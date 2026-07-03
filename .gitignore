@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Expo / React Native
+.expo/
+.expo-shared/
+dist/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Next.js
+.next/
+out/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Build output
+build/
+coverage/
+
+# macOS
+.DS_Store
+
+# Editor
+.idea/
+.vscode/
+
+# Logs
+*.log
