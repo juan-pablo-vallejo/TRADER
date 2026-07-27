@@ -16,20 +16,20 @@ Deliberate maintainability-over-scale choices: monolith over services; managed P
 
 ## 2. Tech Stack
 
-| Layer             | Choice                                                                      | Why                                                                                                                     |
-| ----------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Mobile            | React Native + Expo (EAS)                                                   | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals                 |
-| Local mobile DB   | Drizzle on `expo-sqlite`                                                    | Same ORM and migration tool as the server; actively maintained. Provides storage only — **the sync layer is ours** (§3) |
-| Web + API hosting | Next.js on Vercel                                                           | Admin panel and the tRPC API in one deployment; one bill, one log stream; deploys on git push                           |
-| Backend           | Node.js + TypeScript + tRPC                                                 | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift                     |
-| ORM               | Drizzle                                                                     | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                           |
-| Database          | PostgreSQL on Neon                                                          | Serverless, branching for safe migration testing, automatic backups                                                     |
-| Auth              | Clerk, phone-based                                                          | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel    |
-| Background jobs   | Inngest                                                                     | Hosted; no Redis to run or monitor; handles retries/scheduling                                                          |
-| File storage      | S3 + CloudFront                                                             | Material/receipt photos, invoice PDFs                                                                                   |
-| Observability     | Sentry (errors), PostHog (product analytics)                                | Hosted, free-tier-friendly                                                                                              |
-| Secrets           | Doppler                                                                     | Hosted secret management                                                                                                |
-| Notifications     | Twilio SMS (workflow-critical), Expo push, Resend email (non-critical only) | Wired in Phase 2+, never as the auth channel of record                                                                  |
+| Layer             | Choice                                                            | Why                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Mobile            | React Native + Expo (EAS)                                         | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals                 |
+| Local mobile DB   | Drizzle on `expo-sqlite`                                          | Same ORM and migration tool as the server; actively maintained. Provides storage only — **the sync layer is ours** (§3) |
+| Web + API hosting | Next.js on Vercel                                                 | Admin panel and the tRPC API in one deployment; one bill, one log stream; deploys on git push                           |
+| Backend           | Node.js + TypeScript + tRPC                                       | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift                     |
+| ORM               | Drizzle                                                           | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                           |
+| Database          | PostgreSQL on Neon                                                | Serverless, branching for safe migration testing, automatic backups                                                     |
+| Auth              | Clerk, phone-based                                                | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel    |
+| Background jobs   | Inngest                                                           | Hosted; no Redis to run or monitor; handles retries/scheduling                                                          |
+| File storage      | Undecided — S3+CloudFront, Vercel Blob or Cloudflare R2           | Material/receipt photos, invoice PDFs. Decided at Phase 2, when the real access pattern is known                        |
+| Observability     | Sentry (errors), PostHog (product analytics)                      | Hosted, free-tier-friendly                                                                                              |
+| Secrets           | Vercel environment variables, EAS secrets, GitHub Actions secrets | Each platform holds the secrets it needs; no separate secret-management service                                         |
+| Notifications     | Expo push (workers), Resend email (non-critical only)             | Wired in Phase 2+, never as the auth channel of record. Customer-facing SMS is out of v1                                |
 
 ## 3. Offline & Sync
 
@@ -82,11 +82,11 @@ The boundary that matters most: **no role can mutate a submitted labor record �
 
 **Clock in/out & hours.** Worker opens app → sees today's assigned jobs (local DB, works offline) → taps clock-in → `started` event written locally with client UUID and timestamp; UI immediately shows "on session." Mid-day switch → `ended` on job A, `started` on job B (one open session per worker, enforced in the API handler). End of day → `ended`. Events queue locally as `pending`; on reconnect the queue flushes oldest-first, the server upserts idempotently, stamps server timestamps, orders events, and the device pulls back server truth. Derived sessions and hours are computed server-side from the event fold.
 
-**Materials.** Worker or foreman on a job → add material (description, quantity, unit, optional receipt photo) → written locally with a UUID; the record syncs first, the photo uploads to S3 when bandwidth allows — the record is never blocked on the upload. `unit_cost_cents` may be filled by admin later.
+**Materials.** Worker or foreman on a job → add material (description, quantity, unit, optional receipt photo) → written locally with a UUID; the record syncs first, the photo uploads to object storage when bandwidth allows — the record is never blocked on the upload. `unit_cost_cents` may be filled by admin later.
 
 **Day closeout.** Foreman (or worker for their own day — final actor ruling due before Phase 3) reviews the day's sessions and materials for a job → sets job status/note → submits. On submit the closeout locks; any later change is an admin correcting event. The office dashboard reflects the closeout as received.
 
-**Invoices.** Admin (web) → create invoice → attach customer + optional job → add line items manually or pulled from the job's labor and materials costs → totals computed in cents → draft → PDF to S3 → mark sent. When the customer pays by check/cash, admin marks it paid manually. When the payments phase arrives, a payment row attaches to this exact invoice and flips its status automatically.
+**Invoices.** Admin (web) → create invoice → attach customer + optional job → add line items manually or pulled from the job's labor and materials costs → totals computed in cents → draft → PDF to object storage → mark sent. When the customer pays by check/cash, admin marks it paid manually. When the payments phase arrives, a payment row attaches to this exact invoice and flips its status automatically.
 
 **Reconciliation dashboard.** Admin sees a table of jobs/days with state — expected vs. received, still open on a phone, submitted, needs attention — with drill-down into each day's events. This is the office's window into the field, and where corrections are issued.
 
@@ -98,7 +98,7 @@ Each phase is independently shippable and usable on a real job. Ship phase N bef
 - **Phase 1 — Offline clock in/out.** Local store on `expo-sqlite`, append-only event model, client UUIDs, derived-session computation, the server-authoritative conflict handler, and **the sync layer itself** — outbox push, pull, retry/backoff, visible per-record status, and device-side migrations. No library provides the sync; estimate it as build, not wiring. _Done when a worker tracks a real day's hours across spotty connectivity and the office sees correct, deduplicated hours per job._ Everything else is additive on top of a working sync core.
 - **Phase 2 — Jobs, roster, materials.** Roster management (invite/deactivate, pay rates), job CRUD with customers, material logging with photo upload. _Done when an admin can set up people and jobs and the field logs materials alongside hours._
 - **Phase 3 — Closeout & reconciliation.** Day-close lock, admin correcting entries, reconciliation table with drill-down, job-cost-to-date (labor + materials cents per job). _Done when a foreman closes out a day, it locks, the office sees it, and a correction is issued without mutating history._
-- **Phase 4 — Invoices.** Invoice + line-item CRUD, PDF generation to S3, manual sent/paid, pull labor/material costs into line items. _Done when an admin issues an invoice from a completed job's data and tracks it to paid._
+- **Phase 4 — Invoices.** Invoice + line-item CRUD, PDF generation to object storage, manual sent/paid, pull labor/material costs into line items. _Done when an admin issues an invoice from a completed job's data and tracks it to paid._
 - **Phase 5 — Payments (future).** Client portal, real payment capture, contractor payouts. Trigger: a customer asks to pay online, or a paying contractor base needs payouts. Not before.
 
 ## 8. Risks
@@ -107,7 +107,7 @@ Each phase is independently shippable and usable on a real job. Ship phase N bef
 - **The sync layer is entirely ours.** `expo-sqlite` provides storage and Drizzle provides migrations; neither provides sync. The outbox, the pull, retry/backoff and device migrations are all hand-written and hand-tested — the largest single body of work in Phase 1. Re-evaluate PowerSync if it outgrows one person's head or a second company onboards.
 - **Offline auth.** A Clerk session expiring in a dead zone must not block clock-in; an offline grace policy is required before Phase 1.
 - **Pay-rate history.** A mutable `pay_rate_cents` retroactively corrupts past job costs; effective-dated rates or a rate snapshot at session time must be decided by Phase 2.
-- **Cost creep.** Neon, Clerk, Twilio, Inngest, Sentry, PostHog are free-tier at 30 users but not at scale. Revisit at the second company or the first breached tier.
+- **Cost creep.** Vercel Pro and Neon Launch are paid from the start; Clerk, Sentry, Inngest and PostHog sit inside free tiers at 30 users but not at scale, and Clerk meters SMS one-time-passcodes separately from its user allowance. Current costs and thresholds are tracked in [ACCOUNTS.md](ACCOUNTS.md). Revisit at the second company or the first breached tier.
 - **Bus factor.** Solo developer; mitigation is a boring stack, clean modules, and documenting the sync handler and conflict policy as they're written — the one part not reconstructable from code alone.
 
 ## Revisions
@@ -119,4 +119,8 @@ The body above always states current truth. Rationale for each change is in [DEC
   Railway/Render → the tRPC API runs inside the Next.js deployment on Vercel, removing the
   separate backend host (§1, §2). Data model: `jobs.crew_id` added — §5 and §6 always assumed
   an assignment, and §4 never defined one.
+- **2026-07-27 (accounts pass)** — §2: Doppler dropped, secrets held by each platform;
+  file storage returned to undecided; notifications narrowed to Expo push for workers, with
+  customer SMS (Twilio) out of v1. §8: cost risk rewritten — Vercel and Neon are paid from
+  the start. External services and their costs are now tracked in [ACCOUNTS.md](ACCOUNTS.md).
 - **2026-07-03** — Initial canonical specification.

@@ -16,6 +16,7 @@ Each fact has one home. This README links; it does not restate.
 | [docs/SPEC.md](docs/SPEC.md)                   | What the system **is** — architecture, stack, offline sync, data model, flows, phases |
 | [docs/DECISIONS.md](docs/DECISIONS.md)         | **Why**, and when it changed. Settled decisions and the open list                     |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md)           | Developing across machines                                                            |
+| [docs/ACCOUNTS.md](docs/ACCOUNTS.md)           | External services: which, when needed, what they cost, whether we have them           |
 | [packages/db/README.md](packages/db/README.md) | Running the database: migrations, seeding, local Postgres                             |
 
 ## License
