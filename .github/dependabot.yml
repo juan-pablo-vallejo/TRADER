@@ -8,6 +8,16 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # TypeScript is pinned to 5.9.x by a recorded decision: typescript-eslint
+      # does not support TS 7 and has deferred it pending the new compiler API.
+      # CI proved this the day it was set up — the TS 7.0.2 bump failed with
+      # "typescript-eslint does not support TS 7.0". Without this rule Dependabot
+      # re-proposes the same failing upgrade every week. Remove it when
+      # typescript-eslint ships TS 7 support; see docs/DECISIONS.md.
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+
     groups:
       # One PR per ecosystem-ish cluster rather than per package, so a quiet week
       # produces a handful of reviews instead of thirty.
