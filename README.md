@@ -14,6 +14,7 @@ Pre-build. The technical specification is complete and the first pilot is commit
 |---|---|
 | [docs/SPEC.md](docs/SPEC.md) | Canonical technical specification: architecture, stack, offline sync, data model, flows, build phases |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Settled decisions and the open list |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md) | Development workflow: machine roles, connecting, where work happens |
 
 ## Stack at a glance
 

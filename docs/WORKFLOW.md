@@ -1,12 +1,12 @@
 # Development Workflow
 
 How TRADER is developed across machines. Architecture and build phases live in
-[docs/SPEC.md](docs/SPEC.md); settled and open decisions in
-[docs/DECISIONS.md](docs/DECISIONS.md).
+[SPEC.md](SPEC.md); settled and open decisions in
+[DECISIONS.md](DECISIONS.md).
 
 Machine addresses are not recorded here — this repository is public and the machines are
 not internet-exposed. They live in a gitignored `.env.machines`; copy
-[machines.example.env](machines.example.env) and fill in your own.
+[machines.example.env](../machines.example.env) and fill in your own.
 
 ## Machine roles
 
@@ -64,7 +64,7 @@ that prefix means *public*, literally.
 ## Git conventions
 
 - `main` is the working branch. The project is single-maintainer; see
-  [CONTRIBUTING.md](CONTRIBUTING.md).
+  [CONTRIBUTING.md](../CONTRIBUTING.md).
 - Commits are **SSH-signed** and should verify on GitHub.
 - Imperative subject lines, matching the existing history
   (`Add canonical technical spec and decision log`).
