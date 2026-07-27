@@ -41,7 +41,7 @@ jobs:
       LOCAL_DATABASE_URL: postgresql://trader:trader@localhost:5432/trader
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         # Version comes from the packageManager field in package.json.
