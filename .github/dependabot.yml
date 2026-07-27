@@ -1,0 +1,28 @@
+version: 2
+
+# A solo-maintained payroll application should not learn about a compromised
+# dependency from the news. Weekly is frequent enough to stay current without
+# generating more pull requests than one person can review.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      # One PR per ecosystem-ish cluster rather than per package, so a quiet week
+      # produces a handful of reviews instead of thirty.
+      dev-tooling:
+        patterns:
+          - "eslint*"
+          - "@eslint/*"
+          - "typescript-eslint"
+          - "prettier*"
+          - "vitest"
+      drizzle:
+        patterns:
+          - "drizzle-*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

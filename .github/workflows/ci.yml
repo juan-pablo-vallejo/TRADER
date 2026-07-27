@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, lint, test
+    runs-on: ubuntu-latest
+
+    # The invariant tests assert database behaviour — triggers and column types —
+    # so they need a real Postgres, not a mock. Credentials match
+    # docker-compose.yml and the default in packages/db/test.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: trader
+          POSTGRES_PASSWORD: trader
+          POSTGRES_DB: trader
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trader -d trader"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # The Neon serverless driver speaks HTTP to Neon's proxy and cannot reach a
+      # service container. This flag routes packages/db through node-postgres —
+      # see packages/db/src/env.ts.
+      USE_LOCAL_POSTGRES: "true"
+      LOCAL_DATABASE_URL: postgresql://trader:trader@localhost:5432/trader
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        # Version comes from the packageManager field in package.json.
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm -r typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+
+      # Migrations must run before the tests: the append-only guard is installed
+      # by 0001_append_only_guard.sql, and without it the tests would pass
+      # vacuously against a table that has no triggers.
+      - run: pnpm db:migrate
+
+      - run: pnpm test

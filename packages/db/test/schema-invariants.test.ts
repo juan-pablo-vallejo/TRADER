@@ -147,3 +147,39 @@ describe("multi-tenancy seam", () => {
     }
   });
 });
+
+describe("clock-in is never blocked by location", () => {
+  it("device location columns are nullable", async () => {
+    // SPEC §3: a foreman in a basement with no signal must be able to clock in —
+    // and GPS is typically unavailable in exactly that basement. Location is
+    // best-effort. Making any of these NOT NULL would strand a worker underground.
+    const { rows } = await pool.query<{ column_name: string; is_nullable: string }>(
+      `SELECT column_name, is_nullable
+         FROM information_schema.columns
+        WHERE table_schema='public'
+          AND table_name='work_session_events'
+          AND column_name LIKE 'device\\_%'`,
+    );
+
+    expect(rows.length, "device location columns are missing").toBe(3);
+    for (const r of rows) {
+      expect(r.is_nullable, `${r.column_name} must stay nullable`).toBe("YES");
+    }
+  });
+
+  it("accepts an event with no location at all", async () => {
+    const id = "00000000-0000-7000-8000-0000000000e3";
+    await pool.query(
+      `INSERT INTO work_session_events
+         (id,company_id,worker_id,job_id,type,client_timestamp,initiator_user_id)
+       VALUES ($1,$2,$3,$4,'started',now(),$3) ON CONFLICT DO NOTHING`,
+      [id, COMPANY, USER, JOB],
+    );
+    const { rows } = await pool.query<{ n: string }>(
+      `SELECT count(*)::text AS n FROM work_session_events
+        WHERE id=$1 AND device_lat IS NULL`,
+      [id],
+    );
+    expect(rows[0]?.n).toBe("1");
+  });
+});

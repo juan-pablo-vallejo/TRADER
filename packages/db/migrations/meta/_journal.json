@@ -15,6 +15,13 @@
       "when": 1785125100000,
       "tag": "0001_append_only_guard",
       "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785190347519,
+      "tag": "0002_massive_star_brand",
+      "breakpoints": true
     }
   ]
 }

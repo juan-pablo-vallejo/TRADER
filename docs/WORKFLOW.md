@@ -65,6 +65,10 @@ that prefix means _public_, literally.
 
 - `main` is the working branch. The project is single-maintainer; see
   [CONTRIBUTING.md](../.github/CONTRIBUTING.md).
+- **Code goes through a pull request; docs may go direct.** Changes under `packages/` or
+  `apps/` need a passing CI check before merging — that is what keeps the schema invariants
+  from rotting. Changes confined to `docs/` can be pushed to `main`, because gating a typo fix
+  behind a review round-trip on a one-person repo buys nothing.
 - Commits are **SSH-signed** and should verify on GitHub.
 - Imperative subject lines, matching the existing history
   (`Add canonical technical spec and decision log`).

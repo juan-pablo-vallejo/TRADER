@@ -1,4 +1,11 @@
-import { index, jsonb, pgTable, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  doublePrecision,
+  index,
+  jsonb,
+  pgTable,
+  timestamp,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { companies } from "./companies.js";
 import { workSessionEventType } from "./enums.js";
@@ -49,6 +56,23 @@ export const workSessionEvents = pgTable(
     initiatorUserId: uuid("initiator_user_id")
       .notNull()
       .references(() => users.id),
+    /**
+     * Where the worker's device was when the event was recorded — distinct from
+     * `jobs.lat/lng`, which is where the work is.
+     *
+     * **Nullable by design, and never blocking.** SPEC §3's governing scenario is
+     * a foreman in a basement with no signal, and GPS is typically unavailable in
+     * exactly that basement. Location is captured on a short best-effort timeout;
+     * if no fix arrives, these stay null and the event is written anyway. A
+     * clock-in that waited on GPS would break the product's founding promise.
+     *
+     * Float, not numeric: this is physical position, and no arithmetic depends on
+     * exactness.
+     */
+    deviceLat: doublePrecision("device_lat"),
+    deviceLng: doublePrecision("device_lng"),
+    /** Reported accuracy radius in metres, so a poor fix can be told from a good one. */
+    deviceAccuracyM: doublePrecision("device_accuracy_m"),
     /** Correction reason, voided-event reference, and similar metadata. */
     payload: jsonb("payload"),
     /**

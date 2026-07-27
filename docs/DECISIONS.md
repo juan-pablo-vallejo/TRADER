@@ -64,7 +64,8 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   definition, and push is free and already in the stack. This removes Twilio, its A2P 10DLC
   registration (fees plus a 10–15 day campaign review), and — for now — the TCPA obligation
   that remains open below. Twilio returns only if customers without the app must be reached.
-- **Neon Launch (~$10/mo) from pilot start, not Free.** The free plan suspends compute for
+- **Neon Launch from pilot start, not Free.** Launch bills purely on usage with no monthly
+  minimum; costs are tracked in [ACCOUNTS.md](ACCOUNTS.md). The free plan suspends compute for
   the rest of the billing period once 100 CU-hours are spent; thirty phones syncing across a
   workday can reach that, and the failure mode is the crew losing the app mid-shift. Free
   also retains only a 6-hour restore window against 1 day on paid, which is too thin for
@@ -79,6 +80,37 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   built for Phase 1: TestFlight external testing, and a Play closed-testing track. The residual
   Android consideration is a count, not a deadline — 12+ crew continuously opted in clears the
   production gate as a side effect; fewer means padding with outside testers later.
+
+### Settled during the compliance review (2026-07-27)
+
+- **"Delete my account" means deactivate and anonymize, not erase.** Both app stores require
+  in-app account deletion, but a worker's labor events cannot be destroyed: the append-only
+  trigger forbids it, the foreign key from `work_session_events.worker_id` blocks it, and FLSA
+  plus RI/MA rules impose multi-year retention on payroll records. Deletion therefore sets
+  `active=false` and strips or replaces phone and name on the `users` row, keeping the row id so
+  every reference and all history survives under a now-pseudonymous identifier. The retention
+  window is disclosed in the privacy policy. Three independent constraints — technical, legal,
+  and store policy — all permit exactly this and nothing else.
+- **Device location is captured at clock-in, best-effort and never blocking.**
+  `work_session_events` carries nullable `device_lat`, `device_lng` and `device_accuracy_m`,
+  distinct from `jobs.lat/lng`, which is where the work is rather than where the worker was.
+  Nullable is the design, not an oversight: SPEC §3's governing scenario is a foreman in a
+  basement with no signal, and GPS is typically unavailable in exactly that basement. Capture
+  runs on a short timeout; if no fix arrives the event is written anyway. A test asserts these
+  columns stay nullable.
+  **Consequence:** both stores' privacy declarations now require precise-location disclosure,
+  and the contractor as employer carries a notice obligation to the crew — Massachusetts
+  employee-privacy law covers this directly. That belongs in the pilot scope agreement, not
+  only in an app policy.
+- **CI enforcement: pull requests for code, direct push for docs.** Branch protection requires a
+  passing CI check for changes under `packages/` and `apps/`; `docs/` may go direct. Guards the
+  invariants without taxing documentation work on a single-maintainer repo. Recorded in
+  [WORKFLOW.md](WORKFLOW.md), which owns how work happens.
+- **No public store release is scheduled.** The pilot distributes via TestFlight external
+  testing and a Play closed-testing track. The privacy policy still binds at Phase 1, since
+  TestFlight external requires the URL, but Apple's App Privacy details and Google's Data Safety
+  form are prepared alongside rather than gating the pilot.
+
 - Auth: Clerk, phone-based. Email magic links are not a primary auth channel.
 - Tenancy: single company in v1 with `company_id NOT NULL` on every tenant-scoped table (one seeded row). No RLS until tenant #2 onboards.
 - Worker is an app user (roles: admin, foreman, worker) — supersedes the earlier "no crew accounts" position.

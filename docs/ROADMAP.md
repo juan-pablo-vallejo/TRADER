@@ -59,13 +59,17 @@ sees correct, deduplicated hours per job.
 This phase carries the most risk in the project. Everything later is additive on a working
 sync core; if the core is wrong, everything above it inherits the fault.
 
-| Gate                                              | Due             | Why it blocks                                                                             |
-| ------------------------------------------------- | --------------- | ----------------------------------------------------------------------------------------- |
-| Offline auth grace policy                         | **At start**    | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path |
-| Sync protocol shape — cursor, batch size, backoff | **At start**    | The protocol _is_ the phase                                                               |
-| Language: English-first vs Spanish-first          | **At start**    | i18n from day 1 is cheap; retrofitting is not                                             |
-| Pilot success criteria                            | By pilot launch | You cannot judge a pilot you never defined success for                                    |
-| ToS and Privacy Policy                            | By pilot launch | Real users, real payroll data                                                             |
+| Gate                                              | Due                              | Why it blocks                                                                                |
+| ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| Offline auth grace policy                         | **At start**                     | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path    |
+| Sync protocol shape — cursor, batch size, backoff | **At start**                     | The protocol _is_ the phase                                                                  |
+| Language: English-first vs Spanish-first          | **At start**                     | i18n from day 1 is cheap; retrofitting is not                                                |
+| Data retention policy                             | **Before the policy is drafted** | The privacy policy cannot be written without it, and statute largely dictates the answer     |
+| Account deletion flow                             | By pilot launch                  | A store requirement, not a nicety — see the compliance note below                            |
+| ToS and Privacy Policy                            | By pilot launch                  | Real users, real payroll data                                                                |
+| Apple App Privacy details · Play Data Safety form | By pilot launch                  | Separate mandatory forms, one per store. Both must declare location and what Sentry collects |
+| Sentry PII scrubbing configured                   | By pilot launch                  | Crash breadcrumbs capture phone numbers and location unless told not to                      |
+| Pilot success criteria                            | By pilot launch                  | You cannot judge a pilot you never defined success for                                       |
 
 **Needs:** Apple Developer · Google Play · domain · **Neon Launch billing begins here.**
 Jobs and roster are hand-seeded until Phase 2.
@@ -86,6 +90,28 @@ access_ — a public Play listing, which this roadmap does not schedule. A pilot
 closed test, so the clock can run during it: with 12+ Android crew continuously opted in, the
 pilot clears that gate as a side effect. If fewer stay opted in the window rebuilds, and you
 pad with outside testers before wanting a public listing. A count to watch, not a deadline.
+
+### Compliance that comes with real users
+
+Three items on the gate list above are easy to underestimate.
+
+**Account deletion is a store requirement that cannot mean erasure.** Labor events survive by
+law and by trigger; deletion deactivates the account and anonymizes the identifiers. The
+mechanism is settled in [DECISIONS.md](DECISIONS.md) — the flow still has to be built.
+
+**Each store has its own privacy form**, separate from the policy document: Apple's App Privacy
+details and Google's Data Safety form. Both must declare device location, and both must account
+for what Sentry collects.
+
+**Sentry needs scrubbing before real workers use the app**, not after. Breadcrumbs capture
+phone numbers and now location by default, which makes an honest declaration worse and puts PII
+somewhere it does not belong.
+
+### Before the pilot: run a restore drill
+
+Take a Neon point-in-time restore to a branch and run the invariant tests against the restored
+copy. For a payroll system of record, one tested restore is worth more than any document here.
+An untested backup is a belief, not a capability.
 
 ## Phase 2 — Jobs, roster, materials
 
