@@ -10,15 +10,16 @@ Pre-build. The technical specification is complete and the first pilot is commit
 
 ## Documentation
 
-| Document | Purpose |
-|---|---|
-| [docs/SPEC.md](docs/SPEC.md) | Canonical technical specification: architecture, stack, offline sync, data model, flows, build phases |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Settled decisions and the open list |
-| [docs/WORKFLOW.md](docs/WORKFLOW.md) | Development workflow: machine roles, connecting, where work happens |
+| Document                               | Purpose                                                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| [docs/SPEC.md](docs/SPEC.md)           | Canonical technical specification: architecture, stack, offline sync, data model, flows, build phases |
+| [docs/DECISIONS.md](docs/DECISIONS.md) | Settled decisions and the open list                                                                   |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md)   | Development workflow: machine roles, connecting, where work happens                                   |
+| [docs/DATABASE.md](docs/DATABASE.md)   | Running Postgres locally, migrations, seeding, and the schema's enforced invariants                   |
 
 ## Stack at a glance
 
-React Native + Expo (mobile, offline-first) · Next.js (web admin) · Node.js + TypeScript + tRPC · PostgreSQL on Neon · Drizzle · WatermelonDB · Clerk (phone auth) · S3 + CloudFront.
+React Native + Expo (mobile, offline-first) · Next.js on Vercel (web admin, and host of the tRPC API) · Node.js + TypeScript + tRPC · PostgreSQL on Neon · Drizzle (server and device) · expo-sqlite · Clerk (phone auth) · S3 + CloudFront.
 
 ## License
 

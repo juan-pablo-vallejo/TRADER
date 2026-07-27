@@ -10,11 +10,11 @@ not internet-exposed. They live in a gitignored `.env.machines`; copy
 
 ## Machine roles
 
-| Machine | Role | Why |
-|---|---|---|
-| **Mac** | Primary. All app development. | React Native means iOS builds and simulators require macOS. Nothing in a Node/Next/Postgres stack is heavy enough to need offloading. |
-| **Linux workstation** | Containers, database, long-running jobs. | Ample disk and RAM; runs Docker without competing with the editor. Optional — the stack runs fine on the Mac alone. |
-| **Windows box** | Legacy. Not part of TRADER. | Carried over from the prior Flutter project. Kept reachable, but no TRADER work happens here. |
+| Machine               | Role                                     | Why                                                                                                                                   |
+| --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mac**               | Primary. All app development.            | React Native means iOS builds and simulators require macOS. Nothing in a Node/Next/Postgres stack is heavy enough to need offloading. |
+| **Linux workstation** | Containers, database, long-running jobs. | Ample disk and RAM; runs Docker without competing with the editor. Optional — the stack runs fine on the Mac alone.                   |
+| **Windows box**       | Legacy. Not part of TRADER.              | Carried over from the prior Flutter project. Kept reachable, but no TRADER work happens here.                                         |
 
 **The Linux and Windows machines are the same physical hardware on a dual boot**, so only
 one of the two is ever reachable. Booting one makes the other disappear from the network;
@@ -59,7 +59,7 @@ with no private key ever copied onto it.
 **Nowhere in this repo:** secrets. Application config belongs in `.env` (gitignored,
 loaded by Next.js at runtime); machine topology in `.env.machines`. Neither is committed.
 Note that Next.js inlines any `NEXT_PUBLIC_`-prefixed variable into the client bundle, so
-that prefix means *public*, literally.
+that prefix means _public_, literally.
 
 ## Git conventions
 

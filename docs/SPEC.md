@@ -2,6 +2,15 @@
 
 Canonical as of 2026-07-03. Supersedes all prior spec documents. Settled and open decisions are tracked in [DECISIONS.md](DECISIONS.md).
 
+> **Superseded in part, 2026-07-27 (Phase 0).** Three choices below have been revised;
+> [DECISIONS.md](DECISIONS.md) is the canon where the two disagree.
+>
+> - **Offline layer:** WatermelonDB → **Drizzle + `expo-sqlite`** (§2, §8). WatermelonDB is
+>   dormant. Consequence: it was also the _sync engine_, so §3's queue is now **ours to build**.
+> - **Backend hosting:** Railway/Render → **tRPC inside Next.js on Vercel** (§1, §2). One
+>   deploy target rather than two.
+> - **Job assignment:** §4 gains **`jobs.crew_id`**, which §5 and §6 assumed but never defined.
+
 ## 1. Architecture
 
 Four pieces: a mobile app for the field, a web app for the office, one backend API, one Postgres database. Single backend, single database, single deploy target — a **modular monolith**: one codebase, one process, clean internal module boundaries, no microservices. For a solo-maintained system, every additional moving part is something one person must monitor, debug, and pay for; at pilot scale (~30 users), stability comes from having fewer things that can break.
@@ -16,21 +25,21 @@ Deliberate maintainability-over-scale choices: monolith over services; managed P
 
 ## 2. Tech Stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Mobile | React Native + Expo (EAS) | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals |
-| Local mobile DB + sync | WatermelonDB on SQLite | A library owned and run for free — no paid sync service, no sync server to keep alive |
-| Web | Next.js on Vercel | Admin panel, marketing page, and future public pages in one framework; deploys on git push |
-| Backend | Node.js + TypeScript + tRPC | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift |
-| ORM | Drizzle | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime |
-| Database | PostgreSQL on Neon | Serverless, branching for safe migration testing, automatic backups |
-| Auth | Clerk, phone-based | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel |
-| Backend hosting | Railway or Render | "Git push and it runs," managed logs/metrics/rollbacks; decided at Phase 0 |
-| Background jobs | Inngest | Hosted; no Redis to run or monitor; handles retries/scheduling |
-| File storage | S3 + CloudFront | Material/receipt photos, invoice PDFs |
-| Observability | Sentry (errors), PostHog (product analytics) | Hosted, free-tier-friendly |
-| Secrets | Doppler | Hosted secret management |
-| Notifications | Twilio SMS (workflow-critical), Expo push, Resend email (non-critical only) | Wired in Phase 2+, never as the auth channel of record |
+| Layer                  | Choice                                                                      | Why                                                                                                                  |
+| ---------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Mobile                 | React Native + Expo (EAS)                                                   | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals              |
+| Local mobile DB + sync | WatermelonDB on SQLite                                                      | A library owned and run for free — no paid sync service, no sync server to keep alive                                |
+| Web                    | Next.js on Vercel                                                           | Admin panel, marketing page, and future public pages in one framework; deploys on git push                           |
+| Backend                | Node.js + TypeScript + tRPC                                                 | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift                  |
+| ORM                    | Drizzle                                                                     | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                        |
+| Database               | PostgreSQL on Neon                                                          | Serverless, branching for safe migration testing, automatic backups                                                  |
+| Auth                   | Clerk, phone-based                                                          | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel |
+| Backend hosting        | Railway or Render                                                           | "Git push and it runs," managed logs/metrics/rollbacks; decided at Phase 0                                           |
+| Background jobs        | Inngest                                                                     | Hosted; no Redis to run or monitor; handles retries/scheduling                                                       |
+| File storage           | S3 + CloudFront                                                             | Material/receipt photos, invoice PDFs                                                                                |
+| Observability          | Sentry (errors), PostHog (product analytics)                                | Hosted, free-tier-friendly                                                                                           |
+| Secrets                | Doppler                                                                     | Hosted secret management                                                                                             |
+| Notifications          | Twilio SMS (workflow-critical), Expo push, Resend email (non-critical only) | Wired in Phase 2+, never as the auth channel of record                                                               |
 
 ## 3. Offline & Sync
 
@@ -95,11 +104,11 @@ The boundary that matters most: **no role can mutate a submitted labor record �
 
 Each phase is independently shippable and usable on a real job. Ship phase N before building phase N+1. Planning horizon: 13–20 weeks solo (the nominal 10-week estimate did not survive adversarial review).
 
-- **Phase 0 — Foundation.** Repo, TypeScript monorepo (mobile + web + shared types), Drizzle schema for core tables, Neon database, Clerk wired, one deployed backend, Sentry on. *Done when an admin can log in on web and a worker on mobile against the real deployed stack.*
-- **Phase 1 — Offline clock in/out.** WatermelonDB local store, append-only event model, client UUIDs, sync queue with visible status, the server-authoritative conflict handler, derived-session computation. *Done when a worker tracks a real day's hours across spotty connectivity and the office sees correct, deduplicated hours per job.* Everything else is additive on top of a working sync core.
-- **Phase 2 — Jobs, roster, materials.** Roster management (invite/deactivate, pay rates), job CRUD with customers, material logging with photo upload. *Done when an admin can set up people and jobs and the field logs materials alongside hours.*
-- **Phase 3 — Closeout & reconciliation.** Day-close lock, admin correcting entries, reconciliation table with drill-down, job-cost-to-date (labor + materials cents per job). *Done when a foreman closes out a day, it locks, the office sees it, and a correction is issued without mutating history.*
-- **Phase 4 — Invoices.** Invoice + line-item CRUD, PDF generation to S3, manual sent/paid, pull labor/material costs into line items. *Done when an admin issues an invoice from a completed job's data and tracks it to paid.*
+- **Phase 0 — Foundation.** Repo, TypeScript monorepo (mobile + web + shared types), Drizzle schema for core tables, Neon database, Clerk wired, one deployed backend, Sentry on. _Done when an admin can log in on web and a worker on mobile against the real deployed stack._
+- **Phase 1 — Offline clock in/out.** WatermelonDB local store, append-only event model, client UUIDs, sync queue with visible status, the server-authoritative conflict handler, derived-session computation. _Done when a worker tracks a real day's hours across spotty connectivity and the office sees correct, deduplicated hours per job._ Everything else is additive on top of a working sync core.
+- **Phase 2 — Jobs, roster, materials.** Roster management (invite/deactivate, pay rates), job CRUD with customers, material logging with photo upload. _Done when an admin can set up people and jobs and the field logs materials alongside hours._
+- **Phase 3 — Closeout & reconciliation.** Day-close lock, admin correcting entries, reconciliation table with drill-down, job-cost-to-date (labor + materials cents per job). _Done when a foreman closes out a day, it locks, the office sees it, and a correction is issued without mutating history._
+- **Phase 4 — Invoices.** Invoice + line-item CRUD, PDF generation to S3, manual sent/paid, pull labor/material costs into line items. _Done when an admin issues an invoice from a completed job's data and tracks it to paid._
 - **Phase 5 — Payments (future).** Client portal, real payment capture, contractor payouts. Trigger: a customer asks to pay online, or a paying contractor base needs payouts. Not before.
 
 ## 8. Risks
