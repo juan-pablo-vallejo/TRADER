@@ -20,7 +20,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/node": "^24.9.2",
+    "@types/node": "^26.1.2",
     "@types/pg": "^8.15.6",
     "dotenv": "^17.2.3",
     "pg": "^8.16.3",
