@@ -1,7 +1,7 @@
 # Development Workflow
 
-How TRADER is developed across machines. Architecture and build phases live in
-[SPEC.md](SPEC.md); settled and open decisions in
+How TRADER is developed across machines. Architecture lives in [SPEC.md](SPEC.md), the build
+path in [ROADMAP.md](ROADMAP.md), and settled and open decisions in
 [DECISIONS.md](DECISIONS.md).
 
 **No machine addresses appear in this repository.** It is public and the machines are not
@@ -76,4 +76,5 @@ Node, pnpm or psql** — so the "run the stack on the workstation" path above is
 arrangement, not yet a working one. Provision that box before relying on it.
 
 Build status and outstanding decisions are not tracked here — see
-[SPEC.md](SPEC.md) §7 for phases and [DECISIONS.md](DECISIONS.md) for what is still open.
+[ROADMAP.md](ROADMAP.md) for phases and status, and [DECISIONS.md](DECISIONS.md) for what is
+still open.

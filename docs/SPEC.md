@@ -92,14 +92,11 @@ The boundary that matters most: **no role can mutate a submitted labor record �
 
 ## 7. Build Phases
 
-Each phase is independently shippable and usable on a real job. Ship phase N before building phase N+1. Planning horizon: 13–20 weeks solo (the nominal 10-week estimate did not survive adversarial review).
+Moved to [ROADMAP.md](ROADMAP.md), which owns the build path: phase definitions and
+done-criteria, current status, decision gates and their deadlines, and distribution. This
+document describes what the system is; the schedule for getting there belongs elsewhere.
 
-- **Phase 0 — Foundation.** Repo, TypeScript monorepo (mobile + web + shared types), Drizzle schema for core tables, Neon database, Clerk wired, one deployed backend, Sentry on. _Done when an admin can log in on web and a worker on mobile against the real deployed stack._
-- **Phase 1 — Offline clock in/out.** Local store on `expo-sqlite`, append-only event model, client UUIDs, derived-session computation, the server-authoritative conflict handler, and **the sync layer itself** — outbox push, pull, retry/backoff, visible per-record status, and device-side migrations. No library provides the sync; estimate it as build, not wiring. _Done when a worker tracks a real day's hours across spotty connectivity and the office sees correct, deduplicated hours per job._ Everything else is additive on top of a working sync core.
-- **Phase 2 — Jobs, roster, materials.** Roster management (invite/deactivate, pay rates), job CRUD with customers, material logging with photo upload. _Done when an admin can set up people and jobs and the field logs materials alongside hours._
-- **Phase 3 — Closeout & reconciliation.** Day-close lock, admin correcting entries, reconciliation table with drill-down, job-cost-to-date (labor + materials cents per job). _Done when a foreman closes out a day, it locks, the office sees it, and a correction is issued without mutating history._
-- **Phase 4 — Invoices.** Invoice + line-item CRUD, PDF generation to object storage, manual sent/paid, pull labor/material costs into line items. _Done when an admin issues an invoice from a completed job's data and tracks it to paid._
-- **Phase 5 — Payments (future).** Client portal, real payment capture, contractor payouts. Trigger: a customer asks to pay online, or a paying contractor base needs payouts. Not before.
+The heading is kept so §8 below and the references to it from other files stay valid.
 
 ## 8. Risks
 
@@ -119,6 +116,9 @@ The body above always states current truth. Rationale for each change is in [DEC
   Railway/Render → the tRPC API runs inside the Next.js deployment on Vercel, removing the
   separate backend host (§1, §2). Data model: `jobs.crew_id` added — §5 and §6 always assumed
   an assignment, and §4 never defined one.
+- **2026-07-27 (roadmap pass)** — §7's contents moved to [ROADMAP.md](ROADMAP.md), which now
+  owns phases, status and gates. The heading remains so §8 keeps its number and existing
+  references stay valid.
 - **2026-07-27 (accounts pass)** — §2: Doppler dropped, secrets held by each platform;
   file storage returned to undecided; notifications narrowed to Expo push for workers, with
   customer SMS (Twilio) out of v1. §8: cost risk rewritten — Vercel and Neon are paid from

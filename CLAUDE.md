@@ -5,15 +5,16 @@
 Every fact has exactly one home. Everything else links to it. Restating a fact elsewhere —
 even accurately — creates a second copy that will drift.
 
-| Fact                                                                   | Home                                                |
-| ---------------------------------------------------------------------- | --------------------------------------------------- |
-| What the system **is**: architecture, stack, data model, flows, phases | `docs/SPEC.md`                                      |
-| **Why** it is that way, and when it changed                            | `docs/DECISIONS.md`                                 |
-| Developing across machines                                             | `docs/WORKFLOW.md`                                  |
-| Running the database                                                   | `packages/db/README.md`                             |
-| Why one line of code exists                                            | the comment beside it                               |
-| Environment variable contract                                          | `.env.example`                                      |
-| Real machine addresses, hostnames, users                               | `~/.ssh/config` — **never this repo, it is public** |
+| Fact                                                           | Home                                                |
+| -------------------------------------------------------------- | --------------------------------------------------- |
+| What the system **is**: architecture, stack, data model, flows | `docs/SPEC.md`                                      |
+| The build path: phases, status, gates, distribution            | `docs/ROADMAP.md`                                   |
+| **Why** it is that way, and when it changed                    | `docs/DECISIONS.md`                                 |
+| Developing across machines                                     | `docs/WORKFLOW.md`                                  |
+| Running the database                                           | `packages/db/README.md`                             |
+| Why one line of code exists                                    | the comment beside it                               |
+| Environment variable contract                                  | `.env.example`                                      |
+| Real machine addresses, hostnames, users                       | `~/.ssh/config` — **never this repo, it is public** |
 
 `README.md` links; it never restates.
 

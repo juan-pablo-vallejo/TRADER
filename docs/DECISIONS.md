@@ -70,9 +70,15 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   also retains only a 6-hour restore window against 1 day on paid, which is too thin for
   payroll and invoice data.
 - **Store accounts are individual, not JPTEQ LLC.** No D-U-N-S number, so enrollment is fast.
-  The accepted cost: Google requires a 12-tester, 14-continuous-day closed test before
-  Android production access, which organization accounts would have been exempt from. Treated
-  as a scheduled dependency, not a surprise.
+  The accepted cost is narrow: Google requires a 12-tester, 14-continuous-day closed test
+  before granting **production access** — a public Play listing — which organization accounts
+  are exempt from. It does **not** gate the pilot: closed-testing tracks distribute to testers
+  immediately, and a pilot is itself a closed test, so the clock can run during it. Recorded
+  because future-you would otherwise re-derive this trade.
+- **The pilot crew carries both iPhone and Android.** Both distribution tracks are therefore
+  built for Phase 1: TestFlight external testing, and a Play closed-testing track. The residual
+  Android consideration is a count, not a deadline — 12+ crew continuously opted in clears the
+  production gate as a side effect; fewer means padding with outside testers later.
 - Auth: Clerk, phone-based. Email magic links are not a primary auth channel.
 - Tenancy: single company in v1 with `company_id NOT NULL` on every tenant-scoped table (one seeded row). No RLS until tenant #2 onboards.
 - Worker is an app user (roles: admin, foreman, worker) — supersedes the earlier "no crew accounts" position.
@@ -86,15 +92,18 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
 
 ## Open
 
+The pilot goes live at the end of Phase 1, so anything that used to read "before pilot" is a
+Phase 1 deadline. [ROADMAP.md](ROADMAP.md) shows each of these as a gate on the phase it blocks.
+
 | Decision                                                       | Decide                       |
 | -------------------------------------------------------------- | ---------------------------- |
-| Offline auth grace policy (Clerk expiry in a dead zone)        | before Phase 1               |
-| Sync protocol shape: pull cursor, batch size, backoff curve    | before Phase 1               |
+| Offline auth grace policy (Clerk expiry in a dead zone)        | **start of Phase 1**         |
+| Sync protocol shape: pull cursor, batch size, backoff curve    | **start of Phase 1**         |
 | Pay-rate history: effective-dated rates vs snapshot-at-session | before Phase 2               |
 | File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2    | Phase 2                      |
 | Geocoding: Mapbox vs Google (accuracy test on local addresses) | Phase 2                      |
 | Closeout actor: foreman-only vs worker-own-day                 | before Phase 3               |
-| Language: English-first (i18n from day 1) vs Spanish-first     | before pilot                 |
+| Language: English-first (i18n from day 1) vs Spanish-first     | **start of Phase 1**         |
+| Pilot success criteria (single canonical set)                  | before Phase 1 ends          |
+| ToS and Privacy Policy                                         | before Phase 1 ends          |
 | Pricing model and unit (per-company / per-user / per-crew)     | before first paying customer |
-| Pilot success criteria (single canonical set)                  | before pilot                 |
-| ToS, Privacy Policy, TCPA opt-out for SMS                      | before pilot                 |

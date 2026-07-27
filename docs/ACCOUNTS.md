@@ -19,7 +19,7 @@ relying on it.
 
 | Service        | Used for               | Cost at pilot scale                                                                                                                         | Have it |
 | -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| **Neon**       | Postgres               | Free to start; **Launch (~$10/mo) from pilot start** — see below                                                                            | ☐       |
+| **Neon**       | Postgres               | Free to start; **Launch from Phase 1** — usage-based, no monthly minimum. See below                                                         | ☐       |
 | **Clerk**      | Auth (phone-based)     | Free to 50,000 monthly retained users. **SMS OTPs are metered separately** — small at 30 users, but not zero                                | ☐       |
 | **Vercel**     | Web app + the tRPC API | **$20/mo (Pro).** Hobby forbids commercial use, which includes pre-revenue company work                                                     | ☐       |
 | **Sentry**     | Error tracking         | Free tier; confirm limits at signup                                                                                                         | ☐       |
@@ -33,9 +33,16 @@ Thirty phones syncing across a 10–12 hour workday can approach that in an acti
 connections drop, new ones fail, and the crew loses the app mid-workday.
 
 Free also keeps only a 6-hour restore window, against 1 day on paid. For payroll and invoice
-data that is too thin. ~$10/mo removes both problems.
+data that is too thin.
 
-## Before the pilot reaches real phones
+Launch has had **no monthly minimum since December 2025** — it bills purely on usage, roughly
+$0.106 per CU-hour plus $0.35 per GB-month. Expect single-digit to low-teens dollars per month
+at pilot scale; there is no fixed plan fee to commit to.
+
+## Phase 1 — the pilot goes live
+
+The pilot lands at the end of Phase 1 (see [ROADMAP.md](ROADMAP.md)), so these are Phase 1
+dependencies, not late ones.
 
 | Service                     | Used for                                                             | Cost             | Have it |
 | --------------------------- | -------------------------------------------------------------------- | ---------------- | ------- |
@@ -46,16 +53,24 @@ data that is too thin. ~$10/mo removes both problems.
 Both store accounts are **individual**, not under JPTEQ LLC. No D-U-N-S number is required,
 so enrollment is quick — with one consequence.
 
-### Android needs a 14-day head start
+### What the store accounts do and do not gate
 
-Personal Play accounts created after 13 November 2023 must run a **closed test with 12
-testers opted in for 14 continuous days** before production access is granted. "Opted in"
-means each tester accepted the invitation and installed the app under a matching Google
-account.
+The crew is mixed, so both distribution tracks are needed. **Neither gates the pilot.**
 
-Treat this as a scheduled dependency: line up 12 people and start the clock **two weeks
-before** the crew needs Android builds. iOS via TestFlight has no equivalent gate.
-Organization accounts are exempt from this — that is the trade against the D-U-N-S lead time.
+**iOS — TestFlight external testing.** The public-link path. Each version's first build goes
+through Beta App Review, roughly a day: latency on every hotfix, not a gate. Internal testing
+is instant but requires testers to be App Store Connect users on your team, which is the wrong
+shape for a field crew.
+
+**Android — a Play closed-testing track**, which distributes to testers immediately.
+
+Personal Play accounts created after 13 November 2023 must run a closed test with **12 testers
+opted in for 14 continuous days** — but that gates **production access**, meaning a public Play
+listing, not getting builds to your testers. A pilot _is_ a closed test, so the clock can run
+during it. With 12+ Android crew continuously opted in, the pilot clears the gate as a side
+effect; with fewer, the window rebuilds and you pad with outside testers before wanting a
+public listing. Organization accounts are exempt entirely — that is the trade against the
+D-U-N-S lead time.
 
 ## Later phases
 
@@ -73,15 +88,19 @@ Organization accounts are exempt from this — that is the trade against the D-U
 US application-to-person SMS requires A2P 10DLC registration: **$44 one-time brand
 registration plus $15 per campaign**, then **$1.50–$10 per month per campaign**, plus carrier
 surcharges of roughly $0.003–0.005 per message. Brand approval is fast; **campaign review
-runs 10–15 days.** Start a month before it is needed, and settle the TCPA opt-out item in
-[DECISIONS.md](DECISIONS.md) first.
+runs 10–15 days.** Start a month before it is needed. TCPA opt-out compliance would also have
+to be settled at that point — it is not currently tracked as an open decision, because
+customer SMS left v1.
 
 ## Running cost
 
-**$20/month** once Phase 0 is live, rising to **~$30/month** when Neon Launch starts at pilot.
+**$20/month fixed** once Phase 0 is live — Vercel Pro is the only fixed subscription. Neon
+Launch adds usage-based cost from Phase 1, expected in the single-digit to low-teens dollars
+per month at this scale, with no minimum.
+
 First-year one-offs total **~$139**: Apple $99, Google Play $25, domain ~$15. Everything else
-sits inside a free tier at this scale. [SPEC.md](SPEC.md) §8 tracks cost creep as a standing
-risk.
+sits inside a free tier at this scale, though Clerk meters SMS one-time-passcodes separately.
+[SPEC.md](SPEC.md) §8 tracks cost creep as a standing risk.
 
 ## Dropped
 
