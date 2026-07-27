@@ -9,12 +9,12 @@ This file owns the build path and current status.
 
 ## Now
 
-**Phase 0, in progress.** The pnpm workspace and `packages/db` are done — full schema, the
-append-only triggers, and invariant tests passing against local Postgres. Next is
-`packages/api` (tRPC, Clerk context, `me.get`), which needs no accounts.
+**Phase 0, in progress.** The pnpm workspace, `packages/db` and `packages/api` are done —
+schema with append-only triggers, and the tRPC router with just-in-time provisioning, role
+gates and `me.get`, all under CI.
 
-The remaining Phase 0 steps are blocked on signups, not code: Neon and Clerk for the web
-app, Expo for mobile, Sentry and Vercel to deploy.
+Everything remaining in Phase 0 is blocked on signups rather than code: Neon and Clerk for the
+web app, Expo for mobile, Sentry and Vercel to deploy.
 
 ## How phases work
 
