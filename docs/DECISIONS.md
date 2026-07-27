@@ -9,7 +9,9 @@ and SPEC.md is stale.
 
 - MVP is the daily-closeout operating system; the marketplace and AI estimator are later phases, not the wedge.
 - Modular monolith: one backend, one Postgres, one deploy target. No microservices.
-- Stack: React Native + Expo · Next.js on Vercel · Node.js + TypeScript + tRPC · Drizzle · PostgreSQL on Neon.
+
+<!-- The stack is not enumerated here. SPEC.md §2 is its single home; the entries below
+     record individual choices and the reasoning behind them. -->
 
 ### Settled at Phase 0 (2026-07-27)
 

@@ -4,9 +4,9 @@ How TRADER is developed across machines. Architecture and build phases live in
 [SPEC.md](SPEC.md); settled and open decisions in
 [DECISIONS.md](DECISIONS.md).
 
-Machine addresses are not recorded here — this repository is public and the machines are
-not internet-exposed. They live in a gitignored `.env.machines`; copy
-[machines.example.env](../machines.example.env) and fill in your own.
+**No machine addresses appear in this repository.** It is public and the machines are not
+internet-exposed. Real hostnames and users live in your `~/.ssh/config`, which is the single
+source of truth for them — this document refers to machines only by SSH alias.
 
 ## Machine roles
 
@@ -64,19 +64,16 @@ that prefix means _public_, literally.
 ## Git conventions
 
 - `main` is the working branch. The project is single-maintainer; see
-  [CONTRIBUTING.md](../CONTRIBUTING.md).
+  [CONTRIBUTING.md](../.github/CONTRIBUTING.md).
 - Commits are **SSH-signed** and should verify on GitHub.
 - Imperative subject lines, matching the existing history
   (`Add canonical technical spec and decision log`).
 
-## Current state
+## Machine readiness
 
-TRADER is **pre-build** — this repository holds documentation only, and Phase 0 in
-SPEC §7 has not started. Two consequences for this document:
+The Mac is fully provisioned. **The Linux workstation has Docker, git and a JDK, but not
+Node, pnpm or psql** — so the "run the stack on the workstation" path above is the intended
+arrangement, not yet a working one. Provision that box before relying on it.
 
-- The workstation currently has Docker, git, and a JDK, but **not Node, pnpm, or psql**.
-  The "run the stack on the workstation" path above is the intended arrangement, not a
-  working one, until that machine is provisioned.
-- Phase 0 additionally depends on accounts that do not exist yet — Neon, Clerk, Vercel,
-  Expo/EAS, Sentry — plus an S3 bucket and the Railway-vs-Render decision still open in
-  DECISIONS.md.
+Build status and outstanding decisions are not tracked here — see
+[SPEC.md](SPEC.md) §7 for phases and [DECISIONS.md](DECISIONS.md) for what is still open.

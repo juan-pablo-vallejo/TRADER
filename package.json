@@ -14,13 +14,19 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
-    "test:watch": "vitest",
+    "test": "pnpm -r test",
     "db:generate": "pnpm --filter @trader/db generate",
     "db:migrate": "pnpm --filter @trader/db migrate",
     "db:seed": "pnpm --filter @trader/db seed",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down"
+  },
+  "prettier": {
+    "semi": true,
+    "singleQuote": false,
+    "trailingComma": "all",
+    "printWidth": 90,
+    "tabWidth": 2
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
@@ -28,7 +34,6 @@
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.6.2",
     "typescript": "5.9.3",
-    "typescript-eslint": "^8.65.0",
-    "vitest": "^3.2.4"
+    "typescript-eslint": "^8.65.0"
   }
 }

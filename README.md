@@ -4,22 +4,19 @@ Phone-first daily closeout and job costing for painting contractors, by JPTEQ LL
 
 Small painting contractors lose margin because field activity — labor, materials, job progress — lives in texts, calls, and memory until someone reconstructs it days later. TRADER captures it at the end of each workday, on the phone, offline if necessary, so the office always has a usable record for payroll, job costing, and billing.
 
-## Status
-
-Pre-build. The technical specification is complete and the first pilot is committed with a painting contractor in RI/MA. Build phases are defined in the spec.
+In build. The first pilot is committed with a painting contractor in RI/MA. Phases and
+their done-criteria are in [SPEC.md](docs/SPEC.md) §7.
 
 ## Documentation
 
-| Document                               | Purpose                                                                                               |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| [docs/SPEC.md](docs/SPEC.md)           | Canonical technical specification: architecture, stack, offline sync, data model, flows, build phases |
-| [docs/DECISIONS.md](docs/DECISIONS.md) | Settled decisions and the open list                                                                   |
-| [docs/WORKFLOW.md](docs/WORKFLOW.md)   | Development workflow: machine roles, connecting, where work happens                                   |
-| [docs/DATABASE.md](docs/DATABASE.md)   | Running Postgres locally, migrations, seeding, and the schema's enforced invariants                   |
+Each fact has one home. This README links; it does not restate.
 
-## Stack at a glance
-
-React Native + Expo (mobile, offline-first) · Next.js on Vercel (web admin, and host of the tRPC API) · Node.js + TypeScript + tRPC · PostgreSQL on Neon · Drizzle (server and device) · expo-sqlite · Clerk (phone auth) · S3 + CloudFront.
+| Document                                       | Owns                                                                                  |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [docs/SPEC.md](docs/SPEC.md)                   | What the system **is** — architecture, stack, offline sync, data model, flows, phases |
+| [docs/DECISIONS.md](docs/DECISIONS.md)         | **Why**, and when it changed. Settled decisions and the open list                     |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md)           | Developing across machines                                                            |
+| [packages/db/README.md](packages/db/README.md) | Running the database: migrations, seeding, local Postgres                             |
 
 ## License
 
