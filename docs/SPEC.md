@@ -16,20 +16,21 @@ Deliberate maintainability-over-scale choices: monolith over services; managed P
 
 ## 2. Tech Stack
 
-| Layer             | Choice                                                            | Why                                                                                                                     |
-| ----------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Mobile            | React Native + Expo (EAS)                                         | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals                 |
-| Local mobile DB   | Drizzle on `expo-sqlite`                                          | Same ORM and migration tool as the server; actively maintained. Provides storage only — **the sync layer is ours** (§3) |
-| Web + API hosting | Next.js on Vercel                                                 | Admin panel and the tRPC API in one deployment; one bill, one log stream; deploys on git push                           |
-| Backend           | Node.js + TypeScript + tRPC                                       | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift                     |
-| ORM               | Drizzle                                                           | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                           |
-| Database          | PostgreSQL on Neon                                                | Serverless, branching for safe migration testing, automatic backups                                                     |
-| Auth              | Clerk, phone-based                                                | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel    |
-| Background jobs   | Inngest                                                           | Hosted; no Redis to run or monitor; handles retries/scheduling                                                          |
-| File storage      | Undecided — S3+CloudFront, Vercel Blob or Cloudflare R2           | Material/receipt photos, invoice PDFs. Decided at Phase 2, when the real access pattern is known                        |
-| Observability     | Sentry (errors), PostHog (product analytics)                      | Hosted, free-tier-friendly                                                                                              |
-| Secrets           | Vercel environment variables, EAS secrets, GitHub Actions secrets | Each platform holds the secrets it needs; no separate secret-management service                                         |
-| Notifications     | Expo push (workers), Resend email (non-critical only)             | Wired in Phase 2+, never as the auth channel of record. Customer-facing SMS is out of v1                                |
+| Layer             | Choice                                                            | Why                                                                                                                                               |
+| ----------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile            | React Native + Expo (EAS)                                         | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals                                           |
+| Local mobile DB   | Drizzle on `expo-sqlite`                                          | Same ORM and migration tool as the server; actively maintained. Provides storage only — **the sync layer is ours** (§3)                           |
+| Web + API hosting | Next.js on Vercel                                                 | Admin panel and the tRPC API in one deployment; one bill, one log stream; deploys on git push                                                     |
+| Backend           | Node.js + TypeScript + tRPC (superjson transformer)               | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift. superjson keeps Dates intact across the wire |
+| Validation        | zod                                                               | Procedure inputs and, in Phase 1, sync payloads. Field-level errors are surfaced to clients rather than a bare BAD_REQUEST                        |
+| ORM               | Drizzle                                                           | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                                                     |
+| Database          | PostgreSQL on Neon                                                | Serverless, branching for safe migration testing, automatic backups                                                                               |
+| Auth              | Clerk, phone-based                                                | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel                              |
+| Background jobs   | Inngest                                                           | Hosted; no Redis to run or monitor; handles retries/scheduling                                                                                    |
+| File storage      | Undecided — S3+CloudFront, Vercel Blob or Cloudflare R2           | Material/receipt photos, invoice PDFs. Decided at Phase 2, when the real access pattern is known                                                  |
+| Observability     | Sentry (errors), PostHog (product analytics)                      | Hosted, free-tier-friendly                                                                                                                        |
+| Secrets           | Vercel environment variables, EAS secrets, GitHub Actions secrets | Each platform holds the secrets it needs; no separate secret-management service                                                                   |
+| Notifications     | Expo push (workers), Resend email (non-critical only)             | Wired in Phase 2+, never as the auth channel of record. Customer-facing SMS is out of v1                                                          |
 
 ## 3. Offline & Sync
 
@@ -117,6 +118,8 @@ The body above always states current truth. Rationale for each change is in [DEC
   Railway/Render → the tRPC API runs inside the Next.js deployment on Vercel, removing the
   separate backend host (§1, §2). Data model: `jobs.crew_id` added — §5 and §6 always assumed
   an assignment, and §4 never defined one.
+- **2026-07-27 (API pass)** — §2 gains zod as the validation layer and notes superjson on the
+  backend row. Both arrived with `packages/api`; see [DECISIONS.md](DECISIONS.md).
 - **2026-07-27 (compliance pass)** — §3 and §4: `work_session_events` gains nullable device
   location, captured best-effort and never blocking a clock-in. Account deletion is defined as
   deactivate-and-anonymize rather than erasure, since labor history survives by trigger and by

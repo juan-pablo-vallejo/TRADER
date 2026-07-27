@@ -111,6 +111,35 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   TestFlight external requires the URL, but Apple's App Privacy details and Google's Data Safety
   form are prepared alongside rather than gating the pilot.
 
+### Settled building `packages/api` (2026-07-27)
+
+- **The API never talks to Clerk; it receives an already-verified identity.** Token
+  verification lives in the Next.js route handler, where Clerk's helpers already run. The
+  package therefore has no Clerk dependency and every procedure is testable by passing a fake
+  subject — which is what lets step 3 be built and fully tested with no account of any kind.
+- **The just-in-time insert selects first and never updates on conflict.** `seed.ts`
+  legitimately writes `role` in its upsert to promote an admin; the same shape in a request
+  path would rewrite `role` — or `active` — on every sign-in, demoting the admin the moment
+  they logged in and silently undoing a deactivation. Rather than rely on an inert `set` clause
+  that a future edit could "helpfully" extend, there is no `set` clause at all: select, insert
+  only when missing with `ON CONFLICT DO NOTHING`, re-select on the rare race.
+- **Company assignment on first sign-in is single-tenant by assumption.** The oldest company is
+  chosen — ordered, not an unqualified `limit(1)`, so a stray second row cannot attach users to
+  an arbitrary tenant non-deterministically. V2 multi-tenancy replaces this with explicit
+  assignment (invite or organisation claim), additively.
+- **A missing profile yields a provisional name.** `users.name` is NOT NULL and the API cannot
+  ask Clerk, so the route handler passes a profile when it has one and otherwise the row takes
+  an exported placeholder that Phase 2 roster management corrects. The profile is read **only**
+  on insert, so an admin's correction survives the next sign-in.
+- **`protectedProcedure` rejects deactivated accounts, not merely anonymous ones.** Deletion is
+  defined as deactivate-and-anonymise because labor history survives by trigger and by
+  retention law; an account that could still clock in afterwards would make that definition
+  cosmetic. This is where it becomes enforcement.
+- **Stack additions: zod for validation, superjson as the tRPC transformer.** superjson now
+  rather than later: JSON turns Dates into strings, Phase 1's sync layer is almost entirely
+  timestamps, and adding a transformer afterwards is a breaking change that must land on the
+  server and both clients together.
+
 - Auth: Clerk, phone-based. Email magic links are not a primary auth channel.
 - Tenancy: single company in v1 with `company_id NOT NULL` on every tenant-scoped table (one seeded row). No RLS until tenant #2 onboards.
 - Worker is an app user (roles: admin, foreman, worker) — supersedes the earlier "no crew accounts" position.

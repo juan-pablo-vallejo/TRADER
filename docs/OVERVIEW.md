@@ -56,21 +56,22 @@ snap to server truth on the next sync.
 
 ## What exists today
 
-Only `packages/db`: the Postgres schema, migrations, the triggers enforcing append-only
-labor, and invariant tests. The API package, both applications, and the sync layer are
-unwritten — and the sync layer is the largest single risk, since `expo-sqlite` and Drizzle
-supply storage and migrations but no sync.
+`packages/db` — the Postgres schema, migrations, the triggers enforcing append-only labor —
+and `packages/api`, the tRPC router with just-in-time user provisioning and role gates. Both
+applications and the sync layer are unwritten, and the sync layer is the largest single risk,
+since `expo-sqlite` and Drizzle supply storage and migrations but no sync.
 
 Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Open decisions →
 [DECISIONS.md](DECISIONS.md).
 
 ## Repository map
 
-| Path           | What it is                                                                                |
-| -------------- | ----------------------------------------------------------------------------------------- |
-| `packages/db/` | Schema, migrations, seed, invariant tests. Has its own [README](../packages/db/README.md) |
-| `docs/`        | The documents in the reading path below                                                   |
-| `CLAUDE.md`    | The one-fact-one-home rule this repository is maintained under                            |
+| Path            | What it is                                                                                                  |
+| --------------- | ----------------------------------------------------------------------------------------------------------- |
+| `packages/db/`  | Schema, migrations, seed, invariant tests. Has its own [README](../packages/db/README.md)                   |
+| `packages/api/` | tRPC routers, request context, role gates. Exports `AppRouter` — the contract both clients import as a type |
+| `docs/`         | The documents in the reading path below                                                                     |
+| `CLAUDE.md`     | The one-fact-one-home rule this repository is maintained under                                              |
 
 `packages/api/` and `apps/` appear as their phases land; see [ROADMAP.md](ROADMAP.md).
 
