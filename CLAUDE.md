@@ -24,6 +24,7 @@ even accurately — creates a second copy that will drift.
 | What the system **is**: architecture, stack, data model, flows       | `docs/SPEC.md`                                      |
 | The build path: phases, status, gates, distribution                  | `docs/ROADMAP.md`                                   |
 | **Why** it is that way, and when it changed                          | `docs/DECISIONS.md`                                 |
+| What happened, including work that produced no commit                | `docs/WORKLOG.md`                                   |
 | Developing across machines                                           | `docs/WORKFLOW.md`                                  |
 | Running the database                                                 | `packages/db/README.md`                             |
 | Why one line of code exists                                          | the comment beside it                               |
@@ -36,20 +37,19 @@ even accurately — creates a second copy that will drift.
 
 Say which fact it owns that no existing file owns. If the answer is "it explains X more
 fully," extend X's home instead — summaries, status sections and architecture overviews are
-how duplication usually enters. Prefer extending a file to adding one, and a comment beside
-the code to a document about the code.
+how duplication usually enters. Prefer a comment beside the code to a document about it.
 
 ## When a decision changes
 
 Update the fact in its home so it is simply correct. Do **not** append a "superseded" notice
-to a document whose body still says the old thing — that leaves two truths in one file.
-Record the change and its reasoning in `docs/DECISIONS.md`; if the fact lives in `SPEC.md`,
-add a line to its Revisions section.
+to a document whose body still says the old thing — that leaves two truths in one file. Record
+the change and its reasoning in `docs/DECISIONS.md`; if the fact lives in `SPEC.md`, add a line
+to its Revisions section.
 
 ## Root directory
 
-Root is for files their tooling requires to be there. Anything else belongs in `docs/`,
-`.github/`, or beside the code it concerns.
+Root is for files their tooling requires; anything else belongs in `docs/`, `.github/`, or
+beside the code it concerns.
 
 ## How we work
 
