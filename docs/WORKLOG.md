@@ -6,16 +6,46 @@ never restated; `git log` is their home.
 
 **Historical only.** Current state and what is next live in [ROADMAP.md](ROADMAP.md).
 
-Newest first; entries are immutable once written. Times are local (America/New_York). **This
-log has gaps** — entries are written when Claude Code is involved in the work, not otherwise.
-Roll to `WORKLOG-<year>.md` when this becomes unwieldy.
+Newest first. Entries written live are immutable; entries marked as reconstructed may be
+corrected when evidence appears, with the correction noted. Times are local
+(America/New_York). **This log has gaps** — entries are written when Claude Code is involved
+in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwieldy.
 
 ---
 
 ## 2026-07-27
 
-_Reconstructed at the end of the day from commit timestamps and session history, not written
-live. Entries after this date are written as the work happens._
+_The 22:39 entry was written live. Everything below it was reconstructed from commit
+timestamps and session history._
+
+### 22:39 — The doc guards had turned `main` red
+
+Found while bringing this log current: the commit below broke the `check` job. Its new script
+uses `console` and `process`, and ESLint had no Node globals declared for `.github/scripts/`,
+so three lines failed `no-undef`. The `docs` job passed, which is why it was not obvious — a
+commit adding guards broke the guard already there.
+
+Fixed by declaring those two globals for that path only, rather than adding the `globals`
+package for two names or disabling the rule. Confirmed the fix is narrow: an unused variable in
+that same file still fails lint, so the file is checked rather than exempted.
+
+### 22:25 — Doc organization enforced in CI, by a parallel session `c9d8148`
+
+Committed from the desktop app by a separate Claude Code session asked to review the
+repository. It turned two manual habits into CI jobs — a relative-link checker over tracked
+markdown, and a one-liner enforcing CLAUDE.md's own sub-100-line ceiling. Both were watched
+failing before being trusted, the standard this repo already held itself to; now it is a red X
+rather than a memory.
+
+It also caught a drift spot I had created hours earlier: OVERVIEW.md still said `packages/api/`
+was yet to appear, four lines below the repository-map row I had just added listing it. A
+contradiction inside one screen, in the document whose job is orientation.
+
+### 22:18 — This log created `0ea5528`
+
+Justified only by what `git log` cannot hold. A review caught that the draft named a machine
+hostname while its own verification claimed it named none — and that hostname was already in
+the standing leak grep, so the check would have failed on the plan proposing it.
 
 ### 21:26 — Session-starter sections added to CLAUDE.md `cd8c3f5`
 
@@ -49,6 +79,15 @@ the claim rather than leave a false guarantee.
 Two smaller finds: company selection had no `ORDER BY`, so a second company row would attach
 users to an arbitrary tenant non-deterministically; and raw-SQL fixtures hit a NOT NULL
 violation because `id` comes from Drizzle's `$defaultFn`, not a database default.
+
+### 18:22–18:24 — Dependabot triage `ff9f116` `6edb1be` `10cf5e9` `aec5b79`
+
+Six pull requests within two minutes of CI going live. Five merged, two closed with reasons
+recorded in `.github/dependabot.yml`: TypeScript 7 fails because typescript-eslint does not
+support it, and `@types/node` must track the Node runtime rather than the newest release.
+
+The `gh` token turned out to lack `workflow` scope, so pull requests touching
+`.github/workflows/` cannot be merged through the API — those went in over SSH instead.
 
 ### 18:15 — CI added, and a compliance collision surfaced `872dad1`
 
@@ -109,20 +148,52 @@ Eleven tables with the append-only triggers. Proved the invariant tests can fail
 trusting them: injecting a floating-point money column turned the suite red and named the
 offending column. A test that has never failed is not evidence.
 
-### ~09:00 — Machine setup, outside the repository
+---
 
-No commit here — the work touched shell and SSH configuration rather than the project. The
-toolchain was missing four tools, and installing them exposed a real bug: PATH entries had been
-added to `.zshrc`, which only interactive shells read, so scripts and hooks could not resolve
-Node at all. Moved to `.zshenv`.
+## 2026-07-26
 
-A second machine was rediscovered by mDNS after its recorded address went stale.
+_Reconstructed from file timestamps and commit history. **Correction:** the machine-setup and
+reframe entries below were originally filed under 2026-07-27 with invented times of ~08:00 and
+~09:00. File mtimes place them here — wrong by a day and about twelve hours. The timestamps
+were guessed rather than checked, in the file whose value is that it can be trusted._
 
-### ~08:00 — The project is TRADER, not Sierra-Painting-v1
+### 23:27 — Workflow document moved into `docs/` `4518587`
 
-The largest finding of the day, and it produced no commit. The session opened on a request to
-work on "the Sierra Painting application" against a repository that turned out to be a dead
-Flutter and Firebase codebase on a different account, untouched since November.
+Relocating it broke all four of its relative links. Also added it to the README table, where it
+had been conspicuously absent beside SPEC and DECISIONS.
+
+### 23:11 — Multi-machine workflow documented `1f648d2`
+
+Machine addresses stayed out of the public repository. A filename trap surfaced: a template
+named `.env.machines.example` would have been silently gitignored, since the `!.env.example`
+negation rescues only that exact name — it would have looked committed locally and never
+appeared on GitHub.
+
+### 21:31 — A PATH bug that had been failing quietly
+
+Installing the toolchain exposed it: PATH entries lived in `.zshrc`, which only interactive
+shells read, so scripts, hooks and `ssh host cmd` could not resolve Node at all. `pnpm` and
+`eas` were installed and unreachable. Moved to `.zshenv`.
+
+My first fix was wrong for the same reason — I put the corrected PATH in `.zshrc` too, and only
+caught it because verification ran across all three shell types rather than the convenient one.
+
+### 21:27 — Second machine rediscovered
+
+Its recorded address was stale after a subnet change. Found by scanning for its service ports,
+then confirmed by mDNS name rather than reusing the address recorded for its other OS — which
+you flagged, correctly, as belonging to a different boot.
+
+### 21:21 — Toolchain installed
+
+Four tools missing for the stack. Deliberately not installed: a JDK, and PowerShell, both
+belonging to the superseded project.
+
+### ~21:00 — The project is TRADER, not Sierra-Painting-v1
+
+The largest finding, and it produced no commit. The session opened on a request to work on "the
+Sierra Painting application" against a repository that turned out to be a dead Flutter and
+Firebase codebase on a different account, untouched since November.
 
 The live project is a full rewrite on a different stack under a different owner. Nothing in
 either repository states the relationship — the connection existed only in the maintainer's
