@@ -11,6 +11,20 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  docs:
+    name: Docs guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Every document leans on relative links; a rename silently breaks the
+      # reading path. Uses the runner's preinstalled Node — no install step.
+      - run: node .github/scripts/check-doc-links.mjs
+
+      # CLAUDE.md declares its own sub-100-line ceiling ("Conventions for this
+      # file"); enforce it here so it is a red X rather than a memory.
+      - run: test "$(wc -l < CLAUDE.md)" -lt 100
+
   check:
     name: Typecheck, lint, test
     runs-on: ubuntu-latest

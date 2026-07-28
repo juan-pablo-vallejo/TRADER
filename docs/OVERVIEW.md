@@ -73,7 +73,7 @@ Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Ope
 | `docs/`         | The documents in the reading path below                                                                     |
 | `CLAUDE.md`     | The one-fact-one-home rule this repository is maintained under                                              |
 
-`packages/api/` and `apps/` appear as their phases land; see [ROADMAP.md](ROADMAP.md).
+`apps/` appears as its phase lands; see [ROADMAP.md](ROADMAP.md).
 
 ## Reading path
 
