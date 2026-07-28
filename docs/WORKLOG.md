@@ -18,16 +18,25 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 _The 22:39 entry was written live. Everything below it was reconstructed from commit
 timestamps and session history._
 
-### 22:39 — The doc guards had turned `main` red
+### 22:39 — The doc guards broke lint, and I misreported where
 
-Found while bringing this log current: the commit below broke the `check` job. Its new script
+Found while bringing this log current: the commit below fails the `check` job. Its new script
 uses `console` and `process`, and ESLint had no Node globals declared for `.github/scripts/`,
-so three lines failed `no-undef`. The `docs` job passed, which is why it was not obvious — a
+so three lines fail `no-undef`. The `docs` job passes, which is why it was not obvious — a
 commit adding guards broke the guard already there.
 
-Fixed by declaring those two globals for that path only, rather than adding the `globals`
-package for two names or disabling the rule. Confirmed the fix is narrow: an unused variable in
-that same file still fails lint, so the file is checked rather than exempted.
+Fixed by declaring those two names for that path only, rather than adding the `globals` package
+for two globals or disabling the rule. Confirmed the fix is narrow: an unused variable in the
+same file still fails lint, so the file is checked rather than exempted.
+
+**I reported this as "`main` is red". It was not.** `main` was green throughout, at the commit
+above. I had read a failing run record without checking which branch it belonged to, and
+without noticing my own checkout was on `docs-guards` rather than `main`. The failing run was
+for a commit that is not in main's history.
+
+Twice in one day, then: invented timestamps here, and a branch state asserted rather than
+checked — on the day "verify before asserting" was written into CLAUDE.md as a rule, citing
+earlier instances of the same thing.
 
 ### 22:25 — Doc organization enforced in CI, by a parallel session `c9d8148`
 
