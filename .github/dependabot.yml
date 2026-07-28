@@ -18,6 +18,15 @@ updates:
       - dependency-name: typescript
         update-types: [version-update:semver-major]
 
+      # @types/node must track the Node runtime, not the newest release. We run
+      # Node 24 locally and in CI; types from a later major describe APIs the
+      # runtime does not have, so code type-checks and then fails when it runs.
+      # Dependabot cannot know which Node we use, so it offered 26. Lift this
+      # when the runtime itself moves — CI's node-version and the engines field
+      # are the things to change first.
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+
     groups:
       # One PR per ecosystem-ish cluster rather than per package, so a quiet week
       # produces a handful of reviews instead of thirty.
