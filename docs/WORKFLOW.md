@@ -65,10 +65,11 @@ that prefix means _public_, literally.
 
 - `main` is the working branch. The project is single-maintainer; see
   [CONTRIBUTING.md](../.github/CONTRIBUTING.md).
-- **Code goes through a pull request; docs may go direct.** Changes under `packages/` or
-  `apps/` need a passing CI check before merging — that is what keeps the schema invariants
-  from rotting. Changes confined to `docs/` can be pushed to `main`, because gating a typo fix
-  behind a review round-trip on a one-person repo buys nothing.
+- **A pull request is the default; a direct push is a deliberate exception.** `main` requires a
+  pull request and passing CI, which is what keeps the schema invariants from rotting. Admin
+  bypass is left enabled so a documentation fix need not take a review round-trip on a
+  one-person repo — but bypassing is a choice you make, not the path of least resistance.
+  GitHub cannot scope the rule to code paths only; see [DECISIONS.md](DECISIONS.md).
 - Commits are **SSH-signed** and should verify on GitHub.
 - Imperative subject lines, matching the existing history
   (`Add canonical technical spec and decision log`).

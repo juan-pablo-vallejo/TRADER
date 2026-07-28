@@ -18,6 +18,17 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 _The 22:39 entry was written live. Everything below it was reconstructed from commit
 timestamps and session history._
 
+### 23:05 — A recorded decision that the platform cannot express
+
+Preparing to enable branch protection surfaced that "pull requests for code, direct push for
+docs" is not configurable: GitHub's require-a-pull-request rule has no path filter, and
+rulesets do not support path exclusion. The decision had been recorded as though it were.
+
+Amended to the enforceable shape — require pull requests and CI checks, leave administrator
+bypass enabled — which makes a pull request the default and a direct documentation push a
+deliberate act rather than the easy one. Worth checking before writing a policy down, not
+after.
+
 ### 22:39 — The doc guards broke lint, and I misreported where
 
 Found while bringing this log current: the commit below fails the `check` job. Its new script

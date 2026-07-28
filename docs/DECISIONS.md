@@ -102,10 +102,13 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   and the contractor as employer carries a notice obligation to the crew — Massachusetts
   employee-privacy law covers this directly. That belongs in the pilot scope agreement, not
   only in an app policy.
-- **CI enforcement: pull requests for code, direct push for docs.** Branch protection requires a
-  passing CI check for changes under `packages/` and `apps/`; `docs/` may go direct. Guards the
-  invariants without taxing documentation work on a single-maintainer repo. Recorded in
-  [WORKFLOW.md](WORKFLOW.md), which owns how work happens.
+- **CI enforcement: pull requests are the default path; admin bypass covers documentation.**
+  The intent was pull requests for code and direct pushes for docs, but **GitHub cannot express
+  that** — branch protection has no path filter for the "require a pull request" rule, and
+  rulesets do not support path exclusion. The enforceable shape is: require a pull request and
+  the CI checks, and leave bypassing permitted for administrators. A pull request is then the
+  default for everything, while a documentation fix can still go direct as a deliberate act
+  rather than an accident. Recorded in [WORKFLOW.md](WORKFLOW.md), which owns how work happens.
 - **No public store release is scheduled.** The pilot distributes via TestFlight external
   testing and a Play closed-testing track. The privacy policy still binds at Phase 1, since
   TestFlight external requires the URL, but Apple's App Privacy details and Google's Data Safety
