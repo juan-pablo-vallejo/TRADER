@@ -29,5 +29,18 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // CI helper scripts run under Node directly, so they use `console` and
+    // `process`. Without these declared for this path they lint as undefined —
+    // which is how the commit that added the doc guards turned main red.
+    //
+    // Listed explicitly rather than pulling in the `globals` package: two names
+    // do not justify a dependency, and naming them says what these scripts may
+    // reach for.
+    files: [".github/scripts/**/*.mjs"],
+    languageOptions: {
+      globals: { console: "readonly", process: "readonly" },
+    },
+  },
   prettier,
 );
