@@ -1,6 +1,7 @@
 # Decisions
 
-As of 2026-07-27. Full reasoning lives in [SPEC.md](SPEC.md).
+Current as of 2026-07-29. **Why** each choice was made, and when it changed. _What_ was chosen
+lives in [SPEC.md](SPEC.md); the **rules** those choices imply live in [logic.md](logic.md).
 
 This file is the **single canon** for decisions. Where it and SPEC.md disagree, this file wins
 and SPEC.md is stale.
@@ -103,6 +104,60 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   strong enough alone to carry the battery cost or the privacy obligation that continuous
   location adds on top of the point-in-time capture already disclosed.
 
+### Settled on one-tap attested clock-in (2026-07-29)
+
+- **The rules move to [logic.md](logic.md), and SPEC cites them.** SPEC stated the session
+  machine, the derivations, the conflict policy and the permission matrix narratively across §3,
+  §5 and §6 — and stated some of them twice. One rule was in no proper home at all: "one open
+  session per worker" appeared parenthetically in §6 as "enforced in the API handler", with no
+  test and nowhere to cite. Rules now have permanent identifiers so code and tests can reference
+  them; SPEC keeps the narrative and the reasoning.
+- **Attestation scope is "anything that becomes payroll or money".** Clock in/out, pause/resume,
+  job switch, closeout submission, admin corrections, invoice status. **Material logging is
+  excluded** deliberately: it is high-frequency and low-consequence, and a crew prompted for
+  their face on every bucket of paint learns to resent the prompt — which erodes it everywhere
+  else. The gate is worth having only where the record is worth money.
+- **Face ID rather than a fingerprint, where the platform offers both.** Painters have paint,
+  solvent and tape on their hands all day; Touch ID and Android fingerprint sensors fail on
+  exactly the hands this app is for. The platform APIs abstract the modality, so this is a
+  preference in the prompt rather than a branch in the code — but it is the reason the feature
+  is worth building for this trade specifically.
+- **The check is OS-mediated and the biometric template never reaches TRADER.** This is a
+  liability decision as much as a technical one: handling biometric identifiers directly would
+  pull the project into Illinois BIPA and its lookalikes, with written-consent, retention-schedule
+  and private-right-of-action consequences. Asking the OS "was this the enrolled owner?" and
+  storing only the yes leaves the template on the device and out of scope. RI and MA do not
+  currently have BIPA equivalents, but a pilot is not the last customer.
+- **Attestation never blocks a labor event; a web approval fails closed.** These point opposite
+  ways on purpose. A worker recording their own work must not be blocked by a failed or
+  unenrolled sensor, because a worker who cannot clock in cannot be paid — and unpaid work is a
+  wage-law problem, not a UX one. So the level achieved is recorded honestly (`biometric`,
+  `device_credential`, `none`) and the event is written regardless, exactly as location behaves
+  in SPEC §3. An admin altering someone else's submitted record may be blocked freely: the cost
+  is a delay on something that is not urgent. The asymmetry follows the consequence, not the
+  platform. Recording `none` rather than silently accepting it is also what makes a pattern of
+  avoidance visible.
+- **The web app pushes an approval to the phone rather than being exempt.** The scope rule above
+  is uniform, and web is where the highest-consequence actions live — corrections to submitted
+  labor and invoice status. Exempting it would have gated the cheap actions and left the
+  expensive ones open. Passkeys were the alternative and are not chosen: they would authenticate
+  the browser session rather than confirm a specific act, and they add a second enrolment path
+  for the same person. Pushing to the phone reuses the enrolment, the app and the Expo push
+  channel that already exist.
+- **Attestation strength is staged: local check at Phase 1, signed challenges at Phase 3.** The
+  realistic threat is a colleague using someone else's phone, and a local biometric check already
+  defeats it. What a signature additionally defeats is a modified client, which needs a rooted
+  device and intent — and buying that defence early costs key enrolment, recovery on a smashed
+  phone, and re-enrolment every time iOS invalidates keys because Face ID enrolment changed. The
+  trigger for upgrading is not a date but a dependency: **web approval needs server-issued
+  challenges anyway**, which is most of a device-key design, so the increment is small once
+  Phase 3 arrives. Events carry the attestation record from Phase 1 so the upgrade is additive.
+- **The geofence prompt _is_ the clock-in tap, not a step before it.** The two were designed
+  separately and merge cleanly: the notification a worker acts on is the clock-in button. This is
+  what keeps advisory detection free when it fires wrongly — dismissing a prompt costs one
+  gesture that was going to be spent anyway — and it means the spike needs no confirmation UI of
+  its own.
+
 ### Settled during the compliance review (2026-07-27)
 
 - **"Delete my account" means deactivate and anonymize, not erase.** Both app stores require
@@ -181,15 +236,17 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
 The pilot goes live at the end of Phase 1, so anything that used to read "before pilot" is a
 Phase 1 deadline. [ROADMAP.md](ROADMAP.md) shows each of these as a gate on the phase it blocks.
 
-| Decision                                                       | Decide                       |
-| -------------------------------------------------------------- | ---------------------------- |
-| Offline auth grace policy (Clerk expiry in a dead zone)        | **start of Phase 1**         |
-| Sync protocol shape: pull cursor, batch size, backoff curve    | **start of Phase 1**         |
-| Pay-rate history: effective-dated rates vs snapshot-at-session | before Phase 2               |
-| File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2    | Phase 2                      |
-| Geocoding: Mapbox vs Google (accuracy test on local addresses) | Phase 2                      |
-| Closeout actor: foreman-only vs worker-own-day                 | before Phase 3               |
-| Language: English-first (i18n from day 1) vs Spanish-first     | **start of Phase 1**         |
-| Pilot success criteria (single canonical set)                  | before Phase 1 ends          |
-| ToS and Privacy Policy                                         | before Phase 1 ends          |
-| Pricing model and unit (per-company / per-user / per-crew)     | before first paying customer |
+| Decision                                                                                                                         | Decide                       |
+| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Offline auth grace policy (Clerk expiry in a dead zone)                                                                          | **start of Phase 1**         |
+| Sync protocol shape: pull cursor, batch size, backoff curve                                                                      | **start of Phase 1**         |
+| Clock-skew bound on `client_timestamp`, and whether a breach is clamped, flagged or rejected ([logic.md](logic.md) `CONFLICT-4`) | **start of Phase 1**         |
+| Web approval when an admin has no phone ([logic.md](logic.md) `ATTEST-10`)                                                       | before Phase 3               |
+| Pay-rate history: effective-dated rates vs snapshot-at-session                                                                   | before Phase 2               |
+| File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2                                                                      | Phase 2                      |
+| Geocoding: Mapbox vs Google (accuracy test on local addresses)                                                                   | Phase 2                      |
+| Closeout actor: foreman-only vs worker-own-day                                                                                   | before Phase 3               |
+| Language: English-first (i18n from day 1) vs Spanish-first                                                                       | **start of Phase 1**         |
+| Pilot success criteria (single canonical set)                                                                                    | before Phase 1 ends          |
+| ToS and Privacy Policy                                                                                                           | before Phase 1 ends          |
+| Pricing model and unit (per-company / per-user / per-crew)                                                                       | before first paying customer |

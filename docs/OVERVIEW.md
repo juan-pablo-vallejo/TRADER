@@ -80,12 +80,14 @@ Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Ope
 1. **This file** — orientation.
 2. **[SPEC.md](SPEC.md)** — what the system is. Read §3 (offline and sync) and §4 (data
    model) closely; they carry the design.
-3. **[ROADMAP.md](ROADMAP.md)** — where it is going, what is done, and what each phase is
+3. **[logic.md](logic.md)** — the numbered rules the system must obey. Read this before
+   writing behaviour; each rule has a permanent identifier that code and tests cite.
+4. **[ROADMAP.md](ROADMAP.md)** — where it is going, what is done, and what each phase is
    gated on.
-4. **[DECISIONS.md](DECISIONS.md)** — why. Read this before proposing a change; most obvious
+5. **[DECISIONS.md](DECISIONS.md)** — why. Read this before proposing a change; most obvious
    suggestions have already been considered and recorded, including the ones that were
    reversed.
-5. **[packages/db/README.md](../packages/db/README.md)** — how to run it locally.
+6. **[packages/db/README.md](../packages/db/README.md)** — how to run it locally.
 
 [WORKFLOW.md](WORKFLOW.md) and [ACCOUNTS.md](ACCOUNTS.md) are operational — machine setup and
 external services. Skip them until you need to run or deploy something.

@@ -22,6 +22,7 @@ even accurately — creates a second copy that will drift.
 | -------------------------------------------------------------------- | --------------------------------------------------- |
 | Orientation for a new reader: system diagram, reading path, repo map | `docs/OVERVIEW.md`                                  |
 | What the system **is**: architecture, stack, data model, flows       | `docs/SPEC.md`                                      |
+| The numbered rules it must obey, and their permanent identifiers     | `docs/logic.md`                                     |
 | The build path: phases, status, gates, distribution                  | `docs/ROADMAP.md`                                   |
 | **Why** it is that way, and when it changed                          | `docs/DECISIONS.md`                                 |
 | What happened, including work that produced no commit                | `docs/WORKLOG.md`                                   |
