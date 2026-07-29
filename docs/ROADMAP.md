@@ -56,6 +56,12 @@ That keeps the labor ledger human-initiated and costs nothing when detection is 
 suggestion is dismissed and leaves no trace. See [DECISIONS.md](DECISIONS.md) for why an
 authoritative version would collide with three settled constraints.
 
+**The prompt _is_ the tap.** Confirmation is not a step added on top of the ordinary clock-in —
+it is the same gesture, arriving unprompted. A worker who is offered the prompt taps it and
+passes Face ID; a worker who is not opens the app and does exactly the same thing. This is why
+advisory detection costs the worker nothing even when it fires wrongly, and it means the spike
+does not need to design a confirmation UI of its own.
+
 **What it tests.** Device-side region monitoring on both iOS and Android, at a real address,
 over consecutive days. Not a server feature: neither platform lets a server ask where devices
 are, so detection happens on the phone and reports upward.
@@ -81,6 +87,12 @@ Local store on `expo-sqlite`, append-only event model, client UUIDs, derived-ses
 computation, the server-authoritative conflict handler, and **the sync layer itself** —
 outbox push, pull, retry/backoff, visible per-record status, device-side migrations.
 
+**One-tap attested clock-in ships here too:** tap → Face ID → clocked in. That means the
+biometric gate on the mobile actions that become payroll, an attestation column on
+`work_session_events`, and the recorded level flowing through sync. The check is local and
+OS-mediated, so it needs no account and works with no signal. Rules are
+[logic.md](logic.md) `ATTEST-1`–`ATTEST-4`; the web half waits for Phase 3.
+
 Sync services exist — PowerSync and ElectricSQL among them — and building rather than buying
 is a deliberate choice recorded in [DECISIONS.md](DECISIONS.md). The consequence for
 planning: estimate this as build, not wiring.
@@ -91,17 +103,17 @@ sees correct, deduplicated hours per job.
 This phase carries the most risk in the project. Everything later is additive on a working
 sync core; if the core is wrong, everything above it inherits the fault.
 
-| Gate                                              | Due                              | Why it blocks                                                                                |
-| ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
-| Offline auth grace policy                         | **At start**                     | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path    |
-| Sync protocol shape — cursor, batch size, backoff | **At start**                     | The protocol _is_ the phase                                                                  |
-| Language: English-first vs Spanish-first          | **At start**                     | i18n from day 1 is cheap; retrofitting is not                                                |
-| Data retention policy                             | **Before the policy is drafted** | The privacy policy cannot be written without it, and statute largely dictates the answer     |
-| Account deletion flow                             | By pilot launch                  | A store requirement, not a nicety — see the compliance note below                            |
-| ToS and Privacy Policy                            | By pilot launch                  | Real users, real payroll data                                                                |
-| Apple App Privacy details · Play Data Safety form | By pilot launch                  | Separate mandatory forms, one per store. Both must declare location and what Sentry collects |
-| Sentry PII scrubbing configured                   | By pilot launch                  | Crash breadcrumbs capture phone numbers and location unless told not to                      |
-| Pilot success criteria                            | By pilot launch                  | You cannot judge a pilot you never defined success for                                       |
+| Gate                                              | Due                              | Why it blocks                                                                                                        |
+| ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Offline auth grace policy                         | **At start**                     | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path                            |
+| Sync protocol shape — cursor, batch size, backoff | **At start**                     | The protocol _is_ the phase. Includes the clock-skew bound on `client_timestamp` ([logic.md](logic.md) `CONFLICT-4`) |
+| Language: English-first vs Spanish-first          | **At start**                     | i18n from day 1 is cheap; retrofitting is not                                                                        |
+| Data retention policy                             | **Before the policy is drafted** | The privacy policy cannot be written without it, and statute largely dictates the answer                             |
+| Account deletion flow                             | By pilot launch                  | A store requirement, not a nicety — see the compliance note below                                                    |
+| ToS and Privacy Policy                            | By pilot launch                  | Real users, real payroll data                                                                                        |
+| Apple App Privacy details · Play Data Safety form | By pilot launch                  | Separate mandatory forms, one per store. Both must declare location and what Sentry collects                         |
+| Sentry PII scrubbing configured                   | By pilot launch                  | Crash breadcrumbs capture phone numbers and location unless told not to                                              |
+| Pilot success criteria                            | By pilot launch                  | You cannot judge a pilot you never defined success for                                                               |
 
 **Needs:** Apple Developer · Google Play · domain · **Neon Launch billing begins here.**
 Jobs and roster are hand-seeded until Phase 2.
@@ -167,7 +179,25 @@ job-cost-to-date in cents.
 **Done when** a foreman closes out a day, it locks, the office sees it, and a correction is
 issued without mutating history.
 
-**Gates:** closeout actor — foreman-only vs worker-own-day.
+**Gates:** closeout actor — foreman-only vs worker-own-day · a documented alternative for an
+admin with no phone, since web approval assumes one ([logic.md](logic.md) `ATTEST-10`).
+
+### Web approval: the office half of one-tap
+
+Corrections arrive in this phase, so this is where the web app gets attestation. The web has no
+biometric of its own, so a high-consequence web action **pushes an approval to the actor's
+enrolled phone** — the prompt names the correction in plain terms, the admin passes Face ID, and
+the web action completes. Single-use, short-lived, and **fails closed**: if the push is not
+answered, the correction does not happen. Rules are [logic.md](logic.md) `ATTEST-5`–`ATTEST-10`.
+
+This phase is also the upgrade point for attestation strength. Web approval requires
+server-issued challenges regardless, which is most of a device-key design already — so the phone
+starts signing challenges with a Secure Enclave key here, and mobile clock-ins inherit it. Phase
+1 deliberately ships the weaker local check; [DECISIONS.md](DECISIONS.md) records why.
+
+Expo push moves onto the critical path here. It is already in the stack for worker
+notifications, but an approval that silently fails to deliver is a stuck admin rather than a
+missed notification — so delivery failure needs a visible, honest state.
 
 ## Phase 4 — Invoices
 

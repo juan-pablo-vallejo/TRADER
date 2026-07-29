@@ -15,6 +15,40 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-29
 
+### 01:19 — One-tap attested clock-in, and the rules get a home
+
+Tap → Face ID → clocked in, recorded across spec, roadmap and decisions; and a new
+`docs/logic.md` that owns the numbered rules the system must obey. Documentation only, no code.
+
+**The extraction was the valuable part.** Pulling rules out of narrative prose into numbered
+form exposed things prose had been hiding. "One open session per worker" existed only as a
+parenthesis in §6 — "enforced in the API handler" — with no test, no citation and nowhere to
+point. It is now `SESSION-1`. And §3's conflict rule promised that server receipt acts as a
+"sanity bound" on client timestamps without anywhere defining the tolerance, or what happens
+when it is breached; that read as settled for months and was not. It is now `CONFLICT-4`,
+carrying an explicit open-parameter marker, and a row in the Open table due at the start of
+Phase 1 alongside the sync protocol it belongs to.
+
+Two rules point in opposite directions on purpose, which is worth recording because it looks
+like a contradiction. A failed biometric never blocks a worker clocking in — a worker who cannot
+clock in cannot be paid, which is a wage-law problem rather than a UX one — so the level
+achieved is recorded honestly and the event is written anyway. A web approval, by contrast,
+fails closed: an admin altering someone else's submitted record can be made to wait, because a
+correction is not urgent. The asymmetry follows the consequence, not the platform.
+
+**A recommendation reversed mid-conversation.** I had settled on the weaker attestation — a local
+biometric check, no signing — on the grounds that it already defeats the realistic threat of
+someone using a colleague's phone, and that key lifecycle is real burden for a solo maintainer.
+Then the requirement arrived that the web app push a Face ID approval to the phone. That flow is
+inherently challenge–response, which is most of a device-key design already, so the increment to
+real signing collapses once it is built. Staged instead: local check at Phase 1, signed
+challenges at Phase 3 when web approval needs the infrastructure regardless.
+
+Smaller finds along the way: SPEC stated the sync-queue states twice, once in §3 and again
+inside §6's clock-in flow; and DECISIONS' own header dated itself 07-27 while carrying 07-29
+entries, and told the reader that "full reasoning lives in SPEC.md" — pointing away from the one
+thing that file exists to own.
+
 ### 00:50 — Geofenced clock-in recorded as a timeboxed spike
 
 An idea arrived from outside the project: detect arrival at a jobsite and clock the worker in

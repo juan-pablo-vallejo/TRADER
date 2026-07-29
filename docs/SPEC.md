@@ -1,6 +1,6 @@
 # TRADER — Technical Specification
 
-Canonical as of 2026-07-27. This document states what the system **is**; _why_ each choice was made, and when it changed, lives in [DECISIONS.md](DECISIONS.md). Revisions are listed at the end.
+Canonical as of 2026-07-29. This document states what the system **is**; _why_ each choice was made, and when it changed, lives in [DECISIONS.md](DECISIONS.md). The **numbered rules** the system must obey — session state machine, derivations, conflict resolution, permissions, attestation — live in [logic.md](logic.md) and are cited here rather than restated. Revisions are listed at the end.
 
 ## 1. Architecture
 
@@ -37,14 +37,15 @@ Deliberate maintainability-over-scale choices: monolith over services; managed P
 Governing principle: **the field client is offline-first and the server is authoritative.** A foreman in a basement with no signal must be able to clock in, switch jobs, log materials, and close out — and have all of it sync correctly hours later without loss or duplication.
 
 - **Local-first writes.** Every field action writes immediately to on-device SQLite (`expo-sqlite`, via Drizzle); the UI updates from local state. The network is never on the critical path of a user action.
-- **Client-generated UUIDs + idempotency.** Every client-created record gets a UUIDv7 (time-sortable) generated on the device. The server upserts by that UUID: a duplicate insert is a no-op returning success. A flaky connection can retry the same write ten times; the server records it once.
+- **Client-generated UUIDs + idempotency.** Every client-created record gets a UUIDv7 (time-sortable) generated on the device, and the server upserts by it — so a flaky connection can retry the same write ten times and the server records it once ([logic.md](logic.md) `CONFLICT-1`).
 - **Append-only event log for labor.** Time tracking is an immutable stream of events — `started`, `paused`, `resumed`, `ended`, `voided` — each stamped with a client timestamp (when it happened on the device) and a server timestamp (when it arrived). A worker's current session is a derived view computed by folding the events, never a mutable row. Events can arrive late, out of order, and in batches; the server still reconstructs the correct timeline.
-- **`work_date` is derived, not entered.** Computed server-side from the clock-in timestamp in the company timezone (`companies.timezone`). Never user-editable.
+- **`work_date` is derived, not entered.** Computed server-side from the clock-in timestamp in the company timezone (`companies.timezone`). Never user-editable — [logic.md](logic.md) `DERIVE-1`, and `DERIVE-2` for shifts crossing midnight.
 - **Device location is best-effort and never blocks.** Each event may carry the device's position, captured on a short timeout. If no fix arrives — and in the basement above, none will — the fields stay null and the event is written regardless. Location is evidence when present, never a precondition for recording work.
 - **Automation may propose; only a person's action creates a record.** Any detection — a geofence, a schedule, anything else — may suggest a clock-in or clock-out, but the worker's confirmation is what writes the event. The labor ledger stays human-initiated, which is what keeps `initiator_user_id` meaningful and keeps a wrong guess from becoming payroll.
-- **Sync queue with explicit states.** Each local record carries `pending → syncing → synced` (or `failed → retry`). The UI shows this honestly — a worker can see whether the day's closeout reached the office or is still on the phone. Sync runs on reconnect, on app foreground, and on a timer, oldest-first.
-- **Conflict resolution: server-authoritative, latest action wins.** Because labor is append-only, true conflicts are rare by construction. When they occur (e.g., two devices both end the same session), the latest legitimate action wins, **ordered by client event time (`client_timestamp`), with server receipt order as tiebreaker and sanity bound** — an offline 3pm clock-out that syncs at 6pm beats a 2pm event. The losing device snaps to server truth on next sync. Conflict policy lives at the API boundary in one readable handler — deliberately not a database constraint and not a multi-layer locking scheme. This is the one piece of logic worth hand-writing and testing hard.
-- **Immutability on submit.** A submitted day closeout is locked. Corrections are new correcting events, never edits — the historical record is always an accurate account of what was recorded when.
+- **A person's action is attested, and attestation never blocks it.** Anything that becomes payroll or money — clocking in, switching jobs, submitting a closeout, an admin correction — is confirmed with the device's own biometrics, so the record carries evidence of who was present. The check is OS-mediated and the biometric template never reaches TRADER. Like location above, it is evidence when present rather than a precondition: a failed or unavailable check records a weaker attestation level and writes the event anyway, because a worker who cannot clock in cannot be paid. The web app has no biometric of its own and pushes an approval to the actor's phone instead. Rules in [logic.md](logic.md) `ATTEST-1`–`ATTEST-12`.
+- **Sync queue with explicit states.** The UI shows delivery honestly — a worker can see whether the day's closeout reached the office or is still sitting on the phone. The states and the sync triggers are [logic.md](logic.md) `CONFLICT-6`.
+- **Conflict resolution: server-authoritative, latest action wins.** Because labor is append-only, true conflicts are rare by construction. Conflict policy lives at the API boundary in one readable handler — deliberately not a database constraint and not a multi-layer locking scheme. This is the one piece of logic worth hand-writing and testing hard; its rules are [logic.md](logic.md) `CONFLICT-1`–`CONFLICT-7`.
+- **Immutability on submit.** A submitted day closeout is locked. Corrections are new correcting events, never edits — the historical record is always an accurate account of what was recorded when ([logic.md](logic.md) `CONFLICT-7`).
 
 ## 4. Data Model
 
@@ -75,19 +76,23 @@ Adding payments later is new tables referencing existing ones — no restructuri
 
 Three roles, enforced server-side at the API layer (client UI also hides what a role can't do, but the server is the gate).
 
-- **Worker** — clock self in/out, switch jobs, pause/resume, log materials on assigned jobs, view own sessions and assigned jobs. Cannot see others' pay, edit submitted records, or touch invoices/customers/roster.
-- **Foreman** — everything a worker can do, plus: view and close out the day for their crew's jobs, see crew labor on their jobs, log materials on any of their jobs. Cannot manage roster, pay rates, invoices, or customers (read-only on their jobs' customers).
-- **Admin** — full access: roster CRUD, pay rates, customers, jobs, invoices, the reconciliation dashboard, and correcting entries against submitted labor.
+- **Worker** — the field. Records their own labor and materials, sees their own history and the jobs their crew is assigned.
+- **Foreman** — a worker who also runs a crew's day: crew labor on their own jobs, and the closeout.
+- **Admin** — the office. Roster, pay, customers, jobs, invoices, reconciliation, and corrections.
 
-The boundary that matters most: **no role can mutate a submitted labor record — including admins.** Corrections are always new append-only events. This is what keeps payroll history trustworthy.
+**The capability matrix is [logic.md](logic.md) `PERM-1`**, which is the enforceable statement of the above.
+
+The boundary that matters most: **no role can mutate a submitted labor record — including admins.** Corrections are always new append-only events ([logic.md](logic.md) `PERM-2`). This is what keeps payroll history trustworthy.
 
 ## 6. Core Flows
 
-**Clock in/out & hours.** Worker opens app → sees today's assigned jobs (local DB, works offline) → taps clock-in → `started` event written locally with client UUID and timestamp; UI immediately shows "on session." Mid-day switch → `ended` on job A, `started` on job B (one open session per worker, enforced in the API handler). End of day → `ended`. Events queue locally as `pending`; on reconnect the queue flushes oldest-first, the server upserts idempotently, stamps server timestamps, orders events, and the device pulls back server truth. Derived sessions and hours are computed server-side from the event fold.
+**Clock in/out & hours.** Worker opens app → sees today's assigned jobs (local DB, works offline) → taps clock-in → **Face ID** → `started` event written locally with client UUID, timestamp and attestation level; UI immediately shows "on session." Three steps, no typing, and the biometric runs on-device so it works with no signal. Mid-day switch → `ended` on job A, `started` on job B ([logic.md](logic.md) `SESSION-1`, `SESSION-5`). End of day → `ended`. Events queue locally and flush on reconnect ([logic.md](logic.md) `CONFLICT-6`); the server stamps its own timestamps, orders what arrives, and the device pulls back server truth. Sessions and hours are then derived from the event fold — never stored as editable numbers ([logic.md](logic.md) `DERIVE-3`–`DERIVE-6`).
+
+Where arrival detection is running, the geofence prompt **is** this tap rather than a step before it: the notification the worker acts on is the clock-in button, so a proposed clock-in costs the same single gesture as an unprompted one.
 
 **Materials.** Worker or foreman on a job → add material (description, quantity, unit, optional receipt photo) → written locally with a UUID; the record syncs first, the photo uploads to object storage when bandwidth allows — the record is never blocked on the upload. `unit_cost_cents` may be filled by admin later.
 
-**Day closeout.** Foreman (or worker for their own day — final actor ruling due before Phase 3) reviews the day's sessions and materials for a job → sets job status/note → submits. On submit the closeout locks; any later change is an admin correcting event. The office dashboard reflects the closeout as received.
+**Day closeout.** Foreman (or worker for their own day — final actor ruling due before Phase 3) reviews the day's sessions and materials for a job → sets job status/note → **Face ID** → submits. On submit the closeout locks; any later change is an admin correcting event. The office dashboard reflects the closeout as received.
 
 **Invoices.** Admin (web) → create invoice → attach customer + optional job → add line items manually or pulled from the job's labor and materials costs → totals computed in cents → draft → PDF to object storage → mark sent. When the customer pays by check/cash, admin marks it paid manually. When the payments phase arrives, a payment row attaches to this exact invoice and flips its status automatically.
 
@@ -114,6 +119,10 @@ The heading is kept so §8 below and the references to it from other files stay 
 
 The body above always states current truth. Rationale for each change is in [DECISIONS.md](DECISIONS.md).
 
+- **2026-07-29 (logic pass)** — The numbered rules move to [logic.md](logic.md), which now owns
+  them; §3, §5 and §6 cite rather than restate. §3 gains the attestation principle and §6 the
+  Face ID step in the clock-in and closeout flows. §5's role bullets shrink to what each role
+  _is_, with the capability matrix now `PERM-1`.
 - **2026-07-27 (Phase 0)** — Offline layer: WatermelonDB → Drizzle on `expo-sqlite`; the sync
   engine WatermelonDB would have provided is now ours to build (§2, §3, §7, §8). Hosting:
   Railway/Render → the tRPC API runs inside the Next.js deployment on Vercel, removing the
