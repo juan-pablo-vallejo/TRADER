@@ -6,8 +6,8 @@ pilot scale (~30 users), and whether we have it.
 _Why_ each service was chosen → [SPEC.md §2](SPEC.md). _Variable names_ → `.env.example`.
 This file owns only account and provisioning state.
 
-Costs verified 2026-07-27. Providers change pricing; re-check anything load-bearing before
-relying on it.
+Costs verified 2026-07-29 against vendor pricing pages, not summaries. Providers change pricing;
+re-check anything load-bearing before relying on it.
 
 ## Have now
 
@@ -17,13 +17,13 @@ relying on it.
 
 ## Phase 0 — blocking the current phase
 
-| Service        | Used for               | Cost at pilot scale                                                                                                                         | Have it |
-| -------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| **Neon**       | Postgres               | Free to start; **Launch from Phase 1** — usage-based, no monthly minimum. See below                                                         | ☐       |
-| **Clerk**      | Auth (phone-based)     | Free to 50,000 monthly retained users. **SMS OTPs are metered separately** — small at 30 users, but not zero                                | ☐       |
-| **Vercel**     | Web app + the tRPC API | **$20/mo (Pro).** Hobby forbids commercial use, which includes pre-revenue company work                                                     | ☐       |
-| **Sentry**     | Error tracking         | Free tier; confirm limits at signup                                                                                                         | ☐       |
-| **Expo / EAS** | Mobile builds          | Free = **15 iOS + 15 Android builds/month**, lower-priority queue, 45-minute timeout. **Local CLI builds are unlimited** — the relief valve | ☐       |
+| Service        | Used for               | Cost at pilot scale                                                                                                                                                                                  | Have it |
+| -------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **Neon**       | Postgres               | Free to start; **Launch from Phase 1** — usage-based, no monthly minimum. See below                                                                                                                  | ☐       |
+| **Clerk**      | Auth (phone-based)     | **Pro, $25/mo, from pilot** — the free plan lists "SMS codes: No", so phone sign-in is not available on it. Plus $0.01/SMS. Free development instances do support phone auth, capped at 20 SMS/month | ☐       |
+| **Vercel**     | Web app + the tRPC API | **$20/mo (Pro).** Hobby forbids commercial use, which includes pre-revenue company work                                                                                                              | ☐       |
+| **Sentry**     | Error tracking         | Free tier; confirm limits at signup                                                                                                                                                                  | ☐       |
+| **Expo / EAS** | Mobile builds          | Free = **15 iOS + 15 Android builds/month**, lower-priority queue, 45-minute timeout. **Local CLI builds are unlimited** — the relief valve                                                          | ☐       |
 
 ### Why Neon Launch rather than Free
 
@@ -94,12 +94,15 @@ customer SMS left v1.
 
 ## Running cost
 
-**$20/month fixed** once Phase 0 is live — Vercel Pro is the only fixed subscription. Neon
-Launch adds usage-based cost from Phase 1, expected in the single-digit to low-teens dollars
-per month at this scale, with no minimum.
+**$20/month** while building — Vercel Pro, the only subscription Phase 0 requires. Clerk's free
+development instance covers phone auth until real workers sign in.
+
+**~$45/month fixed from pilot** — Vercel Pro $20 plus Clerk Pro $25, since phone sign-in is not
+available on Clerk's free plan. Neon Launch adds usage-based cost with no minimum, expected in
+the single-digit to low-teens dollars, and SMS runs $0.01 a message.
 
 First-year one-offs total **~$139**: Apple $99, Google Play $25, domain ~$15. Everything else
-sits inside a free tier at this scale, though Clerk meters SMS one-time-passcodes separately.
+sits inside a free tier at this scale.
 [SPEC.md](SPEC.md) §8 tracks cost creep as a standing risk.
 
 ## Dropped

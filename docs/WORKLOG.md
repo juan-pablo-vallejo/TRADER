@@ -13,6 +13,49 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ---
 
+## 2026-07-29
+
+### 00:50 — Geofenced clock-in recorded as a timeboxed spike
+
+An idea arrived from outside the project: detect arrival at a jobsite and clock the worker in
+automatically. Recorded in the roadmap and spec; nothing built.
+
+Checking it against what already exists did most of the work. An authoritative version collides
+with three settled constraints — `initiator_user_id` is `NOT NULL` and names the human who
+caused each event, labor history is append-only so a false clock-in would be permanent, and §3
+holds that location never blocks a clock-in, which making it the trigger would invert. The
+advisory shape collides with none of them, needs no schema change, and costs nothing when
+detection is wrong.
+
+Also corrected a live error: `ACCOUNTS.md` still said Clerk was free with metered SMS, and put
+fixed cost at $20/month. Clerk's own pricing lists "SMS codes: No" on the free plan — phone
+sign-in needs Pro at $25. The correction had been planned the previous day, then the
+conversation moved to re-evaluating the stack and it was never committed. Found only because
+this change touched the neighbouring file.
+
+---
+
+## 2026-07-28
+
+_No commits this day and no timestamps captured, so the entry carries none. Times are not
+guessed here — an earlier pair of invented ones is recorded below as a correction._
+
+### Clerk's free tier does not do SMS — found while writing a setup guide
+
+Researching an account-creation walkthrough surfaced that phone sign-in, a settled product
+decision, is unavailable on the plan the project had assumed. Verified against Clerk's pricing
+page rather than the aggregator articles, which were vaguer and in one case wrong.
+
+The finding prompted a full re-examination of the services stack, and a spec-verification report
+covering twelve findings. Neither produced a commit; the report lives outside the repository.
+
+One near miss recorded there: several 2026-dated articles state Drizzle ORM reached a stable
+1.0. The npm registry disagrees — `latest` resolves to 0.45.2, there are no stable 1.x releases,
+and the 1.0 line sits at rc.4 after 315 prereleases. The pin was already correct, but it had been
+chosen before anyone checked.
+
+---
+
 ## 2026-07-27
 
 _The 22:39 entry was written live. Everything below it was reconstructed from commit

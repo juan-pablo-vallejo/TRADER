@@ -19,12 +19,14 @@ web app, Expo for mobile, Sentry and Vercel to deploy.
 ## How phases work
 
 Each phase is independently shippable and usable on a real job. Ship phase N before building
-N+1. **Planning horizon: 13–20 weeks solo** — the nominal 10 weeks did not survive
-adversarial review. The ranges below allocate that band; they are effort, not dates.
+N+1. **Planning horizon: 13–20 weeks solo**, plus a 3–5 day spike that may cost nothing — it
+needs no accounts, so it can run while Phase 0 waits on signups. The nominal 10 weeks did not
+survive adversarial review. The ranges below allocate that band; they are effort, not dates.
 
 | Phase                             | Delivers                                   | Effort        | Status          |
 | --------------------------------- | ------------------------------------------ | ------------- | --------------- |
 | **0 — Foundation**                | Monorepo, schema, auth, one deployed stack | 2–3 wks       | **In progress** |
+| **Spike — geofenced clock-in**    | Whether battery cost kills auto-detection  | 3–5 days      | Not started     |
 | **1 — Offline clock in/out**      | The sync core, and **the pilot goes live** | 4–7 wks       | Not started     |
 | **2 — Jobs, roster, materials**   | Self-service setup, materials with photos  | 3–4 wks       | Not started     |
 | **3 — Closeout & reconciliation** | Day lock, corrections, job cost to date    | 2–3 wks       | Not started     |
@@ -42,6 +44,36 @@ Neon database, Clerk wired, one deployed backend, Sentry on.
 stack.
 
 **Needs:** Neon · Clerk · Vercel · Sentry · Expo. **Gates:** none outstanding.
+
+## Spike — geofenced clock-in
+
+Can arriving at a jobsite propose a clock-in, rather than the worker remembering to tap? Three
+motivations in equal measure: convenience for the worker, evidence for the contractor, and
+fewer corrections for the office.
+
+**Advisory only.** Detection proposes; the worker confirms; the worker's tap writes the event.
+That keeps the labor ledger human-initiated and costs nothing when detection is wrong — a bad
+suggestion is dismissed and leaves no trace. See [DECISIONS.md](DECISIONS.md) for why an
+authoritative version would collide with three settled constraints.
+
+**What it tests.** Device-side region monitoring on both iOS and Android, at a real address,
+over consecutive days. Not a server feature: neither platform lets a server ask where devices
+are, so detection happens on the phone and reports upward.
+
+**What it is not.** Throwaway code. No schema change, no server work, no production path. Three
+to five days, then a decision.
+
+**The exit rule: battery cost decides.** Detection reliability is probably solvable with enough
+effort; a crew disabling background location to save their phones is not. If the drain is bad,
+the idea is shelved regardless of how well it detects.
+
+**A limitation to respect when reading the result.** Three days on two handsets cannot tell you
+whether a crew would turn it off — only the pilot can, on phones their owners actually care
+about. The evidence is asymmetric: a bad battery reading is strong evidence against, a clean one
+is weak evidence for. Do not promote this to a feature on a clean reading alone.
+
+Radius and whether the geofence is per-job or global are deliberately unset. The spike exists to
+inform them rather than assume them.
 
 ## Phase 1 — Offline clock in/out — _and the pilot_
 

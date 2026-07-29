@@ -81,6 +81,28 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   Android consideration is a count, not a deadline — 12+ crew continuously opted in clears the
   production gate as a side effect; fewer means padding with outside testers later.
 
+### Settled on the geofenced clock-in idea (2026-07-29)
+
+- **Any arrival detection is advisory: it proposes, the worker confirms.** An authoritative
+  version — where the geofence writes the labor event — collides with three settled constraints,
+  and advisory collides with none. `initiator_user_id` is `NOT NULL` and names the human who
+  caused each event; an automated event has no such human, so authoritative would need a system
+  actor in the schema. Labor history is append-only by trigger, so a false clock-in would be a
+  permanent payroll record correctable only through a workflow that does not arrive until
+  Phase 3. And §3 holds that location never blocks a clock-in; making it the trigger inverts
+  that, so no GPS fix would mean no clock-in — in the basement the product exists to work in.
+  Advisory keeps the ledger human-initiated and costs nothing when detection is wrong. The
+  general principle is recorded in [SPEC.md](SPEC.md) §3.
+- **It runs as a timeboxed spike before Phase 1, and battery cost decides it.** Three to five
+  days of throwaway code, no schema and no server work; see [ROADMAP.md](ROADMAP.md). Detection
+  reliability is probably solvable with effort, whereas a crew disabling background location to
+  save their phones is not, so drain is the gate. The spike needs no accounts, so it can run
+  while Phase 0 waits on signups.
+- **No single motivation justifies it.** Convenience for the worker, evidence for the
+  contractor, and fewer corrections for the office each contribute roughly equally; none is
+  strong enough alone to carry the battery cost or the privacy obligation that continuous
+  location adds on top of the point-in-time capture already disclosed.
+
 ### Settled during the compliance review (2026-07-27)
 
 - **"Delete my account" means deactivate and anonymize, not erase.** Both app stores require
