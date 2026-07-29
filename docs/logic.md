@@ -17,6 +17,46 @@ an **open parameter** name a value that is deliberately undecided; the decision 
 
 ---
 
+## AUTH — getting in
+
+**`[unbuilt]`** — Clerk is chosen but not yet wired, and no invite or enrolment code exists.
+
+**AUTH-1.** **Accounts are created by invitation only.** There is no public sign-up. A payroll
+system with an open front door is a payroll system strangers can appear in.
+
+**AUTH-2.** The one exception is the **first admin of a company**, provisioned by seed, because
+nobody exists yet to invite them.
+
+**AUTH-3.** An invitation is issued by an admin to a **phone number**, and is **single-use and
+expiring**.
+
+**AUTH-4.** Accepting an invitation **verifies the phone number once**, then enrols a **passkey
+guarded by the device's biometrics**. This is what "sign up with Face ID" means in practice:
+the device generates a keypair and Face ID guards the private half.
+
+**AUTH-5.** After enrolment, **sign-in is passkey-only** — no SMS code on the happy path.
+
+**AUTH-6.** The phone number is the **recovery channel**. Recovery re-verifies the phone and
+enrols a **new** passkey; the previous credential is revoked rather than left live. A crew breaks
+phones, so this path is ordinary rather than exceptional and must be self-service.
+
+**AUTH-7.** Passkeys require **iOS 16+ or Android 9+**. A device below that cannot hold one, and
+those users sign in by phone OTP instead. **This is a supported state, not an error** — the crew
+does not get to choose their handset's age.
+
+**AUTH-8.** **TRADER never stores passkey material.** Clerk holds the public key; the private key
+never leaves the device's secure hardware and we never see it.
+
+**AUTH-9.** Signing up **never grants a role.** A newly enrolled user is a `worker`; elevation is
+a deliberate roster action (PERM-4).
+
+**AUTH-10.** Deactivation (PERM-3) must **revoke the credential and the session**, not merely set
+a flag. A phone already holding a valid passkey would otherwise keep working. Events a deactivated
+device queued while offline are **rejected at sync**, not silently accepted — which is the one
+place PERM-3 has to hold against a client that was authorised when it wrote.
+
+---
+
 ## SESSION — the work-session state machine
 
 A session is one worker's continuous stretch of work on one job. It exists only as a fold over
@@ -218,3 +258,52 @@ signing the challenge. See [DECISIONS.md](DECISIONS.md) for why the weaker form 
 geofence, a schedule or any other detection may raise the prompt, but the confirmation is what
 writes the event — which is what keeps `initiator_user_id` meaningful. The governing principle
 is SPEC §3's; this is its rule form.
+
+---
+
+## INVOICE — billing and payment
+
+**`[unbuilt]`** — invoicing is Phase 4 and payment capture arrives with it. `payments` is not yet
+a table.
+
+**INVOICE-1.** An invoice number is **allocated when the invoice is sent, never when the draft is
+created**, and is sequential per company. Allocating at draft leaves a gap every time a draft is
+abandoned, and an unexplained gap in an invoice sequence is the first thing an auditor asks about.
+
+**INVOICE-2.** Line items are **snapshots**. Generation copies the labor and material amounts in;
+the `job_id` and `material_id` links are kept for drill-down and are **never re-read to recompute
+a total**. Otherwise a Phase 3 correction to a worker's hours would silently alter an invoice
+already in a customer's inbox.
+
+**INVOICE-3.** A **sent invoice is immutable.** A change is a new invoice or a credit note, never
+an edit — the same principle as the labor ledger, for the same reason.
+
+**INVOICE-4.** **Status is derived, not set.** `void` is the one explicit state; otherwise status
+follows the sum of attached payments against the total: unsent → `draft`, sent with nothing paid
+→ `sent`, part-paid → `partially_paid`, settled → `paid`, and more than the total → `overpaid`.
+A field an admin ticks can disagree with the money; a derivation cannot.
+
+**INVOICE-5.** Cash and cheque are recorded as **payment rows with a method**, not as a status
+toggle. Manual and online payments then reconcile through exactly one mechanism.
+
+**INVOICE-6.** **TRADER never receives customer funds.** The contractor's own processor account is
+the payee. Holding customer money and later disbursing it is money transmission, which carries
+state-by-state licensing — a burden with no upside at this scale.
+
+**INVOICE-7.** **Card data never enters TRADER.** Payment is a processor-hosted checkout, which
+keeps us at the lightest PCI self-assessment. Never build a card form, however convenient it looks
+later.
+
+**INVOICE-8.** Refunds and disputes belong to the **contractor's processor dashboard**. TRADER
+reflects their outcome and does not mediate them.
+
+**INVOICE-9.** **Tax is entered per invoice by the admin.** TRADER does the arithmetic and claims
+no tax expertise: RI and MA treat painting labor and materials differently, and encoding a guess
+would be worse than asking.
+
+**INVOICE-10.** All money is **integer minor units**. The sum of line totals equals the subtotal,
+and subtotal plus tax equals the total, exactly — no floating point anywhere in the chain.
+
+**INVOICE-11.** **Delivery is best-effort and its failure is visible.** If the email does not
+send, the invoice still exists and the admin can download the PDF or copy the payment link. A
+delivery that silently failed is worse than one that never went.

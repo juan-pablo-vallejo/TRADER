@@ -46,6 +46,10 @@ with no private key ever copied onto it.
 **On the Mac:**
 
 - The Expo/React Native app, iOS simulator, and EAS builds — macOS-only.
+- **Passkey and biometric work needs a real handset, not a simulator.** Passkeys ship native
+  code, so they run in neither Expo Go nor an Android emulator, and they need iOS 16+ or
+  Android 9+. Plan on a development build and a physical device from Phase 0 rather than
+  discovering it at the point the sign-in flow is written.
 - The Next.js web app and the tRPC backend during normal development.
 - Everything, honestly, unless there is a specific reason to reach for the workstation.
 

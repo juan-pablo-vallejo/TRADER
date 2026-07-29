@@ -32,7 +32,10 @@ flowchart LR
   end
 
   DB[("Postgres · Neon<br/>system of record")]
-  AUTH["Clerk<br/>phone auth"]
+  AUTH["Clerk<br/>passkey · phone recovery"]
+
+  CUST(["Customer<br/>not a user"])
+  PAY["Stripe hosted checkout<br/>contractor's own account"]
 
   M -->|"sync: outbox push / pull<br/>client UUIDv7, idempotent"| API
   W --> API
@@ -40,13 +43,21 @@ flowchart LR
   AUTH -.-> M
   AUTH -.-> W
   AUTH -.-> API
+
+  API -->|"invoice PDF + payment link"| CUST
+  CUST -->|"pays"| PAY
+  PAY -.->|"webhook: payment recorded"| API
 ```
 
-[SPEC.md](SPEC.md) §1–§2 own this architecture; the diagram depicts it, and §2 is the
-complete stack. Deliberately not drawn — peripheral to the request and sync paths shown
-here — are observability, file storage, background jobs, secrets and notifications.
+The customer is drawn because v1 takes their money, but note what the arrows do **not** show:
+funds never pass through TRADER, and no card data reaches it. The customer has no account — a
+payment link is the whole relationship.
 
-Four pieces, one deploy target. The web app and the API ship as a single Vercel deployment;
+[SPEC.md](SPEC.md) §1–§2 own this architecture; the diagram depicts it, and §2 is the
+complete stack. Deliberately not drawn — peripheral to the request, sync and payment paths
+shown here — are observability, file storage, background jobs, secrets and worker notifications.
+
+Four pieces we build and run, one deploy target. The web app and the API ship as a single Vercel deployment;
 both clients call the same typed tRPC router, so a signature change breaks compilation on
 both rather than failing at runtime.
 

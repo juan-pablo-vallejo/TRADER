@@ -158,6 +158,57 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   gesture that was going to be spent anyway — and it means the spike needs no confirmation UI of
   its own.
 
+### Settled defining v1 (2026-07-29)
+
+- **"v1" now has a definition, and it is Phases 0–4.** The repo had only ever spoken in phases,
+  so "v1" meant whatever the reader assumed. It is stated once in [ROADMAP.md](ROADMAP.md).
+  **The pilot is deliberately not v1** — it ships at the end of Phase 1 on the sync core alone,
+  because that phase carries the project's real risk and a real crew is the only way to test it.
+  Invoicing could not move earlier in any case: populating an invoice from job data requires jobs,
+  customers, materials and closed-out labor to exist first.
+- **"Sign up with Face ID" means passkeys, because Face ID cannot identify anyone.** It is a 1:1
+  check against whoever enrolled that handset — "is this the phone's owner?", never "who is
+  this?". So enrolment creates a keypair with Face ID guarding the private half. Verified against
+  npm rather than recalled: `@clerk/expo-passkeys` is at 2.0.2 with peer range `expo >=54 <58`,
+  which covers Expo 57. A search summary quoting v1.1.0's `<57` would have ruled it out.
+- **Accounts are invite-only; the contractor adds the worker.** A payroll system with an open
+  front door is one strangers can appear in, and the contractor already knows who works for them.
+  The single exception is the first admin, seeded, since nobody exists to invite them.
+- **Face ID signs in; the phone number recovers.** Daily sign-in needs no SMS, which collapses
+  metered message volume to invites and recovery. The number stays because a paint crew breaks
+  phones — recovery is an ordinary path, not an exceptional one, and must be self-service.
+  Passkeys do **not** avoid Clerk's paid plan: they require it in production just as SMS does, so
+  Pro at $25/mo stands either way and this was not a cost decision.
+- **The phone-OTP fallback stays, permanently.** Passkeys need iOS 16+ or Android 9+, and a crew
+  does not get to choose how old their handsets are. A worker on an older phone signing in by code
+  is a supported state, not a degraded one.
+- **Customers pay the contractor directly; TRADER never holds funds.** The contractor connects
+  their own processor account. Taking custody of customer money and disbursing it later is money
+  transmission, which carries state-by-state licensing and bonding — real burden with no upside at
+  one pilot contractor. Payment is a processor-hosted page, so **card data never enters TRADER**
+  and the PCI surface stays at the lightest self-assessment. Refunds and disputes stay in the
+  contractor's dashboard. This also means **no customer portal in v1**: a payment link needs no
+  account, so `client_portal_access` stays reserved and a whole class of password-reset support
+  for non-users never gets built.
+- **Invoice status becomes derived rather than set.** The built enum
+  `draft | sent | paid | void` was designed for an admin ticking a box after a cheque cleared.
+  Once customers pay online, part-payments and overpayments are ordinary and the enum cannot
+  express either. Deriving status from attached payments also makes it impossible for the status
+  and the money to disagree. Cash and cheque become payment rows with a method, so manual and
+  online settlement reconcile through one mechanism.
+- **Invoice line items are snapshots, and numbers are allocated at send.** A line item that read
+  job labor live would mean a Phase 3 correction to a worker's hours silently altering an invoice
+  already in a customer's inbox. Numbering at draft creation leaves a gap whenever a draft is
+  abandoned, and unexplained gaps are the first thing an auditor asks about.
+- **Tax is entered per invoice; TRADER claims no tax expertise.** RI and MA treat painting labor
+  and materials differently, a wrong rate is the contractor's liability, and their bookkeeper
+  already makes this call. Encoding a guess would be worse than asking. Revisit only if a
+  contractor asks the app to decide, which is a different product promise.
+- **Email becomes load-bearing, which supersedes "non-critical only".** Resend was recorded as
+  carrying nothing important. Delivering an invoice is not nothing, so the entry is rewritten
+  rather than annotated — and delivery failure must be visible, with the PDF and payment link
+  independently retrievable. It is still never the auth channel.
+
 ### Settled during the compliance review (2026-07-27)
 
 - **"Delete my account" means deactivate and anonymize, not erase.** Both app stores require
@@ -220,13 +271,13 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   timestamps, and adding a transformer afterwards is a breaking change that must land on the
   server and both clients together.
 
-- Auth: Clerk, phone-based. Email magic links are not a primary auth channel.
+- Auth: Clerk. A passkey guarded by Face ID is the sign-in credential; the phone number invites a worker and recovers the account. Email magic links are not a primary auth channel.
 - Tenancy: single company in v1 with `company_id NOT NULL` on every tenant-scoped table (one seeded row). No RLS until tenant #2 onboards.
 - Worker is an app user (roles: admin, foreman, worker) — supersedes the earlier "no crew accounts" position.
-- Invoices (tracking-only, manually marked paid) are in v1; signed PDF estimates are deferred.
+- Invoices are in v1 and take real payment: generated from job data, emailed as a PDF with a payment link, settled into the contractor's own processor account. Signed PDF estimates are still deferred.
 - Labor is an append-only event log; conflicts resolved at the API boundary, server-authoritative, latest action by `client_timestamp` wins with server receipt as tiebreaker. Not a DB constraint.
 - Corrections are events only — no separate corrections table; no role, including admin, mutates a submitted record.
-- Photos in v1 are material/receipt photos only. **Storage provider is open** — see below.
+- Object storage in v1 holds material/receipt photos and invoice PDFs. **Provider is open** — see below; the choice is now v1-critical rather than a Phase 2 nicety.
 - Notifications are Phase 2+, never week-1.
 - Money is integer cents + currency code everywhere; schema is money-capable now, money-moving later.
 - Plan against 13–20 weeks solo build, not the nominal 10.
@@ -243,8 +294,11 @@ Phase 1 deadline. [ROADMAP.md](ROADMAP.md) shows each of these as a gate on the 
 | Clock-skew bound on `client_timestamp`, and whether a breach is clamped, flagged or rejected ([logic.md](logic.md) `CONFLICT-4`) | **start of Phase 1**         |
 | Web approval when an admin has no phone ([logic.md](logic.md) `ATTEST-10`)                                                       | before Phase 3               |
 | Pay-rate history: effective-dated rates vs snapshot-at-session                                                                   | before Phase 2               |
-| File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2                                                                      | Phase 2                      |
+| File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2 — **v1-critical**, invoice PDFs need it too                          | Phase 2                      |
 | Geocoding: Mapbox vs Google (accuracy test on local addresses)                                                                   | Phase 2                      |
+| Payment processor confirmed (Stripe assumed)                                                                                     | before Phase 4               |
+| Invoice number format and starting value                                                                                         | before Phase 4               |
+| What happens when an invoice email fails to deliver                                                                              | before Phase 4               |
 | Closeout actor: foreman-only vs worker-own-day                                                                                   | before Phase 3               |
 | Language: English-first (i18n from day 1) vs Spanish-first                                                                       | **start of Phase 1**         |
 | Pilot success criteria (single canonical set)                                                                                    | before Phase 1 ends          |

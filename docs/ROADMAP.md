@@ -16,22 +16,42 @@ gates and `me.get`, all under CI.
 Everything remaining in Phase 0 is blocked on signups rather than code: Neon and Clerk for the
 web app, Expo for mobile, Sentry and Vercel to deploy.
 
+## What "v1" means
+
+**v1 is Phases 0 through 4** — a crew that clocks in, an office that closes out and reconciles,
+and an invoice that goes to a customer and gets paid. This file is the only place that definition
+lives; everywhere else links here.
+
+**The pilot is not v1.** It goes live at the end of Phase 1, on the sync core alone, and the crew
+grows into the rest as it ships. That ordering is deliberate: Phase 1 carries the project's real
+risk, and shipping it to a real crew early is the only way to find out whether it works. Waiting
+for invoicing would leave the riskiest subsystem unvalidated for months.
+
+Invoicing cannot move earlier regardless of preference. Populating an invoice from job data needs
+jobs and customers (Phase 2), materials (Phase 2) and closed-out labor (Phase 3) to exist first —
+before that there is nothing to populate from.
+
+**Out of v1:** contractor payouts, a customer login portal, estimates and quotes, the marketplace
+and the AI estimator.
+
 ## How phases work
 
 Each phase is independently shippable and usable on a real job. Ship phase N before building
-N+1. **Planning horizon: 13–20 weeks solo**, plus a 3–5 day spike that may cost nothing — it
-needs no accounts, so it can run while Phase 0 waits on signups. The nominal 10 weeks did not
-survive adversarial review. The ranges below allocate that band; they are effort, not dates.
+N+1. **Planning horizon: 14–23 weeks solo** to the end of v1, plus a 3–5 day spike that may cost
+nothing — it needs no accounts, so it can run while Phase 0 waits on signups. The nominal 10 weeks
+did not survive adversarial review; the band then widened again when passkey enrolment joined
+Phase 1 and payment capture joined Phase 4. The ranges below allocate it; they are effort, not
+dates.
 
-| Phase                             | Delivers                                   | Effort        | Status          |
-| --------------------------------- | ------------------------------------------ | ------------- | --------------- |
-| **0 — Foundation**                | Monorepo, schema, auth, one deployed stack | 2–3 wks       | **In progress** |
-| **Spike — geofenced clock-in**    | Whether battery cost kills auto-detection  | 3–5 days      | Not started     |
-| **1 — Offline clock in/out**      | The sync core, and **the pilot goes live** | 4–7 wks       | Not started     |
-| **2 — Jobs, roster, materials**   | Self-service setup, materials with photos  | 3–4 wks       | Not started     |
-| **3 — Closeout & reconciliation** | Day lock, corrections, job cost to date    | 2–3 wks       | Not started     |
-| **4 — Invoices**                  | Invoice CRUD, PDFs, tracked to paid        | 2–3 wks       | Not started     |
-| **5 — Payments**                  | Client portal, payment capture, payouts    | Trigger-based | Unscheduled     |
+| Phase                             | Delivers                                            | Effort        | Status          |
+| --------------------------------- | --------------------------------------------------- | ------------- | --------------- |
+| **0 — Foundation**                | Monorepo, schema, auth, one deployed stack          | 2–3 wks       | **In progress** |
+| **Spike — geofenced clock-in**    | Whether battery cost kills auto-detection           | 3–5 days      | Not started     |
+| **1 — Offline clock in/out**      | The sync core, joining, and **the pilot goes live** | 4–8 wks       | Not started     |
+| **2 — Jobs, roster, materials**   | Self-service setup, materials with photos           | 3–4 wks       | Not started     |
+| **3 — Closeout & reconciliation** | Day lock, corrections, job cost to date             | 2–3 wks       | Not started     |
+| **4 — Invoices & payment**        | Invoice from job data, PDF, sent, **paid online**   | 3–5 wks       | Not started     |
+| **5 — Payouts & portal**          | Contractor payouts, customer login                  | Trigger-based | Unscheduled     |
 
 ---
 
@@ -44,6 +64,11 @@ Neon database, Clerk wired, one deployed backend, Sentry on.
 stack.
 
 **Needs:** Neon · Clerk · Vercel · Sentry · Expo. **Gates:** none outstanding.
+
+Clerk is configured for **passkeys** here, not just phone. One consequence lands earlier than
+expected: passkeys ship native code, so they work in neither Expo Go nor an Android emulator, and
+the project needs a **development build on a physical device** from this phase rather than
+whenever convenient.
 
 ## Spike — geofenced clock-in
 
@@ -92,6 +117,12 @@ biometric gate on the mobile actions that become payroll, an attestation column 
 `work_session_events`, and the recorded level flowing through sync. The check is local and
 OS-mediated, so it needs no account and works with no signal. Rules are
 [logic.md](logic.md) `ATTEST-1`–`ATTEST-4`; the web half waits for Phase 3.
+
+**Joining ships here as well**, because a pilot crew needs accounts: an admin invites a worker by
+phone number, the worker verifies once and enrols a passkey with Face ID, and every sign-in after
+that is Face ID alone. The phone number stays as the recovery path, and the phone-OTP fallback for
+pre-iOS-16 / pre-Android-9 handsets has to work from day one rather than being added when someone
+turns up with an old phone. Rules are [logic.md](logic.md) `AUTH-1`–`AUTH-10`.
 
 Sync services exist — PowerSync and ElectricSQL among them — and building rather than buying
 is a deliberate choice recorded in [DECISIONS.md](DECISIONS.md). The consequence for
@@ -199,18 +230,43 @@ Expo push moves onto the critical path here. It is already in the stack for work
 notifications, but an approval that silently fails to deliver is a stuck admin rather than a
 missed notification — so delivery failure needs a visible, honest state.
 
-## Phase 4 — Invoices
+## Phase 4 — Invoices & payment
 
-Invoice and line-item CRUD, PDF generation to object storage, manual sent/paid, labor and
-material costs pulled into line items.
+Invoice and line-item CRUD with labor and material costs pulled from the job, PDF generation to
+object storage, delivery by email, and **payment capture through the contractor's own processor
+account**. The `payments` table arrives here.
 
-**Done when** an admin issues an invoice from a completed job's data and tracks it to paid.
+**Done when** an admin issues an invoice from a completed job's data, the customer receives it,
+pays it online, and the invoice reflects that without anyone ticking a box.
 
-## Phase 5 — Payments
+Two things change shape rather than being added:
 
-Client portal, real payment capture, contractor payouts. **A trigger, not a date:** a customer
-asks to pay online, or a paying contractor base needs payouts. Not before. The schema is
-already shaped for it, so this adds tables rather than restructuring existing ones.
+- **`invoice_status` cannot express a partly-paid invoice.** The built enum is
+  `draft | sent | paid | void`, which suited an admin marking a cheque as cleared. Once customers
+  pay online, part-payments and overpayments are ordinary, so status becomes **derived from the
+  payments attached** ([logic.md](logic.md) `INVOICE-4`). This is a migration, not a new column.
+- **`invoice_number` moves to allocation at send.** Numbering drafts leaves gaps whenever one is
+  abandoned, and unexplained gaps in an invoice sequence are what an auditor asks about first
+  (`INVOICE-1`).
+
+**What TRADER deliberately does not do:** hold customer money, or see a card number. Customers pay
+the contractor directly through a processor-hosted page, and refunds and disputes stay in the
+contractor's own dashboard. [DECISIONS.md](DECISIONS.md) records what staying out of the money
+flow avoids.
+
+**Gates:** processor confirmed (Stripe assumed) · invoice number format and starting value · what
+happens when invoice email fails to deliver.
+
+**Needs:** Stripe · Resend · the file-storage provider, whose Phase 2 gate becomes v1-critical
+here since PDFs need somewhere to live.
+
+## Phase 5 — Payouts & customer portal
+
+Contractor payouts and a customer login. **A trigger, not a date:** a contractor base that needs
+disbursement, or customers who want an account rather than a link. Not before — v1 takes payment
+without either, since a hosted payment link needs no customer account and direct-to-contractor
+payment needs no payout. The schema is already shaped for both, so this adds tables rather than
+restructuring existing ones.
 
 ---
 
