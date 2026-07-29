@@ -17,13 +17,13 @@ re-check anything load-bearing before relying on it.
 
 ## Phase 0 — blocking the current phase
 
-| Service        | Used for               | Cost at pilot scale                                                                                                                                                                                  | Have it |
-| -------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
-| **Neon**       | Postgres               | Free to start; **Launch from Phase 1** — usage-based, no monthly minimum. See below                                                                                                                  | ☐       |
-| **Clerk**      | Auth (phone-based)     | **Pro, $25/mo, from pilot** — the free plan lists "SMS codes: No", so phone sign-in is not available on it. Plus $0.01/SMS. Free development instances do support phone auth, capped at 20 SMS/month | ☐       |
-| **Vercel**     | Web app + the tRPC API | **$20/mo (Pro).** Hobby forbids commercial use, which includes pre-revenue company work                                                                                                              | ☐       |
-| **Sentry**     | Error tracking         | Free tier; confirm limits at signup                                                                                                                                                                  | ☐       |
-| **Expo / EAS** | Mobile builds          | Free = **15 iOS + 15 Android builds/month**, lower-priority queue, 45-minute timeout. **Local CLI builds are unlimited** — the relief valve                                                          | ☐       |
+| Service        | Used for                | Cost at pilot scale                                                                                                                                                                                                                                      | Have it |
+| -------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| **Neon**       | Postgres                | Free to start; **Launch from Phase 1** — usage-based, no monthly minimum. See below                                                                                                                                                                      | ☐       |
+| **Clerk**      | Auth (passkeys + phone) | **Pro, $25/mo, from pilot.** Both paths need it: the free plan lists "SMS codes: No", and passkeys require a paid plan in production. Free development instances support both. SMS is $0.01 each but is now only invites and recovery, not daily sign-in | ☐       |
+| **Vercel**     | Web app + the tRPC API  | **$20/mo (Pro).** Hobby forbids commercial use, which includes pre-revenue company work                                                                                                                                                                  | ☐       |
+| **Sentry**     | Error tracking          | Free tier; confirm limits at signup                                                                                                                                                                                                                      | ☐       |
+| **Expo / EAS** | Mobile builds           | Free = **15 iOS + 15 Android builds/month**, lower-priority queue, 45-minute timeout. **Local CLI builds are unlimited** — the relief valve                                                                                                              | ☐       |
 
 ### Why Neon Launch rather than Free
 
@@ -74,14 +74,29 @@ D-U-N-S lead time.
 
 ## Later phases
 
-| Service                          | First needed  | Used for                                                                                                    |
-| -------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
-| **File storage**                 | Phase 2       | Material and receipt photos; invoice PDFs in Phase 4. **Provider undecided** — [DECISIONS.md](DECISIONS.md) |
-| **Geocoding** — Mapbox or Google | Phase 2       | Job addresses → coordinates. **Undecided**                                                                  |
-| **Inngest**                      | Phase 2+      | Background jobs                                                                                             |
-| **PostHog**                      | Phase 2+      | Product analytics                                                                                           |
-| **Resend**                       | Phase 2+      | Non-critical email. Never the auth channel                                                                  |
-| **Twilio**                       | **Not in v1** | Customer-facing SMS only. Workers are reached by Expo push, which is free and needs no registration         |
+| Service                          | First needed  | Used for                                                                                                                                        |
+| -------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **File storage**                 | Phase 2       | Material and receipt photos; **invoice PDFs in Phase 4, which makes the choice v1-critical.** Provider undecided — [DECISIONS.md](DECISIONS.md) |
+| **Geocoding** — Mapbox or Google | Phase 2       | Job addresses → coordinates. **Undecided**                                                                                                      |
+| **Inngest**                      | Phase 2+      | Background jobs                                                                                                                                 |
+| **PostHog**                      | Phase 2+      | Product analytics                                                                                                                               |
+| **Resend**                       | Phase 4       | **Delivering invoices to customers** — load-bearing in v1, not incidental. Never the auth channel                                               |
+| **Stripe**                       | Phase 4       | Customer invoice payment. See below — **the contractor's own account receives the money**                                                       |
+| **Twilio**                       | **Not in v1** | Customer-facing SMS only. Workers are reached by Expo push, which is free and needs no registration                                             |
+
+### Stripe: the contractor's account, not ours
+
+TRADER needs a **platform account, which is free**, but it never holds funds. The contractor
+connects their own Stripe account and customers pay them directly, so **processing fees are the
+contractor's** — roughly 2.9% + 30¢ per card transaction, billed to them and not to JPTEQ.
+
+That split is deliberate rather than merely convenient, and what it avoids — money-transmission
+licensing and a heavier PCI obligation — is recorded in [DECISIONS.md](DECISIONS.md). For this
+file's purposes the consequence is narrow: **no payment line on JPTEQ's bill.** Refunds and
+disputes are likewise the contractor's, in their own dashboard.
+
+Revisit only if payouts or a marketplace arrive — both are out of v1, and both are what would
+pull TRADER into the money flow.
 
 ### If customer SMS ever enters scope
 
@@ -97,9 +112,14 @@ customer SMS left v1.
 **$20/month** while building — Vercel Pro, the only subscription Phase 0 requires. Clerk's free
 development instance covers phone auth until real workers sign in.
 
-**~$45/month fixed from pilot** — Vercel Pro $20 plus Clerk Pro $25, since phone sign-in is not
-available on Clerk's free plan. Neon Launch adds usage-based cost with no minimum, expected in
-the single-digit to low-teens dollars, and SMS runs $0.01 a message.
+**~$45/month fixed from pilot** — Vercel Pro $20 plus Clerk Pro $25, which both phone sign-in and
+passkeys require. Neon Launch adds usage-based cost with no minimum, expected in the single-digit
+to low-teens dollars. SMS is $0.01 a message and should stay negligible, since passkeys mean codes
+are sent only when a worker joins or recovers an account rather than on every sign-in.
+
+**Stripe adds no fixed cost to JPTEQ** — the contractor's own account receives payments and pays
+the processing fees. Resend and object storage enter at Phase 4 and sit inside free tiers at pilot
+volume.
 
 First-year one-offs total **~$139**: Apple $99, Google Play $25, domain ~$15. Everything else
 sits inside a free tier at this scale.

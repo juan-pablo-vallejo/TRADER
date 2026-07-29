@@ -15,6 +15,43 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-29
 
+### 01:47 — v1 gets a definition, plus passkey signup and invoicing that takes payment
+
+Two features added and, more consequentially, the word "v1" defined for the first time. The repo
+had only ever spoken in phases, so "v1" meant whatever each reader assumed. It is now Phases 0–4,
+stated once in the roadmap. Documentation only.
+
+**"Sign up with Face ID" had to be translated before it could be planned.** Face ID cannot
+identify anyone — it is a 1:1 check against whoever enrolled that handset, answering "is this the
+phone's owner?" and never "who is this?". The feature is therefore passkeys, with Face ID guarding
+the private key. Checking npm directly rather than trusting a search summary mattered here: the
+summary quoted `@clerk/expo-passkeys` v1.1.0 with peer range `expo >=54 <57`, which would have
+excluded Expo 57 and killed the idea. The current 2.0.2 allows `<58`. Also learned that passkeys
+require Clerk's paid plan in production, so this saves no money — but it does collapse SMS to
+invites and recovery only.
+
+**Pulling online payment into v1 forced a regulatory question before a technical one.** Holding
+customer money and disbursing it later is money transmission, with state-by-state licensing
+behind it. Having the contractor connect their own processor account avoids the entire category,
+and at one pilot contractor there is no upside to being in the money flow. Two simplifications
+fell out of it: no customer portal is needed, because a payment link needs no account, and card
+data never enters the system, which keeps the PCI obligation at its lightest tier.
+
+**The invoice status enum cannot survive real payments.** `draft | sent | paid | void` was built
+for an admin ticking a box after a cheque cleared. Once customers pay online, part-payments and
+overpayments are ordinary and neither is expressible. Status becomes derived from the payments
+attached, which also makes it impossible for the status and the money to disagree. Two related
+finds: line items must be snapshots, or a Phase 3 correction to someone's hours would silently
+alter an invoice already sitting in a customer's inbox; and invoice numbers must be allocated at
+send rather than at draft, since numbering drafts leaves a gap every time one is abandoned.
+
+Three recorded decisions were left wrong by this and were rewritten rather than annotated —
+invoices as "tracking-only, manually marked paid", photos as the only thing in object storage,
+and Resend as carrying "non-critical" email only. Delivering an invoice is not non-critical.
+
+The planning band widened to 14–23 weeks: passkey enrolment joined Phase 1 and payment capture
+joined Phase 4. Saying so is cheaper than discovering it later.
+
 ### 01:19 — One-tap attested clock-in, and the rules get a home
 
 Tap → Face ID → clocked in, recorded across spec, roadmap and decisions; and a new

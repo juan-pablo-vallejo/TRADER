@@ -1,6 +1,6 @@
 # TRADER — Technical Specification
 
-Canonical as of 2026-07-29. This document states what the system **is**; _why_ each choice was made, and when it changed, lives in [DECISIONS.md](DECISIONS.md). The **numbered rules** the system must obey — session state machine, derivations, conflict resolution, permissions, attestation — live in [logic.md](logic.md) and are cited here rather than restated. Revisions are listed at the end.
+Canonical as of 2026-07-29. This document states what the system **is**; _why_ each choice was made, and when it changed, lives in [DECISIONS.md](DECISIONS.md). The **numbered rules** the system must obey — joining, session state machine, derivations, conflict resolution, permissions, attestation, invoicing — live in [logic.md](logic.md) and are cited here rather than restated. Revisions are listed at the end.
 
 ## 1. Architecture
 
@@ -16,21 +16,22 @@ Deliberate maintainability-over-scale choices: monolith over services; managed P
 
 ## 2. Tech Stack
 
-| Layer             | Choice                                                            | Why                                                                                                                                               |
-| ----------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mobile            | React Native + Expo (EAS)                                         | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals                                           |
-| Local mobile DB   | Drizzle on `expo-sqlite`                                          | Same ORM and migration tool as the server; actively maintained. Provides storage only — **the sync layer is ours** (§3)                           |
-| Web + API hosting | Next.js on Vercel                                                 | Admin panel and the tRPC API in one deployment; one bill, one log stream; deploys on git push                                                     |
-| Backend           | Node.js + TypeScript + tRPC (superjson transformer)               | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift. superjson keeps Dates intact across the wire |
-| Validation        | zod                                                               | Procedure inputs and, in Phase 1, sync payloads. Field-level errors are surfaced to clients rather than a bare BAD_REQUEST                        |
-| ORM               | Drizzle                                                           | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                                                     |
-| Database          | PostgreSQL on Neon                                                | Serverless, branching for safe migration testing, automatic backups                                                                               |
-| Auth              | Clerk, phone-based                                                | Never hand-build auth solo. Phone login fits field workers; email magic links are explicitly not the primary channel                              |
-| Background jobs   | Inngest                                                           | Hosted; no Redis to run or monitor; handles retries/scheduling                                                                                    |
-| File storage      | Undecided — S3+CloudFront, Vercel Blob or Cloudflare R2           | Material/receipt photos, invoice PDFs. Decided at Phase 2, when the real access pattern is known                                                  |
-| Observability     | Sentry (errors), PostHog (product analytics)                      | Hosted, free-tier-friendly                                                                                                                        |
-| Secrets           | Vercel environment variables, EAS secrets, GitHub Actions secrets | Each platform holds the secrets it needs; no separate secret-management service                                                                   |
-| Notifications     | Expo push (workers), Resend email (non-critical only)             | Wired in Phase 2+, never as the auth channel of record. Customer-facing SMS is out of v1                                                          |
+| Layer             | Choice                                                            | Why                                                                                                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mobile            | React Native + Expo (EAS)                                         | One codebase for iOS+Android; OTA updates, managed builds, push without touching Xcode/Gradle internals                                                                                                 |
+| Local mobile DB   | Drizzle on `expo-sqlite`                                          | Same ORM and migration tool as the server; actively maintained. Provides storage only — **the sync layer is ours** (§3)                                                                                 |
+| Web + API hosting | Next.js on Vercel                                                 | Admin panel and the tRPC API in one deployment; one bill, one log stream; deploys on git push                                                                                                           |
+| Backend           | Node.js + TypeScript + tRPC (superjson transformer)               | End-to-end type safety from DB to both clients, no schema-generation step, zero client/server drift. superjson keeps Dates intact across the wire                                                       |
+| Validation        | zod                                                               | Procedure inputs and, in Phase 1, sync payloads. Field-level errors are surfaced to clients rather than a bare BAD_REQUEST                                                                              |
+| ORM               | Drizzle                                                           | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                                                                                                           |
+| Database          | PostgreSQL on Neon                                                | Serverless, branching for safe migration testing, automatic backups                                                                                                                                     |
+| Auth              | Clerk — passkeys primary, phone as recovery                       | Never hand-build auth solo. Sign-in is a passkey guarded by Face ID; the phone number invites the worker and recovers the account ([logic.md](logic.md) `AUTH-1`–`AUTH-10`)                             |
+| Background jobs   | Inngest                                                           | Hosted; no Redis to run or monitor; handles retries/scheduling                                                                                                                                          |
+| File storage      | Undecided — S3+CloudFront, Vercel Blob or Cloudflare R2           | Material/receipt photos, invoice PDFs. Decided at Phase 2, when the real access pattern is known                                                                                                        |
+| Observability     | Sentry (errors), PostHog (product analytics)                      | Hosted, free-tier-friendly                                                                                                                                                                              |
+| Secrets           | Vercel environment variables, EAS secrets, GitHub Actions secrets | Each platform holds the secrets it needs; no separate secret-management service                                                                                                                         |
+| Notifications     | Expo push (workers), Resend email (customers)                     | Push carries worker notifications and the Phase 3 approval prompt. Email delivers invoices, so it is load-bearing rather than incidental — but never the auth channel. Customer-facing SMS is out of v1 |
+| Payments          | Stripe, against the **contractor's own** connected account        | Customers pay the contractor directly. TRADER never holds funds and never sees a card number — hosted checkout only ([logic.md](logic.md) `INVOICE-6`, `INVOICE-7`)                                     |
 
 ## 3. Offline & Sync
 
@@ -60,17 +61,20 @@ Design principles: **money-capable now, money-moving later** — amounts, line i
 - **jobs** — `company_id`, `customer_id`, `crew_id` (nullable — the assignment: a worker's "assigned jobs" in §5/§6 are the jobs of the crew they belong to), `address`, `lat`, `lng`, `status` (`scheduled | active | closed | archived`), `scheduled_at`. Jobs are archived, never deleted.
 - **work_session_events** — the append-only core. `id` (UUIDv7, client-generated), `company_id`, `worker_id`, `job_id`, `type` (`started | paused | resumed | ended | voided`), `client_timestamp`, `server_timestamp`, `initiator_user_id` (the worker, or an admin making a correction), `device_lat` / `device_lng` / `device_accuracy_m` (all nullable — where the _worker_ was, best-effort; see §3), `payload` (jsonb — includes correction reason where applicable). Never updated, never deleted. Admin corrections are themselves events referencing the original via payload; there is no separate corrections table.
 - **materials** — `company_id`, `job_id`, `logged_by_user_id`, `description`, `quantity`, `unit`, `unit_cost_cents` (nullable — field capture is never blocked on cost; admin fills later), `photo_s3_key` (nullable receipt photo), `logged_at`.
-- **invoices** — `company_id`, `customer_id`, `job_id`, `invoice_number` (unique per company), `status` (`draft | sent | paid | void` — `paid` set manually in v1), `issued_at`, `due_at`, `subtotal_cents`, `tax_cents`, `total_cents`, `currency`, `pdf_s3_key`. A tracking record in v1, already shaped for real payments.
+- **invoices** — `company_id`, `customer_id`, `job_id`, `invoice_number` (unique per company), `status` (`draft | sent | paid | void`), `issued_at`, `due_at`, `subtotal_cents`, `tax_cents`, `total_cents`, `currency`, `pdf_s3_key`. **The status enum as built cannot express a partly-paid invoice**, which becomes ordinary once customers pay online; Phase 4 replaces the set field with one derived from attached payments ([logic.md](logic.md) `INVOICE-4`). `invoice_number` is likewise allocated at send rather than at draft (`INVOICE-1`) — neither change is made yet.
 - **invoice_line_items** — `invoice_id`, `description`, `quantity`, `unit_price_cents`, `line_total_cents`, optional `job_id`/`material_id` source links. Invoices are structured data, not a blob.
 - **audit_log** — append-only record of significant writes (who, what, when).
 
-### Reserved for the payments phase (designed for, not built)
+### Arriving with invoicing (designed for, not built)
 
-- **payments** — money in, linked to invoices: `amount_cents`, `method`, `processor_ref`, `status`, `paid_at`.
-- **payouts** — contractor money out; labor and materials tables already hold the cost data.
-- **client_portal_access** — customer login to view/pay invoices; `customers` and `invoices` are already shaped for it.
+- **payments** — money in, linked to invoices: `amount_cents`, `method`, `processor_ref`, `status`, `paid_at`. Covers cash and cheque as well as card, so manual and online settlement reconcile through one mechanism ([logic.md](logic.md) `INVOICE-5`).
 
-Adding payments later is new tables referencing existing ones — no restructuring of invoices, customers, jobs, or labor.
+### Reserved for later (designed for, not built)
+
+- **payouts** — contractor money out; labor and materials tables already hold the cost data. Not in v1: customers pay the contractor directly, so there is nothing for TRADER to disburse.
+- **client_portal_access** — a customer login. **Not needed to take payment**: the invoice email carries a processor-hosted payment link, so a customer never needs an account.
+
+Adding these later is new tables referencing existing ones — no restructuring of invoices, customers, jobs, or labor.
 
 ## 5. Roles & Permissions
 
@@ -86,6 +90,8 @@ The boundary that matters most: **no role can mutate a submitted labor record �
 
 ## 6. Core Flows
 
+**Joining.** Admin adds a worker's phone number → the worker gets a single-use invite → opens the app → verifies the number once → **enrols a passkey with Face ID**. From then on, signing in is Face ID and nothing else; the phone number's remaining job is to recover the account when the handset is lost, broken or replaced. A phone too old to hold a passkey signs in by code instead, which is a supported path rather than a failure ([logic.md](logic.md) `AUTH-1`–`AUTH-10`).
+
 **Clock in/out & hours.** Worker opens app → sees today's assigned jobs (local DB, works offline) → taps clock-in → **Face ID** → `started` event written locally with client UUID, timestamp and attestation level; UI immediately shows "on session." Three steps, no typing, and the biometric runs on-device so it works with no signal. Mid-day switch → `ended` on job A, `started` on job B ([logic.md](logic.md) `SESSION-1`, `SESSION-5`). End of day → `ended`. Events queue locally and flush on reconnect ([logic.md](logic.md) `CONFLICT-6`); the server stamps its own timestamps, orders what arrives, and the device pulls back server truth. Sessions and hours are then derived from the event fold — never stored as editable numbers ([logic.md](logic.md) `DERIVE-3`–`DERIVE-6`).
 
 Where arrival detection is running, the geofence prompt **is** this tap rather than a step before it: the notification the worker acts on is the clock-in button, so a proposed clock-in costs the same single gesture as an unprompted one.
@@ -94,7 +100,9 @@ Where arrival detection is running, the geofence prompt **is** this tap rather t
 
 **Day closeout.** Foreman (or worker for their own day — final actor ruling due before Phase 3) reviews the day's sessions and materials for a job → sets job status/note → **Face ID** → submits. On submit the closeout locks; any later change is an admin correcting event. The office dashboard reflects the closeout as received.
 
-**Invoices.** Admin (web) → create invoice → attach customer + optional job → add line items manually or pulled from the job's labor and materials costs → totals computed in cents → draft → PDF to object storage → mark sent. When the customer pays by check/cash, admin marks it paid manually. When the payments phase arrives, a payment row attaches to this exact invoice and flips its status automatically.
+**Invoices.** Admin (web) → create invoice → attach customer + optional job → line items pulled from that job's labor and materials, copied in as fixed amounts rather than live references → admin enters the tax → totals computed in cents → send. Sending is what allocates the invoice number, renders the PDF to object storage, and emails it to the customer with a payment link.
+
+**Getting paid.** The customer opens the link and pays on the processor's own hosted page, into **the contractor's** account — TRADER never touches the money and never sees a card number. The resulting payment attaches to that invoice; cash and cheque are recorded the same way by the admin. The invoice's state follows the payments attached to it, so a half-paid invoice reads as half-paid rather than as unpaid or settled. Refunds and disputes are handled by the contractor in their processor's dashboard; TRADER shows the outcome ([logic.md](logic.md) `INVOICE-1`–`INVOICE-11`).
 
 **Reconciliation dashboard.** Admin sees a table of jobs/days with state — expected vs. received, still open on a phone, submitted, needs attention — with drill-down into each day's events. This is the office's window into the field, and where corrections are issued.
 
@@ -113,12 +121,22 @@ The heading is kept so §8 below and the references to it from other files stay 
 - **Offline auth.** A Clerk session expiring in a dead zone must not block clock-in; an offline grace policy is required before Phase 1.
 - **Pay-rate history.** A mutable `pay_rate_cents` retroactively corrupts past job costs; effective-dated rates or a rate snapshot at session time must be decided by Phase 2.
 - **Cost creep.** Vercel Pro and Neon Launch are paid from the start; Clerk, Sentry, Inngest and PostHog sit inside free tiers at 30 users but not at scale, and Clerk meters SMS one-time-passcodes separately from its user allowance. Current costs and thresholds are tracked in [ACCOUNTS.md](ACCOUNTS.md). Revisit at the second company or the first breached tier.
+- **Sales tax is a correctness risk we deliberately do not own.** RI and MA treat painting labor and materials differently, and a wrong rate on a real invoice is the contractor's liability. The admin enters tax per invoice and TRADER only does the arithmetic. Revisit if a contractor asks the app to decide, which is a different product promise.
+- **Invoice delivery now depends on email.** An invoice that silently fails to send is worse than one that never went, so delivery state must be visible and the PDF and payment link independently retrievable.
+- **Passkeys need real hardware to develop against.** No Expo Go, no Android emulator, iOS 16+ / Android 9+ only. The dev-build requirement lands earlier than it otherwise would, and the phone-OTP fallback must stay working for older handsets rather than rotting untested.
 - **Bus factor.** Solo developer; mitigation is a boring stack, clean modules, and documenting the sync handler and conflict policy as they're written — the one part not reconstructable from code alone.
 
 ## Revisions
 
 The body above always states current truth. Rationale for each change is in [DECISIONS.md](DECISIONS.md).
 
+- **2026-07-29 (v1 scope pass)** — §2: auth becomes passkey-primary with phone recovery; Resend
+  moves from "non-critical only" to delivering invoices; Stripe added against the contractor's own
+  connected account. §4: `payments` moves from the reserved set to arriving with invoicing, while
+  `payouts` and `client_portal_access` stay reserved — a hosted payment link means customers never
+  need accounts. The built `invoice_status` enum is noted as unable to express a partly-paid
+  invoice. §6 gains the invite-and-enrol flow and an invoicing flow that takes payment. §8 gains
+  tax, delivery and passkey-hardware risks. Rules in [logic.md](logic.md) `AUTH-*`, `INVOICE-*`.
 - **2026-07-29 (logic pass)** — The numbered rules move to [logic.md](logic.md), which now owns
   them; §3, §5 and §6 cite rather than restate. §3 gains the attestation principle and §6 the
   Face ID step in the clock-in and closeout flows. §5's role bullets shrink to what each role
