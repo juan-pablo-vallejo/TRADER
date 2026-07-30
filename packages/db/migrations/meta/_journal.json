@@ -22,6 +22,20 @@
       "when": 1785190347519,
       "tag": "0002_massive_star_brand",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785449778270,
+      "tag": "0003_tense_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785450247877,
+      "tag": "0004_mute_nighthawk",
+      "breakpoints": true
     }
   ]
 }

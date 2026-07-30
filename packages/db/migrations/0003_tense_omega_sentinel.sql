@@ -1,0 +1,2 @@
+CREATE TYPE "public"."attestation_level" AS ENUM('biometric', 'device_credential', 'none');--> statement-breakpoint
+ALTER TABLE "work_session_events" ADD COLUMN "attestation_level" "attestation_level" DEFAULT 'none' NOT NULL;

@@ -15,6 +15,54 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-30
 
+### 18:15 — Phase 1 opens: gates settled, and the sync core built server-first
+
+All four **at start** gates decided before any sync code was written, which is the order ROADMAP
+asks for and the only order that works — every one of them is protocol shape.
+
+**The clock-skew rule needed reframing before it could be answered.** `CONFLICT-4` was written as
+`server_timestamp` bounding `client_timestamp`, but those two cannot distinguish a wrong clock
+from a legitimately old event: a device offline for two days produces a 48-hour gap by design,
+and that is the case SPEC §3 exists to serve. Skew is therefore measured **at sync time** from a
+`deviceNow` the push carries, which is pure clock error regardless of outbox age. Tolerance 5
+minutes. Beyond it the event is still written — `SESSION-4` rejection is permanent and losing a
+worker's hours to their phone's clock is the worse failure — but ordered by arrival and flagged.
+Clamping was rejected outright: in an append-only payroll ledger a rewritten timestamp is a time
+the worker did not act, and nothing downstream can undo it.
+
+**Two real bugs, both mine, both caught by tests rather than review.**
+
+The first was a design error in the pull cursor. The overlap window that makes CONFLICT-4a safe
+was applied _inside pagination_, so any page beginning a window behind its own cursor could never
+advance whenever a full batch fit inside that window — an infinite loop. The fix separates the
+two concerns: `sync.pull` uses a strict keyset so a run always terminates, and `rewindCursor`
+applies the overlap exactly once per sync cycle.
+
+The second was worse because it looked like nothing. Three cursor tests failed on their iteration
+bound; the cause was that `server_timestamp` stored **microseconds** while a JavaScript `Date`
+holds only milliseconds, so the driver truncated on the way out and every cursor landed
+fractionally behind the row it came from. `server_timestamp > cursor` then stayed true for rows
+already delivered and sync would have livelocked in production while every log looked healthy.
+Fixed at the column — `timestamptz(3)` — and pinned by two schema invariants, because nothing in
+application code would fail if a later migration widened it back.
+
+**A test that could not fail, found by breaking the code it guarded.** Removing DERIVE-4's
+`workedMs = 0` changed no test result: the voided session in the fixture had never accumulated
+any time, so the assertion held whether or not the rule was implemented. Rewritten with a
+`paused` that closes a four-hour interval first, it now goes red — exactly the money-column
+failure `CLAUDE.md` records from `75ba82e`. Four other guards were disarmed in turn and each went
+red as it should: the duplicate-resume interval guard, the insertion-breaks-the-future check in
+`SESSION-3`, `workDate`'s company timezone, and the precision fix above.
+
+`work_session_events` gained `attestation_level`, so `ATTEST-3`/`ATTEST-4` now hold end to end on
+the server; the device-side biometric call remains unbuilt and every event honestly records
+`none`. logic.md's ATTEST group was downgraded from `[unbuilt]` to partly built rather than left
+claiming no code exists.
+
+Not built yet, and the larger half of the phase: the device. `expo-sqlite`, the outbox, per-record
+sync status (`CONFLICT-6`), device-side migrations, passkey joining (`AUTH-1`–`AUTH-10`), and the
+Face ID call itself.
+
 ### 12:20 — Phase 0 stops waiting on signups, and both clients get built
 
 Started from external advice to be wary of managed database services and to focus on building.

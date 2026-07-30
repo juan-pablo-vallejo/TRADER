@@ -9,14 +9,13 @@ This file owns the build path and current status.
 
 ## Now
 
-**Phase 0, in progress.** The pnpm workspace, `packages/db` and `packages/api` are done —
-schema with append-only triggers, and the tRPC router with just-in-time provisioning, role
-gates and `me.get`, all under CI.
+**Phase 1, in progress.** Phase 0 is complete: an admin signs in on web and a worker on mobile
+against the local stack, each provisioned into Postgres on first request with the correct role,
+all under CI.
 
-What remains is `apps/web` and `apps/mobile`, built and run against the local stack: the
-`docker-compose.yml` Postgres and a development identity supplied at the HTTP edge. No external
-account is needed to finish this phase — see [DECISIONS.md](DECISIONS.md) for why the signups
-moved to the pilot.
+Phase 1's four **at start** gates are settled — clock skew, pull cursor shape, offline auth and
+language; see [DECISIONS.md](DECISIONS.md). The sync core is being built server-first, because
+the protocol is testable headless long before a device can exercise it.
 
 ## What "v1" means
 
@@ -47,9 +46,9 @@ dates.
 
 | Phase                             | Delivers                                            | Effort        | Status          |
 | --------------------------------- | --------------------------------------------------- | ------------- | --------------- |
-| **0 — Foundation**                | Monorepo, schema, auth, one running stack           | 2–3 wks       | **In progress** |
+| **0 — Foundation**                | Monorepo, schema, auth, one running stack           | 2–3 wks       | **Done**        |
 | **Spike — geofenced clock-in**    | Whether battery cost kills auto-detection           | 3–5 days      | Not started     |
-| **1 — Offline clock in/out**      | The sync core, joining, and **the pilot goes live** | 4–8 wks       | Not started     |
+| **1 — Offline clock in/out**      | The sync core, joining, and **the pilot goes live** | 4–8 wks       | **In progress** |
 | **2 — Jobs, roster, materials**   | Self-service setup, materials with photos           | 3–4 wks       | Not started     |
 | **3 — Closeout & reconciliation** | Day lock, corrections, job cost to date             | 2–3 wks       | Not started     |
 | **4 — Invoices & payment**        | Invoice from job data, PDF, sent, **paid online**   | 3–5 wks       | Not started     |
@@ -141,9 +140,6 @@ sync core; if the core is wrong, everything above it inherits the fault.
 | Gate                                              | Due                              | Why it blocks                                                                                                                                                                                |
 | ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Deploy the stack: Neon · Clerk · Vercel · Sentry  | **At start**                     | Phase 0 runs locally by design. A pilot crew needs a reachable backend and real accounts, and Neon's tier reasoning in [ACCOUNTS.md](ACCOUNTS.md) must be re-read here rather than defaulted |
-| Offline auth grace policy                         | **At start**                     | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path                                                                                                    |
-| Sync protocol shape — cursor, batch size, backoff | **At start**                     | The protocol _is_ the phase. Includes the clock-skew bound on `client_timestamp` ([logic.md](logic.md) `CONFLICT-4`)                                                                         |
-| Language: English-first vs Spanish-first          | **At start**                     | i18n from day 1 is cheap; retrofitting is not                                                                                                                                                |
 | Data retention policy                             | **Before the policy is drafted** | The privacy policy cannot be written without it, and statute largely dictates the answer                                                                                                     |
 | Account deletion flow                             | By pilot launch                  | A store requirement, not a nicety — see the compliance note below                                                                                                                            |
 | ToS and Privacy Policy                            | By pilot launch                  | Real users, real payroll data                                                                                                                                                                |

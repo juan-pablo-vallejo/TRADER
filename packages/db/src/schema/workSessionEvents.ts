@@ -8,7 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
-import { workSessionEventType } from "./enums";
+import { attestationLevel, workSessionEventType } from "./enums";
 import { jobs } from "./jobs";
 import { users } from "./users";
 
@@ -48,8 +48,20 @@ export const workSessionEvents = pgTable(
     type: workSessionEventType("type").notNull(),
     /** When it happened on the device. Authoritative for conflict ordering. */
     clientTimestamp: timestamp("client_timestamp", { withTimezone: true }).notNull(),
-    /** When it reached the server. Tiebreaker and sanity bound only. */
-    serverTimestamp: timestamp("server_timestamp", { withTimezone: true })
+    /**
+     * When it reached the server. CONFLICT-2 tiebreaker, and the key the sync
+     * pull cursor pages on (CONFLICT-4a).
+     *
+     * **Millisecond precision, deliberately.** Postgres defaults to microseconds,
+     * but a JavaScript `Date` cannot represent them — the driver truncates, so a
+     * cursor built from a value read back through JS lands fractionally *behind*
+     * the row it came from. Every subsequent `server_timestamp > cursor` is then
+     * true for rows already delivered, and pagination silently never advances.
+     * Matching the column to the precision every client can actually hold is what
+     * makes the keyset sound; the alternative is arithmetic at every comparison,
+     * in a protocol whose rules say it must stay one readable handler.
+     */
+    serverTimestamp: timestamp("server_timestamp", { withTimezone: true, precision: 3 })
       .notNull()
       .defaultNow(),
     /** The worker, or an admin issuing a correction. */
@@ -73,7 +85,17 @@ export const workSessionEvents = pgTable(
     deviceLng: doublePrecision("device_lng"),
     /** Reported accuracy radius in metres, so a poor fix can be told from a good one. */
     deviceAccuracyM: doublePrecision("device_accuracy_m"),
-    /** Correction reason, voided-event reference, and similar metadata. */
+    /**
+     * How strongly this event is attributed to a person present when it was taken
+     * (logic.md ATTEST-3). Defaults to `none` so a client that does not yet send
+     * the field records the honest answer rather than an optimistic one — and so
+     * the column can be NOT NULL over rows written before attestation shipped.
+     */
+    attestationLevel: attestationLevel("attestation_level").notNull().default("none"),
+    /**
+     * Correction reason, voided-event reference, and — per CONFLICT-4 — the skew
+     * flag when the submitting device's clock was beyond tolerance.
+     */
     payload: jsonb("payload"),
     /**
      * No `updated_at`: these rows cannot be updated. Including one would imply a
