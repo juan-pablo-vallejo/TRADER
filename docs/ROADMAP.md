@@ -14,8 +14,12 @@ against the local stack, each provisioned into Postgres on first request with th
 all under CI.
 
 Phase 1's four **at start** gates are settled — clock skew, pull cursor shape, offline auth and
-language; see [DECISIONS.md](DECISIONS.md). The sync core is being built server-first, because
-the protocol is testable headless long before a device can exercise it.
+language; see [DECISIONS.md](DECISIONS.md).
+
+Built: the server sync boundary (`sync.push`/`sync.pull`), the shared session fold, the device's
+`expo-sqlite` store and outbox, and a clock in/out screen that records offline. Still to come in
+this phase: passkey joining (`AUTH-1`–`AUTH-10`), the Face ID call behind `ATTEST-2`, background
+and foreground sync triggers, and the deploy gate below.
 
 ## What "v1" means
 

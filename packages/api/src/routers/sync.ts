@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import { checkLegality, orderEvents, type FoldEvent } from "../sync/fold";
 import { clockSkewMs, isClockTrusted, PULL_BATCH_SIZE } from "../sync/protocol";
+import type { PushResult } from "../sync/types";
 import { protectedProcedure, router } from "../trpc";
 
 /**
@@ -33,13 +34,6 @@ const incomingEvent = z.object({
   deviceAccuracyM: z.number().nonnegative().nullable().default(null),
   payload: z.record(z.string(), z.unknown()).nullable().default(null),
 });
-
-export type PushResult =
-  | { id: string; status: "accepted" }
-  /** CONFLICT-1: a repeat of an already-recorded id is a no-op that succeeds. */
-  | { id: string; status: "duplicate" }
-  /** SESSION-4: rejected at the boundary and never written. */
-  | { id: string; status: "rejected"; reason: string; conflictingEventId?: string };
 
 export const syncRouter = router({
   /**
