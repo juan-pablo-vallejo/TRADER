@@ -1,9 +1,9 @@
 import { index, numeric, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-import { cents, primaryId, timestamps } from "./_shared.js";
-import { companies } from "./companies.js";
-import { jobs } from "./jobs.js";
-import { users } from "./users.js";
+import { cents, primaryId, timestamps } from "./_shared";
+import { companies } from "./companies";
+import { jobs } from "./jobs";
+import { users } from "./users";
 
 /**
  * Materials consumed on a job (SPEC §4, §6).

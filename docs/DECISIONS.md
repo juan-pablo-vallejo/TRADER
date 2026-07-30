@@ -1,6 +1,6 @@
 # Decisions
 
-Current as of 2026-07-29. **Why** each choice was made, and when it changed. _What_ was chosen
+Current as of 2026-07-30. **Why** each choice was made, and when it changed. _What_ was chosen
 lives in [SPEC.md](SPEC.md); the **rules** those choices imply live in [logic.md](logic.md).
 
 This file is the **single canon** for decisions. Where it and SPEC.md disagree, this file wins
@@ -157,6 +157,45 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   what keeps advisory detection free when it fires wrongly — dismissing a prompt costs one
   gesture that was going to be spent anyway — and it means the spike needs no confirmation UI of
   its own.
+
+### Settled unblocking Phase 0 (2026-07-30)
+
+- **Build against local Postgres; Neon is deferred, not dropped.** Phase 0 had stalled with two
+  packages built and nothing to run them, because [ROADMAP.md](ROADMAP.md) made a deployed stack
+  the phase's exit criterion — so remaining work was "blocked on signups rather than code". That
+  is a bad reason to stop building. `packages/db/src/client.ts` already carries the dual-driver
+  switch, so developing against the `docker-compose.yml` Postgres costs **no code change**:
+  `USE_LOCAL_POSTGRES=true` and the same Drizzle API runs on `node-postgres` instead of Neon's
+  HTTP driver. **This rewrites Phase 0's former "Needs: Neon · Clerk · Vercel · Sentry · Expo"** —
+  those move to the pilot, which is the first thing that genuinely cannot run on a laptop.
+  Nothing about the Neon choice itself is retracted; the signup is sequenced later.
+- **The Neon tier analysis outlives the deferral, and must be re-read at the deploy gate.**
+  [ACCOUNTS.md](ACCOUNTS.md) records why Launch rather than Free: Free suspends compute for the
+  rest of the billing period once 100 CU-hours are spent, thirty phones syncing across a 10–12
+  hour workday can approach that, and the failure mode is the crew losing the app mid-shift
+  against a 6-hour restore window. Deferring the account must not defer that finding — it is the
+  reason the tier is not a free-tier default when the gate arrives.
+- **Auth is deferred behind the seam that already exists, not stubbed inside the API.**
+  `packages/api` was built so it "never talks to Clerk" — it receives an already-verified
+  `AuthIdentity` from the HTTP edge. So the web app supplies a development identity at that edge
+  and the API is untouched. The dev provider **fails closed at request time**, not at module
+  load: `next build` runs with `NODE_ENV=production` and no dev flag, so a module-load throw
+  would break the build, and setting the flag in CI to fix it would normalise the flag being on
+  everywhere. Absent flag ⇒ no identity ⇒ the existing `protectedProcedure` returns 401. Flag set
+  **in production** is the one combination worth crashing over. Clerk replaces one file.
+- **Relative imports inside packages carry no file extension.** They were written
+  `./trpc.js` — correct TypeScript ESM, and `tsc`, `tsx`, `vitest` and `drizzle-kit` all map it
+  back to `.ts`. Bundlers do not. Turbopack has no extension-aliasing at all (only
+  `resolveExtensions`, which cannot help once a specifier already ends in `.js`), so `next build`
+  failed on the first cross-file import in `@trader/api`; Metro would fail the same way for
+  mobile. The alternatives were opting the web app out of Turbopack, or a different resolver
+  workaround per bundler. Dropping the extension satisfies every consumer with configuration in
+  none of them, and `moduleResolution: bundler` — already set in `tsconfig.base.json` — is
+  exactly the mode that expects it. Nothing here is run by bare `node`, which is the one
+  consumer that would still require the extension.
+- **Development subject ids are local-only and the rows are throwaway.** Seeding an admin uses
+  `SEED_ADMIN_CLERK_USER_ID`, so a dev subject puts a non-Clerk string in the column real Clerk
+  ids will occupy. Harmless locally; it must never be seeded into a deployed database.
 
 ### Settled defining v1 (2026-07-29)
 

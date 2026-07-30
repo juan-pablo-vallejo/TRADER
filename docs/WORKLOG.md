@@ -13,6 +13,66 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ---
 
+## 2026-07-30
+
+### 12:20 — Phase 0 stops waiting on signups, and both clients get built
+
+Started from external advice to be wary of managed database services and to focus on building.
+That landed exactly on why nothing had been committed since `a309f46`: ROADMAP made a _deployed_
+stack the Phase 0 exit criterion, so the phase read as "blocked on signups rather than code".
+Nothing about it was a code problem. Reframed the phase around a running stack instead of a
+deployed one, which cost nothing to do — `packages/db/src/client.ts` already had the dual-driver
+switch, and `packages/api` was already built to receive an already-verified identity rather than
+talk to Clerk. Both deferrals were free because both seams already existed.
+
+Weighed dropping Neon outright and self-hosting in production too. Rejected: it collides with the
+settled "tRPC inside Next.js on Vercel" decision, since serverless functions against a plain
+Postgres exhaust connections without a pooler you then run yourself. Deferring keeps the option
+and costs nothing, so the entry is worded "deferred, not dropped" and carries the Neon tier
+analysis forward to the deploy gate rather than burying it with the signup.
+
+**A plan review made two blocking claims; one was wrong.** It said the merge of
+`v1-scope-passkeys-invoicing` would smuggle in a scope change without marking the superseded
+decisions, and prescribed adding "superseded" banners — which `CLAUDE.md` explicitly forbids,
+and which the branch had already handled correctly by rewriting the facts in place
+(`DECISIONS.md:207`). It also asserted a recorded "sign up now rather than build a dev shim"
+decision; grep found no such entry. Its other blocking claim was right and material: a
+module-load throw in the dev-auth guard would have broken the `next build` step being added in
+the same plan, and the natural fix — setting the flag in CI — would have normalised the flag
+being on everywhere. Guard moved to request time.
+
+**The merge itself was a mistake worth recording.** Acted on a stale local `main` without
+fetching; the branch had already merged the previous day as #12. PR #13 was therefore a no-op
+and left an empty commit, `37aa1a9`, on `main`. Harmless, but it is there because a `git fetch`
+was skipped.
+
+**The one genuinely invasive change was not in the plan.** `next build` failed on every
+cross-file import inside `@trader/api`: the packages import siblings as `./trpc.js`, correct
+TypeScript ESM, but Turbopack has no extension-aliasing at all — only `resolveExtensions`, which
+cannot help once a specifier already ends in `.js`. Tried `experimental.extensionAlias`;
+Turbopack ignores it. That left opting the web app out of Turbopack, or dropping the extension
+across 63 sites in 20 files. Chose the latter because Metro would have hit the identical wall for
+mobile, and `moduleResolution: bundler` is already the mode that expects extensionless imports.
+Verified afterwards that `tsc`, `tsx` (migrate/seed), `vitest` and Metro all still resolve.
+
+Two supply-chain and tooling defaults were left armed rather than quietly disabled. pnpm
+auto-wrote a `minimumReleaseAgeExclude` list for ten Expo packages published ~21 hours earlier;
+that is the quarantine `CLAUDE.md` says to wait out rather than disable, so the list was reverted
+and `expo` pinned to `57.0.8` (2026-07-22, well clear) instead. It also left a
+`sharp: set this to true or false` placeholder, which was decided rather than deleted.
+
+Watched to fail before being trusted, per the repo rule: disarming `devAuthEnabled` makes a
+production server with no flag set return a signed-in **admin** from `me.get`, and turns 3 of the
+4 new tests red. Restored, both go green. The mobile half was proven on a booted iPhone 17
+simulator rather than asserted — Expo's `--ios` launcher shells out to `osascript`, which this
+environment blocks, so Metro was started plainly and Expo Go opened with
+`xcrun simctl openurl`.
+
+Left undone: `.env.example` is unreadable under current tool permissions, so the
+`DEV_AUTH_ENABLED` / `EXPO_PUBLIC_DEV_SUBJECT` variables are documented in the commit and in this
+entry but **not yet in the file that owns the environment contract**. That is a real gap, not a
+deferral.
+
 ## 2026-07-29
 
 ### 01:47 — v1 gets a definition, plus passkey signup and invoicing that takes payment

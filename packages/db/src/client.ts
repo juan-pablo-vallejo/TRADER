@@ -3,8 +3,8 @@ import { drizzle as drizzleNeon } from "drizzle-orm/neon-http";
 import { drizzle as drizzleNode } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { runtimeDatabaseUrl, useLocalPostgres } from "./env.js";
-import * as schema from "./schema/index.js";
+import { runtimeDatabaseUrl, useLocalPostgres } from "./env";
+import * as schema from "./schema/index";
 
 /**
  * Dual driver, one env switch.

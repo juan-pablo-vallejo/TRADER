@@ -1,4 +1,4 @@
-import { protectedProcedure, router } from "../trpc.js";
+import { protectedProcedure, router } from "../trpc";
 
 /**
  * The signed-in caller's own record.

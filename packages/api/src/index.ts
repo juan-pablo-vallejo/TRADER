@@ -1,11 +1,11 @@
-export { appRouter, type AppRouter } from "./routers/_app.js";
+export { appRouter, type AppRouter } from "./routers/_app";
 export {
   createContext,
   PROVISIONAL_USER_NAME,
   type AppUser,
   type AuthIdentity,
   type Context,
-} from "./context.js";
+} from "./context";
 export {
   adminProcedure,
   createCallerFactory,
@@ -13,4 +13,4 @@ export {
   protectedProcedure,
   publicProcedure,
   router,
-} from "./trpc.js";
+} from "./trpc";

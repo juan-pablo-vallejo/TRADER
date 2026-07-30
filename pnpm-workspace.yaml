@@ -5,3 +5,8 @@ packages:
 # vitest depends on it. Denying this breaks the test runner.
 allowBuilds:
   esbuild: true
+  # Next.js's image optimizer, and likewise a platform-specific native binary.
+  # Phase 0 renders no images, but denying the postinstall leaves a half-installed
+  # package that `next build` warns on — and the first material photo in Phase 2
+  # would turn that warning into a failure.
+  sharp: true

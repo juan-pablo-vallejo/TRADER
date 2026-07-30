@@ -11,11 +11,20 @@ re-check anything load-bearing before relying on it.
 
 ## Have now
 
-| Service | Used for                           |
-| ------- | ---------------------------------- |
-| GitHub  | Repository, and CI when it arrives |
+| Service            | Used for                                                        |
+| ------------------ | --------------------------------------------------------------- |
+| GitHub             | Repository and CI                                               |
+| _(local Postgres)_ | Not an account. `docker-compose.yml` — the development database |
 
-## Phase 0 — blocking the current phase
+## Phase 1 — the deployed stack
+
+**None of these blocks Phase 0**, which completes against local Postgres and a development
+identity supplied at the HTTP edge; see [DECISIONS.md](DECISIONS.md). Each is needed the moment
+its trigger fires, and every trigger lands at the pilot: **Neon** when the backend must be
+reachable from a phone off this LAN · **Clerk** when real workers sign in, since passkey
+enrolment cannot be faked on a real handset · **Vercel** for anything deployed at all ·
+**Sentry** when crashes happen where no debugger is attached · **Expo** when a build goes to
+someone else's phone.
 
 | Service        | Used for                | Cost at pilot scale                                                                                                                                                                                                                                      | Have it |
 | -------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
@@ -39,7 +48,7 @@ Launch has had **no monthly minimum since December 2025** — it bills purely on
 $0.106 per CU-hour plus $0.35 per GB-month. Expect single-digit to low-teens dollars per month
 at pilot scale; there is no fixed plan fee to commit to.
 
-## Phase 1 — the pilot goes live
+## Phase 1 — store accounts and domain
 
 The pilot lands at the end of Phase 1 (see [ROADMAP.md](ROADMAP.md)), so these are Phase 1
 dependencies, not late ones.

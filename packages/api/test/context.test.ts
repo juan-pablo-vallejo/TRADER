@@ -2,7 +2,7 @@ import { users } from "@trader/db";
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createContext, PROVISIONAL_USER_NAME } from "../src/context.js";
+import { createContext, PROVISIONAL_USER_NAME } from "../src/context";
 import {
   API_TEST_COMPANY,
   clearTestUsers,
@@ -13,7 +13,7 @@ import {
   testDb,
   oldestCompanyId,
   withEmptyTenantTables,
-} from "./helpers.js";
+} from "./helpers";
 
 beforeAll(seedCompany);
 beforeEach(clearTestUsers);

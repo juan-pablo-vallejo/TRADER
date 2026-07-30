@@ -13,8 +13,10 @@ This file owns the build path and current status.
 schema with append-only triggers, and the tRPC router with just-in-time provisioning, role
 gates and `me.get`, all under CI.
 
-Everything remaining in Phase 0 is blocked on signups rather than code: Neon and Clerk for the
-web app, Expo for mobile, Sentry and Vercel to deploy.
+What remains is `apps/web` and `apps/mobile`, built and run against the local stack: the
+`docker-compose.yml` Postgres and a development identity supplied at the HTTP edge. No external
+account is needed to finish this phase — see [DECISIONS.md](DECISIONS.md) for why the signups
+moved to the pilot.
 
 ## What "v1" means
 
@@ -38,14 +40,14 @@ and the AI estimator.
 
 Each phase is independently shippable and usable on a real job. Ship phase N before building
 N+1. **Planning horizon: 14–23 weeks solo** to the end of v1, plus a 3–5 day spike that may cost
-nothing — it needs no accounts, so it can run while Phase 0 waits on signups. The nominal 10 weeks
+nothing — it needs no accounts and no server work, so it can run alongside any phase. The nominal 10 weeks
 did not survive adversarial review; the band then widened again when passkey enrolment joined
 Phase 1 and payment capture joined Phase 4. The ranges below allocate it; they are effort, not
 dates.
 
 | Phase                             | Delivers                                            | Effort        | Status          |
 | --------------------------------- | --------------------------------------------------- | ------------- | --------------- |
-| **0 — Foundation**                | Monorepo, schema, auth, one deployed stack          | 2–3 wks       | **In progress** |
+| **0 — Foundation**                | Monorepo, schema, auth, one running stack           | 2–3 wks       | **In progress** |
 | **Spike — geofenced clock-in**    | Whether battery cost kills auto-detection           | 3–5 days      | Not started     |
 | **1 — Offline clock in/out**      | The sync core, joining, and **the pilot goes live** | 4–8 wks       | Not started     |
 | **2 — Jobs, roster, materials**   | Self-service setup, materials with photos           | 3–4 wks       | Not started     |
@@ -57,13 +59,15 @@ dates.
 
 ## Phase 0 — Foundation
 
-Repo, TypeScript monorepo (mobile + web + shared types), Drizzle schema for core tables,
-Neon database, Clerk wired, one deployed backend, Sentry on.
+Repo, TypeScript monorepo (mobile + web + shared types), Drizzle schema for core tables, a
+running Postgres, an identity at the HTTP edge, and both clients talking to one API.
 
-**Done when** an admin can log in on web and a worker on mobile against the real deployed
-stack.
+**Done when** an admin can sign in on web and a worker on mobile against a **running stack**,
+each provisioned into the database on first request, with the correct role.
 
-**Needs:** Neon · Clerk · Vercel · Sentry · Expo. **Gates:** none outstanding.
+**Needs:** nothing external — local Postgres and a development identity. Deploying that stack
+to Vercel, Neon, Clerk and Sentry is a gate on **Phase 1's pilot**, where a real crew makes it
+genuinely necessary. **Gates:** none outstanding.
 
 Clerk is configured for **passkeys** here, not just phone. One consequence lands earlier than
 expected: passkeys ship native code, so they work in neither Expo Go nor an Android emulator, and
@@ -134,19 +138,21 @@ sees correct, deduplicated hours per job.
 This phase carries the most risk in the project. Everything later is additive on a working
 sync core; if the core is wrong, everything above it inherits the fault.
 
-| Gate                                              | Due                              | Why it blocks                                                                                                        |
-| ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Offline auth grace policy                         | **At start**                     | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path                            |
-| Sync protocol shape — cursor, batch size, backoff | **At start**                     | The protocol _is_ the phase. Includes the clock-skew bound on `client_timestamp` ([logic.md](logic.md) `CONFLICT-4`) |
-| Language: English-first vs Spanish-first          | **At start**                     | i18n from day 1 is cheap; retrofitting is not                                                                        |
-| Data retention policy                             | **Before the policy is drafted** | The privacy policy cannot be written without it, and statute largely dictates the answer                             |
-| Account deletion flow                             | By pilot launch                  | A store requirement, not a nicety — see the compliance note below                                                    |
-| ToS and Privacy Policy                            | By pilot launch                  | Real users, real payroll data                                                                                        |
-| Apple App Privacy details · Play Data Safety form | By pilot launch                  | Separate mandatory forms, one per store. Both must declare location and what Sentry collects                         |
-| Sentry PII scrubbing configured                   | By pilot launch                  | Crash breadcrumbs capture phone numbers and location unless told not to                                              |
-| Pilot success criteria                            | By pilot launch                  | You cannot judge a pilot you never defined success for                                                               |
+| Gate                                              | Due                              | Why it blocks                                                                                                                                                                                |
+| ------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deploy the stack: Neon · Clerk · Vercel · Sentry  | **At start**                     | Phase 0 runs locally by design. A pilot crew needs a reachable backend and real accounts, and Neon's tier reasoning in [ACCOUNTS.md](ACCOUNTS.md) must be re-read here rather than defaulted |
+| Offline auth grace policy                         | **At start**                     | A Clerk session expiring in a dead zone must not block clock-in — it shapes the auth path                                                                                                    |
+| Sync protocol shape — cursor, batch size, backoff | **At start**                     | The protocol _is_ the phase. Includes the clock-skew bound on `client_timestamp` ([logic.md](logic.md) `CONFLICT-4`)                                                                         |
+| Language: English-first vs Spanish-first          | **At start**                     | i18n from day 1 is cheap; retrofitting is not                                                                                                                                                |
+| Data retention policy                             | **Before the policy is drafted** | The privacy policy cannot be written without it, and statute largely dictates the answer                                                                                                     |
+| Account deletion flow                             | By pilot launch                  | A store requirement, not a nicety — see the compliance note below                                                                                                                            |
+| ToS and Privacy Policy                            | By pilot launch                  | Real users, real payroll data                                                                                                                                                                |
+| Apple App Privacy details · Play Data Safety form | By pilot launch                  | Separate mandatory forms, one per store. Both must declare location and what Sentry collects                                                                                                 |
+| Sentry PII scrubbing configured                   | By pilot launch                  | Crash breadcrumbs capture phone numbers and location unless told not to                                                                                                                      |
+| Pilot success criteria                            | By pilot launch                  | You cannot judge a pilot you never defined success for                                                                                                                                       |
 
-**Needs:** Apple Developer · Google Play · domain · **Neon Launch billing begins here.**
+**Needs:** Neon · Clerk · Vercel · Sentry — all deferred out of Phase 0 and due here — plus
+Apple Developer · Google Play · domain. **Neon Launch billing begins here.**
 Jobs and roster are hand-seeded until Phase 2.
 
 ### Distribution

@@ -7,11 +7,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { primaryId, timestamps } from "./_shared.js";
-import { companies } from "./companies.js";
-import { crews } from "./crews.js";
-import { customers } from "./customers.js";
-import { jobStatus } from "./enums.js";
+import { primaryId, timestamps } from "./_shared";
+import { companies } from "./companies";
+import { crews } from "./crews";
+import { customers } from "./customers";
+import { jobStatus } from "./enums";
 
 /**
  * A unit of work at a location. Archived, never deleted (SPEC §4) — job costing

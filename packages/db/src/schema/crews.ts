@@ -1,8 +1,8 @@
 import { index, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 
-import { primaryId, timestamps } from "./_shared.js";
-import { companies } from "./companies.js";
-import { users } from "./users.js";
+import { primaryId, timestamps } from "./_shared";
+import { companies } from "./companies";
+import { users } from "./users";
 
 /**
  * A crew groups workers under a foreman (SPEC §4). Kept relational precisely so

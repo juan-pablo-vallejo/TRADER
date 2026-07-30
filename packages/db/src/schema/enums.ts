@@ -27,5 +27,9 @@ export const workSessionEventType = pgEnum("work_session_event_type", [
   "voided",
 ]);
 
-/** SPEC §4: v1 tracks invoices only; `paid` is set manually until Phase 5. */
+/**
+ * SPEC §4. Retained for the draft/sent/void lifecycle; `paid` is the member Phase 4
+ * stops writing, because status is derived from attached payments once invoices
+ * settle online. See `invoices.ts`.
+ */
 export const invoiceStatus = pgEnum("invoice_status", ["draft", "sent", "paid", "void"]);

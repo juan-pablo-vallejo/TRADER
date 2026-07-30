@@ -1,7 +1,7 @@
 import { text } from "drizzle-orm/pg-core";
 import { pgTable } from "drizzle-orm/pg-core";
 
-import { primaryId, timestamps } from "./_shared.js";
+import { primaryId, timestamps } from "./_shared";
 
 /**
  * One seeded row in v1 (SPEC §4). Exists now so every tenant-scoped table can

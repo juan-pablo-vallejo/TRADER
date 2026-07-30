@@ -14,6 +14,10 @@ dist/
 # Next.js
 .next/
 out/
+# Regenerated on every run, and `next dev` and `next build` write *different*
+# contents (they reference .next/dev/types and .next/types respectively), so
+# tracking it means a spurious diff every time you switch between them.
+next-env.d.ts
 
 # Environment & secrets
 .env
@@ -23,6 +27,9 @@ out/
 # Build output
 build/
 coverage/
+# TypeScript's incremental-build cache. `next dev` writes it beside the app's
+# tsconfig; it is machine-local state, not source.
+*.tsbuildinfo
 
 # macOS
 .DS_Store
