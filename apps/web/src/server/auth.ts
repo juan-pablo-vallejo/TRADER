@@ -1,5 +1,5 @@
 import type { AuthIdentity } from "@trader/api";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 /**
  * The one file Clerk replaces.
@@ -13,6 +13,12 @@ import { cookies } from "next/headers";
 
 /** Cookie holding the development subject id. Name is deliberately unmistakable. */
 export const DEV_SUBJECT_COOKIE = "trader_dev_subject";
+
+/**
+ * Header carrying the same thing for native clients, which have no cookie jar.
+ * Kept in step with `apps/mobile/src/dev-identity.ts`.
+ */
+export const DEV_SUBJECT_HEADER = "x-trader-dev-subject";
 
 const isProduction = () => process.env.NODE_ENV === "production";
 const devAuthFlagSet = () => process.env.DEV_AUTH_ENABLED === "true";
@@ -50,7 +56,13 @@ export function devAuthEnabled(): boolean {
 export async function identityFromRequest(): Promise<AuthIdentity | null> {
   if (!devAuthEnabled()) return null;
 
-  const subject = (await cookies()).get(DEV_SUBJECT_COOKIE)?.value?.trim();
+  // The header comes first because it is the mobile path: a native app has no
+  // cookie jar, so the subject travels in a header there. Clerk will collapse
+  // both back into one bearer token.
+  const fromHeader = (await headers()).get(DEV_SUBJECT_HEADER)?.trim();
+  const fromCookie = (await cookies()).get(DEV_SUBJECT_COOKIE)?.value?.trim();
+
+  const subject = fromHeader || fromCookie;
   if (!subject) return null;
 
   return {

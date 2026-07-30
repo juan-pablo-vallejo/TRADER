@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { devAuthEnabled } from "../src/server/auth";
+import { DEV_SUBJECT_HEADER, devAuthEnabled } from "../src/server/auth";
 
 /**
  * The development identity path is the one piece of this app that, misconfigured,
@@ -11,6 +11,16 @@ import { devAuthEnabled } from "../src/server/auth";
  */
 afterEach(() => {
   vi.unstubAllEnvs();
+});
+
+/**
+ * The server half of a two-sided fact. `apps/mobile/src/dev-identity.ts` pins the
+ * identical literal, and `apps/mobile/test/dev-identity.test.ts` asserts it — a
+ * header the two sides spell differently does not error, it silently produces a
+ * 401 that reads as "not signed in". Change one and you must change the other.
+ */
+it("reads the subject from the header the mobile client sends", () => {
+  expect(DEV_SUBJECT_HEADER).toBe("x-trader-dev-subject");
 });
 
 describe("devAuthEnabled", () => {

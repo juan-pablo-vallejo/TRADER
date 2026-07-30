@@ -77,3 +77,11 @@ jobs:
       - run: pnpm db:migrate
 
       - run: pnpm test
+
+      # Typechecking does not compile the web app: Next resolves the workspace
+      # packages through its own bundler, which is where a `.js`-extension import
+      # or a missing `transpilePackages` entry actually surfaces. Runs with no
+      # auth environment on purpose — `apps/web/src/server/auth.ts` must stay
+      # buildable without DEV_AUTH_ENABLED, or the fix becomes "set the flag in
+      # CI" and the flag ends up on everywhere.
+      - run: pnpm --filter @trader/web build
