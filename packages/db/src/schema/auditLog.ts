@@ -1,8 +1,8 @@
 import { index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
-import { primaryId } from "./_shared.js";
-import { companies } from "./companies.js";
-import { users } from "./users.js";
+import { primaryId } from "./_shared";
+import { companies } from "./companies";
+import { users } from "./users";
 
 /**
  * Append-only record of significant writes (SPEC §4): who, what, when.

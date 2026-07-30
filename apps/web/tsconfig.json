@@ -1,0 +1,27 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "preserve",
+
+    /**
+     * An application is a leaf — nothing imports it, so it emits no `.d.ts`.
+     * Leaving the base config's `declaration` on makes TS additionally require
+     * every inferred type to be *nameable* in a portable way, which tRPC's
+     * `createTRPCReact` return type is not (TS2742). Turning it off here is the
+     * fix rather than annotating around a declaration file we never produce.
+     */
+    "declaration": false,
+    "declarationMap": false,
+
+    "allowJs": true,
+    "incremental": true,
+    "moduleDetection": "force",
+    "plugins": [{ "name": "next" }],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

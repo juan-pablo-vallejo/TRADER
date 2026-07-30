@@ -8,19 +8,23 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { cents, currency, primaryId, timestamps } from "./_shared.js";
-import { companies } from "./companies.js";
-import { customers } from "./customers.js";
-import { invoiceStatus } from "./enums.js";
-import { jobs } from "./jobs.js";
-import { materials } from "./materials.js";
+import { cents, currency, primaryId, timestamps } from "./_shared";
+import { companies } from "./companies";
+import { customers } from "./customers";
+import { invoiceStatus } from "./enums";
+import { jobs } from "./jobs";
+import { materials } from "./materials";
 
 /**
- * A tracking record in v1 — already shaped for real payments (SPEC §4).
+ * An invoice that goes to a customer and gets paid, in v1 (SPEC §4).
  *
- * `paid` is set manually until Phase 5, when a `payments` row will attach to this
- * exact invoice and flip the status automatically. That phase adds tables; it does
- * not restructure this one.
+ * Phase 4 attaches `payments` rows to this exact invoice, and `status` becomes
+ * **derived from them** rather than set: once customers pay online, part-payments
+ * and overpayments are ordinary and no stored enum value can express either.
+ * Deriving it is what makes it impossible for the status and the money to
+ * disagree. Cash and cheque become payment rows with a method, so manual and
+ * online settlement reconcile through one mechanism. That phase adds tables; it
+ * does not restructure this one.
  */
 export const invoices = pgTable(
   "invoices",

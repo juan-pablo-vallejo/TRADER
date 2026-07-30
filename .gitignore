@@ -23,6 +23,9 @@ out/
 # Build output
 build/
 coverage/
+# TypeScript's incremental-build cache. `next dev` writes it beside the app's
+# tsconfig; it is machine-local state, not source.
+*.tsbuildinfo
 
 # macOS
 .DS_Store

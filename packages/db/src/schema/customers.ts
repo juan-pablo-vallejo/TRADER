@@ -1,7 +1,7 @@
 import { index, pgTable, text, uuid } from "drizzle-orm/pg-core";
 
-import { primaryId, timestamps } from "./_shared.js";
-import { companies } from "./companies.js";
+import { primaryId, timestamps } from "./_shared";
+import { companies } from "./companies";
 
 /**
  * The contractor's customers. SPEC §4 notes the future client-portal login

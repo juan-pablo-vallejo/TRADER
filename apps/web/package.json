@@ -1,0 +1,33 @@
+{
+  "name": "@trader/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "DEV_AUTH_ENABLED=true next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "@trader/api": "workspace:*",
+    "@trader/db": "workspace:*",
+    "@trpc/client": "^11.18.0",
+    "@trpc/react-query": "^11.18.0",
+    "@trpc/server": "^11.18.0",
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "superjson": "^2.2.6"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "dotenv": "^17.2.3",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.10"
+  }
+}

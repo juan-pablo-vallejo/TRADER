@@ -6,15 +6,15 @@
  * definitions sharing the enums and types declared here — one ORM and one
  * migration tool, not one schema file.
  */
-export * from "./_shared.js";
-export * from "./enums.js";
+export * from "./_shared";
+export * from "./enums";
 
-export * from "./companies.js";
-export * from "./users.js";
-export * from "./crews.js";
-export * from "./customers.js";
-export * from "./jobs.js";
-export * from "./workSessionEvents.js";
-export * from "./materials.js";
-export * from "./invoices.js";
-export * from "./auditLog.js";
+export * from "./companies";
+export * from "./users";
+export * from "./crews";
+export * from "./customers";
+export * from "./jobs";
+export * from "./workSessionEvents";
+export * from "./materials";
+export * from "./invoices";
+export * from "./auditLog";

@@ -1,8 +1,8 @@
 import { boolean, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
 
-import { cents, primaryId, timestamps } from "./_shared.js";
-import { companies } from "./companies.js";
-import { userRole } from "./enums.js";
+import { cents, primaryId, timestamps } from "./_shared";
+import { companies } from "./companies";
+import { userRole } from "./enums";
 
 /**
  * A person in the system. Authentication lives in Clerk; this table holds the

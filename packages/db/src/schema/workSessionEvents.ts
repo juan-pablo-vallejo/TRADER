@@ -7,10 +7,10 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-import { companies } from "./companies.js";
-import { workSessionEventType } from "./enums.js";
-import { jobs } from "./jobs.js";
-import { users } from "./users.js";
+import { companies } from "./companies";
+import { workSessionEventType } from "./enums";
+import { jobs } from "./jobs";
+import { users } from "./users";
 
 /**
  * The append-only labor core (SPEC §3, §4).

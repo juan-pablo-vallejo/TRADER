@@ -2,16 +2,10 @@ import { users } from "@trader/db";
 import { TRPCError } from "@trpc/server";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { createContext, type AppUser, type Context } from "../src/context.js";
-import { appRouter } from "../src/routers/_app.js";
-import { adminProcedure, createCallerFactory, router } from "../src/trpc.js";
-import {
-  API_TEST_COMPANY,
-  clearTestUsers,
-  pool,
-  seedCompany,
-  testDb,
-} from "./helpers.js";
+import { createContext, type AppUser, type Context } from "../src/context";
+import { appRouter } from "../src/routers/_app";
+import { adminProcedure, createCallerFactory, router } from "../src/trpc";
+import { API_TEST_COMPANY, clearTestUsers, pool, seedCompany, testDb } from "./helpers";
 
 /**
  * Callers run the real middleware chain, so these assert the gates as deployed
