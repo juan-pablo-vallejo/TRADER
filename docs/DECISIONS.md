@@ -158,6 +158,44 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   gesture that was going to be spent anyway — and it means the spike needs no confirmation UI of
   its own.
 
+### Settled at the start of Phase 1 (2026-07-30)
+
+The four gates ROADMAP marks **at start** for Phase 1. All are protocol shape; none could be
+deferred past the first line of sync code.
+
+- **Clock skew is measured at sync time, and a labor event is never rejected for it
+  ([logic.md](logic.md) `CONFLICT-4`).** Comparing an event's `client_timestamp` to
+  `server_timestamp` cannot distinguish a wrong clock from a legitimately old event — a device
+  offline for two days produces a 48-hour gap by design, which is the whole point of SPEC §3. So
+  the sync request carries the device's **current** clock, and skew is `|device_now − server_now|`,
+  independent of how long anything sat in the outbox. **Tolerance is 5 minutes**: phones sync time
+  from the network automatically and healthy drift is seconds, while 5 minutes cannot meaningfully
+  reorder a workday. Beyond tolerance the event is still written — losing a worker's hours to their
+  phone's clock is the worse failure, and `SESSION-4` rejection is permanent — but it is ordered by
+  `server_timestamp` instead of `client_timestamp` and flagged in `payload`. A bad clock loses the
+  power to reorder history without anyone losing labor. Clamping was rejected: in an append-only
+  payroll ledger it would silently record a time the worker did not act, unrecoverably.
+- **The pull cursor is a keyset on `(server_timestamp, id)` with a deliberate overlap window.** A
+  cursor that resumes exactly where it stopped can silently skip events, because transactions do
+  not become visible in timestamp order — a row can commit _after_ a client has read past its
+  timestamp. Re-reading a window behind the cursor closes that gap, and `CONFLICT-1` makes the
+  redundancy free: the client upserts by client UUID, so a redelivered event is a no-op. Trading a
+  little repeated traffic for "cannot drop a labor event" is the right side of that trade every
+  time. A `bigserial` sequence was rejected because it has the identical commit-visibility gap
+  while adding a column and an index; an `xmin`/snapshot cursor is genuinely correct but couples
+  the protocol to Postgres internals, against the `CONFLICT` preamble's "one readable handler".
+  **Batch 200, exponential backoff 1s → 5min with jitter.**
+- **Capture never requires a valid session; only sync does.** A Clerk token expiring in a dead zone
+  must not block clock-in, so labor events write to local SQLite regardless of token state and a
+  stale token only stops the outbox flushing. This mirrors `ATTEST-4`: evidence when present, never
+  a precondition. A fixed offline grace window was rejected — it sets a deadline that expires
+  exactly when connectivity is worst, which is when the crew most needs the app.
+- **English-first, with the i18n layer in place from day 1.** Every string goes through the
+  translation layer immediately even though English is the only locale shipped, because the
+  scaffolding is cheap now and a retrofit is not. Spanish lands when the pilot crew needs it, and
+  the field app is the half that matters — a worker misreading a clock-in screen is a payroll
+  error.
+
 ### Settled unblocking Phase 0 (2026-07-30)
 
 - **Build against local Postgres; Neon is deferred, not dropped.** Phase 0 had stalled with two
@@ -326,20 +364,16 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
 The pilot goes live at the end of Phase 1, so anything that used to read "before pilot" is a
 Phase 1 deadline. [ROADMAP.md](ROADMAP.md) shows each of these as a gate on the phase it blocks.
 
-| Decision                                                                                                                         | Decide                       |
-| -------------------------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Offline auth grace policy (Clerk expiry in a dead zone)                                                                          | **start of Phase 1**         |
-| Sync protocol shape: pull cursor, batch size, backoff curve                                                                      | **start of Phase 1**         |
-| Clock-skew bound on `client_timestamp`, and whether a breach is clamped, flagged or rejected ([logic.md](logic.md) `CONFLICT-4`) | **start of Phase 1**         |
-| Web approval when an admin has no phone ([logic.md](logic.md) `ATTEST-10`)                                                       | before Phase 3               |
-| Pay-rate history: effective-dated rates vs snapshot-at-session                                                                   | before Phase 2               |
-| File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2 — **v1-critical**, invoice PDFs need it too                          | Phase 2                      |
-| Geocoding: Mapbox vs Google (accuracy test on local addresses)                                                                   | Phase 2                      |
-| Payment processor confirmed (Stripe assumed)                                                                                     | before Phase 4               |
-| Invoice number format and starting value                                                                                         | before Phase 4               |
-| What happens when an invoice email fails to deliver                                                                              | before Phase 4               |
-| Closeout actor: foreman-only vs worker-own-day                                                                                   | before Phase 3               |
-| Language: English-first (i18n from day 1) vs Spanish-first                                                                       | **start of Phase 1**         |
-| Pilot success criteria (single canonical set)                                                                                    | before Phase 1 ends          |
-| ToS and Privacy Policy                                                                                                           | before Phase 1 ends          |
-| Pricing model and unit (per-company / per-user / per-crew)                                                                       | before first paying customer |
+| Decision                                                                                                | Decide                       |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------- |
+| Web approval when an admin has no phone ([logic.md](logic.md) `ATTEST-10`)                              | before Phase 3               |
+| Pay-rate history: effective-dated rates vs snapshot-at-session                                          | before Phase 2               |
+| File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2 — **v1-critical**, invoice PDFs need it too | Phase 2                      |
+| Geocoding: Mapbox vs Google (accuracy test on local addresses)                                          | Phase 2                      |
+| Payment processor confirmed (Stripe assumed)                                                            | before Phase 4               |
+| Invoice number format and starting value                                                                | before Phase 4               |
+| What happens when an invoice email fails to deliver                                                     | before Phase 4               |
+| Closeout actor: foreman-only vs worker-own-day                                                          | before Phase 3               |
+| Pilot success criteria (single canonical set)                                                           | before Phase 1 ends          |
+| ToS and Privacy Policy                                                                                  | before Phase 1 ends          |
+| Pricing model and unit (per-company / per-user / per-crew)                                              | before first paying customer |

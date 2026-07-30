@@ -1,8 +1,10 @@
 import { router } from "../trpc";
 import { meRouter } from "./me";
+import { syncRouter } from "./sync";
 
 export const appRouter = router({
   me: meRouter,
+  sync: syncRouter,
 });
 
 /**

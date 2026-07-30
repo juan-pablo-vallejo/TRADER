@@ -167,6 +167,45 @@ describe("clock-in is never blocked by location", () => {
     }
   });
 
+  /**
+   * The sync pull cursor pages on `(server_timestamp, id)` and is carried by
+   * clients as a JavaScript `Date`, which holds milliseconds and nothing finer.
+   * At Postgres's default microsecond precision the driver truncates on the way
+   * out, so a cursor lands fractionally behind the row it came from, every
+   * `server_timestamp > cursor` stays true for rows already delivered, and
+   * pagination never advances — sync livelocks while looking healthy.
+   *
+   * Caught by three cursor tests hanging on their iteration bound. Pinned here
+   * because it is a property of the column, and nothing in application code
+   * would fail if a later migration widened it back.
+   */
+  it("stores server_timestamp at millisecond precision, so a JS cursor can match it", async () => {
+    const { rows } = await pool.query<{ datetime_precision: number }>(
+      `SELECT datetime_precision
+         FROM information_schema.columns
+        WHERE table_schema='public'
+          AND table_name='work_session_events'
+          AND column_name='server_timestamp'`,
+    );
+    expect(rows[0]?.datetime_precision).toBe(3);
+  });
+
+  it("writes no sub-millisecond component a JS Date would silently drop", async () => {
+    const id = "00000000-0000-7000-8000-0000000000e4";
+    await pool.query(
+      `INSERT INTO work_session_events
+         (id,company_id,worker_id,job_id,type,client_timestamp,initiator_user_id)
+       VALUES ($1,$2,$3,$4,'started',now(),$3) ON CONFLICT DO NOTHING`,
+      [id, COMPANY, USER, JOB],
+    );
+    const { rows } = await pool.query<{ micros: string }>(
+      `SELECT (extract(microseconds from server_timestamp)::bigint % 1000)::text AS micros
+         FROM work_session_events WHERE id=$1`,
+      [id],
+    );
+    expect(rows[0]?.micros).toBe("0");
+  });
+
   it("accepts an event with no location at all", async () => {
     const id = "00000000-0000-7000-8000-0000000000e3";
     await pool.query(

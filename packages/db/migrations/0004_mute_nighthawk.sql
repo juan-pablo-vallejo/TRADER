@@ -1,0 +1,2 @@
+ALTER TABLE "work_session_events" ALTER COLUMN "server_timestamp" SET DATA TYPE timestamp (3) with time zone;--> statement-breakpoint
+ALTER TABLE "work_session_events" ALTER COLUMN "server_timestamp" SET DEFAULT now();

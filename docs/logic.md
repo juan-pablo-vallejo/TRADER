@@ -140,11 +140,23 @@ tiebreaker**. An offline 15:00 clock-out that syncs at 18:00 beats a 14:00 event
 **CONFLICT-3.** Where two events genuinely compete — two devices ending the same session — the
 **latest legitimate action under CONFLICT-2 wins.**
 
-**CONFLICT-4.** _(open parameter)_ `server_timestamp` is also a **sanity bound** on
-`client_timestamp`: a device whose clock is badly wrong must not be able to reorder history by
-claiming an implausible time. **The tolerance is undecided**, as is whether a breach is clamped,
-flagged or rejected. Tracked in [DECISIONS.md](DECISIONS.md)'s Open table; it must be settled
-with the sync protocol shape at the start of Phase 1.
+**CONFLICT-4.** A device whose clock is badly wrong must not be able to reorder history by
+claiming an implausible time. Skew is measured **at sync time, not per event**: the push request
+carries the device's current clock, and skew is `|device_now − server_now|`. Comparing an event's
+own `client_timestamp` to `server_timestamp` would not work — a device offline for two days
+produces a 48-hour gap legitimately, and that is the case SPEC §3 exists to serve. **Tolerance is
+5 minutes.** Within it, `client_timestamp` orders events per CONFLICT-2. Beyond it the event is
+**still written** — never rejected, per SESSION-4's permanence and the same logic as ATTEST-4 —
+but is ordered by `server_timestamp` and flagged in `payload`. `client_timestamp` is recorded as
+the device reported it and is never clamped: in an append-only payroll ledger, a rewritten time
+is a time the worker did not act, and nothing downstream can undo it.
+
+**CONFLICT-4a.** The pull cursor is a **keyset on `(server_timestamp, id)`, re-read with a
+deliberate overlap window** rather than resumed exactly where it stopped. Transactions do not
+become visible in `server_timestamp` order — a row can commit after a client has read past its
+timestamp — so a precise cursor can silently skip a labor event. CONFLICT-1 makes the overlap
+free: a redelivered event upserts by client UUID and is a no-op. **Batch 200; retry backs off
+exponentially from 1s to 5min with jitter.**
 
 **CONFLICT-5.** The losing device **snaps to server truth** on its next pull. Clients never argue
 with the server.
@@ -199,8 +211,12 @@ roster action, never by the just-in-time provisioning that runs on sign-in.
 
 ## ATTEST — attribution of consequential actions
 
-**`[unbuilt]` — this group describes intended behaviour in full. No code implements it yet, and
-`work_session_events` does not yet carry an attestation column.** ROADMAP schedules the work.
+**Partly built.** `work_session_events.attestation_level` exists and the sync boundary records
+what the client reports, defaulting to `none` — so ATTEST-3 and ATTEST-4 hold end to end on the
+server. **The device-side check is `[unbuilt]`**: nothing yet invokes Face ID or
+BiometricPrompt, so every event currently records `none` honestly rather than because
+biometrics failed. ATTEST-5 through ATTEST-12, the web approval path, are `[unbuilt]` and
+scheduled for Phase 3.
 
 **ATTEST-1.** The scope rule: **an action that becomes payroll or money must be attributable to
 a person present at the moment it was taken.** Concretely — clock in/out, pause/resume, job

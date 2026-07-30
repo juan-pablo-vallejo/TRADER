@@ -28,6 +28,22 @@ export const workSessionEventType = pgEnum("work_session_event_type", [
 ]);
 
 /**
+ * How strongly an event is attributed to a person present when it was taken
+ * ([logic.md](../../../../docs/logic.md) `ATTEST-3`).
+ *
+ * `none` is a first-class member, not a failure code. ATTEST-4 forbids attestation
+ * from ever blocking a labor event: biometrics can be unenrolled, wet, or absent on
+ * a device with no passcode, and a worker who cannot clock in cannot be paid. The
+ * level is recorded honestly instead, which is precisely what makes a pattern of
+ * `none` visible to the office rather than silently accepted.
+ */
+export const attestationLevel = pgEnum("attestation_level", [
+  "biometric",
+  "device_credential",
+  "none",
+]);
+
+/**
  * SPEC §4. Retained for the draft/sent/void lifecycle; `paid` is the member Phase 4
  * stops writing, because status is derived from attached payments once invoices
  * settle online. See `invoices.ts`.
