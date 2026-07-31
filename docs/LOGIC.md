@@ -351,12 +351,19 @@ rejects, and labor history is other people's hours before it is anything else.
 
 ## ATTEST — attribution of consequential actions
 
-**Partly built.** `work_session_events.attestation_level` exists and the sync boundary records
-what the client reports, defaulting to `none` — so ATTEST-3 and ATTEST-4 hold end to end on the
-server. **The device-side check is `[unbuilt]`**: nothing yet invokes Face ID or
-BiometricPrompt, so every event currently records `none` honestly rather than because
-biometrics failed. ATTEST-5 through ATTEST-12, the web approval path, are `[unbuilt]` and
-scheduled for Phase 3.
+**Partly built.** `ATTEST-1` through `ATTEST-4` hold end to end: every labor event prompts for the
+device's own biometrics, the achieved level is stored, and a failure, cancellation or absent
+sensor records `none` and writes the event anyway.
+
+One inference to be aware of when reading the data. `biometric` is claimed **only** when the
+OS fallback was disabled and the check still passed, which is the one case the platform
+guarantees a face or finger was used. The fallback prompt permits a biometric retry as well as a
+passcode and cannot distinguish them, so its success records the weaker `device_credential`.
+Levels therefore under-claim rather than over-claim — `ATTEST-11` replaces the inference with a
+signed challenge in Phase 3.
+
+`ATTEST-5` through `ATTEST-12`, the web approval path, remain **`[unbuilt]`** and are scheduled
+for Phase 3.
 
 **ATTEST-1.** The scope rule: **an action that becomes payroll or money must be attributable to
 a person present at the moment it was taken.** Concretely — clock in/out, pause/resume, job

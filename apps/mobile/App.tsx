@@ -24,8 +24,9 @@ import {
  * signal and the outbox catches up later — SPEC §3's founding promise, and the
  * reason nothing below awaits the network before recording an event.
  *
- * Still unbuilt in this screen: passkey joining (`AUTH-1`–`AUTH-10`) and the
- * Face ID call itself, so events honestly record `none` for attestation.
+ * Still unbuilt in this screen: passkey joining (`AUTH-1`–`AUTH-10`), which
+ * needs a Clerk account and a physical device — passkeys ship native code, so
+ * neither Expo Go nor an emulator can run them.
  */
 export default function App() {
   const [subject, setSubject] = useState<DevSubject | null>(initialSubject);
