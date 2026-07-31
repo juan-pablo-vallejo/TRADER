@@ -1,7 +1,10 @@
+import { useCallback } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import type { LocalEventType } from "./db/schema";
 import { useLabor } from "./useLabor";
+import { useSyncTriggers } from "./useSyncTriggers";
+import type { PullFn } from "./db/pull";
 import type { PushFn } from "./db/sync";
 
 const LABEL: Record<LocalEventType, string> = {
@@ -23,8 +26,28 @@ const hhmm = (ms: number) => {
  * Every button writes to SQLite and returns. Nothing here awaits the network, and
  * nothing is disabled because the network is absent.
  */
-export function Clock({ jobId, push }: { jobId: string; push: PushFn }) {
-  const { session, outbox, available, act, sync, syncing, lastSync } = useLabor(jobId);
+export function Clock({
+  workerId,
+  jobId,
+  push,
+  pull,
+}: {
+  workerId: string;
+  jobId: string;
+  push: PushFn;
+  pull: PullFn;
+}) {
+  const { session, outbox, available, act, sync, syncing, lastSync } = useLabor(
+    workerId,
+    jobId,
+  );
+
+  // CONFLICT-6: foreground, reconnect and timer, all coalesced through one
+  // scheduler. The manual button below goes through the same path so a tap can
+  // never overlap an automatic cycle.
+  const scheduler = useSyncTriggers(
+    useCallback(() => sync(push, pull), [sync, push, pull]),
+  );
 
   return (
     <View style={styles.wrap}>
@@ -73,7 +96,7 @@ export function Clock({ jobId, push }: { jobId: string; push: PushFn }) {
           </Text>
         )}
         <Pressable
-          onPress={() => void sync(push)}
+          onPress={() => void scheduler.request("manual")}
           disabled={syncing}
           style={[styles.syncButton, syncing && styles.syncButtonBusy]}
         >

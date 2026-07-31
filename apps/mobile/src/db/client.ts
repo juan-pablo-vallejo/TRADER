@@ -62,6 +62,12 @@ const MIGRATIONS: readonly string[] = [
   // needed — `user_version` already guarantees each migration runs once, and a
   // partial failure re-runs the whole statement rather than half of it.
   `ALTER TABLE local_events ADD COLUMN syncing_since INTEGER;`,
+
+  // 3 — whose labor each row is, so a foreman's pulled crew events do not merge
+  //     into one impossible timeline. See the column comment in schema.ts.
+  `ALTER TABLE local_events ADD COLUMN worker_id TEXT;
+   CREATE INDEX IF NOT EXISTS local_events_worker_idx
+     ON local_events (worker_id, client_timestamp);`,
 ];
 
 export function migrateLocalDb(): void {

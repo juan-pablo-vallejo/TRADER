@@ -1,8 +1,10 @@
-import { openSession, type Session } from "@trader/api/sync";
+import { openSession, PULL_BATCH_SIZE, type Session } from "@trader/api/sync";
 import { useCallback, useMemo, useState } from "react";
 
 import { migrateLocalDb } from "./db/client";
 import { summarize, type OutboxSummary } from "./db/outbox-logic";
+import { pullEvents, type PullFn } from "./db/pull";
+import { livePullDeps } from "./db/pull-store";
 import type { LocalEventType } from "./db/schema";
 import { allEvents, recordEvent, toFoldEvents, type LocalEventRow } from "./db/store";
 import { flushOutbox, type PushFn } from "./db/sync";
@@ -12,7 +14,8 @@ import { flushOutbox, type PushFn } from "./db/sync";
  *
  * The ordering here is the product's founding promise made concrete: a tap writes
  * to SQLite and the UI updates from local state. Nothing awaits the network, so
- * a foreman in a basement clocks in exactly as fast as one on a rooftop.
+ * a foreman in a basement clocks in exactly as fast as one on a rooftop
+ * (CAPTURE-1).
  */
 
 let migrated = false;
@@ -23,55 +26,72 @@ export type LaborState = {
   outbox: OutboxSummary;
 };
 
-function read(): LaborState {
+function read(workerId: string): LaborState {
   const events = allEvents();
   return {
     events,
     // The same fold the server runs (DERIVE-6) — not a second implementation
-    // that could drift from it.
-    session: openSession(toFoldEvents(events)),
+    // that could drift. Scoped to this worker, because a foreman's device may
+    // hold crew events and SESSION-1 is per worker.
+    session: openSession(toFoldEvents(events, workerId)),
     outbox: summarize(events),
   };
 }
 
-export function useLabor(jobId: string) {
+export function useLabor(workerId: string, jobId: string) {
   if (!migrated) {
     migrateLocalDb();
     migrated = true;
   }
 
-  const [state, setState] = useState<LaborState>(read);
+  const [state, setState] = useState<LaborState>(() => read(workerId));
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const act = useCallback(
     (type: LocalEventType) => {
-      recordEvent({ jobId, type });
+      recordEvent({ workerId, jobId, type });
       // Re-read rather than patch: the fold is the source of truth for what the
-      // session now is, and reconstructing it from the events avoids keeping a
-      // second, divergent notion of state in React.
-      setState(read());
+      // session now is, and reconstructing it avoids keeping a second, divergent
+      // notion of state in React.
+      setState(read(workerId));
     },
-    [jobId],
+    [workerId, jobId],
   );
 
-  const sync = useCallback(async (push: PushFn) => {
-    setSyncing(true);
-    try {
-      const outcome = await flushOutbox(push);
-      setLastSync(
-        outcome.attempted === 0
-          ? "Nothing to sync"
-          : `${outcome.synced} synced · ${outcome.rejected} rejected · ${outcome.retrying} retrying`,
-      );
-    } finally {
-      // Always re-read: a partial flush still changed rows, and leaving the UI
-      // showing pre-flush state would be the "implying delivery" CONFLICT-6
-      // forbids, in reverse.
-      setState(read());
-      setSyncing(false);
-    }
-  }, []);
+  /**
+   * One sync cycle: **push, then pull.**
+   *
+   * That order matters. Pushing first means this device's own events are on the
+   * server before it asks what the server has, so the pull confirms them in the
+   * same cycle rather than a later one — and a worker watching the screen sees
+   * "waiting" become "sent" once, not twice.
+   */
+  const sync = useCallback(
+    async (push: PushFn, pull: PullFn) => {
+      setSyncing(true);
+      try {
+        const pushed = await flushOutbox(push);
+        const pulled = await pullEvents(pull, PULL_BATCH_SIZE, livePullDeps);
+        setLastSync(
+          `${pushed.synced} sent · ${pulled.received} received` +
+            (pushed.rejected ? ` · ${pushed.rejected} refused` : "") +
+            (pushed.retrying ? ` · ${pushed.retrying} retrying` : ""),
+        );
+      } catch (error) {
+        // A failed cycle is not a failed capture. The outbox already recorded the
+        // per-record outcome; this only reports it.
+        setLastSync(error instanceof Error ? error.message : "Sync failed");
+      } finally {
+        // Always re-read: a partial cycle still changed rows, and showing
+        // pre-sync state would be the "implying delivery" CONFLICT-6 forbids,
+        // in reverse.
+        setState(read(workerId));
+        setSyncing(false);
+      }
+    },
+    [workerId],
+  );
 
   /** SESSION-2's legal transitions, so the UI offers only what will be accepted. */
   const available = useMemo<LocalEventType[]>(() => {

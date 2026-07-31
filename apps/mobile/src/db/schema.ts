@@ -39,6 +39,19 @@ export const localEvents = sqliteTable(
      * every retry into a duplicate labor record.
      */
     id: text("id").primaryKey(),
+    /**
+     * Whose labor this is.
+     *
+     * Not redundant even though a device has one signed-in user: `PERM-5` lets a
+     * foreman pull their crew's events, so this table holds other people's labor
+     * too. `SESSION-1` is a per-worker invariant, so the fold must be given one
+     * worker's events — without this column a foreman's crew view would silently
+     * merge several workers into one impossible timeline.
+     *
+     * Nullable only because migration 3 added it to existing rows; every row
+     * written since carries it.
+     */
+    workerId: text("worker_id"),
     jobId: text("job_id").notNull(),
     type: text("type").notNull().$type<LocalEventType>(),
     /** Epoch millis. SQLite has no timestamp type; the fold takes Dates. */

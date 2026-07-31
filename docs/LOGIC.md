@@ -220,11 +220,14 @@ Because labor is append-only, true conflicts are rare by construction. These rul
 ones that remain. All of them live in **one readable handler at the API boundary** — deliberately
 not a database constraint and not a locking scheme.
 
-**Partly built.** The server half is complete: idempotent push, ordering, skew handling, the pull
-cursor, and per-record results. On the device, the outbox pushes and retries — but **nothing pulls
-yet**, so `CONFLICT-5`'s "snaps to server truth" is `[unbuilt]`, and with it the durable cursor
-`CONFLICT-8` describes. `CONFLICT-6`'s triggers are also `[unbuilt]`: sync currently runs only when
-a worker taps it, not on reconnect, foreground or a timer.
+**Built**, on both sides. The server has idempotent push, ordering, skew handling, the pull cursor
+and per-record results; the device has the outbox, the pull loop with its durable cursor, and all
+three of `CONFLICT-6`'s triggers coalesced so that regaining signal — which usually foregrounds the
+app in the same second — produces one cycle rather than three.
+
+One deliberate gap: a device applies `CONFLICT-5` by overwriting from the server, but there is no
+**correction** path yet for an event already accepted. That is Phase 3's work (`CONFLICT-7`), and
+until it exists the only corrections in the system are ones an admin cannot yet issue.
 
 **CONFLICT-1.** The server upserts by the **client-generated UUIDv7**. A repeat of an
 already-recorded `id` is a no-op that returns success. A client may retry the same write
@@ -255,7 +258,10 @@ with the server.
 
 **CONFLICT-6.** Sync runs on reconnect, on app foreground, and on a timer — **oldest-first**.
 Each local record carries `pending → syncing → synced`, or `failed → retry`, and the UI shows
-that state honestly rather than implying delivery.
+that state honestly rather than implying delivery. The triggers are **coalesced**: they routinely
+fire together — leaving a basement regains signal and foregrounds the app within the same second
+— and two cycles must never run at once. A cycle is **push then pull**, so a device's own events
+reach the server before it asks what the server holds, and are confirmed in the same cycle.
 
 **CONFLICT-7.** A submitted day closeout is **locked**. Every later change is a new correcting
 event referencing the original through `payload`; nothing is edited and no correcting event is

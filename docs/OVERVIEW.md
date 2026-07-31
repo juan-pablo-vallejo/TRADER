@@ -72,10 +72,12 @@ snap to server truth on the next sync.
 Both applications exist: `apps/web` hosts the API and signs an admin in, `apps/mobile` clocks a
 worker in and out **offline**, holding events in an `expo-sqlite` outbox until they sync.
 
-The sync layer remains the largest single risk and is only half built. The server side — idempotent
-push, the session fold, the pull cursor — is written and tested; on the device, the outbox pushes
-but **nothing pulls yet**, so a device does not yet snap to server truth. Passkey sign-in and the
-Face ID attestation call are also unbuilt, so every event honestly records `none`.
+The sync layer — the largest single risk — now runs end to end: idempotent push, the shared session
+fold, the pull cursor, the device outbox, and sync on foreground, reconnect and a timer. A device
+snaps to server truth without anyone tapping anything.
+
+Still unbuilt: passkey sign-in (`AUTH-1`–`AUTH-10`) and the Face ID attestation call, so every
+event honestly records `none`; and the correction path an admin needs, which is Phase 3.
 
 Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Open decisions →
 [DECISIONS.md](DECISIONS.md).
