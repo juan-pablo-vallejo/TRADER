@@ -15,6 +15,41 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-30
 
+### 19:05 — The device half: local store, outbox, and a clock that works offline
+
+`expo-sqlite` holds the labor events and the outbox in **one table**, not two. Splitting them
+would mean writing every event twice and inventing a reconciliation between the copies; the
+outbox is simply the rows whose `syncState` is not `synced`.
+
+**Metro pulled a Postgres driver into the phone.** Importing the fold from `@trader/api` reaches
+`createContext` → `@trader/db` → `pg`, and the bundle died on `require('events')`. The repo's
+`consistent-type-imports` lint rule exists for exactly this hazard but could not catch it: these
+were legitimate _value_ imports, because DERIVE-6 deliberately lets the device run the same fold
+the server runs. Fixed with a package boundary rather than a convention — `@trader/api/sync` is a
+second entry point that re-exports only fold, derive and protocol, and may import neither the
+database nor tRPC. `PushResult` moved there too, since a type describing the wire protocol has no
+business living beside the router that touches Postgres.
+
+Three outbox decisions worth their comments. `duplicate` is treated as **success**, because
+CONFLICT-1 makes a repeat a no-op that succeeded — a device that pushed, lost the response and
+pushed again must not retry forever against a server that already holds the event. `rejected` is
+**permanent** and stops retrying, because SESSION-4 never writes and the timeline that made the
+event illegal is append-only, so no future attempt can succeed; retrying would show a worker a
+spinner implying their hours are on the way. And a row left in `syncing` by an app the OS killed
+mid-request is reclaimed after two minutes — being backgrounded in a pocket is the normal case,
+and without reclamation those rows never sync again.
+
+A read-only `jobs.list` and a seeded job landed with it. ROADMAP hand-seeds jobs until Phase 2,
+but a worker still has to see which job they are clocking into, so the list ships and creation
+does not.
+
+**Verification boundary, stated plainly.** The server push/pull is proven against real Postgres
+and the outbox state machine is unit-tested, but the seam between them — expo-sqlite writes
+driving a real flush — is only exercised by tapping the UI, and UI automation is unavailable
+here: `osascript`/System Events is blocked in this environment, which is the same call Expo's own
+`--ios` launcher fails on. The screen was confirmed rendering on a booted iPhone 17 against the
+seeded job; the tap-to-Postgres round trip was **not** machine-verified and needs one manual pass.
+
 ### 18:15 — Phase 1 opens: gates settled, and the sync core built server-first
 
 All four **at start** gates decided before any sync code was written, which is the order ROADMAP

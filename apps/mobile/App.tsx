@@ -1,11 +1,13 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
 import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import superjson from "superjson";
 
 import { apiUrl, trpc } from "./src/api";
+import { Clock } from "./src/Clock";
+import type { PushFn } from "./src/db/sync";
 import {
   DEV_SUBJECTS,
   DEV_SUBJECT_HEADER,
@@ -14,12 +16,15 @@ import {
 } from "./src/dev-identity";
 
 /**
- * Phase 0's done-criteria, on the mobile half: a worker signs in and sees their
- * own role, resolved by the same API the office web app calls.
+ * The field client.
  *
- * Deliberately not offline-capable. `expo-sqlite`, the outbox and the sync
- * protocol are Phase 1 — the whole point of that phase. This screen only proves
- * the transport and the identity seam work from a phone.
+ * Identity and the job list come from the server; **the labor does not.** Every
+ * clock action writes to SQLite and returns, so a crew works a full day with no
+ * signal and the outbox catches up later — SPEC §3's founding promise, and the
+ * reason nothing below awaits the network before recording an event.
+ *
+ * Still unbuilt in this screen: passkey joining (`AUTH-1`–`AUTH-10`) and the
+ * Face ID call itself, so events honestly record `none` for attestation.
  */
 export default function App() {
   const [subject, setSubject] = useState<DevSubject | null>(initialSubject);
@@ -47,7 +52,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ScrollView contentContainerStyle={styles.screen}>
           <Text style={styles.title}>TRADER</Text>
-          <Text style={styles.subtitle}>Phase 0 — field client, local stack</Text>
+          <Text style={styles.subtitle}>Phase 1 — offline clock in/out</Text>
           <Text style={styles.meta}>{apiUrl}</Text>
 
           <View style={styles.row}>
@@ -69,7 +74,11 @@ export default function App() {
             ))}
           </View>
 
-          {subject ? <Me /> : <Text style={styles.meta}>Choose an identity above.</Text>}
+          {subject ? (
+            <Field />
+          ) : (
+            <Text style={styles.meta}>Choose an identity above.</Text>
+          )}
           <StatusBar style="auto" />
         </ScrollView>
       </QueryClientProvider>
@@ -77,24 +86,48 @@ export default function App() {
   );
 }
 
-function Me() {
+/**
+ * Who is signed in, and the clock for their job.
+ *
+ * The identity and job list come from the server, but note what does *not*
+ * depend on them: `Clock` writes to SQLite, so once a job id is known the crew
+ * can work through a whole day with no connectivity at all.
+ */
+function Field() {
   const me = trpc.me.get.useQuery(undefined, { retry: false });
+  const jobs = trpc.jobs.list.useQuery(undefined, { retry: false });
+  const utils = trpc.useUtils();
+
+  const push = useCallback<PushFn>(
+    (batch) => utils.client.sync.push.mutate(batch),
+    [utils],
+  );
 
   if (me.isPending) return <Text style={styles.meta}>Loading…</Text>;
   if (me.error) return <Text style={styles.error}>{me.error.message}</Text>;
 
+  // `address` is nullable in the schema, and a job without one is unidentifiable
+  // to a worker — so prefer a named job, and fall back rather than showing blank.
+  const job = jobs.data?.find((j) => j.address) ?? jobs.data?.[0];
+
   return (
     <View style={styles.card}>
-      <Field label="Name" value={me.data.name} />
-      <Field label="Role" value={me.data.role} />
-      <Field label="Active" value={String(me.data.active)} />
-      <Field label="User id" value={me.data.id} />
-      <Field label="Company" value={me.data.companyId} />
+      <Row label="Signed in" value={`${me.data.name} · ${me.data.role}`} />
+      <Row
+        label="Job"
+        value={
+          job?.address ??
+          (job
+            ? `Untitled job ${job.id.slice(0, 8)}`
+            : "No active job — run pnpm db:seed")
+        }
+      />
+      {job && <Clock jobId={job.id} push={push} />}
     </View>
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>

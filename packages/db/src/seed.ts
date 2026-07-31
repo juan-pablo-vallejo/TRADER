@@ -1,8 +1,8 @@
 import { config } from "dotenv";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { getDb } from "./client";
-import { companies, users } from "./schema/index";
+import { companies, jobs, users } from "./schema/index";
 
 config({ path: "../../.env" });
 
@@ -63,6 +63,37 @@ async function main() {
 
   const count = await db.select().from(users).where(eq(users.companyId, company.id));
   console.log(`Users in company: ${count.length}`);
+
+  await seedJobs(db, company.id);
+}
+
+/**
+ * A job to clock into.
+ *
+ * ROADMAP hand-seeds jobs and the roster until Phase 2, which owns self-service
+ * setup — so this is the sanctioned source of jobs for Phase 1 rather than a test
+ * fixture. Idempotent by address, since jobs carry no natural key and re-running
+ * the seed must not accumulate duplicates for the crew to choose between.
+ */
+async function seedJobs(db: ReturnType<typeof getDb>, companyId: string): Promise<void> {
+  const address = process.env.SEED_JOB_ADDRESS ?? "12 Benefit Street, Providence RI";
+
+  const existing = await db
+    .select()
+    .from(jobs)
+    .where(and(eq(jobs.companyId, companyId), eq(jobs.address, address)))
+    .limit(1);
+
+  if (existing[0]) {
+    console.log(`Job: ${address} (${existing[0].id}) — already present`);
+    return;
+  }
+
+  const [job] = await db
+    .insert(jobs)
+    .values({ companyId, address, status: "active" })
+    .returning();
+  console.log(`Job: ${address} (${job?.id}) status=active`);
 }
 
 main()

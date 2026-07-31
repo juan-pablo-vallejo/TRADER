@@ -7,40 +7,14 @@ export {
   type Context,
 } from "./context";
 /**
- * The sync surface both clients need. The fold and the derivations are exported
- * because DERIVE-6 lets a device compute the same values for display — using the
- * identical code, so a disagreement can only be a data difference, never a
- * reimplementation drifting from the server's.
+ * The sync surface, re-exported for server-side callers.
+ *
+ * **Clients must import `@trader/api/sync` instead**, never this root. The root
+ * re-exports `createContext`, which reaches `@trader/db` and therefore `pg` —
+ * and Metro follows value imports, so a phone importing the fold from here pulls
+ * a Postgres driver into the app bundle. See `src/sync/index.ts`.
  */
-export {
-  checkLegality,
-  compareEvents,
-  foldSessions,
-  openSession,
-  orderEvents,
-  type FoldEvent,
-  type Legality,
-  type Session,
-} from "./sync/fold";
-export {
-  deriveSessions,
-  payrollByWorkDate,
-  workDate,
-  type DerivedSession,
-} from "./sync/derive";
-export {
-  clockSkewMs,
-  isClockTrusted,
-  retryDelayMs,
-  rewindCursor,
-  CLOCK_SKEW_TOLERANCE_MS,
-  PULL_BATCH_SIZE,
-  PULL_OVERLAP_MS,
-  RETRY_BASE_MS,
-  RETRY_MAX_MS,
-  type PullCursor,
-} from "./sync/protocol";
-export type { PushResult } from "./routers/sync";
+export * from "./sync/index";
 export {
   adminProcedure,
   createCallerFactory,
