@@ -1,6 +1,6 @@
 # TRADER — Technical Specification
 
-Canonical as of 2026-07-30. This document states what the system **is**; _why_ each choice was made, and when it changed, lives in [DECISIONS.md](DECISIONS.md). The **numbered rules** the system must obey — joining, session state machine, derivations, conflict resolution, permissions, attestation, invoicing — live in [logic.md](logic.md) and are cited here rather than restated. Revisions are listed at the end.
+Canonical as of 2026-07-30. This document states what the system **is**; _why_ each choice was made, and when it changed, lives in [DECISIONS.md](DECISIONS.md). The **numbered rules** the system must obey — joining, session state machine, derivations, conflict resolution, permissions, attestation, invoicing — live in [LOGIC.md](LOGIC.md) and are cited here rather than restated. Revisions are listed at the end.
 
 ## 1. Architecture
 
@@ -25,28 +25,28 @@ Deliberate maintainability-over-scale choices: monolith over services; managed P
 | Validation        | zod                                                               | Procedure inputs and, in Phase 1, sync payloads. Field-level errors are surfaced to clients rather than a bare BAD_REQUEST                                                                                                  |
 | ORM               | Drizzle                                                           | Thin, SQL-shaped, TypeScript-native; first-class migrations, no heavy runtime                                                                                                                                               |
 | Database          | PostgreSQL — Docker locally, Neon when deployed                   | One Drizzle API over two drivers, switched by `USE_LOCAL_POSTGRES`. Development needs no account; Neon is chosen for the deployed stack for serverless scaling, branching for safe migration testing, and automatic backups |
-| Auth              | Clerk — passkeys primary, phone as recovery                       | Never hand-build auth solo. Sign-in is a passkey guarded by Face ID; the phone number invites the worker and recovers the account ([logic.md](logic.md) `AUTH-1`–`AUTH-10`)                                                 |
+| Auth              | Clerk — passkeys primary, phone as recovery                       | Never hand-build auth solo. Sign-in is a passkey guarded by Face ID; the phone number invites the worker and recovers the account ([LOGIC.md](LOGIC.md) `AUTH-1`–`AUTH-10`)                                                 |
 | Background jobs   | Inngest                                                           | Hosted; no Redis to run or monitor; handles retries/scheduling                                                                                                                                                              |
 | File storage      | Undecided — S3+CloudFront, Vercel Blob or Cloudflare R2           | Material/receipt photos, invoice PDFs. Decided at Phase 2, when the real access pattern is known                                                                                                                            |
 | Observability     | Sentry (errors), PostHog (product analytics)                      | Hosted, free-tier-friendly                                                                                                                                                                                                  |
 | Secrets           | Vercel environment variables, EAS secrets, GitHub Actions secrets | Each platform holds the secrets it needs; no separate secret-management service                                                                                                                                             |
 | Notifications     | Expo push (workers), Resend email (customers)                     | Push carries worker notifications and the Phase 3 approval prompt. Email delivers invoices, so it is load-bearing rather than incidental — but never the auth channel. Customer-facing SMS is out of v1                     |
-| Payments          | Stripe, against the **contractor's own** connected account        | Customers pay the contractor directly. TRADER never holds funds and never sees a card number — hosted checkout only ([logic.md](logic.md) `INVOICE-6`, `INVOICE-7`)                                                         |
+| Payments          | Stripe, against the **contractor's own** connected account        | Customers pay the contractor directly. TRADER never holds funds and never sees a card number — hosted checkout only ([LOGIC.md](LOGIC.md) `INVOICE-6`, `INVOICE-7`)                                                         |
 
 ## 3. Offline & Sync
 
 Governing principle: **the field client is offline-first and the server is authoritative.** A foreman in a basement with no signal must be able to clock in, switch jobs, log materials, and close out — and have all of it sync correctly hours later without loss or duplication.
 
-- **Local-first writes.** Every field action writes immediately to on-device SQLite (`expo-sqlite`, via Drizzle); the UI updates from local state. The network is never on the critical path of a user action.
-- **Client-generated UUIDs + idempotency.** Every client-created record gets a UUIDv7 (time-sortable) generated on the device, and the server upserts by it — so a flaky connection can retry the same write ten times and the server records it once ([logic.md](logic.md) `CONFLICT-1`).
+- **Local-first writes.** Every field action writes immediately to on-device SQLite (`expo-sqlite`, via Drizzle); the UI updates from local state. The network is never on the critical path of a user action, and neither is a valid session — [LOGIC.md](LOGIC.md) `CAPTURE-1`, `CAPTURE-2`.
+- **Client-generated UUIDs + idempotency.** Every client-created record gets a UUIDv7 (time-sortable) generated on the device, and the server upserts by it — so a flaky connection can retry the same write ten times and the server records it once ([LOGIC.md](LOGIC.md) `CONFLICT-1`).
 - **Append-only event log for labor.** Time tracking is an immutable stream of events — `started`, `paused`, `resumed`, `ended`, `voided` — each stamped with a client timestamp (when it happened on the device) and a server timestamp (when it arrived). A worker's current session is a derived view computed by folding the events, never a mutable row. Events can arrive late, out of order, and in batches; the server still reconstructs the correct timeline.
-- **`work_date` is derived, not entered.** Computed server-side from the clock-in timestamp in the company timezone (`companies.timezone`). Never user-editable — [logic.md](logic.md) `DERIVE-1`, and `DERIVE-2` for shifts crossing midnight.
-- **Device location is best-effort and never blocks.** Each event may carry the device's position, captured on a short timeout. If no fix arrives — and in the basement above, none will — the fields stay null and the event is written regardless. Location is evidence when present, never a precondition for recording work.
+- **`work_date` is derived, not entered.** Computed server-side from the clock-in timestamp in the company timezone (`companies.timezone`). Never user-editable — [LOGIC.md](LOGIC.md) `DERIVE-1`, and `DERIVE-2` for shifts crossing midnight.
+- **Device location is best-effort and never blocks.** Each event may carry the device's position, captured on a short timeout. If no fix arrives — and in the basement above, none will — the fields stay null and the event is written regardless. Location is evidence when present, never a precondition for recording work ([LOGIC.md](LOGIC.md) `CAPTURE-3`).
 - **Automation may propose; only a person's action creates a record.** Any detection — a geofence, a schedule, anything else — may suggest a clock-in or clock-out, but the worker's confirmation is what writes the event. The labor ledger stays human-initiated, which is what keeps `initiator_user_id` meaningful and keeps a wrong guess from becoming payroll.
-- **A person's action is attested, and attestation never blocks it.** Anything that becomes payroll or money — clocking in, switching jobs, submitting a closeout, an admin correction — is confirmed with the device's own biometrics, so the record carries evidence of who was present. The check is OS-mediated and the biometric template never reaches TRADER. Like location above, it is evidence when present rather than a precondition: a failed or unavailable check records a weaker attestation level and writes the event anyway, because a worker who cannot clock in cannot be paid. The web app has no biometric of its own and pushes an approval to the actor's phone instead. Rules in [logic.md](logic.md) `ATTEST-1`–`ATTEST-12`.
-- **Sync queue with explicit states.** The UI shows delivery honestly — a worker can see whether the day's closeout reached the office or is still sitting on the phone. The states and the sync triggers are [logic.md](logic.md) `CONFLICT-6`.
-- **Conflict resolution: server-authoritative, latest action wins.** Because labor is append-only, true conflicts are rare by construction. Conflict policy lives at the API boundary in one readable handler — deliberately not a database constraint and not a multi-layer locking scheme. This is the one piece of logic worth hand-writing and testing hard; its rules are [logic.md](logic.md) `CONFLICT-1`–`CONFLICT-7`.
-- **Immutability on submit.** A submitted day closeout is locked. Corrections are new correcting events, never edits — the historical record is always an accurate account of what was recorded when ([logic.md](logic.md) `CONFLICT-7`).
+- **A person's action is attested, and attestation never blocks it.** Anything that becomes payroll or money — clocking in, switching jobs, submitting a closeout, an admin correction — is confirmed with the device's own biometrics, so the record carries evidence of who was present. The check is OS-mediated and the biometric template never reaches TRADER. Like location above, it is evidence when present rather than a precondition: a failed or unavailable check records a weaker attestation level and writes the event anyway, because a worker who cannot clock in cannot be paid. The web app has no biometric of its own and pushes an approval to the actor's phone instead. Rules in [LOGIC.md](LOGIC.md) `ATTEST-1`–`ATTEST-12`.
+- **Sync queue with explicit states.** The UI shows delivery honestly — a worker can see whether the day's closeout reached the office or is still sitting on the phone, and an event the server refused is called out as needing attention rather than left spinning. The states, the triggers, and what governs them are [LOGIC.md](LOGIC.md) `CONFLICT-6` and `CONFLICT-9`–`CONFLICT-13`. That bookkeeping is local to the device and never sent.
+- **Conflict resolution: server-authoritative, latest action wins.** Because labor is append-only, true conflicts are rare by construction. Conflict policy lives at the API boundary in one readable handler — deliberately not a database constraint and not a multi-layer locking scheme. This is the one piece of logic worth hand-writing and testing hard; its rules are [LOGIC.md](LOGIC.md) `CONFLICT-1`–`CONFLICT-13`.
+- **Immutability on submit.** A submitted day closeout is locked. Corrections are new correcting events, never edits — the historical record is always an accurate account of what was recorded when ([LOGIC.md](LOGIC.md) `CONFLICT-7`).
 
 ## 4. Data Model
 
@@ -61,13 +61,13 @@ Design principles: **money-capable now, money-moving later** — amounts, line i
 - **jobs** — `company_id`, `customer_id`, `crew_id` (nullable — the assignment: a worker's "assigned jobs" in §5/§6 are the jobs of the crew they belong to), `address`, `lat`, `lng`, `status` (`scheduled | active | closed | archived`), `scheduled_at`. Jobs are archived, never deleted.
 - **work_session_events** — the append-only core. `id` (UUIDv7, client-generated), `company_id`, `worker_id`, `job_id`, `type` (`started | paused | resumed | ended | voided`), `client_timestamp`, `server_timestamp`, `initiator_user_id` (the worker, or an admin making a correction), `device_lat` / `device_lng` / `device_accuracy_m` (all nullable — where the _worker_ was, best-effort; see §3), `payload` (jsonb — includes correction reason where applicable). Never updated, never deleted. Admin corrections are themselves events referencing the original via payload; there is no separate corrections table.
 - **materials** — `company_id`, `job_id`, `logged_by_user_id`, `description`, `quantity`, `unit`, `unit_cost_cents` (nullable — field capture is never blocked on cost; admin fills later), `photo_s3_key` (nullable receipt photo), `logged_at`.
-- **invoices** — `company_id`, `customer_id`, `job_id`, `invoice_number` (unique per company), `status` (`draft | sent | paid | void`), `issued_at`, `due_at`, `subtotal_cents`, `tax_cents`, `total_cents`, `currency`, `pdf_s3_key`. **The status enum as built cannot express a partly-paid invoice**, which becomes ordinary once customers pay online; Phase 4 replaces the set field with one derived from attached payments ([logic.md](logic.md) `INVOICE-4`). `invoice_number` is likewise allocated at send rather than at draft (`INVOICE-1`) — neither change is made yet.
+- **invoices** — `company_id`, `customer_id`, `job_id`, `invoice_number` (unique per company), `status` (`draft | sent | paid | void`), `issued_at`, `due_at`, `subtotal_cents`, `tax_cents`, `total_cents`, `currency`, `pdf_s3_key`. **The status enum as built cannot express a partly-paid invoice**, which becomes ordinary once customers pay online; Phase 4 replaces the set field with one derived from attached payments ([LOGIC.md](LOGIC.md) `INVOICE-4`). `invoice_number` is likewise allocated at send rather than at draft (`INVOICE-1`) — neither change is made yet.
 - **invoice_line_items** — `invoice_id`, `description`, `quantity`, `unit_price_cents`, `line_total_cents`, optional `job_id`/`material_id` source links. Invoices are structured data, not a blob.
 - **audit_log** — append-only record of significant writes (who, what, when).
 
 ### Arriving with invoicing (designed for, not built)
 
-- **payments** — money in, linked to invoices: `amount_cents`, `method`, `processor_ref`, `status`, `paid_at`. Covers cash and cheque as well as card, so manual and online settlement reconcile through one mechanism ([logic.md](logic.md) `INVOICE-5`).
+- **payments** — money in, linked to invoices: `amount_cents`, `method`, `processor_ref`, `status`, `paid_at`. Covers cash and cheque as well as card, so manual and online settlement reconcile through one mechanism ([LOGIC.md](LOGIC.md) `INVOICE-5`).
 
 ### Reserved for later (designed for, not built)
 
@@ -84,15 +84,15 @@ Three roles, enforced server-side at the API layer (client UI also hides what a 
 - **Foreman** — a worker who also runs a crew's day: crew labor on their own jobs, and the closeout.
 - **Admin** — the office. Roster, pay, customers, jobs, invoices, reconciliation, and corrections.
 
-**The capability matrix is [logic.md](logic.md) `PERM-1`**, which is the enforceable statement of the above.
+**The capability matrix is [LOGIC.md](LOGIC.md) `PERM-1`**, which is the enforceable statement of the above.
 
-The boundary that matters most: **no role can mutate a submitted labor record — including admins.** Corrections are always new append-only events ([logic.md](logic.md) `PERM-2`). This is what keeps payroll history trustworthy.
+The boundary that matters most: **no role can mutate a submitted labor record — including admins.** Corrections are always new append-only events ([LOGIC.md](LOGIC.md) `PERM-2`). This is what keeps payroll history trustworthy.
 
 ## 6. Core Flows
 
-**Joining.** Admin adds a worker's phone number → the worker gets a single-use invite → opens the app → verifies the number once → **enrols a passkey with Face ID**. From then on, signing in is Face ID and nothing else; the phone number's remaining job is to recover the account when the handset is lost, broken or replaced. A phone too old to hold a passkey signs in by code instead, which is a supported path rather than a failure ([logic.md](logic.md) `AUTH-1`–`AUTH-10`).
+**Joining.** Admin adds a worker's phone number → the worker gets a single-use invite → opens the app → verifies the number once → **enrols a passkey with Face ID**. From then on, signing in is Face ID and nothing else; the phone number's remaining job is to recover the account when the handset is lost, broken or replaced. A phone too old to hold a passkey signs in by code instead, which is a supported path rather than a failure ([LOGIC.md](LOGIC.md) `AUTH-1`–`AUTH-10`).
 
-**Clock in/out & hours.** Worker opens app → sees today's assigned jobs (local DB, works offline) → taps clock-in → **Face ID** → `started` event written locally with client UUID, timestamp and attestation level; UI immediately shows "on session." Three steps, no typing, and the biometric runs on-device so it works with no signal. Mid-day switch → `ended` on job A, `started` on job B ([logic.md](logic.md) `SESSION-1`, `SESSION-5`). End of day → `ended`. Events queue locally and flush on reconnect ([logic.md](logic.md) `CONFLICT-6`); the server stamps its own timestamps, orders what arrives, and the device pulls back server truth. Sessions and hours are then derived from the event fold — never stored as editable numbers ([logic.md](logic.md) `DERIVE-3`–`DERIVE-6`).
+**Clock in/out & hours.** Worker opens app → sees today's assigned jobs (local DB, works offline) → taps clock-in → **Face ID** → `started` event written locally with client UUID, timestamp and attestation level; UI immediately shows "on session." Three steps, no typing, and the biometric runs on-device so it works with no signal. Mid-day switch → `ended` on job A, `started` on job B ([LOGIC.md](LOGIC.md) `SESSION-1`, `SESSION-5`). End of day → `ended`. Events queue locally and flush on reconnect ([LOGIC.md](LOGIC.md) `CONFLICT-6`); the server stamps its own timestamps, orders what arrives, and the device pulls back server truth. Sessions and hours are then derived from the event fold — never stored as editable numbers ([LOGIC.md](LOGIC.md) `DERIVE-3`–`DERIVE-6`).
 
 Where arrival detection is running, the geofence prompt **is** this tap rather than a step before it: the notification the worker acts on is the clock-in button, so a proposed clock-in costs the same single gesture as an unprompted one.
 
@@ -102,7 +102,7 @@ Where arrival detection is running, the geofence prompt **is** this tap rather t
 
 **Invoices.** Admin (web) → create invoice → attach customer + optional job → line items pulled from that job's labor and materials, copied in as fixed amounts rather than live references → admin enters the tax → totals computed in cents → send. Sending is what allocates the invoice number, renders the PDF to object storage, and emails it to the customer with a payment link.
 
-**Getting paid.** The customer opens the link and pays on the processor's own hosted page, into **the contractor's** account — TRADER never touches the money and never sees a card number. The resulting payment attaches to that invoice; cash and cheque are recorded the same way by the admin. The invoice's state follows the payments attached to it, so a half-paid invoice reads as half-paid rather than as unpaid or settled. Refunds and disputes are handled by the contractor in their processor's dashboard; TRADER shows the outcome ([logic.md](logic.md) `INVOICE-1`–`INVOICE-11`).
+**Getting paid.** The customer opens the link and pays on the processor's own hosted page, into **the contractor's** account — TRADER never touches the money and never sees a card number. The resulting payment attaches to that invoice; cash and cheque are recorded the same way by the admin. The invoice's state follows the payments attached to it, so a half-paid invoice reads as half-paid rather than as unpaid or settled. Refunds and disputes are handled by the contractor in their processor's dashboard; TRADER shows the outcome ([LOGIC.md](LOGIC.md) `INVOICE-1`–`INVOICE-11`).
 
 **Reconciliation dashboard.** Admin sees a table of jobs/days with state — expected vs. received, still open on a phone, submitted, needs attention — with drill-down into each day's events. This is the office's window into the field, and where corrections are issued.
 
@@ -130,6 +130,11 @@ The heading is kept so §8 below and the references to it from other files stay 
 
 The body above always states current truth. Rationale for each change is in [DECISIONS.md](DECISIONS.md).
 
+- **2026-07-30 (rules pass)** — `logic.md` renamed to `LOGIC.md`. §3 now cites the built sync
+  protocol rather than describing it: the new `CAPTURE` group owns the conditions under which a
+  labor event may be written, `STORE` owns the storage invariants that were previously listed only
+  in OVERVIEW, and `CONFLICT` gained the outbox rules. No behaviour in §3 changed; it had simply
+  outrun its citations.
 - **2026-07-30 (Phase 0 unblocking pass)** — §1 and §2: the database is stated as local Postgres
   through Phase 0 and Neon from the pilot, over one Drizzle API and two drivers. Managed services
   are now described as adopted when they earn their keep rather than up front, so that building
@@ -140,8 +145,8 @@ The body above always states current truth. Rationale for each change is in [DEC
   `payouts` and `client_portal_access` stay reserved — a hosted payment link means customers never
   need accounts. The built `invoice_status` enum is noted as unable to express a partly-paid
   invoice. §6 gains the invite-and-enrol flow and an invoicing flow that takes payment. §8 gains
-  tax, delivery and passkey-hardware risks. Rules in [logic.md](logic.md) `AUTH-*`, `INVOICE-*`.
-- **2026-07-29 (logic pass)** — The numbered rules move to [logic.md](logic.md), which now owns
+  tax, delivery and passkey-hardware risks. Rules in [LOGIC.md](LOGIC.md) `AUTH-*`, `INVOICE-*`.
+- **2026-07-29 (logic pass)** — The numbered rules move to [LOGIC.md](LOGIC.md), which now owns
   them; §3, §5 and §6 cite rather than restate. §3 gains the attestation principle and §6 the
   Face ID step in the clock-in and closeout flows. §5's role bullets shrink to what each role
   _is_, with the capability matrix now `PERM-1`.

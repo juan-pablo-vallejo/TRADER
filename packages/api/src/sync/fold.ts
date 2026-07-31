@@ -3,7 +3,7 @@ import type { workSessionEvents } from "@trader/db";
 /**
  * The fold: work sessions computed from the append-only event stream.
  *
- * There is no session row anywhere, by design (logic.md SESSION preamble). A
+ * There is no session row anywhere, by design (LOGIC.md SESSION preamble). A
  * session exists only as a fold over `work_session_events`, so the ledger and the
  * numbers can never disagree — DERIVE's whole premise.
  *
@@ -24,7 +24,7 @@ export type FoldEvent = Pick<
 export type EventType = FoldEvent["type"];
 
 /**
- * logic.md SESSION-2, as data rather than branching. `ended` and `voided` are
+ * LOGIC.md SESSION-2, as data rather than branching. `ended` and `voided` are
  * terminal and so appear as empty sets rather than being absent — an absent key
  * would be indistinguishable from a typo at the call site.
  */

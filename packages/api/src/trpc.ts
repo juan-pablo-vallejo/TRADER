@@ -31,7 +31,7 @@ export const createCallerFactory = t.createCallerFactory;
 export const publicProcedure = t.procedure;
 
 /**
- * Requires a verified caller who is still active. Implements docs/logic.md PERM-3.
+ * Requires a verified caller who is still active. Implements docs/LOGIC.md PERM-3.
  *
  * The `active` check is not incidental. "Delete my account" is defined as
  * deactivate-and-anonymise, because labor history survives by database trigger
@@ -51,7 +51,7 @@ export const protectedProcedure = t.procedure.use(({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
-/** The docs/logic.md PERM-1 matrix, narrowing outward: worker ⊂ foreman ⊂ admin. */
+/** The docs/LOGIC.md PERM-1 matrix, narrowing outward: worker ⊂ foreman ⊂ admin. */
 function requireRole(...allowed: AppUser["role"][]) {
   return protectedProcedure.use(({ ctx, next }) => {
     if (!allowed.includes(ctx.user.role)) {

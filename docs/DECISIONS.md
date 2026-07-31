@@ -1,7 +1,7 @@
 # Decisions
 
 Current as of 2026-07-30. **Why** each choice was made, and when it changed. _What_ was chosen
-lives in [SPEC.md](SPEC.md); the **rules** those choices imply live in [logic.md](logic.md).
+lives in [SPEC.md](SPEC.md); the **rules** those choices imply live in [LOGIC.md](LOGIC.md).
 
 This file is the **single canon** for decisions. Where it and SPEC.md disagree, this file wins
 and SPEC.md is stale.
@@ -106,7 +106,7 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
 
 ### Settled on one-tap attested clock-in (2026-07-29)
 
-- **The rules move to [logic.md](logic.md), and SPEC cites them.** SPEC stated the session
+- **The rules move to [LOGIC.md](LOGIC.md), and SPEC cites them.** SPEC stated the session
   machine, the derivations, the conflict policy and the permission matrix narratively across §3,
   §5 and §6 — and stated some of them twice. One rule was in no proper home at all: "one open
   session per worker" appeared parenthetically in §6 as "enforced in the API handler", with no
@@ -158,13 +158,57 @@ Costs and provisioning state live in [ACCOUNTS.md](ACCOUNTS.md); the reasoning i
   gesture that was going to be spent anyway — and it means the spike needs no confirmation UI of
   its own.
 
+### Settled bringing the rules up to date (2026-07-30)
+
+- **`logic.md` is renamed `LOGIC.md`, and gains two groups.** It was the lone lowercase file in a
+  `docs/` directory of uppercase names. More substantially, the storage and maintenance rules built
+  across Phases 0–1 had landed only in code comments — nothing could cite "a rejected event is
+  never retried" or "`server_timestamp` must be millisecond-precision", which is exactly the drift
+  the one-fact-one-home rule exists to prevent. **`STORE`** now owns the invariants that were
+  previously only _listed_ in OVERVIEW and the db README, and **`CAPTURE`** owns the conditions
+  under which a labor event may be written at all — a question SESSION does not answer, since it
+  governs what a write may say rather than whether one is permitted. Architecture stayed in this
+  file; LOGIC.md keeps its promise that every rule in it is testable.
+- **`CONFLICT-4a` is renumbered `CONFLICT-8`.** The sub-letter was an insertion to avoid
+  renumbering, but LOGIC.md's own convention is that identifiers are permanent and numbers are
+  never reused — which argues for appending, not inserting. It was two days old and cited twice, so
+  the correction cost nothing; in a year it would have cost a migration. New rules are appended to
+  their group from now on, and the convention note says so explicitly.
+- **Sync delivery is scoped by role (`PERM-5`), which is a bug fix, not a documentation change.**
+  `sync.pull` was company-scoped for every caller: a worker's device received the whole crew's
+  labor history. PERM-1 denies a worker "view crew labor", and PERM's preamble states that hiding
+  something in the client "is cosmetic and never the gate" — so the code and the rules disagreed,
+  and the code was wrong. Labor history is other people's hours, and once pay rates land in Phase 2
+  it is derivable pay. Crew membership is read live per pull rather than cached, so a roster change
+  takes effect immediately instead of whenever a token happens to expire.
+- **`isStaleSyncing` is wired in, and its comment corrected.** It was written, unit-tested, and
+  **never called** — while its own comment pointed at a `reclaimStale` function that did not exist.
+  So the failure it described was real and unmitigated: a flush killed mid-request left rows in
+  `syncing`, which `isDue` excludes unconditionally, stranding a worker's day forever. A
+  `syncing_since` column now distinguishes a dead flush from a live one. Recorded because the
+  lesson is not the bug: a comment describing a safeguard that does not exist is worse than no
+  comment, because it stops the next reader from looking.
+- **`@trader/api/sync` is a separate entry point because Metro follows value imports.** Importing
+  the fold from the package root reaches `createContext` → `@trader/db` → `pg`, and the bundle dies
+  on `require('events')`. The `consistent-type-imports` lint rule cannot catch this: the imports are
+  legitimately values, because DERIVE-6 deliberately runs the _same_ fold on device and server
+  rather than two implementations that could drift. So the guard has to be a package boundary —
+  nothing re-exported from `sync/index.ts` may import the database, the router, or tRPC. Recorded
+  here because it existed only as a code comment.
+- **`server_timestamp` is `timestamptz(3)` because a JavaScript `Date` cannot hold microseconds.**
+  Postgres defaults to microsecond precision; the driver truncates on the way out, so a cursor
+  built from a value read back through JS lands fractionally _behind_ the row it came from, every
+  `server_timestamp > cursor` stays true for rows already delivered, and pagination livelocks while
+  every log looks healthy. Matching the column to the precision clients can represent is what makes
+  the keyset sound. The invariant is `STORE-4`; the reasoning is here.
+
 ### Settled at the start of Phase 1 (2026-07-30)
 
 The four gates ROADMAP marks **at start** for Phase 1. All are protocol shape; none could be
 deferred past the first line of sync code.
 
 - **Clock skew is measured at sync time, and a labor event is never rejected for it
-  ([logic.md](logic.md) `CONFLICT-4`).** Comparing an event's `client_timestamp` to
+  ([LOGIC.md](LOGIC.md) `CONFLICT-4`).** Comparing an event's `client_timestamp` to
   `server_timestamp` cannot distinguish a wrong clock from a legitimately old event — a device
   offline for two days produces a 48-hour gap by design, which is the whole point of SPEC §3. So
   the sync request carries the device's **current** clock, and skew is `|device_now − server_now|`,
@@ -366,7 +410,7 @@ Phase 1 deadline. [ROADMAP.md](ROADMAP.md) shows each of these as a gate on the 
 
 | Decision                                                                                                | Decide                       |
 | ------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Web approval when an admin has no phone ([logic.md](logic.md) `ATTEST-10`)                              | before Phase 3               |
+| Web approval when an admin has no phone ([LOGIC.md](LOGIC.md) `ATTEST-10`)                              | before Phase 3               |
 | Pay-rate history: effective-dated rates vs snapshot-at-session                                          | before Phase 2               |
 | File storage: S3+CloudFront vs Vercel Blob vs Cloudflare R2 — **v1-critical**, invoice PDFs need it too | Phase 2                      |
 | Geocoding: Mapbox vs Google (accuracy test on local addresses)                                          | Phase 2                      |

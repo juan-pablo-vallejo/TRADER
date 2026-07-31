@@ -6,7 +6,13 @@ import { appRouter } from "../src/routers/_app";
 import { rewindCursor, retryDelayMs, RETRY_MAX_MS } from "../src/sync/protocol";
 import { createCallerFactory } from "../src/trpc";
 import { pool } from "./helpers";
-import { actor, eventId, withSyncFixture, type SyncFixture } from "./sync-helpers";
+import {
+  actor,
+  eventId,
+  seedCrew,
+  withSyncFixture,
+  type SyncFixture,
+} from "./sync-helpers";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -304,7 +310,7 @@ describe("sync.push — CONFLICT-4, clock skew", () => {
   });
 });
 
-describe("sync.pull — CONFLICT-4a, cursor", () => {
+describe("sync.pull — CONFLICT-8, cursor", () => {
   async function seedEvents(f: SyncFixture, n: number) {
     // A legal timeline: one long session paused and resumed repeatedly.
     const events: PushEvent[] = [
@@ -391,7 +397,103 @@ describe("sync.pull — CONFLICT-4a, cursor", () => {
   });
 });
 
-describe("retry backoff — CONFLICT-4a", () => {
+/**
+ * PERM-5. These exist because the first version of `pull` was company-scoped for
+ * everyone, which contradicted PERM-1's matrix — a worker could pull the whole
+ * crew's labor history. PERM's preamble is explicit that hiding it in the client
+ * "is cosmetic and never the gate", so the boundary has to be here.
+ */
+describe("sync.pull — PERM-5, role scoping", () => {
+  /** One event for each of the two fixture workers, on the same job. */
+  async function seedTwoWorkers(f: SyncFixture) {
+    await push(f, [
+      {
+        id: eventId(),
+        jobId: f.jobA,
+        type: "started",
+        clientTimestamp: new Date("2026-07-30T12:00:00Z"),
+      },
+    ]);
+    await caller(f, f.otherWorkerId).sync.push({
+      deviceNow: new Date(),
+      events: [
+        {
+          id: eventId(),
+          jobId: f.jobA,
+          type: "started",
+          clientTimestamp: new Date("2026-07-30T12:05:00Z"),
+        },
+      ],
+    });
+  }
+
+  it("a worker receives only their own events", async () => {
+    await withSyncFixture(async (f) => {
+      await seedTwoWorkers(f);
+      const res = await caller(f).sync.pull({ cursor: null, limit: 200 });
+      expect(res.events).toHaveLength(1);
+      expect(res.events.every((e) => e.workerId === f.workerId)).toBe(true);
+    });
+  });
+
+  it("an admin receives the whole company", async () => {
+    await withSyncFixture(async (f) => {
+      await seedTwoWorkers(f);
+      const admin = createCaller({ db: f.db, user: actor(f, f.workerId, "admin") });
+      const res = await admin.sync.pull({ cursor: null, limit: 200 });
+      expect(res.events).toHaveLength(2);
+    });
+  });
+
+  it("a foreman receives their crew's events, not the whole company", async () => {
+    await withSyncFixture(async (f) => {
+      await seedTwoWorkers(f);
+      // The foreman leads a crew containing only `otherWorkerId`.
+      await seedCrew(f.client, {
+        crewId: "00000000-0000-7000-8000-0000000cc001",
+        foremanId: f.workerId,
+        members: [f.otherWorkerId],
+      });
+
+      const foreman = createCaller({ db: f.db, user: actor(f, f.workerId, "foreman") });
+      const res = await foreman.sync.pull({ cursor: null, limit: 200 });
+
+      // Their own event plus their one crew member's — which here is everything,
+      // so assert on the worker ids rather than the count.
+      expect(new Set(res.events.map((e) => e.workerId))).toEqual(
+        new Set([f.workerId, f.otherWorkerId]),
+      );
+    });
+  });
+
+  it("a foreman leading no crew still receives their own labor", async () => {
+    // The Phase 1 state: crews are hand-seeded until Phase 2, so a foreman with
+    // no crew row must not silently receive nothing.
+    await withSyncFixture(async (f) => {
+      await seedTwoWorkers(f);
+      const foreman = createCaller({ db: f.db, user: actor(f, f.workerId, "foreman") });
+      const res = await foreman.sync.pull({ cursor: null, limit: 200 });
+      expect(res.events.map((e) => e.workerId)).toEqual([f.workerId]);
+    });
+  });
+
+  it("a foreman does not receive a worker outside their crew", async () => {
+    await withSyncFixture(async (f) => {
+      await seedTwoWorkers(f);
+      // A crew the foreman leads, but which `otherWorkerId` is not in.
+      await seedCrew(f.client, {
+        crewId: "00000000-0000-7000-8000-0000000cc002",
+        foremanId: f.workerId,
+        members: [],
+      });
+      const foreman = createCaller({ db: f.db, user: actor(f, f.workerId, "foreman") });
+      const res = await foreman.sync.pull({ cursor: null, limit: 200 });
+      expect(res.events.map((e) => e.workerId)).toEqual([f.workerId]);
+    });
+  });
+});
+
+describe("retry backoff — CONFLICT-8", () => {
   it("grows exponentially and caps at 5 minutes", () => {
     // `random: 1` is full-jitter's ceiling, which is the curve being asserted.
     expect(retryDelayMs(0, 1)).toBe(1000);

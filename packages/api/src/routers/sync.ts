@@ -1,14 +1,15 @@
-import { workSessionEvents } from "@trader/db";
-import { and, asc, eq, gt, or } from "drizzle-orm";
+import { crewMembers, crews, workSessionEvents } from "@trader/db";
+import { and, asc, eq, gt, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 
+import type { AppUser, Context } from "../context";
 import { checkLegality, orderEvents, type FoldEvent } from "../sync/fold";
 import { clockSkewMs, isClockTrusted, PULL_BATCH_SIZE } from "../sync/protocol";
 import type { PushResult } from "../sync/types";
 import { protectedProcedure, router } from "../trpc";
 
 /**
- * The sync boundary. logic.md's CONFLICT preamble requires this to be **one
+ * The sync boundary. LOGIC.md's CONFLICT preamble requires this to be **one
  * readable handler at the API boundary** — deliberately not a database constraint
  * and not a locking scheme — so the ordering, legality and skew rules all live
  * here where they can be read together.
@@ -34,6 +35,40 @@ const incomingEvent = z.object({
   deviceAccuracyM: z.number().nonnegative().nullable().default(null),
   payload: z.record(z.string(), z.unknown()).nullable().default(null),
 });
+
+/**
+ * Which workers' events the caller may receive, as a SQL condition.
+ *
+ * Implements LOGIC.md `PERM-5` — the read half of PERM-1's matrix:
+ *
+ * - **worker** — their own events only.
+ * - **foreman** — their own, plus every member of a crew they lead. Membership is
+ *   read live rather than cached, so removing someone from a crew takes effect on
+ *   the next pull rather than whenever a token happens to expire.
+ * - **admin** — everyone in the company.
+ *
+ * Returns `undefined` for admin so the caller can `and()` it away, rather than
+ * a tautology that would have to be special-cased in the query planner's favour.
+ */
+async function visibleWorkerScope(ctx: Omit<Context, "user"> & { user: AppUser }) {
+  if (ctx.user.role === "admin") return undefined;
+
+  if (ctx.user.role === "foreman") {
+    const led = await ctx.db
+      .select({ userId: crewMembers.userId })
+      .from(crewMembers)
+      .innerJoin(crews, eq(crews.id, crewMembers.crewId))
+      .where(eq(crews.foremanId, ctx.user.id));
+
+    // Always includes the foreman themselves: a foreman who leads no crew yet —
+    // the Phase 1 state, since crews are hand-seeded until Phase 2 — must still
+    // receive their own labor.
+    const ids = [...new Set([ctx.user.id, ...led.map((r) => r.userId)])];
+    return inArray(workSessionEvents.workerId, ids);
+  }
+
+  return eq(workSessionEvents.workerId, ctx.user.id);
+}
 
 export const syncRouter = router({
   /**
@@ -165,7 +200,7 @@ export const syncRouter = router({
    * Pull events the device has not seen, oldest-first (CONFLICT-6).
    *
    * The cursor is a keyset on `(server_timestamp, id)` re-read with an overlap
-   * window — CONFLICT-4a. Callers must treat redelivery as normal.
+   * window — CONFLICT-8. Callers must treat redelivery as normal.
    */
   pull: protectedProcedure
     .input(
@@ -179,14 +214,25 @@ export const syncRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      // Company-scoped, not worker-scoped: a foreman's device needs their crew's
-      // events to fold a crew view. The company boundary is the tenancy seam.
-      const scope = eq(workSessionEvents.companyId, ctx.user.companyId);
+      /**
+       * Scoped by the caller's role, per LOGIC.md `PERM-5`.
+       *
+       * Company-scoping every device would be simpler and was the first shape
+       * written — but PERM-1 denies a worker "view crew labor", and PERM's
+       * preamble is explicit that hiding it in the client "is cosmetic and never
+       * the gate". Labor history is other people's hours, and once pay rates
+       * land in Phase 2 it is other people's pay. The tenancy seam bounds the
+       * outside of this query; the role bounds the inside.
+       */
+      const scope = and(
+        eq(workSessionEvents.companyId, ctx.user.companyId),
+        await visibleWorkerScope(ctx),
+      );
 
       /**
        * A strict keyset: `(server_timestamp, id)` greater than the cursor.
        *
-       * Strict, not overlapping, and that distinction matters. The CONFLICT-4a
+       * Strict, not overlapping, and that distinction matters. The CONFLICT-8
        * overlap belongs at the *start of a sync cycle*, not inside pagination —
        * a page that always began a window behind its own cursor could never
        * advance whenever a full batch fit inside that window, and the client
@@ -221,7 +267,7 @@ export const syncRouter = router({
          * Paginate within this cycle until null, which means caught up.
          *
          * When the cycle ends, the client must store `rewindCursor(lastSeen)` —
-         * not this value — so the next cycle re-reads the CONFLICT-4a overlap
+         * not this value — so the next cycle re-reads the CONFLICT-8 overlap
          * window and picks up anything that committed late.
          */
         nextCursor:

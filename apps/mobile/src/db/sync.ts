@@ -2,7 +2,13 @@ import type { PushResult } from "@trader/api/sync";
 import { asc } from "drizzle-orm";
 
 import { localDb } from "./client";
-import { applyPushResult, applyTransportFailure, isDue } from "./outbox-logic";
+import {
+  applyPushResult,
+  applyTransportFailure,
+  isDue,
+  isStaleSyncing,
+  reclaimStale,
+} from "./outbox-logic";
 import { localEvents } from "./schema";
 import { applyTransition, markSyncing, type LocalEventRow } from "./store";
 
@@ -39,16 +45,31 @@ export async function flushOutbox(
   now: number = Date.now(),
   random: () => number = Math.random,
 ): Promise<FlushOutcome> {
-  const due = localDb
+  const all = localDb
     .select()
     .from(localEvents)
     .orderBy(asc(localEvents.clientTimestamp))
-    .all()
-    .filter((row) => isDue(row, now));
+    .all();
+
+  // Reclaim first, then select. A row whose flush was killed mid-request sits in
+  // `syncing` with nothing behind it, and `isDue` excludes `syncing`
+  // unconditionally — so without this pass it is stranded forever and the
+  // worker's day never arrives.
+  for (const row of all) {
+    if (!isStaleSyncing(row, now)) continue;
+    const reclaimed = reclaimStale(row.attempts);
+    applyTransition(row.id, reclaimed);
+    Object.assign(row, reclaimed, { syncingSince: null });
+  }
+
+  const due = all.filter((row) => isDue(row, now));
 
   if (due.length === 0) return { attempted: 0, synced: 0, rejected: 0, retrying: 0 };
 
-  markSyncing(due.map((r) => r.id));
+  markSyncing(
+    due.map((r) => r.id),
+    now,
+  );
 
   let results: PushResult[];
   try {

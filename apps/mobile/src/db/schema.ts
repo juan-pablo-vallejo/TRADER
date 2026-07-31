@@ -15,7 +15,7 @@ import { index, integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core
  */
 
 /**
- * logic.md CONFLICT-6: `pending → syncing → synced`, or `failed → retry`.
+ * LOGIC.md CONFLICT-6: `pending → syncing → synced`, or `failed → retry`.
  *
  * Stored as text rather than an integer enum so a row read in a SQLite browser
  * during a field debugging session says what it means.
@@ -54,6 +54,15 @@ export const localEvents = sqliteTable(
     // ---- local-only, never transmitted ----
 
     syncState: text("sync_state").notNull().$type<SyncState>().default("pending"),
+    /**
+     * When the in-flight flush began, epoch millis; null unless `syncing`.
+     *
+     * Exists so a flush killed mid-request can be told from one still running.
+     * The OS reaping a backgrounded app is the normal case on a phone, and
+     * without this the row stays `syncing` forever and the worker's day never
+     * arrives. See `reclaimStale`.
+     */
+    syncingSince: integer("syncing_since"),
     /** Retry count, feeding the backoff curve in `@trader/api`'s `retryDelayMs`. */
     attempts: integer("attempts").notNull().default(0),
     /** Epoch millis before which no retry should be made. */

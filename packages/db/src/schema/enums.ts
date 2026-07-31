@@ -29,7 +29,7 @@ export const workSessionEventType = pgEnum("work_session_event_type", [
 
 /**
  * How strongly an event is attributed to a person present when it was taken
- * ([logic.md](../../../../docs/logic.md) `ATTEST-3`).
+ * ([LOGIC.md](../../../../docs/LOGIC.md) `ATTEST-3`).
  *
  * `none` is a first-class member, not a failure code. ATTEST-4 forbids attestation
  * from ever blocking a labor event: biometrics can be unenrolled, wet, or absent on
