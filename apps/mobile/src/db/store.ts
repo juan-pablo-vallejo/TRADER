@@ -37,6 +37,8 @@ export function uuidv7(now: number = Date.now(), rand = Math.random): string {
 }
 
 export type NewEvent = {
+  /** The signed-in worker. Stored so a foreman's pulled crew events stay separable. */
+  workerId: string;
   jobId: string;
   type: LocalEventType;
   clientTimestamp?: Date;
@@ -56,6 +58,7 @@ export type NewEvent = {
 export function recordEvent(event: NewEvent): LocalEventRow {
   const row = {
     id: uuidv7(),
+    workerId: event.workerId,
     jobId: event.jobId,
     type: event.type,
     clientTimestamp: (event.clientTimestamp ?? new Date()).getTime(),
@@ -95,15 +98,29 @@ export function allEvents(): LocalEventRow[] {
  * the server's. It only matters as a CONFLICT-2 tiebreaker between events sharing
  * a `client_timestamp`, and locally that ordering is already settled by id.
  */
-export function toFoldEvents(rows: readonly LocalEventRow[]): FoldEvent[] {
+export function toFoldEvents(
+  rows: readonly LocalEventRow[],
+  workerId?: string,
+): FoldEvent[] {
   return rows
-    .filter((r) => !r.rejected) // Never written server-side; must not appear in a local total either.
+    .filter((r) => !r.rejected) // DERIVE-7: never written server-side, so it counts nowhere.
+    .filter((r) => {
+      // SESSION-1 is per worker, and PERM-5 lets a foreman's device hold crew
+      // events — folding them together would produce one impossible timeline.
+      // Rows predating migration 3 have no worker id; they were written by this
+      // device's own user, so they belong to whoever is asking.
+      if (!workerId) return true;
+      return r.workerId === null || r.workerId === workerId;
+    })
     .map((r) => ({
       id: r.id,
-      workerId: "self",
+      workerId: r.workerId ?? workerId ?? "self",
       jobId: r.jobId,
       type: r.type,
       clientTimestamp: new Date(r.clientTimestamp),
+      // The device does not know the server's arrival time. It only matters as
+      // CONFLICT-2's tiebreaker between events sharing a client timestamp, and
+      // locally that is already settled by the time-sortable id.
       serverTimestamp: new Date(r.clientTimestamp),
     }));
 }

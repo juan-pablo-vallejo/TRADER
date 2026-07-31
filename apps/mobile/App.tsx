@@ -7,6 +7,7 @@ import superjson from "superjson";
 
 import { apiUrl, trpc } from "./src/api";
 import { Clock } from "./src/Clock";
+import type { PullFn } from "./src/db/pull";
 import type { PushFn } from "./src/db/sync";
 import {
   DEV_SUBJECTS,
@@ -102,6 +103,10 @@ function Field() {
     (batch) => utils.client.sync.push.mutate(batch),
     [utils],
   );
+  const pull = useCallback<PullFn>(
+    (input) => utils.client.sync.pull.query(input),
+    [utils],
+  );
 
   if (me.isPending) return <Text style={styles.meta}>Loading…</Text>;
   if (me.error) return <Text style={styles.error}>{me.error.message}</Text>;
@@ -122,7 +127,7 @@ function Field() {
             : "No active job — run pnpm db:seed")
         }
       />
-      {job && <Clock jobId={job.id} push={push} />}
+      {job && <Clock workerId={me.data.id} jobId={job.id} push={push} pull={pull} />}
     </View>
   );
 }

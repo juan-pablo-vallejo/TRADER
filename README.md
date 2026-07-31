@@ -12,17 +12,17 @@ phases and their done-criteria are in [ROADMAP.md](docs/ROADMAP.md).
 Each fact has one home. This README links; it does not restate.
 **New here? Start with [docs/OVERVIEW.md](docs/OVERVIEW.md).**
 
-| Document                                       | Owns                                                                                                             |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| [docs/OVERVIEW.md](docs/OVERVIEW.md)           | Orientation — system diagram, reading path, repository map                                                       |
-| [docs/SPEC.md](docs/SPEC.md)                   | What the system **is** — architecture, stack, offline sync, data model, flows                                    |
-| [docs/LOGIC.md](docs/LOGIC.md)                 | The numbered rules it must obey — joining, sessions, derivations, conflicts, permissions, attestation, invoicing || 
-| [docs/ROADMAP.md](docs/ROADMAP.md)             | The build path — phases, current status, decision gates, distribution                                            |
-| [docs/DECISIONS.md](docs/DECISIONS.md)         | **Why**, and when it changed. Settled decisions and the open list                                                |
-| [docs/WORKFLOW.md](docs/WORKFLOW.md)           | Developing across machines                                                                                       |
-| [docs/ACCOUNTS.md](docs/ACCOUNTS.md)           | External services: which, when needed, what they cost, whether we have them                                      |
-| [docs/WORKLOG.md](docs/WORKLOG.md)             | What happened, including work that produced no commit. Historical only — current state lives in ROADMAP          |
-| [packages/db/README.md](packages/db/README.md) | Running the database: migrations, seeding, local Postgres                                                        |
+| Document                                       | Owns                                                                                                                      |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| [docs/OVERVIEW.md](docs/OVERVIEW.md)           | Orientation — system diagram, reading path, repository map                                                                |
+| [docs/SPEC.md](docs/SPEC.md)                   | What the system **is** — architecture, stack, offline sync, data model, flows                                             |
+| [docs/LOGIC.md](docs/LOGIC.md)                 | The numbered rules it must obey — capture, storage, sessions, derivations, conflicts, permissions, attestation, invoicing |
+| [docs/ROADMAP.md](docs/ROADMAP.md)             | The build path — phases, current status, decision gates, distribution                                                     |
+| [docs/DECISIONS.md](docs/DECISIONS.md)         | **Why**, and when it changed. Settled decisions and the open list                                                         |
+| [docs/WORKFLOW.md](docs/WORKFLOW.md)           | Developing across machines                                                                                                |
+| [docs/ACCOUNTS.md](docs/ACCOUNTS.md)           | External services: which, when needed, what they cost, whether we have them                                               |
+| [docs/WORKLOG.md](docs/WORKLOG.md)             | What happened, including work that produced no commit. Historical only — current state lives in ROADMAP                   |
+| [packages/db/README.md](packages/db/README.md) | Running the database: migrations, seeding, local Postgres                                                                 |
 
 ## License
 

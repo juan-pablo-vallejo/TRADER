@@ -15,6 +15,43 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-30
 
+### 22:20 — The sync loop closes: device pull, durable cursor, and the three triggers
+
+`CONFLICT-5` now holds on the device. A cycle is **push then pull**, in that order, so a phone's
+own events reach the server before it asks what the server holds and are confirmed in the same
+cycle rather than the next one.
+
+**A schema gap surfaced while wiring it.** `local_events` had no `worker_id`, which was harmless
+while a device only ever held its own labor — but `PERM-5` lets a foreman pull their crew's
+events, and `SESSION-1` is a per-worker invariant. Folding several workers' events together would
+have produced one impossible timeline with no error anywhere. Added as migration 3, and the fold
+is now scoped by worker.
+
+**Two structural fixes, both prompted by a test that would not run.** `pull.ts` originally imported
+`client.ts`, which opens SQLite at module load — so importing the pull loop anywhere pulled in a
+native runtime and the test file could not even be collected. Split into `pull.ts` (pure, takes a
+`PullDeps`) and `pull-store.ts` (the only part that touches the database), matching the existing
+`outbox-logic.ts`/`sync.ts` split. That made the loop's real logic testable, and it is: rewind
+exactly once, terminate, advance on a short final page, respect the page cap. Two of those go red
+when broken — rewinding inside the loop, and dropping the short-page advance.
+
+The three triggers go through one scheduler because they fire _together_: walking out of a
+basement regains signal and foregrounds the app within the same second, which without coalescing
+is three cycles pushing the same rows. Manual taps deliberately skip the throttle — a worker
+tapping Sync is usually watching to see their day leave the phone.
+
+**Verified without a tap, which was the part I could not do before.** A cached Expo Go bundle was
+hiding a real Metro resolution failure — the running Metro predated three new files, so its file
+map could not see them; only a cold start with a fresh Metro surfaced it. Once restarted: an event
+pushed to the server by `curl` as `dev_worker_1` was pulled by the device on its automatic
+foreground trigger, folded, and the screen went from "Clocked out" to **Working**, offering Break
+and Clock out rather than Clock in. That is `CONFLICT-5`, `DERIVE-6` and `SESSION-2` all confirmed
+end to end, by the app itself.
+
+`PERM-5` was also verified live and shown to _discriminate_: with one event in the company, the
+owning worker pulled 1, an admin pulled 1, and a second worker in the same company pulled 0.
+Before the scoping fix that last number was 1.
+
 ### 20:10 — The rules catch up with the code, and two bugs fall out of writing them down
 
 Renaming `logic.md` to `LOGIC.md` was the small half. The real work was that the storage and
