@@ -1,7 +1,7 @@
 import { foldSessions, type FoldEvent, type Session } from "./fold";
 
 /**
- * logic.md DERIVE. Nothing here is stored; every value is computed from the fold
+ * LOGIC.md DERIVE. Nothing here is stored; every value is computed from the fold
  * so the ledger and the numbers cannot disagree.
  */
 

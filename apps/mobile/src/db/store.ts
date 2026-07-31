@@ -67,6 +67,7 @@ export function recordEvent(event: NewEvent): LocalEventRow {
     syncState: "pending" as const,
     attempts: 0,
     nextAttemptAt: null,
+    syncingSince: null,
     lastError: null,
     rejected: false,
   };
@@ -107,11 +108,13 @@ export function toFoldEvents(rows: readonly LocalEventRow[]): FoldEvent[] {
     }));
 }
 
-export function markSyncing(ids: readonly string[]): void {
+export function markSyncing(ids: readonly string[], now: number = Date.now()): void {
   if (ids.length === 0) return;
   localDb
     .update(localEvents)
-    .set({ syncState: "syncing" })
+    // Stamped, not just flagged: without a start time a row killed mid-flush is
+    // indistinguishable from one still in flight. See `reclaimStale`.
+    .set({ syncState: "syncing", syncingSince: now })
     .where(inArray(localEvents.id, [...ids]))
     .run();
 }
@@ -126,5 +129,12 @@ export function applyTransition(
     rejected: boolean;
   },
 ): void {
-  localDb.update(localEvents).set(t).where(eq(localEvents.id, id)).run();
+  localDb
+    .update(localEvents)
+    // Every transition leaves `syncing`, so the in-flight stamp is always
+    // cleared here. Leaving a stale one behind would make the *next* flush
+    // reclaim a row that had already been answered.
+    .set({ ...t, syncingSince: null })
+    .where(eq(localEvents.id, id))
+    .run();
 }

@@ -1,5 +1,5 @@
 /**
- * Sync protocol parameters (logic.md `CONFLICT-4`, `CONFLICT-4a`).
+ * Sync protocol parameters (LOGIC.md `CONFLICT-4`, `CONFLICT-8`).
  *
  * Gathered here rather than inlined because every one of them was a decision with
  * reasoning behind it, recorded in DECISIONS.md under "Settled at the start of
@@ -19,11 +19,11 @@
  */
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 
-/** CONFLICT-4a. Events returned per pull. */
+/** CONFLICT-8. Events returned per pull. */
 export const PULL_BATCH_SIZE = 200;
 
 /**
- * CONFLICT-4a. How far *behind* the cursor each pull re-reads.
+ * CONFLICT-8. How far *behind* the cursor each pull re-reads.
  *
  * Transactions do not become visible in `server_timestamp` order — a row can
  * commit after a client has already read past its timestamp — so resuming exactly
@@ -59,7 +59,7 @@ export function rewindCursor(cursor: PullCursor | null): PullCursor | null {
   };
 }
 
-/** CONFLICT-6 / CONFLICT-4a: retry backoff, exponential from 1s to 5min. */
+/** CONFLICT-6 / CONFLICT-8: retry backoff, exponential from 1s to 5min. */
 export const RETRY_BASE_MS = 1000;
 export const RETRY_MAX_MS = 5 * 60 * 1000;
 

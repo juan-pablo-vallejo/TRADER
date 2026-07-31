@@ -9,7 +9,15 @@ owns the rules themselves; the others link here rather than restating them.
 
 Rules are identified by group and number — `SESSION-3`, `ATTEST-5`. **Identifiers are permanent.**
 A withdrawn rule keeps its number and is marked withdrawn; numbers are never reused, so a
-citation in a two-year-old test never silently points at a different rule.
+citation in a two-year-old test never silently points at a different rule. A new rule is
+**appended** to its group rather than inserted, even when it belongs beside an older one by
+subject; ordering is not meaning.
+
+The groups, in the order a reader meets them: **AUTH** getting in · **CAPTURE** when a labor
+event may be written · **STORE** how it is stored and kept · **SESSION** the state machine it
+must obey · **DERIVE** what is computed from it · **CONFLICT** how it reaches the server and what
+happens when two versions disagree · **PERM** who may do and see what · **ATTEST** who an action
+is attributed to · **INVOICE** billing and payment.
 
 Rules marked **`[unbuilt]`** describe intended behaviour that no code implements yet. Rules with
 an **open parameter** name a value that is deliberately undecided; the decision is tracked in
@@ -57,6 +65,71 @@ place PERM-3 has to hold against a client that was authorised when it wrote.
 
 ---
 
+## CAPTURE — recording a labor event
+
+The conditions under which a write is permitted, as distinct from SESSION's rules about what a
+write may say. Every rule here exists to serve one scenario: a foreman in a basement with no
+signal must be able to clock in. ATTEST-4 and CONFLICT-4 are the same principle applied to
+attestation and to clocks — evidence when present, never a precondition.
+
+**CAPTURE-1.** Recording a labor event **touches local storage only**. No network call, no
+awaited remote work, and nothing on the path that can fail because a server is unreachable. The
+event is durable the moment the worker's tap returns.
+
+**CAPTURE-2.** Capture **never requires a valid session**; only sync does. A credential expiring
+in a dead zone must not block a clock-in — it stops the outbox flushing and nothing else. There
+is deliberately no offline grace window to expire, because any such deadline would fall due
+exactly when connectivity is worst.
+
+**CAPTURE-3.** Device location is **best-effort, nullable, and never blocking**. It is captured
+on a short timeout _(open parameter — the value is unset in both code and DECISIONS.md)_; if no
+fix arrives the event is written with no location. GPS is typically unavailable in exactly the
+basement the product exists to work in, so a clock-in that waited on it would break CAPTURE-1.
+
+**CAPTURE-4.** A worker may only write **their own** labor. The server takes the acting worker
+from the authenticated caller and never from the request body, so no client can attribute an
+event to someone else.
+
+---
+
+## STORE — how data is stored and kept
+
+Rules about the shape and durability of what is written, as opposed to what it means. Each is a
+property of the database that **no amount of correct application code would preserve** if a
+later migration changed it, which is why they are asserted against a real database in
+`packages/db/test/schema-invariants.test.ts` rather than in TypeScript.
+
+**STORE-1.** The labor ledger is **append-only**. `work_session_events` rejects UPDATE, DELETE
+and TRUNCATE — for every caller, including an admin and including the application's own
+connection. TRUNCATE needs its own guard because it bypasses row triggers entirely.
+
+**STORE-2.** Money is **integer minor units** paired with a currency code. Never floating point,
+and never a bare number without its currency.
+
+**STORE-3.** Every tenant-scoped table carries a **non-nullable `company_id`** — the seam
+multi-tenancy attaches to. A nullable one anywhere forces a backfill at exactly the wrong moment.
+
+**STORE-4.** `work_session_events.server_timestamp` is stored at **millisecond precision**, and
+no finer component is ever written. The sync cursor keys on this column (CONFLICT-8) and clients
+carry it as a JavaScript timestamp, which cannot represent microseconds; at finer precision every
+cursor lands fractionally behind the row it came from, `server_timestamp > cursor` stays true for
+rows already delivered, and pagination livelocks while every log looks healthy.
+
+**STORE-5.** Event ids are **client-generated UUIDv7**, produced on the device that observed the
+event. The server never defaults one — a server-side default would mask a client bug by turning
+every retry into a new row — and the device never regenerates one on retry, because the id _is_
+the idempotency key CONFLICT-1 upserts by. Time-sortability is not decoration: it is what lets
+the id serve as CONFLICT-2's final tiebreaker.
+
+**STORE-6.** An append-only table carries **no `updated_at`**. Including one would advertise a
+mutability STORE-1 forbids.
+
+**STORE-7.** Derived values are **never stored**. `work_date`, session state and worked duration
+are computed from the event fold on every read (DERIVE), so the ledger and the numbers cannot
+disagree.
+
+---
+
 ## SESSION — the work-session state machine
 
 A session is one worker's continuous stretch of work on one job. It exists only as a fold over
@@ -96,6 +169,16 @@ result. Neither case may be repaired by inventing an event.
 **SESSION-7.** `voided` nullifies an entire session rather than a single event. It is itself an
 appended event and does not remove anything.
 
+**SESSION-8.** Rejection is **per record, never per batch.** A push carrying one illegal event
+still records every legal event beside it; a single client bug must not cost a worker their whole
+day. This is also what makes CONFLICT-6's per-record status possible.
+
+**SESSION-9.** SESSION-3's check is **two-sided.** Inserting an event at its timestamp position
+also changes what follows it, so an event is legal only if the event that previously came next
+remains legal after the insertion. Without the forward half, a `started` slipped in before an
+existing open session would breach SESSION-1, and an `ended` placed before another `ended` would
+orphan the second — neither is visible from the preceding state alone.
+
 ---
 
 ## DERIVE — derived values
@@ -104,7 +187,10 @@ Nothing in this group is stored as an editable field. Each is computed from the 
 the ledger and the numbers can never disagree.
 
 **DERIVE-1.** `work_date` is the calendar date of the session's `started` `client_timestamp`,
-evaluated in `companies.timezone`. **Never entered, never editable.**
+evaluated in `companies.timezone`. **Never entered, never editable.** It must be computed against
+the named zone, not a fixed UTC offset: an offset is wrong twice a year, and a shift starting
+near midnight on a daylight-saving boundary lands on a different date depending which side of the
+transition it falls.
 
 **DERIVE-2.** A session crossing midnight belongs entirely to its **start** date. A shift from
 22:00 to 02:00 is four hours on the first day, not two on each.
@@ -122,6 +208,10 @@ the current time; that display value is never a payroll input.
 **DERIVE-6.** All derivation is server-side. A device may compute the same values for display,
 but on any disagreement the server's value is the one that counts (CONFLICT-5).
 
+**DERIVE-7.** An event the server **rejected** contributes to no total, local or server-side. It
+was never written server-side (SESSION-4), so a device that still counted it would show hours the
+office does not have — the exact disagreement DERIVE-6 exists to resolve.
+
 ---
 
 ## CONFLICT — sync and conflict resolution
@@ -130,12 +220,21 @@ Because labor is append-only, true conflicts are rare by construction. These rul
 ones that remain. All of them live in **one readable handler at the API boundary** — deliberately
 not a database constraint and not a locking scheme.
 
+**Partly built.** The server half is complete: idempotent push, ordering, skew handling, the pull
+cursor, and per-record results. On the device, the outbox pushes and retries — but **nothing pulls
+yet**, so `CONFLICT-5`'s "snaps to server truth" is `[unbuilt]`, and with it the durable cursor
+`CONFLICT-8` describes. `CONFLICT-6`'s triggers are also `[unbuilt]`: sync currently runs only when
+a worker taps it, not on reconnect, foreground or a timer.
+
 **CONFLICT-1.** The server upserts by the **client-generated UUIDv7**. A repeat of an
 already-recorded `id` is a no-op that returns success. A client may retry the same write
 indefinitely; the server records it once.
 
 **CONFLICT-2.** Events are ordered by **`client_timestamp`**, with **`server_timestamp` as
-tiebreaker**. An offline 15:00 clock-out that syncs at 18:00 beats a 14:00 event.
+tiebreaker** and **`id` as the final key**. An offline 15:00 clock-out that syncs at 18:00 beats a
+14:00 event. The third key is not ceremony: without it two events written in the same millisecond
+could fold differently on different runs, and a payroll number that is wrong reproducibly is far
+easier to trust than one that is right most of the time.
 
 **CONFLICT-3.** Where two events genuinely compete — two devices ending the same session — the
 **latest legitimate action under CONFLICT-2 wins.**
@@ -151,13 +250,6 @@ but is ordered by `server_timestamp` and flagged in `payload`. `client_timestamp
 the device reported it and is never clamped: in an append-only payroll ledger, a rewritten time
 is a time the worker did not act, and nothing downstream can undo it.
 
-**CONFLICT-4a.** The pull cursor is a **keyset on `(server_timestamp, id)`, re-read with a
-deliberate overlap window** rather than resumed exactly where it stopped. Transactions do not
-become visible in `server_timestamp` order — a row can commit after a client has read past its
-timestamp — so a precise cursor can silently skip a labor event. CONFLICT-1 makes the overlap
-free: a redelivered event upserts by client UUID and is a no-op. **Batch 200; retry backs off
-exponentially from 1s to 5min with jitter.**
-
 **CONFLICT-5.** The losing device **snaps to server truth** on its next pull. Clients never argue
 with the server.
 
@@ -168,6 +260,39 @@ that state honestly rather than implying delivery.
 **CONFLICT-7.** A submitted day closeout is **locked**. Every later change is a new correcting
 event referencing the original through `payload`; nothing is edited and no correcting event is
 special-cased in the schema.
+
+**CONFLICT-8.** The pull cursor is a **keyset on `(server_timestamp, id)`**, and pagination uses
+it **strictly** — each page starts after the previous page's last row, so a run always terminates.
+The **overlap window is 30 seconds and is applied once at the start of a sync cycle**, never
+inside pagination: a page that began a window behind its own cursor would return the same rows
+forever whenever a full batch fit inside that window. The overlap exists because transactions do
+not become visible in `server_timestamp` order — a row can commit after a client has read past
+its timestamp — so a cursor without it can silently skip a labor event. CONFLICT-1 makes the
+re-read free. **Pull batch 200; push batch 1–500; retry backs off exponentially from 1s to 5min
+with full jitter.**
+
+**CONFLICT-9.** A `duplicate` response is **success**, not an error. CONFLICT-1 obliges the
+server to record a repeat once and return success; this is the client's matching obligation. A
+device that pushed, lost the response and pushed again must mark the record delivered — treating
+it as failure leaves the row retrying forever against a server that already holds it.
+
+**CONFLICT-10.** A **rejected** event is permanently failed and is **never retried**. SESSION-4
+never wrote it, and the timeline that made it illegal is append-only, so no later attempt can
+succeed. It must be surfaced to the worker as needing attention rather than left retrying, which
+would imply hours are on their way that never will be.
+
+**CONFLICT-11.** A push that **never reached the server** is not a rejection. No record may be
+abandoned on transport failure, and a response that **omits** a record is treated as transport
+failure rather than success — leaving it `syncing` would strand it.
+
+**CONFLICT-12.** A record left `syncing` by a flush that died mid-request is **reclaimed** after
+**2 minutes**, and one carrying no start time is reclaimed immediately. The OS reaping a
+backgrounded app is ordinary on a phone; without reclamation those records never sync again.
+Reclamation returns the record to the queue and never resurrects a `rejected` one.
+
+**CONFLICT-13.** Sync bookkeeping — sync state, attempt count, next-attempt time, the rejected
+flag — is **local to the device and never transmitted**. It records one device's knowledge of
+delivery, not anything true about the labor.
 
 ---
 
@@ -205,7 +330,16 @@ is. Deletion is defined as deactivate-and-anonymise, so an account that could st
 afterwards would make that definition cosmetic.
 
 **PERM-4.** Role is never written by a request path. It is set by seeding or by deliberate
-roster action, never by the just-in-time provisioning that runs on sign-in.
+roster action, never by the just-in-time provisioning that runs on sign-in. The same holds for
+`active` and for profile fields: just-in-time provisioning reads a profile **only when creating
+the row**, so an admin's later correction is never overwritten on the next sign-in.
+
+**PERM-5.** **Sync delivery is bound by PERM-1 like any other read.** A worker receives only
+their own events; a foreman theirs plus the members of a crew they lead, read live so a roster
+change takes effect on the next pull; an admin the whole company. Company scope bounds the
+outside of the query and role bounds the inside — delivering the company's events to every
+device and hiding them in the UI would be exactly the cosmetic gate this group's preamble
+rejects, and labor history is other people's hours before it is anything else.
 
 ---
 
@@ -230,7 +364,10 @@ biometric template never leaves the device and TRADER never receives it.** We st
 the OS reported success, not anything about the face or finger.
 
 **ATTEST-3.** Attestation is recorded at one of three levels, and **the level achieved is stored
-on the event**: `biometric`, `device_credential` (the OS passcode fallback), or `none`.
+on the event**: `biometric`, `device_credential` (the OS passcode fallback), or `none`. The
+column is NOT NULL and **defaults to `none`**, so a client that sends nothing records the honest
+answer rather than an optimistic one — which is what makes a pattern of `none` visible to the
+office instead of indistinguishable from a client that never implemented the field.
 
 **ATTEST-4.** **Attestation never blocks a labor event.** If biometrics fail, are unenrolled, or
 the device has no passcode set, the event is written with the level honestly recorded. This
@@ -317,8 +454,9 @@ reflects their outcome and does not mediate them.
 no tax expertise: RI and MA treat painting labor and materials differently, and encoding a guess
 would be worse than asking.
 
-**INVOICE-10.** All money is **integer minor units**. The sum of line totals equals the subtotal,
-and subtotal plus tax equals the total, exactly — no floating point anywhere in the chain.
+**INVOICE-10.** All money is **integer minor units, paired with a currency code** (STORE-2). The
+sum of line totals equals the subtotal, and subtotal plus tax equals the total, exactly — no
+floating point anywhere in the chain, and no bare amount without its currency.
 
 **INVOICE-11.** **Delivery is best-effort and its failure is visible.** If the email does not
 send, the invoice still exists and the admin can download the PDF or copy the payment link. A

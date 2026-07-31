@@ -50,7 +50,7 @@ export const workSessionEvents = pgTable(
     clientTimestamp: timestamp("client_timestamp", { withTimezone: true }).notNull(),
     /**
      * When it reached the server. CONFLICT-2 tiebreaker, and the key the sync
-     * pull cursor pages on (CONFLICT-4a).
+     * pull cursor pages on (CONFLICT-8).
      *
      * **Millisecond precision, deliberately.** Postgres defaults to microseconds,
      * but a JavaScript `Date` cannot represent them — the driver truncates, so a
@@ -87,7 +87,7 @@ export const workSessionEvents = pgTable(
     deviceAccuracyM: doublePrecision("device_accuracy_m"),
     /**
      * How strongly this event is attributed to a person present when it was taken
-     * (logic.md ATTEST-3). Defaults to `none` so a client that does not yet send
+     * (LOGIC.md ATTEST-3). Defaults to `none` so a client that does not yet send
      * the field records the honest answer rather than an optimistic one — and so
      * the column can be NOT NULL over rows written before attestation shipped.
      */

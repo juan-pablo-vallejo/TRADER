@@ -67,10 +67,15 @@ snap to server truth on the next sync.
 
 ## What exists today
 
-`packages/db` — the Postgres schema, migrations, the triggers enforcing append-only labor —
-and `packages/api`, the tRPC router with just-in-time user provisioning and role gates. Both
-applications and the sync layer are unwritten, and the sync layer is the largest single risk,
-since `expo-sqlite` and Drizzle supply storage and migrations but no sync.
+`packages/db` — the Postgres schema, migrations, the triggers enforcing append-only labor — and
+`packages/api`, the tRPC router with just-in-time provisioning, role gates and the sync boundary.
+Both applications exist: `apps/web` hosts the API and signs an admin in, `apps/mobile` clocks a
+worker in and out **offline**, holding events in an `expo-sqlite` outbox until they sync.
+
+The sync layer remains the largest single risk and is only half built. The server side — idempotent
+push, the session fold, the pull cursor — is written and tested; on the device, the outbox pushes
+but **nothing pulls yet**, so a device does not yet snap to server truth. Passkey sign-in and the
+Face ID attestation call are also unbuilt, so every event honestly records `none`.
 
 Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Open decisions →
 [DECISIONS.md](DECISIONS.md).
@@ -81,18 +86,20 @@ Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Ope
 | --------------- | ----------------------------------------------------------------------------------------------------------- |
 | `packages/db/`  | Schema, migrations, seed, invariant tests. Has its own [README](../packages/db/README.md)                   |
 | `packages/api/` | tRPC routers, request context, role gates. Exports `AppRouter` — the contract both clients import as a type |
+| `apps/web/`     | Next.js — the office app, and the route handler that hosts the tRPC API both clients call                   |
+| `apps/mobile/`  | Expo — the field app. Owns the device SQLite store and the outbox                                           |
 | `docs/`         | The documents in the reading path below                                                                     |
 | `CLAUDE.md`     | The one-fact-one-home rule this repository is maintained under                                              |
-
-`apps/` appears as its phase lands; see [ROADMAP.md](ROADMAP.md).
 
 ## Reading path
 
 1. **This file** — orientation.
 2. **[SPEC.md](SPEC.md)** — what the system is. Read §3 (offline and sync) and §4 (data
    model) closely; they carry the design.
-3. **[logic.md](logic.md)** — the numbered rules the system must obey. Read this before
-   writing behaviour; each rule has a permanent identifier that code and tests cite.
+3. **[LOGIC.md](LOGIC.md)** — the numbered rules the system must obey. Read this before
+   writing behaviour; each rule has a permanent identifier that code and tests cite. **CAPTURE**
+   and **STORE** come first for a reason: they say when a labor event may be written and what
+   must remain true of it afterwards, and everything else assumes both.
 4. **[ROADMAP.md](ROADMAP.md)** — where it is going, what is done, and what each phase is
    gated on.
 5. **[DECISIONS.md](DECISIONS.md)** — why. Read this before proposing a change; most obvious
@@ -105,13 +112,15 @@ external services. Skip them until you need to run or deploy something.
 
 ## Invariants you must not break
 
-Three things are enforced mechanically rather than by convention. Each is tested; if a test
-fails, the change is wrong, not the test.
+Four things are enforced mechanically rather than by convention. Each is tested against a real
+database; if a test fails, the change is wrong, not the test. They are stated as rules in
+[LOGIC.md](LOGIC.md)'s **STORE** group — cite those identifiers rather than this table.
 
-| Invariant                                                                                                                                     | Enforced in                                                                                                   |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Labor history is immutable.** `work_session_events` rejects UPDATE, DELETE and TRUNCATE — including for admins. Corrections are new events. | `packages/db/migrations/0001_append_only_guard.sql`, asserted in `packages/db/test/schema-invariants.test.ts` |
-| **Money is integer cents, never floating point.**                                                                                             | `packages/db/test/schema-invariants.test.ts`                                                                  |
-| **Every tenant-scoped table carries a non-nullable `company_id`** — the seam multi-tenancy attaches to later.                                 | `packages/db/test/schema-invariants.test.ts`                                                                  |
+| Invariant                                                                                                                                     | Rule    | Enforced in                                                                                                   |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| **Labor history is immutable.** `work_session_events` rejects UPDATE, DELETE and TRUNCATE — including for admins. Corrections are new events. | STORE-1 | `packages/db/migrations/0001_append_only_guard.sql`, asserted in `packages/db/test/schema-invariants.test.ts` |
+| **Money is integer cents, never floating point.**                                                                                             | STORE-2 | `packages/db/test/schema-invariants.test.ts`                                                                  |
+| **Every tenant-scoped table carries a non-nullable `company_id`** — the seam multi-tenancy attaches to later.                                 | STORE-3 | `packages/db/test/schema-invariants.test.ts`                                                                  |
+| **`server_timestamp` is millisecond precision.** The sync cursor keys on it; at finer precision pagination livelocks while looking healthy.   | STORE-4 | `packages/db/test/schema-invariants.test.ts` (two assertions)                                                 |
 
-The reasoning for all three is in [DECISIONS.md](DECISIONS.md).
+The reasoning for all four is in [DECISIONS.md](DECISIONS.md).

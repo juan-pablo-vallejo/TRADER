@@ -5,6 +5,7 @@ import {
   applyTransportFailure,
   isDue,
   isStaleSyncing,
+  reclaimStale,
   STALE_SYNCING_MS,
   summarize,
 } from "../src/db/outbox-logic";
@@ -95,21 +96,33 @@ describe("isStaleSyncing — a flush killed mid-request", () => {
    * sync again, and a worker's day would silently never arrive.
    */
   it("reclaims a row stuck in syncing past the deadline", () => {
-    const row = { syncState: "syncing" as const, nextAttemptAt: null };
-    expect(isStaleSyncing(row, NOW, NOW + STALE_SYNCING_MS + 1)).toBe(true);
-    expect(isStaleSyncing(row, NOW, NOW + 1000)).toBe(false);
+    const row = { syncState: "syncing" as const, syncingSince: NOW };
+    expect(isStaleSyncing(row, NOW + STALE_SYNCING_MS + 1)).toBe(true);
+    expect(isStaleSyncing(row, NOW + 1000)).toBe(false);
   });
 
   it("reclaims a syncing row with no recorded start at all", () => {
-    expect(isStaleSyncing({ syncState: "syncing", nextAttemptAt: null }, null, NOW)).toBe(
-      true,
-    );
+    expect(isStaleSyncing({ syncState: "syncing", syncingSince: null }, NOW)).toBe(true);
   });
 
   it("leaves rows that are not syncing alone", () => {
-    expect(isStaleSyncing({ syncState: "pending", nextAttemptAt: null }, null, NOW)).toBe(
-      false,
-    );
+    expect(isStaleSyncing({ syncState: "pending", syncingSince: null }, NOW)).toBe(false);
+  });
+
+  it("reclaiming returns the row to the queue without losing its attempt count", () => {
+    const t = reclaimStale(3);
+    expect(t.syncState).toBe("pending");
+    expect(t.attempts).toBe(3);
+    expect(t.rejected).toBe(false);
+    // Due immediately: the previous attempt never reached the server, so there
+    // is no backoff to serve.
+    expect(isDue({ ...t }, NOW)).toBe(true);
+  });
+
+  it("does not reclaim a rejected row that happens to be stale", () => {
+    // `rejected` is terminal (CONFLICT-10); reclamation must not resurrect it.
+    const t = reclaimStale(1);
+    expect(isDue({ ...t, rejected: true }, NOW)).toBe(false);
   });
 });
 

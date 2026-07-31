@@ -51,7 +51,7 @@ export async function createContext(opts: CreateContextOptions): Promise<Context
  * Finds the caller's row, creating it on first sign-in (SPEC provisioning
  * decision: default role `worker`; admins are promoted deliberately by seed).
  *
- * Enforces docs/logic.md PERM-4: role is never written by a request path.
+ * Enforces docs/LOGIC.md PERM-4: role is never written by a request path.
  *
  * **There is deliberately no `onConflictDoUpdate` here.** An update clause on
  * this path is a standing hazard: `packages/db/src/seed.ts` legitimately writes

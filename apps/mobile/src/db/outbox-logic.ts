@@ -82,8 +82,9 @@ export function applyTransportFailure(
  * Whether a record should be included in the next flush.
  *
  * `rejected` rows are excluded permanently. `failed` rows wait out their backoff.
- * `syncing` rows are excluded because a flush is already in flight — but see
- * `reclaimStale`: a process killed mid-flush would otherwise strand them.
+ * `syncing` rows are excluded because a flush is already in flight — which is why
+ * `flushOutbox` calls `reclaimStale` first: without that pass, a row whose flush
+ * was killed mid-request would be excluded here forever.
  */
 export function isDue(
   row: { syncState: SyncState; rejected: boolean; nextAttemptAt: number | null },
@@ -105,13 +106,29 @@ export function isDue(
  */
 export const STALE_SYNCING_MS = 2 * 60 * 1000;
 
+/**
+ * A `syncing` row with no recorded start is stale immediately: it predates the
+ * column, or was written by a path that forgot to stamp it. Either way nothing is
+ * in flight for it, and the safe reading is "retry" — CONFLICT-1 makes a
+ * redundant retry a no-op, while a missed one loses a day.
+ */
 export function isStaleSyncing(
-  row: { syncState: SyncState; nextAttemptAt: number | null },
-  startedAt: number | null,
+  row: { syncState: SyncState; syncingSince: number | null },
   now: number,
 ): boolean {
   if (row.syncState !== "syncing") return false;
-  return startedAt === null || now - startedAt > STALE_SYNCING_MS;
+  return row.syncingSince === null || now - row.syncingSince > STALE_SYNCING_MS;
+}
+
+/** Puts a stranded row back in the queue, keeping its attempt count. */
+export function reclaimStale(attempts: number): OutboxTransition {
+  return {
+    syncState: "pending",
+    attempts,
+    nextAttemptAt: null,
+    lastError: "Interrupted before the server answered; retrying.",
+    rejected: false,
+  };
 }
 
 /**

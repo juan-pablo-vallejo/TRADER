@@ -15,6 +15,42 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-30
 
+### 20:10 — The rules catch up with the code, and two bugs fall out of writing them down
+
+Renaming `logic.md` to `LOGIC.md` was the small half. The real work was that the storage and
+maintenance rules built across Phases 0–1 existed only in code comments, so nothing could cite
+them — new `STORE` and `CAPTURE` groups now own them, plus five new `CONFLICT` rules for the
+outbox. `CONFLICT-4a` became `CONFLICT-8`: the sub-letter contradicted the file's own "numbers are
+never reused" convention, and correcting it cost nothing at two days old.
+
+**Writing the rules down found two bugs, which is the argument for writing rules down.**
+
+`sync.pull` was company-scoped for every caller — a worker's device received the whole crew's
+labor history — while PERM-1 denies a worker "view crew labor" and PERM's preamble says client-side
+hiding "is cosmetic and never the gate". The code and the rules disagreed and the code was wrong.
+Now scoped by role, crew membership read live per pull. Three tests go red when it is reverted.
+
+Worse: `isStaleSyncing` was written, unit-tested, and **never called**, while its own comment
+pointed at a `reclaimStale` function that did not exist. The failure it described was therefore
+real and unmitigated — a flush killed mid-request left rows in `syncing`, which `isDue` excludes
+unconditionally, stranding a worker's day permanently. Wired in behind a new `syncing_since`
+column. The lesson is not the missing call: a comment describing a safeguard that does not exist
+is worse than no comment, because it stops the next reader looking.
+
+Both were found by a documentation pass, not by tests — the tests covered the predicate and were
+perfectly green while the predicate was unreachable.
+
+Honest coverage note: the reclaim _logic_ is tested, but the _wiring_ into `flushOutbox` is not,
+because `flushOutbox` reaches native `expo-sqlite` and cannot run under vitest. That is the same
+untested seam already recorded for the device store, not a new one.
+
+The rename had a trap worth recording. `core.ignorecase` is true and APFS here is
+case-insensitive, so a direct `git mv` can silently no-op — the two-step through a temporary name
+is required, and `git ls-files` is the only honest check, since `ls` resolves either case.
+`check-doc-links.mjs` is likewise useless locally for this: it delegates to `existsSync`, so every
+stale link still resolved on this Mac. CI on ubuntu-latest is the only case-sensitive verification,
+and it covers only the 32 markdown links — the 10 code-comment references were caught by grep.
+
 ### 19:05 — The device half: local store, outbox, and a clock that works offline
 
 `expo-sqlite` holds the labor events and the outbox in **one table**, not two. Splitting them

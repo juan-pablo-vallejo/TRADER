@@ -16,7 +16,7 @@ Each fact has one home. This README links; it does not restate.
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | [docs/OVERVIEW.md](docs/OVERVIEW.md)           | Orientation — system diagram, reading path, repository map                                                       |
 | [docs/SPEC.md](docs/SPEC.md)                   | What the system **is** — architecture, stack, offline sync, data model, flows                                    |
-| [docs/logic.md](docs/logic.md)                 | The numbered rules it must obey — joining, sessions, derivations, conflicts, permissions, attestation, invoicing |
+| [docs/LOGIC.md](docs/LOGIC.md)                 | The numbered rules it must obey — joining, sessions, derivations, conflicts, permissions, attestation, invoicing |
 | [docs/ROADMAP.md](docs/ROADMAP.md)             | The build path — phases, current status, decision gates, distribution                                            |
 | [docs/DECISIONS.md](docs/DECISIONS.md)         | **Why**, and when it changed. Settled decisions and the open list                                                |
 | [docs/WORKFLOW.md](docs/WORKFLOW.md)           | Developing across machines                                                                                       |

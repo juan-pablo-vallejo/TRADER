@@ -46,8 +46,11 @@ pnpm --filter @trader/db check    # report drift
 ## Invariants under test
 
 `test/schema-invariants.test.ts` asserts these against a real database, because none can be
-enforced by TypeScript. If one fails, the schema is wrong — not the test.
+enforced by TypeScript. If one fails, the schema is wrong — not the test. Each is a numbered rule
+in [LOGIC.md](../../docs/LOGIC.md)'s STORE group; cite the identifier, not this list.
 
-- `work_session_events` rejects UPDATE, DELETE and TRUNCATE.
-- Every `*_cents` column is integer-family, never floating point.
-- Every tenant-scoped table has a non-nullable `company_id`.
+- `work_session_events` rejects UPDATE, DELETE and TRUNCATE (STORE-1).
+- Every `*_cents` column is integer-family, never floating point (STORE-2).
+- Every tenant-scoped table has a non-nullable `company_id` (STORE-3).
+- `server_timestamp` is `timestamptz(3)` and carries no sub-millisecond component (STORE-4) —
+  two assertions, because the column type and the values written can drift apart.

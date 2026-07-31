@@ -1,5 +1,6 @@
 import { companies, jobs, users, workSessionEvents, type Db } from "@trader/db";
 import { drizzle } from "drizzle-orm/node-postgres";
+import type { PoolClient } from "pg";
 
 import { pool } from "./helpers";
 
@@ -24,10 +25,19 @@ export const TEST_OTHER_WORKER = "00000000-0000-7000-8000-0000000ce002";
 export const TEST_JOB_A = "00000000-0000-7000-8000-00000000b001";
 export const TEST_JOB_B = "00000000-0000-7000-8000-00000000b002";
 
-const TABLES = ["companies", "users", "jobs", "work_session_events"] as const;
+const TABLES = [
+  "companies",
+  "users",
+  "jobs",
+  "crews",
+  "crew_members",
+  "work_session_events",
+] as const;
 
 export type SyncFixture = {
   db: Db;
+  /** The raw connection, for fixtures Drizzle would need whole schemas to express. */
+  client: PoolClient;
   companyId: string;
   workerId: string;
   otherWorkerId: string;
@@ -80,6 +90,7 @@ export async function withSyncFixture<T>(fn: (f: SyncFixture) => Promise<T>): Pr
 
     return await fn({
       db,
+      client,
       companyId: TEST_COMPANY,
       workerId: TEST_WORKER,
       otherWorkerId: TEST_OTHER_WORKER,
@@ -92,13 +103,19 @@ export async function withSyncFixture<T>(fn: (f: SyncFixture) => Promise<T>): Pr
   }
 }
 
+export type ActorRole = "worker" | "foreman" | "admin";
+
 /** A caller-shaped user row, so tests need not round-trip through the database. */
-export function actor(f: SyncFixture, id: string = f.workerId) {
+export function actor(
+  f: SyncFixture,
+  id: string = f.workerId,
+  role: ActorRole = "worker",
+) {
   return {
     id,
     companyId: f.companyId,
     clerkUserId: "sync_test",
-    role: "worker" as const,
+    role,
     name: "Sync Test",
     phone: null,
     payRateCents: null,
@@ -106,6 +123,28 @@ export function actor(f: SyncFixture, id: string = f.workerId) {
     createdAt: new Date(),
     updatedAt: new Date(),
   };
+}
+
+/** Puts `members` in a crew led by `foremanId`, so PERM-5's foreman scope has data. */
+export async function seedCrew(
+  client: PoolClient,
+  opts: { crewId: string; foremanId: string; members: readonly string[] },
+): Promise<void> {
+  await client.query(
+    `INSERT INTO crews (id,company_id,name,foreman_id) VALUES ($1,$2,'Test Crew',$3)`,
+    [opts.crewId, TEST_COMPANY, opts.foremanId],
+  );
+  for (const [i, userId] of opts.members.entries()) {
+    await client.query(
+      `INSERT INTO crew_members (id,company_id,crew_id,user_id) VALUES ($1,$2,$3,$4)`,
+      [
+        `00000000-0000-7000-8000-0000000cf0${String(i).padStart(2, "0")}`,
+        TEST_COMPANY,
+        opts.crewId,
+        userId,
+      ],
+    );
+  }
 }
 
 let seq = 0;

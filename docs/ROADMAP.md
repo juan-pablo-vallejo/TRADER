@@ -123,13 +123,13 @@ outbox push, pull, retry/backoff, visible per-record status, device-side migrati
 biometric gate on the mobile actions that become payroll, an attestation column on
 `work_session_events`, and the recorded level flowing through sync. The check is local and
 OS-mediated, so it needs no account and works with no signal. Rules are
-[logic.md](logic.md) `ATTEST-1`–`ATTEST-4`; the web half waits for Phase 3.
+[LOGIC.md](LOGIC.md) `ATTEST-1`–`ATTEST-4`; the web half waits for Phase 3.
 
 **Joining ships here as well**, because a pilot crew needs accounts: an admin invites a worker by
 phone number, the worker verifies once and enrols a passkey with Face ID, and every sign-in after
 that is Face ID alone. The phone number stays as the recovery path, and the phone-OTP fallback for
 pre-iOS-16 / pre-Android-9 handsets has to work from day one rather than being added when someone
-turns up with an old phone. Rules are [logic.md](logic.md) `AUTH-1`–`AUTH-10`.
+turns up with an old phone. Rules are [LOGIC.md](LOGIC.md) `AUTH-1`–`AUTH-10`.
 
 Sync services exist — PowerSync and ElectricSQL among them — and building rather than buying
 is a deliberate choice recorded in [DECISIONS.md](DECISIONS.md). The consequence for
@@ -217,7 +217,7 @@ job-cost-to-date in cents.
 issued without mutating history.
 
 **Gates:** closeout actor — foreman-only vs worker-own-day · a documented alternative for an
-admin with no phone, since web approval assumes one ([logic.md](logic.md) `ATTEST-10`).
+admin with no phone, since web approval assumes one ([LOGIC.md](LOGIC.md) `ATTEST-10`).
 
 ### Web approval: the office half of one-tap
 
@@ -225,7 +225,7 @@ Corrections arrive in this phase, so this is where the web app gets attestation.
 biometric of its own, so a high-consequence web action **pushes an approval to the actor's
 enrolled phone** — the prompt names the correction in plain terms, the admin passes Face ID, and
 the web action completes. Single-use, short-lived, and **fails closed**: if the push is not
-answered, the correction does not happen. Rules are [logic.md](logic.md) `ATTEST-5`–`ATTEST-10`.
+answered, the correction does not happen. Rules are [LOGIC.md](LOGIC.md) `ATTEST-5`–`ATTEST-10`.
 
 This phase is also the upgrade point for attestation strength. Web approval requires
 server-issued challenges regardless, which is most of a device-key design already — so the phone
@@ -250,7 +250,7 @@ Two things change shape rather than being added:
 - **`invoice_status` cannot express a partly-paid invoice.** The built enum is
   `draft | sent | paid | void`, which suited an admin marking a cheque as cleared. Once customers
   pay online, part-payments and overpayments are ordinary, so status becomes **derived from the
-  payments attached** ([logic.md](logic.md) `INVOICE-4`). This is a migration, not a new column.
+  payments attached** ([LOGIC.md](LOGIC.md) `INVOICE-4`). This is a migration, not a new column.
 - **`invoice_number` moves to allocation at send.** Numbering drafts leaves gaps whenever one is
   abandoned, and unexplained gaps in an invoice sequence are what an auditor asks about first
   (`INVOICE-1`).

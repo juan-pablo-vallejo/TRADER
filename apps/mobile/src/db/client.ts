@@ -55,6 +55,13 @@ const MIGRATIONS: readonly string[] = [
     value TEXT
   );
   `,
+
+  // 2 — when the in-flight flush began, so a killed one can be reclaimed.
+  //
+  // No `IF NOT EXISTS` on ADD COLUMN: SQLite has not supported it, and it is not
+  // needed — `user_version` already guarantees each migration runs once, and a
+  // partial failure re-runs the whole statement rather than half of it.
+  `ALTER TABLE local_events ADD COLUMN syncing_since INTEGER;`,
 ];
 
 export function migrateLocalDb(): void {
