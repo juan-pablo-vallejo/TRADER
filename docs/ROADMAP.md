@@ -18,8 +18,12 @@ language; see [DECISIONS.md](DECISIONS.md).
 
 Built: the sync core, end to end. The server boundary (`sync.push`/`sync.pull`), the shared session
 fold, the device's `expo-sqlite` store and outbox, the pull loop with its durable cursor, and the
-three sync triggers — a device snaps to server truth unprompted. Still to come in this phase:
-passkey joining (`AUTH-1`–`AUTH-10`), the Face ID call behind `ATTEST-2`, and the deploy gate below.
+three sync triggers — a device snaps to server truth unprompted. One-tap attested clock-in is
+built too: `ATTEST-1`–`ATTEST-4` hold on the device, and the level reaches Postgres on the event.
+
+Still to come in this phase: **passkey joining** (`AUTH-1`–`AUTH-10`), which needs a Clerk account
+and a physical device — passkeys ship native code, so neither Expo Go nor an emulator can run them
+— and the deploy gate below. Both are the same blocker.
 
 ## What "v1" means
 

@@ -15,6 +15,34 @@ in the work, not otherwise. Roll to `WORKLOG-<year>.md` when this becomes unwiel
 
 ## 2026-07-30
 
+### 23:05 — One-tap attested clock-in
+
+`ATTEST-1`–`ATTEST-4` now hold on the device. Every labor event prompts for the phone's own
+biometrics; the level reaches Postgres on the event; a failure, cancellation or absent sensor
+records `none` and writes the event regardless.
+
+**The level matrix needed a decision the rules did not make for me.** `expo-local-authentication`
+reports success or failure, not _which_ method the OS accepted. Prompting once with the fallback
+enabled gives the best experience but cannot tell a passcode from a face — and recording
+`biometric` on that basis would put evidence on a payroll record that nobody produced. So the
+check is two-step: biometrics with the fallback **disabled** first, where a success is
+unambiguous; only if that fails does a second prompt allow the device credential, and its success
+records the weaker `device_credential` because it _might_ have been a biometric retry. Levels
+under-claim rather than over-claim. `ATTEST-11` already schedules the fix — a signed challenge in
+Phase 3 replaces the inference with proof.
+
+**A payroll bug avoided by ordering.** The event's `client_timestamp` is taken at the tap, before
+the prompt opens. Stamping it after would shift every clock-in later by however long Face ID took
+to recognise its owner — a payroll error caused by collecting the evidence rather than by the
+work.
+
+Not machine-verified: **the OS prompt itself.** It only appears on a tap, and UI automation is
+unavailable here. The decision logic is unit-tested and two guards go red when broken — treating
+the fallback as biometric, and skipping the enrolment check — but whether iOS actually renders
+the Face ID sheet needs one manual pass, and the simulator needs Features → Face ID → Enrolled
+first. Without enrolment or a device passcode the correct behaviour is a silent `none`, which is
+`ATTEST-4` working but proves nothing about the prompt.
+
 ### 22:20 — The sync loop closes: device pull, durable cursor, and the three triggers
 
 `CONFLICT-5` now holds on the device. A cycle is **push then pull**, in that order, so a phone's

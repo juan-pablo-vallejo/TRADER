@@ -47,6 +47,9 @@ importers:
       expo:
         specifier: ~57.0.9
         version: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      expo-local-authentication:
+        specifier: ~57.0.2
+        version: 57.0.2(expo@57.0.9)
       expo-network:
         specifier: ~57.0.1
         version: 57.0.1(expo@57.0.9)(react@19.2.3)
@@ -2428,6 +2431,11 @@ packages:
     peerDependencies:
       expo: '*'
       react: '*'
+
+  expo-local-authentication@57.0.2:
+    resolution: {integrity: sha512-8K4zcrQ5wZkRS1rwEWY8qHbeGVMNh35e9D1VTVKlMHz1O47itW+pW6iBVuqwGFLozN4fRBeEDQH8hu9Gt58YuQ==}
+    peerDependencies:
+      expo: '*'
 
   expo-modules-autolinking@57.0.9:
     resolution: {integrity: sha512-lj2nsAKMMRLXSFnGgaaQrWJ2fdSpLPc/bca6Rkiw4g8zYPn7qX4MRUJgavvzm/hBrzvMnlhXVgJtidOGuwBh+w==}
@@ -6211,6 +6219,11 @@ snapshots:
       expo: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.8))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8)(supports-color@8.1.1)(typescript@5.9.3)
       react: 19.2.8
     optional: true
+
+  expo-local-authentication@57.0.2(expo@57.0.9):
+    dependencies:
+      expo: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      invariant: 2.2.4
 
   expo-modules-autolinking@57.0.9(supports-color@8.1.1)(typescript@5.9.3):
     dependencies:
