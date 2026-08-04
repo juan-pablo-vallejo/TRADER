@@ -1,6 +1,8 @@
 import { openSession, PULL_BATCH_SIZE, type Session } from "@trader/api/sync";
 import { useCallback, useMemo, useState } from "react";
 
+import { attest } from "./attest";
+import { requiresAttestation } from "./attest-logic";
 import { migrateLocalDb } from "./db/client";
 import { summarize, type OutboxSummary } from "./db/outbox-logic";
 import { pullEvents, type PullFn } from "./db/pull";
@@ -49,8 +51,22 @@ export function useLabor(workerId: string, jobId: string) {
   const [lastSync, setLastSync] = useState<string | null>(null);
 
   const act = useCallback(
-    (type: LocalEventType) => {
-      recordEvent({ workerId, jobId, type });
+    async (type: LocalEventType) => {
+      /**
+       * **The timestamp is the tap, not the prompt.**
+       *
+       * Face ID takes a moment, and a worker in gloves may take several. Stamping
+       * after the prompt would push every clock-in later by however long the
+       * device took to recognise its owner — a payroll error caused by the
+       * evidence-gathering rather than the work.
+       */
+      const clientTimestamp = new Date();
+
+      // ATTEST-1: every labor event is payroll, so every one is attested.
+      // ATTEST-4: whatever comes back, including `none`, the event is written.
+      const attestationLevel = requiresAttestation(type) ? await attest(type) : "none";
+
+      recordEvent({ workerId, jobId, type, clientTimestamp, attestationLevel });
       // Re-read rather than patch: the fold is the source of truth for what the
       // session now is, and reconstructing it avoids keeping a second, divergent
       // notion of state in React.

@@ -76,8 +76,11 @@ The sync layer — the largest single risk — now runs end to end: idempotent p
 fold, the pull cursor, the device outbox, and sync on foreground, reconnect and a timer. A device
 snaps to server truth without anyone tapping anything.
 
-Still unbuilt: passkey sign-in (`AUTH-1`–`AUTH-10`) and the Face ID attestation call, so every
-event honestly records `none`; and the correction path an admin needs, which is Phase 3.
+Clock actions are attested with the device's own biometrics, and the level reaches Postgres on the
+event — the biometric template never leaves the phone.
+
+Still unbuilt: passkey sign-in (`AUTH-1`–`AUTH-10`), which needs a Clerk account and a physical
+device; and the correction path an admin needs, which is Phase 3.
 
 Current status and what each phase is gated on → [ROADMAP.md](ROADMAP.md). Open decisions →
 [DECISIONS.md](DECISIONS.md).

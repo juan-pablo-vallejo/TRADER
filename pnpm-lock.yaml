@@ -46,7 +46,10 @@ importers:
         version: 0.45.2(@neondatabase/serverless@1.1.0)(@types/pg@8.20.0)(expo-sqlite@57.0.1(expo@57.0.9)(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8))(pg@8.22.0)
       expo:
         specifier: ~57.0.9
-        version: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.8))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8)(supports-color@8.1.1)(typescript@5.9.3)
+        version: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      expo-local-authentication:
+        specifier: ~57.0.2
+        version: 57.0.2(expo@57.0.9)
       expo-network:
         specifier: ~57.0.1
         version: 57.0.1(expo@57.0.9)(react@19.2.8)
@@ -116,8 +119,8 @@ importers:
         specifier: ^19.2.18
         version: 19.2.18
       '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.18)
+        specifier: ^19.2.4
+        version: 19.2.4(@types/react@19.2.17)
       dotenv:
         specifier: ^17.2.3
         version: 17.4.2
@@ -1736,8 +1739,8 @@ packages:
   '@types/pg@8.20.0':
     resolution: {integrity: sha512-bEPFOaMAHTEP1EzpvHTbmwR8UsFyHSKsRisLIHVMXnpNefSbGA1bD6CVy+qKjGSqmZqNqBDV2azOBo8TgkcVow==}
 
-  '@types/react-dom@19.2.3':
-    resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
+  '@types/react-dom@19.2.4':
+    resolution: {integrity: sha512-Bsc+QHgp+P/F02XDzNCY9jnZNCUuLki36KT7VKrTXXLdHf+vHMNZnW1rVu5DNW/rCK+fya3DATySbLM4yhtKUw==}
     peerDependencies:
       '@types/react': ^19.2.0
 
@@ -2428,6 +2431,11 @@ packages:
     peerDependencies:
       expo: '*'
       react: '*'
+
+  expo-local-authentication@57.0.2:
+    resolution: {integrity: sha512-8K4zcrQ5wZkRS1rwEWY8qHbeGVMNh35e9D1VTVKlMHz1O47itW+pW6iBVuqwGFLozN4fRBeEDQH8hu9Gt58YuQ==}
+    peerDependencies:
+      expo: '*'
 
   expo-modules-autolinking@57.0.9:
     resolution: {integrity: sha512-lj2nsAKMMRLXSFnGgaaQrWJ2fdSpLPc/bca6Rkiw4g8zYPn7qX4MRUJgavvzm/hBrzvMnlhXVgJtidOGuwBh+w==}
@@ -5278,7 +5286,7 @@ snapshots:
       pg-protocol: 1.15.0
       pg-types: 2.2.0
 
-  '@types/react-dom@19.2.3(@types/react@19.2.18)':
+  '@types/react-dom@19.2.4(@types/react@19.2.17)':
     dependencies:
       '@types/react': 19.2.18
 
@@ -6020,6 +6028,11 @@ snapshots:
     dependencies:
       expo: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.8))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.8)(supports-color@8.1.1))(react@19.2.8)(supports-color@8.1.1)(typescript@5.9.3)
       react: 19.2.8
+
+  expo-local-authentication@57.0.2(expo@57.0.9):
+    dependencies:
+      expo: 57.0.9(@babel/core@7.29.7(supports-color@8.1.1))(@expo/dom-webview@57.0.1)(react-dom@19.2.8(react@19.2.3))(react-native@0.86.2(@babel/core@7.29.7(supports-color@8.1.1))(@types/react@19.2.17)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@5.9.3)
+      invariant: 2.2.4
 
   expo-modules-autolinking@57.0.9(supports-color@8.1.1)(typescript@5.9.3):
     dependencies:
