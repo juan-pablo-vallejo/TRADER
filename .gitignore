@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment & secrets
+.env
+.env.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# macOS
+.DS_Store
