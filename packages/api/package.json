@@ -1,0 +1,14 @@
+{
+  "name": "@trader/api",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "@types/node": "^24.9.2",
+    "typescript": "5.9.3",
+    "vitest": "^4.1.10"
+  }
+}
