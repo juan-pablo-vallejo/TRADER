@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.4",
     "pg": "^8.16.3",
     "uuid": "^14.0.1"
   },
@@ -28,7 +28,7 @@
     "@types/node": "^24.9.2",
     "@types/pg": "^8.15.6",
     "dotenv": "^17.2.3",
-    "drizzle-kit": "^0.31.10",
+    "drizzle-kit": "^0.31.11",
     "tsx": "^4.20.7",
     "typescript": "5.9.3",
     "vitest": "^4.1.10"

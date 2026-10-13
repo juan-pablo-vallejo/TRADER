@@ -15,7 +15,7 @@
     "@trader/api": "workspace:*",
     "@trpc/client": "^11.18.0",
     "@trpc/react-query": "^11.18.0",
-    "drizzle-orm": "^0.45.2",
+    "drizzle-orm": "^0.45.4",
     "expo": "~57.0.9",
     "expo-local-authentication": "~57.0.2",
     "expo-network": "~57.0.1",
