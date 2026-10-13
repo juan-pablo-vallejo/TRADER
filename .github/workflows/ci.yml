@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The job id is the required status check on main. Renaming it disarms branch protection.
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6.0.9
+        # Version comes from the packageManager field in package.json.
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm format:check
+      - run: pnpm test
+
+      # Document caps from docs/RULES.md, enforced here so an overrun is a red X, not a memory.
+      - run: |
+          cap() { test "$(wc -l < "$1")" -le "$2" || { echo "$1 exceeds $2 lines"; exit 1; }; }
+          cap README.md 30
+          cap CLAUDE.md 40
+          cap docs/MEMORY.md 200
+          for f in docs/PRD.md docs/ARCHITECTURE.md docs/RULES.md docs/DESIGN.md docs/TASKS.md; do
+            cap "$f" 150
+          done
