@@ -100,6 +100,7 @@ package name `app.jpteq.trader`.
 ```
 .
 ├── .github/workflows/ci.yml   # the one workflow; the required check is its job name
+├── assets/brand/              # logo.png master, icon.png glyph — consumed by apps/*
 ├── apps/
 │   ├── mobile/                # Expo field app                      (planned)
 │   └── web/                   # Next.js office app + tRPC handler   (planned)

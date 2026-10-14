@@ -15,6 +15,7 @@ Done when `main` is the rebuilt branch, CI is green on it, and the protection ru
 - [x] Lockfile pruned to the rebuilt workspace; `pnpm install --frozen-lockfile` passes
 - [x] `.github/workflows/ci.yml` with the single job `check`, document caps included
 - [x] `README.md`, `CLAUDE.md`, `LICENSE` and the six documents
+- [ ] Brand assets in `assets/brand/`; DESIGN.md palette adopts the logo colours
 - [ ] Swap `rebuild` → `main`; protection rule on `main` requiring `check`
 - [ ] Delete the Dependabot branches; turn off Dependabot security updates in settings
 - [ ] Resync every other clone to the new `main`
@@ -64,7 +65,8 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 
 Done when an admin runs a pay period end to end locally: roster, jobs, approvals, close, export.
 
-- [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter
+- [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
+      favicon and header mark from `assets/brand/logo.png`
 - [ ] Roster: invite, deactivate, role, effective-dated pay rates
 - [ ] Customers and jobs with crew assignment
 - [ ] Approval queue with reason tags; reconciliation view; job cost to date
@@ -76,7 +78,8 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
 Done when a worker tracks a real day across airplane-mode gaps on a physical phone and the
 office sees correct, deduplicated hours per job.
 
-- [ ] Expo app with a development build; `app.jpteq.trader`; theme module from DESIGN.md
+- [ ] Expo app with a development build; `app.jpteq.trader`; theme module from DESIGN.md; app
+      icon, adaptive icon and splash from `assets/brand/` (asset specs checked on docs.expo.dev)
 - [ ] i18n layer with English and Spanish catalogs; every crew string through it
 - [ ] `expo-sqlite` store through Drizzle; outbox; sync cycle with coalesced triggers and
       reclamation
