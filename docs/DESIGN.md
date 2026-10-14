@@ -20,13 +20,14 @@ built turns them into a `theme` module per app, and nothing hard-codes a color o
 6. **Accessible by default.** WCAG AA contrast, dynamic type up to the OS's large sizes, every
    control labelled for a screen reader, and color never the only carrier of meaning — status
    always has a word or an icon beside it.
-7. **Plain.** No illustration, no gradients, no decorative motion. Motion exists only to show a
-   state changing, and it respects the reduce-motion setting.
+7. **Plain.** No illustration beyond the brand mark, no gradients, no decorative motion. Motion
+   exists only to show a state changing, and it respects the reduce-motion setting.
 
 ## Color palette
 
 Light theme only in V1; dark theme is listed after V1. One accent, reserved for actions and the
-active session; three status colors, reserved for status. Values are sRGB hex.
+active session; one brand red, reserved for the mark; three status colors, reserved for status.
+The accent and the brand red are sampled from the logo (see Brand). Values are sRGB hex.
 
 | Token           | Hex       | Use                                                  |
 | --------------- | --------- | ---------------------------------------------------- |
@@ -35,8 +36,9 @@ active session; three status colors, reserved for status. Values are sRGB hex.
 | `border`        | `#D1D5DB` | Hairlines, input borders                             |
 | `surface`       | `#FFFFFF` | Cards, inputs, sheets                                |
 | `canvas`        | `#F3F4F6` | Screen background                                    |
-| `accent`        | `#1D4ED8` | Primary button, active session, links                |
+| `accent`        | `#2808AC` | Primary button, active session, links (logo indigo)  |
 | `on-accent`     | `#FFFFFF` | Text and icons on `accent`                           |
+| `brand`         | `#BC0C0C` | Mark and wordmark only; never a control or a status  |
 | `synced`        | `#166534` | Delivered to the office; approved                    |
 | `pending`       | `#92400E` | On the device, not yet delivered; offline banner     |
 | `attention`     | `#991B1B` | Rejected, failed, needs approval, destructive        |
@@ -44,8 +46,9 @@ active session; three status colors, reserved for status. Values are sRGB hex.
 
 Tints for pills and banners are the status color at 10% over `surface`, with the text in the
 status color. Verified contrast: every text token above `muted` meets 4.5:1 on `surface`, on
-`canvas` and on its own tint (lowest: `accent` on its tint, 5.7:1); `on-accent` on `accent` is
-6.7:1.
+`canvas` and on its own tint (lowest: `brand` on its tint, 5.5:1; `accent` on its tint, 10.0:1);
+`on-accent` on `accent` is 12.2:1. `brand` and `attention` are both reds, which is why `brand`
+never colors a control: an action is indigo, a problem is dark red, and the mark is neither.
 
 ## Typography
 
@@ -104,5 +107,15 @@ catalog so Spanish is a translation, not a rewrite.
 
 ## Brand
 
-The wordmark is "TRADER" set in `title`, weight 600, `ink`. The Expo placeholder icon is
-replaced before any store listing; no other brand asset exists in V1.
+The mark is the D Sierra Painting logo: the crossed roller and brush in two reds with an indigo
+outline, over the name. Two files in `assets/brand/`, both on white with no alpha:
+
+| File       | Size        | Use                                                                              |
+| ---------- | ----------- | -------------------------------------------------------------------------------- |
+| `logo.png` | 2048 × 2048 | Full mark with the name: splash, sign-in screen, office header, favicon          |
+| `icon.png` | 1024 × 1024 | Tools glyph alone: app icon and adaptive icon, where the name would be illegible |
+
+The mark sits on `surface` white, never on `canvas` or a tint, and is never recolored. Minimum
+rendered size: 96 pt for `logo.png` so the name stays legible, 24 pt for `icon.png`. The
+wordmark is "TRADER" set in `title`, weight 600, `ink`, placed beside or under the mark. Every
+tenant sees this mark in V1; a per-company logo is listed after V1 in PRD.md.

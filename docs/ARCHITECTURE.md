@@ -139,3 +139,4 @@ supersedes, never an edit to an old row.
 | 2026-10    | Nightly `pg_dump` to R2 with weekly restore-verify                                   | —                                 |
 | 2026-10    | Web approval by push, Expo push, Inngest and Resend deferred past V1                 | Phase 3–4 plans (2026-07)         |
 | 2026-10-13 | Rebuild from `archive/pre-rebuild`; six-doc set replaces the previous documentation  | 2026-07 doc set and ADR register  |
+| 2026-10-13 | Brand: D Sierra Painting mark; indigo accent `#2808AC`; red reserved for the mark    | Blue accent; no brand asset in V1 |
