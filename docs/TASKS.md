@@ -134,4 +134,5 @@ out.
 ## After V1 (unscheduled)
 
 Push notifications and web approval by push · SMS · roster self-service · audit log wiring ·
-dark theme · second contractor onboarding · payments · customer portal · PowerSync re-evaluation.
+dark theme · per-company logo (additive `companies` column, upload, shown in crew app and office
+header) · second contractor onboarding · payments · customer portal · PowerSync re-evaluation.

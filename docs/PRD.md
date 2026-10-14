@@ -127,5 +127,6 @@ each declaring location and what Sentry and PostHog collect; Sentry PII scrubbin
 ## After V1
 
 Push notifications, web approval by push to the admin's phone, SMS, roster self-service, audit
-log, dark theme, payments, a customer portal, and a second contractor — the schema is
-tenant-safe from the first migration, so that is onboarding work, not restructuring.
+log, dark theme, payments, a customer portal, per-company branding (each contractor's own logo
+in the crew app and office header), and a second contractor — the schema is tenant-safe from
+the first migration, so that is onboarding work, not restructuring.
