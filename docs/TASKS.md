@@ -15,7 +15,7 @@ Done when `main` is the rebuilt branch, CI is green on it, and the protection ru
 - [x] Lockfile pruned to the rebuilt workspace; `pnpm install --frozen-lockfile` passes
 - [x] `.github/workflows/ci.yml` with the single job `check`, document caps included
 - [x] `README.md`, `CLAUDE.md`, `LICENSE` and the six documents
-- [ ] Brand assets in `assets/brand/`; DESIGN.md palette adopts the logo colours
+- [x] Brand assets in `assets/brand/`; DESIGN.md palette adopts the logo colours
 - [ ] Swap `rebuild` → `main`; protection rule on `main` requiring `check`
 - [ ] Delete the Dependabot branches; turn off Dependabot security updates in settings
 - [ ] Resync every other clone to the new `main`

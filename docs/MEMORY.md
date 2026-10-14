@@ -77,3 +77,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   day closeout stay; the geofence spike is dropped; Stripe, Resend, Inngest and Expo push are
   out of V1; light theme only.
 - **Next:** TASKS.md Stage 0 — swap `rebuild` → `main`.
+
+### 2026-10-13 — D Sierra Painting logo adopted as the brand; indigo accent
+
+- **Did:** converted the partner's 7740 px JPEG into `assets/brand/logo.png` (2048, full mark)
+  and `icon.png` (1024, tools glyph only, cropped by colour so no text survives); rewrote the
+  DESIGN.md palette and Brand section with computed contrast; decisions row; TASKS lines naming
+  the Stage 4 and 5 consumers; per-company branding listed after V1 in PRD and TASKS.
+- **Decided:** the logo is TRADER's own mark in V1 and every tenant sees it; accent is the logo's
+  outline indigo `#2808AC`; `brand` red `#BC0C0C` colors only the mark and wordmark so it never
+  competes with `attention`. Expo icon and splash specs are checked on docs.expo.dev at Stage 5.
+- **Next:** Stage 0 — swap `rebuild` → `main` and set the protection rule.
