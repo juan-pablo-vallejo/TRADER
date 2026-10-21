@@ -55,8 +55,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   physical device (iOS 16+ / Android 9+).
 - A required status check must equal the literal CI job name; renaming the job silently
   disarms branch protection.
-- Dependabot regenerates its pull requests from `dependabot.yml` on the default branch; closing
-  them is churn until the file is gone from `main`.
+- Postgres 18 images take one mount at `/var/lib/postgresql`, data in a major-version
+  subdirectory; the pre-18 `/var/lib/postgresql/data` mount makes the container refuse to start.
+- `POSTGRES_PASSWORD` applies only when the volume is initialised. Changing it in `.env` later
+  needs `docker compose down -v`, which also discards the data.
+- `docker-compose.yml` pins the project name `trader`, so a container left by another clone of
+  this repository is adopted and recreated by `pnpm db:up`; its volume is left behind.
+  `docker compose ls -a` and `docker volume ls` show both.
 
 ## Log
 
@@ -88,3 +93,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   outline indigo `#2808AC`; `brand` red `#BC0C0C` colors only the mark and wordmark so it never
   competes with `attention`. Expo icon and splash specs are checked on docs.expo.dev at Stage 5.
 - **Next:** Stage 0 — swap `rebuild` → `main` and set the protection rule.
+
+### 2026-10-21 — Local Postgres through Docker Compose; Stage 0 closed on evidence
+
+- **Did:** `docker-compose.yml` (`postgres:18-alpine`, named volume, `pg_isready` healthcheck,
+  loopback port, credentials interpolated from `.env` with `:?`), `.env.example` with the three
+  Postgres variables, `!.env.example` in `.gitignore`, `db:up` as `up -d --wait` and `db:down`.
+  Verified: healthy in 6 s, `psql` from the host, a row survives down/up, `db:up` fails closed
+  with no credentials. Ticked Stage 0 lines 1–2 on evidence: protection on `main` requires
+  `check`; no Dependabot branches, open PRs or security updates remain. Node 24 is Maintenance
+  LTS per nodejs/Release; nvm's `lts/*` moves to 26 on 2026-10-28 while CI pins 24.
+- **Decided:** nothing.
+- **Next:** Juan Pablo copies `.env.example` to `.env` (a permission rule keeps Claude from
+  writing it) and ticks Stage 1 line 3; the Linux clone stays unverified until the workstation
+  answers; Stage 1 line 4's Android half contradicts the Mac's no-Android rule and needs his call.
+  Then Stage 2 line 1.
