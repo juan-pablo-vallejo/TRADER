@@ -2,7 +2,7 @@
 
 The build order and what is done. Stages are dependency-ordered; a stage starts when the one
 before it is done. No dates. A task is ticked when its done-criterion holds, not when the code
-exists. **Current stage: 0.**
+exists. **Current stage: 1.**
 
 ## Stage 0 — Repo rebuild
 
@@ -16,8 +16,8 @@ Done when `main` is the rebuilt branch, CI is green on it, and the protection ru
 - [x] `.github/workflows/ci.yml` with the single job `check`, document caps included
 - [x] `README.md`, `CLAUDE.md`, `LICENSE` and the six documents
 - [x] Brand assets in `assets/brand/`; DESIGN.md palette adopts the logo colours
-- [ ] Swap `rebuild` → `main`; protection rule on `main` requiring `check`
-- [ ] Delete the Dependabot branches; turn off Dependabot security updates in settings
+- [x] Swap `rebuild` → `main`; protection rule on `main` requiring `check`
+- [x] Delete the Dependabot branches; turn off Dependabot security updates in settings
 - [ ] Resync every other clone to the new `main`
 
 ## Stage 1 — Development environment (Mac)
@@ -25,8 +25,8 @@ Done when `main` is the rebuilt branch, CI is green on it, and the protection ru
 Done when `pnpm install && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` is
 green locally and a Postgres container answers on `localhost:5432`.
 
-- [ ] Node LTS through a version manager; pnpm at the `packageManager` version
-- [ ] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
+- [x] Node LTS through a version manager; pnpm at the `packageManager` version
+- [x] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
 - [ ] `.env.example` restored as the environment contract; `.env` local and gitignored
 - [ ] Xcode with the iOS Simulator; Android Studio with one emulator
 
