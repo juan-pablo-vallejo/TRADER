@@ -1,0 +1,27 @@
+# Local Postgres for development. Credentials come from .env (gitignored); see .env.example.
+# Prove it answers: docker compose exec postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+name: trader # fixed so the project does not depend on the directory name
+
+services:
+  postgres:
+    image: postgres:18-alpine # major-line tag so 18.x patches arrive on pull
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    ports:
+      - "127.0.0.1:5432:5432" # loopback only; nothing else on the LAN can reach it
+    volumes:
+      # Postgres 18 images take one mount at /var/lib/postgresql, with the data in a
+      # major-version subdirectory. Mounting /var/lib/postgresql/data (the pre-18 path)
+      # makes the image refuse to start.
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata: # named volume: survives `docker compose down`; `down -v` wipes it
