@@ -4,6 +4,7 @@ node_modules/
 # Environment & secrets
 .env
 .env.*
+!.env.example
 *.jks
 *.p8
 *.p12
