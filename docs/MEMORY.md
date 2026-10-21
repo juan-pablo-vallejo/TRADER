@@ -59,9 +59,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   subdirectory; the pre-18 `/var/lib/postgresql/data` mount makes the container refuse to start.
 - `POSTGRES_PASSWORD` applies only when the volume is initialised. Changing it in `.env` later
   needs `docker compose down -v`, which also discards the data.
-- `docker-compose.yml` pins the project name `trader`, so a container left by another clone of
-  this repository is adopted and recreated by `pnpm db:up`; its volume is left behind.
-  `docker compose ls -a` and `docker volume ls` show both.
+- The pre-rebuild clone's Compose project was `trader`; its volume `trader_trader-pgdata` is
+  still on this Mac and is left alone. This repository's project is `trader-local`, so
+  `pnpm db:up` creates `trader-local_pgdata` and never adopts the old container or volume.
 
 ## Log
 
@@ -108,3 +108,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   writing it) and ticks Stage 1 line 3; the Linux clone stays unverified until the workstation
   answers; Stage 1 line 4's Android half contradicts the Mac's no-Android rule and needs his call.
   Then Stage 2 line 1.
+
+### 2026-10-21 — Compose project renamed to `trader-local`
+
+- **Did:** changed `name:` in `docker-compose.yml` from `trader` to `trader-local` so the
+  development database is isolated from the pre-rebuild Compose project; the named volume
+  configuration is unchanged and the old volume `trader_trader-pgdata` was not touched. `.env`,
+  application code and dependencies untouched. Rewrote the Notes entry that described the old
+  name.
+- **Decided:** nothing.
+- **Next:** unchanged from the entry above.

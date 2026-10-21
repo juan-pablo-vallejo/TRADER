@@ -1,6 +1,8 @@
 # Local Postgres for development. Credentials come from .env (gitignored); see .env.example.
 # Prove it answers: docker compose exec postgres pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
-name: trader # fixed so the project does not depend on the directory name
+# `trader-local`, not `trader`: the pre-rebuild clone used `trader`, and reusing it would
+# adopt that project's container and volume (trader_trader-pgdata) instead of starting clean.
+name: trader-local # fixed so the project does not depend on the directory name
 
 services:
   postgres:
