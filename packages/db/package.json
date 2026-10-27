@@ -6,7 +6,7 @@
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
