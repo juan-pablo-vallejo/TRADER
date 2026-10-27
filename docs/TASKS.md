@@ -34,7 +34,8 @@ green locally and a Postgres container answers on `localhost:5432`.
 Done when migrations apply to an empty database, every invariant test fails when its guard is
 removed and passes when restored, and RLS blocks a cross-tenant read under the app role.
 
-- [ ] Drizzle config; client with the driver seam (`pg` locally, Neon deployed); `migrate`; `seed`
+- [x] Drizzle config; client with the driver seam (`pg` locally, Neon deployed); environment
+      contract validated with zod; `migrate`
 - [ ] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`
 - [ ] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
       attestation level, location stamp, skew flag
