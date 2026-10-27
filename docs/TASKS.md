@@ -2,7 +2,7 @@
 
 The build order and what is done. Stages are dependency-ordered; a stage starts when the one
 before it is done. No dates. A task is ticked when its done-criterion holds, not when the code
-exists. **Current stage: 1.**
+exists. **Current stage: 2.**
 
 ## Stage 0 — Repo rebuild
 
