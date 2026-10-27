@@ -14,6 +14,32 @@ jobs:
   # The job id is the required status check on main. Renaming it disarms branch protection.
   check:
     runs-on: ubuntu-latest
+
+    # The three compose variables, named as in .env.example. The service below, the migrate
+    # step and the client test all read these, so the credentials exist once. No .env in CI.
+    env:
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: trader
+      POSTGRES_DB: trader
+
+    # `pnpm db:migrate` and the client test need a real Postgres, the same major as compose.
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        # The `services` block itself has no `env` context, but the health command runs inside
+        # the container under its own environment, where the same variables are set.
+        options: >-
+          --health-cmd "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v7
 
@@ -29,6 +55,9 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
+      # Before the tests: the client test and, from Stage 2 line 8, the invariant tests run
+      # against the migrated schema.
+      - run: pnpm db:migrate
       - run: pnpm test
 
       # Document caps from docs/RULES.md, enforced here so an overrun is a red X, not a memory.

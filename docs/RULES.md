@@ -86,7 +86,7 @@ is wrong.
   `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
-- One workflow, one job: install, typecheck, lint, format check, test, document caps.
+- One workflow, one job: install, typecheck, lint, format check, migrate, test, document caps.
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
 - Branches other than `main` are short-lived and deleted on merge. Force-push and branch
   deletion are human actions in a terminal, never agent actions.
