@@ -5,7 +5,7 @@
   "license": "UNLICENSED",
   "packageManager": "pnpm@11.17.0",
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "typecheck": "pnpm -r typecheck",
