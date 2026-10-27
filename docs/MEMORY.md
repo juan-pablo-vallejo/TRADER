@@ -49,8 +49,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   (`ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION`). Wait it out; never disable it.
 - `@types/node` tracks the Node runtime, not the newest release. Change `node-version` in CI and
   `engines` first.
-- The `gh` token has no `workflow` scope, so a pull request touching `.github/workflows/` cannot
-  be merged through the API. Push over SSH, or `gh auth refresh -h github.com -s workflow`.
+- `gh pr checks --watch` straight after `gh pr create` returns before the run registers; wait on
+  the run by SHA: `gh run list --commit <sha>` then `gh run watch <id>`.
 - Passkeys run in neither Expo Go nor an Android emulator; they need a development build on a
   physical device (iOS 16+ / Android 9+).
 - A required status check must equal the literal CI job name; renaming the job silently
@@ -128,3 +128,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   Studio on the Linux workstation; Stage 1 closes without them.
 - **Next:** Stage 2 line 1 — Drizzle config, client with the driver seam, `migrate`, `seed`.
   Stage 0 line 10 (Linux clone resync) stays open until the workstation answers.
+
+### 2026-10-27 — Stage 2 line 1: Drizzle config, client behind the driver seam, `migrate`
+
+- **Did:** merge procedure in RULES; `@trader/db` gains zod, drizzle-orm, pg, @types/pg and
+  drizzle-kit, each with its first importer; `env.ts` validates a passed record and entry points
+  load `.env`; `pg` client; drizzle config, empty journal, `db:generate`/`db:migrate`; CI
+  migrates against a Postgres 18 service; `migrations/` prettier-ignored. Found while verifying:
+  drizzle-kit turns an absent `ssl` into `{}`, so the derived connection says `ssl: false`.
+- **Decided:** branch protection now enforced for admins; merges are merge commits through pull
+  requests. `loadEnvFile` over dotenv; `drizzle-kit migrate` over a tsx script; engines ≥ 24.
+- **Next:** Stage 2 line 2 — core tables.
