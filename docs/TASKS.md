@@ -28,7 +28,6 @@ green locally and a Postgres container answers on `localhost:5432`.
 - [x] Node LTS through a version manager; pnpm at the `packageManager` version
 - [x] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
 - [x] `.env.example` restored as the environment contract; `.env` local and gitignored
-- [ ] Xcode with the iOS Simulator; Android Studio with one emulator
 
 ## Stage 2 — Data foundation (`packages/db`)
 
@@ -78,6 +77,8 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
 Done when a worker tracks a real day across airplane-mode gaps on a physical phone and the
 office sees correct, deduplicated hours per job.
 
+- [ ] Xcode with the iOS Simulator (Mac)
+- [ ] Android Studio with one emulator (Linux workstation)
 - [ ] Expo app with a development build; `app.jpteq.trader`; theme module from DESIGN.md; app
       icon, adaptive icon and splash from `assets/brand/` (asset specs checked on docs.expo.dev)
 - [ ] i18n layer with English and Spanish catalogs; every crew string through it
