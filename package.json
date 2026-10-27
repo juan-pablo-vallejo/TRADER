@@ -15,7 +15,9 @@
     "format:check": "prettier --check .",
     "test": "pnpm -r test",
     "db:up": "docker compose up -d --wait postgres",
-    "db:down": "docker compose down"
+    "db:down": "docker compose down",
+    "db:generate": "pnpm --filter @trader/db generate",
+    "db:migrate": "pnpm --filter @trader/db migrate"
   },
   "prettier": {
     "semi": true,

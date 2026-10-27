@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
     "test": "vitest run --passWithNoTests"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
+    "drizzle-kit": "^0.31.11",
     "typescript": "5.9.3",
     "vitest": "^4.1.10"
   },

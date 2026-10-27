@@ -19,6 +19,7 @@ describe("parseDatabaseEnv", () => {
         user: "trader",
         password: "secret",
         database: "trader",
+        ssl: false,
       },
     });
   });

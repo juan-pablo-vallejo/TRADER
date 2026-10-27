@@ -24,7 +24,14 @@ export type DatabaseDriver = z.infer<typeof driverSchema>["DATABASE_DRIVER"];
 // Both shapes are what pg.Pool takes as its config and drizzle-kit takes as dbCredentials.
 export type DatabaseConnection =
   | { connectionString: string }
-  | { host: string; port: number; user: string; password: string; database: string };
+  | {
+      host: string;
+      port: number;
+      user: string;
+      password: string;
+      database: string;
+      ssl: false;
+    };
 
 export type DatabaseEnv = { driver: DatabaseDriver; connection: DatabaseConnection };
 
@@ -50,6 +57,9 @@ export function parseDatabaseEnv(env: Record<string, string | undefined>): Datab
       user: POSTGRES_USER,
       password: POSTGRES_PASSWORD,
       database: POSTGRES_DB,
+      // The container speaks no TLS and is loopback-only. Explicit, because drizzle-kit turns an
+      // absent `ssl` into `{}`, which makes pg attempt TLS and fail.
+      ssl: false,
     },
   };
 }
