@@ -27,7 +27,7 @@ green locally and a Postgres container answers on `localhost:5432`.
 
 - [x] Node LTS through a version manager; pnpm at the `packageManager` version
 - [x] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
-- [ ] `.env.example` restored as the environment contract; `.env` local and gitignored
+- [x] `.env.example` restored as the environment contract; `.env` local and gitignored
 - [ ] Xcode with the iOS Simulator; Android Studio with one emulator
 
 ## Stage 2 — Data foundation (`packages/db`)
