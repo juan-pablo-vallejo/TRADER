@@ -81,8 +81,9 @@ is wrong.
 
 ## Git and CI
 
-- `main` is protected: pull request plus the required check `check`, which is the literal job
-  name in `.github/workflows/ci.yml`. A direct push is a deliberate exception, not a habit.
+- `main` is protected: pull request plus the required check `check`, the literal job name in
+  `.github/workflows/ci.yml`. Branch per TASKS line, pull request, `check` green, then
+  `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
 - One workflow, one job: install, typecheck, lint, format check, test, document caps.
