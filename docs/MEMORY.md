@@ -59,9 +59,6 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   subdirectory; the pre-18 `/var/lib/postgresql/data` mount makes the container refuse to start.
 - `POSTGRES_PASSWORD` applies only when the volume is initialised. Changing it in `.env` later
   needs `docker compose down -v`, which also discards the data.
-- The pre-rebuild clone's Compose project was `trader`; its volume `trader_trader-pgdata` is
-  still on this Mac and is left alone. This repository's project is `trader-local`, so
-  `pnpm db:up` creates `trader-local_pgdata` and never adopts the old container or volume.
 
 ## Log
 
@@ -118,3 +115,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   name.
 - **Decided:** nothing.
 - **Next:** unchanged from the entry above.
+
+### 2026-10-27 — Stage 1 closed: Postgres answers under `trader-local`
+
+- **Did:** with `.env` in place (never read by Claude), `pnpm db:up` created
+  `trader-local_pgdata`, healthy, published on 127.0.0.1:5432 only, `pg_isready` from the host
+  accepting connections; a probe row survived `db:down`/`db:up`; public schema empty after. The
+  old volume `trader_trader-pgdata` and `.env.pre-rebuild` were already gone at the start.
+  `.nvmrc` pins Node 24 to match CI's `node-version`. Simulator lines moved to Stage 5, split by
+  machine; "Current stage" bumped to 2 in its own commit after a line-anchored `sed` missed it.
+- **Decided:** simulators belong to the stage that consumes them — Xcode on the Mac, Android
+  Studio on the Linux workstation; Stage 1 closes without them.
+- **Next:** Stage 2 line 1 — Drizzle config, client with the driver seam, `migrate`, `seed`.
+  Stage 0 line 10 (Linux clone resync) stays open until the workstation answers.
