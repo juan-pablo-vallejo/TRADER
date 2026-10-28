@@ -3,3 +3,5 @@
 // of the unions). It never imports the client, so a value import here never loads `pg`.
 // One file per table group.
 export * from "./companies";
+export * from "./enums";
+export * from "./users";
