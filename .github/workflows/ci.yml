@@ -13,7 +13,10 @@ concurrency:
 jobs:
   # The job id is the required status check on main. Renaming it disarms branch protection.
   check:
-    runs-on: ubuntu-latest
+    # The image is a version, pinned like node-version. `ubuntu-latest` is 24.04 today and
+    # moves on GitHub's schedule (26.04 is already listed), which would change the toolchain
+    # under the job without a commit.
+    runs-on: ubuntu-24.04
 
     # The three compose variables, named as in .env.example. The service below, the migrate
     # step and the client test all read these, so the credentials exist once. No .env in CI.
