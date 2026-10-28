@@ -36,7 +36,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 
 - [x] Drizzle config; client with the driver seam (`pg` locally, Neon deployed); environment
       contract validated with zod; `migrate`
-- [ ] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`, with
+- [x] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`, with
       `company_id NOT NULL`, unique `(company_id, id)` and composite foreign keys
 - [ ] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
       attestation level, location stamp, skew flag
