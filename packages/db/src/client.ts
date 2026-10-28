@@ -5,14 +5,15 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
-import { databaseConnection, databaseDriver } from "./env";
+import { parseDatabaseEnv } from "./env";
 
 export function createDb(env: Record<string, string | undefined> = process.env) {
-  const driver = databaseDriver(env);
+  // One parse: the driver and the connection come from the same validated record.
+  const { driver, connection } = parseDatabaseEnv(env);
   switch (driver) {
     case "pg":
       // A pool, not a single client: tests and the API run concurrent queries.
-      return drizzle({ client: new Pool(databaseConnection(env)) });
+      return drizzle({ client: new Pool(connection) });
   }
 }
 

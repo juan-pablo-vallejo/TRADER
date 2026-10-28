@@ -135,10 +135,11 @@ supersedes, never an edit to an old row.
 | 2026-10    | Foreground location stamps at clock events only; geofenced clock-in dropped              | Advisory geofence spike (2026-07) |
 | 2026-10    | Effective-dated pay rates; immutable closed pay periods; no pay calculation in V1        | Open                              |
 | 2026-10    | `jpteq.app` everywhere; bundle ID `app.jpteq.trader`                                     | `jpteq.com`                       |
-| 2026-10    | Vercel Pro, Neon Launch and Clerk Pro from the first production instance                 | Open hosting decision             |
-| 2026-10    | Nightly `pg_dump` to R2 with weekly restore-verify                                       | —                                 |
+| 2026-10    | Production: Vercel Pro, Neon Launch, Clerk Pro; nightly `pg_dump` to R2, weekly verify   | Open hosting decision             |
 | 2026-10    | Web approval by push, Expo push, Inngest and Resend deferred past V1                     | Phase 3–4 plans (2026-07)         |
 | 2026-10-13 | Rebuild from `archive/pre-rebuild`; six-doc set replaces the previous documentation      | 2026-07 doc set and ADR register  |
 | 2026-10-13 | Brand: D Sierra Painting mark; indigo accent `#2808AC`; red reserved for the mark        | Blue accent; no brand asset in V1 |
-| 2026-10-27 | Connection as fields from the compose vars; `DATABASE_URL` only when set; `pg` only      | `LOCAL_DATABASE_URL` (2026-07)    |
-| 2026-10-27 | Migrations by `drizzle-kit migrate`; `.env` via `loadEnvFile` at entry points; no dotenv | `tsx` migrate script (2026-07)    |
+| 2026-10-27 | Compose vars or `DATABASE_URL` for `pg`; `drizzle-kit migrate`; `.env` via `loadEnvFile` | Archive env and migrate (2026-07) |
+| 2026-10-28 | Ids: `uuidv7()` DB default on office rows; device UUIDv7, no default, on phone rows      | ORM `$defaultFn` ids (2026-07)    |
+| 2026-10-28 | Enumerations are Postgres enum types in `enums.ts`; a value is only ever added           | —                                 |
+| 2026-10-28 | `deactivated_at` timestamps on roster tables; no `active` flag, state is derived         | `active` boolean (2026-07)        |

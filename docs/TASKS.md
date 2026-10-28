@@ -36,15 +36,16 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 
 - [x] Drizzle config; client with the driver seam (`pg` locally, Neon deployed); environment
       contract validated with zod; `migrate`
-- [ ] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`
+- [x] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`, with
+      `company_id NOT NULL`, unique `(company_id, id)` and composite foreign keys
 - [ ] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
       attestation level, location stamp, skew flag
 - [ ] `pay_rates` (effective-dated), `pay_periods`, `approvals`
 - [ ] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
       invoice number sequence
 - [ ] `audit_log`
-- [ ] `company_id NOT NULL`, composite foreign keys, RLS `ENABLE` and `FORCE` on every tenant
-      table; app role created in SQL with `NOBYPASSRLS`; startup guard
+- [ ] RLS `ENABLE` and `FORCE` on every tenant table; app role created in SQL with
+      `NOBYPASSRLS`; startup guard
 - [ ] Invariant tests against the container; seed for one company and one admin
 
 ## Stage 3 — API (`packages/api`)

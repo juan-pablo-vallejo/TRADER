@@ -2,6 +2,10 @@
   "name": "@trader/db",
   "version": "0.0.0",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema/index.ts"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "generate": "drizzle-kit generate",

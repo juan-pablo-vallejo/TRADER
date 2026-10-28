@@ -21,6 +21,4 @@ export default defineConfig({
   schema: "./src/schema/index.ts",
   out: "./migrations",
   dbCredentials,
-  strict: true, // confirm destructive statements instead of applying them quietly
-  verbose: true, // print the SQL that runs
 });
