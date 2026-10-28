@@ -6,3 +6,4 @@ export * from "./companies";
 export * from "./enums";
 export * from "./users";
 export * from "./crews";
+export * from "./customers";
