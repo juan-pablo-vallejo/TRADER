@@ -38,7 +38,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
       contract validated with zod; `migrate`
 - [x] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`, with
       `company_id NOT NULL`, unique `(company_id, id)` and composite foreign keys
-- [ ] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
+- [x] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
       attestation level, location stamp, skew flag
 - [ ] `pay_rates` (effective-dated), `pay_periods`, `approvals`
 - [ ] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
