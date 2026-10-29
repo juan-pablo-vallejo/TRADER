@@ -132,12 +132,10 @@ describe("pay_periods", () => {
     await rolledBack(db, async (tx) => {
       const { companyId } = await fixture(tx);
       const code = await sqlstate(
-        tx
-          .insert(payPeriods)
-          .values({
-            ...period(companyId, "2026-10-05", "2026-10-11"),
-            closedAt: new Date(),
-          }),
+        tx.insert(payPeriods).values({
+          ...period(companyId, "2026-10-05", "2026-10-11"),
+          closedAt: new Date(),
+        }),
       );
       expect(code).toBe("23514");
     });
