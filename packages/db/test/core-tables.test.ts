@@ -7,7 +7,14 @@ import { createDb, type Db } from "../src/client";
 import { companies, crews, customers, jobs, users } from "../src/schema";
 import { company, one, rolledBack, sqlstate } from "./helpers";
 
-const TENANT_TABLES = ["users", "crews", "crew_members", "customers", "jobs"];
+const TENANT_TABLES = [
+  "users",
+  "crews",
+  "crew_members",
+  "customers",
+  "jobs",
+  "work_session_events",
+];
 
 let db: Db;
 beforeAll(() => {
@@ -49,7 +56,13 @@ describe("core tables", () => {
         where c.contype = 'u'
         group by c.oid, c.conrelid
       `);
-      for (const table of ["users", "crews", "customers", "jobs"]) {
+      for (const table of [
+        "users",
+        "crews",
+        "customers",
+        "jobs",
+        "work_session_events",
+      ]) {
         const pair = rows.find(
           (r) => r.table_name === table && r.columns.join(",") === "company_id,id",
         );
