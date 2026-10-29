@@ -1,47 +1,12 @@
-// Stage 2 line 2: the six core tables, asserted against the migrated container. Every test runs
-// inside a transaction that is always rolled back, so the database is clean afterwards and the
-// pattern survives the append-only trigger (line 3). Every statement runs on `tx`, never `db`.
-import { DrizzleQueryError, sql } from "drizzle-orm";
+// Stage 2 line 2: the six core tables, asserted against the migrated container. Rolled-back
+// transactions throughout; see helpers.ts.
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../src/client";
 import { companies, crews, customers, jobs, users } from "../src/schema";
+import { company, one, rolledBack, sqlstate } from "./helpers";
 
-type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
-
-const ROLLBACK = Symbol("rollback");
-
-// Runs `body` in a transaction and rolls it back whatever happens.
-async function rolledBack(db: Db, body: (tx: Tx) => Promise<void>) {
-  try {
-    await db.transaction(async (tx) => {
-      await body(tx);
-      throw ROLLBACK;
-    });
-  } catch (error) {
-    if (error !== ROLLBACK) throw error;
-  }
-}
-
-// drizzle-orm wraps a failed query in DrizzleQueryError; the pg error, with its SQLSTATE, is
-// the `cause`.
-async function sqlstate(statement: Promise<unknown>): Promise<string | undefined> {
-  try {
-    await statement;
-  } catch (error) {
-    expect(error).toBeInstanceOf(DrizzleQueryError);
-    return ((error as DrizzleQueryError).cause as { code?: string } | undefined)?.code;
-  }
-  throw new Error("expected the statement to fail");
-}
-
-function one<T>(rows: T[]): T {
-  const row = rows[0];
-  if (row === undefined) throw new Error("expected one row");
-  return row;
-}
-
-const company = { name: "Invariant Co", timezone: "America/New_York" };
 const TENANT_TABLES = ["users", "crews", "crew_members", "customers", "jobs"];
 
 let db: Db;
