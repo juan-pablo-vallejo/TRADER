@@ -171,10 +171,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 
 ### 2026-10-29 — Stage 2 line 4: pay_rates, pay_periods, approvals; voids and corrections
 
-- **Did:** `voided` and four correction columns; `pay_rates`, `pay_periods`, `approvals`, two
-  enums; `0003` generated, `0004` custom (btree_gist, no-overlap exclusion, three triggers); 26
-  tests watched red, 53 in all; `0000`–`0004` replayed empty in one transaction; four rows. The
-  TRUNCATE test needs `CASCADE`: a referenced table is 0A000 before any trigger fires.
+- **Did:** `voided` and four correction columns; `pay_rates`, `pay_periods`, `approvals`; `0003`
+  generated, `0004` custom (btree_gist, exclusion, 3 triggers); 26 tests watched red, 53 in all;
+  `0000`–`0004` replayed empty in one transaction; TRUNCATE test now `CASCADE` (0A000 otherwise).
 - **Decided:** the plan's eighteen recommendations as given. Flag: PRD Office approval omits the
   skew condition ARCHITECTURE line 85 adds; `approval_reason` carries `clock_skewed`.
 - **Next:** Stage 2 line 5 — materials, photos, invoices and the number sequence. Roll-up due.
