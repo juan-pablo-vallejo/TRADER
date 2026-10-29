@@ -40,7 +40,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
       `company_id NOT NULL`, unique `(company_id, id)` and composite foreign keys
 - [x] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
       attestation level, location stamp, skew flag
-- [ ] `pay_rates` (effective-dated), `pay_periods`, `approvals`
+- [x] `pay_rates` (effective-dated), `pay_periods`, `approvals`
 - [ ] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
       invoice number sequence
 - [ ] `audit_log`
