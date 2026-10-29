@@ -14,6 +14,9 @@ const TENANT_TABLES = [
   "customers",
   "jobs",
   "work_session_events",
+  "pay_rates",
+  "pay_periods",
+  "approvals",
 ];
 
 let db: Db;
@@ -56,13 +59,7 @@ describe("core tables", () => {
         where c.contype = 'u'
         group by c.oid, c.conrelid
       `);
-      for (const table of [
-        "users",
-        "crews",
-        "customers",
-        "jobs",
-        "work_session_events",
-      ]) {
+      for (const table of TENANT_TABLES.filter((t) => t !== "crew_members")) {
         const pair = rows.find(
           (r) => r.table_name === table && r.columns.join(",") === "company_id,id",
         );
