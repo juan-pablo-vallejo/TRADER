@@ -147,3 +147,7 @@ supersedes, never an edit to an old row.
 | 2026-10-28 | `work_session_events` facts are typed columns: stamp, attestation, `clock_skewed` + `clock_skew_ms`; no `payload`, no `created_at` | `payload` jsonb (2026-07)         |
 | 2026-10-28 | Skew verdict stored at write time under the tolerance then in force; the ledger's order never moves | —                                 |
 | 2026-10-28 | Triggers and functions live in `generate --custom` migrations; a rejected mutation is SQLSTATE `23000` | Hand-journaled `0001` (2026-07)   |
+| 2026-10-29 | `approvals`: one row per event, written at push when the rule fires; no row is approved by default; `reasons` enum array; a decision is set once | —                                 |
+| 2026-10-29 | Pay periods: inclusive work-date ranges, overlap-free by exclusion; closed in order and frozen; an event's period is derived from `work_date` and `server_timestamp` against `closed_at` | —                                 |
+| 2026-10-29 | `currency` beside every `_cents` column, no default; `_cents` is `integer` until a sum can exceed it | `char(3) default 'USD'`, bigint (2026-07) |
+| 2026-10-29 | Extensions (`btree_gist`) and exclusion constraints live in `generate --custom` migrations; a rule naming an enum member lives in plpgsql | —                                 |
