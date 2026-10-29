@@ -8,3 +8,4 @@ export * from "./users";
 export * from "./crews";
 export * from "./customers";
 export * from "./jobs";
+export * from "./work-session-events";

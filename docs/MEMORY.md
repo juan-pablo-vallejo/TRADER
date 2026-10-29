@@ -35,13 +35,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 
 ## Notes
 
-- `work_session_events` references `users` and `companies` and is append-only by trigger, so
-  nothing can bulk-delete those tables — in tests or anywhere. Build fixtures on an empty
-  schema.
+- `work_session_events` is append-only by trigger and references `users` and `companies`, so
+  fixtures can never be cleaned up: schema tests run in rolled-back transactions
+  (`test/helpers.ts`), every statement on `tx`.
+- drizzle-kit never sees triggers or functions. They live in `generate --custom` files, which
+  start with a comment line to replace; a plain generate afterwards emits nothing. Separate
+  statements with `--> statement-breakpoint`; pass flags without `--` (pnpm forwards them).
 - Drizzle maintains `updated_at` through `$onUpdate` in the ORM, not the database: a raw SQL
   UPDATE leaves it stale. Write through Drizzle; `id` defaults in Postgres and needs nothing.
-- Prettier aligns a Markdown table to its widest cell: a row wider than that, or removing the
-  only row at that width, rewrites every row. Measure new ARCHITECTURE rows against it first.
 - A seed script may legitimately write `role` in an upsert; the same statement in a request
   path rewrites `role` and `active` on every sign-in. JIT provisioning reads a profile only when
   creating the row.
@@ -153,3 +154,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   archived; `deactivated_at` over `active`; `identity_subject` globally unique (one login, one
   company; relaxing it is a decision); the foreman is also a `crew_members` row, API-enforced.
 - **Next:** Stage 2 line 3 — `work_session_events`.
+
+### 2026-10-28 — Stage 2 line 3: `work_session_events` and its append-only guard
+
+- **Did:** the table and two enums; `0001` generated, `0002` through `generate --custom` with
+  the trigger function and three statement-level triggers; `test/helpers.ts` shared; twelve
+  tests, each watched red by dropping its guard; D14 (`prettier-ignore`) and D16 (ARCHITECTURE
+  cap 200); three decision rows. Empty-schema migrate twice and the four rejections verified.
+- **Decided:** `clock_skewed` plus `clock_skew_ms` as bigint; no `payload`, no `created_at`;
+  SQLSTATE 23000; `voided` and the correction columns wait for line 4 (D15); cap 200 (D16).
+- **Next:** Stage 2 line 4 — `pay_rates`, `pay_periods`, `approvals`, plus `voided` with
+  `voids_event_id` and the correction columns.

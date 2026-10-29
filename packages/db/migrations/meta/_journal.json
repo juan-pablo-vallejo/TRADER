@@ -8,6 +8,20 @@
       "when": 1793227123554,
       "tag": "0000_core-tables",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793232960621,
+      "tag": "0001_work-session-events",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793232972933,
+      "tag": "0002_append-only-guard",
+      "breakpoints": true
     }
   ]
 }

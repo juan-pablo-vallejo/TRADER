@@ -121,6 +121,7 @@ nothing else owns. `packages/db/src/schema/` holds one file per table group.
 One line each; the date is when it was settled. A change is a new row naming the row it
 supersedes, never an edit to an old row.
 
+<!-- prettier-ignore -->
 | Date       | Decision                                                                                 | Supersedes                        |
 | ---------- | ---------------------------------------------------------------------------------------- | --------------------------------- |
 | 2026-07    | Modular monolith; the API runs inside the Next.js deployment on Vercel                   | Separate backend host             |
@@ -143,3 +144,6 @@ supersedes, never an edit to an old row.
 | 2026-10-28 | Ids: `uuidv7()` DB default on office rows; device UUIDv7, no default, on phone rows      | ORM `$defaultFn` ids (2026-07)    |
 | 2026-10-28 | Enumerations are Postgres enum types in `enums.ts`; a value is only ever added           | —                                 |
 | 2026-10-28 | `deactivated_at` timestamps on roster tables; no `active` flag, state is derived         | `active` boolean (2026-07)        |
+| 2026-10-28 | `work_session_events` facts are typed columns: stamp, attestation, `clock_skewed` + `clock_skew_ms`; no `payload`, no `created_at` | `payload` jsonb (2026-07)         |
+| 2026-10-28 | Skew verdict stored at write time under the tolerance then in force; the ledger's order never moves | —                                 |
+| 2026-10-28 | Triggers and functions live in `generate --custom` migrations; a rejected mutation is SQLSTATE `23000` | Hand-journaled `0001` (2026-07)   |

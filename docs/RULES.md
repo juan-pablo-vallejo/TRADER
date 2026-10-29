@@ -71,8 +71,8 @@ is wrong.
 
 - The root holds only files their tooling requires. Documents live in `docs/`; the set is fixed
   at the six in the authority table plus `CLAUDE.md`, `README.md` and `LICENSE`.
-- Caps, enforced in CI: README ≤ 30 lines, CLAUDE.md ≤ 40, MEMORY.md ≤ 200, every other
-  document ≤ 150. A document at its cap is condensed, not split.
+- Caps, enforced in CI: README ≤ 30 lines, CLAUDE.md ≤ 40, ARCHITECTURE.md and MEMORY.md
+  ≤ 200, every other document ≤ 150. A document at its cap is condensed, not split.
 - `packages/*` is shared code consumed by `apps/*`; nothing in `packages/` imports from `apps/`.
 - Files are kebab-case; React components PascalCase; database tables and columns snake_case;
   foreign keys end in `_id`. One Drizzle schema file per table group under
