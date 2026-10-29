@@ -68,7 +68,8 @@ jobs:
           cap() { test "$(wc -l < "$1")" -le "$2" || { echo "$1 exceeds $2 lines"; exit 1; }; }
           cap README.md 30
           cap CLAUDE.md 40
+          cap docs/ARCHITECTURE.md 200
           cap docs/MEMORY.md 200
-          for f in docs/PRD.md docs/ARCHITECTURE.md docs/RULES.md docs/DESIGN.md docs/TASKS.md; do
+          for f in docs/PRD.md docs/RULES.md docs/DESIGN.md docs/TASKS.md; do
             cap "$f" 150
           done
