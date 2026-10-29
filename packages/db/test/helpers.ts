@@ -6,6 +6,7 @@ import { DrizzleQueryError } from "drizzle-orm";
 import { expect } from "vitest";
 
 import type { Db } from "../src/client";
+import { companies, customers, jobs, users, type workSessionEvents } from "../src/schema";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -54,3 +55,57 @@ export function one<T>(rows: T[]): T {
 }
 
 export const company = { name: "Invariant Co", timezone: "America/New_York" };
+
+// What the device will do in Stage 5: 48 bits of milliseconds, version 7, variant 10, random.
+export function uuidv7(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(16));
+  const ms = BigInt(Date.now());
+  for (let i = 0; i < 6; i++) bytes[i] = Number((ms >> BigInt(8 * (5 - i))) & 0xffn);
+  bytes[6] = (bytes[6]! & 0x0f) | 0x70;
+  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+// One company, one worker, one job: the rows an event must reference. Shared by the
+// events and approvals tests.
+export async function fixture(tx: Tx) {
+  const c = one(
+    await tx.insert(companies).values(company).returning({ id: companies.id }),
+  );
+  const worker = one(
+    await tx
+      .insert(users)
+      .values({ companyId: c.id, email: "w@co.test", name: "Worker" })
+      .returning({ id: users.id }),
+  );
+  const customer = one(
+    await tx
+      .insert(customers)
+      .values({ companyId: c.id, name: "Customer" })
+      .returning({ id: customers.id }),
+  );
+  const job = one(
+    await tx
+      .insert(jobs)
+      .values({ companyId: c.id, customerId: customer.id, name: "Job" })
+      .returning({ id: jobs.id }),
+  );
+  return { companyId: c.id, workerId: worker.id, jobId: job.id };
+}
+
+type Refs = Awaited<ReturnType<typeof fixture>>;
+
+// A complete, legal clock-in as the push handler will write it.
+export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
+  id: uuidv7(),
+  ...refs,
+  type: "started",
+  clientTimestamp: new Date(),
+  clockSkewed: false,
+  clockSkewMs: 0,
+  attestationLevel: "none",
+  schemaVersion: 1,
+  timeSetByUser: false,
+  initiatorUserId: refs.workerId,
+});

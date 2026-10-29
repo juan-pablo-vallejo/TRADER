@@ -62,6 +62,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   subdirectory; the pre-18 `/var/lib/postgresql/data` mount makes the container refuse to start.
 - `POSTGRES_PASSWORD` applies only when the volume is initialised. Changing it in `.env` later
   needs `docker compose down -v`, which also discards the data.
+- Pending migrations run in one transaction (a fresh database replays the whole journal in one),
+  so a label added by `ALTER TYPE … ADD VALUE` is unusable (55P04) in any CHECK, DEFAULT or index
+  predicate in the journal, a Drizzle `check()` included. Name it in plpgsql, resolved at run time.
 
 ## Log
 
@@ -165,3 +168,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   SQLSTATE 23000; `voided` and the correction columns wait for line 4 (D15); cap 200 (D16).
 - **Next:** Stage 2 line 4 — `pay_rates`, `pay_periods`, `approvals`, plus `voided` with
   `voids_event_id` and the correction columns.
+
+### 2026-10-29 — Stage 2 line 4: pay_rates, pay_periods, approvals; voids and corrections
+
+- **Did:** `voided` and four correction columns; `pay_rates`, `pay_periods`, `approvals`; `0003`
+  generated, `0004` custom (btree_gist, exclusion, 3 triggers); 26 tests watched red, 53 in all;
+  `0000`–`0004` replayed empty in one transaction; TRUNCATE test now `CASCADE` (0A000 otherwise).
+- **Decided:** the plan's eighteen recommendations as given. Flag: PRD Office approval omits the
+  skew condition ARCHITECTURE line 85 adds; `approval_reason` carries `clock_skewed`.
+- **Next:** Stage 2 line 5 — materials, photos, invoices and the number sequence. Roll-up due.
