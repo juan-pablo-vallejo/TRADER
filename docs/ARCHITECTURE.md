@@ -121,6 +121,7 @@ nothing else owns. `packages/db/src/schema/` holds one file per table group.
 One line each; the date is when it was settled. A change is a new row naming the row it
 supersedes, never an edit to an old row.
 
+<!-- prettier-ignore -->
 | Date       | Decision                                                                                 | Supersedes                        |
 | ---------- | ---------------------------------------------------------------------------------------- | --------------------------------- |
 | 2026-07    | Modular monolith; the API runs inside the Next.js deployment on Vercel                   | Separate backend host             |

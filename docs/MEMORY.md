@@ -40,8 +40,6 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   schema.
 - Drizzle maintains `updated_at` through `$onUpdate` in the ORM, not the database: a raw SQL
   UPDATE leaves it stale. Write through Drizzle; `id` defaults in Postgres and needs nothing.
-- Prettier aligns a Markdown table to its widest cell: a row wider than that, or removing the
-  only row at that width, rewrites every row. Measure new ARCHITECTURE rows against it first.
 - A seed script may legitimately write `role` in an upsert; the same statement in a request
   path rewrites `role` and `active` on every sign-in. JIT provisioning reads a profile only when
   creating the row.
