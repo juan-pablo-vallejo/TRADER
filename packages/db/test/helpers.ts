@@ -6,7 +6,7 @@ import { DrizzleQueryError } from "drizzle-orm";
 import { expect } from "vitest";
 
 import type { Db } from "../src/client";
-import { companies, customers, jobs, users, workSessionEvents } from "../src/schema";
+import { companies, customers, jobs, users, type workSessionEvents } from "../src/schema";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
