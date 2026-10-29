@@ -62,6 +62,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   subdirectory; the pre-18 `/var/lib/postgresql/data` mount makes the container refuse to start.
 - `POSTGRES_PASSWORD` applies only when the volume is initialised. Changing it in `.env` later
   needs `docker compose down -v`, which also discards the data.
+- Every pending migration runs in one transaction, and a fresh database replays the whole
+  journal in one, so a label added by `ALTER TYPE … ADD VALUE` is unusable (SQLSTATE 55P04) in
+  any CHECK, DEFAULT or index predicate anywhere in the journal — a Drizzle `check()` naming it
+  included. Name it in plpgsql, which resolves literals at first execution.
 
 ## Log
 
@@ -165,3 +169,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   SQLSTATE 23000; `voided` and the correction columns wait for line 4 (D15); cap 200 (D16).
 - **Next:** Stage 2 line 4 — `pay_rates`, `pay_periods`, `approvals`, plus `voided` with
   `voids_event_id` and the correction columns.
+
+### 2026-10-29 — Stage 2 line 4: pay_rates, pay_periods, approvals; voids and corrections
+
+- **Did:** `voided` and the four correction columns on the ledger; `pay_rates`, `pay_periods`,
+  `approvals`, two enums; `0003` generated, `0004` custom (btree_gist, the no-overlap exclusion,
+  three trigger functions); 26 tests each watched red, 53 in all; `0000`–`0004` replayed on an
+  empty database in one transaction; four decision rows. The TRUNCATE test needs `CASCADE` now
+  that `approvals` references the ledger: a plain TRUNCATE is 0A000 before any trigger fires.
+- **Decided:** the plan's eighteen recommendations as given: one `approvals` row per event with
+  a derived pending state and a decision set once; per-row `currency`, `integer` cents; period
+  overlap by exclusion, close-in-order and freeze by trigger, gaps and own-entry approval in the
+  API; the `voided` rules in a new plpgsql trigger at 23514. Flag: PRD Office approval omits the
+  skew condition ARCHITECTURE line 85 adds; `approval_reason` carries `clock_skewed`.
+- **Next:** Stage 2 line 5 — `materials`, `photos`, `invoices`, `invoice_line_items`,
+  `credit_memos`, the invoice number sequence. The MEMORY roll-up falls due there.
