@@ -15,6 +15,13 @@
       "when": 1793232960621,
       "tag": "0001_work-session-events",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793232972933,
+      "tag": "0002_append-only-guard",
+      "breakpoints": true
     }
   ]
 }
