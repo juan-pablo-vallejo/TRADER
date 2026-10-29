@@ -1,7 +1,7 @@
 // Postgres enum types. A value is only ever added (`ALTER TYPE … ADD VALUE`, which drizzle-kit
 // emits); removing or renaming one needs a type rebuild, a destructive diff invariant 8
-// forbids. Choose members as permanent. Consumed by users.ts, jobs.ts and
-// work-session-events.ts.
+// forbids. Choose members as permanent. Consumed by users.ts, jobs.ts,
+// work-session-events.ts and approvals.ts.
 import { pgEnum } from "drizzle-orm/pg-core";
 
 // PRD, Target users. A new user starts as a worker; roles are a deliberate roster action.
@@ -37,3 +37,19 @@ export const attestationLevel = pgEnum("attestation_level", [
   "device_credential",
   "none",
 ]);
+
+// PRD, Office approval: why an entry is in the queue, every reason that applies. `offline` is
+// receipt lag (no column: server_timestamp − client_timestamp); `corrected` is a
+// corrects_event_id or a void; `user_timed` is time_set_by_user; `location` is a missing or
+// out-of-radius stamp; `clock_skewed` is the push verdict (ARCHITECTURE, Sync protocol).
+export const approvalReason = pgEnum("approval_reason", [
+  "offline",
+  "corrected",
+  "user_timed",
+  "location",
+  "clock_skewed",
+]);
+
+// The office's answer. No `pending`: that is a NULL decision, derived (invariant 7). A
+// rejected event never counts; the office issues a correcting event instead.
+export const approvalDecision = pgEnum("approval_decision", ["approved", "rejected"]);
