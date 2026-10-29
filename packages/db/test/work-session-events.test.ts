@@ -57,6 +57,8 @@ const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
   clockSkewMs: 0,
   attestationLevel: "none",
   schemaVersion: 1,
+  timeSetByUser: false,
+  initiatorUserId: refs.workerId,
 });
 
 const APPEND_ONLY =

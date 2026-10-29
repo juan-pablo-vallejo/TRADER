@@ -16,13 +16,17 @@ export const jobStatus = pgEnum("job_status", ["open", "complete", "archived"]);
 
 // PRD, Labor: clock in/out and pause/resume. A job switch is `ended` on the old job then
 // `started` on the new one, two events that sync independently, so "one open session" stays a
-// property of the fold. `voided` joins in Stage 2 line 4 together with the column naming the
-// event it voids: a member and its referent travel together.
+// property of the fold. `voided` is an appended event that nullifies a whole session; it names
+// that session's `started` event in `voids_event_id`, and the tie between the member and the
+// column is a trigger, not a CHECK: the member arrived by `ALTER TYPE … ADD VALUE`, and Postgres
+// refuses to use such a label inside the transaction that added it, which on a fresh database
+// is the one replaying every migration. Last in the list, so the migration was a plain ADD VALUE.
 export const workSessionEventType = pgEnum("work_session_event_type", [
   "started",
   "paused",
   "resumed",
   "ended",
+  "voided",
 ]);
 
 // PRD, Labor: a clock action is confirmed with the device's biometrics; a failed or unavailable
