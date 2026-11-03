@@ -1,44 +1,20 @@
 // Stage 2 line 5: invoices and the number counter, asserted against the migrated container.
 // Rolled-back transactions throughout; see helpers.ts.
-import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../src/client";
-import { customers, invoiceCounters, invoices, jobs, users } from "../src/schema";
-import { fixture, one, rolledBack, sqlstate, type Tx } from "./helpers";
+import { customers, invoiceCounters, invoices } from "../src/schema";
+import {
+  billing,
+  type Billing,
+  fixture,
+  one,
+  rolledBack,
+  sqlstate,
+  type Tx,
+} from "./helpers";
 
-// The fixture's rows plus the job's customer, the admin who issues, and the counter row
-// starting where the partner's series left off.
-async function billing(tx: Tx) {
-  const refs = await fixture(tx);
-  const job = one(
-    await tx
-      .select({ customerId: jobs.customerId })
-      .from(jobs)
-      .where(eq(jobs.id, refs.jobId)),
-  );
-  const admin = one(
-    await tx
-      .insert(users)
-      .values({
-        companyId: refs.companyId,
-        email: "a@co.test",
-        name: "Admin",
-        role: "admin",
-      })
-      .returning({ id: users.id }),
-  );
-  await tx.insert(invoiceCounters).values({
-    companyId: refs.companyId,
-    nextInvoiceNumber: 1042,
-    nextCreditMemoNumber: 7,
-  });
-  return { ...refs, customerId: job.customerId, adminId: admin.id };
-}
-
-type Refs = Awaited<ReturnType<typeof billing>>;
-
-const draft = (refs: Refs): typeof invoices.$inferInsert => ({
+const draft = (refs: Billing): typeof invoices.$inferInsert => ({
   companyId: refs.companyId,
   customerId: refs.customerId,
   jobId: refs.jobId,

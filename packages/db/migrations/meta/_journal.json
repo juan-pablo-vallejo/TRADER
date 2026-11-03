@@ -57,6 +57,13 @@
       "when": 1793730216920,
       "tag": "0007_invoices",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793730315981,
+      "tag": "0008_invoice-line-items",
+      "breakpoints": true
     }
   ]
 }

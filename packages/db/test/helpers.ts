@@ -2,11 +2,18 @@
 // append-only by trigger and references users and companies, so nothing can bulk-delete
 // those tables. Every test therefore runs inside a transaction that is always rolled back,
 // and every statement runs on `tx`, never `db`.
-import { DrizzleQueryError } from "drizzle-orm";
+import { DrizzleQueryError, eq } from "drizzle-orm";
 import { expect } from "vitest";
 
 import type { Db } from "../src/client";
-import { companies, customers, jobs, users, type workSessionEvents } from "../src/schema";
+import {
+  companies,
+  customers,
+  invoiceCounters,
+  jobs,
+  users,
+  type workSessionEvents,
+} from "../src/schema";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
@@ -109,3 +116,35 @@ export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
   timeSetByUser: false,
   initiatorUserId: refs.workerId,
 });
+
+// The billing rows on top of fixture(): the job's customer, the admin who issues, and the
+// counter row starting where the partner's series left off. Shared by the invoice, line,
+// credit memo and guard tests.
+export async function billing(tx: Tx) {
+  const refs = await fixture(tx);
+  const job = one(
+    await tx
+      .select({ customerId: jobs.customerId })
+      .from(jobs)
+      .where(eq(jobs.id, refs.jobId)),
+  );
+  const admin = one(
+    await tx
+      .insert(users)
+      .values({
+        companyId: refs.companyId,
+        email: "a@co.test",
+        name: "Admin",
+        role: "admin",
+      })
+      .returning({ id: users.id }),
+  );
+  await tx.insert(invoiceCounters).values({
+    companyId: refs.companyId,
+    nextInvoiceNumber: 1042,
+    nextCreditMemoNumber: 7,
+  });
+  return { ...refs, customerId: job.customerId, adminId: admin.id };
+}
+
+export type Billing = Awaited<ReturnType<typeof billing>>;
