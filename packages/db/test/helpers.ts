@@ -2,7 +2,7 @@
 // append-only by trigger and references users and companies, so nothing can bulk-delete
 // those tables. Every test therefore runs inside a transaction that is always rolled back,
 // and every statement runs on `tx`, never `db`.
-import { DrizzleQueryError, eq } from "drizzle-orm";
+import { DrizzleQueryError, eq, sql } from "drizzle-orm";
 import { expect } from "vitest";
 
 import type { Db } from "../src/client";
@@ -55,6 +55,16 @@ export async function pgError(
 
 export async function sqlstate(statement: Promise<unknown>): Promise<string | undefined> {
   return (await pgError(statement)).code;
+}
+
+// Becomes the runtime role for the rest of the transaction, optionally bound to a tenant, as
+// Stage 3's request context will. SET LOCAL ROLE needs no password and ends with the
+// transaction; set_config(…, true) is SET LOCAL that takes a bind parameter.
+export async function asApp(tx: Tx, companyId?: string) {
+  await tx.execute(sql`set local role trader_app`);
+  if (companyId !== undefined) {
+    await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
+  }
 }
 
 export function one<T>(rows: T[]): T {
