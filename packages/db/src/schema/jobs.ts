@@ -44,6 +44,9 @@ export const jobs = pgTable(
   },
   (t) => [
     unique("jobs_company_id_id_unique").on(t.companyId, t.id),
+    // The target of invoices' (company_id, customer_id, job_id) foreign key: an invoice is to
+    // the job's customer, and the customer is immutable once an invoice exists.
+    unique("jobs_company_id_customer_id_id_unique").on(t.companyId, t.customerId, t.id),
     // Composite, so a job's customer and crew belong to its company (invariant 4). A NULL
     // crew_id leaves that reference unchecked (MATCH SIMPLE).
     foreignKey({

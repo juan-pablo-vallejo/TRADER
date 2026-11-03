@@ -22,8 +22,8 @@ Done when `main` is the rebuilt branch, CI is green on it, and the protection ru
 
 ## Stage 1 — Development environment (Mac)
 
-Done when `pnpm install && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` is
-green locally and a Postgres container answers on `localhost:5432`.
+Done when `pnpm install && pnpm check` is green locally and a Postgres container answers on
+`localhost:5432`.
 
 - [x] Node LTS through a version manager; pnpm at the `packageManager` version
 - [x] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
@@ -41,7 +41,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 - [x] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
       attestation level, location stamp, skew flag
 - [x] `pay_rates` (effective-dated), `pay_periods`, `approvals`
-- [ ] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
+- [x] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
       invoice number sequence
 - [ ] `audit_log`
 - [ ] RLS `ENABLE` and `FORCE` on every tenant table; app role created in SQL with

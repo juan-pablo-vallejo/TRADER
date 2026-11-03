@@ -96,7 +96,9 @@ is wrong.
 1. Start from `docs/MEMORY.md`, then read `docs/TASKS.md`. Work only the task Juan Pablo
    names, or the next unchecked task in the current stage.
 2. Before editing anything under schema, auth, sync, money or CI: write the plan, stop, wait.
-3. Make the change; run `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test`.
+3. Make the change; run `pnpm check` (typecheck, lint, format check, tests). Per-commit green
+   is `pnpm check` against a database migrated to that commit's own journal; one fully
+   migrated database carried across commits is a false red.
 4. Commit per the rules above. Do not push.
 5. End by ticking the task in TASKS.md and appending an entry to MEMORY.md in its format. Never
    edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.

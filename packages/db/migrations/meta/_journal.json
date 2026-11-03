@@ -36,6 +36,48 @@
       "when": 1793274964797,
       "tag": "0004_pay-and-void-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793730063047,
+      "tag": "0005_materials",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793730150185,
+      "tag": "0006_photos",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793730216920,
+      "tag": "0007_invoices",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793730315981,
+      "tag": "0008_invoice-line-items",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793730422044,
+      "tag": "0009_credit-memos",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793730437470,
+      "tag": "0010_invoice-guards",
+      "breakpoints": true
     }
   ]
 }
