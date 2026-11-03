@@ -5,59 +5,17 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../src/client";
-import { companies, customers, jobs, users, workSessionEvents } from "../src/schema";
-import { company, one, pgError, rolledBack, sqlstate, type Tx } from "./helpers";
-
-// What the device will do in Stage 5: 48 bits of milliseconds, version 7, variant 10, random.
-function uuidv7(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  const ms = BigInt(Date.now());
-  for (let i = 0; i < 6; i++) bytes[i] = Number((ms >> BigInt(8 * (5 - i))) & 0xffn);
-  bytes[6] = (bytes[6]! & 0x0f) | 0x70;
-  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
-// One company, one worker, one job: the rows an event must reference.
-async function fixture(tx: Tx) {
-  const c = one(
-    await tx.insert(companies).values(company).returning({ id: companies.id }),
-  );
-  const worker = one(
-    await tx
-      .insert(users)
-      .values({ companyId: c.id, email: "w@co.test", name: "Worker" })
-      .returning({ id: users.id }),
-  );
-  const customer = one(
-    await tx
-      .insert(customers)
-      .values({ companyId: c.id, name: "Customer" })
-      .returning({ id: customers.id }),
-  );
-  const job = one(
-    await tx
-      .insert(jobs)
-      .values({ companyId: c.id, customerId: customer.id, name: "Job" })
-      .returning({ id: jobs.id }),
-  );
-  return { companyId: c.id, workerId: worker.id, jobId: job.id };
-}
-
-type Refs = Awaited<ReturnType<typeof fixture>>;
-
-// A complete, legal clock-in as the push handler will write it.
-const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
-  id: uuidv7(),
-  ...refs,
-  type: "started",
-  clientTimestamp: new Date(),
-  clockSkewed: false,
-  clockSkewMs: 0,
-  attestationLevel: "none",
-  schemaVersion: 1,
-});
+import { companies, users, workSessionEvents } from "../src/schema";
+import {
+  company,
+  fixture,
+  one,
+  pgError,
+  rolledBack,
+  sqlstate,
+  started,
+  uuidv7,
+} from "./helpers";
 
 const APPEND_ONLY =
   /^work_session_events is append-only: (UPDATE|DELETE|TRUNCATE) rejected$/;
@@ -100,10 +58,13 @@ describe("work_session_events", () => {
   });
 
   it("rejects TRUNCATE, which bypasses row triggers", async () => {
+    // CASCADE, because approvals references this table and Postgres refuses a plain
+    // TRUNCATE of a referenced table (0A000) before any trigger runs; with CASCADE the
+    // statement reaches the guard.
     await rolledBack(db, async (tx) => {
       await tx.insert(workSessionEvents).values(started(await fixture(tx)));
       const error = await pgError(
-        tx.transaction((sp) => sp.execute(sql`truncate work_session_events`)),
+        tx.transaction((sp) => sp.execute(sql`truncate work_session_events cascade`)),
       );
       expect(error.code).toBe("23000");
       expect(error.message).toBe("work_session_events is append-only: TRUNCATE rejected");
@@ -152,8 +113,27 @@ describe("work_session_events", () => {
         tx.execute(sql`
           insert into work_session_events
             (company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
-             clock_skew_ms, attestation_level, schema_version)
-          values (${companyId}, ${workerId}, ${jobId}, 'started', now(), false, 0, 'none', 1)
+             clock_skew_ms, attestation_level, schema_version, time_set_by_user,
+             initiator_user_id)
+          values (${companyId}, ${workerId}, ${jobId}, 'started', now(), false, 0, 'none', 1,
+                  false, ${workerId})
+        `),
+      );
+      expect(code).toBe("23502");
+    });
+  });
+
+  it("requires time_set_by_user", async () => {
+    await rolledBack(db, async (tx) => {
+      const { companyId, workerId, jobId } = await fixture(tx);
+      // Raw SQL again: the Drizzle insert type already refuses to omit it.
+      const code = await sqlstate(
+        tx.execute(sql`
+          insert into work_session_events
+            (id, company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
+             clock_skew_ms, attestation_level, schema_version, initiator_user_id)
+          values (${uuidv7()}, ${companyId}, ${workerId}, ${jobId}, 'started', now(), false,
+                  0, 'none', 1, ${workerId})
         `),
       );
       expect(code).toBe("23502");
@@ -167,6 +147,27 @@ describe("work_session_events", () => {
         tx.insert(workSessionEvents).values({ ...event, id: crypto.randomUUID() }),
       );
       expect(code).toBe("23514");
+    });
+  });
+
+  it("rejects an initiator who belongs to another company", async () => {
+    await rolledBack(db, async (tx) => {
+      const a = await fixture(tx);
+      const b = one(
+        await tx.insert(companies).values(company).returning({ id: companies.id }),
+      );
+      const outsider = one(
+        await tx
+          .insert(users)
+          .values({ companyId: b.id, email: "o@b.test", name: "Outsider" })
+          .returning({ id: users.id }),
+      );
+      const code = await sqlstate(
+        tx
+          .insert(workSessionEvents)
+          .values({ ...started(a), initiatorUserId: outsider.id }),
+      );
+      expect(code).toBe("23503");
     });
   });
 
@@ -231,6 +232,97 @@ describe("work_session_events", () => {
       const row = one(await tx.select().from(workSessionEvents));
       expect(row.clockSkewMs).toBe(ninetyDays);
       expect(row.clockSkewed).toBe(true);
+    });
+  });
+
+  it("writes a voided event naming the started event of its session", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const session = started(refs);
+      await tx.insert(workSessionEvents).values(session);
+      const voided = {
+        ...started(refs),
+        type: "voided" as const,
+        voidsEventId: session.id,
+      };
+      await tx.insert(workSessionEvents).values(voided);
+      const rows = await tx.select().from(workSessionEvents);
+      const row = rows.find((r) => r.id === voided.id);
+      expect(row?.type).toBe("voided");
+      expect(row?.voidsEventId).toBe(session.id);
+    });
+  });
+
+  it("rejects a voided event with no voids_event_id", async () => {
+    await rolledBack(db, async (tx) => {
+      const error = await pgError(
+        tx
+          .insert(workSessionEvents)
+          .values({ ...started(await fixture(tx)), type: "voided" }),
+      );
+      expect(error.code).toBe("23514");
+      expect(error.message).toBe(
+        "work_session_events: voids_event_id is set exactly when type is voided",
+      );
+    });
+  });
+
+  it("rejects voids_event_id on an event that is not voided", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const session = started(refs);
+      await tx.insert(workSessionEvents).values(session);
+      const code = await sqlstate(
+        tx
+          .insert(workSessionEvents)
+          .values({ ...started(refs), type: "ended", voidsEventId: session.id }),
+      );
+      expect(code).toBe("23514");
+    });
+  });
+
+  it("rejects a voided event that also corrects one", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const session = started(refs);
+      await tx.insert(workSessionEvents).values(session);
+      const error = await pgError(
+        tx.insert(workSessionEvents).values({
+          ...started(refs),
+          type: "voided",
+          voidsEventId: session.id,
+          correctsEventId: session.id,
+        }),
+      );
+      expect(error.code).toBe("23514");
+      expect(error.message).toBe("work_session_events: a voided event corrects nothing");
+    });
+  });
+
+  it("rejects an event that voids itself", async () => {
+    await rolledBack(db, async (tx) => {
+      const event = started(await fixture(tx));
+      const code = await sqlstate(
+        tx
+          .insert(workSessionEvents)
+          .values({ ...event, type: "voided", voidsEventId: event.id }),
+      );
+      expect(code).toBe("23514");
+    });
+  });
+
+  it("rejects a correction of another company's event", async () => {
+    await rolledBack(db, async (tx) => {
+      const a = await fixture(tx);
+      const b = await fixture(tx);
+      const theirs = started(b);
+      await tx.insert(workSessionEvents).values(theirs);
+      const code = await sqlstate(
+        tx
+          .insert(workSessionEvents)
+          .values({ ...started(a), type: "ended", correctsEventId: theirs.id }),
+      );
+      expect(code).toBe("23503");
     });
   });
 
