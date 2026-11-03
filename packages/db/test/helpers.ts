@@ -10,6 +10,8 @@ import {
   companies,
   customers,
   invoiceCounters,
+  invoiceLineItems,
+  invoices,
   jobs,
   users,
   type workSessionEvents,
@@ -148,3 +150,70 @@ export async function billing(tx: Tx) {
 }
 
 export type Billing = Awaited<ReturnType<typeof billing>>;
+
+// One line as the office snapshots it: 2.5 gal at $19.99 is $49.98 after rounding.
+export const line = (
+  refs: Billing,
+  invoiceId: string,
+): typeof invoiceLineItems.$inferInsert => ({
+  companyId: refs.companyId,
+  invoiceId,
+  currency: "USD",
+  position: 0,
+  description: "Interior walls, two coats",
+  quantity: "2.500",
+  unit: "gal",
+  unitPriceCents: 1999,
+  amountCents: 4998,
+});
+
+// A draft with one line, ready to issue.
+export async function draftInvoice(tx: Tx, refs: Billing) {
+  const invoice = one(
+    await tx
+      .insert(invoices)
+      .values({
+        companyId: refs.companyId,
+        customerId: refs.customerId,
+        jobId: refs.jobId,
+        currency: "USD",
+        taxCents: 0,
+      })
+      .returning({ id: invoices.id }),
+  );
+  const item = one(
+    await tx
+      .insert(invoiceLineItems)
+      .values(line(refs, invoice.id))
+      .returning({ id: invoiceLineItems.id }),
+  );
+  return { invoiceId: invoice.id, lineId: item.id };
+}
+
+// The issue transition as the office will perform it: the trigger (0010) assigns the number.
+export async function issue(tx: Tx, refs: Billing, invoiceId: string) {
+  return one(
+    await tx
+      .update(invoices)
+      .set({ issuedAt: new Date(), issuedByUserId: refs.adminId })
+      .where(eq(invoices.id, invoiceId))
+      .returning({ number: invoices.number, issuedAt: invoices.issuedAt }),
+  );
+}
+
+// Rows two connections can both see: the billing fixture committed, with a cleanup that
+// deletes it in reverse. The draft stays a draft in every committed state, because the
+// cross-connection tests roll back every issue, so the cleanup is always allowed.
+export async function committedBilling(db: Db) {
+  const refs = await db.transaction(billing);
+  const draft = await db.transaction((tx) => draftInvoice(tx, refs));
+  const cleanup = async () => {
+    await db.delete(invoices).where(eq(invoices.id, draft.invoiceId));
+    await db.delete(invoiceCounters).where(eq(invoiceCounters.companyId, refs.companyId));
+    await db.delete(jobs).where(eq(jobs.id, refs.jobId));
+    await db.delete(customers).where(eq(customers.id, refs.customerId));
+    await db.delete(users).where(eq(users.companyId, refs.companyId));
+    await db.delete(companies).where(eq(companies.id, refs.companyId));
+  };
+  return { ...refs, ...draft, cleanup };
+}
