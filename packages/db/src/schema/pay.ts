@@ -25,7 +25,7 @@ import { users } from "./users";
 // guarantee that one worker has one rate on one day. The rate in force on day D is the row
 // with the greatest effective_from ≤ D; none means unpriced. Mutable through the ORM: no pay
 // is computed in V1 (the export is hours), and a change to a rate a closed period relied on is
-// a Stage 4 rule plus an audit_log entry, not a database guard.
+// a Stage 4 rule, not a database guard.
 export const payRates = pgTable(
   "pay_rates",
   {

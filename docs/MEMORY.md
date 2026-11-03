@@ -155,3 +155,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   credit memos append-only with their own series; materials carry the receipt total; photos
   hold object metadata only, R2 named.
 - **Next:** Stage 2 line 6 — `audit_log`.
+
+### 2026-11-03 — Stage 2 line 6: audit_log
+
+- **Did:** `audit_log` over `0011` generated and `0012` custom (0002's guard on a second
+  table); 9 tests watched red, 114 in all; two decision rows; `crews.ts` and `pay.ts` comments
+  drop their audit_log promise; `committedBilling` suffixes its company name.
+- **Decided:** append-only, API-written in the writing transaction; `before`/`after` jsonb;
+  `action = entity_table.verb` under a prefix check, no enum; writers after V1, V1 ships it empty.
+- **Next:** Stage 2 line 7 — RLS and the app role.

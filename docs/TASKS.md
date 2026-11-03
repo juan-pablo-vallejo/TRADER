@@ -43,7 +43,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 - [x] `pay_rates` (effective-dated), `pay_periods`, `approvals`
 - [x] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
       invoice number sequence
-- [ ] `audit_log`
+- [x] `audit_log`
 - [ ] RLS `ENABLE` and `FORCE` on every tenant table; app role created in SQL with
       `NOBYPASSRLS`; startup guard
 - [ ] Invariant tests against the container; seed for one company and one admin
