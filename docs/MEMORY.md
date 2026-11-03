@@ -147,7 +147,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 
 ### 2026-11-03 — Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter
 
-- **Did:** rolled up three Log entries; root `check` script, RULES/CLAUDE/TASKS point at it;
+- **Did:** rolled up four Log entries; root `check` script, RULES/CLAUDE/TASKS point at it;
   six tables over `0005`–`0009` and the `0010` guards (lifecycle, counter numbering, line freeze
   under `FOR SHARE`, credit-memo rules); `jobs` customer unique; 48 tests watched red, 105 in
   all, two of them cross-connection lock tests on a committed fixture; five decision rows.
