@@ -92,6 +92,13 @@
       "when": 1793733375343,
       "tag": "0012_audit-log-guard",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793735836246,
+      "tag": "0013_app-role",
+      "breakpoints": true
     }
   ]
 }
