@@ -47,8 +47,8 @@ export const crews = pgTable(
 );
 
 // Membership, many-to-many. A row is added or removed, never edited: no id, no updated_at, and
-// removal is DELETE — the labor fold is by worker and job, so no history is lost, and the
-// audit log (line 6) records the roster action. company_id is carried for RLS (line 7).
+// removal is DELETE — the labor fold is by worker and job, so no history is lost. company_id is
+// carried for RLS (line 7).
 export const crewMembers = pgTable(
   "crew_members",
   {
