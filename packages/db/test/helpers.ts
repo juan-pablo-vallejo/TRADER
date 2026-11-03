@@ -78,9 +78,9 @@ export function uuidv7(): string {
 
 // One company, one worker, one job: the rows an event must reference. Shared by the
 // events and approvals tests.
-export async function fixture(tx: Tx) {
+export async function fixture(tx: Tx, values = company) {
   const c = one(
-    await tx.insert(companies).values(company).returning({ id: companies.id }),
+    await tx.insert(companies).values(values).returning({ id: companies.id }),
   );
   const worker = one(
     await tx
@@ -122,8 +122,8 @@ export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
 // The billing rows on top of fixture(): the job's customer, the admin who issues, and the
 // counter row starting where the partner's series left off. Shared by the invoice, line,
 // credit memo and guard tests.
-export async function billing(tx: Tx) {
-  const refs = await fixture(tx);
+export async function billing(tx: Tx, values = company) {
+  const refs = await fixture(tx, values);
   const job = one(
     await tx
       .select({ customerId: jobs.customerId })
@@ -202,10 +202,13 @@ export async function issue(tx: Tx, refs: Billing, invoiceId: string) {
 }
 
 // Rows two connections can both see: the billing fixture committed, with a cleanup that
-// deletes it in reverse. The draft stays a draft in every committed state, because the
-// cross-connection tests roll back every issue, so the cleanup is always allowed.
+// deletes it in reverse. The company name carries a random suffix, so a row a crashed run
+// leaves behind says which run made it and is never mistaken for a rolled-back fixture. The
+// draft stays a draft in every committed state, because the cross-connection tests roll back
+// every issue, so the cleanup is always allowed.
 export async function committedBilling(db: Db) {
-  const refs = await db.transaction(billing);
+  const name = `${company.name} ${crypto.randomUUID().slice(0, 8)}`;
+  const refs = await db.transaction((tx) => billing(tx, { ...company, name }));
   const draft = await db.transaction((tx) => draftInvoice(tx, refs));
   const cleanup = async () => {
     await db.delete(invoices).where(eq(invoices.id, draft.invoiceId));
