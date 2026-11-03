@@ -64,6 +64,13 @@
       "when": 1793730315981,
       "tag": "0008_invoice-line-items",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793730422044,
+      "tag": "0009_credit-memos",
+      "breakpoints": true
     }
   ]
 }

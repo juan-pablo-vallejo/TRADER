@@ -15,3 +15,4 @@ export * from "./materials";
 export * from "./photos";
 export * from "./invoices";
 export * from "./invoice-line-items";
+export * from "./credit-memos";
