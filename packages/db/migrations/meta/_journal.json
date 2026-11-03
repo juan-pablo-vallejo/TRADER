@@ -43,6 +43,13 @@
       "when": 1793730063047,
       "tag": "0005_materials",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793730150185,
+      "tag": "0006_photos",
+      "breakpoints": true
     }
   ]
 }

@@ -12,3 +12,4 @@ export * from "./work-session-events";
 export * from "./pay";
 export * from "./approvals";
 export * from "./materials";
+export * from "./photos";
