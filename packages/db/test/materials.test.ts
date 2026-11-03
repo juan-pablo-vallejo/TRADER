@@ -1,5 +1,6 @@
 // Stage 2 line 5: materials, asserted against the migrated container. Rolled-back
 // transactions throughout; see helpers.ts.
+import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../src/client";
@@ -43,6 +44,7 @@ describe("materials", () => {
         await tx
           .update(materials)
           .set({ costCents: 8999, currency: "USD" })
+          .where(eq(materials.id, row.id))
           .returning({ costCents: materials.costCents, currency: materials.currency }),
       );
       expect(row.id).toBeTruthy();
