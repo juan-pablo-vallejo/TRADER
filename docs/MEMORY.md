@@ -38,6 +38,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `work_session_events` is append-only by trigger and references `users` and `companies`, so
   fixtures can never be cleaned up: schema tests run in rolled-back transactions
   (`test/helpers.ts`), every statement on `tx`.
+- Log roll-up: when headroom <30 after the session entry, roll the oldest entries one line
+  each; Notes untouched.
 - drizzle-kit never sees triggers or functions. They live in `generate --custom` files, which
   start with a comment line to replace; a plain generate afterwards emits nothing. Separate
   statements with `--> statement-breakpoint`; pass flags without `--` (pnpm forwards them).
@@ -68,34 +70,11 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 
 ## Log
 
-### 2026-10-09 — Archived the old repository, started the rebuild
+### 2026-10-09 → 2026-10-13 — rolled up
 
-- **Did:** tagged `main` as `archive/pre-rebuild`; began orphan branch `rebuild` with root
-  config and workspace scaffolds, one file per commit, each verified against the tag.
-- **Decided:** repository stays public on GitHub Free; proprietary LICENSE in Juan Pablo's own
-  name; Dependabot off; one CI workflow; no commit trailers.
-- **Next:** finish the scaffolds.
-
-### 2026-10-13 — Six-document set replaces the previous documentation plan
-
-- **Did:** pushed `rebuild`; added the remaining scaffolds, the pruned lockfile, the CI
-  workflow, `LICENSE`, the six documents, `CLAUDE.md` and `README.md`.
-- **Decided:** PRD · ARCHITECTURE · RULES · DESIGN · TASKS · MEMORY replace DECISIONS, ROADMAP,
-  WORKFLOW and the ADR register; biometric attestation stays in V1 mobile; three roles and the
-  day closeout stay; the geofence spike is dropped; Stripe, Resend, Inngest and Expo push are
-  out of V1; light theme only.
-- **Next:** TASKS.md Stage 0 — swap `rebuild` → `main`.
-
-### 2026-10-13 — D Sierra Painting logo adopted as the brand; indigo accent
-
-- **Did:** converted the partner's 7740 px JPEG into `assets/brand/logo.png` (2048, full mark)
-  and `icon.png` (1024, tools glyph only, cropped by colour so no text survives); rewrote the
-  DESIGN.md palette and Brand section with computed contrast; decisions row; TASKS lines naming
-  the Stage 4 and 5 consumers; per-company branding listed after V1 in PRD and TASKS.
-- **Decided:** the logo is TRADER's own mark in V1 and every tenant sees it; accent is the logo's
-  outline indigo `#2808AC`; `brand` red `#BC0C0C` colors only the mark and wordmark so it never
-  competes with `attention`. Expo icon and splash specs are checked on docs.expo.dev at Stage 5.
-- **Next:** Stage 0 — swap `rebuild` → `main` and set the protection rule.
+- 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
+- 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
+- 10-13: D Sierra Painting mark adopted; accent `#2808AC`, `brand` red for the mark only.
 
 ### 2026-10-21 — Local Postgres through Docker Compose; Stage 0 closed on evidence
 
