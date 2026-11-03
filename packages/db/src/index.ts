@@ -7,3 +7,4 @@ export {
   type DatabaseDriver,
   type DatabaseEnv,
 } from "./env";
+export { assertRuntimeRole } from "./guard";
