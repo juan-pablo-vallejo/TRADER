@@ -76,6 +76,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   role made in the Console, CLI or API (`neon_superuser` has BYPASSRLS). RLS tests
   `SET LOCAL ROLE trader_app`.
 - `SET LOCAL` takes no bind parameter; `set_config(name, $1, true)` does.
+- Drizzle's `onConflict` target takes columns only; an expression unique index such as
+  `lower(email)` needs a raw `ON CONFLICT`.
+- FORCE with no policy for a role denies it every row: whatever writes as the owner needs
+  `rolsuper` or `rolbypassrls` on the role itself (attributes are not inherited). At Stage 6,
+  verify the Neon owner carries `rolbypassrls`; if not, the seed, the migrator-as-owner and
+  onboarding all need a decision.
 
 ## Log
 
@@ -140,3 +146,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   privileges; guard checks role and inventory; RLS tests by `SET LOCAL ROLE`; custom SQL.
 - **Next:** Stage 2 line 8 — invariant tests against the container; seed for one company and
   one admin.
+
+### 2026-11-03 — Stage 2 line 8: the owner-only seed; Stage 2 closed
+
+- **Did:** `seed.ts` and `run-seed.ts` behind `pnpm db:seed`, `tsx` declared; 3 tests watched
+  red, 136 in all; empty database migrated, seeded twice, counts 1/1/1; one decision row;
+  Stage 2 closed on "shows only the tenant's rows in every table".
+- **Decided:** fixed company id; counter 1/1 inserted once, the partner's series at Stage 8;
+  the seed refuses a role that cannot bypass RLS; proven by tests, not a CI step.
+- **Next:** the TASKS condense PR, then Stage 3 line 1. Pilot onboarding (its company and
+  counter continuation, owner-run) still needs a TASKS line.
