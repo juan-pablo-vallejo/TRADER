@@ -16,3 +16,4 @@ export * from "./photos";
 export * from "./invoices";
 export * from "./invoice-line-items";
 export * from "./credit-memos";
+export * from "./audit-log";
