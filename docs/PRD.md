@@ -65,8 +65,9 @@ first build; the office UI ships in English.
 An entry needs office approval before it counts toward payroll or job cost when any of these
 holds: it was captured offline; it was edited or corrected; its recorded time was set by the
 user rather than taken from the moment of capture; its location stamp is missing or outside
-the job's radius. Everything else is approved by default. Nobody approves their own entries.
-The approval queue tags each entry with every reason it is there.
+the job's radius; it was captured on a device whose clock disagreed with server time by more
+than the allowed tolerance. Everything else is approved by default. Nobody approves their own
+entries. The approval queue tags each entry with every reason it is there.
 
 ### Jobs and location
 
