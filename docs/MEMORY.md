@@ -40,9 +40,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   (`test/helpers.ts`), every statement on `tx`.
 - Log roll-up: when headroom <30 after the session entry, roll the oldest entries one line
   each; Notes untouched.
-- drizzle-kit never sees triggers or functions. They live in `generate --custom` files, which
-  start with a comment line to replace; a plain generate afterwards emits nothing. Separate
-  statements with `--> statement-breakpoint`; pass flags without `--` (pnpm forwards them).
+- drizzle-kit never sees triggers or functions, or roles, grants, policies and FORCE. They live
+  in `generate --custom` files, which start with a comment line to replace; a plain generate
+  afterwards emits nothing. Separate statements with `--> statement-breakpoint`; pass flags
+  without `--` (pnpm forwards them).
 - Drizzle maintains `updated_at` through `$onUpdate` in the ORM, not the database: a raw SQL
   UPDATE leaves it stale. Write through Drizzle; `id` defaults in Postgres and needs nothing.
 - A seed script may legitimately write `role` in an upsert; the same statement in a request
@@ -69,61 +70,25 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   predicate in the journal, a Drizzle `check()` included. Name it in plpgsql, resolved at run time.
 - A cascaded DELETE reaches the child's BEFORE DELETE trigger after the parent row is gone; a
   child trigger that looks its parent up must permit a missing parent (0010's line guard).
+- `current_setting('app.company_id', true)` is `''`, not NULL, once any earlier transaction in
+  the session set it locally, and `''::uuid` raises 22P02. Read it only via `app_company_id()`.
+- The compose and CI user is a superuser and bypasses RLS whatever FORCE says; so does any Neon
+  role made in the Console, CLI or API (`neon_superuser` has BYPASSRLS). RLS tests
+  `SET LOCAL ROLE trader_app`.
+- `SET LOCAL` takes no bind parameter; `set_config(name, $1, true)` does.
 
 ## Log
 
-### 2026-10-09 → 2026-10-21 — rolled up
+### 2026-10-09 → 2026-10-28 — rolled up
 
 - 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
 - 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
 - 10-13: D Sierra Painting mark adopted; accent `#2808AC`, `brand` red for the mark only.
 - 10-21: Compose Postgres 18, `db:up`/`db:down`, `.env.example`; Stage 0 closed on evidence.
-
-### 2026-10-21 — Compose project renamed to `trader-local`
-
-- **Did:** changed `name:` in `docker-compose.yml` from `trader` to `trader-local` so the
-  development database is isolated from the pre-rebuild Compose project; the named volume
-  configuration is unchanged and the old volume `trader_trader-pgdata` was not touched. `.env`,
-  application code and dependencies untouched. Rewrote the Notes entry that described the old
-  name.
-- **Decided:** nothing.
-- **Next:** unchanged from the entry above.
-
-### 2026-10-27 — Stage 1 closed: Postgres answers under `trader-local`
-
-- **Did:** with `.env` in place (never read by Claude), `pnpm db:up` created
-  `trader-local_pgdata`, healthy, published on 127.0.0.1:5432 only, `pg_isready` from the host
-  accepting connections; a probe row survived `db:down`/`db:up`; public schema empty after. The
-  old volume `trader_trader-pgdata` and `.env.pre-rebuild` were already gone at the start.
-  `.nvmrc` pins Node 24 to match CI's `node-version`. Simulator lines moved to Stage 5, split by
-  machine; "Current stage" bumped to 2 in its own commit after a line-anchored `sed` missed it.
-- **Decided:** simulators belong to the stage that consumes them — Xcode on the Mac, Android
-  Studio on the Linux workstation; Stage 1 closes without them.
-- **Next:** Stage 2 line 1 — Drizzle config, client with the driver seam, `migrate`, `seed`.
-  Stage 0 line 10 (Linux clone resync) stays open until the workstation answers.
-
-### 2026-10-27 — Stage 2 line 1: Drizzle config, client behind the driver seam, `migrate`
-
-- **Did:** merge procedure in RULES; `@trader/db` gains zod, drizzle-orm, pg, @types/pg and
-  drizzle-kit, each with its first importer; `env.ts` validates a passed record and entry points
-  load `.env`; `pg` client; drizzle config, empty journal, `db:generate`/`db:migrate`; CI
-  migrates against a Postgres 18 service; `migrations/` prettier-ignored. Found while verifying:
-  drizzle-kit turns an absent `ssl` into `{}`, so the derived connection says `ssl: false`.
-- **Decided:** branch protection now enforced for admins; merges are merge commits through pull
-  requests. `loadEnvFile` over dotenv; `drizzle-kit migrate` over a tsx script; engines ≥ 24.
-- **Next:** Stage 2 line 2 — core tables.
-
-### 2026-10-28 — Stage 2 line 2: core tables
-
-- **Did:** line 1 carry-overs (push-only Drizzle options dropped; one env parse in `createDb`;
-  `./schema` export subpath; CI runner `ubuntu-24.04`); lines 2 and 7 rescoped; six core tables
-  with composite foreign keys in one generated migration; nine schema tests in rolled-back
-  transactions, each watched red by dropping its guard in the database; ARCHITECTURE condensed by
-  two rows, three added.
-- **Decided:** Postgres `uuidv7()` for office rows; enum types, `job_status` open · complete ·
-  archived; `deactivated_at` over `active`; `identity_subject` globally unique (one login, one
-  company; relaxing it is a decision); the foreman is also a `crew_members` row, API-enforced.
-- **Next:** Stage 2 line 3 — `work_session_events`.
+- 10-21: Compose project renamed `trader-local`; the pre-rebuild volume left untouched.
+- 10-27: Stage 1 closed: `trader-local_pgdata` healthy on loopback; `.nvmrc` Node 24.
+- 10-27: Stage 2 line 1: Drizzle config, `pg` client behind the seam, `migrate`, CI migrates.
+- 10-28: Stage 2 line 2: six core tables, composite foreign keys, `uuidv7()` office ids.
 
 ### 2026-10-28 — Stage 2 line 3: `work_session_events` and its append-only guard
 
@@ -164,3 +129,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Decided:** append-only, API-written in the writing transaction; `before`/`after` jsonb;
   `action = entity_table.verb` under a prefix check, no enum; writers after V1, V1 ships it empty.
 - **Next:** Stage 2 line 7 — RLS and the app role.
+
+### 2026-11-03 — Stage 2 line 7: RLS, `trader_app`, the startup guard
+
+- **Did:** `0013` custom (`trader_app` if absent, per-table grants) and `0014` custom
+  (`app_company_id()`, ENABLE + FORCE + one `<table>_tenant` policy on 16 tenant tables and
+  `companies`); `assertRuntimeRole` in `guard.ts`; 19 tests watched red, 133 in all; four
+  decision rows; rolled up four Log entries. Archive had no RLS code.
+- **Decided:** role `trader_app`, no password in the repository; grants per table, no default
+  privileges; guard checks role and inventory; RLS tests by `SET LOCAL ROLE`; custom SQL.
+- **Next:** Stage 2 line 8 — invariant tests against the container; seed for one company and
+  one admin.
