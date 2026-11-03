@@ -67,29 +67,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Pending migrations run in one transaction (a fresh database replays the whole journal in one),
   so a label added by `ALTER TYPE … ADD VALUE` is unusable (55P04) in any CHECK, DEFAULT or index
   predicate in the journal, a Drizzle `check()` included. Name it in plpgsql, resolved at run time.
+- A cascaded DELETE reaches the child's BEFORE DELETE trigger after the parent row is gone; a
+  child trigger that looks its parent up must permit a missing parent (0010's line guard).
 
 ## Log
 
-### 2026-10-09 → 2026-10-13 — rolled up
+### 2026-10-09 → 2026-10-21 — rolled up
 
 - 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
 - 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
 - 10-13: D Sierra Painting mark adopted; accent `#2808AC`, `brand` red for the mark only.
-
-### 2026-10-21 — Local Postgres through Docker Compose; Stage 0 closed on evidence
-
-- **Did:** `docker-compose.yml` (`postgres:18-alpine`, named volume, `pg_isready` healthcheck,
-  loopback port, credentials interpolated from `.env` with `:?`), `.env.example` with the three
-  Postgres variables, `!.env.example` in `.gitignore`, `db:up` as `up -d --wait` and `db:down`.
-  Verified: healthy in 6 s, `psql` from the host, a row survives down/up, `db:up` fails closed
-  with no credentials. Ticked Stage 0 lines 1–2 on evidence: protection on `main` requires
-  `check`; no Dependabot branches, open PRs or security updates remain. Node 24 is Maintenance
-  LTS per nodejs/Release; nvm's `lts/*` moves to 26 on 2026-10-28 while CI pins 24.
-- **Decided:** nothing.
-- **Next:** Juan Pablo copies `.env.example` to `.env` (a permission rule keeps Claude from
-  writing it) and ticks Stage 1 line 3; the Linux clone stays unverified until the workstation
-  answers; Stage 1 line 4's Android half contradicts the Mac's no-Android rule and needs his call.
-  Then Stage 2 line 1.
+- 10-21: Compose Postgres 18, `db:up`/`db:down`, `.env.example`; Stage 0 closed on evidence.
 
 ### 2026-10-21 — Compose project renamed to `trader-local`
 
@@ -156,3 +144,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Decided:** the plan's eighteen recommendations as given. The PRD's missing clock-skew
   approval trigger was resolved in this PR: five triggers, a decisions row.
 - **Next:** Stage 2 line 5 — materials, photos, invoices and the number sequence. Roll-up due.
+
+### 2026-11-03 — Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter
+
+- **Did:** rolled up three Log entries; root `check` script, RULES/CLAUDE/TASKS point at it;
+  six tables over `0005`–`0009` and the `0010` guards (lifecycle, counter numbering, line freeze
+  under `FOR SHARE`, credit-memo rules); `jobs` customer unique; 48 tests watched red, 105 in
+  all, two of them cross-connection lock tests on a committed fixture; five decision rows.
+- **Decided:** invoice state derived, no enum; numbers from a transactional counter at issue;
+  credit memos append-only with their own series; materials carry the receipt total; photos
+  hold object metadata only, R2 named.
+- **Next:** Stage 2 line 6 — `audit_log`.

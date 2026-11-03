@@ -152,3 +152,8 @@ supersedes, never an edit to an old row.
 | 2026-10-29 | `currency` beside every `_cents` column, no default; `_cents` is `integer` until a sum can exceed it | `char(3) default 'USD'`, bigint (2026-07) |
 | 2026-10-29 | Extensions (`btree_gist`) and exclusion constraints live in `generate --custom` migrations; a rule naming an enum member lives in plpgsql | —                                 |
 | 2026-11-03 | PRD approval triggers are five: offline capture, edit/correction, user-set time, missing/out-of-radius location, clock skew beyond tolerance; every `approval_reason` member maps to exactly one trigger | Four-trigger list (2026-10)       |
+| 2026-11-03 | Invoice state derived from `issued_at`/`voided_at`, no status enum; born draft; `number` assigned at issue by trigger from a transactional per-company counter; issued rows frozen except one void | — |
+| 2026-11-03 | Credit memos append-only, against an issued unvoided invoice, numbered from their own per-company series in the same counter row | — |
+| 2026-11-03 | Materials carry the receipt total in cents, nullable with currency, priced later; photos attach to a job and optionally a material, same job by composite key; the row holds object metadata only | `photo_s3_key` on materials (2026-07) |
+| 2026-11-03 | Cross-row agreement (currency, customer of job, job of material) by composite foreign keys over an added unique, never by trigger; the referenced column is thereby immutable while a child exists | — |
+| 2026-11-03 | Photos live in Cloudflare R2 beside the backups; `object_key` is provider-neutral text the server assigns at push from `company_id` and `id`; no client until Stage 3 | — |
