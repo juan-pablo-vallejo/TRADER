@@ -17,7 +17,7 @@ and stop — never edit the document to match the code.
 
 1. Start from MEMORY.md, then read TASKS.md. Work the named task or the next unchecked one.
 2. Plan first, then wait, for anything touching schema, auth, sync, money or CI.
-3. `pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` before every commit.
+3. `pnpm check` before every commit.
 4. One change per commit; imperative subject ≤ 72 characters; no trailers; do not push.
 5. End by ticking TASKS.md and appending a MEMORY.md entry in its format.
 

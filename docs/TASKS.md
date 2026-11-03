@@ -22,8 +22,8 @@ Done when `main` is the rebuilt branch, CI is green on it, and the protection ru
 
 ## Stage 1 — Development environment (Mac)
 
-Done when `pnpm install && pnpm typecheck && pnpm lint && pnpm format:check && pnpm test` is
-green locally and a Postgres container answers on `localhost:5432`.
+Done when `pnpm install && pnpm check` is green locally and a Postgres container answers on
+`localhost:5432`.
 
 - [x] Node LTS through a version manager; pnpm at the `packageManager` version
 - [x] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
