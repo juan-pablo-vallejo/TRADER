@@ -73,8 +73,24 @@ entries. The approval queue tags each entry with every reason it is there.
 
 - Jobs belong to a customer and are assigned to a crew; a crew has a foreman. A worker's jobs
   are the jobs of the crew they belong to.
-- Location is a foreground stamp at clock-in, clock-out and job switch — never background
-  tracking. A missing or out-of-radius stamp sends the entry to approval; it never blocks it.
+- Location is a foreground stamp at clock-in, clock-out and job switch, plus Smart Clock-In;
+  never tracking, sampling, history or a map. Missing or out-of-radius: approval, never a block.
+
+### Smart Clock-In
+
+- Follows the manual pilot, within V1. An admin makes an employee eligible; it runs once they
+  read an in-app background-location disclosure, activate it and grant the phone's permission,
+  which no admin setting overrides. Manual clock-in always remains.
+- A work window (company default, employee override) is an expected start and end, not a
+  schedule. From 30 minutes before the start to its close, entering an assigned job's radius
+  (the approval rule's, 200 m when first set, so a change affects both; no coordinates, no
+  reminder) raises a local notification, not a push; the employee confirms the normal
+  clock-in. Departure only reminds; after the window, at most a timed open-session reminder.
+- Entries and exits stay on the phone; only the clock-event stamp carries location to the
+  server (device status may, without coordinates). The phone checks its policy before acting on
+  an alert; its authorization expires; geofences go as soon as the OS allows, timing unpromised.
+  Release waits on verified privacy enforcement; V1 waits on release. Attestation is evidence,
+  never an approval reason; no face data; periodic sampling is outside V1, owner-gated.
 
 ### Materials and photos
 
@@ -113,9 +129,9 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
 
 ## Pilot and V1 completion
 
-- Pilot build: sign-in, clock in/out with job attribution, sync, the approval queue, and the
-  payroll export, distributed by TestFlight public link and the Play internal track. The pilot
-  is unpaid.
+- Pilot build: sign-in, manual clock in/out with job attribution, sync, the approval queue,
+  and the payroll export, distributed by TestFlight public link and the Play internal track.
+  The pilot is unpaid.
 - V1 complete — the billing trigger — requires every V1 feature above, production distribution
   on the App Store and Google Play (US storefronts), and a partner-signed acceptance checklist.
 
@@ -123,7 +139,8 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
 
 Privacy policy and terms of service; account deletion as deactivate-and-pseudonymize, because
 labor records are retained by law; Apple App Privacy details and Google Play Data Safety form,
-each declaring location and what Sentry and PostHog collect; Sentry PII scrubbing.
+each declaring location (background too, before Smart Clock-In) and what Sentry and PostHog
+collect; Sentry PII scrubbing; local employment rules on location checked before Smart Clock-In.
 
 ## After V1
 

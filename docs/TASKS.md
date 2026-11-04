@@ -108,7 +108,24 @@ number continues the partner's series without a gap.
 - [ ] Issue (immutable), void, credit memos; gap-free numbering continuing the partner's series
 - [ ] PDF on demand; QuickBooks CSV export
 
-## Stage 9 — V1 complete
+## Stage 9 — Smart Clock-In
+
+Done when, on physical iOS and Android phones, an activated employee is reminded on arrival
+inside the work window and never outside it, the privacy release gate holds, and the office
+sees ordinary clock events (PRD, Smart Clock-In).
+
+- [ ] Policy (schema, migration, invariant tests, API): eligibility, company work window with
+      employee overrides and a maximum override length; admin-only writes; own policy in the
+      pull snapshot
+- [ ] Office: eligibility per employee, work windows and overrides
+- [ ] Feasibility on Expo, iOS and Android — background geofencing, local notifications,
+      permissions, store policy — checked on vendor pages; findings before code
+- [ ] Device: disclosure and activation, in-window geofences, policy check and expiry,
+      reminders, strings through i18n
+- [ ] Release gate: privacy enforcement verified on physical phones; store privacy forms
+      updated; jurisdictional employment requirements identified
+
+## Stage 10 — V1 complete
 
 Done when the partner signs the acceptance checklist and the first invoice to the partner goes
 out.
@@ -122,4 +139,5 @@ out.
 
 Push notifications and web approval by push · SMS · roster self-service · audit log wiring ·
 dark theme · per-company logo (additive `companies` column, upload, shown in crew app and office
-header) · second contractor onboarding · payments · customer portal · PowerSync re-evaluation.
+header) · second contractor onboarding · payments · customer portal · PowerSync re-evaluation ·
+periodic location-sampling experiment (separate owner approval).

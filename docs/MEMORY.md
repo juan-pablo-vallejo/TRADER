@@ -83,7 +83,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 
 ## Log
 
-### 2026-10-09 → 2026-10-28 — rolled up
+### 2026-10-09 → 2026-10-29 — rolled up
 
 - 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
 - 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
@@ -93,26 +93,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 10-27: Stage 1 closed: `trader-local_pgdata` healthy on loopback; `.nvmrc` Node 24.
 - 10-27: Stage 2 line 1: Drizzle config, `pg` client behind the seam, `migrate`, CI migrates.
 - 10-28: Stage 2 line 2: six core tables, composite foreign keys, `uuidv7()` office ids.
-
-### 2026-10-28 — Stage 2 line 3: `work_session_events` and its append-only guard
-
-- **Did:** the table and two enums; `0001` generated, `0002` through `generate --custom` with
-  the trigger function and three statement-level triggers; `test/helpers.ts` shared; twelve
-  tests, each watched red by dropping its guard; D14 (`prettier-ignore`) and D16 (ARCHITECTURE
-  cap 200); three decision rows. Empty-schema migrate twice and the four rejections verified.
-- **Decided:** `clock_skewed` plus `clock_skew_ms` as bigint; no `payload`, no `created_at`;
-  SQLSTATE 23000; `voided` and the correction columns wait for line 4 (D15); cap 200 (D16).
-- **Next:** Stage 2 line 4 — `pay_rates`, `pay_periods`, `approvals`, plus `voided` with
-  `voids_event_id` and the correction columns.
-
-### 2026-10-29 — Stage 2 line 4: pay_rates, pay_periods, approvals; voids and corrections
-
-- **Did:** `voided` and four correction columns; `pay_rates`, `pay_periods`, `approvals`; `0003`
-  generated, `0004` custom (btree_gist, exclusion, 3 triggers); 26 tests watched red, 53 in all;
-  `0000`–`0004` replayed empty in one transaction; TRUNCATE test now `CASCADE` (0A000 otherwise).
-- **Decided:** the plan's eighteen recommendations as given. The PRD's missing clock-skew
-  approval trigger was resolved in this PR: five triggers, a decisions row.
-- **Next:** Stage 2 line 5 — materials, photos, invoices and the number sequence. Roll-up due.
+- 10-28: Stage 2 line 3: `work_session_events`, `0002` append-only guard (SQLSTATE 23000).
+- 10-29: Stage 2 line 4: pay rates, pay periods, approvals, voids and corrections; 53 tests.
 
 ### 2026-11-03 — Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter
 
@@ -165,3 +147,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** Stage 3 line 1 (TASKS:34) — "tRPC with superjson and zod; request context with the
   identity adapter (development identity now, Clerk later) and JIT provisioning,
   select-first".
+
+### 2026-11-04 — Smart Clock-In V1 scope documented
+
+- **Did:** PRD Smart Clock-In section, location bullet narrowed, pilot marked manual, compliance
+  extended (PRD at 150); two decision rows superseding row 136's halves; TASKS Stage 9 inserted,
+  V1 complete renumbered to Stage 10, sampling experiment listed after V1; two Log entries
+  rolled up. The `rv.sh` review channel retired.
+- **Decided:** the owner's scope as written in PRD, Smart Clock-In: post-pilot, admin
+  eligibility plus employee activation, the shared job radius, local notifications only, and a
+  privacy release gate that V1 waits on.
+- **Next:** Stage 3 line 1 (TASKS:34).
