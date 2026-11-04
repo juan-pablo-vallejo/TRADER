@@ -80,10 +80,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `lower(email)` needs a raw `ON CONFLICT`.
 - FORCE with no policy for a role denies it every row: whatever writes as the owner needs
   `rolsuper` or `rolbypassrls` on the role itself (attributes are not inherited).
+- A request clears `app.company_id` and both identity settings first, resolves the user under
+  the identity settings, clears them, then sets `app.company_id` — all on one `tx`. The 0015
+  guard refuses any update while an identity setting is present, except the bind itself.
 
 ## Log
 
-### 2026-10-09 → 2026-10-29 — rolled up
+### 2026-10-09 → 2026-11-03 — rolled up
 
 - 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
 - 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
@@ -95,17 +98,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 10-28: Stage 2 line 2: six core tables, composite foreign keys, `uuidv7()` office ids.
 - 10-28: Stage 2 line 3: `work_session_events`, `0002` append-only guard (SQLSTATE 23000).
 - 10-29: Stage 2 line 4: pay rates, pay periods, approvals, voids and corrections; 53 tests.
-
-### 2026-11-03 — Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter
-
-- **Did:** rolled up four Log entries; root `check` script, RULES/CLAUDE/TASKS point at it;
-  six tables over `0005`–`0009` and the `0010` guards (lifecycle, counter numbering, line freeze
-  under `FOR SHARE`, credit-memo rules); `jobs` customer unique; 48 tests watched red, 105 in
-  all, two of them cross-connection lock tests on a committed fixture; five decision rows.
-- **Decided:** invoice state derived, no enum; numbers from a transactional counter at issue;
-  credit memos append-only with their own series; materials carry the receipt total; photos
-  hold object metadata only, R2 named.
-- **Next:** Stage 2 line 6 — `audit_log`.
+- 11-03: Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter; 105 tests.
 
 ### 2026-11-03 — Stage 2 line 6: audit_log
 
@@ -158,3 +151,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   eligibility plus employee activation, the shared job radius, local notifications only, and a
   privacy release gate that V1 waits on.
 - **Next:** Stage 3 line 1 (TASKS:34).
+
+### 2026-11-04 — Stage 3 line 1a: users identity binding
+
+- **Did:** split line 1 into 1a/1b (line 2 keeps the deactivation proof); `0015` custom
+  (`app_identity_subject()`, `app_identity_email()`, two `users` policies, `users_identity_guard`);
+  31 tests under `trader_app`, each protection watched red; 167 in all; `0000`–`0015` replayed
+  into an empty database, seeded twice 1/1/1; two decision rows; rolled up one Log entry.
+- **Decided:** a trigger, not column grants or SECURITY DEFINER, protects columns on the bind;
+  whole-row comparison; a bound row is unreachable under an identity alone; no unbinding yet.
+- **Next:** Stage 3 line 1b — tRPC, the request context and the development identity.

@@ -31,7 +31,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 Done when both sync procedures pass a failure-injection suite: duplicate push, out-of-order
 arrival, two-day backlog, dropped response, wrong device clock, deactivated user.
 
-- [ ] `users` identity binding: policies on `app.identity_subject` and `app.identity_email`,
+- [x] `users` identity binding: policies on `app.identity_subject` and `app.identity_email`,
       an identity guard trigger (custom migration, tests under `trader_app`)
 - [ ] tRPC with superjson and zod; request context with the identity adapter (development
       identity now, Clerk later), JIT binding select-first; a deactivated account resolves to
