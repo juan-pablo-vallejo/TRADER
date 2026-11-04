@@ -43,6 +43,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
       `closeout.submit`; locked once submitted, later changes are corrections (PRD, Day closeout)
 - [ ] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
 - [ ] Approval queue procedures implementing the approval rule
+- [ ] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
 - [ ] Kill-switch state endpoint; error-reporting wrapper
 
 ## Stage 4 — Office web (`apps/web`)
