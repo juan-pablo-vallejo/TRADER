@@ -12,6 +12,10 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
+    "@trader/db": "workspace:*",
+    "@trpc/server": "^11.23.0",
+    "drizzle-orm": "^0.45.4",
+    "superjson": "^2.2.6",
     "zod": "^4.6.7"
   }
 }
