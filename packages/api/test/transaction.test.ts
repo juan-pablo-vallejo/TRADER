@@ -1,20 +1,18 @@
 // Stage 3 line 1b: the protected procedure's transaction. One per procedure call; settings
 // established inside it whatever the pooled connection carries; the runtime role checked in
 // each; a failed procedure leaves nothing behind; the procedure sees no pool.
-import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { sql } from "drizzle-orm";
-import superjson from "superjson";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { createContext } from "../src/context";
 import {
   appDb,
   caller,
   customerNames,
+  failure,
+  http,
   identity,
   outcome,
   ownerDb,
-  testRouter,
   userRow,
   world,
   type World,
@@ -34,36 +32,6 @@ afterAll(async () => {
   await app.$client.end();
   await owner.$client.end();
 });
-
-// One HTTP request through tRPC's fetch adapter: what the route handler (Stage 4) will do.
-async function http(
-  db: typeof app,
-  who: unknown,
-  calls: { path: string; input?: unknown; mutation?: boolean }[],
-) {
-  const mutation = calls.some((c) => c.mutation);
-  const input = Object.fromEntries(
-    calls.map((c, i) => [i, superjson.serialize(c.input ?? null)]),
-  );
-  const paths = calls.map((c) => c.path).join(",");
-  const url = new URL(`http://test/trpc/${paths}?batch=1`);
-  if (!mutation) url.searchParams.set("input", JSON.stringify(input));
-  const response = await fetchRequestHandler({
-    endpoint: "/trpc",
-    router: testRouter,
-    req: new Request(url, {
-      method: mutation ? "POST" : "GET",
-      ...(mutation
-        ? { body: JSON.stringify(input), headers: { "content-type": "application/json" } }
-        : {}),
-    }),
-    createContext: () => createContext({ db, identity: who }),
-  });
-  return (await response.json()) as {
-    result?: { data: { json: unknown } };
-    error?: { json: { message: string; data: { code: string; stack?: string } } };
-  }[];
-}
 
 const asA = () => identity(w.a.boundSubject, w.a.boundEmail);
 
@@ -182,16 +150,15 @@ describe("rollback", () => {
 
 describe("over HTTP", () => {
   it("gives each call in a batch its own transaction", async () => {
-    const [one, two] = await http(app, asA(), [
-      { path: "probe.inside" },
-      { path: "probe.inside" },
-    ]);
+    const {
+      results: [one, two],
+    } = await http(app, asA(), [{ path: "probe.inside" }, { path: "probe.inside" }]);
     const txid = (r: typeof one) => (r?.result?.data.json as { txid: string }).txid;
     expect(txid(one)).not.toBe(txid(two));
   });
 
   it("commits one call of a batch when the other fails", async () => {
-    const results = await http(app, asA(), [
+    const { results } = await http(app, asA(), [
       { path: "probe.write", input: { name: "Kept", fail: false }, mutation: true },
       { path: "probe.write", input: { name: "Dropped", fail: true }, mutation: true },
     ]);
@@ -209,16 +176,28 @@ describe("over HTTP", () => {
       identity(`sub-new-${w.run}`, "stranger@co.test"),
       identity(`sub-other-${w.run}`, w.a.boundEmail),
     ]) {
-      const [r] = await http(app, who, [{ path: "probe.inside" }]);
-      answers.push([r?.error?.json.data.code, r?.error?.json.message]);
+      const {
+        status,
+        results: [r],
+      } = await http(app, who, [{ path: "probe.inside" }]);
+      answers.push({ status, ...failure(r) });
     }
     expect(new Set(answers.map((a) => JSON.stringify(a)))).toEqual(
-      new Set([JSON.stringify(["UNAUTHORIZED", "Sign-in required."])]),
+      new Set([
+        JSON.stringify({
+          status: 401,
+          code: "UNAUTHORIZED",
+          message: "Sign-in required.",
+          httpStatus: 401,
+        }),
+      ]),
     );
   });
 
   it("sends no database text with an internal error", async () => {
-    const [r] = await http(app, asA(), [{ path: "probe.divideByZero" }]);
+    const {
+      results: [r],
+    } = await http(app, asA(), [{ path: "probe.divideByZero" }]);
     expect(r?.error?.json.data.code).toBe("INTERNAL_SERVER_ERROR");
     expect(r?.error?.json.message).toBe("Internal server error.");
     expect(JSON.stringify(r)).not.toMatch(/division|select 1/i);

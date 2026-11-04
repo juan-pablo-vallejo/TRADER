@@ -7,13 +7,16 @@ import { sql } from "drizzle-orm";
 import superjson from "superjson";
 
 import type { Context } from "./context";
-import { BindConflict, resolveUser } from "./resolve-user";
+import { BindConflict, resolveUser, type AppUser } from "./resolve-user";
 
 // One message for every way of not being a signed-in, active, invited user, so a response
 // never says whether an invitation exists.
 const UNAUTHORIZED_MESSAGE = "Sign-in required.";
 const unauthorized = () =>
   new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHORIZED_MESSAGE });
+
+// One message for every gate, naming no role, so a denial never says what would be admitted.
+const FORBIDDEN_MESSAGE = "Not permitted.";
 
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
@@ -75,3 +78,18 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     throw error;
   }
 });
+
+// A role gate: procedure entry for the listed roles only, judged on the role resolved from the
+// database inside the protected transaction. An allowlist, not a rank, so a role added to the
+// enum later is admitted nowhere until a procedure names it. It checks entry only: a worker's
+// assigned jobs and a foreman's crews are scoped inside each procedure that needs them. A
+// denial is a failed call, so the protected procedure rolls its transaction back.
+export const roleProcedure = (...allowed: [AppUser["role"], ...AppUser["role"][]]) => {
+  const admitted = new Set(allowed);
+  return protectedProcedure.use(({ ctx, next }) => {
+    if (!admitted.has(ctx.user.role)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: FORBIDDEN_MESSAGE });
+    }
+    return next();
+  });
+};
