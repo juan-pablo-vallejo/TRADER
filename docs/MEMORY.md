@@ -108,16 +108,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-03: Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter; 105 tests.
 - 11-03: Stage 2 line 6: `audit_log` append-only by 0002's guard, API-written, empty in V1.
 - 11-03: Stage 2 line 7: `trader_app`, per-table grants, FORCE RLS on 17 tables, startup guard.
-
-### 2026-11-03 — Stage 2 line 8: the owner-only seed; Stage 2 closed
-
-- **Did:** `seed.ts` and `run-seed.ts` behind `pnpm db:seed`, `tsx` declared; 3 tests watched
-  red, 136 in all; empty database migrated, seeded twice, counts 1/1/1; one decision row;
-  Stage 2 closed on "shows only the tenant's rows in every table".
-- **Decided:** fixed company id; counter 1/1 inserted once, the partner's series at Stage 8;
-  the seed refuses a role that cannot bypass RLS; proven by tests, not a CI step.
-- **Next:** the TASKS condense PR, then Stage 3 line 1. Pilot onboarding (its company and
-  counter continuation, owner-run) still needs a TASKS line.
+- 11-03: Stage 2 line 8: owner-only seed (`pnpm db:seed`, `tsx`), 136 tests; Stage 2 closed.
 
 ### 2026-11-03 — TASKS condense: closed stages rolled up, three tasks added
 
