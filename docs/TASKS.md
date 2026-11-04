@@ -2,7 +2,7 @@
 
 The build order and what is done. Stages are dependency-ordered; a stage starts when the one
 before it is done. No dates. A task is ticked when its done-criterion holds, not when the code
-exists. **Current stage: 2.**
+exists. **Current stage: 3.**
 
 ## Stage 0 — Repo rebuild
 
@@ -46,7 +46,8 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 - [x] `audit_log`
 - [x] RLS `ENABLE` and `FORCE` on every tenant table; app role created in SQL with
       `NOBYPASSRLS`; startup guard
-- [ ] Invariant tests against the container; seed for one company and one admin
+- [x] Invariant tests against the container; seed for one company and one admin (`tsx`
+      runs it)
 
 ## Stage 3 — API (`packages/api`)
 

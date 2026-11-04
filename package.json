@@ -18,7 +18,8 @@
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @trader/db generate",
-    "db:migrate": "pnpm --filter @trader/db migrate"
+    "db:migrate": "pnpm --filter @trader/db migrate",
+    "db:seed": "pnpm --filter @trader/db seed"
   },
   "prettier": {
     "semi": true,
