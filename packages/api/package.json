@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
     "typescript": "5.9.3",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
   }
 }

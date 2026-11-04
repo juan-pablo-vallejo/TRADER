@@ -1,0 +1,47 @@
+// The development identity: trusts two request headers as a verified login, which is exactly
+// why it is gated. Off unless TRADER_DEV_IDENTITY=enabled, and then only under an allowlisted
+// NODE_ENV; every deployed build and runtime is NODE_ENV=production, so a deployment cannot
+// accept a named identity. The check runs per request, never at module load, so `next build`
+// never fails (RULES). Pure over the env record it is handed, like db/src/env.ts.
+import { z } from "zod";
+
+import {
+  verifiedIdentitySchema,
+  type IdentityAdapter,
+  type VerifiedIdentity,
+} from "./identity";
+
+export const DEV_SUBJECT_HEADER = "x-trader-dev-subject";
+export const DEV_EMAIL_HEADER = "x-trader-dev-email";
+
+// An allowlist: unset or any other NODE_ENV is not development.
+const DEVELOPMENT_NODE_ENVS = ["development", "test"];
+
+const flagSchema = z.object({
+  TRADER_DEV_IDENTITY: z
+    .enum(["enabled", ""])
+    .optional()
+    .transform((v) => v === "enabled"),
+});
+
+export function createDevIdentityAdapter(
+  env: Record<string, string | undefined> = process.env,
+): IdentityAdapter {
+  return {
+    async identify(headers: Headers): Promise<VerifiedIdentity | null> {
+      if (!flagSchema.parse(env).TRADER_DEV_IDENTITY) return null;
+      // Enabled where it must never be: refuse loudly rather than serve as anyone.
+      if (!DEVELOPMENT_NODE_ENVS.includes(env.NODE_ENV ?? "")) {
+        throw new Error(
+          `refusing the development identity: TRADER_DEV_IDENTITY is enabled under NODE_ENV=${env.NODE_ENV ?? "(unset)"}`,
+        );
+      }
+      const parsed = verifiedIdentitySchema.safeParse({
+        subject: headers.get(DEV_SUBJECT_HEADER),
+        email: headers.get(DEV_EMAIL_HEADER),
+        emailVerified: true,
+      });
+      return parsed.success ? parsed.data : null;
+    },
+  };
+}
