@@ -1,8 +1,8 @@
 // The startup guard (ARCHITECTURE invariant 5): refuses to serve under a role that bypasses
 // row-level security, or a database where a tenant table lacks ENABLE and FORCE. One round
-// trip, run on every call. Called by the API before its first tenant query (Stage 3), never
-// at module load, so `next build` never connects (RULES).
-// The once-per-process promise belongs to the API's request context (Stage 3), not here.
+// trip, run on every call. The API runs it in every protected transaction, before the
+// identity or the tenant is set: a pool's connections are each checked, none is trusted
+// because another passed. Never at module load, so `next build` never connects (RULES).
 // The check is on current_user, so production must log in as trader_app (verified at Stage
 // 6): a SET ROLE could be reset.
 import { sql } from "drizzle-orm";

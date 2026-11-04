@@ -33,7 +33,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 
 - [x] `users` identity binding: policies on `app.identity_subject` and `app.identity_email`,
       an identity guard trigger (custom migration, tests under `trader_app`)
-- [ ] tRPC with superjson and zod; request context with the identity adapter (development
+- [x] tRPC with superjson and zod; request context with the identity adapter (development
       identity now, Clerk later), JIT binding select-first; a deactivated account resolves to
       no user
 - [ ] Role gates; tested against a deactivated account exactly like an anonymous one
