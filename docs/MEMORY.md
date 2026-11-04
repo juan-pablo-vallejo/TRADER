@@ -83,6 +83,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A request clears `app.company_id` and both identity settings first, resolves the user under
   the identity settings, clears them, then sets `app.company_id` — all on one `tx`. The 0015
   guard refuses any update while an identity setting is present, except the bind itself.
+- tRPC v11 `next()` never throws: a failed procedure returns `{ ok: false }`, and a middleware
+  that returns it from inside `db.transaction` commits. Rethrow `result.error`. Its `ctx` is
+  merged (`{ ...ctx, ...next.ctx }`): drop a field by passing it `undefined`.
+- API tests commit fixtures, and the db and api suites run at once: anything global — an
+  `identity_subject`, an email across companies — carries the run's suffix.
+- A test pool takes `trader_app` by the startup parameter `-c role=trader_app`; `RESET ROLE`
+  then restores it, so becoming the owner again is `SET ROLE NONE`.
 
 ## Log
 
@@ -99,26 +106,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 10-28: Stage 2 line 3: `work_session_events`, `0002` append-only guard (SQLSTATE 23000).
 - 10-29: Stage 2 line 4: pay rates, pay periods, approvals, voids and corrections; 53 tests.
 - 11-03: Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter; 105 tests.
-
-### 2026-11-03 — Stage 2 line 6: audit_log
-
-- **Did:** `audit_log` over `0011` generated and `0012` custom (0002's guard on a second
-  table); 9 tests watched red, 114 in all; two decision rows; `crews.ts` and `pay.ts` comments
-  drop their audit_log promise; `committedBilling` suffixes its company name.
-- **Decided:** append-only, API-written in the writing transaction; `before`/`after` jsonb;
-  `action = entity_table.verb` under a prefix check, no enum; writers after V1, V1 ships it empty.
-- **Next:** Stage 2 line 7 — RLS and the app role.
-
-### 2026-11-03 — Stage 2 line 7: RLS, `trader_app`, the startup guard
-
-- **Did:** `0013` custom (`trader_app` if absent, per-table grants) and `0014` custom
-  (`app_company_id()`, ENABLE + FORCE + one `<table>_tenant` policy on 16 tenant tables and
-  `companies`); `assertRuntimeRole` in `guard.ts`; 19 tests watched red, 133 in all; four
-  decision rows; rolled up four Log entries. Archive had no RLS code.
-- **Decided:** role `trader_app`, no password in the repository; grants per table, no default
-  privileges; guard checks role and inventory; RLS tests by `SET LOCAL ROLE`; custom SQL.
-- **Next:** Stage 2 line 8 — invariant tests against the container; seed for one company and
-  one admin.
+- 11-03: Stage 2 line 6: `audit_log` append-only by 0002's guard, API-written, empty in V1.
+- 11-03: Stage 2 line 7: `trader_app`, per-table grants, FORCE RLS on 17 tables, startup guard.
 
 ### 2026-11-03 — Stage 2 line 8: the owner-only seed; Stage 2 closed
 
@@ -161,3 +150,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Decided:** a trigger, not column grants or SECURITY DEFINER, protects columns on the bind;
   whole-row comparison; a bound row is unreachable under an identity alone; no unbinding yet.
 - **Next:** Stage 3 line 1b — tRPC, the request context and the development identity.
+
+### 2026-11-04 — Stage 3 line 1b: tRPC, request context, development identity
+
+- **Did:** `@trpc/server` 11.23.0 (quarantine passed over 11.24.0), superjson, zod; identity
+  adapter and development adapter; `protectedProcedure` with one transaction per call;
+  select-first resolution and bind; `me.get`; 34 api tests, 15 guards watched red; guard.ts
+  comment corrected; four decision rows; plan revised after review (context by value, GUC
+  test inside the transaction, guard per transaction, bind conflicts and deactivation race).
+- **Decided:** per-call transaction, `ok: false` rethrown; one `UNAUTHORIZED`; deactivated
+  resolves to no user and is never bound; the dev identity only under development or test.
+- **Next:** Stage 3 line 2 — role gates, the deactivated-as-anonymous suite.
