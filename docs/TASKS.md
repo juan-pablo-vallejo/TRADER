@@ -6,48 +6,25 @@ exists. **Current stage: 3.**
 
 ## Stage 0 — Repo rebuild
 
-Done when `main` is the rebuilt branch, CI is green on it, and the protection rule requires
-`check`.
+Done when `main` is the rebuilt branch, CI is green on it, and protection requires `check`.
 
-- [x] Tag the old `main` as `archive/pre-rebuild` and push the tag
-- [x] Orphan branch `rebuild`: root manifest, workspace, TypeScript, ESLint, Prettier, gitignore
-- [x] `@trader/db` and `@trader/api` scaffolds
-- [x] Lockfile pruned to the rebuilt workspace; `pnpm install --frozen-lockfile` passes
-- [x] `.github/workflows/ci.yml` with the single job `check`, document caps included
-- [x] `README.md`, `CLAUDE.md`, `LICENSE` and the six documents
-- [x] Brand assets in `assets/brand/`; DESIGN.md palette adopts the logo colours
-- [x] Swap `rebuild` → `main`; protection rule on `main` requiring `check`
-- [x] Delete the Dependabot branches; turn off Dependabot security updates in settings
+- [x] `archive/pre-rebuild` tagged; rebuilt workspace, frozen lockfile, CI job `check` with caps,
+      six documents, brand assets; swapped to `main` under protection; Dependabot off
 - [ ] Resync every other clone to the new `main`
 
 ## Stage 1 — Development environment (Mac)
 
-Done when `pnpm install && pnpm check` is green locally and a Postgres container answers on
-`localhost:5432`.
+Done when `pnpm install && pnpm check` is green and Postgres answers on `localhost:5432`.
 
-- [x] Node LTS through a version manager; pnpm at the `packageManager` version
-- [x] Docker runtime; `docker-compose.yml` with Postgres; `pnpm db:up` and `pnpm db:down`
-- [x] `.env.example` restored as the environment contract; `.env` local and gitignored
+- [x] Node and pnpm pinned; Compose Postgres, `db:up`/`db:down`; `.env.example` as the contract
 
 ## Stage 2 — Data foundation (`packages/db`)
 
 Done when migrations apply to an empty database, every invariant test fails when its guard is
 removed and passes when restored, and RLS blocks a cross-tenant read under the app role.
 
-- [x] Drizzle config; client with the driver seam (`pg` locally, Neon deployed); environment
-      contract validated with zod; `migrate`
-- [x] Core tables: `companies`, `users`, `crews`, `crew_members`, `customers`, `jobs`, with
-      `company_id NOT NULL`, unique `(company_id, id)` and composite foreign keys
-- [x] `work_session_events`: append-only trigger (UPDATE, DELETE, TRUNCATE), `schema_version`,
-      attestation level, location stamp, skew flag
-- [x] `pay_rates` (effective-dated), `pay_periods`, `approvals`
-- [x] `materials`, `photos`, `invoices`, `invoice_line_items`, `credit_memos`, per-company
-      invoice number sequence
-- [x] `audit_log`
-- [x] RLS `ENABLE` and `FORCE` on every tenant table; app role created in SQL with
-      `NOBYPASSRLS`; startup guard
-- [x] Invariant tests against the container; seed for one company and one admin (`tsx`
-      runs it)
+- [x] Driver seam, zod env, `migrate`; core, labor, pay, billing and audit tables; append-only
+      guards; RLS ENABLE + FORCE under `trader_app`, startup guard; owner-only seed (`tsx`)
 
 ## Stage 3 — API (`packages/api`)
 
