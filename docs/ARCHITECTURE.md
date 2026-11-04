@@ -106,7 +106,7 @@ package name `app.jpteq.trader`.
 │   └── web/                   # Next.js office app + tRPC handler   (planned)
 ├── packages/
 │   ├── api/                   # @trader/api — routers, context, sync (scaffold)
-│   └── db/                    # @trader/db — schema, migrations, tests (scaffold)
+│   └── db/                    # @trader/db — schema, migrations, tests
 ├── docs/                      # PRD · ARCHITECTURE · RULES · DESIGN · TASKS · MEMORY
 ├── CLAUDE.md                  # Claude Code session contract (auto-loaded)
 ├── LICENSE
