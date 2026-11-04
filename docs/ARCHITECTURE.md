@@ -105,7 +105,7 @@ package name `app.jpteq.trader`.
 │   ├── mobile/                # Expo field app                      (planned)
 │   └── web/                   # Next.js office app + tRPC handler   (planned)
 ├── packages/
-│   ├── api/                   # @trader/api — routers, context, sync (scaffold)
+│   ├── api/                   # @trader/api — routers, context, sync
 │   └── db/                    # @trader/db — schema, migrations, tests
 ├── docs/                      # PRD · ARCHITECTURE · RULES · DESIGN · TASKS · MEMORY
 ├── CLAUDE.md                  # Claude Code session contract (auto-loaded)
@@ -168,3 +168,7 @@ supersedes, never an edit to an old row.
 | 2026-11-04 | Smart Clock-In after the manual pilot: arrival raises a local notification, the employee confirms a normal clock event; departure only reminds; no automatic event, no new approval reason, no push; no location subsystem | Geofenced clock-in dropped (2026-10) |
 | 2026-11-04 | Identity binding: `users_identity_select` and `users_identity_bind` policies for `trader_app`, keyed on server-set `app.identity_subject`/`app.identity_email` read through `app_identity_subject()`/`app_identity_email()`; first sign-in binds the invited row, nothing is inserted; anything but exactly one invitation fails closed; no SECURITY DEFINER | JIT provisioning into the oldest company (2026-07) |
 | 2026-11-04 | `users_identity_guard`, every role, 23000: `identity_subject` changes only NULL → the verified subject with the tenant unset and every other column but `updated_at` unchanged (whole-row compare); under an identity setting the bind is the only update; unbinding is a future decision | — |
+| 2026-11-04 | One transaction per protected procedure call, not per HTTP request: settings cleared, `assertRuntimeRole` on every transaction (no cache), identity set, user resolved or bound, identity cleared, tenant set, procedure run; a `{ ok: false }` result is rethrown so nothing commits, a first-sign-in bind included; the procedure's context has `tx` and `user`, the pool removed by value | — |
+| 2026-11-04 | Identity adapter: `identify(headers)` returns `{ subject, email, emailVerified: true }` or null, zod-parsed again at context creation; the development adapter reads two headers, off unless `TRADER_DEV_IDENTITY=enabled`, and refuses the request under any `NODE_ENV` but `development` or `test` | Archive `DEV_AUTH_ENABLED` (2026-07) |
+| 2026-11-04 | Every resolution failure — no identity, no or ambiguous invitation, deactivated, lost bind race, the bind's `users_identity_subject_unique` conflict — is one `UNAUTHORIZED` with one message; any other error is `INTERNAL_SERVER_ERROR` with a generic message and no stack | — |
+| 2026-11-04 | A deactivated account resolves to no user; a deactivated invitation is never bound (`deactivated_at IS NULL` in the bind and on its returned row); deactivated invitations still count toward "exactly one" | — |
