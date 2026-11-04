@@ -79,9 +79,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Drizzle's `onConflict` target takes columns only; an expression unique index such as
   `lower(email)` needs a raw `ON CONFLICT`.
 - FORCE with no policy for a role denies it every row: whatever writes as the owner needs
-  `rolsuper` or `rolbypassrls` on the role itself (attributes are not inherited). At Stage 6,
-  verify the Neon owner carries `rolbypassrls`; if not, the seed, the migrator-as-owner and
-  onboarding all need a decision.
+  `rolsuper` or `rolbypassrls` on the role itself (attributes are not inherited).
 
 ## Log
 
@@ -156,3 +154,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the seed refuses a role that cannot bypass RLS; proven by tests, not a CI step.
 - **Next:** the TASKS condense PR, then Stage 3 line 1. Pilot onboarding (its company and
   counter continuation, owner-run) still needs a TASKS line.
+
+### 2026-11-03 — TASKS condense: closed stages rolled up, three tasks added
+
+- **Did:** Stages 0–2 rolled to one ticked line each, TASKS 142 → 125; the Neon owner check
+  moved from Notes to a Stage 6 task; day closeout record (Stage 3) and pilot onboarding
+  (Stage 7) added; `packages/db` loses "(scaffold)" in ARCHITECTURE.
+- **Decided:** a closed stage keeps its heading, done-criterion and one ticked line; the detail
+  lives in the Log. No decision rows.
+- **Next:** Stage 3 line 1 (TASKS:34) — "tRPC with superjson and zod; request context with the
+  identity adapter (development identity now, Clerk later) and JIT provisioning,
+  select-first".
