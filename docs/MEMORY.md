@@ -161,3 +161,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Decided:** per-call transaction, `ok: false` rethrown; one `UNAUTHORIZED`; deactivated
   resolves to no user and is never bound; the dev identity only under development or test.
 - **Next:** Stage 3 line 2 — role gates, the deactivated-as-anonymous suite.
+
+### 2026-11-04 — Stage 3 line 2: role gates
+
+- **Did:** RULES fail-closed line clarified (404 switched-off route, 401/403 API); `roleProcedure`
+  allowlist on the protected procedure; 15 role tests, 49 api and 216 in all; allowlist,
+  deactivated rejection and rollback each watched red; `http()` moved to helpers with statuses;
+  four decision rows.
+- **Decided:** no role hierarchy; `FORBIDDEN` "Not permitted." after resolution; gates are entry
+  checks only, resource scope lives in each business procedure.
+- **Next:** Stage 3 line 3 (TASKS:40) — session fold with two-sided transition validation.
