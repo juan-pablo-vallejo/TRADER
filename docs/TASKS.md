@@ -94,6 +94,8 @@ Done when the pilot success criteria, written with the partner, are met.
 - [ ] Pilot success criteria written with the partner
 - [ ] Privacy policy and terms (RISEUP legal clinic); account deletion flow; both store privacy
       forms
+- [ ] Pilot onboarding: owner-run insert of the pilot's company and its counter at 1/1,
+      before any crew signs in
 - [ ] TestFlight public link and Play internal track; crew onboarding in English and Spanish
 - [ ] Weekly feedback loop; defects become tasks here
 
