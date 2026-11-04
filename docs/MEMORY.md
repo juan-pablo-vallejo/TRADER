@@ -90,10 +90,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `identity_subject`, an email across companies — carries the run's suffix.
 - A test pool takes `trader_app` by the startup parameter `-c role=trader_app`; `RESET ROLE`
   then restores it, so becoming the owner again is `SET ROLE NONE`.
+- Every labor writer runs READ COMMITTED: `loadWorkerTimeline` (lock, read, `receivedAt`),
+  `validateEvent`, insert, in one `tx`; it writes `receivedAt` as `server_timestamp`, so the
+  schema's "now() is transaction time" comment is stale for pushes. Lock workers in id order.
+- Duplicates are push's: `INSERT … ON CONFLICT (id) DO NOTHING RETURNING id`, then re-select;
+  equal client columns (not stamp or skew) is `duplicate`, anything else `id_conflict`.
+- A job switch in one batch with equal device times falls to `id` order: the phone must emit
+  `ended` before `started` with a monotonic UUIDv7, or the start is rejected.
 
 ## Log
 
-### 2026-10-09 → 2026-11-03 — rolled up
+### 2026-10-09 → 2026-11-04 — rolled up
 
 - 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
 - 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
@@ -109,28 +116,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-03: Stage 2 line 6: `audit_log` append-only by 0002's guard, API-written, empty in V1.
 - 11-03: Stage 2 line 7: `trader_app`, per-table grants, FORCE RLS on 17 tables, startup guard.
 - 11-03: Stage 2 line 8: owner-only seed (`pnpm db:seed`, `tsx`), 136 tests; Stage 2 closed.
-
-### 2026-11-03 — TASKS condense: closed stages rolled up, three tasks added
-
-- **Did:** Stages 0–2 rolled to one ticked line each, TASKS 142 → 125; the Neon owner check
-  moved from Notes to a Stage 6 task; day closeout record (Stage 3) and pilot onboarding
-  (Stage 7) added; `packages/db` loses "(scaffold)" in ARCHITECTURE.
-- **Decided:** a closed stage keeps its heading, done-criterion and one ticked line; the detail
-  lives in the Log. No decision rows.
-- **Next:** Stage 3 line 1 (TASKS:34) — "tRPC with superjson and zod; request context with the
-  identity adapter (development identity now, Clerk later) and JIT provisioning,
-  select-first".
-
-### 2026-11-04 — Smart Clock-In V1 scope documented
-
-- **Did:** PRD Smart Clock-In section, location bullet narrowed, pilot marked manual, compliance
-  extended (PRD at 150); two decision rows superseding row 136's halves; TASKS Stage 9 inserted,
-  V1 complete renumbered to Stage 10, sampling experiment listed after V1; two Log entries
-  rolled up. The `rv.sh` review channel retired.
-- **Decided:** the owner's scope as written in PRD, Smart Clock-In: post-pilot, admin
-  eligibility plus employee activation, the shared job radius, local notifications only, and a
-  privacy release gate that V1 waits on.
-- **Next:** Stage 3 line 1 (TASKS:34).
+- 11-03: TASKS condensed: closed stages to one ticked line; closeout and onboarding tasks.
+- 11-04: Smart Clock-In scoped in PRD (post-pilot, local reminders); Stage 9; `rv.sh` retired.
 
 ### 2026-11-04 — Stage 3 line 1a: users identity binding
 
@@ -162,3 +149,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Decided:** no role hierarchy; `FORBIDDEN` "Not permitted." after resolution; gates are entry
   checks only, resource scope lives in each business procedure.
 - **Next:** Stage 3 line 3 (TASKS:40) — session fold with two-sided transition validation.
+
+### 2026-11-04 — Stage 3 line 3: session fold and two-sided validation
+
+- **Did:** `packages/api/src/labor/`: fold (replay with provenance and winners), `validateEvent`,
+  `workDate`/`deriveSessions`, `loadWorkerTimeline`; 77 labor tests (7 on Postgres), 126 api
+  and 293 in all; 18 protections watched red; plan revised twice after review; repairs task.
+- **Decided:** nine decision rows — effective instant, start-date `work_date`, accounting-only
+  voids, correction rules with a winner check, job provenance, full replay under a per-worker
+  lock, explicit receipt stamp, two-source rejection, office-only atomic repair sets.
+- **Next:** Stage 3 line 4 (TASKS:42) — day closeout record and `closeout.submit`.

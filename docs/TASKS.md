@@ -37,7 +37,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
       identity now, Clerk later), JIT binding select-first; a deactivated account resolves to
       no user
 - [x] Role gates; tested against a deactivated account exactly like an anonymous one
-- [ ] Session fold with two-sided transition validation; derivations: `work_date`, duration,
+- [x] Session fold with two-sided transition validation; derivations: `work_date`, duration,
       open sessions
 - [ ] Day closeout record per job and work date (schema, migration, invariant tests) and
       `closeout.submit`; locked once submitted, later changes are corrections (PRD, Day closeout)
