@@ -108,16 +108,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-03: Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter; 105 tests.
 - 11-03: Stage 2 line 6: `audit_log` append-only by 0002's guard, API-written, empty in V1.
 - 11-03: Stage 2 line 7: `trader_app`, per-table grants, FORCE RLS on 17 tables, startup guard.
-
-### 2026-11-03 — Stage 2 line 8: the owner-only seed; Stage 2 closed
-
-- **Did:** `seed.ts` and `run-seed.ts` behind `pnpm db:seed`, `tsx` declared; 3 tests watched
-  red, 136 in all; empty database migrated, seeded twice, counts 1/1/1; one decision row;
-  Stage 2 closed on "shows only the tenant's rows in every table".
-- **Decided:** fixed company id; counter 1/1 inserted once, the partner's series at Stage 8;
-  the seed refuses a role that cannot bypass RLS; proven by tests, not a CI step.
-- **Next:** the TASKS condense PR, then Stage 3 line 1. Pilot onboarding (its company and
-  counter continuation, owner-run) still needs a TASKS line.
+- 11-03: Stage 2 line 8: owner-only seed (`pnpm db:seed`, `tsx`), 136 tests; Stage 2 closed.
 
 ### 2026-11-03 — TASKS condense: closed stages rolled up, three tasks added
 
@@ -161,3 +152,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Decided:** per-call transaction, `ok: false` rethrown; one `UNAUTHORIZED`; deactivated
   resolves to no user and is never bound; the dev identity only under development or test.
 - **Next:** Stage 3 line 2 — role gates, the deactivated-as-anonymous suite.
+
+### 2026-11-04 — Stage 3 line 2: role gates
+
+- **Did:** RULES fail-closed line clarified (404 switched-off route, 401/403 API); `roleProcedure`
+  allowlist on the protected procedure; 15 role tests, 49 api and 216 in all; allowlist,
+  deactivated rejection and rollback each watched red; `http()` moved to helpers with statuses;
+  four decision rows.
+- **Decided:** no role hierarchy; `FORBIDDEN` "Not permitted." after resolution; gates are entry
+  checks only, resource scope lives in each business procedure.
+- **Next:** Stage 3 line 3 (TASKS:40) — session fold with two-sided transition validation.

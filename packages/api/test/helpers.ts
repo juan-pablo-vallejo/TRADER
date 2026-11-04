@@ -4,12 +4,20 @@
 // a work_session_event, so the deletes are always allowed.
 import { createDb, type Db } from "@trader/db";
 import { companies, customers, users } from "@trader/db/schema";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { eq, inArray, sql } from "drizzle-orm";
+import superjson from "superjson";
 import { z } from "zod";
 
-import { createContext } from "../src/context";
+import { createContext, type Tx } from "../src/context";
 import type { VerifiedIdentity } from "../src/identity";
-import { createCallerFactory, protectedProcedure, router } from "../src/trpc";
+import type { AppUser } from "../src/resolve-user";
+import {
+  createCallerFactory,
+  protectedProcedure,
+  roleProcedure,
+  router,
+} from "../src/trpc";
 
 // The owner: writes fixtures and reads them back past RLS.
 export const ownerDb = () => createDb();
@@ -83,6 +91,30 @@ export async function world(owner: Db) {
     await owner.delete(companies).where(inArray(companies.id, ids));
   };
   return { run, a, b, cleanup };
+}
+
+// A bound user of the given role in one of the world's companies, committed by the owner and
+// removed by the world's cleanup with the rest of its company.
+export async function member(
+  owner: Db,
+  w: World,
+  company: "a" | "b",
+  role: AppUser["role"],
+  opts: { deactivated?: boolean } = {},
+) {
+  const tag = `${role}-${opts.deactivated ? "off" : "on"}-${company}-${w.run}`;
+  const [row] = await owner
+    .insert(users)
+    .values({
+      companyId: w[company].companyId,
+      email: `${tag}@co.test`,
+      name: `Member ${tag}`,
+      role,
+      identitySubject: `sub-${tag}`,
+      deactivatedAt: opts.deactivated ? new Date() : null,
+    })
+    .returning({ id: users.id });
+  return { id: row!.id, who: identity(`sub-${tag}`, `${tag}@co.test`) };
 }
 
 // Every column, as the owner sees it, for before/after comparisons.
@@ -161,10 +193,104 @@ const probe = router({
   }),
 });
 
-export const testRouter = router({ probe });
+// Test-only role gates, built from the real roleProcedure: one per admitted set the matrix
+// covers. Each reports what the call ran as.
+async function report({ ctx }: { ctx: { tx: Tx; user: AppUser } }) {
+  const { tx, user } = ctx;
+  const { rows } = await tx.execute<{ company: string | null }>(
+    sql`select app_company_id()::text as company`,
+  );
+  const visible = await tx.select({ id: customers.id }).from(customers);
+  return {
+    role: user.role,
+    company: rows[0]!.company,
+    customers: visible.map((c) => c.id),
+  };
+}
+
+const gate = router({
+  protected: protectedProcedure.query(report),
+  field: roleProcedure("worker", "foreman").query(report),
+  foreman: roleProcedure("foreman").query(report),
+  admin: roleProcedure("admin").query(report),
+  office: roleProcedure("foreman", "admin").query(report),
+  // Accepts any input, so a caller can send role and company claims at an admin gate.
+  adminLoose: roleProcedure("admin").input(z.looseObject({})).query(report),
+  adminWrite: roleProcedure("admin")
+    .input(z.object({ name: z.string(), fail: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.tx
+        .insert(customers)
+        .values({ companyId: ctx.user.companyId, name: input.name });
+      if (input.fail) throw new Error("procedure failed after its write");
+      return "written";
+    }),
+});
+
+export const GATES = ["protected", "field", "foreman", "admin", "office"] as const;
+
+export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(createContext({ db, identity: who }));
+
+export type HttpCall = { path: string; input?: unknown; mutation?: boolean };
+
+// One HTTP request through tRPC's fetch adapter: what the route handler (Stage 4) will do. One
+// call is sent unbatched, so `status` is that call's own; several are one batch, whose status
+// says nothing about any single result. `identify` turns the request's headers into the
+// identity, as an adapter does; by default every request carries `who`.
+export async function http(
+  db: Db,
+  who: unknown,
+  calls: HttpCall[],
+  opts: {
+    headers?: Record<string, string>;
+    identify?: (h: Headers) => Promise<unknown>;
+  } = {},
+) {
+  const batched = calls.length > 1;
+  const mutation = calls.some((c) => c.mutation);
+  const serialized = batched
+    ? Object.fromEntries(calls.map((c, i) => [i, superjson.serialize(c.input ?? null)]))
+    : superjson.serialize(calls[0]!.input ?? null);
+  const paths = calls.map((c) => c.path).join(",");
+  const url = new URL(`http://test/trpc/${paths}${batched ? "?batch=1" : ""}`);
+  if (!mutation) url.searchParams.set("input", JSON.stringify(serialized));
+  const response = await fetchRequestHandler({
+    endpoint: "/trpc",
+    router: testRouter,
+    req: new Request(url, {
+      method: mutation ? "POST" : "GET",
+      headers: {
+        ...opts.headers,
+        ...(mutation ? { "content-type": "application/json" } : {}),
+      },
+      ...(mutation ? { body: JSON.stringify(serialized) } : {}),
+    }),
+    createContext: async ({ req }) =>
+      createContext({
+        db,
+        identity: opts.identify ? await opts.identify(req.headers) : who,
+      }),
+  });
+  const body = (await response.json()) as HttpResult | HttpResult[];
+  return { status: response.status, results: Array.isArray(body) ? body : [body] };
+}
+
+export type HttpResult = {
+  result?: { data: { json: unknown } };
+  error?: {
+    json: { message: string; data: { code: string; httpStatus: number; stack?: string } };
+  };
+};
+
+// A failed result's public face: what a client can see of it.
+export const failure = (r: HttpResult | undefined) => ({
+  code: r?.error?.json.data.code,
+  message: r?.error?.json.message,
+  httpStatus: r?.error?.json.data.httpStatus,
+});
 
 // The procedure's error code, or "OK".
 export async function outcome(call: Promise<unknown>): Promise<string> {

@@ -11,4 +11,10 @@ export {
 } from "./identity";
 export type { AppUser } from "./resolve-user";
 export { appRouter, type AppRouter } from "./router";
-export { createCallerFactory, protectedProcedure, publicProcedure, router } from "./trpc";
+export {
+  createCallerFactory,
+  protectedProcedure,
+  publicProcedure,
+  roleProcedure,
+  router,
+} from "./trpc";

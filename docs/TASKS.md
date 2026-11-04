@@ -36,7 +36,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [x] tRPC with superjson and zod; request context with the identity adapter (development
       identity now, Clerk later), JIT binding select-first; a deactivated account resolves to
       no user
-- [ ] Role gates; tested against a deactivated account exactly like an anonymous one
+- [x] Role gates; tested against a deactivated account exactly like an anonymous one
 - [ ] Session fold with two-sided transition validation; derivations: `work_date`, duration,
       open sessions
 - [ ] Day closeout record per job and work date (schema, migration, invariant tests) and
