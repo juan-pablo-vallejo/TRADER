@@ -36,6 +36,8 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [ ] Role gates; a deactivated account is rejected exactly like an anonymous one
 - [ ] Session fold with two-sided transition validation; derivations: `work_date`, duration,
       open sessions
+- [ ] Day closeout record per job and work date (schema, migration, invariant tests) and
+      `closeout.submit`; locked once submitted, later changes are corrections (PRD, Day closeout)
 - [ ] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
 - [ ] Approval queue procedures implementing the approval rule
 - [ ] Kill-switch state endpoint; error-reporting wrapper
