@@ -55,8 +55,9 @@ is wrong.
   one.
 - Migrations are additive and reviewed as plans. Every tenant-scoped query runs with
   `app.company_id` set.
-- Auth guards fail closed at request time (deny and 404), never by throwing at module load —
-  that breaks `next build`.
+- Auth guards fail closed at request time, never by throwing at module load — that breaks
+  `next build`. A switched-off route answers 404; an API call answers 401 without an active
+  user and 403 when its role is not admitted.
 - Three seams stay thin so a vendor can be swapped without a rewrite: the identity adapter, the
   database driver behind an environment variable, the error-reporting wrapper.
 - Every crew-facing string goes through the i18n layer with English and Spanish entries; a
