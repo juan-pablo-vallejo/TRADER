@@ -79,9 +79,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Drizzle's `onConflict` target takes columns only; an expression unique index such as
   `lower(email)` needs a raw `ON CONFLICT`.
 - FORCE with no policy for a role denies it every row: whatever writes as the owner needs
-  `rolsuper` or `rolbypassrls` on the role itself (attributes are not inherited). At Stage 6,
-  verify the Neon owner carries `rolbypassrls`; if not, the seed, the migrator-as-owner and
-  onboarding all need a decision.
+  `rolsuper` or `rolbypassrls` on the role itself (attributes are not inherited).
 
 ## Log
 

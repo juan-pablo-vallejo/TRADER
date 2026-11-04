@@ -78,6 +78,8 @@ passed, and Sentry shows no PII.
 - [ ] Clerk production instance: passkeys on `jpteq.app`, email-code fallback, invitation-only,
       30-day sessions
 - [ ] Neon Launch project; app role created in SQL; migrations re-baselined before the first run
+- [ ] Neon owner role checked for `rolbypassrls` on the role itself; if absent, a decision
+      covering the seed, the migrator-as-owner and onboarding
 - [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs
 - [ ] Associated Domains and `assetlinks.json` served from the apex
 - [ ] Sentry with PII scrubbing; PostHog; EAS project
