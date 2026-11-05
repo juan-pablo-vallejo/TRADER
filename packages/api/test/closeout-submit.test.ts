@@ -471,6 +471,38 @@ describe("closeout.submit — retries and conflicts", () => {
     });
   });
 
+  it("answers an id another tenant holds as id_conflict, revealing nothing and writing nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const theirs = await crewDayIn(tx);
+      await becomeApp(tx);
+      const held = input(theirs);
+      expect((await submit(tx, theirs.who, held)).result).toBe("accepted");
+      await tx.execute(sql`reset role`);
+      const d = await crewDayIn(tx);
+      await becomeApp(tx);
+      const values = input(d, { id: held.id });
+      // The shape of a visible conflict exactly: no conflictingId, nothing of theirs.
+      expect(await submit(tx, d.who, values)).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+      expect(await submit(tx, d.who, values)).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+      const written = await asOwner(tx, d, async () => ({
+        closeouts: await tx
+          .select()
+          .from(dayCloseouts)
+          .where(eq(dayCloseouts.companyId, d.companyId)),
+        status: (await tx.select().from(jobs).where(eq(jobs.id, d.J)))[0]!.status,
+      }));
+      expect(written).toEqual({ closeouts: [], status: "open" });
+      // The day stays open to a new confirmation under a new id.
+      expect((await submit(tx, d.who, input(d))).result).toBe("accepted");
+    });
+  });
+
   it("still acknowledges the original submitter's retry after a reassignment or a demotion", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);

@@ -567,6 +567,27 @@ describe("material.correct — retries", () => {
       expect((await correct(tx, admin.who, values)).result).toBe("duplicate");
     });
   });
+
+  it("answers an id another tenant holds as id_conflict, revealing nothing and writing nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const theirs = await coveredDay(tx);
+      const held = input(theirs.m);
+      expect((await correct(tx, theirs.d.who, held)).result).toBe("accepted");
+      await tx.execute(sql`reset role`);
+      const { d, m, admin } = await coveredDay(tx);
+      const values = input(m, { id: held.id });
+      // The foreman and an admin alike, every time: the shape of a visible conflict exactly.
+      for (const who of [d.who, admin.who, d.who]) {
+        expect(await correct(tx, who, values)).toEqual({
+          result: "rejected",
+          code: "id_conflict",
+        });
+      }
+      expect(await counts(tx, d)).toEqual({ corrections: 0, approvals: 0 });
+      // The material stays open to a correction under a new id.
+      expect((await correct(tx, d.who, input(m))).result).toBe("accepted");
+    });
+  });
 });
 
 describe("material.correct — the closeout stays as submitted", () => {

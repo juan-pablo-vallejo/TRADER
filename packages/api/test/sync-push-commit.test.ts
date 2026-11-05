@@ -6,6 +6,7 @@
 import {
   approvals,
   crewMembers,
+  dayCloseouts,
   jobs,
   materials,
   users,
@@ -24,7 +25,9 @@ import {
   boundIn,
   crewDayIn,
   disposableDb,
+  rejection,
   rolledBack,
+  sqlstateOf,
   uuidv7,
   waitForLockWait,
   type CrewDay,
@@ -477,5 +480,173 @@ describe("sync.push — transaction boundaries", () => {
     const answer = await running;
     expect(answer.results.map((r) => r.id)).toEqual([first.id]);
     expect(await eventIds([second.id])).toEqual([]);
+  });
+});
+
+describe("sync.push — a closeout id another tenant holds", () => {
+  const DAY = "2026-10-05";
+
+  // A's closeout of J on DAY under `id`, reviewed now, as the field app sends it.
+  async function closeoutRecord(d: World, id = uuidv7()) {
+    const review = await caller(d.who).closeout.review({ jobId: d.J, workDate: DAY });
+    return {
+      id,
+      kind: "closeout" as const,
+      schemaVersion: 1,
+      payload: {
+        jobId: d.J,
+        workDate: DAY,
+        jobStatus: "open",
+        note: null,
+        clientTimestamp: new Date("2026-10-05T21:00:00Z"),
+        reviewFingerprint: review.fingerprint,
+      },
+    };
+  }
+
+  // An empty closeout row of d's J on DAY, as the owner writes it.
+  const closeoutRow = (d: World, id: string) => ({
+    id,
+    companyId: d.companyId,
+    jobId: d.J,
+    workDate: DAY,
+    timezone: "America/New_York",
+    jobStatus: "open" as const,
+    jobStatusApplied: false,
+    submittedByUserId: d.foremanId,
+    clientTimestamp: new Date(),
+    serverTimestamp: new Date(),
+    workerMarkCount: 0,
+    materialCount: 0,
+  });
+
+  // `row` inserted on another connection and held uncommitted until the test ends it, committed
+  // or rolled back: another writer of that key, in flight.
+  async function holdCloseout(row: ReturnType<typeof closeoutRow>) {
+    const ROLLBACK = Symbol("rollback");
+    let finish!: (commit: boolean) => void;
+    const decided = new Promise<boolean>((r) => (finish = r));
+    let ready!: () => void;
+    const held = new Promise<void>((r) => (ready = r));
+    const done = D.owner
+      .transaction(async (tx) => {
+        await tx.insert(dayCloseouts).values(row);
+        ready();
+        if (!(await decided)) throw ROLLBACK;
+      })
+      .catch((error: unknown) => {
+        if (error !== ROLLBACK) throw error;
+      });
+    await Promise.race([held, done]);
+    return { end: async (commit: boolean) => (finish(commit), await done) };
+  }
+
+  const closeoutsOf = async (d: World) =>
+    (
+      await D.owner
+        .select({ id: dayCloseouts.id })
+        .from(dayCloseouts)
+        .where(eq(dayCloseouts.companyId, d.companyId))
+    ).map((r) => r.id);
+
+  const waitOnInsert = () =>
+    waitForLockWait(D.owner, 'insert into "day_closeouts"%', {
+      waitEvent: "transactionid",
+    });
+
+  it("answers it id_conflict on every resend after a dropped response, and goes on", async () => {
+    const theirs = await world();
+    const held = await closeoutRecord(theirs);
+    const accepted = await push(theirs.who, [held]);
+    expect(accepted.results).toMatchObject([{ result: "accepted" }]);
+
+    const d = await world();
+    const batch = [
+      await closeoutRecord(d, held.id),
+      labor(d.w.id, d.J, { clientTimestamp: new Date("2026-10-06T12:00:00Z") }),
+    ];
+    const first = await push(d.who, batch); // the response the device never saw
+    expect(first.results).toEqual([
+      { id: held.id, kind: "closeout", result: "rejected", code: "id_conflict" },
+      expect.objectContaining({ id: batch[1]!.id, result: "accepted" }),
+    ]);
+    const again = await push(d.who, batch);
+    expect(again.results).toEqual([
+      first.results[0],
+      { ...first.results[1], result: "duplicate" },
+    ]);
+    expect(await closeoutsOf(d)).toEqual([]);
+    // Their own resend is still their acknowledgement.
+    expect((await push(theirs.who, [held])).results).toEqual([
+      { ...accepted.results[0], result: "duplicate" },
+    ]);
+  });
+
+  it("waits on their uncommitted insert: id_conflict once it commits", async () => {
+    const theirs = await world();
+    const d = await world();
+    const r = await closeoutRecord(d);
+    const holder = await holdCloseout(closeoutRow(theirs, r.id));
+    const running = push(d.who, [r]);
+    await waitOnInsert();
+    await holder.end(true);
+    expect((await running).results).toEqual([
+      { id: r.id, kind: "closeout", result: "rejected", code: "id_conflict" },
+    ]);
+    expect(await closeoutsOf(d)).toEqual([]);
+  });
+
+  it("waits on their uncommitted insert: accepted once it rolls back", async () => {
+    const theirs = await world();
+    const d = await world();
+    const r = await closeoutRecord(d);
+    const holder = await holdCloseout(closeoutRow(theirs, r.id));
+    const running = push(d.who, [r]);
+    await waitOnInsert();
+    await holder.end(false);
+    expect((await running).results).toMatchObject([{ id: r.id, result: "accepted" }]);
+    expect(await closeoutsOf(d)).toEqual([r.id]);
+  });
+
+  it("leaves it out when the wait passes the lock timeout, writing nothing; the resend lands", async () => {
+    const theirs = await world();
+    const d = await world();
+    const before = labor(d.w.id, d.J, {
+      clientTimestamp: new Date("2026-10-06T12:00:00Z"),
+    });
+    const r = await closeoutRecord(d);
+    const holder = await holdCloseout(closeoutRow(theirs, r.id));
+    // Held past the 2 s lock_timeout: a transient failure, retried, never a rejection.
+    const answer = await push(d.who, [before, r]);
+    expect(answer.results.map((x) => [x.id, x.result])).toEqual([
+      [before.id, "accepted"],
+    ]);
+    expect(await closeoutsOf(d)).toEqual([]);
+    await holder.end(false);
+    expect((await push(d.who, [before, r])).results.map((x) => x.result)).toEqual([
+      "duplicate",
+      "accepted",
+    ]);
+  }, 15_000);
+
+  it("throws a natural-key conflict met at the insert; the retry is already_submitted", async () => {
+    const d = await world();
+    const r = await closeoutRecord(d);
+    // A writer that skipped the job's lock: its row for the same job and day, under another id,
+    // commits after this submission's own already_submitted check.
+    const rival = uuidv7();
+    const holder = await holdCloseout(closeoutRow(d, rival));
+    const submit = () =>
+      caller(d.who).closeout.submit({ id: r.id, ...r.payload } as never);
+    const running = rejection(submit());
+    await waitOnInsert();
+    await holder.end(true);
+    expect(sqlstateOf(await running)).toBe("23505");
+    expect(await submit()).toEqual({
+      result: "rejected",
+      code: "already_submitted",
+      conflictingId: rival,
+    });
+    expect(await closeoutsOf(d)).toEqual([rival]);
   });
 });

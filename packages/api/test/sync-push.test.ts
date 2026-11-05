@@ -7,6 +7,7 @@ import {
   dayCloseoutMaterials,
   dayCloseouts,
   dayCloseoutWorkers,
+  materialCorrections,
   materials,
   users,
   workSessionEvents,
@@ -304,6 +305,98 @@ describe("sync.push — the day as the field sends it", () => {
       };
       const answer = await push(tx, d.w.who, [closeout, labor(d.w.id, d.J)]);
       expect(summary(answer.results)).toEqual(["rejected:not_permitted", "accepted"]);
+    });
+  });
+
+  it("answers a delegate's id another tenant holds id_conflict, as a visible one, and goes on", async () => {
+    await rolledBack(owner, async (tx) => {
+      // Their closeout and their late receipt's correction, through their own pushes.
+      const t = await world(tx);
+      const closeoutOf = async (d: typeof t, workDate: string, id = uuidv7()) => ({
+        id,
+        kind: "closeout",
+        schemaVersion: 1,
+        payload: {
+          jobId: d.J,
+          workDate,
+          jobStatus: "open",
+          note: null,
+          clientTimestamp: new Date(),
+          reviewFingerprint: (
+            await appCallerIn(tx, d.who).closeout.review({ jobId: d.J, workDate })
+          ).fingerprint,
+        },
+      });
+      const correctionOf = (materialId: string, id = uuidv7()) => ({
+        id,
+        kind: "material_correction",
+        schemaVersion: 1,
+        payload: {
+          materialId,
+          correction: { kind: "void" },
+          note: null,
+          clientTimestamp: new Date(),
+        },
+      });
+      // A closed day and a receipt that arrived after it: correctable.
+      const lateReceipt = async (d: typeof t) => {
+        const closed = await push(tx, d.who, [await closeoutOf(d, "2026-10-05")]);
+        expect(summary(closed.results)).toEqual(["accepted"]);
+        const late = receipt(d.J);
+        expect(summary((await push(tx, d.w.who, [late])).results)).toEqual(["accepted"]);
+        return late.id;
+      };
+      const theirCloseout = await closeoutOf(t, "2026-10-04");
+      const theirCorrection = correctionOf(await lateReceipt(t));
+      expect(
+        summary((await push(tx, t.who, [theirCloseout, theirCorrection])).results),
+      ).toEqual(["accepted", "accepted"]);
+      await tx.execute(sql`reset role`);
+
+      const d = await world(tx);
+      const mine = await lateReceipt(d);
+      const batch = [
+        await closeoutOf(d, "2026-10-04", theirCloseout.id),
+        correctionOf(mine, theirCorrection.id),
+        labor(d.foremanId, d.J),
+      ];
+      const answer = await push(tx, d.who, batch);
+      expect(answer.results).toEqual([
+        {
+          id: theirCloseout.id,
+          kind: "closeout",
+          result: "rejected",
+          code: "id_conflict",
+        },
+        {
+          id: theirCorrection.id,
+          kind: "material_correction",
+          result: "rejected",
+          code: "id_conflict",
+        },
+        expect.objectContaining({ id: batch[2]!.id, result: "accepted" }),
+      ]);
+      // The same batch again, as after a dropped response: the same answers, nothing written.
+      expect(summary((await push(tx, d.who, batch)).results)).toEqual([
+        "rejected:id_conflict",
+        "rejected:id_conflict",
+        "duplicate",
+      ]);
+      const written = await asOwner(tx, d.companyId, async () => ({
+        closeouts: (
+          await tx
+            .select()
+            .from(dayCloseouts)
+            .where(eq(dayCloseouts.companyId, d.companyId))
+        ).length,
+        corrections: (
+          await tx
+            .select()
+            .from(materialCorrections)
+            .where(eq(materialCorrections.companyId, d.companyId))
+        ).length,
+      }));
+      expect(written).toEqual({ closeouts: 1, corrections: 0 });
     });
   });
 

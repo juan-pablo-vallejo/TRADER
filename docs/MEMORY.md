@@ -132,10 +132,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `0021` adds NOT NULL columns with no default to `work_session_events` and `materials`: it runs
   only where both are empty — every environment as of 2026-11-05. Count both before migrating any
   other database; rows need an authorized backfill migration, never a delete.
+- `onConflictDoNothing()` with no target swallows every unique violation, not only the id's:
+  where the table has a natural key, name the id as the target.
 
 ## Log
 
-### 2026-10-09 → 2026-11-04 — rolled up
+### 2026-10-09 → 2026-11-05 — rolled up
 
 - 10-09: tagged `archive/pre-rebuild`; orphan `rebuild` scaffolds; public repo, no trailers.
 - 10-13: six documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs; Stripe, Resend, Inngest out.
@@ -160,33 +162,19 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-04: Stage 3 line 4: `0016`–`0018` closeout, seal, freeze, field-write lock; 353 tests.
 - 11-04: Stage 3 line 5: `closeout.review`, fingerprint `v1.`, `review_stale`; 377 tests.
 - 11-04: Stage 3 line 6: `0019`/`0020` material corrections, `material.correct`; 432 tests.
+- 11-05: Stage 3 line 7: `0021`–`0024` approval facts, `sync.push`/`sync.pull`; 525 tests.
+- 11-05: Stage 3 line 7 review fixes: timeouts before resolution, receipt stamp; 528 tests.
+  `3c97d4f` was committed on a red run; its flake fixed in `a807875`.
 
-### 2026-11-05 — Stage 3 line 7: approval facts, `sync.push` and `sync.pull`
+### 2026-11-05 — Stage 3: delegated `id_conflict` for an id another tenant holds
 
-- **Did:** O5 and nine sync decisions settled by Juan Pablo (six ARCHITECTURE rows; PRD's sixth
-  trigger; DESIGN tags; ARCHITECTURE cap 210). `0021`–`0024`: `after_closeout`, `captured_offline`,
-  receipt skew, `approvals.material_id`, NULL-reason ban, deferred approval checks, late-receipt
-  corrections and freeze. `sync.push`: a caller transaction per record, stop on throw; `sync.pull`.
-  525 tests (224 db, 301 api), a real-commit suite in a disposable database; 81 mutations run:
-  80 red, 1 layered (receipt FK behind its visibility trigger); `statement_timeout` layered behind
-  `lock_timeout`, not run alone. The ledger TRUNCATE test's deadlock fixed by NOWAIT locks;
-  `3c97d4f` was committed on that red run (a script read grep's status). Three leftover dev-DB
-  fixture companies deleted with Juan Pablo's approval.
-- **Decided:** in the rows; open for the approval queue: how a pending event counts in its
-  session, the admin-only decider; `submit.ts:256` and `correct.ts:293` still throw on an id held
-  by an invisible row (push answers `id_conflict`).
-- **Next:** Stage 3 — approval queue procedures implementing the approval rule.
-
-### 2026-11-05 — Stage 3 line 7: review fixes
-
-- **Did:** a push in which nothing ran resolves its caller first (an invalid-only or
-  unknown-version-first batch answered a deactivated account); sync timeouts set before identity
-  resolution; a receipt's `created_at` read after its locks. 528 tests (224 db, 304 api); 5
-  mutations run, all red, one after its test was reordered. `0021`'s precondition checked: local
-  0 events, 0 receipts; CI fresh; no deployed database. History kept: `3c97d4f` committed on a
-  red run, its flake fixed in `a807875`; the earlier entry's "push answers `id_conflict`" was
-  push's own records only: a delegated closeout or correction whose id an invisible row holds
-  still throws, stopping the batch on every retry (TASKS line after `sync.push`).
-- **Decided:** two rows: timeouts and resolution when nothing ran; crew membership writers take
-  the crew row first (Stage 4 roster task, with the race test).
-- **Next:** the delegated `id_conflict` line, then the approval queue.
+- **Did:** `closeout.submit` and `material.correct` answer an id an invisible row holds
+  `id_conflict`, shaped as a visible one, instead of throwing (a push batch stopped on it for
+  good); the closeout insert names `id` as its conflict target, so a natural-key conflict at the
+  insert is thrown and retried into `already_submitted`. 536 tests (224 db, 312 api); 6
+  mutations run: 5 red, 1 equivalent (skipping the re-read after a conflict: a visible row there
+  is another job's or material's, answered `id_conflict` either way, the scope lock and re-check
+  catching the caller's own first).
+- **Decided:** nothing; ARCHITECTURE rows 194, 200 and 205 already give the answer.
+- **Next:** Stage 3 — approval queue procedures implementing the approval rule; still open for
+  it: how a pending event counts in its session, and the admin-only decider.

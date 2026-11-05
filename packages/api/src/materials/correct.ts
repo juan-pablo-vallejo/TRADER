@@ -285,8 +285,9 @@ export async function correctMaterial(
   `);
   const now = new Date(Number(stamp[0]!.now_ms));
 
-  // 10. No conflict target: the primary key ends here. Nothing comes back only if a concurrent
-  // call inserted this id for another material (another material's lock).
+  // 10. No conflict target: the primary key is this table's only unique key the id does not
+  // imply. Nothing comes back when a concurrent call committed this id for another material
+  // (seen, then), or another tenant holds it (invisible).
   const [inserted] = await tx
     .insert(materialCorrections)
     .values({
@@ -304,7 +305,9 @@ export async function correctMaterial(
   if (inserted === undefined) {
     const raced = await byId(tx, input.id);
     if (raced !== undefined) return answerFor(raced, user, input);
-    throw new Error("correction insert conflicted with no row under its id");
+    // Another tenant's row, append-only, so permanent: answered as a visible conflict is, and
+    // saying nothing more (ARCHITECTURE, push authority).
+    return rejected("id_conflict");
   }
 
   // 11. Its approval, pending, in the same transaction (migration 0020 requires it).

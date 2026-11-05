@@ -229,8 +229,10 @@ export async function submitCloseout(
     .limit(1);
   const jobStatusApplied = scope.jobStatus !== "archived" && later === undefined;
 
-  // 14. No conflict target: the primary key and the natural key both end here. Nothing comes
-  // back only if a concurrent call inserted this id for another job (another job's lock).
+  // 14. The id is the conflict target: a natural-key conflict here (a writer that skipped the
+  // job's lock) is thrown and retried, and the retry answers already_submitted at step 9, never
+  // id_conflict. Nothing comes back when a concurrent call committed this id for another job
+  // (seen, then), or another tenant holds it (invisible).
   const [inserted] = await tx
     .insert(dayCloseouts)
     .values({
@@ -248,12 +250,14 @@ export async function submitCloseout(
       workerMarkCount: day.workers.length,
       materialCount: materialIds.length,
     })
-    .onConflictDoNothing()
+    .onConflictDoNothing({ target: dayCloseouts.id })
     .returning();
   if (inserted === undefined) {
     const raced = await byId(tx, input.id);
     if (raced !== undefined) return answerFor(raced, user, input);
-    throw new Error("closeout insert conflicted with no row under its id");
+    // Another tenant's row, append-only, so permanent: answered as a visible conflict is, and
+    // saying nothing more (ARCHITECTURE, push authority).
+    return rejected("id_conflict");
   }
 
   // 15. The membership, then the status, through the ORM so updated_at moves.
