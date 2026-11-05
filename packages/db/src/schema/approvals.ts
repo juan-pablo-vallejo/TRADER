@@ -24,9 +24,9 @@ import { workSessionEvents } from "./work-session-events";
 // row, so the id defaults.
 //
 // "Pending" is decision IS NULL — derived, so the decision enum has no pending member
-// (invariant 7). The admin decides (the role gate, and "nobody approves their own entries"
-// against the event's initiator_user_id, are API rules); migration 0004 freezes the row once
-// decided, so a wrong decision is undone by a correcting event, never by editing. A late
+// (invariant 7). An active admin decides (approval.decide; the role is the API's); migration
+// 0004 freezes the row once decided, so a wrong decision is undone by a correcting event,
+// never by editing. A late
 // correction after a period closes is a new event with its own row and the reason
 // `corrected`; the closed period's rows are untouched.
 //
@@ -34,7 +34,8 @@ import { workSessionEvents } from "./work-session-events";
 // is always `corrected` and is written pending by material.correct in the correction's own
 // transaction, or an original receipt, written pending by the push that records it. Migration
 // 0020 fixes every row's subject and reasons (only the decision moves) and refuses a material
-// correction's decision by its own submitter; 0022 does the same for a receipt's logger.
+// correction's decision by its own submitter; 0022 does the same for a receipt's logger, and
+// 0025 for an event's worker (never its initiator). All three subjects are written pending.
 export const approvals = pgTable(
   "approvals",
   {

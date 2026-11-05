@@ -57,17 +57,23 @@ describe("approvals", () => {
     });
   });
 
+  // From pending, as the office decides: 0025 refuses an event's approval born decided before
+  // any CHECK would see it.
   it("rejects a decision without decided_at", async () => {
     await rolledBack(db, async (tx) => {
-      const { companyId, eventId, workerId } = await queued(tx);
+      const { companyId, eventId } = await queued(tx);
+      const office = await otherUser(tx, companyId);
+      const row = one(
+        await tx
+          .insert(approvals)
+          .values({ companyId, eventId, reasons: ["user_timed"] })
+          .returning({ id: approvals.id }),
+      );
       const code = await sqlstate(
-        tx.insert(approvals).values({
-          companyId,
-          eventId,
-          reasons: ["user_timed"],
-          decision: "approved",
-          decidedByUserId: workerId,
-        }),
+        tx
+          .update(approvals)
+          .set({ decision: "approved", decidedByUserId: office })
+          .where(eq(approvals.id, row.id)),
       );
       expect(code).toBe("23514");
     });
@@ -75,7 +81,8 @@ describe("approvals", () => {
 
   it("refuses UPDATE of a decided row and the row survives", async () => {
     await rolledBack(db, async (tx) => {
-      const { companyId, eventId, workerId } = await queued(tx);
+      const { companyId, eventId } = await queued(tx);
+      const office = await otherUser(tx, companyId);
       const row = one(
         await tx
           .insert(approvals)
@@ -85,7 +92,7 @@ describe("approvals", () => {
       // The one legal update: pending → decided.
       await tx
         .update(approvals)
-        .set({ decision: "rejected", decidedAt: new Date(), decidedByUserId: workerId })
+        .set({ decision: "rejected", decidedAt: new Date(), decidedByUserId: office })
         .where(eq(approvals.id, row.id));
       const error = await pgError(
         tx.transaction((sp) =>
@@ -103,16 +110,19 @@ describe("approvals", () => {
     });
   });
 
+  // The guard's lookup (0025) does not find the event in the row's company, and refuses
+  // before the composite foreign key (23503) would.
   it("rejects an event of another company", async () => {
     await rolledBack(db, async (tx) => {
       const a = await queued(tx);
       const b = await queued(tx);
-      const code = await sqlstate(
-        tx
-          .insert(approvals)
-          .values({ companyId: a.companyId, eventId: b.eventId, reasons: ["offline"] }),
-      );
-      expect(code).toBe("23503");
+      expect(
+        await refusal(
+          tx
+            .insert(approvals)
+            .values({ companyId: a.companyId, eventId: b.eventId, reasons: ["offline"] }),
+        ),
+      ).toBe("23000 approvals_event_visible");
     });
   });
 });
@@ -386,6 +396,135 @@ describe("approvals — receipts and approval facts", () => {
         .insert(approvals)
         .values({ companyId: refs.companyId, materialId, reasons: ["offline"] });
       await fire(tx, "materials_approved");
+    });
+  });
+});
+
+// Stage 3 line 8 (0025): a labor event's approval is written pending and never decided by the
+// worker whose labor it is; the initiator is not excluded.
+describe("approvals — labor events (0025)", () => {
+  it("writes an event's approval pending (23000)", async () => {
+    await rolledBack(db, async (tx) => {
+      const { companyId, eventId } = await queued(tx);
+      const office = await otherUser(tx, companyId);
+      const decided = {
+        companyId,
+        eventId,
+        reasons: ["offline" as const],
+        decision: "approved" as const,
+        decidedAt: new Date(),
+        decidedByUserId: office,
+      };
+      expect(
+        await refusal(tx.transaction((sp) => sp.insert(approvals).values(decided))),
+      ).toBe("23000 approvals_event_born_pending");
+    });
+  });
+
+  it("refuses the worker's decision and admits the initiator's and a third user's", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const foreman = one(
+        await tx
+          .insert(users)
+          .values({
+            companyId: refs.companyId,
+            email: "f@co.test",
+            name: "Foreman",
+            role: "foreman",
+          })
+          .returning({ id: users.id }),
+      ).id;
+      const office = await otherUser(tx, refs.companyId);
+      // Recorded by the foreman for the worker.
+      const pending = async () => {
+        const event = { ...started(refs), initiatorUserId: foreman };
+        await tx.insert(workSessionEvents).values(event);
+        return one(
+          await tx
+            .insert(approvals)
+            .values({
+              companyId: refs.companyId,
+              eventId: event.id,
+              reasons: ["offline"],
+            })
+            .returning({ id: approvals.id }),
+        ).id;
+      };
+      const decide = (id: string, by: string) =>
+        tx.transaction((sp) =>
+          sp
+            .update(approvals)
+            .set({ decision: "approved", decidedAt: new Date(), decidedByUserId: by })
+            .where(eq(approvals.id, id)),
+        );
+      const first = await pending();
+      expect(await refusal(decide(first, refs.workerId))).toBe(
+        "23000 approvals_event_not_self_decided",
+      );
+      await decide(first, foreman);
+      // Session legality is the API's fold, not the table's, so a second start is fine here.
+      const second = await pending();
+      await decide(second, office);
+      const rows = await tx
+        .select({ decidedBy: approvals.decidedByUserId })
+        .from(approvals)
+        .orderBy(approvals.createdAt, approvals.id);
+      expect(rows.map((r) => r.decidedBy).sort()).toEqual([foreman, office].sort());
+    });
+  });
+
+  it("still refuses a deactivated worker's own decision and admits another's", async () => {
+    await rolledBack(db, async (tx) => {
+      const { companyId, eventId, workerId } = await queued(tx);
+      const office = await otherUser(tx, companyId);
+      await tx
+        .update(users)
+        .set({ deactivatedAt: new Date() })
+        .where(eq(users.id, workerId));
+      const row = one(
+        await tx
+          .insert(approvals)
+          .values({ companyId, eventId, reasons: ["offline"] })
+          .returning({ id: approvals.id }),
+      );
+      const decide = (by: string) =>
+        tx.transaction((sp) =>
+          sp
+            .update(approvals)
+            .set({ decision: "rejected", decidedAt: new Date(), decidedByUserId: by })
+            .where(eq(approvals.id, row.id)),
+        );
+      expect(await refusal(decide(workerId))).toBe(
+        "23000 approvals_event_not_self_decided",
+      );
+      await decide(office);
+    });
+  });
+
+  it("holds under trader_app with the tenant set", async () => {
+    await rolledBack(db, async (tx) => {
+      const { companyId, eventId, workerId } = await queued(tx);
+      const office = await otherUser(tx, companyId);
+      const row = one(
+        await tx
+          .insert(approvals)
+          .values({ companyId, eventId, reasons: ["offline"] })
+          .returning({ id: approvals.id }),
+      );
+      await asApp(tx, companyId);
+      const decide = (by: string) =>
+        tx.transaction((sp) =>
+          sp
+            .update(approvals)
+            .set({ decision: "approved", decidedAt: new Date(), decidedByUserId: by })
+            .where(eq(approvals.id, row.id)),
+        );
+      expect(await refusal(decide(workerId))).toBe(
+        "23000 approvals_event_not_self_decided",
+      );
+      await decide(office);
+      expect(one(await tx.select().from(approvals)).decidedByUserId).toBe(office);
     });
   });
 });

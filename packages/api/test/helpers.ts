@@ -7,11 +7,13 @@ import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
 import {
+  approvals,
   companies,
   crewMembers,
   crews,
   customers,
   jobs,
+  materialCorrections,
   materials,
   users,
   workSessionEvents,
@@ -25,6 +27,7 @@ import { z } from "zod";
 import { createContext, type Tx } from "../src/context";
 import type { VerifiedIdentity } from "../src/identity";
 import type { AppUser } from "../src/resolve-user";
+import type { ApprovalReason } from "../src/sync/reasons";
 import { appRouter } from "../src/router";
 import {
   createCallerFactory,
@@ -394,6 +397,8 @@ type EventInput = {
   skewed?: boolean;
   corrects?: string;
   voids?: string;
+  // Who recorded it; defaults to the worker.
+  initiator?: string;
 };
 
 // One ledger row, written as the owner (the API's writers are later lines).
@@ -414,20 +419,26 @@ export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<stri
     schemaVersion: 1,
     timeSetByUser: false,
     capturedOffline: false,
-    initiatorUserId: e.worker,
+    initiatorUserId: e.initiator ?? e.worker,
     voidsEventId: e.voids ?? null,
     correctsEventId: e.corrects ?? null,
   });
   return id;
 }
 
-export async function materialIn(tx: Tx, day: CrewDay, job: string, loggedAt: string) {
+export async function materialIn(
+  tx: Tx,
+  day: CrewDay,
+  job: string,
+  loggedAt: string,
+  by = day.w1,
+) {
   const id = uuidv7();
   await tx.insert(materials).values({
     id,
     companyId: day.companyId,
     jobId: job,
-    loggedByUserId: day.w1,
+    loggedByUserId: by,
     description: "Eggshell, white",
     quantity: "2.000",
     unit: "gal",
@@ -664,4 +675,65 @@ export async function disposableDb() {
     await admin.$client.end();
   };
   return { name, owner, app, drop };
+}
+
+// --- Approvals ---------------------------------------------------------------------------
+
+type Subject =
+  { eventId: string } | { materialId: string } | { materialCorrectionId: string };
+
+// A pending approval of one subject, written by the owner as its writer would.
+export async function pendingApproval(
+  tx: Tx,
+  companyId: string,
+  subject: Subject,
+  reasons: ApprovalReason[] = ["offline"],
+): Promise<string> {
+  const [row] = await tx
+    .insert(approvals)
+    .values({ companyId, ...subject, reasons })
+    .returning({ id: approvals.id });
+  return row!.id;
+}
+
+// A correction of a late receipt (its after_closeout approval makes it correctable, 0024) with
+// its pending approval. Returns both ids.
+export async function correctionIn(
+  tx: Tx,
+  day: CrewDay,
+  materialId: string,
+  by: string,
+  kind: "amend" | "void" = "amend",
+  serverTimestamp = new Date(),
+) {
+  const id = uuidv7(serverTimestamp.getTime());
+  await tx.insert(materialCorrections).values({
+    id,
+    companyId: day.companyId,
+    materialId,
+    kind,
+    description: kind === "amend" ? "Primer, grey" : null,
+    quantity: kind === "amend" ? "3.000" : null,
+    unit: kind === "amend" ? "gal" : null,
+    note: null,
+    submittedByUserId: by,
+    clientTimestamp: serverTimestamp,
+    serverTimestamp,
+  });
+  const approvalId = await pendingApproval(
+    tx,
+    day.companyId,
+    { materialCorrectionId: id },
+    ["corrected"],
+  );
+  return { correctionId: id, approvalId };
+}
+
+// A late receipt: logged, with its pending after_closeout approval.
+export async function lateReceiptIn(tx: Tx, day: CrewDay, by = day.w1) {
+  const materialId = await materialIn(tx, day, day.J, "2026-10-05T14:00:00Z", by);
+  const approvalId = await pendingApproval(tx, day.companyId, { materialId }, [
+    "after_closeout",
+  ]);
+  return { materialId, approvalId };
 }
