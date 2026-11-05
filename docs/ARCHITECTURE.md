@@ -113,8 +113,7 @@ package name `app.jpteq.trader`.
 └── README.md
 ```
 
-Inside a package: `src/` for code, `test/` for tests, a `README.md` only when it owns a runbook
-nothing else owns. `packages/db/src/schema/` holds one file per table group.
+Inside a package: `src/` code, `test/` tests, a `README.md` only for a runbook nothing else owns.
 
 ## Decisions
 
