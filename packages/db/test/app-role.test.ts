@@ -33,6 +33,7 @@ const GRANTS: Record<string, Privilege[]> = {
   day_closeouts: ["SELECT", "INSERT"],
   day_closeout_workers: ["SELECT", "INSERT"],
   day_closeout_materials: ["SELECT", "INSERT"],
+  material_corrections: ["SELECT", "INSERT"],
 };
 
 let db: Db;

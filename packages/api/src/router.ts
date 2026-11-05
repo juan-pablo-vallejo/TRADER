@@ -1,9 +1,11 @@
 import { closeoutRouter } from "./routers/closeout";
+import { materialRouter } from "./routers/material";
 import { meRouter } from "./routers/me";
 import { router } from "./trpc";
 
 export const appRouter = router({
   closeout: closeoutRouter,
+  material: materialRouter,
   me: meRouter,
 });
 

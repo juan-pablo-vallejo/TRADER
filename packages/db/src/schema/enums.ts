@@ -1,7 +1,7 @@
 // Postgres enum types. A value is only ever added (`ALTER TYPE … ADD VALUE`, which drizzle-kit
 // emits); removing or renaming one needs a type rebuild, a destructive diff invariant 8
 // forbids. Choose members as permanent. Consumed by users.ts, jobs.ts,
-// work-session-events.ts, approvals.ts and day-closeouts.ts.
+// work-session-events.ts, approvals.ts, day-closeouts.ts and material-corrections.ts.
 import { pgEnum } from "drizzle-orm/pg-core";
 
 // PRD, Target users. A new user starts as a worker; roles are a deliberate roster action.
@@ -53,3 +53,11 @@ export const approvalReason = pgEnum("approval_reason", [
 // The office's answer. No `pending`: that is a NULL decision, derived (invariant 7). A
 // rejected event never counts; the office issues a correcting event instead.
 export const approvalDecision = pgEnum("approval_decision", ["approved", "rejected"]);
+
+// A correction of a closed-out material (PRD, Day closeout): `amend` replaces its description,
+// quantity and unit together; `void` takes the receipt out of effect for good. Created with the
+// type, so CHECKs may name both members.
+export const materialCorrectionKind = pgEnum("material_correction_kind", [
+  "amend",
+  "void",
+]);

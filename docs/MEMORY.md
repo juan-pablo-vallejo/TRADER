@@ -111,7 +111,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The first sign-in bind updates `identity_subject` (a unique column), so it holds the caller's
   users row `FOR UPDATE`, which blocks foreign-key `KEY SHARE`: a future writer inserting rows
   that name that user while holding the field-write lock shared can deadlock with that caller's
-  first closeout. Postgres aborts one; the call is retried.
+  first closeout. Postgres aborts one; the call is retried. A first-sign-in `material.correct`
+  waiting on the field-write lock behind such a closeout is the same case.
+- `SET CONSTRAINTS x IMMEDIATE` lasts to the transaction's end: a second insert in the same
+  transaction then fires the check before its partner row exists. Defer it again after firing.
+- TRUNCATE … CASCADE locks its tables in turn and deadlocks (40P01 at ~1 s) with a suite that
+  holds one and wants another; a TRUNCATE test takes its whole cascade set first with
+  `lockExclusive` (NOWAIT, retried). day_closeouts' cascade reaches approvals.
 
 ## Log
 
@@ -137,26 +143,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-04: Stage 3 line 1b: tRPC, per-call transaction, identity adapters, `me.get`; 34 api tests.
 - 11-04: Stage 3 line 2: `roleProcedure` allowlist, 401/403 answers; 216 tests.
 - 11-04: Stage 3 line 3: fold, `validateEvent`, `deriveSessions`, worker lock; 293 tests.
+- 11-04: Stage 3 line 4: `0016`–`0018` closeout, seal, freeze, field-write lock; 353 tests.
+- 11-04: Stage 3 line 5: `closeout.review`, fingerprint `v1.`, `review_stale`; 377 tests.
 
-### 2026-11-04 — Stage 3 line 4: day closeout record and `closeout.submit`
+### 2026-11-04 — Stage 3 line 6: material corrections and `material.correct`
 
-- **Did:** `0016`–`0018`: `day_closeouts` with sealed worker marks and material membership,
-  append-only, RLS, grants; the closed-out material freeze; the company field-write lock in
-  `loadWorkerTimeline`; the rolled-back caller; `gatherJobDay`; `closeout.submit`. 353 tests
-  (190 db, 163 api); 28 protections watched red, 2 found layered (freeze DELETE branch, the
-  step-2 role check), 2 untestable here (the seal's visibility clause, the in-call seal).
-- **Decided:** nine decision rows. Owner defaults taken: foreman-only with the own-id answer
-  first, record shape C, material freeze, two new Stage 3 lines. Open: O5 (an ordinary event
-  on a closed day: a new approval reason, after-day closeout, or counted normally) blocks line 5.
-- **Next:** O5 from Juan Pablo, then Stage 3 line 5 (TASKS:46) — `sync.push` and `sync.pull`.
-
-### 2026-11-04 — Stage 3 line 5: crew day-review read and review fingerprint
-
-- **Did:** `closeout.review` (foreman gate, scope rows `FOR SHARE`, no field-write lock);
-  `closeout/fingerprint.ts` (`v1.` SHA-256, job status bound); `closeout/scope.ts` shared with
-  submit; submit requires `reviewFingerprint` and answers `review_stale` after `sessions_open`.
-  No migration. 377 tests (190 db, 187 api); 17 protections watched red, `voided` layered.
-- **Decided:** two decision rows; R1–R6 defaults (no stored fingerprint, sessions-only workers,
-  no cost, no approvals, new id after stale, existing closeout flagged). O5 still open, before
-  TASKS:46. The previous entry's Next skipped TASKS:44–45.
-- **Next:** Stage 3 line 6 (TASKS:45) — material corrections.
+- **Did:** `0019`/`0020`: `material_corrections` on sealed members, approvals with one subject,
+  NULL-safe `corrected`, pending at birth, no self-decision, fixed subject; `material.correct`.
+  432 tests (212 db, 220 api); 36 guards removed and run: 32 red, 3 layered (NULL ban covers
+  COALESCE; role check, `kind` compare), stamp floor untestable. The closeout TRUNCATE test's
+  deadlock, already on main (6 of 25 runs), fixed by NOWAIT locks (0 of 30).
+- **Decided:** two decision rows (ARCHITECTURE at 200; condensing above the table would renumber
+  "row N" references). Open for TASKS:46/47: approval of original receipts at push; event rows
+  still accept a NULL reason; the admin-only decider.
+- **Next:** O5 from Juan Pablo, then Stage 3 line 7 (TASKS:46) — `sync.push` and `sync.pull`.

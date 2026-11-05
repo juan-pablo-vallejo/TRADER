@@ -18,6 +18,7 @@ import {
   dayCloseoutWorkers,
   invoiceLineItems,
   invoices,
+  materialCorrections,
   materials,
   payPeriods,
   payRates,
@@ -39,7 +40,7 @@ import {
   type Tx,
 } from "./helpers";
 
-// The tables that carry company_id, as 0014 and 0017 list them; companies is checked on its own id.
+// The tables that carry company_id, as 0014, 0017 and 0020 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -54,6 +55,7 @@ const TENANT_TABLES = [
   "invoice_line_items",
   "invoices",
   "jobs",
+  "material_corrections",
   "materials",
   "pay_periods",
   "pay_rates",
@@ -158,6 +160,21 @@ async function everything(tx: Tx, name: string) {
     closeoutId,
     jobId: refs.jobId,
     materialId,
+  });
+  const correctionId = uuidv7();
+  await tx.insert(materialCorrections).values({
+    id: correctionId,
+    companyId: refs.companyId,
+    materialId,
+    kind: "void",
+    submittedByUserId: refs.workerId,
+    clientTimestamp: new Date(),
+    serverTimestamp: new Date(),
+  });
+  await tx.insert(approvals).values({
+    companyId: refs.companyId,
+    materialCorrectionId: correctionId,
+    reasons: ["corrected"],
   });
   const { invoiceId } = await draftInvoice(tx, refs);
   await issue(tx, refs, invoiceId);
