@@ -273,13 +273,28 @@ describe("sync.push — concurrency on real locks", () => {
       n: 1,
       waitEvent: "advisory",
     });
-    const late = push(d.w.who, [labor(d.w.id, d.J), receipt(d.J)]);
+    // The receipt first: its transaction begins before the closeout commits and waits on it.
+    const late = push(d.w.who, [receipt(d.J), labor(d.w.id, d.J)]);
     // The closeout already holds the job's row (it locks scope before the field-write lock):
     // the push waits there, behind it, and sees it committed.
     await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
     await holder.release();
-    expect((await closeout).result).toBe("accepted");
+    const closed = await closeout;
+    expect(closed.result).toBe("accepted");
     const answer = await late;
+    // Both records waited behind the closeout and are stamped after it: the labor event by its
+    // receipt stamp, the receipt by created_at read after its locks, not at transaction start.
+    const closedAt =
+      closed.result === "accepted" ? closed.closeout.serverTimestamp.getTime() : 0;
+    const [logged, event] = answer.results;
+    expect(
+      event?.result === "accepted" &&
+        (event.ack as { serverTimestamp: Date }).serverTimestamp.getTime(),
+    ).toBeGreaterThan(closedAt);
+    expect(
+      logged?.result === "accepted" &&
+        (logged.ack as { receivedAt: Date }).receivedAt.getTime(),
+    ).toBeGreaterThan(closedAt);
     expect(
       answer.results.map((r) =>
         r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,

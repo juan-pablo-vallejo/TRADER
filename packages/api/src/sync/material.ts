@@ -146,6 +146,10 @@ export async function pushMaterial(
       capturedOffline: p.capturedOffline,
       clockSkewed: skew.clockSkewed,
       clockSkewMs: skew.clockSkewMs,
+      // The receipt's server stamp, read now, after the locks: the column's default is now(),
+      // the transaction's start, which precedes a closeout this record waited behind and would
+      // place an after-closeout receipt before the closeout it arrived after.
+      createdAt: sql`clock_timestamp()`,
     })
     .onConflictDoNothing()
     .returning();
