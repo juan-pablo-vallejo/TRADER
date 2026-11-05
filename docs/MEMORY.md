@@ -129,6 +129,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   them mid-close and the client raises an unhandled 57P01. `disposableDb` waits them out first.
 - Real-commit tests run in `disposableDb()` (api helpers): the journal replayed into a new
   database, dropped after. Savepoint tests never prove a commit or a released lock.
+- `0021` adds NOT NULL columns with no default to `work_session_events` and `materials`: it runs
+  only where both are empty — every environment as of 2026-11-05. Count both before migrating any
+  other database; rows need an authorized backfill migration, never a delete.
 
 ## Log
 
@@ -156,18 +159,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-04: Stage 3 line 3: fold, `validateEvent`, `deriveSessions`, worker lock; 293 tests.
 - 11-04: Stage 3 line 4: `0016`–`0018` closeout, seal, freeze, field-write lock; 353 tests.
 - 11-04: Stage 3 line 5: `closeout.review`, fingerprint `v1.`, `review_stale`; 377 tests.
-
-### 2026-11-04 — Stage 3 line 6: material corrections and `material.correct`
-
-- **Did:** `0019`/`0020`: `material_corrections` on sealed members, approvals with one subject,
-  NULL-safe `corrected`, pending at birth, no self-decision, fixed subject; `material.correct`.
-  432 tests (212 db, 220 api); 36 guards removed and run: 32 red, 3 layered (NULL ban covers
-  COALESCE; role check, `kind` compare), stamp floor untestable. The closeout TRUNCATE test's
-  deadlock, already on main (6 of 25 runs), fixed by NOWAIT locks (0 of 30).
-- **Decided:** two decision rows (ARCHITECTURE at 200; condensing above the table would renumber
-  "row N" references). Open for TASKS:46/47: approval of original receipts at push; event rows
-  still accept a NULL reason; the admin-only decider.
-- **Next:** O5 from Juan Pablo, then Stage 3 line 7 (TASKS:46) — `sync.push` and `sync.pull`.
+- 11-04: Stage 3 line 6: `0019`/`0020` material corrections, `material.correct`; 432 tests.
 
 ### 2026-11-05 — Stage 3 line 7: approval facts, `sync.push` and `sync.pull`
 
@@ -184,3 +176,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   session, the admin-only decider; `submit.ts:256` and `correct.ts:293` still throw on an id held
   by an invisible row (push answers `id_conflict`).
 - **Next:** Stage 3 — approval queue procedures implementing the approval rule.
+
+### 2026-11-05 — Stage 3 line 7: review fixes
+
+- **Did:** a push in which nothing ran resolves its caller first (an invalid-only or
+  unknown-version-first batch answered a deactivated account); sync timeouts set before identity
+  resolution; a receipt's `created_at` read after its locks. 528 tests (224 db, 304 api); 5
+  mutations run, all red, one after its test was reordered. `0021`'s precondition checked: local
+  0 events, 0 receipts; CI fresh; no deployed database. History kept: `3c97d4f` committed on a
+  red run, its flake fixed in `a807875`; the earlier entry's "push answers `id_conflict`" was
+  push's own records only: a delegated closeout or correction whose id an invisible row holds
+  still throws, stopping the batch on every retry (TASKS line after `sync.push`).
+- **Decided:** two rows: timeouts and resolution when nothing ran; crew membership writers take
+  the crew row first (Stage 4 roster task, with the race test).
+- **Next:** the delegated `id_conflict` line, then the approval queue.

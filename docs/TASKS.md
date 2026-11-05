@@ -34,8 +34,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [x] `users` identity binding: policies on `app.identity_subject` and `app.identity_email`,
       an identity guard trigger (custom migration, tests under `trader_app`)
 - [x] tRPC with superjson and zod; request context with the identity adapter (development
-      identity now, Clerk later), JIT binding select-first; a deactivated account resolves to
-      no user
+      identity now, Clerk later), JIT binding select-first; a deactivated account is no user
 - [x] Role gates; tested against a deactivated account exactly like an anonymous one
 - [x] Session fold with two-sided transition validation; derivations: `work_date`, duration,
       open sessions
@@ -45,6 +44,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [x] Material corrections: rows naming the original, approval for materials (PRD, Day closeout)
 - [x] Approval facts at push (`captured_offline`, `after_closeout`); receipt approvals, late corrections
 - [x] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
+- [ ] `closeout.submit`, `material.correct`: an id an invisible row holds is `id_conflict`, not 500
 - [ ] Approval queue procedures implementing the approval rule
 - [ ] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
 - [ ] Kill-switch state endpoint; error-reporting wrapper
@@ -56,7 +56,7 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
 - [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
       favicon and header mark from `assets/brand/logo.png`
 - [ ] Roster: invite, deactivate, role, effective-dated pay rates
-- [ ] Customers and jobs with crew assignment
+- [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested
 - [ ] Approval queue with reason tags; reconciliation view; job cost to date
 - [ ] Pay periods: close, late-entry adjustments; payroll CSV export of approved hours
 - [ ] Full data export

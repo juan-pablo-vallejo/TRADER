@@ -1,8 +1,10 @@
 // Who may push a record, judged at receipt from rows read in the record's own transaction
 // (ARCHITECTURE, push authority of 2026-11-05). The order is the global one (row 193, as
 // extended): the job, then its crew, both FOR SHARE; crew_members read without a lock, because
-// trader_app holds no UPDATE on it (0013) and FOR SHARE needs one — a removal committing after
-// the read serializes after this one insert, which nothing in it depends on; then the users
+// trader_app holds no UPDATE on it (0013) and FOR SHARE needs one. The crew row's lock is what
+// holds membership still: every writer that adds or removes a member locks that row FOR NO
+// KEY UPDATE first (ARCHITECTURE, crew membership writers), so a removal waits for this push
+// to commit and never lands under a push that relied on it; then the users
 // rows FOR SHARE in id order, so two pushes never wait on each other's in opposite orders. A
 // caller deactivated meanwhile is UNAUTHORIZED, as at resolution; every other refusal is one
 // `not_permitted` that says nothing of which check failed. Consumed by sync/labor.ts and
