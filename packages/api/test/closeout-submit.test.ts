@@ -3,7 +3,7 @@
 // labor events can never be deleted. The concurrency tests commit only deletable fixtures and
 // hold each closeout open on its own connection, then roll it back.
 import { crews, dayCloseouts, dayCloseoutWorkers, jobs, users } from "@trader/db/schema";
-import { DrizzleQueryError, eq, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { loadWorkerTimeline } from "../src/labor/timeline";
@@ -17,8 +17,13 @@ import {
   eventIn,
   materialIn,
   ownerDb,
+  holding,
+  lockTimeout,
+  rejection,
   rolledBack,
+  sqlstateOf,
   uuidv7,
+  workedDay,
   type CrewDay,
 } from "./helpers";
 
@@ -52,51 +57,6 @@ async function asOwner<T>(tx: Tx, d: CrewDay, body: () => Promise<T>): Promise<T
   const result = await body();
   await asTenant(tx, d.companyId);
   return result;
-}
-
-// A worked, ended day on J: w1 4 h, w2 8 h.
-async function workedDay(tx: Tx, d: CrewDay) {
-  await eventIn(tx, d, {
-    worker: d.w1,
-    job: d.J,
-    type: "started",
-    client: "2026-10-05T12:00:00Z",
-  });
-  await eventIn(tx, d, {
-    worker: d.w1,
-    job: d.J,
-    type: "ended",
-    client: "2026-10-05T16:00:00Z",
-  });
-  await eventIn(tx, d, {
-    worker: d.w2,
-    job: d.J,
-    type: "started",
-    client: "2026-10-05T13:00:00Z",
-  });
-  await eventIn(tx, d, {
-    worker: d.w2,
-    job: d.J,
-    type: "ended",
-    client: "2026-10-05T21:00:00Z",
-  });
-}
-
-// The SQLSTATE somewhere in an error's cause chain.
-function sqlstateOf(error: unknown): string | undefined {
-  for (let e: unknown = error; e instanceof Error; e = e.cause) {
-    if (e instanceof DrizzleQueryError) return (e.cause as { code?: string }).code;
-  }
-  return undefined;
-}
-
-async function failure(p: Promise<unknown>) {
-  try {
-    await p;
-  } catch (error) {
-    return error as Error & { code?: string };
-  }
-  throw new Error("expected the call to fail");
 }
 
 const forbidden = { code: "FORBIDDEN", message: "Not permitted." };
@@ -501,11 +461,11 @@ describe("closeout.submit — once submitted", () => {
       await becomeApp(tx);
       const values = input(d);
       await submit(tx, d.who, values);
-      const edit = await failure(
+      const edit = await rejection(
         tx.transaction((sp) => sp.execute(sql`update day_closeouts set note = 'Edited'`)),
       );
       expect(sqlstateOf(edit)).toBe("42501");
-      const extra = await failure(
+      const extra = await rejection(
         tx.transaction((sp) =>
           sp.insert(dayCloseoutWorkers).values({
             companyId: d.companyId,
@@ -519,38 +479,6 @@ describe("closeout.submit — once submitted", () => {
     });
   });
 });
-
-// Two connections. The holder's closeout stays open until released, then rolls back.
-async function holding(
-  db: typeof owner,
-  body: (tx: Tx) => Promise<void>,
-  contender: () => Promise<void>,
-) {
-  let release: () => void = () => {};
-  const released = new Promise<void>((r) => (release = r));
-  let ready: () => void = () => {};
-  const held = new Promise<void>((r) => (ready = r));
-  let failed: unknown;
-  const holder = rolledBack(db, async (tx) => {
-    try {
-      await body(tx);
-    } catch (error) {
-      failed = error;
-    }
-    ready();
-    await released;
-  });
-  await held;
-  try {
-    if (failed !== undefined) throw failed;
-    await contender();
-  } finally {
-    release();
-    await holder;
-  }
-}
-
-const lockTimeout = (tx: Tx) => tx.execute(sql`set local lock_timeout = '300ms'`);
 
 describe("closeout.submit — concurrency", () => {
   it("serializes two submissions for one job; the second goes through once the first ends", async () => {
@@ -566,7 +494,9 @@ describe("closeout.submit — concurrency", () => {
           rolledBack(other, async (tx) => {
             await becomeApp(tx);
             await lockTimeout(tx);
-            expect(sqlstateOf(await failure(submit(tx, d.who, input(d))))).toBe("55P03");
+            expect(sqlstateOf(await rejection(submit(tx, d.who, input(d))))).toBe(
+              "55P03",
+            );
           }),
       );
       await rolledBack(other, async (tx) => {
@@ -595,7 +525,7 @@ describe("closeout.submit — concurrency", () => {
             let code: string | undefined;
             await rolledBack(other, async (tx) => {
               await lockTimeout(tx);
-              code = sqlstateOf(await failure(tx.execute(statement)));
+              code = sqlstateOf(await rejection(tx.execute(statement)));
             });
             return code;
           };
@@ -639,7 +569,9 @@ describe("closeout.submit — concurrency", () => {
           rolledBack(other, async (tx) => {
             await becomeApp(tx);
             await lockTimeout(tx);
-            expect(sqlstateOf(await failure(submit(tx, d.who, input(d))))).toBe("55P03");
+            expect(sqlstateOf(await rejection(submit(tx, d.who, input(d))))).toBe(
+              "55P03",
+            );
           }),
       );
       // A closeout in flight: a writer waits for it, but an insert's foreign-key check on the
@@ -662,7 +594,7 @@ describe("closeout.submit — concurrency", () => {
             await asTenant(tx, d.companyId);
             expect(
               sqlstateOf(
-                await failure(tx.transaction((sp) => loadWorkerTimeline(sp, d.w2))),
+                await rejection(tx.transaction((sp) => loadWorkerTimeline(sp, d.w2))),
               ),
             ).toBe("55P03");
           }),
