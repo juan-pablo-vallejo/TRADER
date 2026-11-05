@@ -357,6 +357,36 @@ describe("sync.push — bounded waits", () => {
   }, 15_000);
 });
 
+describe("sync.push — bounded waits before resolution", () => {
+  it("gives up on a first sign-in's bind blocked on its users row, binding nothing", async () => {
+    const d = await world();
+    const tag = uuidv7();
+    const email = `invite-${tag}@co.test`;
+    const [invited] = await D.owner
+      .insert(users)
+      .values({ companyId: d.companyId, email, name: "Invited" })
+      .returning({ id: users.id });
+    const who = { subject: `sub-${tag}`, email, emailVerified: true as const };
+    let outcome!: Promise<string | undefined>;
+    await rolledBack(D.owner, async (tx) => {
+      await tx.execute(sql`select 1 from users where id = ${invited!.id} for update`);
+      outcome = push(who, [receipt(d.J)]).then(
+        () => "answered",
+        (e: { code?: string }) => e.code,
+      );
+      // Past the 2 s lock_timeout, inside the 4 s statement_timeout: only a lock timeout set
+      // before resolution can be what gives up.
+      await new Promise((resolve) => setTimeout(resolve, 3_000));
+    });
+    expect(await outcome).toBe("INTERNAL_SERVER_ERROR");
+    const [row] = await D.owner
+      .select({ subject: users.identitySubject })
+      .from(users)
+      .where(eq(users.id, invited!.id));
+    expect(row).toEqual({ subject: null });
+  }, 15_000);
+});
+
 describe("sync.push — transaction boundaries", () => {
   // The real runner with a barrier before the second record's transaction opens.
   function barrierRun(who: VerifiedIdentity, between: () => Promise<void>): RunRecord {

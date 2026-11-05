@@ -46,10 +46,13 @@ export const publicProcedure = t.procedure;
 // tenant set; then `body` runs in that transaction, which commits when it returns and rolls back
 // when it throws. The protected procedure runs it once per call; sync.push once per record
 // (ARCHITECTURE, sync.push), so a record's authority is re-read every time.
+export type CallerTimeouts = { lockTimeout: string; statementTimeout: string };
+
 export async function inCallerTransaction<T>(
   db: Db,
   identity: VerifiedIdentity,
   body: (tx: Tx, user: AppUser) => Promise<T>,
+  timeouts?: CallerTimeouts,
 ): Promise<T> {
   try {
     return await db.transaction(async (tx) => {
@@ -60,6 +63,14 @@ export async function inCallerTransaction<T>(
           set_config('app.identity_subject', '', true),
           set_config('app.identity_email', '', true)
       `);
+      // Bounded waits, when the caller asks for them, before anything can wait: a first
+      // sign-in's bind can queue on a users row, and nothing else would cap it.
+      if (timeouts !== undefined) {
+        await tx.execute(sql`
+          select set_config('lock_timeout', ${timeouts.lockTimeout}, true),
+            set_config('statement_timeout', ${timeouts.statementTimeout}, true)
+        `);
+      }
       // Every transaction: a pool's connections are checked one by one, not once per process.
       await assertRuntimeRole(tx);
       await tx.execute(sql`
@@ -103,11 +114,19 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 // sync.push's procedure: no transaction of its own. The call gets `runRecord`, which opens one
 // caller transaction per record, and neither the pool nor the identity, removed by value as
 // in the protected procedure. A call without an identity is UNAUTHORIZED before anything runs.
+// Every record's transaction waits at most 2 s for a lock and 4 s on a statement, from its
+// first statement on, identity resolution included (ARCHITECTURE, sync.push): a record that
+// times out is left out and retried.
+export const SYNC_TIMEOUTS: CallerTimeouts = {
+  lockTimeout: "2s",
+  statementTimeout: "4s",
+};
+
 export const syncProcedure = t.procedure.use(({ ctx, next }) => {
   const { db, identity } = ctx;
   if (identity === null) throw unauthorized();
   const runRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) =>
-    inCallerTransaction(db, identity, body);
+    inCallerTransaction(db, identity, body, SYNC_TIMEOUTS);
   return next({ ctx: { db: undefined, identity: undefined, runRecord } });
 });
 

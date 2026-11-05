@@ -6,7 +6,6 @@
 // that failed transiently must not let its `ended` be rejected for good. Consumed by
 // routers/sync.ts.
 import { TRPCError } from "@trpc/server";
-import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -29,11 +28,10 @@ import { measureSkew, type Skew } from "./reasons";
 // device: what is left out comes back next cycle. Vercel Pro allows 300 s by default (checked
 // on vercel.com/docs/functions/configuring-functions/duration, 2026-11-05); a push stops
 // starting records after 8 s, and one record waits at most 2 s for a lock and 4 s on a
-// statement, so a response is never held long enough to time the device out.
+// statement (trpc.ts, SYNC_TIMEOUTS), so a response is never held long enough to time the
+// device out.
 export const MAX_RECORDS = 100;
 export const BUDGET_MS = 8_000;
-const LOCK_TIMEOUT = "2s";
-const STATEMENT_TIMEOUT = "4s";
 
 export const RECORD_KINDS = [
   "labor_event",
@@ -179,8 +177,6 @@ const rejectedAs = (r: { id: string; kind: Kind | null }, c: string): PushResult
 });
 
 async function runOne(tx: Tx, user: AppUser, r: Parsed, skew: Skew): Promise<PushResult> {
-  await tx.execute(sql.raw(`set local lock_timeout = '${LOCK_TIMEOUT}'`));
-  await tx.execute(sql.raw(`set local statement_timeout = '${STATEMENT_TIMEOUT}'`));
   switch (r.kind) {
     case "labor_event": {
       const a = await pushLaborEvent(tx, user, r, skew);
