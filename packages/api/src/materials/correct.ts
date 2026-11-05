@@ -25,18 +25,7 @@ import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import type { AppUser } from "../resolve-user";
 import { forbidden } from "../trpc";
 import { effectiveMaterial, type CorrectionState } from "./effective";
-
-// A decimal string with at most nine integer and three fractional digits — numeric(12,3) — and
-// above zero, rewritten as Postgres prints the column ("2.5" → "2.500"), so equal quantities
-// compare equal as text. Never a float.
-const quantity = z
-  .string()
-  .regex(/^\d{1,9}(\.\d{1,3})?$/)
-  .transform((q) => {
-    const [whole, fraction = ""] = q.split(".");
-    return `${BigInt(whole!).toString()}.${fraction.padEnd(3, "0")}`;
-  })
-  .refine((q) => q !== "0.000", "quantity must be above zero");
+import { quantity } from "./quantity";
 
 // Nothing names a company, a job, a submitter or a role: those are the server's. The job is the
 // material's own, read under lock.
