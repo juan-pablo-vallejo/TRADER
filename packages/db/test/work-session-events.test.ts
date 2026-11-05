@@ -15,6 +15,7 @@ import {
   sqlstate,
   started,
   uuidv7,
+  lockExclusive,
 } from "./helpers";
 
 const APPEND_ONLY =
@@ -60,9 +61,12 @@ describe("work_session_events", () => {
   it("rejects TRUNCATE, which bypasses row triggers", async () => {
     // CASCADE, because approvals references this table and Postgres refuses a plain
     // TRUNCATE of a referenced table (0A000) before any trigger runs; with CASCADE the
-    // statement reaches the guard.
+    // statement reaches the guard. Both tables held first, without waiting: a waiting
+    // TRUNCATE closed a cycle with another suite's approval insert (40P01; helpers.ts,
+    // lockExclusive).
     await rolledBack(db, async (tx) => {
       await tx.insert(workSessionEvents).values(started(await fixture(tx)));
+      await lockExclusive(tx, ["work_session_events", "approvals"]);
       const error = await pgError(
         tx.transaction((sp) => sp.execute(sql`truncate work_session_events cascade`)),
       );
