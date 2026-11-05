@@ -1,12 +1,20 @@
-// Stage 3 line 4: closeout.submit through the application's router. Every call runs inside an
-// owner transaction that is always rolled back (helpers.ts, "Rolled-back calls"): closeouts and
-// labor events can never be deleted. The concurrency tests commit only deletable fixtures and
-// hold each closeout open on its own connection, then roll it back.
-import { crews, dayCloseouts, dayCloseoutWorkers, jobs, users } from "@trader/db/schema";
+// Stage 3 lines 4 and 5: closeout.submit through the application's router. Every call runs
+// inside an owner transaction that is always rolled back (helpers.ts, "Rolled-back calls"):
+// closeouts and labor events can never be deleted. The concurrency tests commit only deletable
+// fixtures and hold each closeout open on its own connection, then roll it back.
+import {
+  companies,
+  crews,
+  dayCloseouts,
+  dayCloseoutWorkers,
+  jobs,
+  materials,
+  users,
+} from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { loadWorkerTimeline } from "../src/labor/timeline";
+import { lockCompanyFieldWrites, loadWorkerTimeline } from "../src/labor/timeline";
 import {
   appCallerIn,
   asTenant,
@@ -23,15 +31,18 @@ import {
   rolledBack,
   sqlstateOf,
   uuidv7,
+  waitForLockWait,
   workedDay,
   type CrewDay,
 } from "./helpers";
 
 const owner = ownerDb();
 const other = ownerDb();
+const third = ownerDb();
 afterAll(async () => {
   await owner.$client.end();
   await other.$client.end();
+  await third.$client.end();
 });
 
 type Tx = Parameters<Parameters<typeof rolledBack>[1]>[0];
@@ -45,11 +56,36 @@ const input = (d: CrewDay, o: Record<string, unknown> = {}) => ({
   jobStatus: "complete" as const,
   note: "Walls done",
   clientTimestamp: new Date("2026-10-05T21:00:00.000Z"),
+  // Well-formed and never current: replaced by `submit`, kept by `submitAsIs`.
+  reviewFingerprint: UNREVIEWED,
   ...o,
 });
 
-const submit = (tx: Tx, who: unknown, values: Record<string, unknown>) =>
+const UNREVIEWED = `v1.${"0".repeat(64)}`;
+
+const review = (tx: Tx, who: unknown, values: Record<string, unknown>) =>
+  appCallerIn(tx, who).closeout.review({
+    jobId: values.jobId as string,
+    workDate: values.workDate as string,
+  });
+
+// Exactly what the caller sends.
+const submitAsIs = (tx: Tx, who: unknown, values: Record<string, unknown>) =>
   appCallerIn(tx, who).closeout.submit(values as never);
+
+// What the field app does: review the day as the caller, then submit with that fingerprint.
+// A caller the review refuses (401, 403) submits what it was given, so the submit answers
+// for itself (and a retry of the caller's own submission still gets through).
+async function submit(tx: Tx, who: unknown, values: Record<string, unknown>) {
+  let reviewFingerprint = values.reviewFingerprint;
+  try {
+    reviewFingerprint = (await review(tx, who, values)).fingerprint;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code !== "FORBIDDEN" && code !== "UNAUTHORIZED") throw error;
+  }
+  return submitAsIs(tx, who, { ...values, reviewFingerprint });
+}
 
 // Back to the owner, to look past RLS, and to trader_app under the tenant again after.
 async function asOwner<T>(tx: Tx, d: CrewDay, body: () => Promise<T>): Promise<T> {
@@ -150,9 +186,13 @@ describe("closeout.submit — input", () => {
         { workDate: "2026-10-05T00:00:00Z" },
         { note: "x".repeat(2001) },
         { note: "   " },
+        { reviewFingerprint: undefined },
+        { reviewFingerprint: "v1.abc" },
+        { reviewFingerprint: `v1.${"A".repeat(64)}` },
+        { reviewFingerprint: `v0.${"0".repeat(64)}` },
       ]) {
         await expect(
-          submit(tx, d.who, input(d, bad)),
+          submitAsIs(tx, d.who, input(d, bad)),
           JSON.stringify(bad),
         ).rejects.toMatchObject({ code: "BAD_REQUEST" });
       }
@@ -494,7 +534,7 @@ describe("closeout.submit — concurrency", () => {
           rolledBack(other, async (tx) => {
             await becomeApp(tx);
             await lockTimeout(tx);
-            expect(sqlstateOf(await rejection(submit(tx, d.who, input(d))))).toBe(
+            expect(sqlstateOf(await rejection(submitAsIs(tx, d.who, input(d))))).toBe(
               "55P03",
             );
           }),
@@ -569,7 +609,7 @@ describe("closeout.submit — concurrency", () => {
           rolledBack(other, async (tx) => {
             await becomeApp(tx);
             await lockTimeout(tx);
-            expect(sqlstateOf(await rejection(submit(tx, d.who, input(d))))).toBe(
+            expect(sqlstateOf(await rejection(submitAsIs(tx, d.who, input(d))))).toBe(
               "55P03",
             );
           }),
@@ -599,6 +639,334 @@ describe("closeout.submit — concurrency", () => {
             ).toBe("55P03");
           }),
       );
+    } finally {
+      await cleanup();
+    }
+  });
+});
+
+describe("closeout.submit — the review", () => {
+  // The day reviewed, then changed by `change` as the owner, then submitted with the fingerprint
+  // of the review: stale, and nothing written.
+  async function staleAfter(change: (tx: Tx, d: CrewDay) => Promise<unknown>) {
+    let answer: unknown;
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await workedDay(tx, d);
+      await materialIn(tx, d, d.J, "2026-10-05T15:00:00Z");
+      await becomeApp(tx);
+      const values = input(d);
+      const { fingerprint } = await review(tx, d.who, values);
+      await asOwner(tx, d, () => change(tx, d));
+      answer = await submitAsIs(tx, d.who, { ...values, reviewFingerprint: fingerprint });
+      const written = await asOwner(tx, d, () =>
+        tx.select().from(dayCloseouts).where(eq(dayCloseouts.jobId, d.J)),
+      );
+      expect(written).toEqual([]);
+    });
+    return answer;
+  }
+  const stale = { result: "rejected", code: "review_stale" };
+
+  it("accepts the day it was reviewed as", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await workedDay(tx, d);
+      await becomeApp(tx);
+      const values = input(d);
+      const { fingerprint } = await review(tx, d.who, values);
+      expect(
+        (await submitAsIs(tx, d.who, { ...values, reviewFingerprint: fingerprint }))
+          .result,
+      ).toBe("accepted");
+    });
+  });
+
+  it("rejects a review that labor, a correction, a void, a material or the zone overtook", async () => {
+    const lastEnd = async (tx: Tx, d: CrewDay) => {
+      const [row] = await tx
+        .execute<{ id: string; started: string }>(
+          sql`
+        select e.id, s.id as started from work_session_events e
+        join work_session_events s on s.worker_id = e.worker_id and s.type = 'started'
+        where e.worker_id = ${d.w1} and e.type = 'ended'
+      `,
+        )
+        .then((r) => r.rows);
+      return row!;
+    };
+    const changes: Record<string, (tx: Tx, d: CrewDay) => Promise<unknown>> = {
+      // A finished session: an open one is answered sessions_open first.
+      labor: async (tx, d) => {
+        await eventIn(tx, d, {
+          worker: d.foremanId,
+          job: d.J,
+          type: "started",
+          client: "2026-10-05T19:00:00Z",
+        });
+        await eventIn(tx, d, {
+          worker: d.foremanId,
+          job: d.J,
+          type: "ended",
+          client: "2026-10-05T20:00:00Z",
+        });
+      },
+      correction: async (tx, d) =>
+        eventIn(tx, d, {
+          worker: d.w1,
+          job: d.J,
+          type: "ended",
+          client: "2026-10-05T16:00:00Z",
+          server: "2026-10-05T23:00:00Z",
+          corrects: (await lastEnd(tx, d)).id,
+        }),
+      void: async (tx, d) =>
+        eventIn(tx, d, {
+          worker: d.w1,
+          job: d.J,
+          type: "voided",
+          client: "2026-10-05T17:00:00Z",
+          voids: (await lastEnd(tx, d)).started,
+        }),
+      material: (tx, d) => materialIn(tx, d, d.J, "2026-10-05T18:00:00Z"),
+      zone: (tx, d) =>
+        tx
+          .update(companies)
+          .set({ timezone: "America/Chicago" })
+          .where(eq(companies.id, d.companyId)),
+    };
+    for (const [what, change] of Object.entries(changes)) {
+      expect([what, await staleAfter(change)]).toEqual([what, stale]);
+    }
+  });
+
+  it("never overrides an office status change it did not see", async () => {
+    for (const status of ["complete", "archived"] as const) {
+      await rolledBack(owner, async (tx) => {
+        const d = await crewDayIn(tx);
+        await workedDay(tx, d);
+        await becomeApp(tx);
+        const values = input(d, { jobStatus: "open" });
+        const { fingerprint } = await review(tx, d.who, values);
+        // The office's change (Stage 4's path; the owner's update stands in for it).
+        await asOwner(tx, d, () =>
+          tx.update(jobs).set({ status }).where(eq(jobs.id, d.J)),
+        );
+        expect(
+          await submitAsIs(tx, d.who, { ...values, reviewFingerprint: fingerprint }),
+        ).toEqual(stale);
+        const [job] = await asOwner(tx, d, () =>
+          tx.select({ status: jobs.status }).from(jobs).where(eq(jobs.id, d.J)),
+        );
+        expect(job?.status).toBe(status);
+        expect(
+          await asOwner(tx, d, () =>
+            tx.select().from(dayCloseouts).where(eq(dayCloseouts.jobId, d.J)),
+          ),
+        ).toEqual([]);
+      });
+    }
+  });
+
+  it("answers another job's, another date's or another version's fingerprint review_stale", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const [j2] = await tx
+        .insert(jobs)
+        .values({
+          companyId: d.companyId,
+          customerId: d.customerId,
+          name: "J2",
+          crewId: d.crewId,
+        })
+        .returning({ id: jobs.id });
+      await becomeApp(tx);
+      const values = input(d);
+      const own = (await review(tx, d.who, values)).fingerprint;
+      const otherJob = (await review(tx, d.who, { ...values, jobId: j2!.id }))
+        .fingerprint;
+      const otherDate = (await review(tx, d.who, { ...values, workDate: "2026-10-04" }))
+        .fingerprint;
+      expect(new Set([own, otherJob, otherDate]).size).toBe(3);
+      for (const reviewFingerprint of [otherJob, otherDate, own.replace(/^v1/, "v2")]) {
+        expect(await submitAsIs(tx, d.who, { ...values, reviewFingerprint })).toEqual(
+          stale,
+        );
+      }
+      expect(
+        (await submitAsIs(tx, d.who, { ...values, reviewFingerprint: own })).result,
+      ).toBe("accepted");
+    });
+  });
+
+  it("accepts a review only an unrelated change followed", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await workedDay(tx, d);
+      await becomeApp(tx);
+      const values = input(d);
+      const { fingerprint } = await review(tx, d.who, values);
+      // w1 on the unstaffed job K later that day: w1's mark moves, J's day does not.
+      await asOwner(tx, d, async () => {
+        await eventIn(tx, d, {
+          worker: d.w1,
+          job: d.K,
+          type: "started",
+          client: "2026-10-05T17:00:00Z",
+        });
+        await eventIn(tx, d, {
+          worker: d.w1,
+          job: d.K,
+          type: "ended",
+          client: "2026-10-05T18:00:00Z",
+        });
+      });
+      expect(
+        (await submitAsIs(tx, d.who, { ...values, reviewFingerprint: fingerprint }))
+          .result,
+      ).toBe("accepted");
+    });
+  });
+
+  it("answers an open day sessions_open before judging the review", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await workedDay(tx, d);
+      await becomeApp(tx);
+      const values = input(d);
+      const { fingerprint } = await review(tx, d.who, values);
+      await asOwner(tx, d, () =>
+        eventIn(tx, d, {
+          worker: d.foremanId,
+          job: d.J,
+          type: "started",
+          client: "2026-10-05T19:00:00Z",
+        }),
+      );
+      expect(
+        await submitAsIs(tx, d.who, { ...values, reviewFingerprint: fingerprint }),
+      ).toEqual({ result: "rejected", code: "sessions_open" });
+    });
+  });
+
+  it("answers a retry of an accepted submission duplicate, whatever changed and whatever fingerprint", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await workedDay(tx, d);
+      await becomeApp(tx);
+      const values = input(d);
+      const { fingerprint } = await review(tx, d.who, values);
+      const sent = { ...values, reviewFingerprint: fingerprint };
+      const first = await submitAsIs(tx, d.who, sent);
+      expect(first.result).toBe("accepted");
+      // Labor lands on the closed day after the acknowledgement was lost.
+      await asOwner(tx, d, () =>
+        eventIn(tx, d, {
+          worker: d.foremanId,
+          job: d.J,
+          type: "started",
+          client: "2026-10-05T19:00:00Z",
+        }),
+      );
+      const duplicate = { ...first, result: "duplicate" };
+      expect(await submitAsIs(tx, d.who, sent)).toEqual(duplicate);
+      // The fingerprint is a precondition, not part of the record: a different one on the
+      // same id and business fields is still the same submission.
+      expect(
+        await submitAsIs(tx, d.who, {
+          ...sent,
+          reviewFingerprint: `v1.${"f".repeat(64)}`,
+        }),
+      ).toEqual(duplicate);
+    });
+  });
+});
+
+describe("closeout.submit — the review under concurrent writers", () => {
+  // A transaction on `db` that runs `body`, then waits for `release` and commits.
+  function committing(db: typeof owner, body: (tx: Tx) => Promise<void>) {
+    let release: () => void = () => {};
+    const released = new Promise<void>((r) => (release = r));
+    let ready: () => void = () => {};
+    const held = new Promise<void>((r) => (ready = r));
+    const done = db.transaction(async (tx) => {
+      await body(tx);
+      ready();
+      await released;
+    });
+    return { held, release, done };
+  }
+
+  const reviewOn = async (d: CrewDay) => {
+    let fingerprint = "";
+    await rolledBack(other, async (tx) => {
+      await becomeApp(tx);
+      fingerprint = (await review(tx, d.who, input(d))).fingerprint;
+    });
+    return fingerprint;
+  };
+
+  it("sees a material a cooperating writer commits while the closeout waits for its lock", async () => {
+    const { day: d, cleanup } = await committedCrewDay(owner);
+    try {
+      const fingerprint = await reviewOn(d);
+      // A material writer: the field-write lock shared, then its insert, uncommitted.
+      const writer = committing(owner, async (tx) => {
+        await asTenant(tx, d.companyId);
+        await lockCompanyFieldWrites(tx, "shared");
+        await materialIn(tx, d, d.J, "2026-10-05T15:00:00Z");
+      });
+      await writer.held;
+      let answer: unknown;
+      const closeout = rolledBack(third, async (tx) => {
+        await becomeApp(tx);
+        answer = await submitAsIs(tx, d.who, {
+          ...input(d),
+          reviewFingerprint: fingerprint,
+        });
+      });
+      // The closeout waits for the exclusive field-write lock; then the writer commits.
+      await waitForLockWait(owner, "select pg_advisory_xact_lock(%", {
+        waitEvent: "advisory",
+      });
+      writer.release();
+      await writer.done;
+      await closeout;
+      expect(answer).toEqual({ result: "rejected", code: "review_stale" });
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it("hashes the day's materials as locked, after an edit that committed while it waited", async () => {
+    const { day: d, cleanup } = await committedCrewDay(owner);
+    const m = await owner.transaction((tx) =>
+      materialIn(tx, d, d.J, "2026-10-05T15:00:00Z"),
+    );
+    try {
+      const fingerprint = await reviewOn(d);
+      // An edit that takes no field-write lock: only the material's row lock stops it.
+      const editor = committing(owner, async (tx) => {
+        await tx
+          .update(materials)
+          .set({ description: "Satin, white" })
+          .where(eq(materials.id, m));
+      });
+      await editor.held;
+      let answer: unknown;
+      const closeout = rolledBack(third, async (tx) => {
+        await becomeApp(tx);
+        answer = await submitAsIs(tx, d.who, {
+          ...input(d),
+          reviewFingerprint: fingerprint,
+        });
+      });
+      // The closeout read the old row in gatherJobDay and now waits on its FOR SHARE.
+      await waitForLockWait(owner, '%from "materials"%for share%');
+      editor.release();
+      await editor.done;
+      await closeout;
+      expect(answer).toEqual({ result: "rejected", code: "review_stale" });
     } finally {
       await cleanup();
     }

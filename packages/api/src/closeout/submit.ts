@@ -4,7 +4,8 @@
 // thrown is retried, except the one-message UNAUTHORIZED and FORBIDDEN answers. Runs in the
 // protected call's transaction; sync.push may later carry closeout records here, each in a
 // transaction of its own (a push holds the field-write lock shared, and this takes it
-// exclusive). Consumed by routers/closeout.ts.
+// exclusive). A new submission is accepted only when the day, under this call's locks, is the
+// day closeout.review returned (closeout/fingerprint.ts). Consumed by routers/closeout.ts.
 import {
   dayCloseoutMaterials,
   dayCloseouts,
@@ -26,6 +27,7 @@ import {
   onDayInIdOrder,
   type DayMaterial,
 } from "./day";
+import { FINGERPRINT_PATTERN, reviewFingerprint } from "./fingerprint";
 import { lockForemanScope } from "./scope";
 
 // Nothing names a company, a submitter, a worker or a role: those are the server's.
@@ -38,6 +40,10 @@ export const closeoutInput = z.strictObject({
   jobStatus: z.enum(["open", "complete"]),
   note: z.string().trim().min(1).max(2000).nullable(),
   clientTimestamp: z.date(),
+  // From the closeout.review the foreman confirmed, kept unchanged on every retry. A
+  // precondition of a new acceptance, not part of the record: never stored, never compared
+  // when answering a retry. Any well-formed version, so another version is review_stale.
+  reviewFingerprint: z.string().regex(FINGERPRINT_PATTERN),
 });
 
 export type CloseoutInput = z.infer<typeof closeoutInput>;
@@ -59,6 +65,9 @@ export const REJECTION_CODES = [
   // A session on the job and date is not ended (a voided one included: decision D4).
   "sessions_open",
   "work_date_in_future",
+  // The day changed since the review the fingerprint came from: review again; a new
+  // confirmation is a new submission with a new id.
+  "review_stale",
 ] as const;
 
 export const closeoutOutput = z.discriminatedUnion("result", [
@@ -98,7 +107,8 @@ const ack = (result: "accepted" | "duplicate", row: Prior): CloseoutResult => ({
   },
 });
 
-// The same submission: the same submitter and every column the device sent.
+// The same submission: the same submitter and every stored field the device sent. The review
+// fingerprint is not one: a retry of an accepted submission is a duplicate whatever it carries.
 const same = (row: Prior, user: AppUser, input: CloseoutInput) =>
   row.submittedByUserId === user.id &&
   row.jobId === input.jobId &&
@@ -193,6 +203,20 @@ export async function submitCloseout(
     dayMaterials = onDayInIdOrder(locked, input.workDate, timeZone);
   }
   const materialIds = dayMaterials.map((m) => m.id);
+
+  // 11b. The day as it stands under the locks, against the day the foreman reviewed. No writer
+  // obeying the field-write lock commits from step 8 to commit, the company row holds the zone
+  // and the job row its status, so this is the state the closeout records. Before any write.
+  const current = reviewFingerprint({
+    companyId: user.companyId,
+    jobId: input.jobId,
+    workDate: input.workDate,
+    timeZone,
+    jobStatus: scope.jobStatus,
+    sessions: day.sessions,
+    materials: dayMaterials,
+  });
+  if (current !== input.reviewFingerprint) return rejected("review_stale");
 
   // 12. A late closeout for an earlier day never overwrites a later day's status, and an
   // archived job stays archived. Fixed now, stored, and answered the same on every retry.
