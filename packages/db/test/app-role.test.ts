@@ -10,8 +10,8 @@ import { asApp, one, rolledBack, sqlstate, type Tx } from "./helpers";
 type Privilege = "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "TRUNCATE";
 const PRIVILEGES: Privilege[] = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"];
 
-// What 0013 grants, table by table. Every table in public must appear here: a table added
-// without stated grants fails the matrix test.
+// What 0013 grants, table by table, and 0017 for the closeout tables. Every table in public
+// must appear here: a table added without stated grants fails the matrix test.
 const GRANTS: Record<string, Privilege[]> = {
   companies: ["SELECT", "UPDATE"],
   invoice_counters: ["SELECT", "UPDATE"],
@@ -30,6 +30,9 @@ const GRANTS: Record<string, Privilege[]> = {
   work_session_events: ["SELECT", "INSERT"],
   credit_memos: ["SELECT", "INSERT"],
   audit_log: ["SELECT", "INSERT"],
+  day_closeouts: ["SELECT", "INSERT"],
+  day_closeout_workers: ["SELECT", "INSERT"],
+  day_closeout_materials: ["SELECT", "INSERT"],
 };
 
 let db: Db;

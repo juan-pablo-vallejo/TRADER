@@ -113,6 +113,20 @@
       "when": 1793817718758,
       "tag": "0015_identity-binding",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1793838009405,
+      "tag": "0016_day-closeouts",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793838013101,
+      "tag": "0017_day-closeout-guards",
+      "breakpoints": true
     }
   ]
 }
