@@ -260,8 +260,9 @@ describe("sync.push — concurrency on real locks", () => {
       workDate: "2026-10-05",
     });
     const holder = await holdFieldWrites(d, "exclusive");
+    const closeoutId = uuidv7();
     const closeout = caller(d.who).closeout.submit({
-      id: uuidv7(),
+      id: closeoutId,
       jobId: d.J,
       workDate: "2026-10-05",
       jobStatus: "open",
@@ -274,7 +275,9 @@ describe("sync.push — concurrency on real locks", () => {
       waitEvent: "advisory",
     });
     // The receipt first: its transaction begins before the closeout commits and waits on it.
-    const late = push(d.w.who, [receipt(d.J), labor(d.w.id, d.J)]);
+    const lateReceipt = receipt(d.J);
+    const lateEvent = labor(d.w.id, d.J);
+    const late = push(d.w.who, [lateReceipt, lateEvent]);
     // The closeout already holds the job's row (it locks scope before the field-write lock):
     // the push waits there, behind it, and sees it committed.
     await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
@@ -282,19 +285,24 @@ describe("sync.push — concurrency on real locks", () => {
     const closed = await closeout;
     expect(closed.result).toBe("accepted");
     const answer = await late;
-    // Both records waited behind the closeout and are stamped after it: the labor event by its
-    // receipt stamp, the receipt by created_at read after its locks, not at transaction start.
-    const closedAt =
-      closed.result === "accepted" ? closed.closeout.serverTimestamp.getTime() : 0;
-    const [logged, event] = answer.results;
-    expect(
-      event?.result === "accepted" &&
-        (event.ack as { serverTimestamp: Date }).serverTimestamp.getTime(),
-    ).toBeGreaterThan(closedAt);
-    expect(
-      logged?.result === "accepted" &&
-        (logged.ack as { receivedAt: Date }).receivedAt.getTime(),
-    ).toBeGreaterThan(closedAt);
+    // Both records waited behind the closeout and are stamped after it, compared in the
+    // database at full precision: the event by its receipt stamp; the receipt by one stamp read
+    // after its locks, in created_at and updated_at alike, never the transaction's start.
+    const { rows } = await D.owner.execute<Record<string, boolean>>(sql`
+      select m.created_at = m.updated_at as receipt_stamps_equal,
+        m.created_at > c.server_timestamp as receipt_after_closeout,
+        e.server_timestamp > c.server_timestamp as event_after_closeout
+      from materials m, work_session_events e, day_closeouts c
+      where m.id = ${lateReceipt.id} and e.id = ${lateEvent.id} and c.id = ${closeoutId}
+    `);
+    expect(rows).toEqual([
+      {
+        receipt_stamps_equal: true,
+        receipt_after_closeout: true,
+        event_after_closeout: true,
+      },
+    ]);
+    expect(answer.results.map((r) => r.result)).toEqual(["accepted", "accepted"]);
     expect(
       answer.results.map((r) =>
         r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,

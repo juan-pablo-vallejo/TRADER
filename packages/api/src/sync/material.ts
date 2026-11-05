@@ -130,6 +130,14 @@ export async function pushMaterial(
     afterCloseout: rows[0]?.closed === true,
   });
 
+  // The receipt's server stamp, read once, now, after the locks, and written to both created_at
+  // and updated_at: their default is now(), the transaction's start, which precedes a closeout
+  // this record waited behind. As text, so the microseconds survive the round trip.
+  const { rows: clock } = await tx.execute<{ at: string }>(
+    sql`select clock_timestamp()::text as at`,
+  );
+  const stampedAt = sql`${clock[0]!.at}::timestamptz`;
+
   // 6. As in sync/labor.ts: nothing back is a concurrent commit of this id, or another
   // tenant's row, which is `id_conflict` and says nothing more.
   const [inserted] = await tx
@@ -146,10 +154,8 @@ export async function pushMaterial(
       capturedOffline: p.capturedOffline,
       clockSkewed: skew.clockSkewed,
       clockSkewMs: skew.clockSkewMs,
-      // The receipt's server stamp, read now, after the locks: the column's default is now(),
-      // the transaction's start, which precedes a closeout this record waited behind and would
-      // place an after-closeout receipt before the closeout it arrived after.
-      createdAt: sql`clock_timestamp()`,
+      createdAt: stampedAt,
+      updatedAt: stampedAt,
     })
     .onConflictDoNothing()
     .returning();
