@@ -97,6 +97,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   equal client columns (not stamp or skew) is `duplicate`, anything else `id_conflict`.
 - A job switch in one batch with equal device times falls to `id` order: the phone must emit
   `ended` before `started` with a monotonic UUIDv7, or the start is rejected.
+- Deferred constraint triggers never fire in a rolled-back test: `SET CONSTRAINTS … IMMEDIATE`
+  fires them. TRUNCATE refuses a table with pending trigger events (55006).
+- A foreign key naming a row another transaction has not committed fails at once (23503).
+- plpgsql resolves `NEW.<column>` when the expression runs: a CASE naming two tables' columns
+  fails 42703 on one of them; branch with IF.
+- Procedures writing append-only rows are tested by calls inside a rolled-back owner transaction
+  (api `helpers.ts`, "Rolled-back calls"); a failed call's savepoint also undoes its tenant.
 
 ## Log
 
@@ -118,37 +125,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-03: Stage 2 line 8: owner-only seed (`pnpm db:seed`, `tsx`), 136 tests; Stage 2 closed.
 - 11-03: TASKS condensed: closed stages to one ticked line; closeout and onboarding tasks.
 - 11-04: Smart Clock-In scoped in PRD (post-pilot, local reminders); Stage 9; `rv.sh` retired.
-
-### 2026-11-04 — Stage 3 line 1a: users identity binding
-
-- **Did:** split line 1 into 1a/1b (line 2 keeps the deactivation proof); `0015` custom
-  (`app_identity_subject()`, `app_identity_email()`, two `users` policies, `users_identity_guard`);
-  31 tests under `trader_app`, each protection watched red; 167 in all; `0000`–`0015` replayed
-  into an empty database, seeded twice 1/1/1; two decision rows; rolled up one Log entry.
-- **Decided:** a trigger, not column grants or SECURITY DEFINER, protects columns on the bind;
-  whole-row comparison; a bound row is unreachable under an identity alone; no unbinding yet.
-- **Next:** Stage 3 line 1b — tRPC, the request context and the development identity.
-
-### 2026-11-04 — Stage 3 line 1b: tRPC, request context, development identity
-
-- **Did:** `@trpc/server` 11.23.0 (quarantine passed over 11.24.0), superjson, zod; identity
-  adapter and development adapter; `protectedProcedure` with one transaction per call;
-  select-first resolution and bind; `me.get`; 34 api tests, 15 guards watched red; guard.ts
-  comment corrected; four decision rows; plan revised after review (context by value, GUC
-  test inside the transaction, guard per transaction, bind conflicts and deactivation race).
-- **Decided:** per-call transaction, `ok: false` rethrown; one `UNAUTHORIZED`; deactivated
-  resolves to no user and is never bound; the dev identity only under development or test.
-- **Next:** Stage 3 line 2 — role gates, the deactivated-as-anonymous suite.
-
-### 2026-11-04 — Stage 3 line 2: role gates
-
-- **Did:** RULES fail-closed line clarified (404 switched-off route, 401/403 API); `roleProcedure`
-  allowlist on the protected procedure; 15 role tests, 49 api and 216 in all; allowlist,
-  deactivated rejection and rollback each watched red; `http()` moved to helpers with statuses;
-  four decision rows.
-- **Decided:** no role hierarchy; `FORBIDDEN` "Not permitted." after resolution; gates are entry
-  checks only, resource scope lives in each business procedure.
-- **Next:** Stage 3 line 3 (TASKS:40) — session fold with two-sided transition validation.
+- 11-04: Stage 3 line 1a: `0015` identity binding, `users_identity_guard`; 167 tests.
+- 11-04: Stage 3 line 1b: tRPC, per-call transaction, identity adapters, `me.get`; 34 api tests.
+- 11-04: Stage 3 line 2: `roleProcedure` allowlist, 401/403 answers; 216 tests.
 
 ### 2026-11-04 — Stage 3 line 3: session fold and two-sided validation
 
@@ -159,3 +138,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   voids, correction rules with a winner check, job provenance, full replay under a per-worker
   lock, explicit receipt stamp, two-source rejection, office-only atomic repair sets.
 - **Next:** Stage 3 line 4 (TASKS:42) — day closeout record and `closeout.submit`.
+
+### 2026-11-04 — Stage 3 line 4: day closeout record and `closeout.submit`
+
+- **Did:** `0016`–`0018`: `day_closeouts` with sealed worker marks and material membership,
+  append-only, RLS, grants; the closed-out material freeze; the company field-write lock in
+  `loadWorkerTimeline`; the rolled-back caller; `gatherJobDay`; `closeout.submit`. 353 tests
+  (190 db, 163 api); 28 protections watched red, 2 found layered (freeze DELETE branch, the
+  step-2 role check), 2 untestable here (the seal's visibility clause, the in-call seal).
+- **Decided:** nine decision rows. Owner defaults taken: foreman-only with the own-id answer
+  first, record shape C, material freeze, two new Stage 3 lines. Open: O5 (an ordinary event
+  on a closed day: a new approval reason, after-day closeout, or counted normally) blocks line 5.
+- **Next:** O5 from Juan Pablo, then Stage 3 line 5 (TASKS:46) — `sync.push` and `sync.pull`.
