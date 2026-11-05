@@ -57,6 +57,9 @@ async function material(tx: Tx, refs: Refs) {
     quantity: "2.000",
     unit: "gal",
     loggedAt: new Date(),
+    capturedOffline: false,
+    clockSkewed: false,
+    clockSkewMs: 0,
   });
   return id;
 }

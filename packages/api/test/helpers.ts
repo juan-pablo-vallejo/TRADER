@@ -410,6 +410,7 @@ export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<stri
     attestationLevel: "none",
     schemaVersion: 1,
     timeSetByUser: false,
+    capturedOffline: false,
     initiatorUserId: e.worker,
     voidsEventId: e.voids ?? null,
     correctsEventId: e.corrects ?? null,
@@ -428,6 +429,9 @@ export async function materialIn(tx: Tx, day: CrewDay, job: string, loggedAt: st
     quantity: "2.000",
     unit: "gal",
     loggedAt: new Date(loggedAt),
+    capturedOffline: false,
+    clockSkewed: false,
+    clockSkewMs: 0,
   });
   return id;
 }

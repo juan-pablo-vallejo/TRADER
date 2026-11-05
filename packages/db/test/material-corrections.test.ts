@@ -43,6 +43,9 @@ async function material(tx: Tx, refs: Refs) {
     quantity: "2.000",
     unit: "gal",
     loggedAt: new Date("2026-10-19T15:00:00Z"),
+    capturedOffline: false,
+    clockSkewed: false,
+    clockSkewMs: 0,
   });
   return id;
 }
@@ -388,13 +391,19 @@ describe("approvals of material corrections", () => {
     });
   });
 
-  it("leaves an event approval's reasons as they were: `{NULL}` still accepted", async () => {
+  it("refuses `{NULL}` reasons on an event approval too, since 0021 (23514)", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await covered(tx);
       const event = started(refs);
       await tx.insert(workSessionEvents).values(event);
-      await tx.execute(sql`insert into approvals (company_id, event_id, reasons)
-        values (${refs.companyId}, ${event.id}, '{NULL}')`);
+      const error = await pgError(
+        tx.transaction((sp) =>
+          sp.execute(sql`insert into approvals (company_id, event_id, reasons)
+            values (${refs.companyId}, ${event.id}, '{NULL}')`),
+        ),
+      );
+      expect(error.code).toBe("23514");
+      expect(error.message).toContain("approvals_reasons_no_null");
     });
   });
 

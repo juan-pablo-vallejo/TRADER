@@ -93,6 +93,7 @@ async function event(
     attestationLevel: "none",
     schemaVersion: 1,
     timeSetByUser: false,
+    capturedOffline: false,
     initiatorUserId: refs.workerId,
   });
   return id;

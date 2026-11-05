@@ -76,6 +76,11 @@ export const workSessionEvents = pgTable(
     // zod payload requires it. Adding it so was possible only because the ledger was empty in
     // every environment; after the pilot, an added column is nullable or defaulted.
     timeSetByUser: boolean("time_set_by_user").notNull(),
+    // The approval rule's "captured offline" (PRD, Office approval): the device's own evidence,
+    // recorded at capture — no confirmed reach of the API, an unknown state counting as offline.
+    // Not receipt lag: a capture offline may arrive seconds later, and a capture online may sit
+    // in the outbox for hours. NOT NULL with no default under the empty-ledger condition above.
+    capturedOffline: boolean("captured_offline").notNull(),
     // Who recorded the event: the worker, the foreman for crew labor, or the admin issuing a
     // correction (PRD, Target users). worker_id stays whose labor it is. Added NOT NULL with no
     // default under the same empty-ledger condition as time_set_by_user.

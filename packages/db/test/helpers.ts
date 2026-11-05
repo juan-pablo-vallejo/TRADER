@@ -152,6 +152,7 @@ export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
   attestationLevel: "none",
   schemaVersion: 1,
   timeSetByUser: false,
+  capturedOffline: false,
   initiatorUserId: refs.workerId,
 });
 

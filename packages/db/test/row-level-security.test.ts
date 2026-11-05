@@ -120,6 +120,9 @@ async function everything(tx: Tx, name: string) {
     quantity: "2.000",
     unit: "gal",
     loggedAt: new Date(),
+    capturedOffline: false,
+    clockSkewed: false,
+    clockSkewMs: 0,
   });
   const photoId = uuidv7();
   await tx.insert(photos).values({

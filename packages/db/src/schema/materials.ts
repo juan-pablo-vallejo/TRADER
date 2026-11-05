@@ -1,5 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
+  bigint,
+  boolean,
   check,
   foreignKey,
   index,
@@ -45,6 +47,13 @@ export const materials = pgTable(
     currency: text("currency"),
     // Device time, recorded as reported (PRD, Labor: device time is business time).
     loggedAt: timestamp("logged_at", { withTimezone: true }).notNull(),
+    // The approval rule's facts of a receipt (PRD, Office approval), fixed at push like the
+    // ledger's: the device's capture-time connectivity evidence, and the push's skew verdict
+    // with its signed measurement (work_session_events, which see). No default: every writer
+    // supplies them. Added NOT NULL while every environment held no receipt.
+    capturedOffline: boolean("captured_offline").notNull(),
+    clockSkewed: boolean("clock_skewed").notNull(),
+    clockSkewMs: bigint("clock_skew_ms", { mode: "number" }).notNull(),
     createdAt,
     updatedAt,
   },

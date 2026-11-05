@@ -19,6 +19,9 @@ const material = (refs: Refs): typeof materials.$inferInsert => ({
   quantity: "2.500",
   unit: "gal",
   loggedAt: new Date(),
+  capturedOffline: false,
+  clockSkewed: false,
+  clockSkewMs: 0,
 });
 
 // A statement expected to fail, in its own savepoint so the test can go on.
