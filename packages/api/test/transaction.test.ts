@@ -4,15 +4,22 @@
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { companies, customers } from "@trader/db/schema";
+import { eq } from "drizzle-orm";
+
 import {
   appDb,
+  becomeApp,
   caller,
+  callerIn,
+  companyIn,
   customerNames,
   failure,
   http,
   identity,
   outcome,
   ownerDb,
+  rolledBack,
   userRow,
   world,
   type World,
@@ -201,5 +208,61 @@ describe("over HTTP", () => {
     expect(r?.error?.json.data.code).toBe("INTERNAL_SERVER_ERROR");
     expect(r?.error?.json.message).toBe("Internal server error.");
     expect(JSON.stringify(r)).not.toMatch(/division|select 1/i);
+  });
+});
+
+// The harness the closeout tests stand on (helpers.ts, "Rolled-back calls"): a protected call
+// run inside an owner transaction that is always rolled back.
+describe("a rolled-back call", () => {
+  it("runs as trader_app in a savepoint, its writes visible to the outer transaction", async () => {
+    await rolledBack(owner, async (tx) => {
+      const c = await companyIn(tx);
+      await becomeApp(tx);
+      const seen = await callerIn(tx, c.who).probe.inside();
+      expect(seen).toMatchObject({ company: c.companyId, subject: null, email: null });
+      expect(await callerIn(tx, c.who).probe.write({ name: "Kept", fail: false })).toBe(
+        "written",
+      );
+      const names = await tx
+        .select({ name: customers.name })
+        .from(customers)
+        .where(eq(customers.companyId, c.companyId));
+      expect(names.map((n) => n.name).sort()).toEqual(["Customer", "Kept"]);
+    });
+  });
+
+  it("rolls a failed call back to its savepoint and leaves the outer transaction usable", async () => {
+    await rolledBack(owner, async (tx) => {
+      const c = await companyIn(tx);
+      await becomeApp(tx);
+      await expect(
+        callerIn(tx, c.who).probe.write({ name: "Lost", fail: true }),
+      ).rejects.toThrow();
+      // The rollback also undid the tenant the call set; read back as the owner.
+      await tx.execute(sql`reset role`);
+      const names = await tx
+        .select({ name: customers.name })
+        .from(customers)
+        .where(eq(customers.companyId, c.companyId));
+      expect(names.map((n) => n.name)).toEqual(["Customer"]);
+    });
+  });
+
+  it("refuses to run before the transaction becomes trader_app", async () => {
+    await rolledBack(owner, async (tx) => {
+      const c = await companyIn(tx);
+      await expect(callerIn(tx, c.who).probe.inside()).rejects.toThrow();
+    });
+  });
+
+  it("leaves nothing behind once the outer transaction rolls back", async () => {
+    let companyId: string | undefined;
+    await rolledBack(owner, async (tx) => {
+      const c = await companyIn(tx);
+      companyId = c.companyId;
+      await becomeApp(tx);
+      await callerIn(tx, c.who).probe.write({ name: "Gone", fail: false });
+    });
+    expect(await owner.$count(companies, eq(companies.id, companyId!))).toBe(0);
   });
 });

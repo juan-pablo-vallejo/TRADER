@@ -1,7 +1,8 @@
 // Shared by the API tests. Unlike the schema tests, nothing here can run in a rolled-back
 // transaction: the code under test opens its own. Fixtures are therefore committed by the
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
-// a work_session_event, so the deletes are always allowed.
+// a work_session_event, so the deletes are always allowed. Procedures that write append-only
+// rows run through the rolled-back calls further down instead.
 import { createDb, type Db } from "@trader/db";
 import { companies, customers, users } from "@trader/db/schema";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
@@ -233,6 +234,79 @@ export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(createContext({ db, identity: who }));
+
+// --- Rolled-back calls -----------------------------------------------------------------
+// Labor events and closeouts can never be deleted once committed, so a procedure that writes
+// them cannot run against the committed fixtures above. Instead the whole call runs inside an
+// owner transaction that is always rolled back: fixtures are inserted as the owner, the
+// transaction becomes trader_app (SET LOCAL ROLE, as the schema tests do), and the
+// transaction itself stands in for the pool, so the protected procedure's db.transaction
+// opens a savepoint. Its settings, its role check and its rollback-on-failure all happen
+// inside that savepoint; nothing survives the outer rollback. After a successful call its
+// tenant setting stays on the outer transaction; after a failed one, it is undone with the
+// rest of the savepoint.
+
+const ROLLBACK = Symbol("rollback");
+
+export async function rolledBack(db: Db, body: (tx: Tx) => Promise<void>): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await body(tx);
+      throw ROLLBACK;
+    });
+  } catch (error) {
+    if (error !== ROLLBACK) throw error;
+  }
+}
+
+// Only a transaction's own savepoint API is used through this cast (`transaction`), which a
+// Drizzle transaction has with the pool's signature.
+export const txAsDb = (tx: Tx) => tx as unknown as Db;
+
+// From here on the transaction runs as the runtime role, as production's pool does.
+export async function becomeApp(tx: Tx) {
+  await tx.execute(sql`set local role trader_app`);
+}
+
+// Fires deferred constraints now: a rolled-back transaction never reaches commit, where they
+// would otherwise run.
+export async function sealNow(tx: Tx) {
+  await tx.execute(sql`set constraints all immediate`);
+}
+
+export const callerIn = (tx: Tx, who: unknown) =>
+  createCallerFactory(testRouter)(createContext({ db: txAsDb(tx), identity: who }));
+
+// One company with a bound user of `role` and a customer, inside `tx`. The subject and email
+// carry a random suffix: identity_subject is unique across every company.
+export async function companyIn(tx: Tx, role: AppUser["role"] = "worker") {
+  const run = crypto.randomUUID().slice(0, 8);
+  const [c] = await tx
+    .insert(companies)
+    .values({ name: `Rolled Co ${run}`, timezone: "America/New_York" })
+    .returning({ id: companies.id });
+  const companyId = c!.id;
+  const [u] = await tx
+    .insert(users)
+    .values({
+      companyId,
+      email: `rolled-${run}@co.test`,
+      name: "Rolled",
+      role,
+      identitySubject: `sub-rolled-${run}`,
+    })
+    .returning({ id: users.id });
+  const [cu] = await tx
+    .insert(customers)
+    .values({ companyId, name: "Customer" })
+    .returning({ id: customers.id });
+  return {
+    companyId,
+    userId: u!.id,
+    customerId: cu!.id,
+    who: identity(`sub-rolled-${run}`, `rolled-${run}@co.test`),
+  };
+}
 
 export type HttpCall = { path: string; input?: unknown; mutation?: boolean };
 
