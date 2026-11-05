@@ -43,8 +43,8 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
       `closeout.submit`; locked once submitted, later changes are corrections (PRD, Day closeout)
 - [x] Crew day-review read with a review fingerprint checked at submit; before Stage 5 closeout
 - [x] Material corrections: rows naming the original, approval for materials (PRD, Day closeout)
-- [ ] Approval facts at push (`captured_offline`, `after_closeout`); receipt approvals, late corrections
-- [ ] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
+- [x] Approval facts at push (`captured_offline`, `after_closeout`); receipt approvals, late corrections
+- [x] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
 - [ ] Approval queue procedures implementing the approval rule
 - [ ] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
 - [ ] Kill-switch state endpoint; error-reporting wrapper

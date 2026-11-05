@@ -118,6 +118,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - TRUNCATE … CASCADE locks its tables in turn and deadlocks (40P01 at ~1 s) with a suite that
   holds one and wants another; a TRUNCATE test takes its whole cascade set first with
   `lockExclusive` (NOWAIT, retried). day_closeouts' cascade reaches approvals.
+- A constraint trigger queues a deferred event for every row it covers, even one it would
+  pass; a queued event makes TRUNCATE fail 55006 before an append-only guard answers. Give it a
+  WHEN that names the rows it checks (0022).
+- `SELECT … FOR SHARE` needs UPDATE on the table: trader_app has none on `crew_members`, so push
+  reads membership unlocked (ARCHITECTURE, push authority).
+- `closeout.submit` locks the job row before the field-write lock, so a push on that job queues
+  on the row, not the advisory lock, and gives up at its 2 s `lock_timeout` (omitted, retried).
+- `pg` Pool `end()` resolves before the server's backends exit; `DROP DATABASE … FORCE` then kills
+  them mid-close and the client raises an unhandled 57P01. `disposableDb` waits them out first.
+- Real-commit tests run in `disposableDb()` (api helpers): the journal replayed into a new
+  database, dropped after. Savepoint tests never prove a commit or a released lock.
 
 ## Log
 
@@ -157,3 +168,19 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   "row N" references). Open for TASKS:46/47: approval of original receipts at push; event rows
   still accept a NULL reason; the admin-only decider.
 - **Next:** O5 from Juan Pablo, then Stage 3 line 7 (TASKS:46) — `sync.push` and `sync.pull`.
+
+### 2026-11-05 — Stage 3 line 7: approval facts, `sync.push` and `sync.pull`
+
+- **Did:** O5 and nine sync decisions settled by Juan Pablo (six ARCHITECTURE rows; PRD's sixth
+  trigger; DESIGN tags; ARCHITECTURE cap 210). `0021`–`0024`: `after_closeout`, `captured_offline`,
+  receipt skew, `approvals.material_id`, NULL-reason ban, deferred approval checks, late-receipt
+  corrections and freeze. `sync.push`: a caller transaction per record, stop on throw; `sync.pull`.
+  525 tests (224 db, 301 api), a real-commit suite in a disposable database; 81 mutations run:
+  80 red, 1 layered (receipt FK behind its visibility trigger); `statement_timeout` layered behind
+  `lock_timeout`, not run alone. The ledger TRUNCATE test's deadlock fixed by NOWAIT locks;
+  `3c97d4f` was committed on that red run (a script read grep's status). Three leftover dev-DB
+  fixture companies deleted with Juan Pablo's approval.
+- **Decided:** in the rows; open for the approval queue: how a pending event counts in its
+  session, the admin-only decider; `submit.ts:256` and `correct.ts:293` still throw on an id held
+  by an invisible row (push answers `id_conflict`).
+- **Next:** Stage 3 — approval queue procedures implementing the approval rule.
