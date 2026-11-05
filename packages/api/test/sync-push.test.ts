@@ -29,6 +29,7 @@ import {
   asTenant,
   boundIn,
   crewDayIn,
+  identity,
   ownerDb,
   rejection,
   rolledBack,
@@ -133,6 +134,39 @@ describe("sync.push — who may call", () => {
           .where(eq(workSessionEvents.companyId, d.companyId)),
       );
       expect(events).toEqual([]);
+    });
+  });
+
+  it("resolves the caller even when no record runs: invalid-only and unknown-version-first", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const invalid = {
+        id: uuidv7(),
+        kind: "labor_event",
+        schemaVersion: 1,
+        payload: {},
+      };
+      const future = { ...labor(d.w.id, d.J), schemaVersion: 2 };
+      const nobody = identity(`sub-nobody-${uuidv7()}`, `nobody-${uuidv7()}@co.test`);
+      // An active caller is answered: the malformed record, and nothing for the future one.
+      expect(summary((await push(tx, d.w.who, [invalid])).results)).toEqual([
+        "rejected:invalid_record",
+      ]);
+      expect((await push(tx, d.w.who, [future, labor(d.w.id, d.J)])).results).toEqual([]);
+      // No account, or a deactivated one: UNAUTHORIZED, whatever the batch holds.
+      for (const batch of [[invalid], [future, labor(d.w.id, d.J)], [invalid, future]]) {
+        expect(await rejection(push(tx, nobody, batch))).toMatchObject({
+          code: "UNAUTHORIZED",
+        });
+      }
+      await asOwner(tx, d.companyId, () =>
+        tx.update(users).set({ deactivatedAt: new Date() }).where(eq(users.id, d.w.id)),
+      );
+      for (const batch of [[invalid], [future, labor(d.w.id, d.J)], [invalid, future]]) {
+        expect(await rejection(push(tx, d.w.who, batch))).toMatchObject({
+          code: "UNAUTHORIZED",
+        });
+      }
     });
   });
 
@@ -470,6 +504,24 @@ describe("pushRecords — the loop, without a database", () => {
     expect(partial.results).toHaveLength(1);
     await expect(
       pushRecords(input(records(2)), fakeRun({ 0: unauthorized })),
+    ).rejects.toBe(unauthorized);
+  });
+
+  it("opens one caller transaction, with no record, when nothing ran", async () => {
+    let calls = 0;
+    const run: RunRecord = async (body) => {
+      calls++;
+      return body(undefined as never, undefined as never);
+    };
+    const invalid = { id: uuidv7(), kind: "material", schemaVersion: 1, payload: {} };
+    const out = await pushRecords(input([invalid, invalid]), run);
+    expect(calls).toBe(1);
+    expect(out.results).toHaveLength(2);
+    const unauthorized = new TRPCError({ code: "UNAUTHORIZED" });
+    await expect(
+      pushRecords(input([invalid]), async () => {
+        throw unauthorized;
+      }),
     ).rejects.toBe(unauthorized);
   });
 

@@ -248,5 +248,10 @@ export async function pushRecords(
       break;
     }
   }
+  // Nothing ran — every record malformed, or the first one of a version this server does not
+  // know — so no transaction has resolved the caller yet. One does now, with no record in it:
+  // an anonymous, uninvited or deactivated caller is UNAUTHORIZED here as anywhere, and learns
+  // nothing about its batch.
+  if (ran === 0) await run(async () => undefined);
   return { serverNow, clockSkewMs: skew.clockSkewMs, results };
 }
