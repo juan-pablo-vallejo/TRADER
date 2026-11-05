@@ -18,3 +18,4 @@ export * from "./invoice-line-items";
 export * from "./credit-memos";
 export * from "./audit-log";
 export * from "./day-closeouts";
+export * from "./material-corrections";

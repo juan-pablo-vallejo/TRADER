@@ -134,6 +134,20 @@
       "when": 1793838279364,
       "tag": "0018_closed-out-material-freeze",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1793845187288,
+      "tag": "0019_material-corrections",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1793845191408,
+      "tag": "0020_material-correction-guards",
+      "breakpoints": true
     }
   ]
 }

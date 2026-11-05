@@ -318,7 +318,8 @@ describe("the membership seal", () => {
 
 describe("append-only", () => {
   const TABLES = ["day_closeouts", "day_closeout_workers", "day_closeout_materials"];
-  const TRUNCATED = TABLES;
+  // CASCADE reaches approvals through material_corrections.
+  const TRUNCATED = [...TABLES, "material_corrections", "approvals"];
 
   async function oneOfEach(tx: Tx) {
     const refs = await fixture(tx);

@@ -11,6 +11,7 @@ import {
 
 import { companies } from "./companies";
 import { approvalDecision, approvalReason } from "./enums";
+import { materialCorrections } from "./material-corrections";
 import { createdAt, id, updatedAt } from "./shared";
 import { users } from "./users";
 import { workSessionEvents } from "./work-session-events";
@@ -27,6 +28,11 @@ import { workSessionEvents } from "./work-session-events";
 // decided, so a wrong decision is undone by a correcting event, never by editing. A late
 // correction after a period closes is a new event with its own row and the reason
 // `corrected`; the closed period's rows are untouched.
+//
+// A row has exactly one subject: an event, or a material correction (Stage 3 line 6), which
+// is always `corrected` and is written pending by material.correct in the correction's own
+// transaction. Migration 0020 fixes every row's subject and reasons (only the decision moves),
+// and refuses a material correction's decision by its own submitter.
 export const approvals = pgTable(
   "approvals",
   {
@@ -34,7 +40,8 @@ export const approvals = pgTable(
     companyId: uuid("company_id")
       .notNull()
       .references(() => companies.id),
-    eventId: uuid("event_id").notNull(),
+    eventId: uuid("event_id"),
+    materialCorrectionId: uuid("material_correction_id"),
     reasons: approvalReason("reasons").array().notNull(),
     decision: approvalDecision("decision"),
     decidedAt: timestamp("decided_at", { withTimezone: true }),
@@ -46,11 +53,20 @@ export const approvals = pgTable(
     unique("approvals_company_id_id_unique").on(t.companyId, t.id),
     // One queue row per event.
     unique("approvals_company_id_event_id_unique").on(t.companyId, t.eventId),
+    unique("approvals_company_id_material_correction_id_unique").on(
+      t.companyId,
+      t.materialCorrectionId,
+    ),
     // Composite, so the event and the decider belong to the row's company (invariant 4).
     foreignKey({
       name: "approvals_company_id_event_id_fk",
       columns: [t.companyId, t.eventId],
       foreignColumns: [workSessionEvents.companyId, workSessionEvents.id],
+    }),
+    foreignKey({
+      name: "approvals_company_id_material_correction_id_fk",
+      columns: [t.companyId, t.materialCorrectionId],
+      foreignColumns: [materialCorrections.companyId, materialCorrections.id],
     }),
     foreignKey({
       name: "approvals_company_id_decided_by_user_id_fk",
@@ -63,6 +79,18 @@ export const approvals = pgTable(
       .on(t.companyId, t.createdAt)
       .where(sql`${t.decision} IS NULL`),
     check("approvals_reasons_not_empty", sql`cardinality(${t.reasons}) >= 1`),
+    // num_nonnulls is never NULL.
+    check(
+      "approvals_one_subject",
+      sql`num_nonnulls(${t.eventId}, ${t.materialCorrectionId}) = 1`,
+    ),
+    // NULL-safe: `= ANY` over an array holding NULL is NULL, not FALSE, and a CHECK passes on
+    // NULL; array_position(…, NULL) finds a NULL element. `corrected` was created with the type
+    // (0003), so naming it here is safe (see enums.ts on ADD VALUE).
+    check(
+      "approvals_material_corrected",
+      sql`${t.materialCorrectionId} IS NULL OR (coalesce('corrected'::approval_reason = ANY (${t.reasons}), false) AND array_position(${t.reasons}, NULL) IS NULL)`,
+    ),
     check(
       "approvals_decision_complete",
       sql`(${t.decision} IS NULL) = (${t.decidedAt} IS NULL) AND (${t.decision} IS NULL) = (${t.decidedByUserId} IS NULL)`,
