@@ -1,7 +1,9 @@
+import { closeoutRouter } from "./routers/closeout";
 import { meRouter } from "./routers/me";
 import { router } from "./trpc";
 
 export const appRouter = router({
+  closeout: closeoutRouter,
   me: meRouter,
 });
 

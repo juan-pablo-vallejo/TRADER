@@ -13,6 +13,9 @@ import {
   crewMembers,
   crews,
   customers,
+  dayCloseoutMaterials,
+  dayCloseouts,
+  dayCloseoutWorkers,
   invoiceLineItems,
   invoices,
   materials,
@@ -36,7 +39,7 @@ import {
   type Tx,
 } from "./helpers";
 
-// The tables that carry company_id, as 0014 lists them; companies is checked on its own id.
+// The tables that carry company_id, as 0014 and 0017 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -44,6 +47,9 @@ const TENANT_TABLES = [
   "crew_members",
   "crews",
   "customers",
+  "day_closeout_materials",
+  "day_closeout_workers",
+  "day_closeouts",
   "invoice_counters",
   "invoice_line_items",
   "invoices",
@@ -125,6 +131,33 @@ async function everything(tx: Tx, name: string) {
     contentType: "image/jpeg",
     byteSize: 1_843_201,
     sha256: "a".repeat(64),
+  });
+  const closeoutId = uuidv7();
+  await tx.insert(dayCloseouts).values({
+    id: closeoutId,
+    companyId: refs.companyId,
+    jobId: refs.jobId,
+    workDate: "2026-10-19",
+    timezone: "America/New_York",
+    jobStatus: "open",
+    jobStatusApplied: true,
+    submittedByUserId: refs.workerId,
+    clientTimestamp: new Date(),
+    serverTimestamp: new Date(),
+    workerMarkCount: 1,
+    materialCount: 1,
+  });
+  await tx.insert(dayCloseoutWorkers).values({
+    companyId: refs.companyId,
+    closeoutId,
+    workerId: refs.workerId,
+    ledgerThrough: new Date(),
+  });
+  await tx.insert(dayCloseoutMaterials).values({
+    companyId: refs.companyId,
+    closeoutId,
+    jobId: refs.jobId,
+    materialId,
   });
   const { invoiceId } = await draftInvoice(tx, refs);
   await issue(tx, refs, invoiceId);

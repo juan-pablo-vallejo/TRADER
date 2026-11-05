@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../src/context";
 import { foldSessions } from "../src/labor/fold";
-import { loadWorkerTimeline } from "../src/labor/timeline";
+import { loadWorkerTimeline, lockCompanyFieldWrites } from "../src/labor/timeline";
 import { validateEvent } from "../src/labor/validate";
 import { HOUR } from "./labor-events";
 
@@ -105,6 +105,11 @@ async function asApp(tx: Tx, companyId?: string) {
   }
 }
 
+// The tenant setting alone, as the owner: the locks key on it and need no rows.
+async function tenantOnly(tx: Tx, companyId: string) {
+  await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
+}
+
 async function sqlstate(run: Promise<unknown>): Promise<string | undefined> {
   try {
     await run;
@@ -143,7 +148,7 @@ describe("loadWorkerTimeline", () => {
     });
   });
 
-  it("sees no other tenant's events, and none with the tenant unset", async () => {
+  it("sees no other tenant's events, and refuses to run with the tenant unset", async () => {
     await rolledBack(owner, async (tx) => {
       const a = await company(tx, "A");
       const b = await company(tx, "B");
@@ -161,7 +166,9 @@ describe("loadWorkerTimeline", () => {
       await event(tx, wb, "started", "2026-10-05T12:00:00Z");
 
       await asApp(tx);
-      expect((await loadWorkerTimeline(tx, wa.workerId)).events).toHaveLength(0);
+      await expect(
+        tx.transaction((sp) => loadWorkerTimeline(sp, wa.workerId)),
+      ).rejects.toThrow(/requires the request's tenant/);
       await tx.execute(sql`select set_config('app.company_id', ${a.companyId}, true)`);
       expect((await loadWorkerTimeline(tx, wb.workerId)).events).toHaveLength(0);
       expect((await loadWorkerTimeline(tx, wa.workerId)).events).toHaveLength(1);
@@ -242,12 +249,47 @@ describe("loadWorkerTimeline", () => {
 
   it("makes a second transaction on the same worker wait, and not one on another", async () => {
     const worker = uuidv7();
+    const tenant = uuidv7();
     await rolledBack(owner, async (holder) => {
+      await tenantOnly(holder, tenant);
       await loadWorkerTimeline(holder, worker);
       await rolledBack(other, async (tx) => {
+        await tenantOnly(tx, tenant);
         await tx.execute(sql`set local lock_timeout = '200ms'`);
         await loadWorkerTimeline(tx, uuidv7());
         expect(await sqlstate(loadWorkerTimeline(tx, worker))).toBe("55P03");
+      });
+    });
+  });
+  it("waits out a closeout's exclusive lock in its company, and not in another", async () => {
+    const tenant = uuidv7();
+    await rolledBack(owner, async (closeout) => {
+      await tenantOnly(closeout, tenant);
+      await lockCompanyFieldWrites(closeout, "exclusive");
+      await rolledBack(other, async (tx) => {
+        await tx.execute(sql`set local lock_timeout = '200ms'`);
+        await tenantOnly(tx, tenant);
+        expect(
+          await sqlstate(tx.transaction((sp) => loadWorkerTimeline(sp, uuidv7()))),
+        ).toBe("55P03");
+        await tenantOnly(tx, uuidv7());
+        await loadWorkerTimeline(tx, uuidv7());
+      });
+    });
+  });
+
+  it("holds a closeout off while a writer is in flight; writers share", async () => {
+    const tenant = uuidv7();
+    await rolledBack(owner, async (writer) => {
+      await tenantOnly(writer, tenant);
+      await loadWorkerTimeline(writer, uuidv7());
+      await rolledBack(other, async (tx) => {
+        await tx.execute(sql`set local lock_timeout = '200ms'`);
+        await tenantOnly(tx, tenant);
+        expect(
+          await sqlstate(tx.transaction((sp) => lockCompanyFieldWrites(sp, "exclusive"))),
+        ).toBe("55P03");
+        await loadWorkerTimeline(tx, uuidv7());
       });
     });
   });

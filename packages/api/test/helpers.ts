@@ -1,9 +1,19 @@
 // Shared by the API tests. Unlike the schema tests, nothing here can run in a rolled-back
 // transaction: the code under test opens its own. Fixtures are therefore committed by the
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
-// a work_session_event, so the deletes are always allowed.
+// a work_session_event, so the deletes are always allowed. Procedures that write append-only
+// rows run through the rolled-back calls further down instead.
 import { createDb, type Db } from "@trader/db";
-import { companies, customers, users } from "@trader/db/schema";
+import {
+  companies,
+  crewMembers,
+  crews,
+  customers,
+  jobs,
+  materials,
+  users,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { eq, inArray, sql } from "drizzle-orm";
 import superjson from "superjson";
@@ -12,6 +22,7 @@ import { z } from "zod";
 import { createContext, type Tx } from "../src/context";
 import type { VerifiedIdentity } from "../src/identity";
 import type { AppUser } from "../src/resolve-user";
+import { appRouter } from "../src/router";
 import {
   createCallerFactory,
   protectedProcedure,
@@ -233,6 +244,229 @@ export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(createContext({ db, identity: who }));
+
+// --- Rolled-back calls -----------------------------------------------------------------
+// Labor events and closeouts can never be deleted once committed, so a procedure that writes
+// them cannot run against the committed fixtures above. Instead the whole call runs inside an
+// owner transaction that is always rolled back: fixtures are inserted as the owner, the
+// transaction becomes trader_app (SET LOCAL ROLE, as the schema tests do), and the
+// transaction itself stands in for the pool, so the protected procedure's db.transaction
+// opens a savepoint. Its settings, its role check and its rollback-on-failure all happen
+// inside that savepoint; nothing survives the outer rollback. After a successful call its
+// tenant setting stays on the outer transaction; after a failed one, it is undone with the
+// rest of the savepoint.
+
+const ROLLBACK = Symbol("rollback");
+
+export async function rolledBack(db: Db, body: (tx: Tx) => Promise<void>): Promise<void> {
+  try {
+    await db.transaction(async (tx) => {
+      await body(tx);
+      throw ROLLBACK;
+    });
+  } catch (error) {
+    if (error !== ROLLBACK) throw error;
+  }
+}
+
+// Only a transaction's own savepoint API is used through this cast (`transaction`), which a
+// Drizzle transaction has with the pool's signature.
+export const txAsDb = (tx: Tx) => tx as unknown as Db;
+
+// From here on the transaction runs as the runtime role, as production's pool does.
+export async function becomeApp(tx: Tx) {
+  await tx.execute(sql`set local role trader_app`);
+}
+
+// Fires deferred constraints now: a rolled-back transaction never reaches commit, where they
+// would otherwise run.
+export async function sealNow(tx: Tx) {
+  await tx.execute(sql`set constraints all immediate`);
+}
+
+export const callerIn = (tx: Tx, who: unknown) =>
+  createCallerFactory(testRouter)(createContext({ db: txAsDb(tx), identity: who }));
+
+// One company with a bound user of `role` and a customer, inside `tx`. The subject and email
+// carry a random suffix: identity_subject is unique across every company.
+export async function companyIn(tx: Tx, role: AppUser["role"] = "worker") {
+  const run = crypto.randomUUID().slice(0, 8);
+  const [c] = await tx
+    .insert(companies)
+    .values({ name: `Rolled Co ${run}`, timezone: "America/New_York" })
+    .returning({ id: companies.id });
+  const companyId = c!.id;
+  const [u] = await tx
+    .insert(users)
+    .values({
+      companyId,
+      email: `rolled-${run}@co.test`,
+      name: "Rolled",
+      role,
+      identitySubject: `sub-rolled-${run}`,
+    })
+    .returning({ id: users.id });
+  const [cu] = await tx
+    .insert(customers)
+    .values({ companyId, name: "Customer" })
+    .returning({ id: customers.id });
+  return {
+    companyId,
+    userId: u!.id,
+    customerId: cu!.id,
+    who: identity(`sub-rolled-${run}`, `rolled-${run}@co.test`),
+  };
+}
+
+// What a device does: 48 bits of milliseconds, version 7, variant 10, random. Rows written by
+// rolled-back tests still share the database with concurrent suites, so ids are random.
+export function uuidv7(ms = Date.now()): string {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  const t = BigInt(ms);
+  for (let i = 0; i < 6; i++) b[i] = Number((t >> BigInt(8 * (5 - i))) & 0xffn);
+  b[6] = (b[6]! & 0x0f) | 0x70;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+// A crew's day, inside `tx`: a New York company whose bound foreman runs a crew assigned job
+// J, two workers, and job K on no crew. Everything a closeout of J reads.
+export async function crewDayIn(tx: Tx) {
+  const c = await companyIn(tx, "foreman");
+  const worker = async (n: string) =>
+    (
+      await tx
+        .insert(users)
+        .values({ companyId: c.companyId, email: `${n}-${uuidv7()}@co.test`, name: n })
+        .returning({ id: users.id })
+    )[0]!.id;
+  const w1 = await worker("w1");
+  const w2 = await worker("w2");
+  const [crew] = await tx
+    .insert(crews)
+    .values({ companyId: c.companyId, name: "Crew", foremanUserId: c.userId })
+    .returning({ id: crews.id });
+  await tx.insert(crewMembers).values(
+    [c.userId, w1, w2].map((userId) => ({
+      companyId: c.companyId,
+      crewId: crew!.id,
+      userId,
+    })),
+  );
+  const job = async (name: string, crewId: string | null) =>
+    (
+      await tx
+        .insert(jobs)
+        .values({ companyId: c.companyId, customerId: c.customerId, name, crewId })
+        .returning({ id: jobs.id })
+    )[0]!.id;
+  const J = await job("J", crew!.id);
+  const K = await job("K", null);
+  return { ...c, foremanId: c.userId, crewId: crew!.id, w1, w2, J, K };
+}
+
+export type CrewDay = Awaited<ReturnType<typeof crewDayIn>>;
+
+type EventInput = {
+  worker: string;
+  job: string;
+  type: "started" | "paused" | "resumed" | "ended" | "voided";
+  client: string;
+  // Receipt; defaults to the device time. Stated, so acceptance order is the test's.
+  server?: string;
+  skewed?: boolean;
+  corrects?: string;
+  voids?: string;
+};
+
+// One ledger row, written as the owner (the API's writers are later lines).
+export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<string> {
+  const server = new Date(e.server ?? e.client);
+  const id = uuidv7(server.getTime());
+  await tx.insert(workSessionEvents).values({
+    id,
+    companyId: day.companyId,
+    workerId: e.worker,
+    jobId: e.job,
+    type: e.type,
+    clientTimestamp: new Date(e.client),
+    serverTimestamp: server,
+    clockSkewed: e.skewed ?? false,
+    clockSkewMs: e.skewed ? 600_000 : 0,
+    attestationLevel: "none",
+    schemaVersion: 1,
+    timeSetByUser: false,
+    initiatorUserId: e.worker,
+    voidsEventId: e.voids ?? null,
+    correctsEventId: e.corrects ?? null,
+  });
+  return id;
+}
+
+export async function materialIn(tx: Tx, day: CrewDay, job: string, loggedAt: string) {
+  const id = uuidv7();
+  await tx.insert(materials).values({
+    id,
+    companyId: day.companyId,
+    jobId: job,
+    loggedByUserId: day.w1,
+    description: "Eggshell, white",
+    quantity: "2.000",
+    unit: "gal",
+    loggedAt: new Date(loggedAt),
+  });
+  return id;
+}
+
+// The application's own router, called inside a rolled-back transaction.
+export const appCallerIn = (tx: Tx, who: unknown) =>
+  createCallerFactory(appRouter)(createContext({ db: txAsDb(tx), identity: who }));
+
+// Another bound user in the day's company.
+export async function boundIn(
+  tx: Tx,
+  companyId: string,
+  role: AppUser["role"],
+  opts: { deactivated?: boolean } = {},
+) {
+  const tag = `${role}-${uuidv7()}`;
+  const [row] = await tx
+    .insert(users)
+    .values({
+      companyId,
+      email: `${tag}@co.test`,
+      name: tag,
+      role,
+      identitySubject: `sub-${tag}`,
+      deactivatedAt: opts.deactivated ? new Date() : null,
+    })
+    .returning({ id: users.id });
+  return { id: row!.id, who: identity(`sub-${tag}`, `${tag}@co.test`) };
+}
+
+// A crew's day committed by the owner, for tests that need two connections to see the same
+// rows. Nothing appended-only is ever committed against it, so cleanup can remove it all.
+export async function committedCrewDay(owner: Db) {
+  const day = await owner.transaction((tx) => crewDayIn(tx));
+  const cleanup = async () => {
+    const id = day.companyId;
+    await owner.delete(materials).where(eq(materials.companyId, id));
+    await owner.delete(jobs).where(eq(jobs.companyId, id));
+    await owner.delete(crewMembers).where(eq(crewMembers.companyId, id));
+    await owner.delete(crews).where(eq(crews.companyId, id));
+    await owner.delete(customers).where(eq(customers.companyId, id));
+    await owner.delete(users).where(eq(users.companyId, id));
+    await owner.delete(companies).where(eq(companies.id, id));
+  };
+  return { day, cleanup };
+}
+
+// The runtime role with the day's tenant set, as a protected call runs.
+export async function asTenant(tx: Tx, companyId: string) {
+  await becomeApp(tx);
+  await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
+}
 
 export type HttpCall = { path: string; input?: unknown; mutation?: boolean };
 

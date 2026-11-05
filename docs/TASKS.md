@@ -39,8 +39,10 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [x] Role gates; tested against a deactivated account exactly like an anonymous one
 - [x] Session fold with two-sided transition validation; derivations: `work_date`, duration,
       open sessions
-- [ ] Day closeout record per job and work date (schema, migration, invariant tests) and
+- [x] Day closeout record per job and work date (schema, migration, invariant tests) and
       `closeout.submit`; locked once submitted, later changes are corrections (PRD, Day closeout)
+- [ ] Crew day-review read with a review fingerprint checked at submit; before Stage 5 closeout
+- [ ] Material corrections: rows naming the original, approval for materials (PRD, Day closeout)
 - [ ] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
 - [ ] Approval queue procedures implementing the approval rule
 - [ ] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
