@@ -6,7 +6,10 @@ import { initTRPC, TRPCError } from "@trpc/server";
 import { sql } from "drizzle-orm";
 import superjson from "superjson";
 
-import type { Context } from "./context";
+import type { Db } from "@trader/db";
+
+import type { Context, Tx } from "./context";
+import type { VerifiedIdentity } from "./identity";
 import { BindConflict, resolveUser, type AppUser } from "./resolve-user";
 
 // One message for every way of not being a signed-in, active, invited user, so a response
@@ -38,9 +41,16 @@ export const router = t.router;
 export const createCallerFactory = t.createCallerFactory;
 export const publicProcedure = t.procedure;
 
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  const { db, identity } = ctx;
-  if (identity === null) throw unauthorized();
+// The protected sequence, in one transaction of its own: settings cleared, the runtime role
+// checked, the identity resolved (or bound) to an active user, the identity cleared and the
+// tenant set; then `body` runs in that transaction, which commits when it returns and rolls back
+// when it throws. The protected procedure runs it once per call; sync.push once per record
+// (ARCHITECTURE, sync.push), so a record's authority is re-read every time.
+export async function inCallerTransaction<T>(
+  db: Db,
+  identity: VerifiedIdentity,
+  body: (tx: Tx, user: AppUser) => Promise<T>,
+): Promise<T> {
   try {
     return await db.transaction(async (tx) => {
       // First statement: a pooled connection may carry session-level values; these
@@ -65,21 +75,29 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
           set_config('app.identity_email', '', true),
           set_config('app.company_id', ${user.companyId}, true)
       `);
-      // tRPC merges this into the existing context ({ ...ctx, ...this }), so the pool and the
-      // identity are removed by value here, not only by type: a procedure has `tx` and nothing
-      // that could open a connection outside this transaction.
-      const result = await next({
-        ctx: { db: undefined, identity: undefined, tx, user },
-      });
-      // A failed procedure comes back as { ok: false }, not a throw; returning it would let
-      // Drizzle commit whatever the procedure wrote before it failed.
-      if (!result.ok) throw result.error;
-      return result;
+      return body(tx, user);
     });
   } catch (error) {
     if (error instanceof BindConflict) throw unauthorized();
     throw error;
   }
+}
+
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  const { db, identity } = ctx;
+  if (identity === null) throw unauthorized();
+  return inCallerTransaction(db, identity, async (tx, user) => {
+    // tRPC merges this into the existing context ({ ...ctx, ...this }), so the pool and the
+    // identity are removed by value here, not only by type: a procedure has `tx` and nothing
+    // that could open a connection outside this transaction.
+    const result = await next({
+      ctx: { db: undefined, identity: undefined, tx, user },
+    });
+    // A failed procedure comes back as { ok: false }, not a throw; returning it would let
+    // Drizzle commit whatever the procedure wrote before it failed.
+    if (!result.ok) throw result.error;
+    return result;
+  });
 });
 
 // A role gate: procedure entry for the listed roles only, judged on the role resolved from the
