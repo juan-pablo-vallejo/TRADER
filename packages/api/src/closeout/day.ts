@@ -1,8 +1,10 @@
-// One job's day for its closeout: the sessions folded onto (job, work date), the receipt mark
-// of each worker who has one, and the materials logged on it. Built only from the existing
-// fold (deriveSessions) and workDate: there is no second derivation of sessions or dates.
-// The caller holds the company's field-write lock exclusive (labor/timeline.ts), so no writer
-// is in flight and every worker's ledger is read whole and consistent. Consumed by submit.ts.
+// One job's day: the sessions folded onto (job, work date), the receipt mark of each worker who
+// has one, and the materials logged on it. Built only from the existing fold (deriveSessions)
+// and workDate: there is no second derivation of sessions or dates. Under the company's
+// field-write lock held exclusive (labor/timeline.ts; closeout.submit), no writer is in flight
+// and the day is one consistent state. Without it (closeout.review), each statement reads its
+// own committed state, so the whole may combine states from different moments; each worker's
+// ledger is still one statement, legal on its own. Consumed by submit.ts and review.ts.
 import { materials, workSessionEvents } from "@trader/db/schema";
 import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
 
@@ -14,7 +16,27 @@ import {
   type DerivedSession,
 } from "../labor/work-date";
 
-export type DaySession = { workerId: string; session: DerivedSession };
+// `corrected`: a source in effect is a correction (an edited entry, PRD Office approval).
+export type DaySession = {
+  workerId: string;
+  session: DerivedSession;
+  corrected: boolean;
+};
+
+// The material facts the foreman sees. No cost: the office's (migration 0018).
+export type DayMaterial = Pick<
+  typeof materials.$inferSelect,
+  "id" | "loggedByUserId" | "description" | "quantity" | "unit" | "loggedAt"
+>;
+
+export const dayMaterialColumns = {
+  id: materials.id,
+  loggedByUserId: materials.loggedByUserId,
+  description: materials.description,
+  quantity: materials.quantity,
+  unit: materials.unit,
+  loggedAt: materials.loggedAt,
+};
 
 export type JobDay = {
   sessions: DaySession[];
@@ -22,7 +44,8 @@ export type JobDay = {
   // stamp of their ledger: their events stamped at or before it are what the day was built
   // from (receipt stamps rise per worker, ARCHITECTURE row 185).
   workers: { workerId: string; ledgerThrough: Date }[];
-  materialIds: string[];
+  // In id order.
+  materials: DayMaterial[];
 };
 
 // A window around the day, in the zone, wide enough to hold it under any offset: SQL only
@@ -64,7 +87,13 @@ export async function gatherJobDay(
       (s) => s.jobId === jobId && s.workDate === workDate,
     );
     if (kept.length === 0) continue;
-    for (const session of kept) sessions.push({ workerId, session });
+    const corrections = new Set(
+      events.filter((e) => e.correctsEventId !== null).map((e) => e.id),
+    );
+    for (const session of kept) {
+      const corrected = session.eventSourceIds.some((id) => corrections.has(id));
+      sessions.push({ workerId, session, corrected });
+    }
     const ledgerThrough = newestStamp(events);
     if (ledgerThrough === null) throw new Error("unreachable: a session has events");
     workers.push({ workerId, ledgerThrough });
@@ -72,7 +101,7 @@ export async function gatherJobDay(
 
   // Device time is business time (PRD, Labor): a material's day is its logged_at's.
   const logged = await tx
-    .select({ id: materials.id, loggedAt: materials.loggedAt })
+    .select(dayMaterialColumns)
     .from(materials)
     .where(
       and(
@@ -81,10 +110,18 @@ export async function gatherJobDay(
         lt(materials.loggedAt, windowEnd(workDate, timeZone)),
       ),
     );
-  const materialIds = logged
-    .filter((m) => workDateOf(m.loggedAt, timeZone) === workDate)
-    .map((m) => m.id)
-    .sort();
+  const onDay = onDayInIdOrder(logged, workDate, timeZone);
 
-  return { sessions, workers, materialIds };
+  return { sessions, workers, materials: onDay };
+}
+
+// The rows whose logged_at falls on the day in the zone, in id order.
+export function onDayInIdOrder(
+  rows: readonly DayMaterial[],
+  workDate: string,
+  timeZone: string,
+): DayMaterial[] {
+  return rows
+    .filter((m) => workDateOf(m.loggedAt, timeZone) === workDate)
+    .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }

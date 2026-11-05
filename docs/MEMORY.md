@@ -104,6 +104,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   fails 42703 on one of them; branch with IF.
 - Procedures writing append-only rows are tested by calls inside a rolled-back owner transaction
   (api `helpers.ts`, "Rolled-back calls"); a failed call's savepoint also undoes its tenant.
+- The review fingerprint's tuple is pinned by a golden vector recomputed outside the code; any
+  change to the tuple, the fold or `workDate` is a new version, never an edit of v1.
+- Row locks never catch a phantom: a material inserted or moved onto a day by a writer that skips
+  the shared field-write lock escapes a closeout. Every material, sync and office writer takes it.
+- The first sign-in bind updates `identity_subject` (a unique column), so it holds the caller's
+  users row `FOR UPDATE`, which blocks foreign-key `KEY SHARE`: a future writer inserting rows
+  that name that user while holding the field-write lock shared can deadlock with that caller's
+  first closeout. Postgres aborts one; the call is retried.
 
 ## Log
 
@@ -128,16 +136,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-04: Stage 3 line 1a: `0015` identity binding, `users_identity_guard`; 167 tests.
 - 11-04: Stage 3 line 1b: tRPC, per-call transaction, identity adapters, `me.get`; 34 api tests.
 - 11-04: Stage 3 line 2: `roleProcedure` allowlist, 401/403 answers; 216 tests.
-
-### 2026-11-04 — Stage 3 line 3: session fold and two-sided validation
-
-- **Did:** `packages/api/src/labor/`: fold (replay with provenance and winners), `validateEvent`,
-  `workDate`/`deriveSessions`, `loadWorkerTimeline`; 77 labor tests (7 on Postgres), 126 api
-  and 293 in all; 18 protections watched red; plan revised twice after review; repairs task.
-- **Decided:** nine decision rows — effective instant, start-date `work_date`, accounting-only
-  voids, correction rules with a winner check, job provenance, full replay under a per-worker
-  lock, explicit receipt stamp, two-source rejection, office-only atomic repair sets.
-- **Next:** Stage 3 line 4 (TASKS:42) — day closeout record and `closeout.submit`.
+- 11-04: Stage 3 line 3: fold, `validateEvent`, `deriveSessions`, worker lock; 293 tests.
 
 ### 2026-11-04 — Stage 3 line 4: day closeout record and `closeout.submit`
 
@@ -150,3 +149,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   first, record shape C, material freeze, two new Stage 3 lines. Open: O5 (an ordinary event
   on a closed day: a new approval reason, after-day closeout, or counted normally) blocks line 5.
 - **Next:** O5 from Juan Pablo, then Stage 3 line 5 (TASKS:46) — `sync.push` and `sync.pull`.
+
+### 2026-11-04 — Stage 3 line 5: crew day-review read and review fingerprint
+
+- **Did:** `closeout.review` (foreman gate, scope rows `FOR SHARE`, no field-write lock);
+  `closeout/fingerprint.ts` (`v1.` SHA-256, job status bound); `closeout/scope.ts` shared with
+  submit; submit requires `reviewFingerprint` and answers `review_stale` after `sessions_open`.
+  No migration. 377 tests (190 db, 187 api); 17 protections watched red, `voided` layered.
+- **Decided:** two decision rows; R1–R6 defaults (no stored fingerprint, sessions-only workers,
+  no cost, no approvals, new id after stale, existing closeout flagged). O5 still open, before
+  TASKS:46. The previous entry's Next skipped TASKS:44–45.
+- **Next:** Stage 3 line 6 (TASKS:45) — material corrections.

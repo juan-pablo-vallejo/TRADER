@@ -15,7 +15,7 @@ import {
   workSessionEvents,
 } from "@trader/db/schema";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { eq, inArray, sql } from "drizzle-orm";
+import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
 import superjson from "superjson";
 import { z } from "zod";
 
@@ -146,20 +146,33 @@ export async function customerNames(owner: Db, companyId: string) {
   return rows.map((r) => r.name).sort();
 }
 
-// Resolves once `n` backends are blocked on a lock inside an UPDATE of users: the point at
-// which a test holding a row lock can release it and know both requests race.
-export async function waitForBlockedUpdates(owner: Db, n: number) {
+// Resolves once `n` backends wait on a lock (`wait_event_type = 'Lock'`) while running a
+// statement matching `queryLike`, optionally of one `wait_event` ('advisory' for an advisory
+// lock; 'transactionid' or 'tuple' for a row): the point at which a test holding the lock can
+// release it and know the waiter is past every earlier statement.
+export async function waitForLockWait(
+  owner: Db,
+  queryLike: string,
+  opts: { n?: number; waitEvent?: string } = {},
+) {
+  const n = opts.n ?? 1;
   for (let i = 0; i < 200; i++) {
     const { rows } = await owner.execute<{ blocked: number }>(sql`
       select count(*)::int as blocked from pg_stat_activity
       where datname = current_database() and wait_event_type = 'Lock'
-        and query ilike 'update "users"%'
+        and (${opts.waitEvent ?? null}::text is null or wait_event = ${opts.waitEvent ?? null})
+        and query ilike ${queryLike}
     `);
     if ((rows[0]?.blocked ?? 0) >= n) return;
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  throw new Error(`expected ${n} blocked updates`);
+  throw new Error(`expected ${n} backends waiting on a lock in ${queryLike}`);
 }
+
+// Resolves once `n` backends are blocked on a lock inside an UPDATE of users: the point at
+// which a test holding a row lock can release it and know both requests race.
+export const waitForBlockedUpdates = (owner: Db, n: number) =>
+  waitForLockWait(owner, 'update "users"%', { n });
 
 // Test-only procedures, built from the real protectedProcedure, that look inside the
 // transaction a protected call runs in.
@@ -533,5 +546,71 @@ export async function outcome(call: Promise<unknown>): Promise<string> {
     return "OK";
   } catch (error) {
     return (error as { code?: string }).code ?? "THROWN";
+  }
+}
+
+// Two connections. The holder's transaction stays open until the contender is done, then rolls
+// back.
+export async function holding(
+  db: Db,
+  body: (tx: Tx) => Promise<void>,
+  contender: () => Promise<void>,
+) {
+  let release: () => void = () => {};
+  const released = new Promise<void>((r) => (release = r));
+  let ready: () => void = () => {};
+  const held = new Promise<void>((r) => (ready = r));
+  let failed: unknown;
+  const holder = rolledBack(db, async (tx) => {
+    try {
+      await body(tx);
+    } catch (error) {
+      failed = error;
+    }
+    ready();
+    await released;
+  });
+  await held;
+  try {
+    if (failed !== undefined) throw failed;
+    await contender();
+  } finally {
+    release();
+    await holder;
+  }
+}
+
+export const lockTimeout = (tx: Tx) => tx.execute(sql`set local lock_timeout = '300ms'`);
+
+// The SQLSTATE somewhere in an error's cause chain.
+export function sqlstateOf(error: unknown): string | undefined {
+  for (let e: unknown = error; e instanceof Error; e = e.cause) {
+    if (e instanceof DrizzleQueryError) return (e.cause as { code?: string }).code;
+  }
+  return undefined;
+}
+
+// The error a promise rejects with; a resolution fails the test.
+export async function rejection(p: Promise<unknown>) {
+  try {
+    await p;
+  } catch (error) {
+    return error as Error & { code?: string };
+  }
+  throw new Error("expected the call to fail");
+}
+
+// A worked, ended day on J, 5 October in New York: w1 4 h, w2 8 h.
+export const WORKED_DAY = "2026-10-05";
+export async function workedDay(tx: Tx, d: CrewDay) {
+  const at = (worker: string, start: string, end: string) => [
+    { worker, job: d.J, type: "started" as const, client: start },
+    { worker, job: d.J, type: "ended" as const, client: end },
+  ];
+  for (const e of [
+    ...at(d.w1, "2026-10-05T12:00:00Z", "2026-10-05T16:00:00Z"),
+    ...at(d.w2, "2026-10-05T13:00:00Z", "2026-10-05T21:00:00Z"),
+  ]) {
+    await eventIn(tx, d, e);
   }
 }

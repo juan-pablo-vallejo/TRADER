@@ -4,16 +4,14 @@
 // thrown is retried, except the one-message UNAUTHORIZED and FORBIDDEN answers. Runs in the
 // protected call's transaction; sync.push may later carry closeout records here, each in a
 // transaction of its own (a push holds the field-write lock shared, and this takes it
-// exclusive). Consumed by routers/closeout.ts.
+// exclusive). A new submission is accepted only when the day, under this call's locks, is the
+// day closeout.review returned (closeout/fingerprint.ts). Consumed by routers/closeout.ts.
 import {
-  companies,
-  crews,
   dayCloseoutMaterials,
   dayCloseouts,
   dayCloseoutWorkers,
   jobs,
   materials,
-  users,
 } from "@trader/db/schema";
 import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -22,8 +20,15 @@ import type { Tx } from "../context";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { workDate as workDateOf } from "../labor/work-date";
 import type { AppUser } from "../resolve-user";
-import { forbidden, unauthorized } from "../trpc";
-import { gatherJobDay } from "./day";
+import { forbidden } from "../trpc";
+import {
+  dayMaterialColumns,
+  gatherJobDay,
+  onDayInIdOrder,
+  type DayMaterial,
+} from "./day";
+import { FINGERPRINT_PATTERN, reviewFingerprint } from "./fingerprint";
+import { lockForemanScope } from "./scope";
 
 // Nothing names a company, a submitter, a worker or a role: those are the server's.
 export const closeoutInput = z.strictObject({
@@ -35,6 +40,10 @@ export const closeoutInput = z.strictObject({
   jobStatus: z.enum(["open", "complete"]),
   note: z.string().trim().min(1).max(2000).nullable(),
   clientTimestamp: z.date(),
+  // From the closeout.review the foreman confirmed, kept unchanged on every retry. A
+  // precondition of a new acceptance, not part of the record: never stored, never compared
+  // when answering a retry. Any well-formed version, so another version is review_stale.
+  reviewFingerprint: z.string().regex(FINGERPRINT_PATTERN),
 });
 
 export type CloseoutInput = z.infer<typeof closeoutInput>;
@@ -56,6 +65,9 @@ export const REJECTION_CODES = [
   // A session on the job and date is not ended (a voided one included: decision D4).
   "sessions_open",
   "work_date_in_future",
+  // The day changed since the review the fingerprint came from: review again; a new
+  // confirmation is a new submission with a new id.
+  "review_stale",
 ] as const;
 
 export const closeoutOutput = z.discriminatedUnion("result", [
@@ -95,7 +107,8 @@ const ack = (result: "accepted" | "duplicate", row: Prior): CloseoutResult => ({
   },
 });
 
-// The same submission: the same submitter and every column the device sent.
+// The same submission: the same submitter and every stored field the device sent. The review
+// fingerprint is not one: a retry of an accepted submission is a duplicate whatever it carries.
 const same = (row: Prior, user: AppUser, input: CloseoutInput) =>
   row.submittedByUserId === user.id &&
   row.jobId === input.jobId &&
@@ -134,49 +147,11 @@ export async function submitCloseout(
   // original submitter (an allowlist of one, ARCHITECTURE row 176).
   if (user.role !== "foreman") throw forbidden();
 
-  // 3–6. Every authorization input is read under a lock held to commit, in the global order
-  // (jobs, crews, users, companies; then the field-write lock): a concurrent office change
-  // either committed first and is seen here, or waits for this closeout to end. NO KEY UPDATE
-  // on the job serializes closeouts of one job without blocking labor and material inserts,
-  // whose foreign-key checks take KEY SHARE. One answer for a job that is invisible, unstaffed
-  // or another foreman's, so nothing says which.
-  const [job] = await tx
-    .select({ crewId: jobs.crewId, status: jobs.status })
-    .from(jobs)
-    .where(eq(jobs.id, input.jobId))
-    .for("no key update");
-  if (job === undefined || job.crewId === null) throw forbidden();
-
-  const [crew] = await tx
-    .select({ foremanUserId: crews.foremanUserId, deactivatedAt: crews.deactivatedAt })
-    .from(crews)
-    .where(eq(crews.id, job.crewId))
-    .for("share");
-  if (
-    crew === undefined ||
-    crew.foremanUserId !== user.id ||
-    crew.deactivatedAt !== null
-  ) {
-    throw forbidden();
-  }
-
-  // Resolution read the caller without a lock; this re-reads it under one.
-  const [self] = await tx
-    .select({ role: users.role, deactivatedAt: users.deactivatedAt })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .for("share");
-  if (self === undefined || self.deactivatedAt !== null) throw unauthorized();
-  if (self.role !== "foreman") throw forbidden();
-
-  // The zone the day is judged in, and stored with the closeout: the company may change it.
-  const [company] = await tx
-    .select({ timezone: companies.timezone })
-    .from(companies)
-    .where(eq(companies.id, user.companyId))
-    .for("share");
-  if (company === undefined) throw new Error("the caller's company is not visible");
-  const timeZone = company.timezone;
+  // 3–6. Every authorization input under a lock held to commit (closeout/scope.ts): the job
+  // NO KEY UPDATE, then its crew, the caller and the company's zone, which is stored with the
+  // closeout.
+  const scope = await lockForemanScope(tx, user, input.jobId, "no key update");
+  const timeZone = scope.timeZone;
 
   // 8. No labor or material writer is in flight from here to commit.
   await lockCompanyFieldWrites(tx, "exclusive");
@@ -210,20 +185,38 @@ export async function submitCloseout(
 
   // 11. Hold the day's materials against a concurrent edit, then judge them again as they now
   // stand: an edit that committed while this waited may have moved one off the day.
-  let materialIds: string[] = [];
-  if (day.materialIds.length > 0) {
+  let dayMaterials: DayMaterial[] = [];
+  if (day.materials.length > 0) {
     const locked = await tx
-      .select({ id: materials.id, loggedAt: materials.loggedAt })
+      .select(dayMaterialColumns)
       .from(materials)
       .where(
-        and(inArray(materials.id, day.materialIds), eq(materials.jobId, input.jobId)),
+        and(
+          inArray(
+            materials.id,
+            day.materials.map((m) => m.id),
+          ),
+          eq(materials.jobId, input.jobId),
+        ),
       )
       .for("share");
-    materialIds = locked
-      .filter((m) => workDateOf(m.loggedAt, timeZone) === input.workDate)
-      .map((m) => m.id)
-      .sort();
+    dayMaterials = onDayInIdOrder(locked, input.workDate, timeZone);
   }
+  const materialIds = dayMaterials.map((m) => m.id);
+
+  // 11b. The day as it stands under the locks, against the day the foreman reviewed. No writer
+  // obeying the field-write lock commits from step 8 to commit, the company row holds the zone
+  // and the job row its status, so this is the state the closeout records. Before any write.
+  const current = reviewFingerprint({
+    companyId: user.companyId,
+    jobId: input.jobId,
+    workDate: input.workDate,
+    timeZone,
+    jobStatus: scope.jobStatus,
+    sessions: day.sessions,
+    materials: dayMaterials,
+  });
+  if (current !== input.reviewFingerprint) return rejected("review_stale");
 
   // 12. A late closeout for an earlier day never overwrites a later day's status, and an
   // archived job stays archived. Fixed now, stored, and answered the same on every retry.
@@ -234,7 +227,7 @@ export async function submitCloseout(
       and(eq(dayCloseouts.jobId, input.jobId), gt(dayCloseouts.workDate, input.workDate)),
     )
     .limit(1);
-  const jobStatusApplied = job.status !== "archived" && later === undefined;
+  const jobStatusApplied = scope.jobStatus !== "archived" && later === undefined;
 
   // 14. No conflict target: the primary key and the natural key both end here. Nothing comes
   // back only if a concurrent call inserted this id for another job (another job's lock).
