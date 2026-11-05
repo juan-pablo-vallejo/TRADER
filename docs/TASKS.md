@@ -46,7 +46,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [x] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
 - [x] `closeout.submit`, `material.correct`: an id an invisible row holds is `id_conflict`, not 500
 - [x] Approval queue procedures implementing the approval rule
-- [ ] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
+- [x] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
 - [ ] Kill-switch state endpoint; error-reporting wrapper
 
 ## Stage 4 — Office web (`apps/web`)
