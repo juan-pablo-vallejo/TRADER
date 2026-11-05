@@ -4,7 +4,16 @@
 // a work_session_event, so the deletes are always allowed. Procedures that write append-only
 // rows run through the rolled-back calls further down instead.
 import { createDb, type Db } from "@trader/db";
-import { companies, customers, users } from "@trader/db/schema";
+import {
+  companies,
+  crewMembers,
+  crews,
+  customers,
+  jobs,
+  materials,
+  users,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { eq, inArray, sql } from "drizzle-orm";
 import superjson from "superjson";
@@ -306,6 +315,113 @@ export async function companyIn(tx: Tx, role: AppUser["role"] = "worker") {
     customerId: cu!.id,
     who: identity(`sub-rolled-${run}`, `rolled-${run}@co.test`),
   };
+}
+
+// What a device does: 48 bits of milliseconds, version 7, variant 10, random. Rows written by
+// rolled-back tests still share the database with concurrent suites, so ids are random.
+export function uuidv7(ms = Date.now()): string {
+  const b = crypto.getRandomValues(new Uint8Array(16));
+  const t = BigInt(ms);
+  for (let i = 0; i < 6; i++) b[i] = Number((t >> BigInt(8 * (5 - i))) & 0xffn);
+  b[6] = (b[6]! & 0x0f) | 0x70;
+  b[8] = (b[8]! & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+}
+
+// A crew's day, inside `tx`: a New York company whose bound foreman runs a crew assigned job
+// J, two workers, and job K on no crew. Everything a closeout of J reads.
+export async function crewDayIn(tx: Tx) {
+  const c = await companyIn(tx, "foreman");
+  const worker = async (n: string) =>
+    (
+      await tx
+        .insert(users)
+        .values({ companyId: c.companyId, email: `${n}-${uuidv7()}@co.test`, name: n })
+        .returning({ id: users.id })
+    )[0]!.id;
+  const w1 = await worker("w1");
+  const w2 = await worker("w2");
+  const [crew] = await tx
+    .insert(crews)
+    .values({ companyId: c.companyId, name: "Crew", foremanUserId: c.userId })
+    .returning({ id: crews.id });
+  await tx.insert(crewMembers).values(
+    [c.userId, w1, w2].map((userId) => ({
+      companyId: c.companyId,
+      crewId: crew!.id,
+      userId,
+    })),
+  );
+  const job = async (name: string, crewId: string | null) =>
+    (
+      await tx
+        .insert(jobs)
+        .values({ companyId: c.companyId, customerId: c.customerId, name, crewId })
+        .returning({ id: jobs.id })
+    )[0]!.id;
+  const J = await job("J", crew!.id);
+  const K = await job("K", null);
+  return { ...c, foremanId: c.userId, crewId: crew!.id, w1, w2, J, K };
+}
+
+export type CrewDay = Awaited<ReturnType<typeof crewDayIn>>;
+
+type EventInput = {
+  worker: string;
+  job: string;
+  type: "started" | "paused" | "resumed" | "ended" | "voided";
+  client: string;
+  // Receipt; defaults to the device time. Stated, so acceptance order is the test's.
+  server?: string;
+  skewed?: boolean;
+  corrects?: string;
+  voids?: string;
+};
+
+// One ledger row, written as the owner (the API's writers are later lines).
+export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<string> {
+  const server = new Date(e.server ?? e.client);
+  const id = uuidv7(server.getTime());
+  await tx.insert(workSessionEvents).values({
+    id,
+    companyId: day.companyId,
+    workerId: e.worker,
+    jobId: e.job,
+    type: e.type,
+    clientTimestamp: new Date(e.client),
+    serverTimestamp: server,
+    clockSkewed: e.skewed ?? false,
+    clockSkewMs: e.skewed ? 600_000 : 0,
+    attestationLevel: "none",
+    schemaVersion: 1,
+    timeSetByUser: false,
+    initiatorUserId: e.worker,
+    voidsEventId: e.voids ?? null,
+    correctsEventId: e.corrects ?? null,
+  });
+  return id;
+}
+
+export async function materialIn(tx: Tx, day: CrewDay, job: string, loggedAt: string) {
+  const id = uuidv7();
+  await tx.insert(materials).values({
+    id,
+    companyId: day.companyId,
+    jobId: job,
+    loggedByUserId: day.w1,
+    description: "Eggshell, white",
+    quantity: "2.000",
+    unit: "gal",
+    loggedAt: new Date(loggedAt),
+  });
+  return id;
+}
+
+// The runtime role with the day's tenant set, as a protected call runs.
+export async function asTenant(tx: Tx, companyId: string) {
+  await becomeApp(tx);
+  await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
 }
 
 export type HttpCall = { path: string; input?: unknown; mutation?: boolean };

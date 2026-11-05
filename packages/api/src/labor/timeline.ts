@@ -73,24 +73,8 @@ export async function loadWorkerTimeline(
     sql`select pg_advisory_xact_lock(hashtextextended(${workerId}::uuid::text, 0))`,
   );
 
-  // Row-level security confines this to the request's tenant.
-  const events = await tx
-    .select({
-      id: workSessionEvents.id,
-      workerId: workSessionEvents.workerId,
-      jobId: workSessionEvents.jobId,
-      type: workSessionEvents.type,
-      clientTimestamp: workSessionEvents.clientTimestamp,
-      serverTimestamp: workSessionEvents.serverTimestamp,
-      clockSkewed: workSessionEvents.clockSkewed,
-      voidsEventId: workSessionEvents.voidsEventId,
-      correctsEventId: workSessionEvents.correctsEventId,
-    })
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.workerId, workerId));
-
-  const newest = Math.max(...events.map((e) => e.serverTimestamp.getTime()));
-  const baselineStamp = events.length > 0 ? new Date(newest) : null;
+  const events = await readWorkerEvents(tx, workerId);
+  const baselineStamp = newestStamp(events);
 
   // greatest() ignores the NULL a worker with no events gives. Epoch milliseconds, so no
   // text format crosses the driver; the column holds milliseconds (precision 3).
@@ -104,4 +88,30 @@ export async function loadWorkerTimeline(
   if (received === undefined) throw new Error("no receipt stamp returned");
 
   return { events, baselineStamp, receivedAt: new Date(Number(received)) };
+}
+
+// One worker's whole ledger in the fold's shape, with no lock: callers hold whatever excludes
+// concurrent writers (the worker's lock above, or the closeout's exclusive field-write lock).
+// Row-level security confines it to the request's tenant.
+export async function readWorkerEvents(tx: Tx, workerId: string): Promise<LaborEvent[]> {
+  return tx
+    .select({
+      id: workSessionEvents.id,
+      workerId: workSessionEvents.workerId,
+      jobId: workSessionEvents.jobId,
+      type: workSessionEvents.type,
+      clientTimestamp: workSessionEvents.clientTimestamp,
+      serverTimestamp: workSessionEvents.serverTimestamp,
+      clockSkewed: workSessionEvents.clockSkewed,
+      voidsEventId: workSessionEvents.voidsEventId,
+      correctsEventId: workSessionEvents.correctsEventId,
+    })
+    .from(workSessionEvents)
+    .where(eq(workSessionEvents.workerId, workerId));
+}
+
+// The newest receipt stamp among `events`, or null for none.
+export function newestStamp(events: readonly LaborEvent[]): Date | null {
+  if (events.length === 0) return null;
+  return new Date(Math.max(...events.map((e) => e.serverTimestamp.getTime())));
 }
