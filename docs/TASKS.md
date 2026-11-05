@@ -44,7 +44,7 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 - [x] Material corrections: rows naming the original, approval for materials (PRD, Day closeout)
 - [x] Approval facts at push (`captured_offline`, `after_closeout`); receipt approvals, late corrections
 - [x] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
-- [ ] `closeout.submit`, `material.correct`: an id an invisible row holds is `id_conflict`, not 500
+- [x] `closeout.submit`, `material.correct`: an id an invisible row holds is `id_conflict`, not 500
 - [ ] Approval queue procedures implementing the approval rule
 - [ ] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
 - [ ] Kill-switch state endpoint; error-reporting wrapper
