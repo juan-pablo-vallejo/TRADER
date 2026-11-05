@@ -183,6 +183,13 @@
       "when": 1793915882409,
       "tag": "0025_event-approval-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1793919320644,
+      "tag": "0026_event-repair-guards",
+      "breakpoints": true
     }
   ]
 }

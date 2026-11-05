@@ -36,6 +36,7 @@ import { workSessionEvents } from "./work-session-events";
 // 0020 fixes every row's subject and reasons (only the decision moves) and refuses a material
 // correction's decision by its own submitter; 0022 does the same for a receipt's logger, and
 // 0025 for an event's worker (never its initiator). All three subjects are written pending.
+// 0026 requires a labor correction's or void's row to hold `corrected`.
 export const approvals = pgTable(
   "approvals",
   {
