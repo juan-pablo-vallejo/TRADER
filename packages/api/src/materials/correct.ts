@@ -50,7 +50,10 @@ export type CorrectionInput = z.infer<typeof correctionInput>;
 
 // The acknowledgement: immutable facts of the correction only, so a retry answers exactly as
 // the first call did.
-const acknowledgement = z.strictObject({ id: z.uuid(), serverTimestamp: z.date() });
+export const correctionAcknowledgement = z.strictObject({
+  id: z.uuid(),
+  serverTimestamp: z.date(),
+});
 
 export const REJECTION_CODES = [
   // This id is already a different correction.
@@ -74,8 +77,14 @@ export const REJECTION_CODES = [
 ] as const;
 
 export const correctionOutput = z.discriminatedUnion("result", [
-  z.strictObject({ result: z.literal("accepted"), correction: acknowledgement }),
-  z.strictObject({ result: z.literal("duplicate"), correction: acknowledgement }),
+  z.strictObject({
+    result: z.literal("accepted"),
+    correction: correctionAcknowledgement,
+  }),
+  z.strictObject({
+    result: z.literal("duplicate"),
+    correction: correctionAcknowledgement,
+  }),
   z.strictObject({
     result: z.literal("rejected"),
     code: z.enum(REJECTION_CODES),

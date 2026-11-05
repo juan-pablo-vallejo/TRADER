@@ -3,6 +3,8 @@
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
 // a work_session_event, so the deletes are always allowed. Procedures that write append-only
 // rows run through the rolled-back calls further down instead.
+import { fileURLToPath } from "node:url";
+
 import { createDb, type Db } from "@trader/db";
 import {
   companies,
@@ -16,6 +18,7 @@ import {
 } from "@trader/db/schema";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import superjson from "superjson";
 import { z } from "zod";
 
@@ -617,4 +620,48 @@ export async function workedDay(tx: Tx, d: CrewDay) {
   ]) {
     await eventIn(tx, d, e);
   }
+}
+
+// --- Disposable databases ---------------------------------------------------------------
+// Rolled-back transactions prove nothing about commits: a savepoint released inside one is not
+// a commit, and a failure there cannot be seen from another connection. The real-commit suites
+// (sync-push-commit.test.ts) run in a database of their own instead, made by the owner,
+// migrated through the whole journal — which also proves a fresh replay on every run — and
+// dropped afterwards with everything append-only that was committed in it. The compose and CI
+// user is a superuser (MEMORY), so it may CREATE DATABASE; if that ever stops holding, these
+// suites fail, never skip.
+export async function disposableDb() {
+  const name = `trader_t_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+  const admin = createDb();
+  await admin.execute(sql.raw(`create database ${name}`));
+  // Compose variables pointed at the new database; a blank DATABASE_URL means unset (env.ts).
+  const env = { ...process.env, POSTGRES_DB: name, DATABASE_URL: "" };
+  const owner = createDb(env);
+  await migrate(owner, {
+    migrationsFolder: fileURLToPath(new URL("../../db/migrations", import.meta.url)),
+  });
+  const pools: Db[] = [owner];
+  // The runtime role, as appDb() gives it for the shared database.
+  const app = (opts: { max?: number } = {}) => {
+    const db = createDb(env);
+    db.$client.options.options = "-c role=trader_app";
+    if (opts.max !== undefined) db.$client.options.max = opts.max;
+    pools.push(db);
+    return db;
+  };
+  // pool.end() resolves before the server's backends have gone; a forced drop would kill them
+  // mid-close, and the client would raise an error nothing is listening for. Wait them out.
+  const drop = async () => {
+    await Promise.all(pools.map((p) => p.$client.end()));
+    for (let i = 0; i < 200; i++) {
+      const { rows } = await admin.execute<{ n: number }>(
+        sql`select count(*)::int as n from pg_stat_activity where datname = ${name}`,
+      );
+      if (rows[0]?.n === 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    await admin.execute(sql.raw(`drop database ${name}`));
+    await admin.$client.end();
+  };
+  return { name, owner, app, drop };
 }

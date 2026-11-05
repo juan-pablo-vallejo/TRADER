@@ -5,7 +5,12 @@
 // transaction, its approval. Answers `accepted` or `duplicate` with an acknowledgement of fixed
 // facts only, or `rejected` with a code, writing nothing. Anything thrown is the loop's: the
 // record is omitted and retried. Consumed by sync/push.ts.
-import { approvals, attestationLevel, workSessionEvents } from "@trader/db/schema";
+import {
+  approvalReason,
+  approvals,
+  attestationLevel,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -45,7 +50,7 @@ export const laborAck = z.strictObject({
   id: z.uuid(),
   serverTimestamp: z.date(),
   clockSkewed: z.boolean(),
-  reasons: z.array(z.string()),
+  reasons: z.array(z.enum(approvalReason.enumValues)),
 });
 
 export type LaborRejection = RejectionCode | "id_conflict" | "not_permitted";

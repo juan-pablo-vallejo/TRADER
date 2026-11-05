@@ -100,6 +100,17 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   });
 });
 
+// sync.push's procedure: no transaction of its own. The call gets `runRecord`, which opens one
+// caller transaction per record, and neither the pool nor the identity, removed by value as
+// in the protected procedure. A call without an identity is UNAUTHORIZED before anything runs.
+export const syncProcedure = t.procedure.use(({ ctx, next }) => {
+  const { db, identity } = ctx;
+  if (identity === null) throw unauthorized();
+  const runRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) =>
+    inCallerTransaction(db, identity, body);
+  return next({ ctx: { db: undefined, identity: undefined, runRecord } });
+});
+
 // A role gate: procedure entry for the listed roles only, judged on the role resolved from the
 // database inside the protected transaction. An allowlist, not a rank, so a role added to the
 // enum later is admitted nowhere until a procedure names it. It checks entry only: a worker's

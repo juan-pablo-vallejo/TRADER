@@ -4,7 +4,7 @@
 // this record (seen below) or covers it; the id again; the approval facts; the insert and, in
 // the same transaction, its approval. No cost: the office fills it in later. Answers as
 // sync/labor.ts does. Consumed by sync/push.ts.
-import { approvals, materials } from "@trader/db/schema";
+import { approvalReason, approvals, materials } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -38,7 +38,7 @@ export const materialAck = z.strictObject({
   id: z.uuid(),
   receivedAt: z.date(),
   clockSkewed: z.boolean(),
-  reasons: z.array(z.string()),
+  reasons: z.array(z.enum(approvalReason.enumValues)),
 });
 
 export type MaterialResult =
