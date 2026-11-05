@@ -20,7 +20,12 @@ import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { workDate as workDateOf } from "../labor/work-date";
 import type { AppUser } from "../resolve-user";
 import { forbidden } from "../trpc";
-import { gatherJobDay } from "./day";
+import {
+  dayMaterialColumns,
+  gatherJobDay,
+  onDayInIdOrder,
+  type DayMaterial,
+} from "./day";
 import { lockForemanScope } from "./scope";
 
 // Nothing names a company, a submitter, a worker or a role: those are the server's.
@@ -170,20 +175,24 @@ export async function submitCloseout(
 
   // 11. Hold the day's materials against a concurrent edit, then judge them again as they now
   // stand: an edit that committed while this waited may have moved one off the day.
-  let materialIds: string[] = [];
-  if (day.materialIds.length > 0) {
+  let dayMaterials: DayMaterial[] = [];
+  if (day.materials.length > 0) {
     const locked = await tx
-      .select({ id: materials.id, loggedAt: materials.loggedAt })
+      .select(dayMaterialColumns)
       .from(materials)
       .where(
-        and(inArray(materials.id, day.materialIds), eq(materials.jobId, input.jobId)),
+        and(
+          inArray(
+            materials.id,
+            day.materials.map((m) => m.id),
+          ),
+          eq(materials.jobId, input.jobId),
+        ),
       )
       .for("share");
-    materialIds = locked
-      .filter((m) => workDateOf(m.loggedAt, timeZone) === input.workDate)
-      .map((m) => m.id)
-      .sort();
+    dayMaterials = onDayInIdOrder(locked, input.workDate, timeZone);
   }
+  const materialIds = dayMaterials.map((m) => m.id);
 
   // 12. A late closeout for an earlier day never overwrites a later day's status, and an
   // archived job stays archived. Fixed now, stored, and answered the same on every retry.

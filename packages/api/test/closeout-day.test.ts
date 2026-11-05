@@ -1,4 +1,4 @@
-// Stage 3 line 4: a job's day for its closeout, against Postgres. Every test runs in an owner
+// Stage 3 lines 4 and 5: a job's day for its closeout and review, against Postgres. Every test runs in an owner
 // transaction that is always rolled back (labor events can never be deleted), reading as
 // trader_app under the day's tenant.
 import { companies } from "@trader/db/schema";
@@ -35,8 +35,9 @@ const gather = (
 
 const summary = (d: Awaited<ReturnType<typeof gatherJobDay>>) =>
   d.sessions
-    .map(({ workerId, session }) => ({
+    .map(({ workerId, session, corrected }) => ({
       workerId,
+      corrected,
       workedMs: session.workedMs,
       voided: session.voided,
       complete: session.complete,
@@ -89,8 +90,20 @@ describe("gatherJobDay", () => {
       const day = await gather(tx, d, J, "2026-10-05");
       expect(summary(day)).toEqual(
         [
-          { workerId: w1, workedMs: 4 * HOUR, voided: false, complete: true },
-          { workerId: w2, workedMs: 8 * HOUR, voided: false, complete: true },
+          {
+            workerId: w1,
+            corrected: false,
+            workedMs: 4 * HOUR,
+            voided: false,
+            complete: true,
+          },
+          {
+            workerId: w2,
+            corrected: false,
+            workedMs: 8 * HOUR,
+            voided: false,
+            complete: true,
+          },
         ].sort((a, b) => (a.workerId < b.workerId ? -1 : 1)),
       );
       // The mark is the worker's whole ledger, K included.
@@ -103,12 +116,18 @@ describe("gatherJobDay", () => {
 
       const k = await gather(tx, d, K, "2026-10-05");
       expect(summary(k)).toEqual([
-        { workerId: w1, workedMs: 3 * HOUR, voided: false, complete: true },
+        {
+          workerId: w1,
+          corrected: false,
+          workedMs: 3 * HOUR,
+          voided: false,
+          complete: true,
+        },
       ]);
       expect(await gather(tx, d, J, "2026-10-06")).toEqual({
         sessions: [],
         workers: [],
-        materialIds: [],
+        materials: [],
       });
     });
   });
@@ -161,12 +180,19 @@ describe("gatherJobDay", () => {
       });
       await asTenant(tx, d.companyId);
 
+      // Each moved session's start in effect is a correction.
       expect(
-        summary(await gather(tx, d, J, "2026-10-05")).map((s) => s.workerId),
-      ).toEqual([w1]);
+        summary(await gather(tx, d, J, "2026-10-05")).map((s) => [
+          s.workerId,
+          s.corrected,
+        ]),
+      ).toEqual([[w1, true]]);
       expect(
-        summary(await gather(tx, d, K, "2026-10-05")).map((s) => s.workerId),
-      ).toEqual([w2]);
+        summary(await gather(tx, d, K, "2026-10-05")).map((s) => [
+          s.workerId,
+          s.corrected,
+        ]),
+      ).toEqual([[w2, true]]);
     });
   });
 
@@ -211,7 +237,13 @@ describe("gatherJobDay", () => {
       const byWorker = Object.fromEntries(
         summary(await gather(tx, d, J, "2026-10-05")).map((s) => [s.workerId, s]),
       );
-      expect(byWorker[w1]).toMatchObject({ workedMs: 0, voided: true, complete: true });
+      // A void is not a correction: no source in effect is one.
+      expect(byWorker[w1]).toMatchObject({
+        corrected: false,
+        workedMs: 0,
+        voided: true,
+        complete: true,
+      });
       expect(byWorker[w2]).toMatchObject({ voided: true, complete: false });
     });
   });
@@ -313,9 +345,18 @@ describe("gatherJobDay", () => {
       await materialIn(tx, d, d.J, "2026-10-06T04:01:00Z");
       await materialIn(tx, d, d.K, "2026-10-05T12:00:00Z");
       await asTenant(tx, d.companyId);
-      expect((await gather(tx, d, d.J, "2026-10-05")).materialIds).toEqual(
-        [late, morning].sort(),
+      const day = await gather(tx, d, d.J, "2026-10-05");
+      expect(day.materials.map((m) => m.id)).toEqual([late, morning].sort());
+      // The facts the foreman sees, and no cost.
+      expect(Object.keys(day.materials[0]!).sort()).toEqual(
+        ["description", "id", "loggedAt", "loggedByUserId", "quantity", "unit"].sort(),
       );
+      expect(day.materials[0]).toMatchObject({
+        description: "Eggshell, white",
+        quantity: "2.000",
+        unit: "gal",
+        loggedByUserId: d.w1,
+      });
     });
   });
 
