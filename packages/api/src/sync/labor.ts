@@ -188,7 +188,7 @@ export async function pushLaborEvent(
     clockSkewed: skew.clockSkewed,
     afterCloseout: await afterCloseout(
       tx,
-      sessionOfEvent(replay([...timeline.events, candidate]), candidate.id),
+      sessionOfEvent(replay([...timeline.events, candidate]), candidate),
     ),
   });
 
@@ -237,8 +237,9 @@ export async function pushLaborEvent(
 
 // The session an accepted event falls in: a positional source's own, or for a void, the
 // session of the root it names. Consumed by push and by labor/repair.ts.
-export function sessionOfEvent(after: Replay, eventId: string): Session {
-  const root = after.sessionOf.get(eventId) ?? eventId;
+export function sessionOfEvent(after: Replay, event: LaborEvent): Session {
+  const root =
+    event.type === "voided" ? event.voidsEventId : after.sessionOf.get(event.id);
   const session = after.sessions.find((s) => s.rootEventId === root);
   if (session === undefined) throw new Error("an accepted event has a session");
   return session;
