@@ -18,7 +18,8 @@ const JOB = { lat: 41.824, lng: -71.4128, radiusM: 200 };
 const north = (m: number) => ({ lat: JOB.lat + m / 111_195, lng: JOB.lng });
 
 const plain = {
-  type: "started" as const,
+  type: "started" as "started" | "paused" | "resumed" | "ended" | "voided",
+  corrected: false,
   capturedOffline: false,
   timeSetByUser: false,
   stamp: north(0),
@@ -102,9 +103,33 @@ describe("laborReasons and receiptReasons", () => {
         timeSetByUser: true,
       }),
     ).toEqual(["offline", "user_timed", "location", "clock_skewed", "after_closeout"]);
+    expect(laborReasons({ ...plain, corrected: true })).toEqual(["corrected"]);
     expect(
       receiptReasons({ capturedOffline: true, clockSkewed: true, afterCloseout: true }),
     ).toEqual(["offline", "clock_skewed", "after_closeout"]);
+  });
+
+  it("tags an office repair corrected, and never flags a void's missing stamp", () => {
+    // labor.repair's office events: user-timed, unstamped.
+    const office = { ...plain, timeSetByUser: true, stamp: null };
+    expect(laborReasons({ ...office, corrected: true })).toEqual([
+      "corrected",
+      "user_timed",
+      "location",
+    ]);
+    expect(laborReasons({ ...office, type: "paused" })).toEqual(["user_timed"]);
+    expect(
+      laborReasons({ ...office, type: "voided", corrected: true, timeSetByUser: false }),
+    ).toEqual(["corrected"]);
+    expect(
+      laborReasons({
+        ...office,
+        type: "voided",
+        corrected: true,
+        timeSetByUser: false,
+        afterCloseout: true,
+      }),
+    ).toEqual(["corrected", "after_closeout"]);
   });
 
   it("takes offline from capture evidence alone, never from a delay", () => {

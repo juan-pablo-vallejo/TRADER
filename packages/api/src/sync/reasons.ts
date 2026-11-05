@@ -1,7 +1,7 @@
 // The approval rule's facts at push (PRD, Office approval; ARCHITECTURE, sync decisions of
 // 2026-11-05). Pure: no database, no clock. Every reason is computed here, in one place, and
 // written once with the entry it describes; the database requires the column-derived ones
-// (migration 0022). Consumed by sync/labor.ts and sync/material.ts.
+// (migrations 0022 and 0026). Consumed by sync/labor.ts, sync/material.ts and labor/repair.ts.
 import type { approvalReason } from "@trader/db/schema";
 
 export type ApprovalReason = (typeof approvalReason.enumValues)[number];
@@ -63,8 +63,11 @@ const ordered = (flags: Partial<Record<ApprovalReason, boolean>>): ApprovalReaso
     ] as const
   ).filter((r) => flags[r] === true);
 
+// `corrected` is a corrects_event_id or a void (enums.ts): only the office writes either
+// (labor.repair); a device push never does. A void carries no stamp and is never flagged for one.
 export function laborReasons(e: {
-  type: "started" | "paused" | "resumed" | "ended";
+  type: "started" | "paused" | "resumed" | "ended" | "voided";
+  corrected: boolean;
   capturedOffline: boolean;
   timeSetByUser: boolean;
   stamp: Point | null;
@@ -74,8 +77,9 @@ export function laborReasons(e: {
 }): ApprovalReason[] {
   return ordered({
     offline: e.capturedOffline,
+    corrected: e.corrected,
     user_timed: e.timeSetByUser,
-    location: locationFlagged(e.type, e.stamp, e.job),
+    location: e.type !== "voided" && locationFlagged(e.type, e.stamp, e.job),
     clock_skewed: e.clockSkewed,
     after_closeout: e.afterCloseout,
   });
