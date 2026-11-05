@@ -21,6 +21,17 @@ export type WorkerTimeline = {
   receivedAt: Date;
 };
 
+// READ COMMITTED takes a snapshot per statement, so a read issued after a lock sees everything
+// the previous holder committed. A REPEATABLE READ snapshot predates it.
+export async function assertReadCommitted(tx: Tx, who: string) {
+  const { rows } = await tx.execute<{ level: string }>(
+    sql`select current_setting('transaction_isolation') as level`,
+  );
+  if (rows[0]?.level !== "read committed") {
+    throw new Error(`${who} requires a READ COMMITTED transaction`);
+  }
+}
+
 // The company's field-write lock. Every writer of field records takes it shared — labor
 // through loadWorkerTimeline, materials in their own writers — and the day closeout takes it
 // exclusive, so a closeout reads a company's labor and materials with no writer in flight: a
@@ -53,14 +64,7 @@ export async function loadWorkerTimeline(
   tx: Tx,
   workerId: string,
 ): Promise<WorkerTimeline> {
-  // READ COMMITTED takes a snapshot per statement, so the select below, issued after the lock,
-  // sees everything the previous holder committed. A REPEATABLE READ snapshot predates it.
-  const { rows: isolation } = await tx.execute<{ level: string }>(
-    sql`select current_setting('transaction_isolation') as level`,
-  );
-  if (isolation[0]?.level !== "read committed") {
-    throw new Error("loadWorkerTimeline requires a READ COMMITTED transaction");
-  }
+  await assertReadCommitted(tx, "loadWorkerTimeline");
 
   // Shared, before the worker's lock (the order every writer follows): a closeout holding it
   // exclusive is waited out, and this writer is never part of a closeout's read.

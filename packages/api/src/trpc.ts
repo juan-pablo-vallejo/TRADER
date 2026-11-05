@@ -12,11 +12,14 @@ import { BindConflict, resolveUser, type AppUser } from "./resolve-user";
 // One message for every way of not being a signed-in, active, invited user, so a response
 // never says whether an invitation exists.
 const UNAUTHORIZED_MESSAGE = "Sign-in required.";
-const unauthorized = () =>
+export const unauthorized = () =>
   new TRPCError({ code: "UNAUTHORIZED", message: UNAUTHORIZED_MESSAGE });
 
 // One message for every gate, naming no role, so a denial never says what would be admitted.
+// Exported so a procedure's own resource checks answer exactly as a gate does.
 const FORBIDDEN_MESSAGE = "Not permitted.";
+export const forbidden = () =>
+  new TRPCError({ code: "FORBIDDEN", message: FORBIDDEN_MESSAGE });
 
 const t = initTRPC.context<Context>().create({
   transformer: superjson,
@@ -88,7 +91,7 @@ export const roleProcedure = (...allowed: [AppUser["role"], ...AppUser["role"][]
   const admitted = new Set(allowed);
   return protectedProcedure.use(({ ctx, next }) => {
     if (!admitted.has(ctx.user.role)) {
-      throw new TRPCError({ code: "FORBIDDEN", message: FORBIDDEN_MESSAGE });
+      throw forbidden();
     }
     return next();
   });

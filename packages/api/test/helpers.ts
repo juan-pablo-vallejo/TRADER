@@ -22,6 +22,7 @@ import { z } from "zod";
 import { createContext, type Tx } from "../src/context";
 import type { VerifiedIdentity } from "../src/identity";
 import type { AppUser } from "../src/resolve-user";
+import { appRouter } from "../src/router";
 import {
   createCallerFactory,
   protectedProcedure,
@@ -416,6 +417,49 @@ export async function materialIn(tx: Tx, day: CrewDay, job: string, loggedAt: st
     loggedAt: new Date(loggedAt),
   });
   return id;
+}
+
+// The application's own router, called inside a rolled-back transaction.
+export const appCallerIn = (tx: Tx, who: unknown) =>
+  createCallerFactory(appRouter)(createContext({ db: txAsDb(tx), identity: who }));
+
+// Another bound user in the day's company.
+export async function boundIn(
+  tx: Tx,
+  companyId: string,
+  role: AppUser["role"],
+  opts: { deactivated?: boolean } = {},
+) {
+  const tag = `${role}-${uuidv7()}`;
+  const [row] = await tx
+    .insert(users)
+    .values({
+      companyId,
+      email: `${tag}@co.test`,
+      name: tag,
+      role,
+      identitySubject: `sub-${tag}`,
+      deactivatedAt: opts.deactivated ? new Date() : null,
+    })
+    .returning({ id: users.id });
+  return { id: row!.id, who: identity(`sub-${tag}`, `${tag}@co.test`) };
+}
+
+// A crew's day committed by the owner, for tests that need two connections to see the same
+// rows. Nothing appended-only is ever committed against it, so cleanup can remove it all.
+export async function committedCrewDay(owner: Db) {
+  const day = await owner.transaction((tx) => crewDayIn(tx));
+  const cleanup = async () => {
+    const id = day.companyId;
+    await owner.delete(materials).where(eq(materials.companyId, id));
+    await owner.delete(jobs).where(eq(jobs.companyId, id));
+    await owner.delete(crewMembers).where(eq(crewMembers.companyId, id));
+    await owner.delete(crews).where(eq(crews.companyId, id));
+    await owner.delete(customers).where(eq(customers.companyId, id));
+    await owner.delete(users).where(eq(users.companyId, id));
+    await owner.delete(companies).where(eq(companies.id, id));
+  };
+  return { day, cleanup };
 }
 
 // The runtime role with the day's tenant set, as a protected call runs.
