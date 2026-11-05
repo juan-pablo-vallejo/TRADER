@@ -51,7 +51,7 @@ export type CloseoutInput = z.infer<typeof closeoutInput>;
 // The acknowledgement: immutable facts of the submission, nothing more, so a retry answers
 // exactly as the first call did and needs no current authority over the job. What was
 // covered is read elsewhere, under the reader's current authorization.
-const acknowledgement = z.strictObject({
+export const closeoutAcknowledgement = z.strictObject({
   id: z.uuid(),
   serverTimestamp: z.date(),
   jobStatusApplied: z.boolean(),
@@ -71,8 +71,8 @@ export const REJECTION_CODES = [
 ] as const;
 
 export const closeoutOutput = z.discriminatedUnion("result", [
-  z.strictObject({ result: z.literal("accepted"), closeout: acknowledgement }),
-  z.strictObject({ result: z.literal("duplicate"), closeout: acknowledgement }),
+  z.strictObject({ result: z.literal("accepted"), closeout: closeoutAcknowledgement }),
+  z.strictObject({ result: z.literal("duplicate"), closeout: closeoutAcknowledgement }),
   z.strictObject({
     result: z.literal("rejected"),
     code: z.enum(REJECTION_CODES),

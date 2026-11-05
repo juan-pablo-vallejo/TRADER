@@ -17,4 +17,5 @@ export {
   publicProcedure,
   roleProcedure,
   router,
+  syncProcedure,
 } from "./trpc";

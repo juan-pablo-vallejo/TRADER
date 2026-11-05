@@ -43,6 +43,9 @@ async function material(tx: Tx, refs: Refs) {
     quantity: "2.000",
     unit: "gal",
     loggedAt: new Date("2026-10-19T15:00:00Z"),
+    capturedOffline: false,
+    clockSkewed: false,
+    clockSkewMs: 0,
   });
   return id;
 }
@@ -153,7 +156,8 @@ describe("material_corrections", () => {
     });
   });
 
-  it("refuses a material no closeout covers (23503)", async () => {
+  // 0024's eligibility trigger answers, before the foreign key to materials (0023) could.
+  it("refuses a material no closeout covers and no late approval names (23000)", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await covered(tx);
       const loose = await material(tx, refs);
@@ -161,11 +165,13 @@ describe("material_corrections", () => {
         await failing(tx, (sp) =>
           sp.insert(materialCorrections).values(amend(refs, { materialId: loose })),
         ),
-      ).toBe("23503");
+      ).toBe("23000");
     });
   });
 
-  it("keeps the material and the submitter in the company (23503)", async () => {
+  // Another company's material is not eligible in this one (23000, 0024), before the composite
+  // foreign key (23503) behind it; the submitter has only the foreign key.
+  it("keeps the material (23000) and the submitter (23503) in the company", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await covered(tx);
       const theirs = await covered(tx, { ...company, name: "Other Co" });
@@ -175,7 +181,7 @@ describe("material_corrections", () => {
             .insert(materialCorrections)
             .values(amend(refs, { materialId: theirs.materialId })),
         ),
-      ).toBe("23503");
+      ).toBe("23000");
       expect(
         await failing(tx, (sp) =>
           sp
@@ -308,7 +314,9 @@ describe("material_corrections", () => {
             .insert(materialCorrections)
             .values(amend(theirs, { submittedByUserId: theirs.workerId })),
         ),
-      ).toBe("42501");
+        // The eligibility trigger runs before the policy's WITH CHECK and, under RLS, finds no
+        // membership in another tenant: 23000, with the policy (42501) behind it.
+      ).toBe("23000");
       await corrected(tx, refs);
       await immediate(tx);
       expect(await tx.select().from(materialCorrections)).toHaveLength(1);
@@ -388,13 +396,19 @@ describe("approvals of material corrections", () => {
     });
   });
 
-  it("leaves an event approval's reasons as they were: `{NULL}` still accepted", async () => {
+  it("refuses `{NULL}` reasons on an event approval too, since 0021 (23514)", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await covered(tx);
       const event = started(refs);
       await tx.insert(workSessionEvents).values(event);
-      await tx.execute(sql`insert into approvals (company_id, event_id, reasons)
-        values (${refs.companyId}, ${event.id}, '{NULL}')`);
+      const error = await pgError(
+        tx.transaction((sp) =>
+          sp.execute(sql`insert into approvals (company_id, event_id, reasons)
+            values (${refs.companyId}, ${event.id}, '{NULL}')`),
+        ),
+      );
+      expect(error.code).toBe("23514");
+      expect(error.message).toContain("approvals_reasons_no_null");
     });
   });
 
@@ -520,6 +534,96 @@ describe("approvals of material corrections", () => {
             .where(eq(approvals.id, row.id)),
         ),
       ).toBe("23000");
+    });
+  });
+});
+
+// Stage 3 line 7 (0023, 0024): a receipt that arrived after its day's closeout is never a member,
+// yet is corrected like one, and frozen like one, once its approval carries `after_closeout`.
+describe("corrections of after-closeout receipts", () => {
+  // A covered company's second receipt, recorded after the closeout: its approval as the push
+  // writes it, with `reasons`.
+  async function late(tx: Tx, refs: Covered, reasons: ("after_closeout" | "offline")[]) {
+    const materialId = await material(tx, refs);
+    await tx.insert(approvals).values({ companyId: refs.companyId, materialId, reasons });
+    return { ...refs, materialId };
+  }
+
+  it("accepts an amend and a void of a late receipt, each with its approval", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await late(tx, await covered(tx), ["offline", "after_closeout"]);
+      await corrected(tx, refs);
+      await corrected(tx, refs, voiding(refs));
+      await immediate(tx);
+      expect(
+        await tx
+          .select({ id: materialCorrections.id })
+          .from(materialCorrections)
+          .where(eq(materialCorrections.materialId, refs.materialId)),
+      ).toHaveLength(2);
+      // Never a member: the closeout's sealed membership is untouched.
+      expect(
+        await tx
+          .select()
+          .from(dayCloseoutMaterials)
+          .where(eq(dayCloseoutMaterials.materialId, refs.materialId)),
+      ).toHaveLength(0);
+    });
+  });
+
+  it("refuses a receipt whose approval has no after_closeout (23000)", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await late(tx, await covered(tx), ["offline"]);
+      const error = (await pgError(
+        tx.transaction((sp) => sp.insert(materialCorrections).values(amend(refs))),
+      )) as { code?: string; constraint?: string };
+      expect([error.code, error.constraint]).toEqual([
+        "23000",
+        "material_corrections_eligible",
+      ]);
+    });
+  });
+
+  it("freezes a late receipt's facts but its cost (23000); a plain receipt stays as it was", async () => {
+    await rolledBack(db, async (tx) => {
+      const base = await covered(tx);
+      const refs = await late(tx, base, ["after_closeout"]);
+      const change = (id: string, set: Partial<typeof materials.$inferInsert>) =>
+        pgError(
+          tx.transaction((sp) =>
+            sp.update(materials).set(set).where(eq(materials.id, id)),
+          ),
+        ) as Promise<{ code?: string; constraint?: string }>;
+      for (const set of [
+        { description: "Flat" },
+        { quantity: "9.000" },
+        { capturedOffline: true },
+      ]) {
+        const error = await change(refs.materialId, set);
+        expect([error.code, error.constraint]).toEqual([
+          "23000",
+          "materials_late_receipt_frozen",
+        ]);
+      }
+      const deleted = (await pgError(
+        tx.transaction((sp) =>
+          sp.delete(materials).where(eq(materials.id, refs.materialId)),
+        ),
+      )) as { code?: string; constraint?: string };
+      expect([deleted.code, deleted.constraint]).toEqual([
+        "23000",
+        "materials_late_receipt_frozen",
+      ]);
+      await tx
+        .update(materials)
+        .set({ costCents: 4599, currency: "USD" })
+        .where(eq(materials.id, refs.materialId));
+      // A receipt with no late approval and no closeout is not this trigger's.
+      const plain = await material(tx, base);
+      await tx
+        .update(materials)
+        .set({ description: "Flat" })
+        .where(eq(materials.id, plain));
     });
   });
 });

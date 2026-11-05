@@ -39,6 +39,9 @@ async function receipt(tx: Tx, refs: Refs, jobId = refs.jobId) {
         quantity: "1",
         unit: "roll",
         loggedAt: new Date(),
+        capturedOffline: false,
+        clockSkewed: false,
+        clockSkewMs: 0,
       })
       .returning({ id: materials.id }),
   );

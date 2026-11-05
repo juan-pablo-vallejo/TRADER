@@ -81,22 +81,22 @@ integer cents through the locale formatter; dates and times render in the compan
 
 ## UI components
 
-| Component          | Specification                                                                                                                                       |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Primary button     | 56 pt tall, full width, `accent`, `body-strong` label; one per screen; disabled uses `muted` with the reason shown beneath                          |
-| Secondary button   | 48 pt, `surface` with `border`, `ink` label                                                                                                         |
-| Destructive button | Secondary shape, `attention` border and label; never full width                                                                                     |
-| Status pill        | 24 pt tall, tint plus the status word; the vocabulary `pending · syncing · synced · failed · needs attention · offline` is the same on every screen |
-| Sync banner        | Full-width strip under the header whenever offline or anything is pending; `pending` tint; never dismissible                                        |
-| Clock card         | Current job, elapsed `display` time, attestation level as a caption, one primary action                                                             |
-| Job card           | 72 pt row: customer and job name, address, today's hours; tap selects                                                                               |
-| Approval row (web) | Entry, who, job, time, hours; reason tags `offline`, `edited`, `time set by user`, `location`; approve and reject are buttons, never bare icons     |
-| Form field         | `label` above, 48 pt input, helper or error text beneath in `attention`; numeric keyboards for quantities and money                                 |
-| List row           | 56 pt, leading text, trailing value or chevron, hairline separator                                                                                  |
-| Photo tile         | 96 pt square, upload-state pill in the corner, tap to view                                                                                          |
-| Empty state        | One sentence and one action; no illustration                                                                                                        |
-| Attention banner   | `attention` tint, what happened and what to do, persistent until resolved                                                                           |
-| Data table (web)   | Sticky header, 44 pt rows, right-aligned numbers, no zebra striping, inline status pills                                                            |
+| Component          | Specification                                                                                                                                                                   |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Primary button     | 56 pt tall, full width, `accent`, `body-strong` label; one per screen; disabled uses `muted` with the reason shown beneath                                                      |
+| Secondary button   | 48 pt, `surface` with `border`, `ink` label                                                                                                                                     |
+| Destructive button | Secondary shape, `attention` border and label; never full width                                                                                                                 |
+| Status pill        | 24 pt tall, tint plus the status word; the vocabulary `pending · syncing · synced · failed · needs attention · offline` is the same on every screen                             |
+| Sync banner        | Full-width strip under the header whenever offline or anything is pending; `pending` tint; never dismissible                                                                    |
+| Clock card         | Current job, elapsed `display` time, attestation level as a caption, one primary action                                                                                         |
+| Job card           | 72 pt row: customer and job name, address, today's hours; tap selects                                                                                                           |
+| Approval row (web) | Entry, who, job, time, hours; reason tags `offline`, `edited`, `time set by user`, `location`, `clock skew`, `after closeout`; approve and reject are buttons, never bare icons |
+| Form field         | `label` above, 48 pt input, helper or error text beneath in `attention`; numeric keyboards for quantities and money                                                             |
+| List row           | 56 pt, leading text, trailing value or chevron, hairline separator                                                                                                              |
+| Photo tile         | 96 pt square, upload-state pill in the corner, tap to view                                                                                                                      |
+| Empty state        | One sentence and one action; no illustration                                                                                                                                    |
+| Attention banner   | `attention` tint, what happened and what to do, persistent until resolved                                                                                                       |
+| Data table (web)   | Sticky header, 44 pt rows, right-aligned numbers, no zebra striping, inline status pills                                                                                        |
 
 ## Localization
 

@@ -124,6 +124,9 @@ describe("invoice_line_items", () => {
             quantity: "1",
             unit: "roll",
             loggedAt: new Date(),
+            capturedOffline: false,
+            clockSkewed: false,
+            clockSkewMs: 0,
           })
           .returning({ id: materials.id }),
       );
