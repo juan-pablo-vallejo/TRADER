@@ -398,3 +398,116 @@ describe("append-only", () => {
     });
   });
 });
+
+describe("the closed-out material freeze", () => {
+  // A sealed closeout covering one material, and a second material it does not cover.
+  async function closedOut(tx: Tx) {
+    const refs = await fixture(tx);
+    const covered = await material(tx, refs);
+    const free = await material(tx, refs);
+    const c = closeout(refs, { materialCount: 1 });
+    await tx.insert(dayCloseouts).values(c);
+    await tx.insert(dayCloseoutMaterials).values(member(refs, c.id, covered));
+    await seal(tx);
+    return { refs, covered, free };
+  }
+
+  const update = (tx: Tx, id: string, set: ReturnType<typeof sql>) =>
+    failing(tx, (sp) => sp.execute(sql`update materials set ${set} where id = ${id}`));
+
+  it("refuses every change to a covered material's facts (23000)", async () => {
+    await rolledBack(db, async (tx) => {
+      const { refs, covered } = await closedOut(tx);
+      const buyer = await worker(tx, refs, "buyer");
+      const sets = [
+        sql`quantity = 3`,
+        sql`description = 'Flat, white'`,
+        sql`unit = 'qt'`,
+        sql`logged_at = logged_at - interval '1 day'`,
+        sql`logged_by_user_id = ${buyer}`,
+      ];
+      for (const set of sets) expect(await update(tx, covered, set)).toBe("23000");
+    });
+  });
+
+  it("names the freeze when it refuses", async () => {
+    await rolledBack(db, async (tx) => {
+      const { covered } = await closedOut(tx);
+      const error = await pgError(
+        tx.transaction((sp) =>
+          sp.execute(sql`update materials set quantity = 3 where id = ${covered}`),
+        ),
+      );
+      expect(error.code).toBe("23000");
+      expect(error.message).toContain("closed-out material is frozen");
+    });
+  });
+
+  it("refuses moving a covered material to another job (23000)", async () => {
+    await rolledBack(db, async (tx) => {
+      const { refs, covered } = await closedOut(tx);
+      const customerId = one(
+        await tx
+          .select({ customerId: jobs.customerId })
+          .from(jobs)
+          .where(sql`${jobs.id} = ${refs.jobId}`),
+      ).customerId;
+      const moved = one(
+        await tx
+          .insert(jobs)
+          .values({ companyId: refs.companyId, customerId, name: "Moved" })
+          .returning({ id: jobs.id }),
+      ).id;
+      expect(await update(tx, covered, sql`job_id = ${moved}`)).toBe("23000");
+    });
+  });
+
+  it("refuses deleting a covered material: owner 23000, trader_app 42501", async () => {
+    await rolledBack(db, async (tx) => {
+      const { refs, covered } = await closedOut(tx);
+      expect(
+        await failing(tx, (sp) =>
+          sp.execute(sql`delete from materials where id = ${covered}`),
+        ),
+      ).toBe("23000");
+      await asApp(tx, refs.companyId);
+      expect(
+        await failing(tx, (sp) =>
+          sp.execute(sql`delete from materials where id = ${covered}`),
+        ),
+      ).toBe("42501");
+    });
+  });
+
+  it("refuses TRUNCATE of materials while a closeout covers one (0A000)", async () => {
+    await rolledBack(db, async (tx) => {
+      await closedOut(tx);
+      expect(await failing(tx, (sp) => sp.execute(sql`truncate materials`))).toBe(
+        "0A000",
+      );
+    });
+  });
+
+  it("lets trader_app price a covered material, and refuses it a quantity", async () => {
+    await rolledBack(db, async (tx) => {
+      const { refs, covered } = await closedOut(tx);
+      await asApp(tx, refs.companyId);
+      const { rows } = await tx.execute<{ cost_cents: number; currency: string }>(sql`
+        update materials set cost_cents = 8999, currency = 'USD' where id = ${covered}
+        returning cost_cents, currency
+      `);
+      expect(rows).toEqual([{ cost_cents: 8999, currency: "USD" }]);
+      expect(await update(tx, covered, sql`quantity = 3`)).toBe("23000");
+    });
+  });
+
+  it("leaves a material no closeout covers editable", async () => {
+    await rolledBack(db, async (tx) => {
+      const { free } = await closedOut(tx);
+      const { rows } = await tx.execute<{ quantity: string }>(
+        sql`update materials set quantity = 3 where id = ${free} returning quantity`,
+      );
+      expect(rows).toEqual([{ quantity: "3.000" }]);
+    });
+  });
+});

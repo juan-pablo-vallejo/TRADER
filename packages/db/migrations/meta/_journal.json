@@ -127,6 +127,13 @@
       "when": 1793838013101,
       "tag": "0017_day-closeout-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793838279364,
+      "tag": "0018_closed-out-material-freeze",
+      "breakpoints": true
     }
   ]
 }
