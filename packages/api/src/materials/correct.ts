@@ -1,8 +1,9 @@
 // material.correct (PRD, Day closeout: a submitted closeout is locked; later changes are
 // correcting entries that go through approval). An admin, or the foreman of the job's current
-// crew, corrects a material a committed closeout covers: an `amend` replaces its description,
-// quantity and unit together, a `void` takes it out of effect. The receipt itself is never
-// written (migration 0018 freezes it); the correction is an append-only row naming it, with a
+// crew, corrects a material a committed closeout covers, or a receipt that arrived after its
+// day's closeout: an `amend` replaces its description, quantity and unit together, a `void`
+// takes it out of effect. The receipt itself is never written (migrations 0018 and 0024 freeze
+// it); the correction is an append-only row naming it, with a
 // pending approval written in the same transaction. Answers mirror a push record's: `accepted`
 // or `duplicate` (both success), or `rejected`, which writes nothing, so the same id sent again
 // later is judged afresh. Anything thrown is retried, except the one-message UNAUTHORIZED and
@@ -15,7 +16,7 @@ import {
   materialCorrections,
   materials,
 } from "@trader/db/schema";
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf, lockForemanScope } from "../closeout/scope";
@@ -65,11 +66,12 @@ const acknowledgement = z.strictObject({ id: z.uuid(), serverTimestamp: z.date()
 export const REJECTION_CODES = [
   // This id is already a different correction.
   "id_conflict",
-  // The material's job has a closeout for the material's date that does not cover it.
-  // Permanent with respect to that sealed closeout — membership is sealed, one closeout per job
-  // and date — so no automatic retry of this id. It does not condemn the correction: the device
-  // keeps it recoverable, for explicit resubmission if a later decision makes such a material
-  // eligible (the open question of a new receipt on a closed day). The contract is unchanged.
+  // The material's job has a closeout for the material's date that does not cover it, and
+  // the receipt has no after-closeout approval. Permanent with respect to that sealed closeout —
+  // membership is sealed, one closeout per job and date — so no automatic retry of this id;
+  // the device keeps it recoverable. Since sync.push, every receipt recorded on a closed day
+  // carries that approval and is corrected (step 7), so only a receipt written otherwise
+  // lands here.
   "not_in_closeout",
   // No closeout for the material's job and date yet. Nothing is written; the same id may be
   // sent again once the closeout has committed.
@@ -212,14 +214,28 @@ export async function correctMaterial(
   const again = await byId(tx, input.id);
   if (again !== undefined) return answerFor(again, user, input);
 
-  // 7. Only a material a committed closeout covers is corrected. Otherwise: a closeout of its
-  // job for its date — the date in the zone that closeout was judged in — means it never will
-  // be; none means not yet.
+  // 7. A material a committed closeout covers is corrected, and so is a receipt that arrived
+  // after its day's closeout: its approval, written by the push in the receipt's own
+  // transaction, carries `after_closeout` (migration 0024 states the same rule). Otherwise: a
+  // closeout of its job for its date — the date in the zone that closeout was judged in —
+  // means it never will be; none means not yet.
   const [member] = await tx
     .select({ closeoutId: dayCloseoutMaterials.closeoutId })
     .from(dayCloseoutMaterials)
     .where(eq(dayCloseoutMaterials.materialId, input.materialId));
-  if (member === undefined) {
+  const [late] =
+    member === undefined
+      ? await tx
+          .select({ id: approvals.id })
+          .from(approvals)
+          .where(
+            and(
+              eq(approvals.materialId, input.materialId),
+              sql`'after_closeout'::approval_reason = any (${approvals.reasons})`,
+            ),
+          )
+      : [];
+  if (member === undefined && late === undefined) {
     const { rows } = await tx.execute<{ closed: boolean }>(sql`
       select exists (
         select 1 from day_closeouts c

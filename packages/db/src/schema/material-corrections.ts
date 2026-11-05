@@ -12,13 +12,14 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
-import { dayCloseoutMaterials } from "./day-closeouts";
 import { materialCorrectionKind } from "./enums";
+import { materials } from "./materials";
 import { users } from "./users";
 
 // A correcting entry for a closed-out material (PRD, Day closeout: a submitted closeout is
-// locked; later changes are correcting entries that go through approval). The receipt itself
-// stays as logged — migration 0018 freezes it — and this row names it. Append-only, like the
+// locked; later changes are correcting entries that go through approval), or for a receipt that
+// arrived after its day's closeout. The receipt itself stays as logged — migrations 0018 and
+// 0024 freeze it — and this row names it. Append-only, like the
 // ledger: migration 0020 refuses UPDATE, DELETE and TRUNCATE for every role and requires the
 // row's approval at commit. Every correction names the original receipt, never another
 // correction, so a chain cannot exist. A correction counts only once approved; the effective
@@ -54,13 +55,14 @@ export const materialCorrections = pgTable(
   (t) => [
     // The target of approvals' (company_id, material_correction_id) foreign key.
     unique("material_corrections_company_id_id_unique").on(t.companyId, t.id),
-    // Through the closeout membership, not materials: only a material a committed closeout
-    // covers can be corrected, in the same company (invariant 4). Membership is sealed and
-    // the receipt frozen, so the day as submitted is the receipt as logged.
+    // The receipt, in the same company (invariant 4). Which receipts are correctable — a
+    // committed closeout's member, or one with an after-closeout approval — is an existence
+    // rule, so migration 0024's trigger states it (ARCHITECTURE row 158). Membership is sealed
+    // and both kinds frozen, so the day as submitted is still the receipt as logged.
     foreignKey({
-      name: "material_corrections_company_id_material_id_fk",
+      name: "material_corrections_company_id_material_id_materials_fk",
       columns: [t.companyId, t.materialId],
-      foreignColumns: [dayCloseoutMaterials.companyId, dayCloseoutMaterials.materialId],
+      foreignColumns: [materials.companyId, materials.id],
     }),
     foreignKey({
       name: "material_corrections_company_id_submitted_by_user_id_fk",

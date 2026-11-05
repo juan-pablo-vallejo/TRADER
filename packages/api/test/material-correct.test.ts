@@ -351,6 +351,59 @@ describe("material.correct — outcomes", () => {
     });
   });
 
+  // The push writes a receipt recorded on a closed day with an `after_closeout` approval
+  // (sync.push's own tests); the owner stands in for it here.
+  it("accepts an amend and a void of an after-closeout receipt, never touching the closeout", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d } = await coveredDay(tx);
+      const lateReceipt = () =>
+        asOwner(tx, d, async () => {
+          const id = await materialIn(tx, d, d.J, ON_D);
+          await tx.insert(approvals).values({
+            companyId: d.companyId,
+            materialId: id,
+            reasons: ["after_closeout"],
+          });
+          return id;
+        });
+      const members = () =>
+        asOwner(
+          tx,
+          d,
+          async () =>
+            (
+              await tx.execute(sql`select to_jsonb(m) as row from day_closeout_materials m
+            where company_id = ${d.companyId}`)
+            ).rows,
+        );
+      const before = await members();
+      const amended = await lateReceipt();
+      expect((await correct(tx, d.who, input(amended))).result).toBe("accepted");
+      const voided = await lateReceipt();
+      expect((await correct(tx, d.who, voidOf(voided))).result).toBe("accepted");
+      // Two corrections, each with its own pending `corrected` approval, beside the receipts'.
+      expect(await counts(tx, d)).toEqual({ corrections: 2, approvals: 4 });
+      expect(await members()).toEqual(before);
+    });
+  });
+
+  it("answers not_in_closeout for a late receipt whose approval lacks after_closeout", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d } = await coveredDay(tx);
+      const m = await asOwner(tx, d, async () => {
+        const id = await materialIn(tx, d, d.J, ON_D);
+        await tx
+          .insert(approvals)
+          .values({ companyId: d.companyId, materialId: id, reasons: ["offline"] });
+        return id;
+      });
+      expect(await correct(tx, d.who, input(m))).toEqual({
+        result: "rejected",
+        code: "not_in_closeout",
+      });
+    });
+  });
+
   it("judges the material's date in the zone its day's closeout stored", async () => {
     await rolledBack(owner, async (tx) => {
       const { d } = await coveredDay(tx);
