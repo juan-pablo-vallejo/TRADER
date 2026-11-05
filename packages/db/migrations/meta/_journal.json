@@ -176,6 +176,13 @@
       "when": 1793891864728,
       "tag": "0024_late-receipt-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1793915882409,
+      "tag": "0025_event-approval-guards",
+      "breakpoints": true
     }
   ]
 }
