@@ -57,6 +57,32 @@ export async function sqlstate(statement: Promise<unknown>): Promise<string | un
   return (await pgError(statement)).code;
 }
 
+// ACCESS EXCLUSIVE on `tables`, taken without ever waiting, for the rest of the transaction.
+// TRUNCATE … CASCADE locks its tables one by one while every suite writes them at once; a
+// waiting TRUNCATE can close a cycle with a writer that holds one of them and wants another
+// (40P01). NOWAIT never waits, so it is never in a cycle: a busy table is retried shortly.
+export async function lockExclusive(tx: Tx, tables: string[]) {
+  const list = sql.join(
+    tables.map((t) => sql.identifier(t)),
+    sql`, `,
+  );
+  for (let attempt = 0; attempt < 500; attempt++) {
+    const code = await tx
+      .transaction((sp) =>
+        sp.execute(sql`lock table ${list} in access exclusive mode nowait`),
+      )
+      .then(
+        () => undefined,
+        (error: unknown) =>
+          ((error as DrizzleQueryError).cause as { code?: string })?.code,
+      );
+    if (code === undefined) return;
+    if (code !== "55P03") throw new Error(`lock failed with ${code}`);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`could not lock ${tables.join(", ")}`);
+}
+
 // Becomes the runtime role for the rest of the transaction, optionally bound to a tenant, as
 // Stage 3's request context will. SET LOCAL ROLE needs no password and ends with the
 // transaction; set_config(…, true) is SET LOCAL that takes a bind parameter.

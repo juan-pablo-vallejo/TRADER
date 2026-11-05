@@ -17,6 +17,7 @@ import {
   asApp,
   company,
   fixture,
+  lockExclusive,
   one,
   pgError,
   rolledBack,
@@ -317,6 +318,7 @@ describe("the membership seal", () => {
 
 describe("append-only", () => {
   const TABLES = ["day_closeouts", "day_closeout_workers", "day_closeout_materials"];
+  const TRUNCATED = TABLES;
 
   async function oneOfEach(tx: Tx) {
     const refs = await fixture(tx);
@@ -351,6 +353,8 @@ describe("append-only", () => {
   it("refuses TRUNCATE as the owner (23000)", async () => {
     await rolledBack(db, async (tx) => {
       await oneOfEach(tx);
+      // Everything CASCADE reaches, held first: see lockExclusive.
+      await lockExclusive(tx, TRUNCATED);
       for (const table of TABLES) {
         expect(
           await failing(tx, (sp) =>
