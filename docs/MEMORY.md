@@ -46,6 +46,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   without `--` (pnpm forwards them).
 - Drizzle maintains `updated_at` through `$onUpdate` in the ORM, not the database: a raw SQL
   UPDATE leaves it stale. Write through Drizzle; `id` defaults in Postgres and needs nothing.
+  Its stamp is the Node clock, `created_at` the database's: never assert one after the other.
+- A BEFORE trigger answers before a CHECK: a fixture proving a CHECK must not trip a guard first.
+- A JS Date holds milliseconds, `timestamptz` microseconds: a keyset cursor carrying a Date
+  repeats rows; carry the row's id and read its timestamp back in SQL.
 - A seed script may legitimately write `role` in an upsert; the same statement in a request
   path rewrites `role` and `active` on every sign-in. JIT provisioning reads a profile only when
   creating the row.
@@ -165,16 +169,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-05: Stage 3 line 7: `0021`–`0024` approval facts, `sync.push`/`sync.pull`; 525 tests.
 - 11-05: Stage 3 line 7 review fixes: timeouts before resolution, receipt stamp; 528 tests.
   `3c97d4f` was committed on a red run; its flake fixed in `a807875`.
+- 11-05: Stage 3 line 7b: delegated `id_conflict` for an id another tenant holds; 536 tests.
 
-### 2026-11-05 — Stage 3: delegated `id_conflict` for an id another tenant holds
+### 2026-11-05 — Stage 3 line 8: approval queue, decisions and accounting
 
-- **Did:** `closeout.submit` and `material.correct` answer an id an invisible row holds
-  `id_conflict`, shaped as a visible one, instead of throwing (a push batch stopped on it for
-  good); the closeout insert names `id` as its conflict target, so a natural-key conflict at the
-  insert is thrown and retried into `already_submitted`. 536 tests (224 db, 312 api); 6
-  mutations run: 5 red, 1 equivalent (skipping the re-read after a conflict: a visible row there
-  is another job's or material's, answered `id_conflict` either way, the scope lock and re-check
-  catching the caller's own first).
-- **Decided:** nothing; ARCHITECTURE rows 194, 200 and 205 already give the answer.
-- **Next:** Stage 3 — approval queue procedures implementing the approval rule; still open for
-  it: how a pending event counts in its session, and the admin-only decider.
+- **Did:** `0025` (an event's approval born pending, never decided by its worker);
+  `labor/approval.ts` (session accounting, rejected-void projection) and
+  `materials/approval.ts`; `approval.queue`, `approval.decide`. 579 tests (228 db, 351 api); 22
+  mutations run: 21 red, 1 masked as planned (decide's gate alone, behind `lockActiveSelf`; red
+  with its role check removed too). The queue cursor is the approval id, not the planned
+  `(createdAt, id)`: a Date drops microseconds.
+- **Decided:** by the owner: the accounting precedence and the worker-only labor exclusion
+  (ARCHITECTURE, last two rows; ARCHITECTURE is now at its cap).
+- **Next:** Stage 3 — office labor repairs (TASKS:49); its ARCHITECTURE row needs an
+  authorized condensation first.
