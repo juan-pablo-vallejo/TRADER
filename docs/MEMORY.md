@@ -146,6 +146,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `seed.ts:59`, `invoices.ts:77,112`, `invoice-line-items.ts:46,48,67`, `credit-memos.ts:60`
   (`packages/db/src`). Correct each when its file is next touched, in that task; delete this note
   then.
+- A dev sign-in as the seed admin binds the seeded row, and `seed.test.ts` then fails on
+  `identity_subject`: `DELETE FROM users WHERE email = 'admin@jpteq.app'`, then `pnpm db:seed`.
 
 ## Log
 
@@ -166,22 +168,11 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   fingerprint `v1.`; `0019`/`0020` material corrections; 432 tests.
 - 11-05: Stage 3 lines 7–9: `0021`–`0024` approval facts, `sync.push`/`sync.pull`, review fixes
   (`3c97d4f` committed on a red run, its flake fixed in `a807875`), delegated `id_conflict`;
-  `0025` approval queue and accounting; `0026`, `labor.repair`; 630 tests.
+  `0025` approval queue and accounting; `0026`, `labor.repair`; 630 tests. Line 10: `report.ts`
+  (minimized `ErrorReport`, `logReporter`, `reportingOnError`), reporter required in the context,
+  push reports a record failing after an earlier commit; `status.get` public, four states from
+  `TRADER_SYNC_MODE` and minimum builds, advisory; stack frames dropped from reports; 669 tests.
 - 11-06: Stage 3 line 9 test fix: repair/push race pinned by queue order; 670 tests.
-
-### 2026-11-05 — Stage 3 line 10: kill-switch state and error reporting
-
-- **Did:** `report.ts` (minimized `ErrorReport`, one guard, `logReporter`, `reportingOnError`),
-  `reporter` required in the context; push reports a record failing after an earlier commit
-  (`pushRecords`' fourth argument; the clock stays third); `status.get`, public, no database,
-  four states from `TRADER_SYNC_MODE` and per-platform minimum builds. 669 tests (231 db, 438
-  api); 23 mutations run, all red on their named assertions (M2 strengthened once). On review,
-  stack frames dropped from reports: a forged stack passed the header check (red test first).
-- **Decided:** by the owner ("execute" on the plan's recommendations): advisory switch, no
-  server enforcement; the four states; reporter required; ARCHITECTURE's package-layout line
-  merged into RULES. ARCHITECTURE remains at its cap.
-- **Next:** confirm Stage 3's done-criterion against the sync suites, then Stage 4 line 1 (route
-  handler: `status.get` unauthenticated and `no-store`, `onError` and the reporter wired).
 
 ### 2026-11-06 — Pilot-scope documentation patch
 
@@ -190,9 +181,20 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   each with its TASKS lines; Stage 3 ticked and condensed; folder tree condensed; `row N`
   references pinned to `779894f`; Stages 7 and 8 swapped (invoicing before the pilot). Documents
   only; no code.
-- **Decided:** by the owner on 2026-11-06 ("execute" on revision 3 of the plan): S1–S6 as
-  recorded; Stage 3 accepted with the condensations, the row-reference pin, job locations on the
-  phone, and the Stage 7/8 swap. Open: worker sign-in without email, crew transfers and
-  deactivation, credit ceiling and void, archived-job closeout, admin's own entries, assignment
-  rules.
+- **Decided:** by the owner on 2026-11-06 ("execute" on revision 3 of the plan): the five rows
+  (job suggestion, dated assignments, admin closeout, own profile, pilot scope) as recorded;
+  Stage 3 accepted with the condensations, the row-reference pin, job locations on the phone,
+  and the Stage 7/8 swap. Open: worker sign-in without email, crew transfers and deactivation,
+  credit ceiling and void, archived-job closeout, admin's own entries, assignment rules.
 - **Next:** Stage 4 line 1 (Next.js host, tRPC route handler, development sign-in).
+
+### 2026-11-06 — Stage 4 line 1: Next.js host, route handler, development sign-in
+
+- **Did:** `apps/web` (Next 16.4.5): `/api/trpc` route handler, lazy app-role pool, `no-store`,
+  reporter on `onError`; email-only cookie dev sign-in bridged to the headers, 404 off; shell with
+  `theme.css`, mark and favicon from `assets/brand`, office strings in `strings.ts` until the
+  catalog (Stage 5); `next build` in CI. 683 tests (231 db, 441 api, 11 web); 6 mutations red.
+- **Decided:** by the owner on 2026-11-06: `next build` in `check`; cookies bridged to the dev
+  headers in `apps/web`, the api adapter unchanged; no client library until line 2; CSS Modules,
+  no styling dependency; favicon by route handler from the one asset; `@vercel/functions` at Stage 6.
+- **Next:** Stage 4 line 2 (roster) — first office screen, breakpoint and the tRPC client.

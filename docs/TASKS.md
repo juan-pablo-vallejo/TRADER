@@ -40,18 +40,18 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
 Done when an admin, on a phone and on a desktop, runs a pay period end to end locally: roster,
 jobs, assignments, approvals, a closeout, close, export.
 
-- [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
-      favicon and header mark from `assets/brand/logo.png`
+- [x] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
+      mark and favicon from `assets/brand/logo.png` (`next`, `react`, `react-dom`, their `@types`, `eslint-config-next`)
 - [ ] Roster: invite, deactivate, role, effective-dated pay rates; own name and contact phone
 - [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested;
       deactivation, transfers and offline backlogs decided before code
+- [ ] Demo fixture: owner-run script writing a synthetic company through the real procedures; never raw inserts, never the pilot's database
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
 - [ ] Admin closeout on the foreman procedures, unchanged; archived, crew-less jobs decided first
 - [ ] Approval queue with reason tags; reconciliation view; job cost to date
 - [ ] Pay periods: close, late-entry adjustments; payroll CSV export of approved hours
 - [ ] Full data export
-- [ ] Office screens responsive on phone and desktop (DESIGN.md)
 
 ## Stage 5 — Field app (`apps/mobile`)
 
@@ -84,7 +84,7 @@ passed, and Sentry shows no PII.
 - [ ] Neon Launch project; app role created in SQL; migrations re-baselined before the first run
 - [ ] Neon owner role checked for `rolbypassrls` on the role itself; if absent, a decision
       covering the seed, the migrator-as-owner and onboarding
-- [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs
+- [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs; `attachDatabasePool` from `@vercel/functions`
 - [ ] Associated Domains and `assetlinks.json` served from the apex
 - [ ] Sentry with PII scrubbing; PostHog; EAS project
 - [ ] Nightly encrypted `pg_dump` to R2 and weekly restore-verify in Actions; timed restore drill
