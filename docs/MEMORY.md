@@ -157,25 +157,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `trader-local` (pre-rebuild volume untouched), `db:up`/`db:down`, `.env.example`, `.nvmrc`
   Node 24: Stages 0–1 closed; Stage 2 lines 1–4: Drizzle, `pg` seam, CI migrates, core tables,
   `uuidv7()` office ids, `0002` guard (23000), pay, approvals, voids, corrections; 53 tests.
-- 11-03: Stage 2 line 5: materials, photos, invoices, lines, credit memos, counter; 105 tests.
-- 11-03: Stage 2 line 6: `audit_log` append-only by 0002's guard, API-written, empty in V1.
-- 11-03: Stage 2 line 7: `trader_app`, per-table grants, FORCE RLS on 17 tables, startup guard.
-- 11-03: Stage 2 line 8: owner-only seed (`pnpm db:seed`, `tsx`), 136 tests; Stage 2 closed.
-- 11-03: TASKS condensed: closed stages to one ticked line; closeout and onboarding tasks.
-- 11-04: Smart Clock-In scoped in PRD (post-pilot, local reminders); Stage 9; `rv.sh` retired.
-- 11-04: Stage 3 line 1a: `0015` identity binding, `users_identity_guard`; 167 tests.
-- 11-04: Stage 3 line 1b: tRPC, per-call transaction, identity adapters, `me.get`; 34 api tests.
-- 11-04: Stage 3 line 2: `roleProcedure` allowlist, 401/403 answers; 216 tests.
-- 11-04: Stage 3 line 3: fold, `validateEvent`, `deriveSessions`, worker lock; 293 tests.
-- 11-04: Stage 3 line 4: `0016`–`0018` closeout, seal, freeze, field-write lock; 353 tests.
-- 11-04: Stage 3 line 5: `closeout.review`, fingerprint `v1.`, `review_stale`; 377 tests.
-- 11-04: Stage 3 line 6: `0019`/`0020` material corrections, `material.correct`; 432 tests.
-- 11-05: Stage 3 line 7: `0021`–`0024` approval facts, `sync.push`/`sync.pull`; 525 tests.
-- 11-05: Stage 3 line 7 review fixes: timeouts before resolution, receipt stamp; 528 tests.
-  `3c97d4f` was committed on a red run; its flake fixed in `a807875`.
-- 11-05: Stage 3 line 7b: delegated `id_conflict` for an id another tenant holds; 536 tests.
-- 11-05: Stage 3 line 8: `0025`, `approval.queue`, `approval.decide`, accounting; 579 tests.
-- 11-05: Stage 3 line 9: `0026`, `validateEvents`, `labor.repair`; 630 tests.
+- 11-03: Stage 2 lines 5–8: billing tables (105 tests); `audit_log`, API-written, empty in V1;
+  `trader_app`, grants, FORCE RLS on 17 tables, startup guard; owner-only seed; Stage 2 closed at
+  136 tests. TASKS condensed: closed stages to one ticked line.
+- 11-04: Smart Clock-In scoped in PRD (post-pilot, local reminders), Stage 9; `rv.sh` retired.
+  Stage 3 lines 1a–6: `0015` identity binding; tRPC, identity adapters, `me.get`; role gates; fold
+  and `validateEvent`; `0016`–`0018` closeout, seal, freeze, field-write lock; `closeout.review`,
+  fingerprint `v1.`; `0019`/`0020` material corrections; 432 tests.
+- 11-05: Stage 3 lines 7–9: `0021`–`0024` approval facts, `sync.push`/`sync.pull`, review fixes
+  (`3c97d4f` committed on a red run, its flake fixed in `a807875`), delegated `id_conflict`;
+  `0025` approval queue and accounting; `0026`, `labor.repair`; 630 tests.
+- 11-06: Stage 3 line 9 test fix: repair/push race pinned by queue order; 670 tests.
 
 ### 2026-11-05 — Stage 3 line 10: kill-switch state and error reporting
 
@@ -191,13 +183,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** confirm Stage 3's done-criterion against the sync suites, then Stage 4 line 1 (route
   handler: `status.get` unauthenticated and `no-store`, `onError` and the reporter wired).
 
-### 2026-11-06 — Pin the queue order of a repair racing a device push
+### 2026-11-06 — Pilot-scope documentation patch
 
-- **Did:** `labor-repair-commit.test.ts`'s repair-versus-push race asserted `no_open_session`
-  for whichever call lost, but a push queued first makes the repair lose with
-  `breaks_following_event`. Split into two tests, each pinned by queue position
-  (`workerWaiters(1)` before the second call). Codes swapped: both red on their assertions; 20
-  consecutive green runs. Test only, no source change. 670 tests (231 db, 439 api).
-- **Decided:** nothing.
-- **Next:** Stage 4 line 1 (route handler: `status.get` unauthenticated and `no-store`, `onError`
-  and the reporter wired).
+- **Did:** PRD, ARCHITECTURE, DESIGN and TASKS aligned with the owner's pilot decisions — job
+  suggestion, dated assignments, admin closeout, own profile, pilot scope — in five decision rows,
+  each with its TASKS lines; Stage 3 ticked and condensed; folder tree condensed; `row N`
+  references pinned to `779894f`; Stages 7 and 8 swapped (invoicing before the pilot). Documents
+  only; no code.
+- **Decided:** by the owner on 2026-11-06 ("execute" on revision 3 of the plan): S1–S6 as
+  recorded; Stage 3 accepted with the condensations, the row-reference pin, job locations on the
+  phone, and the Stage 7/8 swap. Open: worker sign-in without email, crew transfers and
+  deactivation, credit ceiling and void, archived-job closeout, admin's own entries, assignment
+  rules.
+- **Next:** Stage 4 line 1 (Next.js host, tRPC route handler, development sign-in).
