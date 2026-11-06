@@ -13,3 +13,8 @@ node_modules/
 
 # macOS
 .DS_Store
+
+# Next.js build output and its generated type stubs (`next typegen` regenerates them).
+.next/
+next-env.d.ts
+*.tsbuildinfo

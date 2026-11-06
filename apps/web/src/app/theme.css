@@ -1,0 +1,89 @@
+/* The web's theme module (DESIGN.md): every token as a custom property, the type styles as
+   classes. A component names a token, never a color or a size. DESIGN measures in pt, which
+   on the web is the CSS px. */
+:root {
+  /* Color palette */
+  --ink: #111827;
+  --ink-secondary: #4b5563;
+  --border: #d1d5db;
+  --surface: #ffffff;
+  --canvas: #f3f4f6;
+  --accent: #2808ac;
+  --on-accent: #ffffff;
+  --brand: #bc0c0c;
+  --synced: #166534;
+  --pending: #92400e;
+  --attention: #991b1b;
+  --muted: #6b7280;
+
+  /* Typography: system fonts, no custom font in V1 */
+  --font: system-ui, sans-serif;
+
+  /* Layout and spacing: a 4 pt grid */
+  --space-1: 4px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-card: 8px;
+  --radius-primary: 12px;
+  --hairline: 1px;
+  --target: 48px;
+}
+
+html {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-size: 17px;
+  line-height: 24px;
+}
+
+/* Type styles */
+.display {
+  font-size: 40px;
+  line-height: 44px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.title {
+  font-size: 24px;
+  line-height: 30px;
+  font-weight: 600;
+}
+.heading {
+  font-size: 20px;
+  line-height: 26px;
+  font-weight: 600;
+}
+.body {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 400;
+}
+.body-strong {
+  font-size: 17px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.secondary {
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 400;
+}
+.label {
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Links are actions: accent, never the brand red */
+a {
+  color: var(--accent);
+}
