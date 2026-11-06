@@ -3,7 +3,15 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { appRouter, createCallerFactory, createContext } from "../src/index";
-import { appDb, identity, outcome, ownerDb, world, type World } from "./helpers";
+import {
+  appDb,
+  identity,
+  outcome,
+  ownerDb,
+  quietReporter,
+  world,
+  type World,
+} from "./helpers";
 
 const owner = ownerDb();
 const app = appDb();
@@ -21,7 +29,9 @@ afterAll(async () => {
 });
 
 const me = (who: unknown) =>
-  createCallerFactory(appRouter)(createContext({ db: app, identity: who })).me.get();
+  createCallerFactory(appRouter)(
+    createContext({ db: app, identity: who, reporter: quietReporter }),
+  ).me.get();
 
 describe("me.get", () => {
   it("returns the caller's own record, narrowed", async () => {

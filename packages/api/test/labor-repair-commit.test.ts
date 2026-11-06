@@ -25,6 +25,7 @@ import {
   sqlstateOf,
   uuidv7,
   waitForLockWait,
+  quietReporter,
 } from "./helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -43,7 +44,9 @@ const T = (hhmm: string) => `2026-10-05T${hhmm}:00.000Z`;
 type Positional = "started" | "paused" | "resumed" | "ended";
 
 const caller = (who: VerifiedIdentity) =>
-  createCallerFactory(appRouter)(createContext({ db: app, identity: who }));
+  createCallerFactory(appRouter)(
+    createContext({ db: app, identity: who, reporter: quietReporter }),
+  );
 
 type Op =
   | { kind: "append"; id: string; type: Positional; jobId: string; clientTimestamp: Date }

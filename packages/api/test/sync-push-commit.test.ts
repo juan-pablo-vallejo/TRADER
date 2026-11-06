@@ -31,6 +31,7 @@ import {
   uuidv7,
   waitForLockWait,
   type CrewDay,
+  quietReporter,
 } from "./helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -45,7 +46,9 @@ afterAll(async () => {
 });
 
 const caller = (who: VerifiedIdentity) =>
-  createCallerFactory(appRouter)(createContext({ db: app, identity: who }));
+  createCallerFactory(appRouter)(
+    createContext({ db: app, identity: who, reporter: quietReporter }),
+  );
 
 // A committed crew day with a bound worker `w` on the crew (crewDayIn's own workers are
 // invitations: no identity to push with), and a second crew job J2.
