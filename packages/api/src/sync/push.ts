@@ -22,6 +22,7 @@ import {
 import type { AppUser } from "../resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { materialAck, materialPayloadV1, pushMaterial } from "./material";
+import { reportFailure, type ErrorReporter } from "../report";
 import { measureSkew, type Skew } from "./reasons";
 
 // ARCHITECTURE, sync.push. A batch is the device's, so a cap protects the function, not the
@@ -206,10 +207,26 @@ async function runOne(tx: Tx, user: AppUser, r: Parsed, skew: Skew): Promise<Pus
   }
 }
 
+// A record that throws after an earlier one committed is answered by omission, so no handler
+// sees it; this hands it to the reporter instead (ARCHITECTURE, error reporting), after that
+// record's transaction rolled back and while the request goes on. reportFailure classifies it:
+// a mid-batch UNAUTHORIZED is an expected answer, never an incident.
+export const reportRecordFailure =
+  (reporter: ErrorReporter) =>
+  (error: unknown): void =>
+    reportFailure(reporter, error, {
+      source: "push_record",
+      path: "sync.push",
+      type: "mutation",
+    });
+
+// `clock` is the batch budget's; `onRecordFailure` receives what the loop swallows, and must
+// not throw (reportRecordFailure never does).
 export async function pushRecords(
   input: z.infer<typeof pushInput>,
   run: RunRecord,
   clock: () => number = Date.now,
+  onRecordFailure: (error: unknown) => void = () => undefined,
 ): Promise<PushOutput> {
   const started = clock();
   const serverNow = new Date(started);
@@ -241,6 +258,7 @@ export async function pushRecords(
       // UNAUTHORIZED (deactivated mid-batch) or anything thrown: this record and the rest are
       // left out and retried; what committed before is answered.
       if (ran === 0) throw error;
+      onRecordFailure(error);
       break;
     }
   }

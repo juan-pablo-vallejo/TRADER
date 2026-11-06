@@ -22,6 +22,7 @@ import { deriveSessions } from "../src/labor/work-date";
 import {
   BUDGET_MS,
   pushRecords,
+  reportRecordFailure,
   type PushResult,
   type RunRecord,
 } from "../src/sync/push";
@@ -32,9 +33,11 @@ import {
   crewDayIn,
   identity,
   ownerDb,
+  recordingReporter,
   rejection,
   rolledBack,
   sqlstateOf,
+  throwingReporter,
   uuidv7,
 } from "./helpers";
 
@@ -633,5 +636,103 @@ describe("pushRecords — the loop, without a database", () => {
     };
     const out = await pushRecords(input(records(5)), run, clock);
     expect(out.results).toHaveLength(2);
+  });
+
+  // TASKS:50: what the loop swallows reaches the reporter; nothing else changes.
+  const codes = (out: { results: PushResult[] }) =>
+    out.results.map((r) => (r.result === "rejected" ? r.code : r.result));
+  const recorded = () => {
+    const { reporter, events } = recordingReporter();
+    return { onFailure: reportRecordFailure(reporter), events };
+  };
+
+  it("reports a record that throws after one committed; the answer is unchanged", async () => {
+    const boom = new Error("transient");
+    const { onFailure, events } = recorded();
+    const plain = await pushRecords(input(records(4)), fakeRun({ 1: boom }));
+    const reported = await pushRecords(
+      input(records(4)),
+      fakeRun({ 1: boom }),
+      Date.now,
+      onFailure,
+    );
+    expect(codes(reported)).toEqual(codes(plain));
+    expect(reported.results).toHaveLength(1);
+    expect(events).toMatchObject([
+      {
+        source: "push_record",
+        path: "sync.push",
+        type: "mutation",
+        errorNames: ["Error"],
+      },
+    ]);
+    // Nothing ran: the throw is the call's, answered by the handler, not reported here.
+    await expect(
+      pushRecords(input(records(2)), fakeRun({ 0: boom }), Date.now, onFailure),
+    ).rejects.toBe(boom);
+    expect(events).toHaveLength(1);
+  });
+
+  it("reports no mid-batch UNAUTHORIZED and no FORBIDDEN", async () => {
+    const { onFailure, events } = recorded();
+    const unauthorized = new TRPCError({ code: "UNAUTHORIZED" });
+    const forbidden = new TRPCError({ code: "FORBIDDEN" });
+    const partial = await pushRecords(
+      input(records(3)),
+      fakeRun({ 0: forbidden, 2: unauthorized }),
+      Date.now,
+      onFailure,
+    );
+    expect(partial.results).toHaveLength(2);
+    expect(events).toEqual([]);
+  });
+
+  it("keeps the injected clock third: its budget and the reporter work together", async () => {
+    let now = 0;
+    let reads = 0;
+    const clock = () => {
+      reads++;
+      return now;
+    };
+    const advancing = (fail: Record<number, Error>): RunRecord => {
+      const inner = fakeRun(fail);
+      return async (body) => {
+        now += BUDGET_MS / 2 + 1;
+        return inner(body);
+      };
+    };
+    const quiet = recorded();
+    const budgeted = await pushRecords(
+      input(records(5)),
+      advancing({}),
+      clock,
+      quiet.onFailure,
+    );
+    expect(budgeted.results).toHaveLength(2);
+    expect(reads).toBeGreaterThan(1);
+    expect(quiet.events).toEqual([]);
+    now = 0;
+    const loud = recorded();
+    const failed = await pushRecords(
+      input(records(5)),
+      advancing({ 1: new Error("transient") }),
+      clock,
+      loud.onFailure,
+    );
+    expect(failed.results).toHaveLength(1);
+    expect(loud.events).toHaveLength(1);
+  });
+
+  it("answers the same when the reporter throws", async () => {
+    const boom = new Error("transient");
+    const plain = await pushRecords(input(records(3)), fakeRun({ 1: boom }));
+    const broken = await pushRecords(
+      input(records(3)),
+      fakeRun({ 1: boom }),
+      Date.now,
+      reportRecordFailure(throwingReporter),
+    );
+    expect(codes(broken)).toEqual(codes(plain));
+    expect(codes(broken)).toEqual(["r_0"]);
   });
 });
