@@ -1,7 +1,6 @@
 # TRADER — Product Requirements
 
-Phone-first daily closeout and job costing for small painting contractors. This document owns
-what the product is for, who it serves, and what V1 does and does not do. How it is built →
+Phone-first daily closeout and job costing for small painting contractors. How it is built →
 [ARCHITECTURE.md](ARCHITECTURE.md). The order it gets built → [TASKS.md](TASKS.md).
 
 ## Product overview
@@ -10,7 +9,6 @@ A field crew records labor, materials and job progress on their phones during th
 if necessary. The office approves what needs approving, exports payroll, and invoices the
 customer from the same record. TRADER is the contractor's system of record for field activity;
 their accounting package stays the system of record for the books, and TRADER exports to it.
-
 Owner and sole developer: Juan Pablo Vallejo, a former painter-estimator. Design partner and
 first pilot: a painting contractor in Rhode Island and Massachusetts, about 30 people.
 
@@ -30,19 +28,18 @@ with no signal.
 4. Nothing recorded is ever silently lost, duplicated or rewritten.
 5. The contractor can leave with their data: QuickBooks-importable exports plus a full export.
 
-Non-goals for V1: payments, estimates and quotes, scheduling, a customer portal, a marketplace,
-an AI estimator, and anything that requires a second contractor to exist.
+Non-goals for V1: payments, estimates and quotes, scheduling beyond assignments, a customer
+portal, a marketplace, an AI estimator, and anything that requires a second contractor to exist.
 
 ## Target users
 
-| User           | Device                     | Connectivity | What they do in TRADER                                                     |
-| -------------- | -------------------------- | ------------ | -------------------------------------------------------------------------- |
-| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours         |
-| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout |
-| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, approvals, pay periods, payroll export, invoices  |
+| User           | Device                     | Connectivity | What they do in TRADER                                                                                      |
+| -------------- | -------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments, edit own name and phone |
+| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout                                  |
+| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, closeouts, pay periods, payroll export, invoices           |
 
-Everyone is a user with their own login. Crew-facing UI ships in English and Spanish from the
-first build; the office UI ships in English.
+Everyone is a user with their own login.
 
 ## Core features (V1)
 
@@ -71,18 +68,21 @@ entries. The approval queue tags each entry with every reason it is there.
 
 ### Jobs and location
 
-- Jobs belong to a customer and are assigned to a crew; a crew has a foreman. A worker's jobs
-  are the jobs of the crew they belong to.
+- Jobs belong to a customer and are assigned to a crew; a crew has a foreman. A worker's jobs are
+  those of every crew they belong to, switched freely during a day. A dated assignment with an
+  expected start and end plans a worker's day; it never authorizes work or becomes hours.
 - Location is a foreground stamp at clock-in, clock-out and job switch, plus Smart Clock-In;
   never tracking, sampling, history or a map. Missing or out-of-radius: approval, never a block.
 
 ### Smart Clock-In
 
-- Follows the manual pilot, within V1. An admin makes an employee eligible; it runs once they
-  read an in-app background-location disclosure, activate it and grant the phone's permission,
-  which no admin setting overrides. Manual clock-in always remains.
+- Pilot: on app open, one foreground reading may suggest a job; the worker confirms the normal
+  clock-in. Never automatic or background; permission optional; manual selection always remains.
+- Arrival reminders follow the pilot, in V1. An admin makes an employee eligible; it runs once
+  they read an in-app background-location disclosure, activate it and grant the phone's
+  permission, which no admin setting overrides. Manual clock-in always remains.
 - A work window (company default, employee override) is an expected start and end, not a
-  schedule. From 30 minutes before the start to its close, entering an assigned job's radius
+  schedule. From 30 minutes before the start to its close, entering a crew job's radius
   (the approval rule's, 200 m when first set, so a change affects both; no coordinates, no
   reminder) raises a local notification, not a push; the employee confirms the normal
   clock-in. Departure only reminds; after the window, at most a timed open-session reminder.
@@ -101,9 +101,9 @@ entries. The approval queue tags each entry with every reason it is there.
 
 ### Day closeout
 
-The foreman reviews the day's labor and materials for a job, sets job status and a note, and
-submits. A submitted closeout is locked; later changes are correcting entries that go through
-approval.
+The foreman of the job's crew, or an admin, reviews the day's labor and materials for a job,
+sets job status and a note, and submits; both submit the same way and get the same answers. A
+submitted closeout is locked; later changes are correcting entries that go through approval.
 
 ### Invoicing and exports
 
@@ -118,9 +118,8 @@ approval.
 ### Sync and offline
 
 Every field action is durable on the phone the moment the tap returns, with or without signal
-or a valid session. The UI shows delivery state honestly: pending, syncing, synced, failed,
-needs attention. Devices hold only the user's own entries and reference data offline; crew
-views are online-only.
+or a valid session, and its delivery state is always shown (DESIGN.md). Devices hold only the
+user's own entries and reference data offline; crew views are online-only.
 
 ### Access
 
@@ -129,9 +128,10 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
 
 ## Pilot and V1 completion
 
-- Pilot build: sign-in, manual clock in/out with job attribution, sync, the approval queue,
-  and the payroll export, distributed by TestFlight public link and the Play internal track.
-  The pilot is unpaid.
+- Pilot build: sign-in, clock in/out and job switch with the job suggestion, materials, photos,
+  offline sync, dated assignments, approvals, foreman and admin closeout, pay periods, payroll
+  export, invoices created, issued and exported in TRADER (no discount feature), the office web on
+  phone and desktop. TestFlight public link, Play internal track; the pilot is unpaid.
 - V1 complete — the billing trigger — requires every V1 feature above, production distribution
   on the App Store and Google Play (US storefronts), and a partner-signed acceptance checklist.
 
@@ -139,12 +139,12 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
 
 Privacy policy and terms of service; account deletion as deactivate-and-pseudonymize, because
 labor records are retained by law; Apple App Privacy details and Google Play Data Safety form,
-each declaring location (background too, before Smart Clock-In) and what Sentry and PostHog
+each declaring location (background too, before arrival reminders) and what Sentry and PostHog
 collect; Sentry PII scrubbing; local employment rules on location checked before Smart Clock-In.
 
 ## After V1
 
-Push notifications, web approval by push to the admin's phone, SMS, roster self-service, audit
-log, dark theme, payments, a customer portal, per-company branding (each contractor's own logo
-in the crew app and office header), and a second contractor — the schema is tenant-safe from
-the first migration, so that is onboarding work, not restructuring.
+Push notifications, web approval by push to the admin's phone, SMS, roster self-service beyond own
+name and phone, audit log, dark theme, payments, a customer portal, per-company branding (each
+contractor's own logo in the crew app and office header), and a second contractor — the schema is
+tenant-safe from the first migration, so that is onboarding work, not restructuring.
