@@ -16,8 +16,8 @@ export type ErrorReport = {
   errorNames: string[];
   // The first SQLSTATE on the chain: a schema-level code, never row data.
   sqlstate: string | null;
-  // The deepest error's "at" lines, only when its stack begins exactly with its own header.
-  frames: string[];
+  // No stack frames: a stack is free text that any code, or a forged value, can fill, so no
+  // filter over it is a guarantee. Sentry (Stage 6) decides frames under its own scrubbing.
   // Configuration only: the names of invalid variables, never their values.
   invalid?: string[];
 };
@@ -36,9 +36,6 @@ const PATH = /^[A-Za-z0-9.]{1,100}$/;
 const VARIABLE = /^TRADER_[A-Z_]{1,40}$/;
 const TYPES = ["query", "mutation", "subscription"] as const;
 const MAX_CHAIN = 5;
-const MAX_FRAMES = 20;
-const MAX_FRAME = 300;
-const MAX_STACK = 16_384;
 
 // Every read of a thrown value may meet a throwing getter or a Proxy trap.
 function read(o: object, key: string): unknown {
@@ -58,25 +55,6 @@ function nameOf(o: object): string {
   }
 }
 
-// V8's stack header is `name: message`, or whichever of the two is not empty. A message spanning
-// lines (Drizzle's SQL and params, a user string holding "\n    at ") is inside the header, so
-// frames are taken only after an exact header match, and none otherwise.
-function framesOf(o: object): string[] | null {
-  const stack = read(o, "stack");
-  const name = read(o, "name");
-  const message = read(o, "message");
-  if (typeof stack !== "string" || stack.length > MAX_STACK) return null;
-  if (typeof name !== "string" || typeof message !== "string") return null;
-  const header = name === "" ? message : message === "" ? name : `${name}: ${message}`;
-  if (stack !== header && !stack.startsWith(`${header}\n`)) return null;
-  return stack
-    .slice(header.length)
-    .split("\n")
-    .filter((line) => /^\s+at /.test(line))
-    .slice(0, MAX_FRAMES)
-    .map((line) => line.slice(0, MAX_FRAME));
-}
-
 // The minimizer. Pure over what it can read; anything unreadable is left out.
 export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
   const path =
@@ -88,7 +66,6 @@ export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
     type,
     errorNames: [],
     sqlstate: null,
-    frames: [],
   };
   if (typeof error !== "object" || error === null) {
     event.errorNames.push("NonError");
@@ -108,8 +85,6 @@ export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
     if (event.sqlstate === null && typeof code === "string" && SQLSTATE.test(code)) {
       event.sqlstate = code;
     }
-    const frames = framesOf(current);
-    if (frames !== null) event.frames = frames;
     current = read(current, "cause");
   }
   return event;
@@ -162,7 +137,6 @@ export function reportConfigFault(
     type: "query",
     errorNames: [],
     sqlstate: null,
-    frames: [],
     invalid: invalid.filter((v) => VARIABLE.test(v)),
   }));
 }

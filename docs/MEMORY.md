@@ -142,7 +142,6 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   report only through `reportFailure`.
 - A Vercel env change reaches only a new deployment, and a rollback restores the old one's env:
   re-check `status.get` after any deploy or rollback.
-- V8 formats `error.stack` on first read, from the message at that moment, not at construction.
 
 ## Log
 
@@ -180,7 +179,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `reporter` required in the context; push reports a record failing after an earlier commit
   (`pushRecords`' fourth argument; the clock stays third); `status.get`, public, no database,
   four states from `TRADER_SYNC_MODE` and per-platform minimum builds. 669 tests (231 db, 438
-  api); 23 mutations run, all red on their named assertions (M2 strengthened once).
+  api); 23 mutations run, all red on their named assertions (M2 strengthened once). On review,
+  stack frames dropped from reports: a forged stack passed the header check (red test first).
 - **Decided:** by the owner ("execute" on the plan's recommendations): advisory switch, no
   server enforcement; the four states; reporter required; ARCHITECTURE's package-layout line
   merged into RULES. ARCHITECTURE remains at its cap.

@@ -45,7 +45,7 @@ const internal = (cause: unknown) =>
   new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "boom", cause });
 
 describe("the minimized report", () => {
-  it("carries names, SQLSTATE and frames, and none of the query, params or identity", () => {
+  it("carries names and SQLSTATE only, none of the query, params or identity", () => {
     const event = toErrorReport(internal(drizzleError()), where);
     expect(event).toMatchObject({
       source: "request",
@@ -54,28 +54,25 @@ describe("the minimized report", () => {
       errorNames: ["TRPCError", "DrizzleQueryError", "Error"],
       sqlstate: "22P02",
     });
-    expect(event.frames.length).toBeGreaterThan(0);
-    expect(event.frames.every((f) => /^\s+at /.test(f))).toBe(true);
+    // Exactly these fields: no stack, no message, nothing free-form.
+    expect(Object.keys(event).sort()).toEqual([
+      "errorNames",
+      "path",
+      "source",
+      "sqlstate",
+      "type",
+    ]);
     const text = JSON.stringify(event);
     for (const secret of [...SECRETS, "Failed query", "params", "boom", "sub-secret"]) {
       expect(text).not.toContain(secret);
     }
   });
 
-  it("takes no frame from inside a message, even one shaped like a frame", () => {
+  it("carries nothing of a message shaped like a stack frame", () => {
     const error = new Error("first line\n    at injected (sub-secret-subject:1:1)\nlast");
-    const event = toErrorReport(error, where);
-    expect(event.frames.length).toBeGreaterThan(0);
-    expect(JSON.stringify(event)).not.toContain("injected");
-    expect(JSON.stringify(event)).not.toContain("sub-secret-subject");
-  });
-
-  it("takes no frame when the stack does not begin with the error's own header", () => {
-    // V8 formats `stack` on first read; read it, then change the message under it.
-    const error = new Error("original");
-    void error.stack;
-    error.message = "changed after capture, worker@co.test";
-    expect(toErrorReport(error, where).frames).toEqual([]);
+    const text = JSON.stringify(toErrorReport(error, where));
+    expect(text).not.toContain("injected");
+    expect(text).not.toContain("sub-secret-subject");
   });
 
   it("stops on a cyclic cause and at five errors", () => {
@@ -100,7 +97,6 @@ describe("the minimized report", () => {
     expect(toErrorReport(hostile, where)).toMatchObject({
       errorNames: ["Error"],
       sqlstate: null,
-      frames: [],
     });
     const trap = () => {
       throw new Error("trap");
@@ -108,7 +104,6 @@ describe("the minimized report", () => {
     const proxy = new Proxy({}, { get: trap, getPrototypeOf: trap, has: trap });
     expect(toErrorReport(proxy, where)).toMatchObject({
       errorNames: ["Unknown"],
-      frames: [],
     });
   });
 
@@ -120,7 +115,7 @@ describe("the minimized report", () => {
     }
   });
 
-  it("bounds every field: names, frames, frame length, path and type", () => {
+  it("bounds every field: names, path and type", () => {
     class WithAVeryLongNameThatNoReportShouldEverCarryBecauseItIsFarTooLongToBeAClass extends Error {}
     const event = toErrorReport(
       new WithAVeryLongNameThatNoReportShouldEverCarryBecauseItIsFarTooLongToBeAClass(
@@ -130,19 +125,22 @@ describe("the minimized report", () => {
     );
     expect(event.errorNames).toEqual(["Unknown"]);
     expect(event).toMatchObject({ path: null, type: "unknown" });
-    const deep = () => {
-      const recurse = (n: number): Error =>
-        n === 0 ? new Error("deep") : recurse(n - 1);
-      return recurse(50);
-    };
-    const limit = Error.stackTraceLimit;
-    Error.stackTraceLimit = 100;
-    try {
-      const frames = toErrorReport(deep(), where).frames;
-      expect(frames.length).toBeLessThanOrEqual(20);
-      expect(frames.every((f) => f.length <= 300)).toBe(true);
-    } finally {
-      Error.stackTraceLimit = limit;
+  });
+});
+
+describe("a forged stack", () => {
+  it("puts nothing of its frames in the report, even under a valid header", () => {
+    const error = new Error("plain");
+    Object.defineProperty(error, "stack", {
+      value: [
+        "Error: plain",
+        "    at worker@co.test (0192f0c4-1111-7000-8000-000000000001:41.8240:-71.4128)",
+        "    at SECRET-MARKER-7f3a (/srv/app.js:1:1)",
+      ].join("\n"),
+    });
+    const text = JSON.stringify(toErrorReport(internal(error), where));
+    for (const secret of [...SECRETS, "SECRET-MARKER-7f3a", "app.js"]) {
+      expect(text).not.toContain(secret);
     }
   });
 });
@@ -223,7 +221,6 @@ describe("reportingOnError and reportConfigFault", () => {
         type: "query",
         errorNames: [],
         sqlstate: null,
-        frames: [],
         invalid: ["TRADER_SYNC_MODE"],
       },
     ]);
