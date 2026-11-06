@@ -1,7 +1,6 @@
 # TRADER — Product Requirements
 
-Phone-first daily closeout and job costing for small painting contractors. This document owns
-what the product is for, who it serves, and what V1 does and does not do. How it is built →
+Phone-first daily closeout and job costing for small painting contractors. How it is built →
 [ARCHITECTURE.md](ARCHITECTURE.md). The order it gets built → [TASKS.md](TASKS.md).
 
 ## Product overview
@@ -10,7 +9,6 @@ A field crew records labor, materials and job progress on their phones during th
 if necessary. The office approves what needs approving, exports payroll, and invoices the
 customer from the same record. TRADER is the contractor's system of record for field activity;
 their accounting package stays the system of record for the books, and TRADER exports to it.
-
 Owner and sole developer: Juan Pablo Vallejo, a former painter-estimator. Design partner and
 first pilot: a painting contractor in Rhode Island and Massachusetts, about 30 people.
 
@@ -41,8 +39,7 @@ an AI estimator, and anything that requires a second contractor to exist.
 | Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout |
 | Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, approvals, pay periods, payroll export, invoices  |
 
-Everyone is a user with their own login. Crew-facing UI ships in English and Spanish from the
-first build; the office UI ships in English.
+Everyone is a user with their own login.
 
 ## Core features (V1)
 
@@ -118,9 +115,8 @@ approval.
 ### Sync and offline
 
 Every field action is durable on the phone the moment the tap returns, with or without signal
-or a valid session. The UI shows delivery state honestly: pending, syncing, synced, failed,
-needs attention. Devices hold only the user's own entries and reference data offline; crew
-views are online-only.
+or a valid session, and its delivery state is always shown (DESIGN.md). Devices hold only the
+user's own entries and reference data offline; crew views are online-only.
 
 ### Access
 
