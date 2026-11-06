@@ -98,6 +98,7 @@ integer cents through the locale formatter; dates and times render in the compan
 | Attention banner   | `attention` tint, what happened and what to do, persistent until resolved                                                                                                       |
 | Data table (web)   | Sticky header, 44 pt rows, right-aligned numbers, no zebra striping, inline status pills                                                                                        |
 | Assignment row     | Date, job and expected start–end under a "Planned" label in `ink-secondary`; never shown as hours, summed, or colored as a status                                               |
+| Profile form       | Name and contact phone as form fields; email read-only, captioned "Managed by your sign-in provider"; no role, company or identity field                                        |
 
 ## Localization
 

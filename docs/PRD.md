@@ -33,11 +33,11 @@ portal, a marketplace, an AI estimator, and anything that requires a second cont
 
 ## Target users
 
-| User           | Device                     | Connectivity | What they do in TRADER                                                                            |
-| -------------- | -------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
-| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments                |
-| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout                        |
-| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, closeouts, pay periods, payroll export, invoices |
+| User           | Device                     | Connectivity | What they do in TRADER                                                                                      |
+| -------------- | -------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
+| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments, edit own name and phone |
+| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout                                  |
+| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, closeouts, pay periods, payroll export, invoices           |
 
 Everyone is a user with their own login.
 
@@ -141,7 +141,7 @@ collect; Sentry PII scrubbing; local employment rules on location checked before
 
 ## After V1
 
-Push notifications, web approval by push to the admin's phone, SMS, roster self-service, audit
-log, dark theme, payments, a customer portal, per-company branding (each contractor's own logo
-in the crew app and office header), and a second contractor — the schema is tenant-safe from
-the first migration, so that is onboarding work, not restructuring.
+Push notifications, web approval by push to the admin's phone, SMS, roster self-service beyond own
+name and phone, audit log, dark theme, payments, a customer portal, per-company branding (each
+contractor's own logo in the crew app and office header), and a second contractor — the schema is
+tenant-safe from the first migration, so that is onboarding work, not restructuring.

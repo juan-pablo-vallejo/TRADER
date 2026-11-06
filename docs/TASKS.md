@@ -41,7 +41,7 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
 
 - [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
       favicon and header mark from `assets/brand/logo.png`
-- [ ] Roster: invite, deactivate, role, effective-dated pay rates
+- [ ] Roster: invite, deactivate, role, effective-dated pay rates; own name and contact phone
 - [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
@@ -65,6 +65,7 @@ office sees correct, deduplicated hours per job.
 - [ ] Clock in/out, pause/resume, job switch with biometric attestation and the foreground
       location stamp
 - [ ] Job list, own hours and own assignments, status pills and sync banner; kill-switch handling
+- [ ] Own profile: name and contact phone
 - [ ] Materials with receipt photo; job-progress photos with deferred upload
 - [ ] Day closeout: review and submit
 
@@ -133,7 +134,7 @@ out.
 
 ## After V1 (unscheduled)
 
-Push notifications and web approval by push · SMS · roster self-service · audit log wiring ·
-dark theme · per-company logo (additive `companies` column, upload, shown in crew app and office
-header) · second contractor onboarding · payments · customer portal · PowerSync re-evaluation ·
-periodic location-sampling experiment (separate owner approval).
+Push notifications and web approval by push · SMS · roster self-service beyond own name and phone
+· audit log wiring · dark theme · per-company logo (additive `companies` column, upload, shown in
+crew app and office header) · second contractor onboarding · payments · customer portal ·
+PowerSync re-evaluation · periodic location-sampling experiment (separate owner approval).
