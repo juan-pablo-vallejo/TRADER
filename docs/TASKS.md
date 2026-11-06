@@ -65,6 +65,8 @@ office sees correct, deduplicated hours per job.
 - [ ] Clock in/out, pause/resume, job switch with biometric attestation and the foreground
       location stamp
 - [ ] Job list, own hours and own assignments, status pills and sync banner; kill-switch handling
+- [ ] Job suggestion on app open (PRD, Smart Clock-In): authorized jobs' locations in an extended
+      pull, one foreground reading, manual fallback; physical iOS and Android tests
 - [ ] Own profile: name and contact phone
 - [ ] Materials with receipt photo; job-progress photos with deferred upload
 - [ ] Day closeout: review and submit
@@ -105,7 +107,7 @@ number continues the partner's series without a gap.
 - [ ] Issue (immutable), void, credit memos; gap-free numbering continuing the partner's series
 - [ ] PDF on demand; QuickBooks CSV export
 
-## Stage 9 — Smart Clock-In
+## Stage 9 — Smart Clock-In arrival reminders
 
 Done when, on physical iOS and Android phones, an activated employee is reminded on arrival
 inside the work window and never outside it, the privacy release gate holds, and the office

@@ -76,9 +76,11 @@ entries. The approval queue tags each entry with every reason it is there.
 
 ### Smart Clock-In
 
-- Follows the manual pilot, within V1. An admin makes an employee eligible; it runs once they
-  read an in-app background-location disclosure, activate it and grant the phone's permission,
-  which no admin setting overrides. Manual clock-in always remains.
+- Pilot: on app open, one foreground reading may suggest a job; the worker confirms the normal
+  clock-in. Never automatic or background; permission optional; manual selection always remains.
+- Arrival reminders follow the pilot, in V1. An admin makes an employee eligible; it runs once
+  they read an in-app background-location disclosure, activate it and grant the phone's
+  permission, which no admin setting overrides. Manual clock-in always remains.
 - A work window (company default, employee override) is an expected start and end, not a
   schedule. From 30 minutes before the start to its close, entering a crew job's radius
   (the approval rule's, 200 m when first set, so a change affects both; no coordinates, no
@@ -136,7 +138,7 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
 
 Privacy policy and terms of service; account deletion as deactivate-and-pseudonymize, because
 labor records are retained by law; Apple App Privacy details and Google Play Data Safety form,
-each declaring location (background too, before Smart Clock-In) and what Sentry and PostHog
+each declaring location (background too, before arrival reminders) and what Sentry and PostHog
 collect; Sentry PII scrubbing; local employment rules on location checked before Smart Clock-In.
 
 ## After V1
