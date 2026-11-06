@@ -2,7 +2,7 @@
 
 The build order and what is done. Stages are dependency-ordered; a stage starts when the one
 before it is done. No dates. A task is ticked when its done-criterion holds, not when the code
-exists. **Current stage: 3.**
+exists. **Current stage: 4.**
 
 ## Stage 0 — Repo rebuild
 
@@ -31,23 +31,9 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 Done when both sync procedures pass a failure-injection suite: duplicate push, out-of-order
 arrival, two-day backlog, dropped response, wrong device clock, deactivated user.
 
-- [x] `users` identity binding: policies on `app.identity_subject` and `app.identity_email`,
-      an identity guard trigger (custom migration, tests under `trader_app`)
-- [x] tRPC with superjson and zod; request context with the identity adapter (development
-      identity now, Clerk later), JIT binding select-first; a deactivated account is no user
-- [x] Role gates; tested against a deactivated account exactly like an anonymous one
-- [x] Session fold with two-sided transition validation; derivations: `work_date`, duration,
-      open sessions
-- [x] Day closeout record per job and work date (schema, migration, invariant tests) and
-      `closeout.submit`; locked once submitted, later changes are corrections (PRD, Day closeout)
-- [x] Crew day-review read with a review fingerprint checked at submit; before Stage 5 closeout
-- [x] Material corrections: rows naming the original, approval for materials (PRD, Day closeout)
-- [x] Approval facts at push (`captured_offline`, `after_closeout`); receipt approvals, late corrections
-- [x] `sync.push` idempotent with per-record results; `sync.pull` per-user snapshot
-- [x] `closeout.submit`, `material.correct`: an id an invisible row holds is `id_conflict`, not 500
-- [x] Approval queue procedures implementing the approval rule
-- [x] Office labor repairs: append, correct, void; atomic repair sets validated as one timeline
-- [x] Kill-switch state endpoint; error-reporting wrapper
+- [x] Identity binding, tRPC context, role gates; fold and validation; day closeout, review
+      fingerprint, material corrections; approval facts, queue, office repairs; sync with the
+      six-scenario suite; kill switch, error reporting
 
 ## Stage 4 — Office web (`apps/web`)
 
