@@ -7,10 +7,11 @@
     "allowJs": true,
     "incremental": true,
     "moduleDetection": "force",
-    "plugins": [{ "name": "next" }],
-    "paths": {
-      "@/*": ["./src/*"]
-    },
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
     "declaration": false,
     "declarationMap": false
   },
