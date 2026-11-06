@@ -45,6 +45,7 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
 - [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
+- [ ] Admin closeout on the foreman procedures, unchanged; archived, crew-less jobs decided first
 - [ ] Approval queue with reason tags; reconciliation view; job cost to date
 - [ ] Pay periods: close, late-entry adjustments; payroll CSV export of approved hours
 - [ ] Full data export

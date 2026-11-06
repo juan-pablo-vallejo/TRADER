@@ -33,11 +33,11 @@ portal, a marketplace, an AI estimator, and anything that requires a second cont
 
 ## Target users
 
-| User           | Device                     | Connectivity | What they do in TRADER                                                                 |
-| -------------- | -------------------------- | ------------ | -------------------------------------------------------------------------------------- |
-| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments     |
-| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout             |
-| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, pay periods, payroll export, invoices |
+| User           | Device                     | Connectivity | What they do in TRADER                                                                            |
+| -------------- | -------------------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments                |
+| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout                        |
+| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, closeouts, pay periods, payroll export, invoices |
 
 Everyone is a user with their own login.
 
@@ -99,9 +99,9 @@ entries. The approval queue tags each entry with every reason it is there.
 
 ### Day closeout
 
-The foreman reviews the day's labor and materials for a job, sets job status and a note, and
-submits. A submitted closeout is locked; later changes are correcting entries that go through
-approval.
+The foreman of the job's crew, or an admin, reviews the day's labor and materials for a job,
+sets job status and a note, and submits; both submit the same way and get the same answers. A
+submitted closeout is locked; later changes are correcting entries that go through approval.
 
 ### Invoicing and exports
 
