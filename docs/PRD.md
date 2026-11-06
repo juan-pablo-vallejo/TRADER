@@ -28,16 +28,16 @@ with no signal.
 4. Nothing recorded is ever silently lost, duplicated or rewritten.
 5. The contractor can leave with their data: QuickBooks-importable exports plus a full export.
 
-Non-goals for V1: payments, estimates and quotes, scheduling, a customer portal, a marketplace,
-an AI estimator, and anything that requires a second contractor to exist.
+Non-goals for V1: payments, estimates and quotes, scheduling beyond assignments, a customer
+portal, a marketplace, an AI estimator, and anything that requires a second contractor to exist.
 
 ## Target users
 
-| User           | Device                     | Connectivity | What they do in TRADER                                                     |
-| -------------- | -------------------------- | ------------ | -------------------------------------------------------------------------- |
-| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours         |
-| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout |
-| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, approvals, pay periods, payroll export, invoices  |
+| User           | Device                     | Connectivity | What they do in TRADER                                                                 |
+| -------------- | -------------------------- | ------------ | -------------------------------------------------------------------------------------- |
+| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments     |
+| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout             |
+| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, pay periods, payroll export, invoices |
 
 Everyone is a user with their own login.
 
@@ -68,8 +68,9 @@ entries. The approval queue tags each entry with every reason it is there.
 
 ### Jobs and location
 
-- Jobs belong to a customer and are assigned to a crew; a crew has a foreman. A worker's jobs
-  are the jobs of the crew they belong to.
+- Jobs belong to a customer and are assigned to a crew; a crew has a foreman. A worker's jobs are
+  those of every crew they belong to, switched freely during a day. A dated assignment with an
+  expected start and end plans a worker's day; it never authorizes work or becomes hours.
 - Location is a foreground stamp at clock-in, clock-out and job switch, plus Smart Clock-In;
   never tracking, sampling, history or a map. Missing or out-of-radius: approval, never a block.
 
@@ -79,7 +80,7 @@ entries. The approval queue tags each entry with every reason it is there.
   read an in-app background-location disclosure, activate it and grant the phone's permission,
   which no admin setting overrides. Manual clock-in always remains.
 - A work window (company default, employee override) is an expected start and end, not a
-  schedule. From 30 minutes before the start to its close, entering an assigned job's radius
+  schedule. From 30 minutes before the start to its close, entering a crew job's radius
   (the approval rule's, 200 m when first set, so a change affects both; no coordinates, no
   reminder) raises a local notification, not a push; the employee confirms the normal
   clock-in. Departure only reminds; after the window, at most a timed open-session reminder.

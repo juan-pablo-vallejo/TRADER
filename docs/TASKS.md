@@ -43,6 +43,8 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
       favicon and header mark from `assets/brand/logo.png`
 - [ ] Roster: invite, deactivate, role, effective-dated pay rates
 - [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested
+- [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
+      never read by push authority, the fold or approvals; writers and zone rules decided first
 - [ ] Approval queue with reason tags; reconciliation view; job cost to date
 - [ ] Pay periods: close, late-entry adjustments; payroll CSV export of approved hours
 - [ ] Full data export
@@ -61,7 +63,7 @@ office sees correct, deduplicated hours per job.
       reclamation
 - [ ] Clock in/out, pause/resume, job switch with biometric attestation and the foreground
       location stamp
-- [ ] Job list, own hours, status pills and sync banner; kill-switch handling
+- [ ] Job list, own hours and own assignments, status pills and sync banner; kill-switch handling
 - [ ] Materials with receipt photo; job-progress photos with deferred upload
 - [ ] Day closeout: review and submit
 
