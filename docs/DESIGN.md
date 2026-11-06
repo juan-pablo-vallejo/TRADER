@@ -75,7 +75,10 @@ integer cents through the locale formatter; dates and times render in the compan
 - Corner radius 8 on cards and inputs, 12 on the primary button. One elevation level: a 1 pt
   `border`, no drop shadows.
 - Crew app: single column, portrait, safe-area aware; the primary button docks above the home
-  indicator. Office web: 1280 pt target, 12-column grid, dense tables, left navigation.
+  indicator. Office web: responsive, usable on a phone and a desktop. Wide: 1280 pt target,
+  12-column grid, dense tables, left navigation. Narrow: one column, table rows stacked,
+  navigation in a menu, targets at least 48 pt. Breakpoints are set in the first office screen's
+  plan.
 - Icons: one icon set at 24 pt with a 2 pt stroke, chosen with the first screen and never mixed
   with emoji.
 

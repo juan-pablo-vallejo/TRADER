@@ -142,6 +142,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   report only through `reportFailure`.
 - A Vercel env change reaches only a new deployment, and a rollback restores the old one's env:
   re-check `status.get` after any deploy or rollback.
+- Comments written before the Stage 7/8 swap say `Stage 8` for invoicing, now Stage 7:
+  `seed.ts:59`, `invoices.ts:77,112`, `invoice-line-items.ts:46,48,67`, `credit-memos.ts:60`
+  (`packages/db/src`). Correct each when its file is next touched, in that task; delete this note
+  then.
 
 ## Log
 

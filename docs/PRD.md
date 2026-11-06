@@ -128,9 +128,10 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
 
 ## Pilot and V1 completion
 
-- Pilot build: sign-in, manual clock in/out with job attribution, sync, the approval queue,
-  and the payroll export, distributed by TestFlight public link and the Play internal track.
-  The pilot is unpaid.
+- Pilot build: sign-in, clock in/out and job switch with the job suggestion, materials, photos,
+  offline sync, dated assignments, approvals, foreman and admin closeout, pay periods, payroll
+  export, invoices created, issued and exported in TRADER (no discount feature), the office web on
+  phone and desktop. TestFlight public link, Play internal track; the pilot is unpaid.
 - V1 complete — the billing trigger — requires every V1 feature above, production distribution
   on the App Store and Google Play (US storefronts), and a partner-signed acceptance checklist.
 

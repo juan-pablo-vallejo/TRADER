@@ -35,9 +35,10 @@ arrival, two-day backlog, dropped response, wrong device clock, deactivated user
       fingerprint, material corrections; approval facts, queue, office repairs; sync with the
       six-scenario suite; kill switch, error reporting
 
-## Stage 4 — Office web (`apps/web`)
+## Stage 4 — Office API and web (`apps/web`)
 
-Done when an admin runs a pay period end to end locally: roster, jobs, approvals, close, export.
+Done when an admin, on a phone and on a desktop, runs a pay period end to end locally: roster,
+jobs, assignments, approvals, a closeout, close, export.
 
 - [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
       favicon and header mark from `assets/brand/logo.png`
@@ -49,6 +50,7 @@ Done when an admin runs a pay period end to end locally: roster, jobs, approvals
 - [ ] Approval queue with reason tags; reconciliation view; job cost to date
 - [ ] Pay periods: close, late-entry adjustments; payroll CSV export of approved hours
 - [ ] Full data export
+- [ ] Office screens responsive on phone and desktop (DESIGN.md)
 
 ## Stage 5 — Field app (`apps/mobile`)
 
@@ -86,7 +88,16 @@ passed, and Sentry shows no PII.
 - [ ] Sentry with PII scrubbing; PostHog; EAS project
 - [ ] Nightly encrypted `pg_dump` to R2 and weekly restore-verify in Actions; timed restore drill
 
-## Stage 7 — Pilot
+## Stage 7 — Invoicing and exports
+
+Done when the office issues an invoice from a completed job, exports it to QuickBooks, and the
+number continues the partner's series without a gap.
+
+- [ ] Invoice drafting from job labor and materials as snapshots; tax entered per invoice
+- [ ] Issue (immutable), void, credit memos; gap-free numbering continuing the partner's series
+- [ ] PDF on demand; QuickBooks CSV export
+
+## Stage 8 — Pilot
 
 Done when the pilot success criteria, written with the partner, are met.
 
@@ -97,15 +108,6 @@ Done when the pilot success criteria, written with the partner, are met.
       before any crew signs in
 - [ ] TestFlight public link and Play internal track; crew onboarding in English and Spanish
 - [ ] Weekly feedback loop; defects become tasks here
-
-## Stage 8 — Invoicing and exports
-
-Done when the office issues an invoice from a completed job, exports it to QuickBooks, and the
-number continues the partner's series without a gap.
-
-- [ ] Invoice drafting from job labor and materials as snapshots; tax entered per invoice
-- [ ] Issue (immutable), void, credit memos; gap-free numbering continuing the partner's series
-- [ ] PDF on demand; QuickBooks CSV export
 
 ## Stage 9 — Smart Clock-In arrival reminders
 
