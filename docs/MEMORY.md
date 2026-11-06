@@ -186,3 +186,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   merged into RULES. ARCHITECTURE remains at its cap.
 - **Next:** confirm Stage 3's done-criterion against the sync suites, then Stage 4 line 1 (route
   handler: `status.get` unauthenticated and `no-store`, `onError` and the reporter wired).
+
+### 2026-11-06 — Pin the queue order of a repair racing a device push
+
+- **Did:** `labor-repair-commit.test.ts`'s repair-versus-push race asserted `no_open_session`
+  for whichever call lost, but a push queued first makes the repair lose with
+  `breaks_following_event`. Split into two tests, each pinned by queue position
+  (`workerWaiters(1)` before the second call). Codes swapped: both red on their assertions; 20
+  consecutive green runs. Test only, no source change. 670 tests (231 db, 439 api).
+- **Decided:** nothing.
+- **Next:** Stage 4 line 1 (route handler: `status.get` unauthenticated and `no-store`, `onError`
+  and the reporter wired).

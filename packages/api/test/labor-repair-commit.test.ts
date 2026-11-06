@@ -304,10 +304,14 @@ describe("labor.repair — concurrent repairs, committed", () => {
     expect(voids).toHaveLength(1);
   });
 
-  it("serializes a repair with a device push for the same worker", async () => {
+  // An open session from 21:00: the office appends its end at 22:00 while the phone pushes
+  // one at 22:30. Both take the worker's lock, and the one queued first wins: the other
+  // finds the session already ended — the push by the fold (no_open_session), the repair
+  // by the following-event check (breaks_following_event). Either order is a valid
+  // serialization, so each is pinned by queue position, as the closeout tests do.
+  const openSession = async () => {
     const x = await world();
-    // An open session: the office appends its end while the phone pushes one.
-    const open = await D.owner.transaction((tx) =>
+    await D.owner.transaction((tx) =>
       eventIn(tx, x.d, {
         worker: x.w.id,
         job: x.d.J,
@@ -315,10 +319,12 @@ describe("labor.repair — concurrent repairs, committed", () => {
         client: T("21:00"),
       }),
     );
-    const h = holdWorker(x.w.id);
-    await h.held;
-    const office = repair(x.admin.who, x.w.id, [append("ended", x.d.J, "22:00")]);
-    const device = caller(x.w.who).sync.push({
+    return x;
+  };
+  const officeEnd = (x: Awaited<ReturnType<typeof world>>) =>
+    repair(x.admin.who, x.w.id, [append("ended", x.d.J, "22:00")]);
+  const deviceEnd = (x: Awaited<ReturnType<typeof world>>) =>
+    caller(x.w.who).sync.push({
       protocolVersion: 1,
       deviceNow: new Date(),
       records: [
@@ -339,16 +345,41 @@ describe("labor.repair — concurrent repairs, committed", () => {
         },
       ],
     });
+  const violationOf = async (workerId: string) =>
+    replay(await D.owner.transaction((tx) => readWorkerEvents(tx, workerId))).violation;
+
+  it("serializes a repair queued ahead of a device push: the push has no open session", async () => {
+    const x = await openSession();
+    const h = holdWorker(x.w.id);
+    await h.held;
+    const office = officeEnd(x);
+    await workerWaiters(1);
+    const device = deviceEnd(x);
     await workerWaiters(2);
     await h.release();
-    const [o, p] = await Promise.all([office, device]);
-    const pushed = p.results[0] as { result: string; code?: string };
-    expect([o.result, pushed.result].sort()).toEqual(["accepted", "rejected"]);
-    const loser = o.result === "rejected" ? o : pushed;
-    expect((loser as { code?: string }).code).toBe("no_open_session");
-    const ledger = await D.owner.transaction((tx) => readWorkerEvents(tx, x.w.id));
-    expect(replay(ledger).violation).toBeNull();
-    expect(open).toBeDefined();
+    expect((await office).result).toBe("accepted");
+    expect((await device).results[0]).toMatchObject({
+      result: "rejected",
+      code: "no_open_session",
+    });
+    expect(await violationOf(x.w.id)).toBeNull();
+  });
+
+  it("serializes a device push queued ahead of a repair: the repair breaks the pushed end", async () => {
+    const x = await openSession();
+    const h = holdWorker(x.w.id);
+    await h.held;
+    const device = deviceEnd(x);
+    await workerWaiters(1);
+    const office = officeEnd(x);
+    await workerWaiters(2);
+    await h.release();
+    expect((await device).results[0]).toMatchObject({ result: "accepted" });
+    expect(await office).toMatchObject({
+      result: "rejected",
+      code: "breaks_following_event",
+    });
+    expect(await violationOf(x.w.id)).toBeNull();
   });
 });
 
