@@ -58,6 +58,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm lint
       - run: pnpm format:check
+      # The web app builds with no database: its routes are dynamic and the pool is lazy.
+      - run: pnpm build
       # Before the tests: the client test and, from Stage 2 line 8, the invariant tests run
       # against the migrated schema.
       - run: pnpm db:migrate
