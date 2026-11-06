@@ -3,6 +3,7 @@ import { closeoutRouter } from "./routers/closeout";
 import { laborRouter } from "./routers/labor";
 import { materialRouter } from "./routers/material";
 import { meRouter } from "./routers/me";
+import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
 import { router } from "./trpc";
 
@@ -12,6 +13,7 @@ export const appRouter = router({
   labor: laborRouter,
   material: materialRouter,
   me: meRouter,
+  status: statusRouter,
   sync: syncRouter,
 });
 

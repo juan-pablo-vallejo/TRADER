@@ -23,6 +23,7 @@ import type { AppUser } from "../resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { materialAck, materialPayloadV1, pushMaterial } from "./material";
 import { reportFailure, type ErrorReporter } from "../report";
+import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
 
 // ARCHITECTURE, sync.push. A batch is the device's, so a cap protects the function, not the
@@ -113,7 +114,7 @@ function classify(raw: unknown): Classified {
 }
 
 export const pushInput = z.strictObject({
-  protocolVersion: z.literal(1),
+  protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
   // The device's clock now, once per push: the one reading that says whether it is wrong.
   deviceNow: z.date(),
   records: z.array(z.unknown()).min(1).max(MAX_RECORDS),
