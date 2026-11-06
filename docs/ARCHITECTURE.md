@@ -105,7 +105,8 @@ documents), `CLAUDE.md` (the auto-loaded session contract), `LICENSE` and `READM
 ## Decisions
 
 One line each; the date is when it was settled. A change is a new row naming the row it
-supersedes, never an edit to an old row.
+supersedes, never an edit to an old row. Rows dated 2026-11-05 or earlier cite another as
+`row N`, meaning line N − 3 of this file at `779894f`; later rows cite one by date and subject.
 
 <!-- prettier-ignore -->
 | Date       | Decision                                                                                 | Supersedes                        |
