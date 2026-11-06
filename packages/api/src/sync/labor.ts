@@ -15,7 +15,7 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../context";
-import { replay, type LaborEvent } from "../labor/fold";
+import { replay, type LaborEvent, type Replay, type Session } from "../labor/fold";
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
 import type { AppUser } from "../resolve-user";
@@ -24,7 +24,7 @@ import { lockPushScope, mayRecordLabor } from "./scope";
 
 // Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
 // receipt stamp, a skew or an approval: those are the server's. No corrections or voids from a
-// device (office repairs, a later line).
+// device: the office writes those (labor.repair, ARCHITECTURE row 187).
 export const laborPayloadV1 = z.strictObject({
   workerId: z.uuid(),
   jobId: z.uuid(),
@@ -180,12 +180,16 @@ export async function pushLaborEvent(
   // 6. The approval facts, the closeout among them judged in each closeout's stored zone.
   const reasons: ApprovalReason[] = laborReasons({
     type: p.type,
+    corrected: false,
     capturedOffline: p.capturedOffline,
     timeSetByUser: p.timeSetByUser,
     stamp: p.location,
     job: scope!.place,
     clockSkewed: skew.clockSkewed,
-    afterCloseout: await afterCloseout(tx, [...timeline.events, candidate], candidate.id),
+    afterCloseout: await afterCloseout(
+      tx,
+      sessionOfEvent(replay([...timeline.events, candidate]), candidate),
+    ),
   });
 
   // 7. No conflict target: the primary key ends here. Nothing comes back when a concurrent
@@ -231,21 +235,25 @@ export async function pushLaborEvent(
   return ack(tx, "accepted", inserted);
 }
 
-// Whether the candidate's session lies on a (job, date) whose closeout is already accepted.
-// The session is the one the candidate falls in once inserted; its start is its effective
-// `started` source's effective instant (fold.ts), the rule the closeout was built by. Each
-// closeout is judged in its own stored zone, never the company's current one, so a later zone
-// change cannot move a record into or out of a closed day. Under the field-write lock held
-// shared, a closeout either committed before (seen here) or covers this record.
-async function afterCloseout(
-  tx: Tx,
-  events: readonly LaborEvent[],
-  candidateId: string,
-): Promise<boolean> {
-  const after = replay(events);
-  const root = after.sessionOf.get(candidateId);
+// The session an accepted event falls in: a positional source's own, or for a void, the
+// session of the root it names. Consumed by push and by labor/repair.ts.
+export function sessionOfEvent(after: Replay, event: LaborEvent): Session {
+  const root =
+    event.type === "voided" ? event.voidsEventId : after.sessionOf.get(event.id);
   const session = after.sessions.find((s) => s.rootEventId === root);
   if (session === undefined) throw new Error("an accepted event has a session");
+  return session;
+}
+
+// Whether a session lies on a (job, date) whose closeout is already accepted, judged on the
+// session as it stands with the new events in place: its effective `started` source's job and
+// effective instant (fold.ts), the rule the closeout was built by (ARCHITECTURE row 201). Each
+// closeout is judged in its own stored zone, never the company's current one, so a later zone
+// change cannot move a record into or out of a closed day. Under the field-write lock held
+// shared, a closeout either committed before (seen here) or covers this record. A closed day
+// the session has left is not consulted: its sealed membership never changes. Consumed by
+// push and by labor/repair.ts.
+export async function afterCloseout(tx: Tx, session: Session): Promise<boolean> {
   const { rows } = await tx.execute<{ closed: boolean }>(sql`
     select exists (
       select 1 from day_closeouts c

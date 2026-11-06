@@ -7,7 +7,11 @@ import {
   LedgerInconsistentError,
   type LaborEvent,
 } from "../src/labor/fold";
-import { validateEvent, type ValidationContext } from "../src/labor/validate";
+import {
+  validateEvent,
+  validateEvents,
+  type ValidationContext,
+} from "../src/labor/validate";
 import { at, builder, JOB_A, JOB_B, v7, WORKER } from "./labor-events";
 
 const RECEIVED = at("23:00", "2026-10-06");
@@ -24,8 +28,15 @@ function ctxFor(existing: readonly LaborEvent[]): ValidationContext {
   };
 }
 
-const push = (existing: readonly LaborEvent[], candidate: LaborEvent) =>
-  validateEvent(ctxFor(existing), existing, candidate);
+// A single candidate's rejection always names that candidate; the comparisons below are on the
+// rest of the verdict.
+function push(existing: readonly LaborEvent[], candidate: LaborEvent) {
+  const verdict = validateEvent(ctxFor(existing), existing, candidate);
+  if (verdict.verdict === "accepted") return verdict;
+  const { eventId, ...rest } = verdict;
+  expect(eventId).toBe(candidate.id);
+  return rest;
+}
 
 const ok = { verdict: "accepted" };
 const no = (code: string, conflictingEventId?: string) => ({
@@ -352,7 +363,7 @@ describe("batch stamps", () => {
   });
 });
 
-describe("atomic repairs are not supported per record (V1 limit)", () => {
+describe("atomic repairs are not possible one record at a time", () => {
   it("cannot add a missed session in front of a later one, one event at a time", () => {
     const ev = builder();
     const later = ev("started", at("13:00"), { job: JOB_B });
@@ -516,5 +527,113 @@ describe("two sources for one worker", () => {
     const timeline = pushAll([start], foremanPause);
     expect(foldSessions(timeline)[0]!.state).toBe("paused");
     pushAll(timeline, ev("resumed", at("10:15"), { server: RECEIVED }));
+  });
+});
+
+// An office repair set (ARCHITECTURE row 187): every candidate in place, one replay.
+const repair = (existing: readonly LaborEvent[], ...candidates: LaborEvent[]) =>
+  validateEvents(ctxFor(existing), existing, candidates);
+const noAt = (eventId: string, code: string, conflictingEventId?: string) => ({
+  ...no(code, conflictingEventId),
+  eventId,
+});
+
+describe("repair sets validated as one timeline", () => {
+  it("accepts a missed session in front of a later one as a pair", () => {
+    const ev = builder();
+    const existing = [
+      ev("started", at("13:00"), { job: JOB_B }),
+      ev("ended", at("17:00"), { job: JOB_B }),
+    ];
+    const start = ev("started", at("08:00"), { server: RECEIVED });
+    const end = ev("ended", at("12:00"), { server: RECEIVED });
+    expect(repair(existing, start, end)).toEqual(ok);
+    expect(repair(existing, end, start)).toEqual(ok);
+  });
+
+  it("accepts a missed pause before a later pause as a pair", () => {
+    const ev = builder();
+    const existing = [
+      ev("started", at("08:00")),
+      ev("paused", at("14:00")),
+      ev("resumed", at("14:30")),
+      ev("ended", at("17:00")),
+    ];
+    const pause = ev("paused", at("10:00"), { server: RECEIVED });
+    const resume = ev("resumed", at("10:15"), { server: RECEIVED });
+    expect(repair(existing, pause, resume)).toEqual(ok);
+  });
+
+  it("rejects a set that is still illegal, naming the candidate it breaks at", () => {
+    const ev = builder();
+    const existing = [ev("started", at("13:00")), ev("ended", at("17:00"))];
+    const start = ev("started", at("08:00"), { server: RECEIVED });
+    const pause = ev("paused", at("10:00"), { server: RECEIVED });
+    const strayResume = ev("resumed", at("11:00"), { server: RECEIVED });
+    // No end before 13:00: the stored start breaks, blamed on the set's first candidate.
+    expect(repair(existing, start, pause)).toEqual(
+      noAt(start.id, "breaks_following_event", existing[0]!.id),
+    );
+    // A candidate that lands illegally is named itself, whatever its place in the set.
+    const end = ev("ended", at("12:00"), { server: RECEIVED });
+    const resumeAgain = ev("resumed", at("11:30"), { server: RECEIVED });
+    expect(repair(existing, start, pause, strayResume, resumeAgain, end)).toEqual(
+      noAt(resumeAgain.id, "not_paused", strayResume.id),
+    );
+  });
+
+  it("supersedes the lower id of two corrections of one root in a set", () => {
+    const ev = builder();
+    const end = ev("ended", at("18:00"));
+    const existing = [ev("started", at("08:00")), end];
+    const first = ev("ended", at("16:00"), { server: RECEIVED, corrects: end.id });
+    const second = ev("ended", at("16:30"), { server: RECEIVED, corrects: end.id });
+    expect(repair(existing, first, second)).toEqual(
+      noAt(first.id, "correction_superseded", second.id),
+    );
+  });
+
+  it("accepts a correction identical to the source in effect", () => {
+    const ev = builder();
+    const start = ev("started", at("08:00"));
+    const existing = [start, ev("ended", at("16:00"))];
+    const same = ev("started", at("08:00"), { server: RECEIVED, corrects: start.id });
+    expect(repair(existing, same)).toEqual(ok);
+  });
+
+  it("holds every candidate to the per-event checks", () => {
+    const ev = builder();
+    const existing = [
+      ev("started", at("08:00")),
+      ev("ended", at("12:00")),
+      ev("started", at("13:00")),
+    ];
+    const end = ev("ended", at("17:00"), { server: RECEIVED });
+    const wrongJob = ev("ended", at("17:00"), { server: RECEIVED, job: JOB_B });
+    expect(repair(existing, end)).toEqual(ok);
+    expect(repair(existing, wrongJob)).toEqual(
+      noAt(wrongJob.id, "job_id_mismatch", existing[2]!.id),
+    );
+  });
+
+  it("applies the fold's void and lineage rules inside a set", () => {
+    const ev = builder();
+    const start = ev("started", at("08:00"));
+    const end = ev("ended", at("16:00"));
+    const existing = [start, end];
+    const voidIt = ev("voided", RECEIVED, { server: RECEIVED, voids: start.id });
+    const again = ev("voided", RECEIVED, { server: RECEIVED, voids: start.id });
+    const voidEnd = ev("voided", RECEIVED, { server: RECEIVED, voids: end.id });
+    expect(repair(existing, voidIt)).toEqual(ok);
+    expect(repair(existing, voidIt, again)).toEqual(noAt(again.id, "already_voided"));
+    expect(repair(existing, voidEnd)).toEqual(
+      noAt(voidEnd.id, "void_target_not_started"),
+    );
+  });
+
+  it("throws on ids repeated within a set", () => {
+    const ev = builder();
+    const start = ev("started", at("08:00"), { server: RECEIVED });
+    expect(() => repair([], start, start)).toThrow(/repeat/);
   });
 });

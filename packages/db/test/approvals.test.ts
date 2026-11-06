@@ -528,3 +528,88 @@ describe("approvals — labor events (0025)", () => {
     });
   });
 });
+
+// Stage 3 line 9 (0026): an office repair — a correction or a void — has an approval holding
+// `corrected` at commit, the labor sibling of 0020's rule for material corrections.
+describe("approvals — labor repairs (0026)", () => {
+  const CHECK = "work_session_events_repair_approved";
+
+  it("refuses a correction or a void without an approval holding corrected", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const root = started(refs);
+      await tx.insert(workSessionEvents).values(root);
+      const correction = () => ({ ...started(refs), correctsEventId: root.id });
+      const voiding = () => ({
+        ...started(refs),
+        type: "voided" as const,
+        voidsEventId: root.id,
+      });
+      for (const make of [correction, voiding]) {
+        const bare = make();
+        expect(
+          await refusal(
+            tx.transaction(async (sp) => {
+              await sp.insert(workSessionEvents).values(bare);
+              await fire(sp, CHECK);
+            }),
+          ),
+        ).toBe(`23000 ${CHECK}`);
+        const wrong = make();
+        expect(
+          await refusal(
+            tx.transaction(async (sp) => {
+              await sp.insert(workSessionEvents).values(wrong);
+              await sp.insert(approvals).values({
+                companyId: refs.companyId,
+                eventId: wrong.id,
+                reasons: ["user_timed"],
+              });
+              await fire(sp, CHECK);
+            }),
+          ),
+        ).toBe(`23000 ${CHECK}`);
+        const right = make();
+        await tx.transaction(async (sp) => {
+          await sp.insert(workSessionEvents).values(right);
+          await sp.insert(approvals).values({
+            companyId: refs.companyId,
+            eventId: right.id,
+            reasons: ["corrected"],
+          });
+          await fire(sp, CHECK);
+        });
+      }
+    });
+  });
+
+  // Nothing of an ordinary event: the WHEN queues no deferred event for one, which
+  // work-session-events.test.ts proves by TRUNCATE answering 23000 after an ordinary insert
+  // (a queued event would make it 55006).
+  it("requires nothing of an ordinary event", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      await tx.transaction(async (sp) => {
+        await sp.insert(workSessionEvents).values(started(refs));
+        await fire(sp, CHECK);
+      });
+    });
+  });
+
+  it("checks a repair's approval under the runtime role in its tenant", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const root = started(refs);
+      await tx.insert(workSessionEvents).values(root);
+      await asApp(tx, refs.companyId);
+      const correction = { ...started(refs), correctsEventId: root.id };
+      await tx.insert(workSessionEvents).values(correction);
+      await tx.insert(approvals).values({
+        companyId: refs.companyId,
+        eventId: correction.id,
+        reasons: ["corrected"],
+      });
+      await fire(tx, CHECK);
+    });
+  });
+});
