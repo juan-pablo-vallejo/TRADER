@@ -23,12 +23,15 @@ import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
 import { effectiveMaterial } from "../materials/effective";
 import type { AppUser } from "../resolve-user";
+import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 
 // ARCHITECTURE, sync.pull: today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
 export const WINDOW_DAYS = 14;
 
-export const pullInput = z.strictObject({ protocolVersion: z.literal(1) });
+export const pullInput = z.strictObject({
+  protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
+});
 
 const approvalState = z.enum(["none", "pending", "approved", "rejected"]);
 const facts = z.strictObject({

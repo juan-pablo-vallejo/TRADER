@@ -18,6 +18,7 @@ import {
   users,
   workSessionEvents,
 } from "@trader/db/schema";
+import type { AnyRouter } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
@@ -26,6 +27,7 @@ import { z } from "zod";
 
 import { createContext, type Tx } from "../src/context";
 import type { VerifiedIdentity } from "../src/identity";
+import { reportingOnError, type ErrorReport, type ErrorReporter } from "../src/report";
 import type { AppUser } from "../src/resolve-user";
 import type { ApprovalReason } from "../src/sync/reasons";
 import { appRouter } from "../src/router";
@@ -49,6 +51,26 @@ export function appDb(opts: { max?: number } = {}): Db {
   if (opts.max !== undefined) db.$client.options.max = opts.max;
   return db;
 }
+
+// Reporters (report.ts): one that drops every event, one that keeps them, one that fails.
+export const quietReporter: ErrorReporter = { report() {} };
+export function recordingReporter() {
+  const events: ErrorReport[] = [];
+  const reporter: ErrorReporter = {
+    report(event) {
+      events.push(event);
+    },
+  };
+  return { reporter, events };
+}
+export const throwingReporter: ErrorReporter = {
+  report() {
+    throw new Error("reporter down");
+  },
+};
+export const rejectingReporter: ErrorReporter = {
+  report: () => Promise.reject(new Error("reporter down")),
+};
 
 export const identity = (subject: string, email: string): VerifiedIdentity => ({
   subject,
@@ -262,7 +284,9 @@ export const GATES = ["protected", "field", "foreman", "admin", "office"] as con
 export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
-  createCallerFactory(testRouter)(createContext({ db, identity: who }));
+  createCallerFactory(testRouter)(
+    createContext({ db, identity: who, reporter: quietReporter }),
+  );
 
 // --- Rolled-back calls -----------------------------------------------------------------
 // Labor events and closeouts can never be deleted once committed, so a procedure that writes
@@ -304,7 +328,9 @@ export async function sealNow(tx: Tx) {
 }
 
 export const callerIn = (tx: Tx, who: unknown) =>
-  createCallerFactory(testRouter)(createContext({ db: txAsDb(tx), identity: who }));
+  createCallerFactory(testRouter)(
+    createContext({ db: txAsDb(tx), identity: who, reporter: quietReporter }),
+  );
 
 // One company with a bound user of `role` and a customer, inside `tx`. The subject and email
 // carry a random suffix: identity_subject is unique across every company.
@@ -452,7 +478,9 @@ export async function materialIn(
 
 // The application's own router, called inside a rolled-back transaction.
 export const appCallerIn = (tx: Tx, who: unknown) =>
-  createCallerFactory(appRouter)(createContext({ db: txAsDb(tx), identity: who }));
+  createCallerFactory(appRouter)(
+    createContext({ db: txAsDb(tx), identity: who, reporter: quietReporter }),
+  );
 
 // Another bound user in the day's company.
 export async function boundIn(
@@ -512,8 +540,12 @@ export async function http(
   opts: {
     headers?: Record<string, string>;
     identify?: (h: Headers) => Promise<unknown>;
+    // The reporter goes into the context and, as the route handler will wire it, `onError`.
+    reporter?: ErrorReporter;
+    router?: AnyRouter;
   } = {},
 ) {
+  const reporter = opts.reporter ?? quietReporter;
   const batched = calls.length > 1;
   const mutation = calls.some((c) => c.mutation);
   const serialized = batched
@@ -524,7 +556,8 @@ export async function http(
   if (!mutation) url.searchParams.set("input", JSON.stringify(serialized));
   const response = await fetchRequestHandler({
     endpoint: "/trpc",
-    router: testRouter,
+    router: opts.router ?? testRouter,
+    onError: reportingOnError(reporter),
     req: new Request(url, {
       method: mutation ? "POST" : "GET",
       headers: {
@@ -537,6 +570,7 @@ export async function http(
       createContext({
         db,
         identity: opts.identify ? await opts.identify(req.headers) : who,
+        reporter,
       }),
   });
   const body = (await response.json()) as HttpResult | HttpResult[];

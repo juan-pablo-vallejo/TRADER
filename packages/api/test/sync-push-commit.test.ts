@@ -16,6 +16,7 @@ import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createContext } from "../src/context";
+import type { ErrorReporter } from "../src/report";
 import type { VerifiedIdentity } from "../src/identity";
 import { lockCompanyFieldWrites } from "../src/labor/timeline";
 import { appRouter } from "../src/router";
@@ -31,6 +32,8 @@ import {
   uuidv7,
   waitForLockWait,
   type CrewDay,
+  quietReporter,
+  recordingReporter,
 } from "./helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -44,8 +47,8 @@ afterAll(async () => {
   await D.drop();
 });
 
-const caller = (who: VerifiedIdentity) =>
-  createCallerFactory(appRouter)(createContext({ db: app, identity: who }));
+const caller = (who: VerifiedIdentity, reporter: ErrorReporter = quietReporter) =>
+  createCallerFactory(appRouter)(createContext({ db: app, identity: who, reporter }));
 
 // A committed crew day with a bound worker `w` on the crew (crewDayIn's own workers are
 // invitations: no identity to push with), and a second crew job J2.
@@ -114,8 +117,8 @@ function receipt(jobId: string, o: Record<string, unknown> = {}, id = uuidv7()) 
   };
 }
 
-const push = (who: VerifiedIdentity, records: unknown[]) =>
-  caller(who).sync.push({ protocolVersion: 1, deviceNow: new Date(), records });
+const push = (who: VerifiedIdentity, records: unknown[], reporter?: ErrorReporter) =>
+  caller(who, reporter).sync.push({ protocolVersion: 1, deviceNow: new Date(), records });
 
 const eventIds = async (ids: string[]) =>
   (
@@ -169,9 +172,14 @@ describe("sync.push — commits, record by record", () => {
       type: "ended",
       clientTimestamp: new Date("2026-10-05T16:00:00Z"),
     });
-    const answer = await push(d.who, [a, b, c]);
+    const { reporter, events } = recordingReporter();
+    const answer = await push(d.who, [a, b, c], reporter);
     expect(answer.results.map((r) => [r.id, r.result])).toEqual([[a.id, "accepted"]]);
     expect(await eventIds([a.id, b.id, c.id])).toEqual([a.id]);
+    // B's failure is answered by omission, so it is reported here, once, naming nobody.
+    expect(events).toMatchObject([{ source: "push_record", path: "sync.push" }]);
+    expect(JSON.stringify(events)).not.toContain(d.w1);
+    expect(JSON.stringify(events)).not.toContain(d.companyId);
     const approvalRows = await D.owner
       .select({ eventId: approvals.eventId })
       .from(approvals)

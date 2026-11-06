@@ -43,11 +43,12 @@ afterAll(async () => {
 const asA = () => identity(w.a.boundSubject, w.a.boundEmail);
 
 describe("the procedure context", () => {
-  it("holds tx and user only: the pool and the identity are gone at runtime", async () => {
+  it("holds tx, user and the reporter: the pool and the identity are gone at runtime", async () => {
     const seen = await caller(app, asA()).probe.inside();
     expect(seen.dbIsUndefined).toBe(true);
     expect(seen.identityIsUndefined).toBe(true);
-    expect(seen.keys).toEqual(["db", "identity", "tx", "user"]);
+    // `reporter` is a stateless sink (report.ts): it opens no connection and names no one.
+    expect(seen.keys).toEqual(["db", "identity", "reporter", "tx", "user"]);
   });
 
   it("runs with the caller's tenant and no identity setting", async () => {

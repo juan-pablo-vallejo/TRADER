@@ -66,7 +66,8 @@ is wrong.
   The repository is public; machine names and addresses stay in `~/.ssh/config`.
 - No new dependency, tool or version bump without a line in TASKS.md naming what consumes it.
   pnpm's minimum-release-age quarantine stays on.
-- Tests live in `test/` beside the package. Invariant tests run against a real Postgres.
+- Inside a package: `src/` code, `test/` tests, a `README.md` only for a runbook nothing else owns.
+  Invariant tests run against a real Postgres.
 
 ## Project structure
 

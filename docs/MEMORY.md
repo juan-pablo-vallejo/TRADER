@@ -138,6 +138,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   other database; rows need an authorized backfill migration, never a delete.
 - `onConflictDoNothing()` with no target swallows every unique violation, not only the id's:
   where the table has a natural key, name the id as the target.
+- `DrizzleQueryError`'s message holds the SQL and its params: never log or report `message`;
+  report only through `reportFailure`.
+- A Vercel env change reaches only a new deployment, and a rollback restores the old one's env:
+  re-check `status.get` after any deploy or rollback.
 
 ## Log
 
@@ -166,29 +170,19 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-05: Stage 3 line 7 review fixes: timeouts before resolution, receipt stamp; 528 tests.
   `3c97d4f` was committed on a red run; its flake fixed in `a807875`.
 - 11-05: Stage 3 line 7b: delegated `id_conflict` for an id another tenant holds; 536 tests.
+- 11-05: Stage 3 line 8: `0025`, `approval.queue`, `approval.decide`, accounting; 579 tests.
+- 11-05: Stage 3 line 9: `0026`, `validateEvents`, `labor.repair`; 630 tests.
 
-### 2026-11-05 — Stage 3 line 8: approval queue, decisions and accounting
+### 2026-11-05 — Stage 3 line 10: kill-switch state and error reporting
 
-- **Did:** `0025` (an event's approval born pending, never decided by its worker);
-  `labor/approval.ts` (session accounting, rejected-void projection) and
-  `materials/approval.ts`; `approval.queue`, `approval.decide`. 579 tests (228 db, 351 api); 22
-  mutations run: 21 red, 1 masked as planned (decide's gate alone, behind `lockActiveSelf`; red
-  with its role check removed too). The queue cursor is the approval id, not the planned
-  `(createdAt, id)`: a Date drops microseconds.
-- **Decided:** by the owner: the accounting precedence and the worker-only labor exclusion
-  (ARCHITECTURE, last two rows; ARCHITECTURE is now at its cap).
-- **Next:** Stage 3 — office labor repairs (TASKS:49); its ARCHITECTURE row needs an
-  authorized condensation first.
-
-### 2026-11-05 — Stage 3 line 9: office labor repairs
-
-- **Did:** `0026` (a labor correction or void needs a `corrected` approval at commit);
-  `validateEvents` (a set as one timeline; `validateEvent` its one-element case); `labor.repair`
-  (append, correct, void; one savepoint, so an id another tenant holds is `id_conflict` with
-  nothing written). 630 tests (231 db, 399 api); 25 mutations run: 24 red, 1 masked as planned
-  (the gate alone, behind `lockActiveSelf`; red with both removed). `no_change` dropped on
-  review: an exact-time correction is how a rejected source recovers.
-- **Decided:** by the owner: office repairs tag `location`, carry `replacesEventId`
-  (`repair_stale`), reach archived jobs and deactivated workers; `0026`; ARCHITECTURE condensed
-  one line for the new row.
-- **Next:** Stage 3 — kill-switch state endpoint; error-reporting wrapper (TASKS:50).
+- **Did:** `report.ts` (minimized `ErrorReport`, one guard, `logReporter`, `reportingOnError`),
+  `reporter` required in the context; push reports a record failing after an earlier commit
+  (`pushRecords`' fourth argument; the clock stays third); `status.get`, public, no database,
+  four states from `TRADER_SYNC_MODE` and per-platform minimum builds. 669 tests (231 db, 438
+  api); 23 mutations run, all red on their named assertions (M2 strengthened once). On review,
+  stack frames dropped from reports: a forged stack passed the header check (red test first).
+- **Decided:** by the owner ("execute" on the plan's recommendations): advisory switch, no
+  server enforcement; the four states; reporter required; ARCHITECTURE's package-layout line
+  merged into RULES. ARCHITECTURE remains at its cap.
+- **Next:** confirm Stage 3's done-criterion against the sync suites, then Stage 4 line 1 (route
+  handler: `status.get` unauthenticated and `no-store`, `onError` and the reporter wired).
