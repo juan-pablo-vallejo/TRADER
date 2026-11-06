@@ -97,21 +97,10 @@ package name `app.jpteq.trader`.
 
 ## Folder structure
 
-```
-.
-├── .github/workflows/ci.yml   # the one workflow; the required check is its job name
-├── assets/brand/              # logo.png master, icon.png glyph — consumed by apps/*
-├── apps/
-│   ├── mobile/                # Expo field app                      (planned)
-│   └── web/                   # Next.js office app + tRPC handler   (planned)
-├── packages/
-│   ├── api/                   # @trader/api — routers, context, sync
-│   └── db/                    # @trader/db — schema, migrations, tests
-├── docs/                      # PRD · ARCHITECTURE · RULES · DESIGN · TASKS · MEMORY
-├── CLAUDE.md                  # Claude Code session contract (auto-loaded)
-├── LICENSE
-└── README.md
-```
+The root holds `.github/workflows/ci.yml` (the one workflow; the required check is its job
+name), `assets/brand/` (`logo.png` master, `icon.png` glyph, consumed by `apps/*`), `apps/` and
+`packages/` as in the table under System architecture (`apps/*` planned), `docs/` (the six
+documents), `CLAUDE.md` (the auto-loaded session contract), `LICENSE` and `README.md`.
 
 ## Decisions
 
