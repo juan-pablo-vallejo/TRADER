@@ -1,0 +1,14 @@
+/* The office header (DESIGN, Brand): the mark on surface white, the wordmark beside it, one
+   hairline below. One row at every width; navigation arrives with the first office screen. */
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-bottom: var(--hairline) solid var(--border);
+}
+
+.wordmark {
+  color: var(--ink);
+}

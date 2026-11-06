@@ -13,9 +13,14 @@ try {
 }
 
 const config: NextConfig = {
+  // `next dev` would write an AGENTS.md into this app; the document set is fixed (RULES).
+  agentRules: false,
   // The monorepo root: the lockfile lives there, and so does assets/brand, which a route
   // reads at request time and the deployment must therefore trace (next.config.ts, Stage 4).
   outputFileTracingRoot: path.join(__dirname, "../../"),
+  outputFileTracingIncludes: {
+    "/favicon.ico": ["../../assets/brand/logo.png"],
+  },
 };
 
 export default config;
