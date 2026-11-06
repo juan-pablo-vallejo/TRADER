@@ -5,4 +5,9 @@ export const strings = {
   wordmark: "TRADER",
   markAlt: "D Sierra Painting",
   empty: "Nothing to show yet.",
+  devSignIn: "Development sign-in",
+  devSignInBadEmail: "Enter an email address.",
+  email: "Email",
+  signIn: "Sign in",
+  signOut: "Sign out",
 } as const;
