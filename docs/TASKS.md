@@ -43,7 +43,8 @@ jobs, assignments, approvals, a closeout, close, export.
 - [ ] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
       favicon and header mark from `assets/brand/logo.png`
 - [ ] Roster: invite, deactivate, role, effective-dated pay rates; own name and contact phone
-- [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested
+- [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested;
+      deactivation, transfers and offline backlogs decided before code
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
 - [ ] Admin closeout on the foreman procedures, unchanged; archived, crew-less jobs decided first
@@ -87,6 +88,8 @@ passed, and Sentry shows no PII.
 - [ ] Associated Domains and `assetlinks.json` served from the apex
 - [ ] Sentry with PII scrubbing; PostHog; EAS project
 - [ ] Nightly encrypted `pg_dump` to R2 and weekly restore-verify in Actions; timed restore drill
+- [ ] Worker sign-in and recovery without an individual email: pilot roster surveyed, provider
+      options checked on the vendor's pages; owner decision before Stage 8
 
 ## Stage 7 — Invoicing and exports
 
@@ -95,6 +98,8 @@ number continues the partner's series without a gap.
 
 - [ ] Invoice drafting from job labor and materials as snapshots; tax entered per invoice
 - [ ] Issue (immutable), void, credit memos; gap-free numbering continuing the partner's series
+- [ ] Credit-memo ceiling and the void of an invoice with memos decided, then enforced in SQL;
+      issue retries idempotent; numbering tested under concurrency
 - [ ] PDF on demand; QuickBooks CSV export
 
 ## Stage 8 — Pilot
@@ -106,6 +111,7 @@ Done when the pilot success criteria, written with the partner, are met.
       forms
 - [ ] Pilot onboarding: owner-run insert of the pilot's company and its counter at 1/1,
       before any crew signs in
+- [ ] Release gate: email-less worker sign-in and an admin's own entries decided
 - [ ] TestFlight public link and Play internal track; crew onboarding in English and Spanish
 - [ ] Weekly feedback loop; defects become tasks here
 
