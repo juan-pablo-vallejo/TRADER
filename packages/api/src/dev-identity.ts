@@ -24,6 +24,17 @@ const flagSchema = z.object({
     .transform((v) => v === "enabled"),
 });
 
+// Whether the adapter would trust the headers: the flag, under an allowlisted NODE_ENV. A
+// route that exists only for development answers 404 on false (RULES: a switched-off route).
+// Never throws, so a wrongly enabled deployment hides its routes while the adapter refuses.
+export function devIdentityEnabled(env: Record<string, string | undefined>): boolean {
+  const flag = flagSchema.safeParse(env);
+  return flag.success && flag.data.TRADER_DEV_IDENTITY && isDevelopmentNodeEnv(env);
+}
+
+const isDevelopmentNodeEnv = (env: Record<string, string | undefined>) =>
+  DEVELOPMENT_NODE_ENVS.includes(env.NODE_ENV ?? "");
+
 export function createDevIdentityAdapter(
   env: Record<string, string | undefined> = process.env,
 ): IdentityAdapter {
@@ -31,7 +42,7 @@ export function createDevIdentityAdapter(
     async identify(headers: Headers): Promise<VerifiedIdentity | null> {
       if (!flagSchema.parse(env).TRADER_DEV_IDENTITY) return null;
       // Enabled where it must never be: refuse loudly rather than serve as anyone.
-      if (!DEVELOPMENT_NODE_ENVS.includes(env.NODE_ENV ?? "")) {
+      if (!isDevelopmentNodeEnv(env)) {
         throw new Error(
           `refusing the development identity: TRADER_DEV_IDENTITY is enabled under NODE_ENV=${env.NODE_ENV ?? "(unset)"}`,
         );

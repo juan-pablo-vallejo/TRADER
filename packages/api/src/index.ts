@@ -3,6 +3,7 @@ export {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,
   DEV_SUBJECT_HEADER,
+  devIdentityEnabled,
 } from "./dev-identity";
 export {
   verifiedIdentitySchema,

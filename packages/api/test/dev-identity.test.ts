@@ -6,6 +6,7 @@ import {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,
   DEV_SUBJECT_HEADER,
+  devIdentityEnabled,
 } from "../src/dev-identity";
 
 const headers = (subject?: string, email?: string) => {
@@ -76,5 +77,29 @@ describe("development identity adapter", () => {
     ]) {
       expect(await adapter.identify(h)).toBeNull();
     }
+  });
+});
+
+// Stage 4 line 1: the one predicate a route uses to answer 404 instead of serving. True only
+// where `identify` would trust the headers; never throws, so a wrongly enabled deployment
+// answers 404 from its routes and refuses from its adapter.
+describe("devIdentityEnabled", () => {
+  it("is true only when enabled under development or test", () => {
+    for (const NODE_ENV of ["development", "test"]) {
+      expect(devIdentityEnabled({ NODE_ENV, TRADER_DEV_IDENTITY: "enabled" })).toBe(true);
+      expect(devIdentityEnabled({ NODE_ENV, TRADER_DEV_IDENTITY: "" })).toBe(false);
+      expect(devIdentityEnabled({ NODE_ENV })).toBe(false);
+    }
+  });
+
+  it("is false, and does not throw, when enabled under any other NODE_ENV", () => {
+    for (const NODE_ENV of ["production", "staging", undefined]) {
+      expect(devIdentityEnabled({ NODE_ENV, TRADER_DEV_IDENTITY: "enabled" })).toBe(
+        false,
+      );
+    }
+    expect(
+      devIdentityEnabled({ NODE_ENV: "development", TRADER_DEV_IDENTITY: "true" }),
+    ).toBe(false);
   });
 });
