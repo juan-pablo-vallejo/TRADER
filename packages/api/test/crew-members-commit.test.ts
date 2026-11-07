@@ -6,7 +6,7 @@
 // on the crew row and reads the membership without the worker. The push waits on the worker
 // lock under its 2 s lock_timeout (trpc.ts, SYNC_TIMEOUTS): the observation and the release
 // happen inside it, as sync-push-commit.test.ts's race() does.
-import { crewMembers, workSessionEvents } from "@trader/db/schema";
+import { crewMembers, jobs, workSessionEvents } from "@trader/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -163,5 +163,39 @@ describe("crew.removeMember against a push in flight", () => {
     });
     expect(await eventExists(record.id)).toBe(false);
     expect(await isMember(d.crewId, d.w.id)).toBe(false);
+  });
+});
+
+describe("job.assign against a push in flight", () => {
+  it("queues behind a push holding the job row and commits only after it ends", async () => {
+    const d = await world();
+    const record = started(d.w.id, d.J);
+    let assignment!: Promise<{ answer: unknown; pushSettledFirst: boolean }>;
+    const pushed = await withPushWaiting(d, record, async (inFlight) => {
+      let pushSettled = false;
+      void inFlight.then(() => (pushSettled = true));
+      assignment = caller(d.admin.who)
+        .job.assign({ jobId: d.J, crewId: null })
+        .then((answer) => ({ answer, pushSettledFirst: pushSettled }));
+      await Promise.race([
+        waitForLockWait(D.owner, '%from "jobs"%for no key update%'),
+        assignment.then(() => {
+          throw new Error("the reassignment committed under the push");
+        }),
+      ]);
+    });
+    expect(pushed).toEqual({ settled: true, result: "accepted" });
+    const { answer, pushSettledFirst } = await assignment;
+    expect(answer).toMatchObject({ result: "updated", job: { crew: null } });
+    expect(pushSettledFirst).toBe(true);
+    expect(await eventExists(record.id)).toBe(true);
+    expect(
+      (
+        await D.owner.select({ crewId: jobs.crewId }).from(jobs).where(eq(jobs.id, d.J))
+      )[0],
+    ).toEqual({ crewId: null });
+    // Unstaffed now: the worker's next start on it has no crew to admit them.
+    const again = await push(d.w.who, [started(d.w.id, d.J)]);
+    expect(again.results[0]).toMatchObject({ result: "rejected", code: "not_permitted" });
   });
 });
