@@ -12,6 +12,7 @@ import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { cents, day, money } from "../format";
 import { strings } from "../strings";
+import table from "../table.module.css";
 import { useTRPC } from "../trpc";
 import styles from "./roster.module.css";
 
@@ -154,14 +155,14 @@ function InviteForm() {
 function RosterTable({ rows }: { rows: Rows }) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
-    <table className={styles.table}>
+    <table className={table.table}>
       <thead>
         <tr>
           <th scope="col">{strings.name}</th>
           <th scope="col">{strings.email}</th>
           <th scope="col">{strings.role}</th>
           <th scope="col">{strings.status}</th>
-          <th scope="col" className={styles.number}>
+          <th scope="col" className={table.number}>
             {strings.hourlyRate}
           </th>
           <th scope="col">
@@ -179,15 +180,15 @@ function RosterTable({ rows }: { rows: Rows }) {
               </td>
               <td data-label={strings.email}>{row.email}</td>
               <td data-label={strings.role}>{strings.roles[row.role]}</td>
-              <td data-label={strings.status} className={styles.status}>
+              <td data-label={strings.status} className={table.status}>
                 {statusOf(row)}
               </td>
-              <td data-label={strings.hourlyRate} className={styles.number}>
+              <td data-label={strings.hourlyRate} className={table.number}>
                 {row.currentRate === null
                   ? strings.unpriced
                   : money(row.currentRate.hourlyRateCents, row.currentRate.currency)}
               </td>
-              <td className={styles.toggle}>
+              <td className={table.toggle}>
                 <button
                   type="button"
                   className={controls.textAction}
@@ -202,7 +203,7 @@ function RosterTable({ rows }: { rows: Rows }) {
             open ? (
               <tr
                 key={`${row.id}-editor`}
-                className={styles.editor}
+                className={table.editor}
                 id={`editor-${row.id}`}
               >
                 <td colSpan={6}>
@@ -275,7 +276,7 @@ function RoleAndState({ row }: { row: Row }) {
       <div className={controls.actions}>
         <button
           type="button"
-          className={`${controls.secondary} ${styles.stretch}`}
+          className={`${controls.secondary} ${table.stretch}`}
           disabled={busy}
           onClick={() => setRoleCall.mutate({ userId: row.id, role })}
         >
@@ -293,7 +294,7 @@ function RoleAndState({ row }: { row: Row }) {
         ) : (
           <button
             type="button"
-            className={`${controls.secondary} ${styles.stretch}`}
+            className={`${controls.secondary} ${table.stretch}`}
             disabled={busy}
             onClick={() => reactivate.mutate({ userId: row.id })}
           >
@@ -375,7 +376,7 @@ function Rates({ row }: { row: Row }) {
         </div>
         <button
           type="submit"
-          className={`${controls.secondary} ${styles.stretch}`}
+          className={`${controls.secondary} ${table.stretch}`}
           disabled={add.isPending}
         >
           {strings.addRate}
@@ -393,7 +394,7 @@ function Rates({ row }: { row: Row }) {
           {history.data.map((rate) => (
             <li key={rate.id}>
               <span>{day(rate.effectiveFrom)}</span>
-              <span className={styles.number}>
+              <span className={table.number}>
                 {money(rate.hourlyRateCents, rate.currency)}
               </span>
             </li>
