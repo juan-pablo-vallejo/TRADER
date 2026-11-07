@@ -112,7 +112,8 @@
   .editor td::before {
     content: none;
   }
-  .editorGrid button {
+  /* The destructive button is never full width (DESIGN); the others stretch on narrow. */
+  .editorGrid .stretch {
     width: 100%;
   }
 }

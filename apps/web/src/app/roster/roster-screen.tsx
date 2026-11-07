@@ -275,7 +275,7 @@ function RoleAndState({ row }: { row: Row }) {
       <div className={controls.actions}>
         <button
           type="button"
-          className={controls.secondary}
+          className={`${controls.secondary} ${styles.stretch}`}
           disabled={busy}
           onClick={() => setRoleCall.mutate({ userId: row.id, role })}
         >
@@ -293,7 +293,7 @@ function RoleAndState({ row }: { row: Row }) {
         ) : (
           <button
             type="button"
-            className={controls.secondary}
+            className={`${controls.secondary} ${styles.stretch}`}
             disabled={busy}
             onClick={() => reactivate.mutate({ userId: row.id })}
           >
@@ -373,7 +373,11 @@ function Rates({ row }: { row: Row }) {
           />
           {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
         </div>
-        <button type="submit" className={controls.secondary} disabled={add.isPending}>
+        <button
+          type="submit"
+          className={`${controls.secondary} ${styles.stretch}`}
+          disabled={add.isPending}
+        >
           {strings.addRate}
         </button>
       </form>
