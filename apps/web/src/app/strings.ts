@@ -84,7 +84,7 @@ export const strings = {
   reactivateCrewFirst: "Reactivate the crew first",
   changeForemanFirst: "Change the foreman first",
   jobsAssigned: (n: number) =>
-    `${n} jobs are assigned to this crew. Reassign or archive them first.`,
+    `${n === 1 ? "1 job is" : `${n} jobs are`} assigned to this crew. Reassign or archive ${n === 1 ? "it" : "them"} first.`,
 
   // Jobs
   emptyJobs: "No jobs to show.",
