@@ -1,0 +1,556 @@
+"use client";
+
+// The jobs screen (PRD, Jobs and location: jobs belong to a customer and are assigned to a
+// crew; DESIGN, Data table). Three queries — jobs, customers and crews, the last two for the
+// selects; every mutation invalidates the jobs. A status filter, open by default, narrows the
+// table on the client. Each row is text plus one Edit toggle; the editor row beneath holds the
+// facts with Save, the crew with Assign, and the status with Set status — three procedures,
+// three answers. A `rejected` answer reads beneath the control it came from. Consumed by
+// page.tsx.
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState, type FormEvent } from "react";
+
+import controls from "../controls.module.css";
+import { EmptyState, Failure } from "../failure";
+import { strings } from "../strings";
+import table from "../table.module.css";
+import { useTRPC } from "../trpc";
+import styles from "./jobs.module.css";
+
+type Rows = NonNullable<ReturnType<typeof useJobs>["data"]>;
+type Row = Rows[number];
+type Customers = NonNullable<ReturnType<typeof useCustomers>["data"]>;
+type Crews = NonNullable<ReturnType<typeof useCrews>["data"]>;
+type Status = Row["status"];
+const STATUSES = ["open", "complete", "archived"] as const satisfies readonly Status[];
+
+// What the facts form holds: text throughout, blank meaning none.
+type Facts = {
+  customerId: string;
+  name: string;
+  address: string;
+  lat: string;
+  lng: string;
+  radiusM: string;
+};
+const EMPTY: Facts = {
+  customerId: "",
+  name: "",
+  address: "",
+  lat: "",
+  lng: "",
+  radiusM: "",
+};
+const factsOf = (row: Row): Facts => ({
+  customerId: row.customer.id,
+  name: row.name,
+  address: row.address ?? "",
+  lat: row.location === null ? "" : String(row.location.lat),
+  lng: row.location === null ? "" : String(row.location.lng),
+  radiusM: row.location === null ? "" : String(row.location.radiusM),
+});
+
+// The three location fields to the API's shape: all or none, else null — the caller refuses
+// a partial set. Coordinates are floats by design (jobs.ts); the radius is a whole number.
+function locationOf(
+  f: Facts,
+): { lat: number; lng: number; radiusM: number } | null | "partial" {
+  const given = [f.lat, f.lng, f.radiusM].map((v) => v.trim() !== "");
+  if (given.every((g) => !g)) return null;
+  if (!given.every((g) => g)) return "partial";
+  const lat = Number(f.lat);
+  const lng = Number(f.lng);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || !/^\d+$/.test(f.radiusM.trim())) {
+    return "partial";
+  }
+  return { lat, lng, radiusM: Number.parseInt(f.radiusM, 10) };
+}
+
+function useJobs() {
+  const trpc = useTRPC();
+  return useQuery(trpc.job.list.queryOptions());
+}
+function useCustomers() {
+  const trpc = useTRPC();
+  return useQuery(trpc.customer.list.queryOptions());
+}
+function useCrews() {
+  const trpc = useTRPC();
+  return useQuery(trpc.crew.list.queryOptions());
+}
+
+function useRefresh() {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries(trpc.job.pathFilter());
+}
+
+export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
+  const list = useJobs();
+  const customers = useCustomers();
+  const crews = useCrews();
+  const [filter, setFilter] = useState<Status | "all">("open");
+  const failed = [list, customers, crews].find((q) => q.isError);
+  return (
+    <>
+      <h1 className="title">{strings.jobs}</h1>
+      {list.isPending || customers.isPending || crews.isPending ? (
+        <p className="body">{strings.loading}</p>
+      ) : failed !== undefined ? (
+        <Failure error={failed.error} devSignIn={devSignIn} />
+      ) : (
+        <>
+          <CreateForm customers={customers.data!} crews={crews.data!} />
+          <div className={`${controls.field} ${styles.filter}`}>
+            <label className="label" htmlFor="jobs-filter">
+              {strings.show}
+            </label>
+            <select
+              id="jobs-filter"
+              className={controls.select}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as Status | "all")}
+            >
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {strings.jobStatus[s]}
+                </option>
+              ))}
+              <option value="all">{strings.allJobs}</option>
+            </select>
+          </div>
+          {(() => {
+            const rows = list.data!.filter(
+              (j) => filter === "all" || j.status === filter,
+            );
+            return rows.length === 0 ? (
+              <EmptyState text={strings.emptyJobs} />
+            ) : (
+              <JobsTable rows={rows} customers={customers.data!} crews={crews.data!} />
+            );
+          })()}
+        </>
+      )}
+    </>
+  );
+}
+
+function FactsFields({
+  id,
+  customers,
+  value,
+  onChange,
+}: {
+  id: string;
+  customers: Customers;
+  value: Facts;
+  onChange: (next: Facts) => void;
+}) {
+  const set =
+    (key: keyof Facts) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      onChange({ ...value, [key]: e.target.value });
+  const input = (
+    key: keyof Facts,
+    label: string,
+    props: React.InputHTMLAttributes<HTMLInputElement>,
+  ) => (
+    <div className={controls.field}>
+      <label className="label" htmlFor={`${id}-${key}`}>
+        {label}
+      </label>
+      <input
+        id={`${id}-${key}`}
+        className={controls.input}
+        autoComplete="off"
+        value={value[key]}
+        onChange={set(key)}
+        {...props}
+      />
+    </div>
+  );
+  // Active customers, plus the job's own even if deactivated, so the select shows the truth.
+  const options = customers.filter(
+    (c) => c.deactivatedAt === null || c.id === value.customerId,
+  );
+  return (
+    <div className={styles.formGrid}>
+      <div className={controls.field}>
+        <label className="label" htmlFor={`${id}-customerId`}>
+          {strings.customer}
+        </label>
+        <select
+          id={`${id}-customerId`}
+          className={controls.select}
+          required
+          value={value.customerId}
+          onChange={set("customerId")}
+        >
+          <option value="">{strings.chooseCustomer}</option>
+          {options.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+      {input("name", strings.job, { type: "text", required: true, maxLength: 200 })}
+      <div className={styles.wide}>
+        {input("address", strings.address, { type: "text", maxLength: 500 })}
+      </div>
+      <div className={`${styles.locationGrid} ${styles.wide}`}>
+        {input("lat", strings.latitude, { type: "text", inputMode: "decimal" })}
+        {input("lng", strings.longitude, { type: "text", inputMode: "decimal" })}
+        {input("radiusM", strings.radiusM, { type: "text", inputMode: "numeric" })}
+      </div>
+    </div>
+  );
+}
+
+function CrewSelect({
+  id,
+  crews,
+  value,
+  onChange,
+}: {
+  id: string;
+  crews: Crews;
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const options = crews.filter((c) => c.deactivatedAt === null || c.id === value);
+  return (
+    <div className={controls.field}>
+      <label className="label" htmlFor={id}>
+        {strings.crew}
+      </label>
+      <select
+        id={id}
+        className={controls.select}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        <option value="">{strings.unassigned}</option>
+        {options.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+            {c.deactivatedAt !== null && ` (${strings.deactivated.toLowerCase()})`}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+// What a `rejected` answer says, by its code and the control it came from.
+const reason = (code: string, on: "facts" | "assign" | "status") =>
+  code === "customer_inactive"
+    ? on === "status"
+      ? strings.customerInactiveOnStatus
+      : strings.customerInactive
+    : code === "crew_inactive"
+      ? on === "status"
+        ? strings.crewInactiveOnStatus
+        : strings.crewInactive
+      : code === "has_invoices"
+        ? strings.hasInvoices
+        : strings.requestFailed;
+
+function CreateForm({ customers, crews }: { customers: Customers; crews: Crews }) {
+  const trpc = useTRPC();
+  const refresh = useRefresh();
+  const [facts, setFacts] = useState<Facts>(EMPTY);
+  const [crewId, setCrewId] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const create = useMutation(
+    trpc.job.create.mutationOptions({
+      onSuccess: async (answer) => {
+        if (answer.result === "rejected") {
+          setNote(reason(answer.code, "facts"));
+          return;
+        }
+        setFacts(EMPTY);
+        setCrewId("");
+        setNote(null);
+        await refresh();
+      },
+      onError: () => setNote(strings.requestFailed),
+    }),
+  );
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const location = locationOf(facts);
+    if (location === "partial") {
+      setNote(strings.locationAllOrNone);
+      return;
+    }
+    setNote(null);
+    create.mutate({
+      customerId: facts.customerId,
+      name: facts.name,
+      address: facts.address,
+      location,
+      crewId: crewId === "" ? null : crewId,
+    });
+  };
+  return (
+    <form className={controls.card} onSubmit={submit}>
+      <h2 className="heading">{strings.addJob}</h2>
+      <FactsFields id="new-job" customers={customers} value={facts} onChange={setFacts} />
+      <CrewSelect id="new-job-crew" crews={crews} value={crewId} onChange={setCrewId} />
+      {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
+      <button type="submit" className={controls.primary} disabled={create.isPending}>
+        {strings.addJob}
+      </button>
+    </form>
+  );
+}
+
+function JobsTable({
+  rows,
+  customers,
+  crews,
+}: {
+  rows: Rows;
+  customers: Customers;
+  crews: Crews;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  return (
+    <table className={table.table}>
+      <thead>
+        <tr>
+          <th scope="col">{strings.job}</th>
+          <th scope="col">{strings.customer}</th>
+          <th scope="col">{strings.crew}</th>
+          <th scope="col">{strings.status}</th>
+          <th scope="col">{strings.address}</th>
+          <th scope="col">
+            <span className="label">{strings.edit}</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => {
+          const open = editing === row.id;
+          return [
+            <tr key={row.id}>
+              <td data-label={strings.job} className="body-strong">
+                {row.name}
+              </td>
+              <td data-label={strings.customer}>{row.customer.name}</td>
+              <td
+                data-label={strings.crew}
+                className={
+                  row.crew !== null && !row.crew.active ? table.attention : undefined
+                }
+              >
+                {row.crew === null
+                  ? strings.unassigned
+                  : row.crew.active
+                    ? row.crew.name
+                    : `${row.crew.name} (${strings.deactivated.toLowerCase()})`}
+              </td>
+              <td data-label={strings.status} className={table.status}>
+                {strings.jobStatus[row.status]}
+              </td>
+              <td data-label={strings.address}>{row.address ?? strings.none}</td>
+              <td className={table.toggle}>
+                <button
+                  type="button"
+                  className={controls.textAction}
+                  aria-expanded={open}
+                  aria-controls={`editor-${row.id}`}
+                  onClick={() => setEditing(open ? null : row.id)}
+                >
+                  {open ? strings.close : strings.edit}
+                </button>
+              </td>
+            </tr>,
+            open ? (
+              <tr
+                key={`${row.id}-editor`}
+                className={table.editor}
+                id={`editor-${row.id}`}
+              >
+                <td colSpan={6}>
+                  <Editor row={row} customers={customers} crews={crews} />
+                </td>
+              </tr>
+            ) : null,
+          ];
+        })}
+      </tbody>
+    </table>
+  );
+}
+
+function Editor({
+  row,
+  customers,
+  crews,
+}: {
+  row: Row;
+  customers: Customers;
+  crews: Crews;
+}) {
+  return (
+    <div className={styles.editorGrid}>
+      <FactsEditor row={row} customers={customers} />
+      <CrewAndStatus row={row} crews={crews} />
+    </div>
+  );
+}
+
+function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
+  const trpc = useTRPC();
+  const refresh = useRefresh();
+  const [facts, setFacts] = useState<Facts>(factsOf(row));
+  const [note, setNote] = useState<string | null>(null);
+  const save = useMutation(
+    trpc.job.update.mutationOptions({
+      onSuccess: async (answer) => {
+        if (answer.result === "rejected") {
+          setNote(reason(answer.code, "facts"));
+          return;
+        }
+        setNote(strings.saved);
+        await refresh();
+      },
+      onError: () => setNote(strings.requestFailed),
+    }),
+  );
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    const location = locationOf(facts);
+    if (location === "partial") {
+      setNote(strings.locationAllOrNone);
+      return;
+    }
+    setNote(null);
+    save.mutate({
+      jobId: row.id,
+      customerId: facts.customerId,
+      name: facts.name,
+      address: facts.address,
+      location,
+    });
+  };
+  return (
+    <form onSubmit={submit}>
+      <FactsFields
+        id={`job-${row.id}`}
+        customers={customers}
+        value={facts}
+        onChange={setFacts}
+      />
+      {note !== null && (
+        <p className={`secondary ${note === strings.saved ? "" : controls.error}`}>
+          {note}
+        </p>
+      )}
+      <button
+        type="submit"
+        className={`${controls.secondary} ${table.stretch}`}
+        disabled={save.isPending}
+      >
+        {strings.saveDetails}
+      </button>
+    </form>
+  );
+}
+
+function CrewAndStatus({ row, crews }: { row: Row; crews: Crews }) {
+  const trpc = useTRPC();
+  const refresh = useRefresh();
+  const [crewId, setCrewId] = useState(row.crew?.id ?? "");
+  const [status, setStatus] = useState<Status>(row.status);
+  const [crewNote, setCrewNote] = useState<string | null>(null);
+  const [statusNote, setStatusNote] = useState<string | null>(null);
+  const assign = useMutation(
+    trpc.job.assign.mutationOptions({
+      onSuccess: async (answer) => {
+        setCrewNote(
+          answer.result === "rejected"
+            ? reason(answer.code, "assign")
+            : answer.result === "unchanged"
+              ? strings.unchanged
+              : null,
+        );
+        await refresh();
+      },
+      onError: () => setCrewNote(strings.requestFailed),
+    }),
+  );
+  const setStatusCall = useMutation(
+    trpc.job.setStatus.mutationOptions({
+      onSuccess: async (answer) => {
+        setStatusNote(
+          answer.result === "rejected"
+            ? reason(answer.code, "status")
+            : answer.result === "unchanged"
+              ? strings.unchanged
+              : answer.job.status === "archived"
+                ? strings.archivedNote
+                : null,
+        );
+        await refresh();
+      },
+      onError: () => setStatusNote(strings.requestFailed),
+    }),
+  );
+  const busy = assign.isPending || setStatusCall.isPending;
+  const statusId = `job-status-${row.id}`;
+  return (
+    <div>
+      <CrewSelect
+        id={`job-crew-${row.id}`}
+        crews={crews}
+        value={crewId}
+        onChange={setCrewId}
+      />
+      <button
+        type="button"
+        className={`${controls.secondary} ${table.stretch}`}
+        disabled={busy}
+        onClick={() =>
+          assign.mutate({ jobId: row.id, crewId: crewId === "" ? null : crewId })
+        }
+      >
+        {strings.assign}
+      </button>
+      {crewNote !== null && <p className={`secondary ${controls.error}`}>{crewNote}</p>}
+      <div className={controls.field}>
+        <label className="label" htmlFor={statusId}>
+          {strings.status}
+        </label>
+        <select
+          id={statusId}
+          className={controls.select}
+          value={status}
+          onChange={(e) => setStatus(e.target.value as Status)}
+        >
+          {STATUSES.map((s) => (
+            <option key={s} value={s}>
+              {strings.jobStatus[s]}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="button"
+        className={`${controls.secondary} ${table.stretch}`}
+        disabled={busy}
+        onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
+      >
+        {strings.setStatus}
+      </button>
+      {statusNote !== null && (
+        <p
+          className={`secondary ${statusNote === strings.archivedNote ? "" : controls.error}`}
+        >
+          {statusNote}
+        </p>
+      )}
+    </div>
+  );
+}

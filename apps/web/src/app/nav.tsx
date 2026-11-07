@@ -12,6 +12,7 @@ import { strings } from "./strings";
 const links = [
   ["/roster", strings.roster],
   ["/customers", strings.customers],
+  ["/jobs", strings.jobs],
   ["/crews", strings.crews],
   ["/profile", strings.profile],
 ] as const;

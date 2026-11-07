@@ -16,6 +16,7 @@ export const strings = {
   menu: "Menu",
   roster: "Roster",
   customers: "Customers",
+  jobs: "Jobs",
   crews: "Crews",
   profile: "Profile",
 
@@ -61,7 +62,6 @@ export const strings = {
   address: "Address",
   phone: "Phone",
   notes: "Notes",
-  jobs: "Jobs",
   none: "—",
   jobsUnarchived: (n: number) =>
     `${n} of this customer's jobs are not archived. Archive them first.`,
@@ -85,6 +85,33 @@ export const strings = {
   changeForemanFirst: "Change the foreman first",
   jobsAssigned: (n: number) =>
     `${n} jobs are assigned to this crew. Reassign or archive them first.`,
+
+  // Jobs
+  emptyJobs: "No jobs to show.",
+  addJob: "Add job",
+  job: "Job",
+  customer: "Customer",
+  chooseCustomer: "Choose a customer",
+  unassigned: "Unassigned",
+  latitude: "Latitude",
+  longitude: "Longitude",
+  radiusM: "Radius (m)",
+  locationAllOrNone: "Enter all three or none.",
+  show: "Show",
+  allJobs: "All",
+  jobStatus: { open: "Open", complete: "Complete", archived: "Archived" },
+  saveDetails: "Save details",
+  assign: "Assign",
+  setStatus: "Set status",
+  customerInactive: "That customer is deactivated.",
+  crewInactive: "That crew is deactivated.",
+  customerInactiveOnStatus:
+    "This customer is deactivated. Reactivate them, or move the job to another customer first.",
+  crewInactiveOnStatus:
+    "This job's crew is deactivated. Reactivate it or reassign the job first.",
+  hasInvoices: "This job has invoices; its customer can no longer change.",
+  archivedNote:
+    "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
 
   // Profile
   contactPhone: "Contact phone",

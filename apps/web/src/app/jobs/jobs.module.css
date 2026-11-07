@@ -1,0 +1,34 @@
+/* The jobs screen's own layout: the form's grid (the three location fields in one row on
+   wide), the editor's sections and the status filter. The data table itself is
+   table.module.css. */
+.formGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.locationGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.editorGrid {
+  display: grid;
+  gap: var(--space-6);
+}
+.filter {
+  max-width: 240px;
+  margin-bottom: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .formGrid .wide {
+    grid-column: 1 / -1;
+  }
+  .locationGrid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .editorGrid {
+    grid-template-columns: 2fr 1fr;
+  }
+}

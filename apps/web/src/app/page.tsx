@@ -20,6 +20,9 @@ export default function Home() {
           <Link href="/customers">{strings.customers}</Link>
         </li>
         <li>
+          <Link href="/jobs">{strings.jobs}</Link>
+        </li>
+        <li>
           <Link href="/crews">{strings.crews}</Link>
         </li>
         <li>
