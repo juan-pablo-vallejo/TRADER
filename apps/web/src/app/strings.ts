@@ -15,6 +15,7 @@ export const strings = {
   navigation: "Office",
   menu: "Menu",
   roster: "Roster",
+  customers: "Customers",
   profile: "Profile",
 
   // States every screen can be in
@@ -52,6 +53,17 @@ export const strings = {
   active: "Active",
   deactivated: "Deactivated",
   roles: { admin: "Admin", foreman: "Foreman", worker: "Worker" },
+
+  // Customers
+  emptyCustomers: "No customers yet.",
+  addCustomer: "Add customer",
+  address: "Address",
+  phone: "Phone",
+  notes: "Notes",
+  jobs: "Jobs",
+  none: "—",
+  jobsUnarchived: (n: number) =>
+    `${n} of this customer's jobs are not archived. Archive them first.`,
 
   // Profile
   contactPhone: "Contact phone",

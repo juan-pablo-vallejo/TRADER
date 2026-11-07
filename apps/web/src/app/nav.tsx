@@ -11,6 +11,7 @@ import { strings } from "./strings";
 
 const links = [
   ["/roster", strings.roster],
+  ["/customers", strings.customers],
   ["/profile", strings.profile],
 ] as const;
 

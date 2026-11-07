@@ -1,7 +1,15 @@
 // Shared by the web tests. Fixtures are committed by the owner under a run suffix and deleted
 // afterwards, as the api suite does; nothing here writes an append-only row.
 import { createDb, type Db } from "@trader/db";
-import { companies, payRates, users } from "@trader/db/schema";
+import {
+  companies,
+  crewMembers,
+  crews,
+  customers,
+  jobs,
+  payRates,
+  users,
+} from "@trader/db/schema";
 import type { ErrorReport, ErrorReporter } from "@trader/api";
 import { eq } from "drizzle-orm";
 
@@ -87,7 +95,12 @@ export async function invitation(
     .insert(users)
     .values({ companyId, email, name: `Invite ${run}`, role: opts.role ?? "worker" })
     .returning({ id: users.id });
+  // In reference order: a test may have written any of these.
   const cleanup = async () => {
+    await owner.delete(crewMembers).where(eq(crewMembers.companyId, companyId));
+    await owner.delete(jobs).where(eq(jobs.companyId, companyId));
+    await owner.delete(crews).where(eq(crews.companyId, companyId));
+    await owner.delete(customers).where(eq(customers.companyId, companyId));
     await owner.delete(payRates).where(eq(payRates.companyId, companyId));
     await owner.delete(users).where(eq(users.companyId, companyId));
     await owner.delete(companies).where(eq(companies.id, companyId));
