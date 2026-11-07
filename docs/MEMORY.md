@@ -183,17 +183,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   closeout, own profile, pilot scope), Stage 3 ticked and condensed, `row N` pinned to `779894f`,
   Stages 7 and 8 swapped; open: worker sign-in without email, crew transfers and deactivation,
   credit ceiling and void, archived-job closeout, admin's own entries, assignment rules. Stage 4
-  line 1: `apps/web` (Next 16.4.5), `/api/trpc` route handler, lazy app-role pool, `no-store`,
-  cookie dev sign-in bridged to the headers (404 off), `theme.css`, mark and favicon from
-  `assets/brand`, `strings.ts` until the catalog; `next build` in CI; CSS Modules, no styling
-  dependency; `@vercel/functions` at Stage 6; 683 tests.
+  line 1: `apps/web` host, route handler, cookie dev sign-in and shell as ARCHITECTURE's
+  2026-11-06 rows; 683 tests.
 
 ### 2026-11-07 — Stage 4 line 2: roster API and the first office screen
 
 - **Did:** `roster.list`/`invite`/`setRole`/`deactivate`/`reactivate`/`setPayRate`/`payRates`
   and `me.update`; last-admin guard under one locking statement, race-tested; `apps/web` tRPC
   client and query provider, breakpoint 768, left navigation, `/roster` and `/profile`; 712 tests
-  (231 db, 466 api, 15 web); five invariants watched red first.
+  (231 db, 466 api, 15 web); five invariants watched red first; `6c1a9fc` committed on a red run
+  (`seed.test.ts` on the manual check's seed rows); the same tree green after the cleanup.
 - **Decided:** by the owner on 2026-11-07: B7.1–B7.10 as recommended; the two 2026-11-04
   identity rows joined verbatim for room; one Edit toggle and an editor row per roster row; no
   icon set this line, DESIGN:82 reworded.
