@@ -15,6 +15,7 @@ import {
   jobs,
   materialCorrections,
   materials,
+  payRates,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -126,6 +127,7 @@ export async function world(owner: Db) {
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
     await owner.delete(customers).where(inArray(customers.companyId, ids));
+    await owner.delete(payRates).where(inArray(payRates.companyId, ids));
     await owner.delete(users).where(inArray(users.companyId, ids));
     await owner.delete(companies).where(inArray(companies.id, ids));
   };

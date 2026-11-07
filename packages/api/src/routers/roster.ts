@@ -8,6 +8,14 @@ import {
 } from "../roster/deactivation";
 import { inviteInput, inviteOutput, rosterInvite } from "../roster/invite";
 import { listOutput, rosterList } from "../roster/list";
+import {
+  listPayRates,
+  payRatesInput,
+  payRatesOutput,
+  setPayRate,
+  setPayRateInput,
+  setPayRateOutput,
+} from "../roster/pay-rates";
 import { changeOutput, setRole, setRoleInput } from "../roster/role";
 import { roleProcedure, router } from "../trpc";
 
@@ -31,4 +39,12 @@ export const rosterRouter = router({
     .input(targetInput)
     .output(reactivateOutput)
     .mutation(({ ctx, input }) => reactivate(ctx.tx, ctx.user, input)),
+  setPayRate: roleProcedure("admin")
+    .input(setPayRateInput)
+    .output(setPayRateOutput)
+    .mutation(({ ctx, input }) => setPayRate(ctx.tx, ctx.user, input)),
+  payRates: roleProcedure("admin")
+    .input(payRatesInput)
+    .output(payRatesOutput)
+    .query(({ ctx, input }) => listPayRates(ctx.tx, input.userId)),
 });

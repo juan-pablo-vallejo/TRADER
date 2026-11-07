@@ -53,6 +53,7 @@ describe("roster.list", () => {
       role: "worker",
       invited: true,
       deactivatedAt: null,
+      currentRate: null,
     });
     expect(rows.find((r) => r.id === w.a.boundId)).toMatchObject({ invited: false });
     expect(rows.find((r) => r.id === admin.id)).toMatchObject({ role: "admin" });
