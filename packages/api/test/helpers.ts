@@ -288,6 +288,13 @@ export const caller = (db: Db, who: unknown) =>
     createContext({ db, identity: who, reporter: quietReporter }),
   );
 
+// The application's own router on committed fixtures, for procedures that write nothing
+// append-only (roster, me). Consumed by the roster and me-update tests.
+export const appCaller = (db: Db, who: unknown) =>
+  createCallerFactory(appRouter)(
+    createContext({ db, identity: who, reporter: quietReporter }),
+  );
+
 // --- Rolled-back calls -----------------------------------------------------------------
 // Labor events and closeouts can never be deleted once committed, so a procedure that writes
 // them cannot run against the committed fixtures above. Instead the whole call runs inside an
