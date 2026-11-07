@@ -26,7 +26,8 @@ export const crews = pgTable(
     name: text("name").notNull(),
     // PRD: a crew has a foreman. The foreman is also a crew_members row, and holds the foreman
     // role; both are cross-row facts no constraint can state, so the API enforces them at crew
-    // creation and foreman change (Stage 3). The pull snapshot reads crew_members only.
+    // creation and foreman change (`crew.create`, `crew.setForeman`). The pull snapshot reads
+    // `crew_members` and this pointer.
     foremanUserId: uuid("foreman_user_id").notNull(),
     deactivatedAt,
     createdAt,
