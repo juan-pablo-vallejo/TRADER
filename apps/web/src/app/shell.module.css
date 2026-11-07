@@ -1,0 +1,21 @@
+/* The office shell below the header (DESIGN, Layout; ARCHITECTURE, office web client). Narrow:
+   one column, the navigation above the content. Wide (768 px and up): the navigation on the
+   left, the content in a column capped at the 1280 target. */
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.main {
+  padding: var(--space-4);
+  max-width: var(--wide);
+  box-sizing: border-box;
+  width: 100%;
+}
+@media (min-width: 768px) {
+  .shell {
+    grid-template-columns: var(--nav) minmax(0, 1fr);
+  }
+  .main {
+    padding: var(--space-6);
+  }
+}

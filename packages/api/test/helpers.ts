@@ -15,6 +15,7 @@ import {
   jobs,
   materialCorrections,
   materials,
+  payRates,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -126,6 +127,7 @@ export async function world(owner: Db) {
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
     await owner.delete(customers).where(inArray(customers.companyId, ids));
+    await owner.delete(payRates).where(inArray(payRates.companyId, ids));
     await owner.delete(users).where(inArray(users.companyId, ids));
     await owner.delete(companies).where(inArray(companies.id, ids));
   };
@@ -139,9 +141,12 @@ export async function member(
   w: World,
   company: "a" | "b",
   role: AppUser["role"],
-  opts: { deactivated?: boolean } = {},
+  // `label` tells two members of one role and state in one company apart: the tag is the
+  // email, unique per company.
+  opts: { deactivated?: boolean; label?: string } = {},
 ) {
-  const tag = `${role}-${opts.deactivated ? "off" : "on"}-${company}-${w.run}`;
+  const label = opts.label === undefined ? "" : `-${opts.label}`;
+  const tag = `${role}-${opts.deactivated ? "off" : "on"}-${company}${label}-${w.run}`;
   const [row] = await owner
     .insert(users)
     .values({
@@ -285,6 +290,13 @@ export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(
+    createContext({ db, identity: who, reporter: quietReporter }),
+  );
+
+// The application's own router on committed fixtures, for procedures that write nothing
+// append-only (roster, me). Consumed by the roster and me-update tests.
+export const appCaller = (db: Db, who: unknown) =>
+  createCallerFactory(appRouter)(
     createContext({ db, identity: who, reporter: quietReporter }),
   );
 

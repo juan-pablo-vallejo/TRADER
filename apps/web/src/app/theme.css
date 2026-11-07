@@ -21,6 +21,7 @@
 
   /* Layout and spacing: a 4 pt grid */
   --space-1: 4px;
+  --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-6: 24px;
@@ -28,7 +29,15 @@
   --radius-primary: 12px;
   --hairline: 1px;
   --target: 48px;
+  --row: 44px;
+  --wide: 1280px;
+  --nav: 240px;
 }
+
+/* The one breakpoint (DESIGN, Layout): 768 px. Below it the office is narrow — one column,
+   navigation in a menu, table rows stacked, targets 48 px; at or above it, wide — the 1280
+   grid, left navigation, dense tables. Media queries cannot read a custom property, so each
+   module writes `(min-width: 768px)` and this comment is the value's home in code. */
 
 html {
   background: var(--canvas);

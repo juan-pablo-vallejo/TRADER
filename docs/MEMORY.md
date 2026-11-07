@@ -148,10 +148,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   then.
 - A dev sign-in as the seed admin binds the seeded row, and `seed.test.ts` then fails on
   `identity_subject`: `DELETE FROM users WHERE email = 'admin@jpteq.app'`, then `pnpm db:seed`.
+- `@trpc/*` peers are exact (`@trpc/client@11.23.0` wants `@trpc/server@11.23.0`): the three
+  move together, pinned without a caret; a bump is one TASKS line naming all three.
+- Under the quarantine pnpm resolves a caret to the newest version older than 24 h, not to
+  `latest`: read `npm view <pkg> time` before stating the version a range will install.
+- `seed.test.ts` counts the seed company's users: rows a manual check invites there must be
+  deleted (their `pay_rates` first) before `pnpm check`, with the admin reseeded.
 
 ## Log
 
-### 2026-10-09 → 2026-11-05 — rolled up
+### 2026-10-09 → 2026-11-06 — rolled up
 
 - 10-09 → 10-29: `archive/pre-rebuild` tagged, orphan `rebuild`, public repo, no trailers; six
   documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs (Stripe, Resend, Inngest out); D Sierra
@@ -173,28 +179,21 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   push reports a record failing after an earlier commit; `status.get` public, four states from
   `TRADER_SYNC_MODE` and minimum builds, advisory; stack frames dropped from reports; 669 tests.
 - 11-06: Stage 3 line 9 test fix: repair/push race pinned by queue order; 670 tests.
+- 11-06: pilot-scope documents: five decision rows (job suggestion, dated assignments, admin
+  closeout, own profile, pilot scope), Stage 3 ticked and condensed, `row N` pinned to `779894f`,
+  Stages 7 and 8 swapped; open: worker sign-in without email, crew transfers and deactivation,
+  credit ceiling and void, archived-job closeout, admin's own entries, assignment rules. Stage 4
+  line 1: `apps/web` host, route handler, cookie dev sign-in and shell as ARCHITECTURE's
+  2026-11-06 rows; 683 tests.
 
-### 2026-11-06 — Pilot-scope documentation patch
+### 2026-11-07 — Stage 4 line 2: roster API and the first office screen
 
-- **Did:** PRD, ARCHITECTURE, DESIGN and TASKS aligned with the owner's pilot decisions — job
-  suggestion, dated assignments, admin closeout, own profile, pilot scope — in five decision rows,
-  each with its TASKS lines; Stage 3 ticked and condensed; folder tree condensed; `row N`
-  references pinned to `779894f`; Stages 7 and 8 swapped (invoicing before the pilot). Documents
-  only; no code.
-- **Decided:** by the owner on 2026-11-06 ("execute" on revision 3 of the plan): the five rows
-  (job suggestion, dated assignments, admin closeout, own profile, pilot scope) as recorded;
-  Stage 3 accepted with the condensations, the row-reference pin, job locations on the phone,
-  and the Stage 7/8 swap. Open: worker sign-in without email, crew transfers and deactivation,
-  credit ceiling and void, archived-job closeout, admin's own entries, assignment rules.
-- **Next:** Stage 4 line 1 (Next.js host, tRPC route handler, development sign-in).
-
-### 2026-11-06 — Stage 4 line 1: Next.js host, route handler, development sign-in
-
-- **Did:** `apps/web` (Next 16.4.5): `/api/trpc` route handler, lazy app-role pool, `no-store`,
-  reporter on `onError`; email-only cookie dev sign-in bridged to the headers, 404 off; shell with
-  `theme.css`, mark and favicon from `assets/brand`, office strings in `strings.ts` until the
-  catalog (Stage 5); `next build` in CI. 683 tests (231 db, 441 api, 11 web); 6 mutations red.
-- **Decided:** by the owner on 2026-11-06: `next build` in `check`; cookies bridged to the dev
-  headers in `apps/web`, the api adapter unchanged; no client library until line 2; CSS Modules,
-  no styling dependency; favicon by route handler from the one asset; `@vercel/functions` at Stage 6.
-- **Next:** Stage 4 line 2 (roster) — first office screen, breakpoint and the tRPC client.
+- **Did:** `roster.list`/`invite`/`setRole`/`deactivate`/`reactivate`/`setPayRate`/`payRates`
+  and `me.update`; last-admin guard under one locking statement, race-tested; `apps/web` tRPC
+  client and query provider, breakpoint 768, left navigation, `/roster` and `/profile`; 712 tests
+  (231 db, 466 api, 15 web); five invariants watched red first; `6c1a9fc` committed on a red run
+  (`seed.test.ts` on the manual check's seed rows); the same tree green after the cleanup.
+- **Decided:** by the owner on 2026-11-07: B7.1–B7.10 as recommended; the two 2026-11-04
+  identity rows joined verbatim for room; one Edit toggle and an editor row per roster row; no
+  icon set this line, DESIGN:82 reworded.
+- **Next:** Stage 4 line 3 (customers and jobs with crew assignment; TASKS:46).

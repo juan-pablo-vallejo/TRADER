@@ -1,0 +1,5 @@
+/* The profile form (DESIGN, Profile form): one card, its fields stacked, 480 px at most on
+   the wide layout so the inputs stay a hand's width. */
+.card {
+  max-width: 480px;
+}

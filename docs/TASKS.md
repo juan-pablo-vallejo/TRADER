@@ -42,7 +42,7 @@ jobs, assignments, approvals, a closeout, close, export.
 
 - [x] Next.js app hosting the tRPC route handler; development sign-in behind the identity adapter;
       mark and favicon from `assets/brand/logo.png` (`next`, `react`, `react-dom`, their `@types`, `eslint-config-next`)
-- [ ] Roster: invite, deactivate, role, effective-dated pay rates; own name and contact phone
+- [x] Roster: invite, deactivate, role, effective-dated pay rates; own name and contact phone (`@trpc/client`, `@trpc/tanstack-react-query`, `@tanstack/react-query`, `superjson` in `apps/web`; `@trpc/server` pinned exact in `apps/web` and `packages/api`)
 - [ ] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested;
       deactivation, transfers and offline backlogs decided before code
 - [ ] Demo fixture: owner-run script writing a synthetic company through the real procedures; never raw inserts, never the pilot's database

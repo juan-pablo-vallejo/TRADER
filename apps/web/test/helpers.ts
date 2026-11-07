@@ -1,7 +1,7 @@
 // Shared by the web tests. Fixtures are committed by the owner under a run suffix and deleted
 // afterwards, as the api suite does; nothing here writes an append-only row.
 import { createDb, type Db } from "@trader/db";
-import { companies, users } from "@trader/db/schema";
+import { companies, payRates, users } from "@trader/db/schema";
 import type { ErrorReport, ErrorReporter } from "@trader/api";
 import { eq } from "drizzle-orm";
 
@@ -47,13 +47,35 @@ export async function query(
   return { status: response.status, headers: response.headers, body };
 }
 
+// One mutation through a handler, unbatched, as a client sends it: POST with the input in
+// superjson's envelope as the body.
+export async function mutate(
+  handler: (req: Request) => Promise<Response>,
+  path: string,
+  opts: { input?: unknown; headers?: Record<string, string> } = {},
+) {
+  const response = await handler(
+    new Request(`http://test${ENDPOINT}/${path}`, {
+      method: "POST",
+      headers: { ...opts.headers, "content-type": "application/json" },
+      body: JSON.stringify({ json: opts.input ?? null }),
+    }),
+  );
+  const body = (await response.json()) as TrpcResult;
+  return { status: response.status, headers: response.headers, body };
+}
+
 export type TrpcResult = {
   result?: { data: { json: unknown } };
   error?: { json: { message: string; data: { code: string; httpStatus: number } } };
 };
 
-// One company with one unbound invitation, committed; `cleanup` removes both.
-export async function invitation(owner: Db) {
+// One company with one unbound invitation, a worker unless a role is named, committed;
+// `cleanup` removes the company and everything the test wrote under it.
+export async function invitation(
+  owner: Db,
+  opts: { role?: "admin" | "foreman" | "worker" } = {},
+) {
   const run = crypto.randomUUID().slice(0, 8);
   const [company] = await owner
     .insert(companies)
@@ -63,9 +85,10 @@ export async function invitation(owner: Db) {
   const email = `invite-${run}@web.test`;
   const [user] = await owner
     .insert(users)
-    .values({ companyId, email, name: `Invite ${run}` })
+    .values({ companyId, email, name: `Invite ${run}`, role: opts.role ?? "worker" })
     .returning({ id: users.id });
   const cleanup = async () => {
+    await owner.delete(payRates).where(eq(payRates.companyId, companyId));
     await owner.delete(users).where(eq(users.companyId, companyId));
     await owner.delete(companies).where(eq(companies.id, companyId));
   };

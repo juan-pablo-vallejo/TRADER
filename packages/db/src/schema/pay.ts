@@ -23,9 +23,9 @@ import { users } from "./users";
 // One row per rate change. A rate applies from effective_from until the next row for the same
 // worker: no end date, so two rows can never overlap, and the unique below is the whole
 // guarantee that one worker has one rate on one day. The rate in force on day D is the row
-// with the greatest effective_from ≤ D; none means unpriced. Mutable through the ORM: no pay
-// is computed in V1 (the export is hours), and a change to a rate a closed period relied on is
-// a Stage 4 rule, not a database guard.
+// with the greatest effective_from ≤ D; none means unpriced. No guard: mutable through the ORM,
+// though the roster API only inserts (ARCHITECTURE, roster API). No pay is computed in V1 (the
+// export is hours); a change to a rate a closed period relied on is the pay-period task's rule.
 export const payRates = pgTable(
   "pay_rates",
   {
