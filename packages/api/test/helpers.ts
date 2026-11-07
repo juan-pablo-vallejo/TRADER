@@ -139,9 +139,12 @@ export async function member(
   w: World,
   company: "a" | "b",
   role: AppUser["role"],
-  opts: { deactivated?: boolean } = {},
+  // `label` tells two members of one role and state in one company apart: the tag is the
+  // email, unique per company.
+  opts: { deactivated?: boolean; label?: string } = {},
 ) {
-  const tag = `${role}-${opts.deactivated ? "off" : "on"}-${company}-${w.run}`;
+  const label = opts.label === undefined ? "" : `-${opts.label}`;
+  const tag = `${role}-${opts.deactivated ? "off" : "on"}-${company}${label}-${w.run}`;
   const [row] = await owner
     .insert(users)
     .values({
