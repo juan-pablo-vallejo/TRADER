@@ -16,6 +16,7 @@ export const strings = {
   menu: "Menu",
   roster: "Roster",
   customers: "Customers",
+  crews: "Crews",
   profile: "Profile",
 
   // States every screen can be in
@@ -64,6 +65,26 @@ export const strings = {
   none: "—",
   jobsUnarchived: (n: number) =>
     `${n} of this customer's jobs are not archived. Archive them first.`,
+
+  // Crews
+  emptyCrews: "No crews yet.",
+  addCrew: "Add crew",
+  crew: "Crew",
+  foreman: "Foreman",
+  members: "Members",
+  chooseForeman: "Choose a foreman",
+  choosePerson: "Choose a person",
+  needsForeman: "Needs a foreman",
+  changeForeman: "Change foreman",
+  addMember: "Add member",
+  remove: "Remove",
+  deactivateCrew: "Deactivate crew",
+  userInactive: "That person is deactivated.",
+  notAForeman: "The foreman must have the Foreman role.",
+  reactivateCrewFirst: "Reactivate the crew first",
+  changeForemanFirst: "Change the foreman first",
+  jobsAssigned: (n: number) =>
+    `${n} jobs are assigned to this crew. Reassign or archive them first.`,
 
   // Profile
   contactPhone: "Contact phone",

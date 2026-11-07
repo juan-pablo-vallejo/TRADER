@@ -1,0 +1,35 @@
+/* The crews screen's own layout: the create form's grid, the editor's sections and the member
+   list. The data table itself is table.module.css. */
+.formGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.editorGrid {
+  display: grid;
+  gap: var(--space-6);
+}
+.members {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.members li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--target);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.members .caption {
+  color: var(--ink-secondary);
+}
+
+@media (min-width: 768px) {
+  .formGrid {
+    grid-template-columns: 2fr 1fr;
+  }
+  .editorGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
