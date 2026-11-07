@@ -1,0 +1,53 @@
+/* The office navigation: a menu button over a list on narrow, the list alone on wide. Every
+   link is a 48 pt row; the current route is in accent. */
+.nav {
+  background: var(--surface);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.toggle {
+  font: inherit;
+  font-weight: 600;
+  min-height: var(--target);
+  width: 100%;
+  text-align: left;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--space-2);
+  display: none;
+}
+.open {
+  display: block;
+}
+.link {
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 var(--space-4);
+  color: var(--ink);
+  text-decoration: none;
+}
+.current {
+  color: var(--accent);
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .nav {
+    border-bottom: 0;
+    border-right: var(--hairline) solid var(--border);
+    min-height: 100%;
+  }
+  .toggle {
+    display: none;
+  }
+  .list {
+    display: block;
+    padding-top: var(--space-2);
+  }
+}

@@ -1,0 +1,135 @@
+/* DESIGN, UI components, for the office: buttons, the form field, the card, the empty state
+   and the attention banner. Consumed by the roster and profile screens. */
+.primary,
+.secondary,
+.destructive,
+.textAction {
+  font: inherit;
+  cursor: pointer;
+  border-radius: var(--radius-card);
+}
+.primary:disabled,
+.secondary:disabled,
+.destructive:disabled,
+.textAction:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+/* Primary button: 56 pt, full width, accent; one per screen. */
+.primary {
+  min-height: 56px;
+  width: 100%;
+  padding: 0 var(--space-4);
+  background: var(--accent);
+  color: var(--on-accent);
+  border: 0;
+  border-radius: var(--radius-primary);
+  font-weight: 600;
+}
+.primary:disabled {
+  background: var(--muted);
+  opacity: 1;
+}
+
+/* Secondary button: 48 pt, surface with border, ink label. */
+.secondary {
+  min-height: var(--target);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--hairline) solid var(--border);
+}
+
+/* Destructive button: the secondary shape, attention border and label; never full width. */
+.destructive {
+  min-height: var(--target);
+  padding: 0 var(--space-4);
+  background: var(--surface);
+  color: var(--attention);
+  border: var(--hairline) solid var(--attention);
+  width: auto;
+}
+
+/* A text action in accent: the row's Edit toggle, 44 pt in the wide table, 48 pt narrow. */
+.textAction {
+  min-height: var(--target);
+  padding: 0 var(--space-2);
+  background: none;
+  border: 0;
+  color: var(--accent);
+  font-weight: 600;
+}
+@media (min-width: 768px) {
+  .textAction {
+    min-height: var(--row);
+  }
+}
+
+/* Form field: label above, 48 pt input, helper or error text beneath in attention. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+.field label,
+.field .caption {
+  color: var(--ink-secondary);
+}
+.input,
+.select {
+  font: inherit;
+  min-height: var(--target);
+  padding: 0 var(--space-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+  box-sizing: border-box;
+  width: 100%;
+}
+.input:read-only {
+  color: var(--ink-secondary);
+  background: var(--canvas);
+}
+.error {
+  color: var(--attention);
+}
+
+/* Card: surface, one hairline, 16 padding; sections 24 apart. */
+.card {
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* Empty state: one sentence and one action. */
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+/* Attention banner: attention tint, what happened and what to do, until resolved. */
+.banner {
+  background: color-mix(in srgb, var(--attention) 10%, var(--surface));
+  color: var(--attention);
+  border-radius: var(--radius-card);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+.banner p {
+  margin: 0;
+}
+
+/* Controls side by side, wrapping; 12 between them. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}

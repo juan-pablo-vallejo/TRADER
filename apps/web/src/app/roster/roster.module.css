@@ -1,0 +1,127 @@
+/* The roster's data table (DESIGN, Data table): sticky header, 44 px rows, numbers right
+   aligned, no zebra striping. Narrow: each row a stacked card, every cell led by its column
+   label, the editor inside the card. */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+}
+.table th,
+.table td {
+  text-align: left;
+  padding: 0 var(--space-3);
+  height: var(--row);
+  border-bottom: var(--hairline) solid var(--border);
+  vertical-align: middle;
+}
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface);
+  color: var(--ink-secondary);
+}
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.table .number {
+  text-align: right;
+}
+.status {
+  color: var(--ink-secondary);
+}
+.editor td {
+  height: auto;
+  padding: var(--space-4) var(--space-3);
+  background: var(--canvas);
+}
+.editorGrid {
+  display: grid;
+  gap: var(--space-6);
+}
+.history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.history li {
+  display: flex;
+  justify-content: space-between;
+  min-height: var(--row);
+  align-items: center;
+  border-bottom: var(--hairline) solid var(--border);
+}
+.inviteGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+
+@media (max-width: 767px) {
+  .table,
+  .table thead,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+  }
+  .table {
+    border: 0;
+    background: none;
+  }
+  .table thead {
+    position: absolute;
+    left: -9999px;
+  }
+  .table tbody tr {
+    background: var(--surface);
+    border: var(--hairline) solid var(--border);
+    border-radius: var(--radius-card);
+    margin-bottom: var(--space-3);
+    padding: var(--space-2) 0;
+  }
+  .table td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: var(--target);
+    height: auto;
+    border: 0;
+    padding: 0 var(--space-4);
+  }
+  .table td::before {
+    content: attr(data-label);
+    color: var(--ink-secondary);
+    flex: 0 0 auto;
+  }
+  .table td.toggle::before {
+    content: "";
+  }
+  .table .toggle {
+    justify-content: flex-end;
+  }
+  .editor {
+    margin-top: calc(-1 * var(--space-3) - var(--hairline));
+  }
+  .editor td {
+    display: block;
+    padding: var(--space-4);
+  }
+  .editor td::before {
+    content: none;
+  }
+  .editorGrid button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 768px) {
+  .inviteGrid {
+    grid-template-columns: 2fr 2fr 1fr;
+  }
+  .editorGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
