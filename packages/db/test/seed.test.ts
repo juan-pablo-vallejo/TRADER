@@ -6,7 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../src/client";
 import { invoiceCounters, users } from "../src/schema";
-import { SEED, seed } from "../src/seed";
+import { SEED, seed, type SeedCompany } from "../src/seed";
 import { asApp, one, rolledBack, type Tx } from "./helpers";
 
 let db: Db;
@@ -75,6 +75,33 @@ describe("seed", () => {
       await seed(tx);
       expect(await counter(tx)).toEqual({ next: 1043, nextMemo: 8 });
       expect((await admin(tx)).role).toBe("admin");
+    });
+  });
+
+  it("bootstraps a second company without touching the first", async () => {
+    const other: SeedCompany = {
+      companyId: "019a4a00-0000-7000-8000-0000000000ff",
+      companyName: "Second Co",
+      timezone: "America/Chicago",
+      adminEmail: "owner@second.test",
+      adminName: "Owner",
+    };
+    await rolledBack(db, async (tx) => {
+      const first = await seed(tx);
+      const second = await seed(tx, other);
+      expect(second).toEqual({ ...first, currentUser: first.currentUser });
+      expect(await seed(tx)).toEqual(first);
+      expect(await counter(tx)).toEqual({ next: 1, nextMemo: 1 });
+      expect(await admin(tx)).toEqual({
+        role: "admin",
+        identitySubject: null,
+        email: SEED.adminEmail,
+      });
+      const rows = await tx
+        .select({ email: users.email, role: users.role })
+        .from(users)
+        .where(eq(users.companyId, other.companyId));
+      expect(rows).toEqual([{ email: other.adminEmail, role: "admin" }]);
     });
   });
 
