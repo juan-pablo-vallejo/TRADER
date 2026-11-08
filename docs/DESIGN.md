@@ -23,6 +23,16 @@ built turns them into a `theme` module per app, and nothing hard-codes a color o
 7. **Plain.** No illustration beyond the brand mark, no gradients, no decorative motion. Motion
    exists only to show a state changing, and it respects the reduce-motion setting.
 
+## Design tooling
+
+This document is the authority for every decided token, component and rule. Figma is where
+alternatives are explored and populated screens are reviewed before a change is decided: a
+frame is a proposal until its outcome is written here, and nothing in code follows a frame this
+document does not yet reflect. One file, _TRADER — Office_, on the owner's team, with three
+pages: _Tokens_, generated from the web theme module and never hand-edited; _Screens as built_,
+the populated office screens at 390 and 1280; _Explorations_, dated, one per review finding.
+Frames and screenshots stay in Figma; the repository holds this document and the code.
+
 ## Color palette
 
 Light theme only in V1; dark theme is listed after V1. One accent, reserved for actions and the

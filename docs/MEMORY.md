@@ -171,9 +171,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-03: Stage 2 lines 5–8: billing tables; `audit_log` (API-written, empty in V1); `trader_app`,
   grants, FORCE RLS on 17 tables, startup guard; owner-only seed; Stage 2 closed at 136 tests.
 - 11-04: Smart Clock-In scoped in PRD (post-pilot), Stage 9; `rv.sh` retired. Stage 3 lines 1a–6:
-  `0015` identity binding; tRPC, adapters, `me.get`; role gates; fold and `validateEvent`;
-  `0016`–`0018` closeout, seal, freeze, field-write lock; review fingerprint `v1.`; `0019`/`0020`
-  material corrections; 432 tests.
+  `0015` identity binding; tRPC, adapters, `me.get`; role gates; fold, `validateEvent`; `0016`–`0018`
+  closeout, seal, freeze, field-write lock; fingerprint `v1.`; `0019`/`0020` corrections; 432 tests.
 - 11-05: Stage 3 lines 7–10: `0021`–`0026` approval facts, `sync.push`/`sync.pull` (`3c97d4f` on a
   red run, flake fixed in `a807875`), approval queue and accounting, `labor.repair`; `report.ts`
   (minimized `ErrorReport`, `logReporter`, `reportingOnError`, reporter required in the context);
@@ -194,6 +193,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   database of its own, bootstrapped by the seed, every other write a persona's caller on an
   app-role pool; 32 steps, 259 events, 18 closeouts, 11 approvals, five reasons; refusal, `--reset`
   and partial-failure paths tested in disposable databases; 770 tests; one guard watched red.
-- **Decided:** by the owner on 2026-11-08: plan v2's I-1 to I-10 as recommended; Figma is in as
-  the exploration surface, to be written into DESIGN.md in its own line.
-- **Next:** the UX review line (Figma into DESIGN.md), then Stage 4 line 5 (TASKS:49).
+- **Decided:** by the owner on 2026-11-08: plan v2's I-1 to I-10 as recommended; Figma is the
+  exploration and review surface, written into DESIGN.md (Design tooling) with its decision row;
+  the UX review is its own TASKS line before Stage 4 line 5.
+- **Next:** the UX review line (TASKS:49), then Stage 4 line 5 (TASKS:50).

@@ -23,8 +23,7 @@ Done when `pnpm install && pnpm check` is green and Postgres answers on `localho
 Done when migrations apply to an empty database, every invariant test fails when its guard is
 removed and passes when restored, and RLS blocks a cross-tenant read under the app role.
 
-- [x] Driver seam, zod env, `migrate`; core, labor, pay, billing and audit tables; append-only
-      guards; RLS ENABLE + FORCE under `trader_app`, startup guard; owner-only seed (`tsx`)
+- [x] Driver seam, zod env, `migrate`; core, labor, pay, billing, audit tables; append-only guards; RLS ENABLE + FORCE under `trader_app`, startup guard; owner-only seed (`tsx`)
 
 ## Stage 3 — API (`packages/api`)
 
@@ -46,6 +45,7 @@ jobs, assignments, approvals, a closeout, close, export.
 - [x] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested;
       deactivation, transfers and offline backlogs decided before code
 - [x] Demo fixture: owner-run script writing a synthetic company through the real procedures; never raw inserts, never the pilot's database (`tsx` in `packages/api`)
+- [ ] UX review of the populated office screens, phone and desktop, in the browser against the demo fixture; Figma as the exploration surface (DESIGN, Design tooling); findings become DESIGN.md amendments and lines here, no screen change in the review itself
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
 - [ ] Admin closeout on the foreman procedures, unchanged; archived, crew-less jobs decided first
