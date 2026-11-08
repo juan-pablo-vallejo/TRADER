@@ -124,8 +124,12 @@ export async function world(owner: Db) {
   };
   const a = await make("a");
   const b = await make("b");
+  // In reference order, as committedCrewDay deletes: a test may have written any of these.
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
+    await owner.delete(crewMembers).where(inArray(crewMembers.companyId, ids));
+    await owner.delete(jobs).where(inArray(jobs.companyId, ids));
+    await owner.delete(crews).where(inArray(crews.companyId, ids));
     await owner.delete(customers).where(inArray(customers.companyId, ids));
     await owner.delete(payRates).where(inArray(payRates.companyId, ids));
     await owner.delete(users).where(inArray(users.companyId, ids));

@@ -1,5 +1,8 @@
 import { approvalRouter } from "./routers/approval";
 import { closeoutRouter } from "./routers/closeout";
+import { crewRouter } from "./routers/crew";
+import { customerRouter } from "./routers/customer";
+import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
 import { materialRouter } from "./routers/material";
 import { meRouter } from "./routers/me";
@@ -11,6 +14,9 @@ import { router } from "./trpc";
 export const appRouter = router({
   approval: approvalRouter,
   closeout: closeoutRouter,
+  crew: crewRouter,
+  customer: customerRouter,
+  job: jobRouter,
   labor: laborRouter,
   material: materialRouter,
   me: meRouter,

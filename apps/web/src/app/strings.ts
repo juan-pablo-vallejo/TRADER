@@ -15,6 +15,9 @@ export const strings = {
   navigation: "Office",
   menu: "Menu",
   roster: "Roster",
+  customers: "Customers",
+  jobs: "Jobs",
+  crews: "Crews",
   profile: "Profile",
 
   // States every screen can be in
@@ -52,6 +55,63 @@ export const strings = {
   active: "Active",
   deactivated: "Deactivated",
   roles: { admin: "Admin", foreman: "Foreman", worker: "Worker" },
+
+  // Customers
+  emptyCustomers: "No customers yet.",
+  addCustomer: "Add customer",
+  address: "Address",
+  phone: "Phone",
+  notes: "Notes",
+  none: "—",
+  jobsUnarchived: (n: number) =>
+    `${n} of this customer's jobs are not archived. Archive them first.`,
+
+  // Crews
+  emptyCrews: "No crews yet.",
+  addCrew: "Add crew",
+  crew: "Crew",
+  foreman: "Foreman",
+  members: "Members",
+  chooseForeman: "Choose a foreman",
+  choosePerson: "Choose a person",
+  needsForeman: "Needs a foreman",
+  changeForeman: "Change foreman",
+  addMember: "Add member",
+  remove: "Remove",
+  deactivateCrew: "Deactivate crew",
+  userInactive: "That person is deactivated.",
+  notAForeman: "The foreman must have the Foreman role.",
+  reactivateCrewFirst: "Reactivate the crew first",
+  changeForemanFirst: "Change the foreman first",
+  jobsAssigned: (n: number) =>
+    `${n === 1 ? "1 job is" : `${n} jobs are`} assigned to this crew. Reassign or archive ${n === 1 ? "it" : "them"} first.`,
+
+  // Jobs
+  emptyJobs: "No jobs to show.",
+  addJob: "Add job",
+  job: "Job",
+  customer: "Customer",
+  chooseCustomer: "Choose a customer",
+  unassigned: "Unassigned",
+  latitude: "Latitude",
+  longitude: "Longitude",
+  radiusM: "Radius (m)",
+  locationAllOrNone: "Enter all three or none.",
+  show: "Show",
+  allJobs: "All",
+  jobStatus: { open: "Open", complete: "Complete", archived: "Archived" },
+  saveDetails: "Save details",
+  assign: "Assign",
+  setStatus: "Set status",
+  customerInactive: "That customer is deactivated.",
+  crewInactive: "That crew is deactivated.",
+  customerInactiveOnStatus:
+    "This customer is deactivated. Reactivate them, or move the job to another customer first.",
+  crewInactiveOnStatus:
+    "This job's crew is deactivated. Reactivate it or reassign the job first.",
+  hasInvoices: "This job has invoices; its customer can no longer change.",
+  archivedNote:
+    "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
 
   // Profile
   contactPhone: "Contact phone",

@@ -164,7 +164,11 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
             .where(and(notArchived, inArray(jobs.crewId, crewIds)))
             .orderBy(asc(jobs.id));
 
-  const led = myCrews.filter((c) => c.foremanUserId === user.id);
+  // Led crews need the foreman role as well as the pointer: a foreman demoted by the roster
+  // keeps the pointer until the office changes it (ARCHITECTURE, crew membership lifecycle)
+  // and must stop receiving member names at once.
+  const led =
+    user.role === "foreman" ? myCrews.filter((c) => c.foremanUserId === user.id) : [];
   const memberRows =
     led.length === 0
       ? []

@@ -1,0 +1,20 @@
+/* The customers screen's own layout: the create form's grid and the editor's columns on wide.
+   The data table itself is table.module.css. */
+.formGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.notes {
+  min-height: calc(2 * var(--target));
+  padding: var(--space-2) var(--space-3);
+  resize: vertical;
+}
+
+@media (min-width: 768px) {
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .formGrid .wide {
+    grid-column: 1 / -1;
+  }
+}

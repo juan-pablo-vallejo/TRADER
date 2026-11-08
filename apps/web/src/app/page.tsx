@@ -17,6 +17,15 @@ export default function Home() {
           <Link href="/roster">{strings.roster}</Link>
         </li>
         <li>
+          <Link href="/customers">{strings.customers}</Link>
+        </li>
+        <li>
+          <Link href="/jobs">{strings.jobs}</Link>
+        </li>
+        <li>
+          <Link href="/crews">{strings.crews}</Link>
+        </li>
+        <li>
           <Link href="/profile">{strings.profile}</Link>
         </li>
         {devIdentityEnabled(process.env) && (

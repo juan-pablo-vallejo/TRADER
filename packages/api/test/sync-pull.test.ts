@@ -393,6 +393,20 @@ describe("sync.pull — reference data", () => {
     });
   });
 
+  it("gives a demoted foreman no roster, and still their own labor and the crew's jobs", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const [mine] = await session(tx, d, d.foremanId, d.J, noonDaysAgo(1));
+      await tx.update(users).set({ role: "worker" }).where(eq(users.id, d.foremanId));
+      await asTenant(tx, d.companyId);
+      const snap = await pull(tx, d.who);
+      expect(snap.ledCrews).toEqual([]);
+      expect(snap.me.role).toBe("worker");
+      expect(snap.sessions.map((s) => s.rootEventId)).toEqual([mine]);
+      expect(snap.jobs.map((j) => j.id)).toEqual([d.J]);
+    });
+  });
+
   it("gives a lead their crew's active members by id and name, and a worker no roster", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
