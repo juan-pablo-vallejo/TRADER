@@ -7,10 +7,12 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "demo": "tsx src/run-demo.ts"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
+    "tsx": "4.23.1",
     "typescript": "5.9.3",
     "vitest": "^4.1.10"
   },
