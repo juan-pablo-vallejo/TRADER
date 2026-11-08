@@ -154,6 +154,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `latest`: read `npm view <pkg> time` before stating the version a range will install.
 - `seed.test.ts` counts the seed company's users: delete a manual check's rows there — memberships,
   jobs, crews, customers, `pay_rates`, then the invited users — before `pnpm check`, then reseed.
+- A piped `pnpm check` reports the pipe's exit status: run it unpiped before committing.
 
 ## Log
 
@@ -182,9 +183,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - 11-06: pilot-scope documents: five decision rows (job suggestion, dated assignments, admin
   closeout, own profile, pilot scope), Stage 3 ticked and condensed, `row N` pinned to `779894f`,
   Stages 7 and 8 swapped; open: worker sign-in without email, credit ceiling and void,
-  archived-job closeout, admin's own entries, assignment rules. Stage 4
-  line 1: `apps/web` host, route handler, cookie dev sign-in and shell as ARCHITECTURE's
-  2026-11-06 rows; 683 tests.
+  archived-job closeout, admin's own entries, assignment rules. Stage 4 line 1: `apps/web` host,
+  route handler, cookie dev sign-in and shell as ARCHITECTURE's 2026-11-06 rows; 683 tests.
 - 11-07: Stage 4 line 2: `roster.*`, `me.update`, last-admin guard under one locking statement,
   race-tested; web tRPC client, `/roster`, `/profile`; 712 tests; `6c1a9fc` on a red run.
 
@@ -192,7 +192,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 
 - **Did:** `customer.*`, `crew.*`, `job.*` under the crew and job row locks, the membership race
   proven against a real push both ways; `sync.pull` led crews by role; `table.module.css`;
-  `/customers`, `/jobs`, `/crews`; 754 tests (231 db, 502 api, 21 web); nine invariants watched
-  red; `2cb77de` committed on a red run (`seed.test.ts`, manual-check rows), green after cleanup.
+  `/customers`, `/jobs`, `/crews`; 754 tests (231 db, 502 api, 21 web); eight invariants watched
+  red (invariant 8 is 0014's); `2cb77de` on a red run (`seed.test.ts`, manual rows); green after.
 - **Decided:** by the owner on 2026-11-07: B7.1–B7.17 as recommended; open: office receipt entry.
 - **Next:** Stage 4 line 4 (demo fixture; TASKS:48).
