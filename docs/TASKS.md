@@ -45,7 +45,7 @@ jobs, assignments, approvals, a closeout, close, export.
 - [x] Roster: invite, deactivate, role, effective-dated pay rates; own name and contact phone (`@trpc/client`, `@trpc/tanstack-react-query`, `@tanstack/react-query`, `superjson` in `apps/web`; `@trpc/server` pinned exact in `apps/web` and `packages/api`)
 - [x] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested;
       deactivation, transfers and offline backlogs decided before code
-- [ ] Demo fixture: owner-run script writing a synthetic company through the real procedures; never raw inserts, never the pilot's database (`tsx` in `packages/api`)
+- [x] Demo fixture: owner-run script writing a synthetic company through the real procedures; never raw inserts, never the pilot's database (`tsx` in `packages/api`)
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
 - [ ] Admin closeout on the foreman procedures, unchanged; archived, crew-less jobs decided first

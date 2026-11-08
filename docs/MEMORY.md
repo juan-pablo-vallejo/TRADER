@@ -155,6 +155,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `seed.test.ts` counts the seed company's users: delete a manual check's rows there — memberships,
   jobs, crews, customers, `pay_rates`, then the invited users — before `pnpm check`, then reseed.
 - A piped `pnpm check` reports the pipe's exit status: run it unpiped before committing.
+- Drizzle's `db.transaction` runs on a client from `pool.connect()`, never through `pool.query`:
+  a spy on the pool misses it, and pg's `connect` has a callback form and a promise form.
 
 ## Log
 
@@ -166,33 +168,32 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `trader-local` (pre-rebuild volume untouched), `db:up`/`db:down`, `.env.example`, `.nvmrc`
   Node 24: Stages 0–1 closed; Stage 2 lines 1–4: Drizzle, `pg` seam, CI migrates, core tables,
   `uuidv7()` office ids, `0002` guard (23000), pay, approvals, voids, corrections; 53 tests.
-- 11-03: Stage 2 lines 5–8: billing tables (105 tests); `audit_log`, API-written, empty in V1;
-  `trader_app`, grants, FORCE RLS on 17 tables, startup guard; owner-only seed; Stage 2 closed at
-  136 tests. TASKS condensed: closed stages to one ticked line.
-- 11-04: Smart Clock-In scoped in PRD (post-pilot, local reminders), Stage 9; `rv.sh` retired.
-  Stage 3 lines 1a–6: `0015` identity binding; tRPC, identity adapters, `me.get`; role gates; fold
-  and `validateEvent`; `0016`–`0018` closeout, seal, freeze, field-write lock; `closeout.review`,
-  fingerprint `v1.`; `0019`/`0020` material corrections; 432 tests.
-- 11-05: Stage 3 lines 7–9: `0021`–`0024` approval facts, `sync.push`/`sync.pull`, review fixes
-  (`3c97d4f` committed on a red run, its flake fixed in `a807875`), delegated `id_conflict`;
-  `0025` approval queue and accounting; `0026`, `labor.repair`; 630 tests. Line 10: `report.ts`
-  (minimized `ErrorReport`, `logReporter`, `reportingOnError`), reporter required in the context,
-  push reports a record failing after an earlier commit; `status.get` public, four states from
-  `TRADER_SYNC_MODE` and minimum builds, advisory; stack frames dropped from reports; 669 tests.
-- 11-06: Stage 3 line 9 test fix: repair/push race pinned by queue order; 670 tests.
-- 11-06: pilot-scope documents: five decision rows (job suggestion, dated assignments, admin
-  closeout, own profile, pilot scope), Stage 3 ticked and condensed, `row N` pinned to `779894f`,
-  Stages 7 and 8 swapped; open: worker sign-in without email, credit ceiling and void,
-  archived-job closeout, admin's own entries, assignment rules. Stage 4 line 1: `apps/web` host,
-  route handler, cookie dev sign-in and shell as ARCHITECTURE's 2026-11-06 rows; 683 tests.
+- 11-03: Stage 2 lines 5–8: billing tables; `audit_log` (API-written, empty in V1); `trader_app`,
+  grants, FORCE RLS on 17 tables, startup guard; owner-only seed; Stage 2 closed at 136 tests.
+- 11-04: Smart Clock-In scoped in PRD (post-pilot), Stage 9; `rv.sh` retired. Stage 3 lines 1a–6:
+  `0015` identity binding; tRPC, adapters, `me.get`; role gates; fold and `validateEvent`;
+  `0016`–`0018` closeout, seal, freeze, field-write lock; review fingerprint `v1.`; `0019`/`0020`
+  material corrections; 432 tests.
+- 11-05: Stage 3 lines 7–10: `0021`–`0026` approval facts, `sync.push`/`sync.pull` (`3c97d4f` on a
+  red run, flake fixed in `a807875`), approval queue and accounting, `labor.repair`; `report.ts`
+  (minimized `ErrorReport`, `logReporter`, `reportingOnError`, reporter required in the context);
+  `status.get` public, four states from `TRADER_SYNC_MODE` and minimum builds; 669 tests.
+- 11-06: repair/push race pinned by queue order (670 tests). Pilot-scope documents: five decision
+  rows, Stage 3 ticked, `row N` pinned to `779894f`, Stages 7 and 8 swapped; open: worker sign-in
+  without email, credit ceiling and void, archived-job closeout, admin's own entries, assignment
+  rules. Stage 4 line 1: `apps/web` host, route handler, cookie dev sign-in, shell; 683 tests.
 - 11-07: Stage 4 line 2: `roster.*`, `me.update`, last-admin guard under one locking statement,
-  race-tested; web tRPC client, `/roster`, `/profile`; 712 tests; `6c1a9fc` on a red run.
+  race-tested; web tRPC client, `/roster`, `/profile`; 712 tests; `6c1a9fc` on a red run. Line 3:
+  `customer.*`, `crew.*`, `job.*` under the crew and job row locks, the membership race proven
+  against a real push; `sync.pull` led crews by role; `/customers`, `/jobs`, `/crews`; 754 tests;
+  `2cb77de` on a red run. Owner: B7.1–B7.17 as recommended; open: office receipt entry.
 
-### 2026-11-07 — Stage 4 line 3: customers, jobs, crews and membership
+### 2026-11-08 — Stage 4 line 4: demo fixture
 
-- **Did:** `customer.*`, `crew.*`, `job.*` under the crew and job row locks, the membership race
-  proven against a real push both ways; `sync.pull` led crews by role; `table.module.css`;
-  `/customers`, `/jobs`, `/crews`; 754 tests (231 db, 502 api, 21 web); eight invariants watched
-  red (invariant 8 is 0014's); `2cb77de` on a red run (`seed.test.ts`, manual rows); green after.
-- **Decided:** by the owner on 2026-11-07: B7.1–B7.17 as recommended; open: office receipt entry.
-- **Next:** Stage 4 line 4 (demo fixture; TASKS:48).
+- **Did:** `seed(executor, company = SEED)`; `pnpm demo` (`tsx` in `packages/api`): a pattern-locked
+  database of its own, bootstrapped by the seed, every other write a persona's caller on an
+  app-role pool; 32 steps, 259 events, 18 closeouts, 11 approvals, five reasons; refusal, `--reset`
+  and partial-failure paths tested in disposable databases; 770 tests; one guard watched red.
+- **Decided:** by the owner on 2026-11-08: plan v2's I-1 to I-10 as recommended; Figma is in as
+  the exploration surface, to be written into DESIGN.md in its own line.
+- **Next:** the UX review line (Figma into DESIGN.md), then Stage 4 line 5 (TASKS:49).
