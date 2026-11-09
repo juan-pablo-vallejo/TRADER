@@ -15,17 +15,28 @@ import type { Db } from "./client";
 // A client or a transaction, as in guard.ts.
 type Executor = Pick<Db, "execute">;
 
+// What one bootstrap writes: the company, its counter and its first admin. The development
+// seed below is the default; the demo fixture (api demo/) hands in its own, so the three raw
+// statements have one home (ARCHITECTURE, seed decision) whichever company they bootstrap.
+export type SeedCompany = {
+  companyId: string;
+  companyName: string;
+  timezone: string;
+  adminEmail: string;
+  adminName: string;
+};
+
 // Placeholders, never the partner's details. The id is fixed because companies has no
 // natural key and a re-run must find its row. America/New_York: the pilot is in RI/MA (PRD).
 // The email is the invitation key (users.ts); identity_subject stays NULL until the first
 // sign-in binds it (Stage 3).
-export const SEED = {
+export const SEED: SeedCompany = {
   companyId: "019a4a00-0000-7000-8000-000000000001",
   companyName: "Pilot Company",
   timezone: "America/New_York",
   adminEmail: "admin@jpteq.app",
   adminName: "Admin",
-} as const;
+};
 
 export type SeedResult = {
   currentUser: string;
@@ -34,7 +45,10 @@ export type SeedResult = {
   users: number;
 };
 
-export async function seed(executor: Executor): Promise<SeedResult> {
+export async function seed(
+  executor: Executor,
+  company: SeedCompany = SEED,
+): Promise<SeedResult> {
   const { rows: roles } = await executor.execute<{ me: string; bypasses: boolean }>(sql`
     SELECT rolname AS me, rolsuper OR rolbypassrls AS bypasses
     FROM pg_roles WHERE rolname = current_user
@@ -51,7 +65,7 @@ export async function seed(executor: Executor): Promise<SeedResult> {
 
   await executor.execute(sql`
     INSERT INTO companies (id, name, timezone)
-    VALUES (${SEED.companyId}, ${SEED.companyName}, ${SEED.timezone})
+    VALUES (${company.companyId}, ${company.companyName}, ${company.timezone})
     ON CONFLICT (id) DO NOTHING
   `);
   // Inserted once and never updated: a re-run must not rewind a series that has issued
@@ -59,14 +73,14 @@ export async function seed(executor: Executor): Promise<SeedResult> {
   // continues (Stage 8), before the first issue.
   await executor.execute(sql`
     INSERT INTO invoice_counters (company_id, next_invoice_number, next_credit_memo_number)
-    VALUES (${SEED.companyId}, 1, 1)
+    VALUES (${company.companyId}, 1, 1)
     ON CONFLICT (company_id) DO NOTHING
   `);
   // The one statement allowed to write role on conflict (MEMORY): a request path never does.
   // The WHERE keeps a re-run on an intact admin a no-op, so updated_at stays put.
   await executor.execute(sql`
     INSERT INTO users (company_id, email, name, role)
-    VALUES (${SEED.companyId}, ${SEED.adminEmail}, ${SEED.adminName}, 'admin')
+    VALUES (${company.companyId}, ${company.adminEmail}, ${company.adminName}, 'admin')
     ON CONFLICT (company_id, lower(email)) DO UPDATE
       SET role = 'admin', updated_at = now()
       WHERE users.role <> 'admin'
@@ -74,10 +88,10 @@ export async function seed(executor: Executor): Promise<SeedResult> {
 
   const { rows: counts } = await executor.execute<Omit<SeedResult, "currentUser">>(sql`
     SELECT
-      (SELECT count(*) FROM companies WHERE id = ${SEED.companyId})::int AS "companies",
-      (SELECT count(*) FROM invoice_counters WHERE company_id = ${SEED.companyId})::int
+      (SELECT count(*) FROM companies WHERE id = ${company.companyId})::int AS "companies",
+      (SELECT count(*) FROM invoice_counters WHERE company_id = ${company.companyId})::int
         AS "invoiceCounters",
-      (SELECT count(*) FROM users WHERE company_id = ${SEED.companyId})::int AS "users"
+      (SELECT count(*) FROM users WHERE company_id = ${company.companyId})::int AS "users"
   `);
   const count = counts[0];
   if (count === undefined) throw new Error("seed: the count query returned no row");

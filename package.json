@@ -20,7 +20,8 @@
     "db:down": "docker compose down",
     "db:generate": "pnpm --filter @trader/db generate",
     "db:migrate": "pnpm --filter @trader/db migrate",
-    "db:seed": "pnpm --filter @trader/db seed"
+    "db:seed": "pnpm --filter @trader/db seed",
+    "demo": "pnpm --filter @trader/api demo"
   },
   "prettier": {
     "semi": true,
