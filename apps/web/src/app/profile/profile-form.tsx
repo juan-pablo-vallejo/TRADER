@@ -9,6 +9,8 @@ import { useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { Failure } from "../failure";
+import { Field } from "../field";
+import { Note } from "../note";
 import { strings } from "../strings";
 import { useTRPC } from "../trpc";
 import styles from "./profile.module.css";
@@ -48,10 +50,7 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
         <Failure error={me.error} devSignIn={devSignIn} />
       ) : (
         <form className={`${controls.card} ${styles.card}`} onSubmit={submit(me.data)}>
-          <div className={controls.field}>
-            <label className="label" htmlFor="profile-name">
-              {strings.name}
-            </label>
+          <Field id="profile-name" label={strings.name}>
             <input
               id="profile-name"
               className={controls.input}
@@ -62,11 +61,8 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
               value={fields(me.data).name}
               onChange={(e) => setDraft({ ...fields(me.data), name: e.target.value })}
             />
-          </div>
-          <div className={controls.field}>
-            <label className="label" htmlFor="profile-phone">
-              {strings.contactPhone}
-            </label>
+          </Field>
+          <Field id="profile-phone" label={strings.contactPhone}>
             <input
               id="profile-phone"
               className={controls.input}
@@ -76,11 +72,8 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
               value={fields(me.data).phone}
               onChange={(e) => setDraft({ ...fields(me.data), phone: e.target.value })}
             />
-          </div>
-          <div className={controls.field}>
-            <label className="label" htmlFor="profile-email">
-              {strings.email}
-            </label>
+          </Field>
+          <Field id="profile-email" label={strings.email}>
             <input
               id="profile-email"
               className={controls.input}
@@ -89,12 +82,8 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
               value={me.data.email}
             />
             <p className={`secondary ${controls.caption}`}>{strings.managedBySignIn}</p>
-          </div>
-          {note !== null && (
-            <p className={`secondary ${note === strings.saved ? "" : controls.error}`}>
-              {note}
-            </p>
-          )}
+          </Field>
+          <Note text={note} />
           <button type="submit" className={controls.primary} disabled={save.isPending}>
             {strings.save}
           </button>

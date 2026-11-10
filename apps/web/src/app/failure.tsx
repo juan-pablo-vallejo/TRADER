@@ -1,6 +1,6 @@
 // What a screen shows when its query fails (ARCHITECTURE, office web client): UNAUTHORIZED
 // and FORBIDDEN are states, drawn as the empty state; anything else is the attention banner.
-// Consumed by the roster and profile screens.
+// Consumed by every office screen.
 import controls from "./controls.module.css";
 import { strings } from "./strings";
 
