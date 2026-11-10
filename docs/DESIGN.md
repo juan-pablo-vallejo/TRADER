@@ -88,7 +88,8 @@ integer cents through the locale formatter; dates and times render in the compan
   indicator. Office web: responsive, usable on a phone and a desktop. Wide: 1280 pt target,
   12-column grid, dense tables, left navigation. Narrow: one column, table rows stacked,
   navigation in a menu, targets at least 48 pt. One breakpoint, 768 pt: narrow below it, wide at
-  or above it, set with the first office screen. No screen scrolls sideways at any width.
+  or above it, set with the first office screen. No screen scrolls sideways at any width: a
+  data table whose own column is under 720 pt shows its rows the narrow way.
 - Office shell: a 56 pt header with the mark, the wordmark, the signed-in name linking to the
   profile, and Sign out. Navigation is grouped by the work, not the table: Work — Jobs,
   Customers; People — Roster, Crews; a destination appears when its screen exists, and `/` opens
