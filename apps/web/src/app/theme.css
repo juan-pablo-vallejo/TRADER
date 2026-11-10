@@ -32,6 +32,7 @@
   --row: 44px;
   --wide: 1280px;
   --nav: 240px;
+  --header: 56px;
 }
 
 /* The one breakpoint (DESIGN, Layout): 768 px. Below it the office is narrow — one column,
@@ -90,6 +91,12 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* Keyboard focus (DESIGN, Layout): one outline for every control. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* Links are actions: accent, never the brand red */

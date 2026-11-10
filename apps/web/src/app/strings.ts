@@ -3,7 +3,6 @@
 // is what moves there. Nothing crew-facing lives here.
 export const strings = {
   wordmark: "TRADER",
-  markAlt: "D Sierra Painting",
   empty: "Nothing to show yet.",
   devSignIn: "Development sign-in",
   devSignInBadEmail: "Enter an email address.",
@@ -19,6 +18,8 @@ export const strings = {
   jobs: "Jobs",
   crews: "Crews",
   profile: "Profile",
+  work: "Work",
+  people: "People",
 
   // States every screen can be in
   loading: "Loading…",

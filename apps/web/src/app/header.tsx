@@ -1,17 +1,21 @@
 import Image from "next/image";
 
-import logo from "../../../../assets/brand/logo.png";
+import { devIdentityEnabled } from "@trader/api";
+
+import icon from "../../../../assets/brand/icon.png";
+import { Account } from "./account";
 import styles from "./header.module.css";
 import { strings } from "./strings";
 
-// DESIGN, Brand: logo.png is the mark for the office header, rendered no smaller than 96 pt
-// so the name stays legible, with the wordmark in `title` beside it. The asset is imported
-// from its one home in assets/brand, never copied.
+// DESIGN, Layout and Brand: the office header is 56 pt — icon.png at 32 pt, the wordmark, and
+// the signed-in person on the right. The asset is imported from its one home in assets/brand,
+// never copied. Sign-out exists only where the development identity is on, read per request.
 export function Header() {
   return (
     <header className={styles.header}>
-      <Image src={logo} alt={strings.markAlt} width={96} height={96} priority />
-      <span className={`title ${styles.wordmark}`}>{strings.wordmark}</span>
+      <Image src={icon} alt="" width={32} height={32} priority />
+      <span className={`heading ${styles.wordmark}`}>{strings.wordmark}</span>
+      <Account devSignIn={devIdentityEnabled(process.env)} />
     </header>
   );
 }

@@ -1,5 +1,5 @@
-/* The office navigation: a menu button over a list on narrow, the list alone on wide. Every
-   link is a 48 pt row; the current route is in accent. */
+/* The office navigation: a menu button over the groups on narrow, the groups alone on wide.
+   Every link is a 48 pt row; the current route is in accent, marked by a bar as well as color. */
 .nav {
   background: var(--surface);
   border-bottom: var(--hairline) solid var(--border);
@@ -16,14 +16,22 @@
   color: var(--ink);
   cursor: pointer;
 }
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0 0 var(--space-2);
+.groups {
   display: none;
+  padding-bottom: var(--space-2);
 }
 .open {
   display: block;
+}
+.group {
+  margin: 0;
+  padding: var(--space-4) var(--space-4) var(--space-1);
+  color: var(--ink-secondary);
+}
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 .link {
   display: flex;
@@ -32,22 +40,23 @@
   padding: 0 var(--space-4);
   color: var(--ink);
   text-decoration: none;
+  border-left: var(--space-1) solid transparent;
 }
 .current {
   color: var(--accent);
   font-weight: 600;
+  border-left-color: var(--accent);
 }
 @media (min-width: 768px) {
   .nav {
     border-bottom: 0;
     border-right: var(--hairline) solid var(--border);
-    min-height: 100%;
+    min-height: calc(100vh - var(--header));
   }
   .toggle {
     display: none;
   }
-  .list {
+  .groups {
     display: block;
-    padding-top: var(--space-2);
   }
 }

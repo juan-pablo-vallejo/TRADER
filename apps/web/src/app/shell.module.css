@@ -10,6 +10,8 @@
   max-width: var(--wide);
   box-sizing: border-box;
   width: 100%;
+  /* The data table reads this column's width, not the viewport's (table.module.css). */
+  container-type: inline-size;
 }
 @media (min-width: 768px) {
   .shell {

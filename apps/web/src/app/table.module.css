@@ -43,7 +43,10 @@
   background: var(--canvas);
 }
 
-@media (max-width: 767px) {
+/* Rows the narrow way whenever the content column is under 720 px (DESIGN, Layout): every
+   narrow viewport, and a wide one whose table would not fit beside the navigation. A container
+   query cannot read a custom property either, so 720 is written here and nowhere else. */
+@container (max-width: 719px) {
   .table,
   .table thead,
   .table tbody,
