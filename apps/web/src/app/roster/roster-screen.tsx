@@ -2,8 +2,8 @@
 
 // The roster screen (PRD, Target users: the admin's roster; DESIGN, Data table). The list is
 // one query; every mutation invalidates it, so the table refetches and nothing is edited in
-// the cache by hand. Each row is text plus one Edit toggle; the editor row beneath holds the
-// role, the deactivation and the rates. A `rejected` answer reads beneath the form it came
+// the cache by hand. The page header's action opens the invite form. Each row is text plus one
+// Edit toggle; the editor row beneath holds the role, the pay rate and, last, the deactivation. A `rejected` answer reads beneath the form it came
 // from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
@@ -11,6 +11,10 @@ import { useState, type FormEvent } from "react";
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { cents, day, money } from "../format";
+import { Field } from "../field";
+import { Note } from "../note";
+import { EditorFooter, EditorRow, EditorSection, RowToggle } from "../row-editor";
+import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
@@ -36,16 +40,28 @@ function useRefresh() {
 
 export function RosterScreen({ devSignIn }: { devSignIn: boolean }) {
   const list = useRoster();
+  const [adding, setAdding] = useState(false);
   return (
     <>
-      <h1 className="title">{strings.roster}</h1>
+      <PageHeader
+        title={strings.roster}
+        action={
+          list.isSuccess
+            ? {
+                label: strings.addPerson,
+                open: adding,
+                onToggle: () => setAdding((a) => !a),
+              }
+            : undefined
+        }
+      />
       {list.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : list.isError ? (
         <Failure error={list.error} devSignIn={devSignIn} />
       ) : (
         <>
-          <InviteForm />
+          {adding && <InviteForm onDone={() => setAdding(false)} />}
           {list.data.length === 0 ? (
             <EmptyState text={strings.emptyRoster} />
           ) : (
@@ -64,7 +80,7 @@ const statusOf = (row: Row) =>
       ? strings.invited
       : strings.active;
 
-function InviteForm() {
+function InviteForm({ onDone }: { onDone: () => void }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [email, setEmail] = useState("");
@@ -83,6 +99,7 @@ function InviteForm() {
         setRole("worker");
         setNote(null);
         await refresh();
+        onDone();
       },
     }),
   );
@@ -92,15 +109,17 @@ function InviteForm() {
     invite.mutate({ email, name, role });
   };
   return (
-    <form className={controls.card} onSubmit={submit}>
-      <h2 className="heading">{strings.addPerson}</h2>
+    <form
+      id={CREATE_FORM_ID}
+      aria-label={strings.addPerson}
+      className={controls.card}
+      onSubmit={submit}
+    >
       <div className={styles.inviteGrid}>
-        <div className={controls.field}>
-          <label className="label" htmlFor="invite-email">
-            {strings.email}
-          </label>
+        <Field id="invite-email" label={strings.email}>
           <input
             id="invite-email"
+            autoFocus
             className={controls.input}
             type="email"
             autoComplete="off"
@@ -108,12 +127,9 @@ function InviteForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
-        </div>
-        <div className={controls.field}>
-          <label className="label" htmlFor="invite-name">
-            {strings.name}
-          </label>
+          <Note text={note} />
+        </Field>
+        <Field id="invite-name" label={strings.name}>
           <input
             id="invite-name"
             className={controls.input}
@@ -123,11 +139,8 @@ function InviteForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-        </div>
-        <div className={controls.field}>
-          <label className="label" htmlFor="invite-role">
-            {strings.role}
-          </label>
+        </Field>
+        <Field id="invite-role" label={strings.role}>
           <select
             id="invite-role"
             className={controls.select}
@@ -140,11 +153,9 @@ function InviteForm() {
               </option>
             ))}
           </select>
-        </div>
+        </Field>
       </div>
-      {invite.isError && (
-        <p className={`secondary ${controls.error}`}>{strings.requestFailed}</p>
-      )}
+      {invite.isError && <Note text={strings.requestFailed} />}
       <button type="submit" className={controls.primary} disabled={invite.isPending}>
         {strings.addToRoster}
       </button>
@@ -166,7 +177,7 @@ function RosterTable({ rows }: { rows: Rows }) {
             {strings.hourlyRate}
           </th>
           <th scope="col">
-            <span className="label">{strings.edit}</span>
+            <span className="visually-hidden">{strings.edit}</span>
           </th>
         </tr>
       </thead>
@@ -181,35 +192,31 @@ function RosterTable({ rows }: { rows: Rows }) {
               <td data-label={strings.email}>{row.email}</td>
               <td data-label={strings.role}>{strings.roles[row.role]}</td>
               <td data-label={strings.status} className={table.status}>
-                {statusOf(row)}
+                {statusOf(row) === strings.invited ? (
+                  <span className={`label ${table.pillPending}`}>{strings.invited}</span>
+                ) : (
+                  statusOf(row)
+                )}
               </td>
-              <td data-label={strings.hourlyRate} className={table.number}>
+              <td
+                data-label={strings.hourlyRate}
+                className={table.number}
+                data-empty={row.currentRate === null ? "" : undefined}
+              >
                 {row.currentRate === null
                   ? strings.unpriced
                   : money(row.currentRate.hourlyRateCents, row.currentRate.currency)}
               </td>
-              <td className={table.toggle}>
-                <button
-                  type="button"
-                  className={controls.textAction}
-                  aria-expanded={open}
-                  aria-controls={`editor-${row.id}`}
-                  onClick={() => setEditing(open ? null : row.id)}
-                >
-                  {open ? strings.close : strings.edit}
-                </button>
-              </td>
+              <RowToggle
+                rowId={row.id}
+                open={open}
+                onToggle={() => setEditing(open ? null : row.id)}
+              />
             </tr>,
             open ? (
-              <tr
-                key={`${row.id}-editor`}
-                className={table.editor}
-                id={`editor-${row.id}`}
-              >
-                <td colSpan={6}>
-                  <Editor row={row} />
-                </td>
-              </tr>
+              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
+                <Editor row={row} />
+              </EditorRow>
             ) : null,
           ];
         })}
@@ -220,46 +227,44 @@ function RosterTable({ rows }: { rows: Rows }) {
 
 function Editor({ row }: { row: Row }) {
   return (
-    <div className={styles.editorGrid}>
-      <RoleAndState row={row} />
-      <Rates row={row} />
-    </div>
+    <>
+      <div className={styles.editorGrid}>
+        <Role row={row} />
+        <Rates row={row} />
+      </div>
+      <EditorFooter>
+        <Access row={row} />
+      </EditorFooter>
+    </>
   );
 }
 
-function RoleAndState({ row }: { row: Row }) {
+// What a role or an access answer says: the last admin is refused, a no-op is "No change.".
+const noteOf = (answer: { result: string }) =>
+  answer.result === "rejected"
+    ? strings.lastAdmin
+    : answer.result === "unchanged"
+      ? strings.unchanged
+      : null;
+
+function Role({ row }: { row: Row }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [role, setRole] = useState<Roles>(row.role);
   const [note, setNote] = useState<string | null>(null);
-  const answered = async (answer: { result: string }) => {
-    setNote(
-      answer.result === "rejected"
-        ? strings.lastAdmin
-        : answer.result === "unchanged"
-          ? strings.unchanged
-          : null,
-    );
-    await refresh();
-  };
-  const failed = () => setNote(strings.requestFailed);
   const setRoleCall = useMutation(
-    trpc.roster.setRole.mutationOptions({ onSuccess: answered, onError: failed }),
+    trpc.roster.setRole.mutationOptions({
+      onSuccess: async (answer) => {
+        setNote(noteOf(answer));
+        await refresh();
+      },
+      onError: () => setNote(strings.requestFailed),
+    }),
   );
-  const deactivate = useMutation(
-    trpc.roster.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
-  );
-  const reactivate = useMutation(
-    trpc.roster.reactivate.mutationOptions({ onSuccess: answered, onError: failed }),
-  );
-  const busy = setRoleCall.isPending || deactivate.isPending || reactivate.isPending;
   const roleId = `role-${row.id}`;
   return (
-    <div>
-      <div className={controls.field}>
-        <label className="label" htmlFor={roleId}>
-          {strings.role}
-        </label>
+    <EditorSection>
+      <Field id={roleId} label={strings.role}>
         <select
           id={roleId}
           className={controls.select}
@@ -272,38 +277,60 @@ function RoleAndState({ row }: { row: Row }) {
             </option>
           ))}
         </select>
-      </div>
-      <div className={controls.actions}>
+      </Field>
+      <button
+        type="button"
+        className={`${controls.secondary} ${table.stretch}`}
+        disabled={setRoleCall.isPending}
+        onClick={() => setRoleCall.mutate({ userId: row.id, role })}
+      >
+        {strings.saveRole}
+      </button>
+      <Note text={note} />
+    </EditorSection>
+  );
+}
+
+// Deactivation, last and alone in the editor's footer; reactivation in its place.
+function Access({ row }: { row: Row }) {
+  const trpc = useTRPC();
+  const refresh = useRefresh();
+  const [note, setNote] = useState<string | null>(null);
+  const answered = async (answer: { result: string }) => {
+    setNote(noteOf(answer));
+    await refresh();
+  };
+  const failed = () => setNote(strings.requestFailed);
+  const deactivate = useMutation(
+    trpc.roster.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
+  );
+  const reactivate = useMutation(
+    trpc.roster.reactivate.mutationOptions({ onSuccess: answered, onError: failed }),
+  );
+  const busy = deactivate.isPending || reactivate.isPending;
+  return (
+    <>
+      {row.deactivatedAt === null ? (
+        <button
+          type="button"
+          className={controls.destructive}
+          disabled={busy}
+          onClick={() => deactivate.mutate({ userId: row.id })}
+        >
+          {strings.deactivate}
+        </button>
+      ) : (
         <button
           type="button"
           className={`${controls.secondary} ${table.stretch}`}
           disabled={busy}
-          onClick={() => setRoleCall.mutate({ userId: row.id, role })}
+          onClick={() => reactivate.mutate({ userId: row.id })}
         >
-          {strings.saveRole}
+          {strings.reactivate}
         </button>
-        {row.deactivatedAt === null ? (
-          <button
-            type="button"
-            className={controls.destructive}
-            disabled={busy}
-            onClick={() => deactivate.mutate({ userId: row.id })}
-          >
-            {strings.deactivate}
-          </button>
-        ) : (
-          <button
-            type="button"
-            className={`${controls.secondary} ${table.stretch}`}
-            disabled={busy}
-            onClick={() => reactivate.mutate({ userId: row.id })}
-          >
-            {strings.reactivate}
-          </button>
-        )}
-      </div>
-      {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
-    </div>
+      )}
+      <Note text={note} />
+    </>
   );
 }
 
@@ -342,12 +369,9 @@ function Rates({ row }: { row: Row }) {
   const dateId = `rate-from-${row.id}`;
   const amountId = `rate-amount-${row.id}`;
   return (
-    <div>
+    <EditorSection heading={strings.payRate}>
       <form onSubmit={submit}>
-        <div className={controls.field}>
-          <label className="label" htmlFor={dateId}>
-            {strings.effectiveFrom}
-          </label>
+        <Field id={dateId} label={strings.effectiveFrom}>
           <input
             id={dateId}
             className={controls.input}
@@ -356,11 +380,8 @@ function Rates({ row }: { row: Row }) {
             value={effectiveFrom}
             onChange={(e) => setEffectiveFrom(e.target.value)}
           />
-        </div>
-        <div className={controls.field}>
-          <label className="label" htmlFor={amountId}>
-            {strings.hourlyRate}
-          </label>
+        </Field>
+        <Field id={amountId} label={strings.hourlyRate}>
           <input
             id={amountId}
             className={controls.input}
@@ -372,8 +393,8 @@ function Rates({ row }: { row: Row }) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
           />
-          {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
-        </div>
+          <Note text={note} />
+        </Field>
         <button
           type="submit"
           className={`${controls.secondary} ${table.stretch}`}
@@ -386,7 +407,7 @@ function Rates({ row }: { row: Row }) {
       {history.isPending ? (
         <p className="secondary">{strings.loading}</p>
       ) : history.isError ? (
-        <p className={`secondary ${controls.error}`}>{strings.requestFailed}</p>
+        <Note text={strings.requestFailed} />
       ) : history.data.length === 0 ? (
         <p className="secondary">{strings.noRates}</p>
       ) : (
@@ -401,6 +422,6 @@ function Rates({ row }: { row: Row }) {
           ))}
         </ul>
       )}
-    </div>
+    </EditorSection>
   );
 }
