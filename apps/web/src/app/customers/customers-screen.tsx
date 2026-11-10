@@ -1,14 +1,19 @@
 "use client";
 
 // The customers screen (PRD, Target users: the admin's customers; DESIGN, Data table). The
-// list is one query; every mutation invalidates it. Each row is text plus one Edit toggle; the
-// editor row beneath holds the fields, Save and the deactivation. A `rejected` answer reads
+// list is one query; every mutation invalidates it. The page header's action opens the create
+// form. Each row is text plus one Edit toggle; the editor row beneath holds the fields with
+// Save and, last, the deactivation. A `rejected` answer reads
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
+import { Field } from "../field";
+import { Note } from "../note";
+import { EditorFooter, EditorRow, EditorSection, RowToggle } from "../row-editor";
+import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
@@ -47,16 +52,29 @@ function useRefresh() {
 
 export function CustomersScreen({ devSignIn }: { devSignIn: boolean }) {
   const list = useCustomers();
+  const [adding, setAdding] = useState(false);
+  const ready = list.isSuccess;
   return (
     <>
-      <h1 className="title">{strings.customers}</h1>
+      <PageHeader
+        title={strings.customers}
+        action={
+          ready
+            ? {
+                label: strings.addCustomer,
+                open: adding,
+                onToggle: () => setAdding((a) => !a),
+              }
+            : undefined
+        }
+      />
       {list.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : list.isError ? (
         <Failure error={list.error} devSignIn={devSignIn} />
       ) : (
         <>
-          <CreateForm />
+          {adding && <CreateForm onDone={() => setAdding(false)} />}
           {list.data.length === 0 ? (
             <EmptyState text={strings.emptyCustomers} />
           ) : (
@@ -84,10 +102,7 @@ function CustomerFields({
     props: React.InputHTMLAttributes<HTMLInputElement>,
     className = "",
   ) => (
-    <div className={`${controls.field} ${className}`}>
-      <label className="label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
+    <Field id={`${id}-${key}`} label={label} className={className}>
       <input
         id={`${id}-${key}`}
         className={controls.input}
@@ -96,18 +111,20 @@ function CustomerFields({
         onChange={(e) => onChange({ ...value, [key]: e.target.value })}
         {...props}
       />
-    </div>
+    </Field>
   );
   return (
     <div className={styles.formGrid}>
-      {field("name", strings.name, { type: "text", required: true, maxLength: 200 })}
+      {field("name", strings.name, {
+        type: "text",
+        required: true,
+        maxLength: 200,
+        autoFocus: id === "new-customer",
+      })}
       {field("address", strings.address, { type: "text", maxLength: 500 })}
       {field("phone", strings.phone, { type: "tel", maxLength: 32 })}
       {field("email", strings.email, { type: "email", maxLength: 254 })}
-      <div className={`${controls.field} ${styles.wide}`}>
-        <label className="label" htmlFor={`${id}-notes`}>
-          {strings.notes}
-        </label>
+      <Field id={`${id}-notes`} label={strings.notes} className={styles.wide}>
         <textarea
           id={`${id}-notes`}
           className={`${controls.input} ${styles.notes}`}
@@ -115,12 +132,12 @@ function CustomerFields({
           value={value.notes}
           onChange={(e) => onChange({ ...value, notes: e.target.value })}
         />
-      </div>
+      </Field>
     </div>
   );
 }
 
-function CreateForm() {
+function CreateForm({ onDone }: { onDone: () => void }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [value, setValue] = useState<Fields>(EMPTY);
@@ -131,6 +148,7 @@ function CreateForm() {
         setValue(EMPTY);
         setNote(null);
         await refresh();
+        onDone();
       },
       onError: () => setNote(strings.requestFailed),
     }),
@@ -141,10 +159,14 @@ function CreateForm() {
     create.mutate(value);
   };
   return (
-    <form className={controls.card} onSubmit={submit}>
-      <h2 className="heading">{strings.addCustomer}</h2>
+    <form
+      id={CREATE_FORM_ID}
+      aria-label={strings.addCustomer}
+      className={controls.card}
+      onSubmit={submit}
+    >
       <CustomerFields id="new-customer" value={value} onChange={setValue} />
-      {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
+      <Note text={note} />
       <button type="submit" className={controls.primary} disabled={create.isPending}>
         {strings.addCustomer}
       </button>
@@ -167,7 +189,7 @@ function CustomersTable({ rows }: { rows: Rows }) {
           </th>
           <th scope="col">{strings.status}</th>
           <th scope="col">
-            <span className="label">{strings.edit}</span>
+            <span className="visually-hidden">{strings.edit}</span>
           </th>
         </tr>
       </thead>
@@ -179,37 +201,40 @@ function CustomersTable({ rows }: { rows: Rows }) {
               <td data-label={strings.name} className="body-strong">
                 {row.name}
               </td>
-              <td data-label={strings.address}>{row.address ?? strings.none}</td>
-              <td data-label={strings.phone}>{row.phone ?? strings.none}</td>
-              <td data-label={strings.email}>{row.email ?? strings.none}</td>
+              <td
+                data-label={strings.address}
+                data-empty={row.address === null ? "" : undefined}
+              >
+                {row.address ?? strings.none}
+              </td>
+              <td
+                data-label={strings.phone}
+                data-empty={row.phone === null ? "" : undefined}
+              >
+                {row.phone ?? strings.none}
+              </td>
+              <td
+                data-label={strings.email}
+                data-empty={row.email === null ? "" : undefined}
+              >
+                {row.email ?? strings.none}
+              </td>
               <td data-label={strings.jobs} className={table.number}>
                 {row.unarchivedJobs}
               </td>
               <td data-label={strings.status} className={table.status}>
                 {row.deactivatedAt === null ? strings.active : strings.deactivated}
               </td>
-              <td className={table.toggle}>
-                <button
-                  type="button"
-                  className={controls.textAction}
-                  aria-expanded={open}
-                  aria-controls={`editor-${row.id}`}
-                  onClick={() => setEditing(open ? null : row.id)}
-                >
-                  {open ? strings.close : strings.edit}
-                </button>
-              </td>
+              <RowToggle
+                rowId={row.id}
+                open={open}
+                onToggle={() => setEditing(open ? null : row.id)}
+              />
             </tr>,
             open ? (
-              <tr
-                key={`${row.id}-editor`}
-                className={table.editor}
-                id={`editor-${row.id}`}
-              >
-                <td colSpan={7}>
-                  <Editor row={row} />
-                </td>
-              </tr>
+              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={7}>
+                <Editor row={row} />
+              </EditorRow>
             ) : null,
           ];
         })}
@@ -257,15 +282,10 @@ function Editor({ row }: { row: Row }) {
     save.mutate({ customerId: row.id, ...value });
   };
   return (
-    <div>
-      <form onSubmit={submit}>
-        <CustomerFields id={`customer-${row.id}`} value={value} onChange={setValue} />
-        {note !== null && (
-          <p className={`secondary ${note === strings.saved ? "" : controls.error}`}>
-            {note}
-          </p>
-        )}
-        <div className={controls.actions}>
+    <>
+      <EditorSection>
+        <form onSubmit={submit}>
+          <CustomerFields id={`customer-${row.id}`} value={value} onChange={setValue} />
           <button
             type="submit"
             className={`${controls.secondary} ${table.stretch}`}
@@ -273,30 +293,31 @@ function Editor({ row }: { row: Row }) {
           >
             {strings.save}
           </button>
-          {row.deactivatedAt === null ? (
-            <button
-              type="button"
-              className={controls.destructive}
-              disabled={busy}
-              onClick={() => deactivate.mutate({ customerId: row.id })}
-            >
-              {strings.deactivate}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className={`${controls.secondary} ${table.stretch}`}
-              disabled={busy}
-              onClick={() => reactivate.mutate({ customerId: row.id })}
-            >
-              {strings.reactivate}
-            </button>
-          )}
-        </div>
-        {stateNote !== null && (
-          <p className={`secondary ${controls.error}`}>{stateNote}</p>
+          <Note text={note} />
+        </form>
+      </EditorSection>
+      <EditorFooter>
+        {row.deactivatedAt === null ? (
+          <button
+            type="button"
+            className={controls.destructive}
+            disabled={busy}
+            onClick={() => deactivate.mutate({ customerId: row.id })}
+          >
+            {strings.deactivate}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={`${controls.secondary} ${table.stretch}`}
+            disabled={busy}
+            onClick={() => reactivate.mutate({ customerId: row.id })}
+          >
+            {strings.reactivate}
+          </button>
         )}
-      </form>
-    </div>
+        <Note text={stateNote} />
+      </EditorFooter>
+    </>
   );
 }
