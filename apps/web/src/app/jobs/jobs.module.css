@@ -9,12 +9,19 @@
   display: grid;
   gap: 0 var(--space-3);
 }
+.location summary {
+  padding: var(--space-4) 0;
+  color: var(--accent);
+  cursor: pointer;
+}
+.location {
+  margin-bottom: var(--space-3);
+}
 .editorGrid {
   display: grid;
   gap: var(--space-6);
 }
 .filter {
-  max-width: 240px;
   margin-bottom: var(--space-4);
 }
 
@@ -24,6 +31,9 @@
   }
   .formGrid .wide {
     grid-column: 1 / -1;
+  }
+  .filter {
+    max-width: var(--nav);
   }
   .locationGrid {
     grid-template-columns: 1fr 1fr 1fr;

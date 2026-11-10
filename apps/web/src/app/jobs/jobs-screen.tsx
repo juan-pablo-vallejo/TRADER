@@ -3,15 +3,20 @@
 // The jobs screen (PRD, Jobs and location: jobs belong to a customer and are assigned to a
 // crew; DESIGN, Data table). Three queries — jobs, customers and crews, the last two for the
 // selects; every mutation invalidates the jobs. A status filter, open by default, narrows the
-// table on the client. Each row is text plus one Edit toggle; the editor row beneath holds the
-// facts with Save, the crew with Assign, and the status with Set status — three procedures,
-// three answers. A `rejected` answer reads beneath the control it came from. Consumed by
+// table on the client. The page header's action opens the create form; the location waits
+// behind a disclosure. Each row is text plus one Edit toggle; the editor row beneath holds the
+// details with Save, the crew with Assign, and the status with Set status — three procedures,
+// three sections, three answers. A `rejected` answer reads beneath the control it came from. Consumed by
 // page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
+import { Field } from "../field";
+import { Note } from "../note";
+import { EditorRow, EditorSection, RowToggle } from "../row-editor";
+import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
@@ -90,21 +95,37 @@ export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
   const customers = useCustomers();
   const crews = useCrews();
   const [filter, setFilter] = useState<Status | "all">("open");
+  const [adding, setAdding] = useState(false);
   const failed = [list, customers, crews].find((q) => q.isError);
+  const ready = list.isSuccess && customers.isSuccess && crews.isSuccess;
   return (
     <>
-      <h1 className="title">{strings.jobs}</h1>
+      <PageHeader
+        title={strings.jobs}
+        action={
+          ready
+            ? {
+                label: strings.addJob,
+                open: adding,
+                onToggle: () => setAdding((a) => !a),
+              }
+            : undefined
+        }
+      />
       {list.isPending || customers.isPending || crews.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : failed !== undefined ? (
         <Failure error={failed.error} devSignIn={devSignIn} />
       ) : (
         <>
-          <CreateForm customers={customers.data!} crews={crews.data!} />
-          <div className={`${controls.field} ${styles.filter}`}>
-            <label className="label" htmlFor="jobs-filter">
-              {strings.show}
-            </label>
+          {adding && (
+            <CreateForm
+              customers={customers.data!}
+              crews={crews.data!}
+              onDone={() => setAdding(false)}
+            />
+          )}
+          <Field id="jobs-filter" label={strings.show} className={styles.filter}>
             <select
               id="jobs-filter"
               className={controls.select}
@@ -118,7 +139,7 @@ export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
               ))}
               <option value="all">{strings.allJobs}</option>
             </select>
-          </div>
+          </Field>
           {(() => {
             const rows = list.data!.filter(
               (j) => filter === "all" || j.status === filter,
@@ -154,10 +175,7 @@ function FactsFields({
     label: string,
     props: React.InputHTMLAttributes<HTMLInputElement>,
   ) => (
-    <div className={controls.field}>
-      <label className="label" htmlFor={`${id}-${key}`}>
-        {label}
-      </label>
+    <Field id={`${id}-${key}`} label={label}>
       <input
         id={`${id}-${key}`}
         className={controls.input}
@@ -166,20 +184,21 @@ function FactsFields({
         onChange={set(key)}
         {...props}
       />
-    </div>
+    </Field>
   );
+  // The location is optional and technical, so it waits behind a disclosure, open when the
+  // job already has one or the person has typed into it.
+  const located = [value.lat, value.lng, value.radiusM].some((v) => v !== "");
   // Active customers, plus the job's own even if deactivated, so the select shows the truth.
   const options = customers.filter(
     (c) => c.deactivatedAt === null || c.id === value.customerId,
   );
   return (
     <div className={styles.formGrid}>
-      <div className={controls.field}>
-        <label className="label" htmlFor={`${id}-customerId`}>
-          {strings.customer}
-        </label>
+      <Field id={`${id}-customerId`} label={strings.customer}>
         <select
           id={`${id}-customerId`}
+          autoFocus={id === "new-job"}
           className={controls.select}
           required
           value={value.customerId}
@@ -192,16 +211,19 @@ function FactsFields({
             </option>
           ))}
         </select>
-      </div>
+      </Field>
       {input("name", strings.job, { type: "text", required: true, maxLength: 200 })}
       <div className={styles.wide}>
         {input("address", strings.address, { type: "text", maxLength: 500 })}
       </div>
-      <div className={`${styles.locationGrid} ${styles.wide}`}>
-        {input("lat", strings.latitude, { type: "text", inputMode: "decimal" })}
-        {input("lng", strings.longitude, { type: "text", inputMode: "decimal" })}
-        {input("radiusM", strings.radiusM, { type: "text", inputMode: "numeric" })}
-      </div>
+      <details className={`${styles.location} ${styles.wide}`} open={located}>
+        <summary className="label">{strings.location}</summary>
+        <div className={styles.locationGrid}>
+          {input("lat", strings.latitude, { type: "text", inputMode: "decimal" })}
+          {input("lng", strings.longitude, { type: "text", inputMode: "decimal" })}
+          {input("radiusM", strings.radiusM, { type: "text", inputMode: "numeric" })}
+        </div>
+      </details>
     </div>
   );
 }
@@ -219,10 +241,7 @@ function CrewSelect({
 }) {
   const options = crews.filter((c) => c.deactivatedAt === null || c.id === value);
   return (
-    <div className={controls.field}>
-      <label className="label" htmlFor={id}>
-        {strings.crew}
-      </label>
+    <Field id={id} label={strings.crew}>
       <select
         id={id}
         className={controls.select}
@@ -237,7 +256,7 @@ function CrewSelect({
           </option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 }
 
@@ -255,7 +274,15 @@ const reason = (code: string, on: "facts" | "assign" | "status") =>
         ? strings.hasInvoices
         : strings.requestFailed;
 
-function CreateForm({ customers, crews }: { customers: Customers; crews: Crews }) {
+function CreateForm({
+  customers,
+  crews,
+  onDone,
+}: {
+  customers: Customers;
+  crews: Crews;
+  onDone: () => void;
+}) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [facts, setFacts] = useState<Facts>(EMPTY);
@@ -272,6 +299,7 @@ function CreateForm({ customers, crews }: { customers: Customers; crews: Crews }
         setCrewId("");
         setNote(null);
         await refresh();
+        onDone();
       },
       onError: () => setNote(strings.requestFailed),
     }),
@@ -293,11 +321,15 @@ function CreateForm({ customers, crews }: { customers: Customers; crews: Crews }
     });
   };
   return (
-    <form className={controls.card} onSubmit={submit}>
-      <h2 className="heading">{strings.addJob}</h2>
+    <form
+      id={CREATE_FORM_ID}
+      aria-label={strings.addJob}
+      className={controls.card}
+      onSubmit={submit}
+    >
       <FactsFields id="new-job" customers={customers} value={facts} onChange={setFacts} />
       <CrewSelect id="new-job-crew" crews={crews} value={crewId} onChange={setCrewId} />
-      {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
+      <Note text={note} />
       <button type="submit" className={controls.primary} disabled={create.isPending}>
         {strings.addJob}
       </button>
@@ -325,7 +357,7 @@ function JobsTable({
           <th scope="col">{strings.status}</th>
           <th scope="col">{strings.address}</th>
           <th scope="col">
-            <span className="label">{strings.edit}</span>
+            <span className="visually-hidden">{strings.edit}</span>
           </th>
         </tr>
       </thead>
@@ -353,29 +385,22 @@ function JobsTable({
               <td data-label={strings.status} className={table.status}>
                 {strings.jobStatus[row.status]}
               </td>
-              <td data-label={strings.address}>{row.address ?? strings.none}</td>
-              <td className={table.toggle}>
-                <button
-                  type="button"
-                  className={controls.textAction}
-                  aria-expanded={open}
-                  aria-controls={`editor-${row.id}`}
-                  onClick={() => setEditing(open ? null : row.id)}
-                >
-                  {open ? strings.close : strings.edit}
-                </button>
+              <td
+                data-label={strings.address}
+                data-empty={row.address === null ? "" : undefined}
+              >
+                {row.address ?? strings.none}
               </td>
+              <RowToggle
+                rowId={row.id}
+                open={open}
+                onToggle={() => setEditing(open ? null : row.id)}
+              />
             </tr>,
             open ? (
-              <tr
-                key={`${row.id}-editor`}
-                className={table.editor}
-                id={`editor-${row.id}`}
-              >
-                <td colSpan={6}>
-                  <Editor row={row} customers={customers} crews={crews} />
-                </td>
-              </tr>
+              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
+                <Editor row={row} customers={customers} crews={crews} />
+              </EditorRow>
             ) : null,
           ];
         })}
@@ -395,7 +420,9 @@ function Editor({
 }) {
   return (
     <div className={styles.editorGrid}>
-      <FactsEditor row={row} customers={customers} />
+      <EditorSection heading={strings.details}>
+        <FactsEditor row={row} customers={customers} />
+      </EditorSection>
       <CrewAndStatus row={row} crews={crews} />
     </div>
   );
@@ -443,11 +470,6 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
         value={facts}
         onChange={setFacts}
       />
-      {note !== null && (
-        <p className={`secondary ${note === strings.saved ? "" : controls.error}`}>
-          {note}
-        </p>
-      )}
       <button
         type="submit"
         className={`${controls.secondary} ${table.stretch}`}
@@ -455,6 +477,7 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
       >
         {strings.saveDetails}
       </button>
+      <Note text={note} />
     </form>
   );
 }
@@ -502,55 +525,53 @@ function CrewAndStatus({ row, crews }: { row: Row; crews: Crews }) {
   const statusId = `job-status-${row.id}`;
   return (
     <div>
-      <CrewSelect
-        id={`job-crew-${row.id}`}
-        crews={crews}
-        value={crewId}
-        onChange={setCrewId}
-      />
-      <button
-        type="button"
-        className={`${controls.secondary} ${table.stretch}`}
-        disabled={busy}
-        onClick={() =>
-          assign.mutate({ jobId: row.id, crewId: crewId === "" ? null : crewId })
-        }
-      >
-        {strings.assign}
-      </button>
-      {crewNote !== null && <p className={`secondary ${controls.error}`}>{crewNote}</p>}
-      <div className={controls.field}>
-        <label className="label" htmlFor={statusId}>
-          {strings.status}
-        </label>
-        <select
-          id={statusId}
-          className={controls.select}
-          value={status}
-          onChange={(e) => setStatus(e.target.value as Status)}
+      <EditorSection>
+        <CrewSelect
+          id={`job-crew-${row.id}`}
+          crews={crews}
+          value={crewId}
+          onChange={setCrewId}
+        />
+        <button
+          type="button"
+          className={`${controls.secondary} ${table.stretch}`}
+          disabled={busy}
+          onClick={() =>
+            assign.mutate({ jobId: row.id, crewId: crewId === "" ? null : crewId })
+          }
         >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {strings.jobStatus[s]}
-            </option>
-          ))}
-        </select>
-      </div>
-      <button
-        type="button"
-        className={`${controls.secondary} ${table.stretch}`}
-        disabled={busy}
-        onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
-      >
-        {strings.setStatus}
-      </button>
-      {statusNote !== null && (
-        <p
-          className={`secondary ${statusNote === strings.archivedNote ? "" : controls.error}`}
+          {strings.assign}
+        </button>
+        <Note text={crewNote} />
+      </EditorSection>
+      <EditorSection>
+        <Field id={statusId} label={strings.status}>
+          <select
+            id={statusId}
+            className={controls.select}
+            value={status}
+            onChange={(e) => setStatus(e.target.value as Status)}
+          >
+            {STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {strings.jobStatus[s]}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <button
+          type="button"
+          className={`${controls.secondary} ${table.stretch}`}
+          disabled={busy}
+          onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
         >
-          {statusNote}
-        </p>
-      )}
+          {strings.setStatus}
+        </button>
+        <Note
+          text={statusNote}
+          tone={statusNote === strings.archivedNote ? "info" : undefined}
+        />
+      </EditorSection>
     </div>
   );
 }
