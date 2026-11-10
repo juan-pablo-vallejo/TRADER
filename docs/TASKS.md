@@ -8,8 +8,7 @@ exists. **Current stage: 4.**
 
 Done when `main` is the rebuilt branch, CI is green on it, and protection requires `check`.
 
-- [x] `archive/pre-rebuild` tagged; rebuilt workspace, frozen lockfile, CI job `check` with caps,
-      six documents, brand assets; swapped to `main` under protection; Dependabot off
+- [x] `archive/pre-rebuild` tagged; rebuilt workspace, frozen lockfile, CI job `check` with caps, six documents, brand assets; swapped to `main` under protection; Dependabot off
 - [ ] Resync every other clone to the new `main`
 
 ## Stage 1 — Development environment (Mac)
@@ -30,9 +29,7 @@ removed and passes when restored, and RLS blocks a cross-tenant read under the a
 Done when both sync procedures pass a failure-injection suite: duplicate push, out-of-order
 arrival, two-day backlog, dropped response, wrong device clock, deactivated user.
 
-- [x] Identity binding, tRPC context, role gates; fold and validation; day closeout, review
-      fingerprint, material corrections; approval facts, queue, office repairs; sync with the
-      six-scenario suite; kill switch, error reporting
+- [x] Identity binding, tRPC context, role gates; fold and validation; day closeout, review fingerprint, material corrections; approval facts, queue, office repairs; sync with the six-scenario suite; kill switch, error reporting
 
 ## Stage 4 — Office API and web (`apps/web`)
 
@@ -45,7 +42,9 @@ jobs, assignments, approvals, a closeout, close, export.
 - [x] Customers and jobs with crew assignment; membership writes lock the crew row, race-tested;
       deactivation, transfers and offline backlogs decided before code
 - [x] Demo fixture: owner-run script writing a synthetic company through the real procedures; never raw inserts, never the pilot's database (`tsx` in `packages/api`)
-- [ ] UX review of the populated office screens, phone and desktop, in the browser against the demo fixture; Figma as the exploration surface (DESIGN, Design tooling); findings become DESIGN.md amendments and lines here, no screen change in the review itself
+- [x] UX review of the populated office screens, phone and desktop, in the browser against the demo fixture; Figma as the exploration surface (DESIGN, Design tooling); findings become DESIGN.md amendments and lines here, no screen change in the review itself
+- [ ] Office shell (DESIGN, Layout): 56 pt header with the icon mark, the signed-in name and sign-out; navigation grouped by workflow, Escape closes the menu; `/` opens Jobs; no sideways scroll at 768; focus outline
+- [ ] Office list pattern on roster, customers, jobs and crews (DESIGN, UI components): page header with an on-demand create form, two-line narrow rows, sectioned row editors, result notes, exception pills; shared page-header, field, note and row-editor modules; no API change
 - [ ] Dated worker-job assignments with expected times (schema, migration, invariant tests, API);
       never read by push authority, the fold or approvals; writers and zone rules decided first
 - [ ] Admin closeout on the foreman procedures, unchanged; archived, crew-less jobs decided first
