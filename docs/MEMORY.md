@@ -157,17 +157,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A piped `pnpm check` reports the pipe's exit status: run it unpiped before committing.
 - Drizzle's `db.transaction` runs on a client from `pool.connect()`, never through `pool.query`:
   a spy on the pool misses it, and pg's `connect` has a callback form and a promise form.
+- Browse the demo with `POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled` on the
+  web `dev` script as the demo admin: nothing is written. Signing in as `sam.carter` binds him.
 
 ## Log
 
-### 2026-10-09 → 2026-11-07 — rolled up
+### 2026-10-09 → 2026-11-08 — rolled up
 
 - 10-09 → 10-29: `archive/pre-rebuild` tagged, orphan `rebuild`, public repo, no trailers; six
-  documents replace DECISIONS/ROADMAP/WORKFLOW/ADRs (Stripe, Resend, Inngest out); D Sierra
-  Painting mark, accent `#2808AC`, `brand` red for the mark only; Compose Postgres 18 as
-  `trader-local` (pre-rebuild volume untouched), `db:up`/`db:down`, `.env.example`, `.nvmrc`
-  Node 24: Stages 0–1 closed; Stage 2 lines 1–4: Drizzle, `pg` seam, CI migrates, core tables,
-  `uuidv7()` office ids, `0002` guard (23000), pay, approvals, voids, corrections; 53 tests.
+  documents; D Sierra Painting mark, accent `#2808AC`; Compose Postgres 18 as `trader-local`,
+  `.env.example`, Node 24: Stages 0–1 closed; Stage 2 lines 1–4: Drizzle, `pg` seam, core
+  tables, `uuidv7()` office ids, `0002` guard, pay, approvals, voids, corrections; 53 tests.
 - 11-03: Stage 2 lines 5–8: billing tables; `audit_log` (API-written, empty in V1); `trader_app`,
   grants, FORCE RLS on 17 tables, startup guard; owner-only seed; Stage 2 closed at 136 tests.
 - 11-04: Smart Clock-In scoped in PRD (post-pilot), Stage 9; `rv.sh` retired. Stage 3 lines 1a–6:
@@ -186,14 +186,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `customer.*`, `crew.*`, `job.*` under the crew and job row locks, the membership race proven
   against a real push; `sync.pull` led crews by role; `/customers`, `/jobs`, `/crews`; 754 tests;
   `2cb77de` on a red run. Owner: B7.1–B7.17 as recommended; open: office receipt entry.
+- 11-08: Stage 4 line 4: `pnpm demo` writes a synthetic company into `trader_demo` through the
+  real procedures; 770 tests. Owner: Figma is the exploration surface; UX review before line 5.
 
-### 2026-11-08 — Stage 4 line 4: demo fixture
+### 2026-11-09 — UX review, office shell, office list pattern
 
-- **Did:** `seed(executor, company = SEED)`; `pnpm demo` (`tsx` in `packages/api`): a pattern-locked
-  database of its own, bootstrapped by the seed, every other write a persona's caller on an
-  app-role pool; 32 steps, 259 events, 18 closeouts, 11 approvals, five reasons; refusal, `--reset`
-  and partial-failure paths tested in disposable databases; 770 tests; one guard watched red.
-- **Decided:** by the owner on 2026-11-08: plan v2's I-1 to I-10 as recommended; Figma is the
-  exploration and review surface, written into DESIGN.md (Design tooling) with its decision row;
-  the UX review is its own TASKS line before Stage 4 line 5.
-- **Next:** the UX review line (TASKS:49), then Stage 4 line 5 (TASKS:50).
+- **Did:** the review, measured in the browser on `trader_demo` at 390, 768 and 1280; DESIGN
+  amended with its decision row; Figma file _TRADER — Office_ (tokens, screens as built). Shell:
+  56 pt header, grouped navigation, `/` to Jobs, rows by a 720 px container query. List pattern:
+  `page-header`, `field`, `note`, `row-editor`; roster at 390 from 3,547 px to 1,183; 770 tests.
+- **Decided:** by the owner on 2026-11-09: plan K-1 to K-6, K-8, K-9 as recommended; K-7 not taken.
+- **Next:** owner merges `ux-review`, `office-shell`, `office-list-pattern` in order; then TASKS.

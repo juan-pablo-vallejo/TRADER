@@ -1,8 +1,9 @@
 /* The office data table (DESIGN, Data table): sticky header, 44 px rows, numbers right aligned,
-   no zebra striping; status words in ink-secondary; an Edit toggle per row opening an editor
-   row beneath it. Narrow: each row a stacked card, every cell led by its column label, the
-   editor inside the card, every stretching control full width — the destructive button never.
-   Consumed by the roster, customers, jobs and crews screens. */
+   no zebra striping; status words in ink-secondary, an exception as a pill; an Edit toggle per
+   row opening an editor row beneath it. Narrow: each row two lines — its name, then the other
+   cells joined by a middle dot, an empty one omitted — the editor inside the card, every
+   stretching control full width — the destructive button never. Consumed by the roster,
+   customers, jobs and crews screens through row-editor.tsx. */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -43,16 +44,48 @@
   background: var(--canvas);
 }
 
+/* Status pill (DESIGN): 24 pt, the tint plus the word. Office record states are words; only
+   an exception is a pill. */
+.pill {
+  display: inline-block;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-primary);
+  white-space: nowrap;
+}
+.pillPending {
+  composes: pill;
+  background: color-mix(in srgb, var(--pending) 10%, var(--surface));
+  color: var(--pending);
+}
+.pillAttention {
+  composes: pill;
+  background: color-mix(in srgb, var(--attention) 10%, var(--surface));
+  color: var(--attention);
+}
+
+/* Inside an editor: sections 24 apart, and the footer where a destructive button stands last
+   and alone, one hairline above it. */
+.section h3 {
+  margin: 0 0 var(--space-3);
+}
+.section + .section {
+  margin-top: var(--space-6);
+}
+.footer {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: var(--hairline) solid var(--border);
+}
+
 /* Rows the narrow way whenever the content column is under 720 px (DESIGN, Layout): every
    narrow viewport, and a wide one whose table would not fit beside the navigation. A container
-   query cannot read a custom property either, so 720 is written here and nowhere else. */
+   query cannot read a custom property either, so 720 is written here and nowhere else. The
+   cells flow as one line of text after the row's name; the toggle sits at the row's right. */
 @container (max-width: 719px) {
   .table,
   .table thead,
   .table tbody,
-  .table tr,
-  .table th,
-  .table td {
+  .table tr {
     display: block;
   }
   .table {
@@ -64,41 +97,64 @@
     left: -9999px;
   }
   .table tbody tr {
+    position: relative;
     background: var(--surface);
     border: var(--hairline) solid var(--border);
     border-radius: var(--radius-card);
-    margin-bottom: var(--space-3);
-    padding: var(--space-2) 0;
+    margin-bottom: var(--space-2);
   }
-  .table td {
-    display: flex;
-    justify-content: space-between;
-    gap: var(--space-3);
+  .table tbody tr:not(.editor) {
     min-height: var(--target);
+    box-sizing: border-box;
+    padding: var(--space-3) calc(var(--space-6) * 3 + var(--space-4)) var(--space-3)
+      var(--space-4);
+  }
+  .table tr:not(.editor) td {
+    display: inline;
     height: auto;
     border: 0;
-    padding: 0 var(--space-4);
-  }
-  .table td::before {
-    content: attr(data-label);
+    padding: 0;
+    font-size: 15px;
+    line-height: 20px;
     color: var(--ink-secondary);
-    flex: 0 0 auto;
+    overflow-wrap: anywhere;
   }
-  .table td.toggle::before {
-    content: "";
+  .table tr:not(.editor) td:first-child {
+    display: block;
+    font-size: 17px;
+    line-height: 24px;
+    color: var(--ink);
   }
-  .table .toggle {
-    justify-content: flex-end;
+  .table tr:not(.editor) td[data-empty] {
+    display: none;
+  }
+  .table tr:not(.editor) td.number::before {
+    content: attr(data-label) " ";
+  }
+  .table
+    tr:not(.editor)
+    td:not(:first-child):not(.toggle):not([data-empty])
+    ~ td:not(.toggle):not([data-empty])::before {
+    content: "\00a0· ";
+  }
+  .table
+    tr:not(.editor)
+    td:not(:first-child):not(.toggle):not([data-empty])
+    ~ td.number:not([data-empty])::before {
+    content: "\00a0· " attr(data-label) " ";
+  }
+  .table tr:not(.editor) td.toggle {
+    position: absolute;
+    top: 0;
+    right: var(--space-2);
   }
   .editor {
-    margin-top: calc(-1 * var(--space-3) - var(--hairline));
+    margin-top: calc(-1 * var(--space-2) - var(--hairline));
   }
   .editor td {
     display: block;
+    border: 0;
     padding: var(--space-4);
-  }
-  .editor td::before {
-    content: none;
   }
   /* The destructive button is never full width (DESIGN); the others stretch on narrow. */
   .stretch {

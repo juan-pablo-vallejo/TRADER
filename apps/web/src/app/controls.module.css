@@ -1,5 +1,6 @@
 /* DESIGN, UI components, for the office: buttons, the form field, the card, the empty state
-   and the attention banner. Consumed by the roster and profile screens. */
+   and the attention banner, the page header and the result note. Consumed by every office
+   screen. */
 .primary,
 .secondary,
 .destructive,
@@ -60,9 +61,19 @@
   color: var(--accent);
   font-weight: 600;
 }
+/* The same shape in attention: removing one item from a list, never a bordered button. */
+.quiet {
+  composes: textAction;
+  color: var(--attention);
+}
 @media (min-width: 768px) {
   .textAction {
     min-height: var(--row);
+  }
+  /* Office, wide: the primary is 48 pt and as wide as its label. */
+  .primary {
+    min-height: var(--target);
+    width: auto;
   }
 }
 
@@ -74,7 +85,7 @@
   margin-bottom: var(--space-3);
 }
 .field label,
-.field .caption {
+.caption {
   color: var(--ink-secondary);
 }
 .input,
@@ -132,4 +143,29 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   align-items: center;
+}
+
+/* Page header: the title and at most one action on one row; narrow, the full-width primary
+   wraps beneath the title. */
+.pageHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+.pageHeader h1 {
+  margin: 0;
+}
+
+/* Result note: beneath the control that caused it. */
+.note {
+  margin: var(--space-2) 0;
+}
+.saved {
+  color: var(--synced);
+}
+.neutral {
+  color: var(--ink-secondary);
 }

@@ -29,6 +29,12 @@ export const strings = {
   requestFailedHelp:
     "Nothing was saved. Try again; if it keeps failing, tell the office.",
 
+  // Editors and create forms
+  details: "Details",
+  location: "Location (optional)",
+  leadsCrew: "Leads this crew",
+  chooseForemanFirst: "Choose a foreman to add the crew.",
+
   // Roster
   emptyRoster: "Nobody is on the roster yet.",
   addPerson: "Add a person",
@@ -49,6 +55,7 @@ export const strings = {
   addRate: "Add rate",
   rateExists: "A rate already starts on that day. Pick another day.",
   badAmount: "Enter an amount like 25.00.",
+  payRate: "Pay rate",
   rateHistory: "Rate history",
   noRates: "No rate yet.",
   unpriced: "—",
