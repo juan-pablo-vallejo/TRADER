@@ -1,0 +1,28 @@
+/* The signed-in person in the header: the name, shrinking before anything else, and Sign
+   out. Consumed by account.tsx. */
+.account {
+  margin-left: auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.account form {
+  margin: 0;
+  flex: 0 0 auto;
+}
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  color: var(--ink);
+  text-decoration: none;
+}
+.current {
+  color: var(--accent);
+  font-weight: 600;
+}

@@ -32,6 +32,7 @@
   --row: 44px;
   --wide: 1280px;
   --nav: 240px;
+  --header: 56px;
 }
 
 /* The one breakpoint (DESIGN, Layout): 768 px. Below it the office is narrow — one column,

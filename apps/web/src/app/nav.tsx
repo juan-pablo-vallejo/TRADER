@@ -1,28 +1,47 @@
 "use client";
 
-// The office navigation (DESIGN, Layout: left navigation wide, a menu narrow). Static links;
-// what a screen may do is the API's answer, not the menu's. Consumed by layout.tsx.
+// The office navigation (DESIGN, Layout: left navigation wide, a menu narrow), grouped by the
+// work rather than the table; a destination is listed once its screen exists. Static links:
+// what a screen may do is the API's answer, not the menu's. The profile is reached from the
+// name in the header. Consumed by layout.tsx.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 
 import styles from "./nav.module.css";
 import { strings } from "./strings";
 
-const links = [
-  ["/roster", strings.roster],
-  ["/customers", strings.customers],
-  ["/jobs", strings.jobs],
-  ["/crews", strings.crews],
-  ["/profile", strings.profile],
+const groups = [
+  {
+    label: strings.work,
+    links: [
+      ["/jobs", strings.jobs],
+      ["/customers", strings.customers],
+    ],
+  },
+  {
+    label: strings.people,
+    links: [
+      ["/roster", strings.roster],
+      ["/crews", strings.crews],
+    ],
+  },
 ] as const;
 
 export function Nav() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
+  const toggle = useRef<HTMLButtonElement>(null);
+  // Escape closes the menu and hands focus back to the button that opened it.
+  const onKeyDown = (e: KeyboardEvent) => {
+    if (e.key !== "Escape" || !open) return;
+    setOpen(false);
+    toggle.current?.focus();
+  };
   return (
-    <nav className={styles.nav} aria-label={strings.navigation}>
+    <nav className={styles.nav} aria-label={strings.navigation} onKeyDown={onKeyDown}>
       <button
+        ref={toggle}
         type="button"
         className={styles.toggle}
         aria-expanded={open}
@@ -31,20 +50,29 @@ export function Nav() {
       >
         {strings.menu}
       </button>
-      <ul id="office-nav" className={`${styles.list} ${open ? styles.open : ""}`}>
-        {links.map(([href, label]) => (
-          <li key={href}>
-            <Link
-              href={href}
-              className={`${styles.link} ${path === href ? styles.current : ""}`}
-              aria-current={path === href ? "page" : undefined}
-              onClick={() => setOpen(false)}
-            >
-              {label}
-            </Link>
-          </li>
+      <div id="office-nav" className={`${styles.groups} ${open ? styles.open : ""}`}>
+        {groups.map((group) => (
+          <section key={group.label} aria-label={group.label}>
+            <p className={`label ${styles.group}`} aria-hidden="true">
+              {group.label}
+            </p>
+            <ul className={styles.list}>
+              {group.links.map(([href, label]) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className={`${styles.link} ${path === href ? styles.current : ""}`}
+                    aria-current={path === href ? "page" : undefined}
+                    onClick={() => setOpen(false)}
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+      </div>
     </nav>
   );
 }

@@ -1,14 +1,15 @@
-/* The office header (DESIGN, Brand): the mark on surface white, the wordmark beside it, one
-   hairline below. One row at every width; navigation arrives with the first office screen. */
+/* The office header (DESIGN, Layout): 56 pt, the mark and the wordmark on the left, the
+   signed-in person and sign-out on the right, one hairline below. One row at every width. */
 .header {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4);
+  min-height: var(--header);
+  box-sizing: border-box;
+  padding: 0 var(--space-4);
   background: var(--surface);
   border-bottom: var(--hairline) solid var(--border);
 }
-
 .wordmark {
   color: var(--ink);
 }
