@@ -2,8 +2,9 @@
 
 // The crews screen (PRD, Jobs and location: a crew has a foreman; DESIGN, Data table). The
 // list is one query, the roster another (for the foreman and member selects); every mutation
-// invalidates the crews. Each row is text plus one Edit toggle; the editor row beneath holds
-// the name, the foreman, the members and the deactivation. A deactivated crew takes no foreman
+// invalidates the crews. The page header's action opens the create form. Each row is text plus
+// one Edit toggle; the editor row beneath holds the name, the foreman, the members and, last,
+// the deactivation. A deactivated crew takes no foreman
 // change or new member: those controls are disabled with the reason. A `rejected` answer reads
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +12,10 @@ import { useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
+import { Field } from "../field";
+import { Note } from "../note";
+import { EditorFooter, EditorRow, EditorSection, RowToggle } from "../row-editor";
+import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
@@ -55,9 +60,21 @@ const reason = (code: string) =>
 export function CrewsScreen({ devSignIn }: { devSignIn: boolean }) {
   const list = useCrews();
   const people = useRoster();
+  const [adding, setAdding] = useState(false);
   return (
     <>
-      <h1 className="title">{strings.crews}</h1>
+      <PageHeader
+        title={strings.crews}
+        action={
+          list.isSuccess && people.isSuccess
+            ? {
+                label: strings.addCrew,
+                open: adding,
+                onToggle: () => setAdding((a) => !a),
+              }
+            : undefined
+        }
+      />
       {list.isPending || people.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : list.isError ? (
@@ -66,7 +83,7 @@ export function CrewsScreen({ devSignIn }: { devSignIn: boolean }) {
         <Failure error={people.error} devSignIn={devSignIn} />
       ) : (
         <>
-          <CreateForm people={people.data} />
+          {adding && <CreateForm people={people.data} onDone={() => setAdding(false)} />}
           {list.data.length === 0 ? (
             <EmptyState text={strings.emptyCrews} />
           ) : (
@@ -96,10 +113,7 @@ function PersonSelect({
   placeholder: string;
 }) {
   return (
-    <div className={controls.field}>
-      <label className="label" htmlFor={id}>
-        {label}
-      </label>
+    <Field id={id} label={label}>
       <select
         id={id}
         className={controls.select}
@@ -114,11 +128,11 @@ function PersonSelect({
           </option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 }
 
-function CreateForm({ people }: { people: People }) {
+function CreateForm({ people, onDone }: { people: People; onDone: () => void }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [name, setName] = useState("");
@@ -135,6 +149,7 @@ function CreateForm({ people }: { people: People }) {
         setForeman("");
         setNote(null);
         await refresh();
+        onDone();
       },
       onError: () => setNote(strings.requestFailed),
     }),
@@ -145,15 +160,17 @@ function CreateForm({ people }: { people: People }) {
     create.mutate({ name, foremanUserId });
   };
   return (
-    <form className={controls.card} onSubmit={submit}>
-      <h2 className="heading">{strings.addCrew}</h2>
+    <form
+      id={CREATE_FORM_ID}
+      aria-label={strings.addCrew}
+      className={controls.card}
+      onSubmit={submit}
+    >
       <div className={styles.formGrid}>
-        <div className={controls.field}>
-          <label className="label" htmlFor="new-crew-name">
-            {strings.name}
-          </label>
+        <Field id="new-crew-name" label={strings.name}>
           <input
             id="new-crew-name"
+            autoFocus
             className={controls.input}
             type="text"
             autoComplete="off"
@@ -162,7 +179,7 @@ function CreateForm({ people }: { people: People }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-        </div>
+        </Field>
         <PersonSelect
           id="new-crew-foreman"
           label={strings.foreman}
@@ -172,7 +189,7 @@ function CreateForm({ people }: { people: People }) {
           placeholder={strings.chooseForeman}
         />
       </div>
-      {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
+      <Note text={note} />
       <button
         type="submit"
         className={controls.primary}
@@ -180,6 +197,9 @@ function CreateForm({ people }: { people: People }) {
       >
         {strings.addCrew}
       </button>
+      {foremanUserId === "" && (
+        <p className={`secondary ${controls.caption}`}>{strings.chooseForemanFirst}</p>
+      )}
     </form>
   );
 }
@@ -200,7 +220,7 @@ function CrewsTable({ rows, people }: { rows: Rows; people: People }) {
           </th>
           <th scope="col">{strings.status}</th>
           <th scope="col">
-            <span className="label">{strings.edit}</span>
+            <span className="visually-hidden">{strings.edit}</span>
           </th>
         </tr>
       </thead>
@@ -212,11 +232,14 @@ function CrewsTable({ rows, people }: { rows: Rows; people: People }) {
               <td data-label={strings.crew} className="body-strong">
                 {row.name}
               </td>
-              <td
-                data-label={strings.foreman}
-                className={row.foreman.available ? undefined : table.attention}
-              >
-                {row.foreman.available ? row.foreman.name : strings.needsForeman}
+              <td data-label={strings.foreman}>
+                {row.foreman.available ? (
+                  row.foreman.name
+                ) : (
+                  <span className={`label ${table.pillAttention}`}>
+                    {strings.needsForeman}
+                  </span>
+                )}
               </td>
               <td data-label={strings.members} className={table.number}>
                 {row.members.length}
@@ -227,28 +250,16 @@ function CrewsTable({ rows, people }: { rows: Rows; people: People }) {
               <td data-label={strings.status} className={table.status}>
                 {row.deactivatedAt === null ? strings.active : strings.deactivated}
               </td>
-              <td className={table.toggle}>
-                <button
-                  type="button"
-                  className={controls.textAction}
-                  aria-expanded={open}
-                  aria-controls={`editor-${row.id}`}
-                  onClick={() => setEditing(open ? null : row.id)}
-                >
-                  {open ? strings.close : strings.edit}
-                </button>
-              </td>
+              <RowToggle
+                rowId={row.id}
+                open={open}
+                onToggle={() => setEditing(open ? null : row.id)}
+              />
             </tr>,
             open ? (
-              <tr
-                key={`${row.id}-editor`}
-                className={table.editor}
-                id={`editor-${row.id}`}
-              >
-                <td colSpan={6}>
-                  <Editor row={row} people={people} />
-                </td>
-              </tr>
+              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
+                <Editor row={row} people={people} />
+              </EditorRow>
             ) : null,
           ];
         })}
@@ -272,6 +283,7 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
   const [name, setName] = useState(row.name);
   const [foremanUserId, setForeman] = useState(row.foreman.id);
   const [note, setNote] = useState<string | null>(null);
+  const [foremanNote, setForemanNote] = useState<string | null>(null);
   const [stateNote, setStateNote] = useState<string | null>(null);
   const inactive = row.deactivatedAt !== null;
   const rename = useMutation(
@@ -283,32 +295,34 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
       onError: () => setNote(strings.requestFailed),
     }),
   );
-  const answered = async (answer: {
-    result: string;
-    code?: string;
-    jobCount?: number;
-  }) => {
-    setStateNote(
-      answer.result === "rejected"
-        ? answer.code === "jobs_assigned"
-          ? strings.jobsAssigned(answer.jobCount ?? 0)
-          : reason(answer.code ?? "")
-        : answer.result === "unchanged"
-          ? strings.unchanged
-          : null,
-    );
-    await refresh();
-  };
-  const failed = () => setStateNote(strings.requestFailed);
+  // One answer shape for the foreman change and the two state writers; each writes the note
+  // beneath its own control.
+  const noteOf = (answer: { result: string; code?: string; jobCount?: number }) =>
+    answer.result === "rejected"
+      ? answer.code === "jobs_assigned"
+        ? strings.jobsAssigned(answer.jobCount ?? 0)
+        : reason(answer.code ?? "")
+      : answer.result === "unchanged"
+        ? strings.unchanged
+        : null;
+  const answering =
+    (set: (note: string | null) => void) =>
+    async (answer: { result: string; code?: string; jobCount?: number }) => {
+      set(noteOf(answer));
+      await refresh();
+    };
   const changeForeman = useMutation(
-    trpc.crew.setForeman.mutationOptions({ onSuccess: answered, onError: failed }),
+    trpc.crew.setForeman.mutationOptions({
+      onSuccess: answering(setForemanNote),
+      onError: () => setForemanNote(strings.requestFailed),
+    }),
   );
-  const deactivate = useMutation(
-    trpc.crew.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
-  );
-  const reactivate = useMutation(
-    trpc.crew.reactivate.mutationOptions({ onSuccess: answered, onError: failed }),
-  );
+  const state = {
+    onSuccess: answering(setStateNote),
+    onError: () => setStateNote(strings.requestFailed),
+  };
+  const deactivate = useMutation(trpc.crew.deactivate.mutationOptions(state));
+  const reactivate = useMutation(trpc.crew.reactivate.mutationOptions(state));
   const busy =
     rename.isPending ||
     changeForeman.isPending ||
@@ -322,48 +336,43 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
   const nameId = `crew-name-${row.id}`;
   return (
     <div>
-      <form onSubmit={submit}>
-        <div className={controls.field}>
-          <label className="label" htmlFor={nameId}>
-            {strings.name}
-          </label>
-          <input
-            id={nameId}
-            className={controls.input}
-            type="text"
-            autoComplete="off"
-            required
-            maxLength={120}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          {note !== null && (
-            <p className={`secondary ${note === strings.saved ? "" : controls.error}`}>
-              {note}
-            </p>
-          )}
-        </div>
-        <button
-          type="submit"
-          className={`${controls.secondary} ${table.stretch}`}
-          disabled={busy}
-        >
-          {strings.save}
-        </button>
-      </form>
-      <PersonSelect
-        id={`crew-foreman-${row.id}`}
-        label={strings.foreman}
-        options={activeForemen(people)}
-        value={foremanUserId}
-        onChange={setForeman}
-        disabled={inactive}
-        placeholder={strings.chooseForeman}
-      />
-      {inactive && (
-        <p className={`secondary ${controls.caption}`}>{strings.reactivateCrewFirst}</p>
-      )}
-      <div className={controls.actions}>
+      <EditorSection>
+        <form onSubmit={submit}>
+          <Field id={nameId} label={strings.name}>
+            <input
+              id={nameId}
+              className={controls.input}
+              type="text"
+              autoComplete="off"
+              required
+              maxLength={120}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </Field>
+          <button
+            type="submit"
+            className={`${controls.secondary} ${table.stretch}`}
+            disabled={busy}
+          >
+            {strings.save}
+          </button>
+          <Note text={note} />
+        </form>
+      </EditorSection>
+      <EditorSection>
+        <PersonSelect
+          id={`crew-foreman-${row.id}`}
+          label={strings.foreman}
+          options={activeForemen(people)}
+          value={foremanUserId}
+          onChange={setForeman}
+          disabled={inactive}
+          placeholder={strings.chooseForeman}
+        />
+        {inactive && (
+          <p className={`secondary ${controls.caption}`}>{strings.reactivateCrewFirst}</p>
+        )}
         <button
           type="button"
           className={`${controls.secondary} ${table.stretch}`}
@@ -372,6 +381,9 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
         >
           {strings.changeForeman}
         </button>
+        <Note text={foremanNote} />
+      </EditorSection>
+      <EditorFooter>
         {inactive ? (
           <button
             type="button"
@@ -391,8 +403,8 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
             {strings.deactivateCrew}
           </button>
         )}
-      </div>
-      {stateNote !== null && <p className={`secondary ${controls.error}`}>{stateNote}</p>}
+        <Note text={stateNote} />
+      </EditorFooter>
     </div>
   );
 }
@@ -427,8 +439,7 @@ function Members({ row, people }: { row: Row; people: People }) {
     (p) => p.deactivatedAt === null && !memberIds.has(p.id),
   );
   return (
-    <div>
-      <h3 className="label">{strings.members}</h3>
+    <EditorSection heading={strings.members}>
       <ul className={styles.members}>
         {row.members.map((m) => {
           const isForeman = m.id === row.foreman.id;
@@ -438,19 +449,21 @@ function Members({ row, people }: { row: Row; people: People }) {
                 {m.name}
                 <span className={`secondary ${styles.caption}`}>
                   {" · "}
-                  {strings.roles[m.role]}
+                  {isForeman ? strings.leadsCrew : strings.roles[m.role]}
                   {m.deactivatedAt !== null && ` · ${strings.deactivated}`}
-                  {isForeman && ` · ${strings.changeForemanFirst}`}
                 </span>
               </span>
-              <button
-                type="button"
-                className={controls.destructive}
-                disabled={busy || isForeman}
-                onClick={() => remove.mutate({ crewId: row.id, userId: m.id })}
-              >
-                {strings.remove}
-              </button>
+              {/* The foreman leaves by a foreman change, so their row offers no removal. */}
+              {!isForeman && (
+                <button
+                  type="button"
+                  className={controls.quiet}
+                  disabled={busy}
+                  onClick={() => remove.mutate({ crewId: row.id, userId: m.id })}
+                >
+                  {strings.remove}
+                </button>
+              )}
             </li>
           );
         })}
@@ -475,7 +488,7 @@ function Members({ row, people }: { row: Row; people: People }) {
       >
         {strings.addMember}
       </button>
-      {note !== null && <p className={`secondary ${controls.error}`}>{note}</p>}
-    </div>
+      <Note text={note} />
+    </EditorSection>
   );
 }
