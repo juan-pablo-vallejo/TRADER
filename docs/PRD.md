@@ -33,11 +33,11 @@ portal, a marketplace, an AI estimator, and anything that requires a second cont
 
 ## Target users
 
-| User           | Device                     | Connectivity | What they do in TRADER                                                                                      |
-| -------------- | -------------------------- | ------------ | ----------------------------------------------------------------------------------------------------------- |
-| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments, edit own name and phone |
-| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs and the day closeout                                  |
-| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, closeouts, pay periods, payroll export, invoices           |
+| User           | Device                     | Connectivity | What they do in TRADER                                                                                                                                           |
+| -------------- | -------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own hours and assignments, edit own name and phone                                                      |
+| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs, the crew's current state when online, and the day closeout                                                |
+| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, any worker's hours and their repair, material costs, job cost, closeouts, pay periods, payroll export, invoices |
 
 Everyone is a user with their own login.
 
@@ -53,9 +53,14 @@ Everyone is a user with their own login.
   are new events that reference the original.
 - Device time is business time. It is recorded as the device reported it and is never used to
   settle a dispute; approval is.
-- Pay rates are effective-dated. Closed pay periods are immutable; a late entry becomes an
-  adjustment in the next open period. No pay or overtime calculation in V1: TRADER exports
-  approved hours, payroll computes pay.
+- Pay rates are effective-dated; a changed rate is a new rate from a date, never an edit.
+- Hours belong to the pay period that contains their work date when they are approved before
+  that period closes. Closed pay periods are immutable: anything approved, corrected or
+  repaired after the close is exported once, as a late-entry adjustment in the next period to
+  close, carrying its original work date.
+- Hours are totalled per worker, job and day and rounded to the hundredth of an hour; every
+  export and invoice line uses that figure. No pay or overtime calculation in V1: TRADER
+  exports approved hours, payroll computes pay.
 
 ### Office approval
 
@@ -65,6 +70,23 @@ user, not taken at capture; its location stamp is missing or outside the job's r
 device's clock disagreed with server time beyond the allowed tolerance; it arrived after its
 day's closeout was accepted. Everything else is approved by default. Nobody approves their own
 entries. The approval queue tags each entry with every reason it is there.
+
+The server checks the time an entry claims against the time it arrived: an entry that says it
+was captured online, at the time it carries, cannot arrive long after that time without going
+to approval, and an entry timed in the future is refused. A phone cannot skip approval by
+describing itself favourably.
+
+### Office review and job cost
+
+- The office sees any worker's recorded day — sessions, the events behind them, what is
+  pending and why — and repairs it there with correcting entries, which go through approval.
+- The office enters what a logged material cost. Job cost to date is approved labor at the
+  rate in force on each work date plus priced materials, shown per job with what is still
+  pending or unpriced beside it, never folded in.
+- A reconciliation view lists, for a pay period, every worker's approved hours by day and job,
+  and everything that still blocks the close.
+- Role changes, deactivations, invitations, pay rates, repairs and approval decisions record
+  who made them and when.
 
 ### Jobs and location
 
@@ -110,6 +132,8 @@ submitted closeout is locked; later changes are correcting entries that go throu
 - Invoices move `draft → issued → void`. An issued invoice is immutable; a change is a credit
   memo or a new invoice. Numbering is gap-free per company and continues the partner's
   existing series. Line items are snapshots of job labor and materials, never live references.
+- Credit memos against an invoice never total more than the invoice; an invoice that has a
+  credit memo cannot be voided.
 - The admin enters tax per invoice; TRADER only does the arithmetic. No paid flag and no
   payment capture: the office records payment in their accounting package.
 - PDF rendered on demand. QuickBooks CSV export of invoices; payroll CSV export of approved
@@ -119,7 +143,10 @@ submitted closeout is locked; later changes are correcting entries that go throu
 
 Every field action is durable on the phone the moment the tap returns, with or without signal
 or a valid session, and its delivery state is always shown (DESIGN.md). Devices hold only the
-user's own entries and reference data offline; crew views are online-only.
+user's own entries and reference data offline; crew views are online-only. An entry the server
+refuses stays on the phone, marked as needing attention, and the server keeps a record that it
+was refused and why, so the office can answer "where are my hours" without the phone in hand.
+The office web is online-only: with no connection it says so and saves nothing for later.
 
 ### Access
 
@@ -134,6 +161,8 @@ SMS. A new user starts as a worker; roles are a deliberate roster action.
   phone and desktop. TestFlight public link, Play internal track; the pilot is unpaid.
 - V1 complete — the billing trigger — requires every V1 feature above, production distribution
   on the App Store and Google Play (US storefronts), and a partner-signed acceptance checklist.
+- Neither is declared from a feeling: the pilot opens when the release gates in
+  [TASKS.md](TASKS.md), Stage 8, are met and recorded, and V1 closes on Stage 10's.
 
 ## Compliance before real users
 
@@ -145,6 +174,7 @@ collect; Sentry PII scrubbing; local employment rules on location checked before
 ## After V1
 
 Push notifications, web approval by push to the admin's phone, SMS, roster self-service beyond own
-name and phone, audit log, dark theme, payments, a customer portal, per-company branding (each
+name and phone, an audit log of every write (V1 records the roster, pay-rate, repair and
+approval actions named above), dark theme, payments, a customer portal, per-company branding (each
 contractor's own logo in the crew app and office header), and a second contractor — the schema is
 tenant-safe from the first migration, so that is onboarding work, not restructuring.

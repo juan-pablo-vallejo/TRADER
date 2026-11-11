@@ -24,7 +24,7 @@ To browse the office app against the demo data, start it with the demo database 
 development sign-in on, then sign in at `/dev-signin` as `office@demo.invalid`:
 
 ```sh
-POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled pnpm --filter web dev
+POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled pnpm --filter @trader/web dev
 ```
 
 ## Layout

@@ -62,11 +62,14 @@ change is wrong, not the test.
 4. Every tenant-scoped table has `company_id NOT NULL`, composite foreign keys that carry it,
    and row-level security `ENABLE`d and `FORCE`d, keyed on `app.company_id`.
 5. The application role is created in SQL with `NOBYPASSRLS` — never through the Neon console,
-   CLI or API — and the server refuses to start under a role that can bypass RLS.
+   CLI or API — and the server refuses to serve under a role that can bypass RLS: the check
+   runs in every protected transaction, on the connection that transaction holds.
 6. Tenant binding happens only through a server-side invitation; no request names a company.
 7. Derived values — `work_date`, session state, worked duration — are computed from the event
    fold, never stored. Append-only tables carry no `updated_at`.
-8. Schema changes are additive. A destructive migration is a defect.
+8. Schema changes are additive: no migration drops a table, a column or data. Relaxing a
+   constraint, or withdrawing a privilege from the application role, is allowed when its
+   decision row says why. A destructive migration is a defect.
 
 ## Sync protocol
 
@@ -87,6 +90,69 @@ change is wrong, not the test.
   protocol version per request. The kill switch ships in build 1: `status.get`, public, answers
   `normal`, `read_only`, `paused` or `update_required`; no state stops capture or drops a record.
 - Sync bookkeeping — state, attempts, next attempt — stays on the device and is never sent.
+- Event time is judged by the server as well as asserted by the device (to be built, TASKS
+  Stage 4): an event that claims it was captured online at the time it carries, yet differs
+  from its receipt by more than the tolerance, is flagged `clock_skewed` and goes to approval;
+  an event timed later than its receipt plus the tolerance is rejected `time_in_future`.
+- `captured_offline` is true when the device's first delivery attempt for the record began
+  more than two minutes after capture. The device records it; the server check above is what
+  keeps a false "online" from skipping approval.
+- A record the server did not accept leaves a trace (to be built, TASKS Stage 4): one
+  minimized line through the error-reporting seam — request id, record id, kind, result code,
+  user id, company id — and never the payload.
+- The pull snapshot grows by optional fields within protocol 1, which clients ignore when they
+  do not know them; a new protocol version is for a change in meaning. The snapshot is derived
+  per request and carries no `schemaVersion`.
+
+## Concurrency
+
+One global lock order, so no two writers can wait on each other:
+
+1. `jobs` rows, 2. `customers` rows, 3. `crews` rows, 4. `users` rows in id order (the caller
+   re-read among them, `lockActiveSelf`), 5. `companies` row, 6. the company's field-write
+   advisory lock (shared by every labor and material writer, exclusive for a closeout), 7. the
+   worker's advisory lock, 8. `materials` rows, 9. the `approvals` row.
+
+A holder of the field-write lock takes no row lock on the first five beyond foreign-key
+`KEY SHARE`. Every stamp that must sort after a lock is read from the server's clock after
+that lock (`core/clock.ts`), never from `now()`. The one known inversion is a first sign-in's
+bind, which holds the caller's `users` row `FOR UPDATE`; Postgres aborts one side and the call
+is retried.
+
+## Runtime bounds
+
+| Bound                         | Value                       | Where                              |
+| ----------------------------- | --------------------------- | ---------------------------------- |
+| Pool size per server instance | `DATABASE_POOL_MAX`, 10     | `packages/db/src/env.ts`           |
+| Wait for a free connection    | 5 s                         | `packages/db/src/client.ts`        |
+| Protected call                | lock 5 s, statement 20 s    | `packages/api/src/core/trpc.ts`    |
+| Push record                   | lock 2 s, statement 4 s     | `packages/api/src/core/trpc.ts`    |
+| Push batch                    | 100 records, none after 8 s | `packages/api/src/sync/push.ts`    |
+| Calls per HTTP request        | 10                          | `apps/web/src/server/handler.ts`   |
+| Client-asserted instant       | 1970-01-01 to 9999-12-31    | `packages/api/src/core/instant.ts` |
+
+An idle pooled connection that the server drops is logged by class and SQLSTATE and discarded;
+it never ends the process.
+
+## Before the first deployment
+
+None of these exists yet; each is a line in TASKS Stage 6 and a release gate in Stage 8.
+
+- Production identity: the Clerk adapter behind the identity seam; the development adapter is
+  not wired into a production build at all.
+- The deployed login role is `trader_app` itself, verified on the deployed database: not a
+  superuser, no `BYPASSRLS`.
+- Rate limits per identity and per address in front of the API; a request body limit.
+- An `Origin` check on state-changing requests, and session-cookie attributes decided with the
+  identity provider.
+- A content security policy and transport security, tested against the deployed app. The
+  baseline headers (`nosniff`, frame denial, referrer policy) are already set for pages and the
+  API in `apps/web/next.config.ts`.
+- A server-enforced sync brake: the kill switch is advisory by design and cannot stop a client
+  that ignores it.
+- A readiness check that touches the database and the role; environment validated at start.
+- Backups, a rehearsed restore, and a written migrate-and-rollback procedure.
+- An error reporter that keeps the minimized event and sends nothing else.
 
 ## Domain and identifiers
 
@@ -100,6 +166,19 @@ package name `app.jpteq.trader`.
 The root holds `.github/workflows/ci.yml` (the one workflow; its job name is the required check),
 `assets/brand/` (`logo.png`, `icon.png`; DESIGN, Brand), `apps/` and `packages/` (System architecture
 table; `apps/mobile` planned), `docs/` (the six documents), `CLAUDE.md`, `LICENSE` and `README.md`.
+
+```text
+apps/web/src/app/        office screens, shared UI modules, strings, theme
+apps/web/src/server/     the route handler, the pool, the identity seam
+packages/api/src/core/   request plumbing: context, tRPC and the caller transaction, identity,
+                         user resolution, error reporting, kill switch, locks, clock, instants
+packages/api/src/<domain>/   approvals, closeout, crews, customers, jobs, labor, materials,
+                         roster, sync, demo — pure cores and writers, one concern per file
+packages/api/src/routers/    one thin router per namespace; `router.ts` composes them
+packages/db/src/schema/  one Drizzle file per table group
+packages/db/migrations/  the journal; hand-written SQL in `generate --custom` files
+packages/*/test/         mirrors `src/` by folder; `helpers.ts` and `setup.ts` at its root
+```
 
 ## Decisions
 
@@ -208,3 +287,20 @@ Rows dated 2026-11-05 or earlier cite another as `row N`, meaning line N − 3 o
 | 2026-11-08 | Demo fixture (Stage 4 line 4): `pnpm demo` writes a synthetic company into a database of its own on the compose server — `trader_demo` or `trader_demo_<suffix>`, refused when `DATABASE_URL` is set, when the name is the configured database or when it already exists (`--reset` drops only such a name); the owner creates, migrates and bootstraps it through `seed(tx, company)` (the seed's three statements, now parameterised) and writes nothing else; every other row is a server-side caller on an app-role pool, one per persona bound as `dev:<email>`; UUIDv7 ids from a seeded generator and an anchor Monday, so a run is repeatable; one transaction per call rules out atomicity, so a failed step keeps the database for inspection (dropped only when nothing committed); clock skew is not simulated | 2026-11-03 seed, for a second bootstrapped company; 2026-11-07 office web client's "no server-side caller exists", for the demo script |
 | 2026-11-08 | Figma is the design exploration and review surface (DESIGN, Design tooling): one file on the owner's team — tokens generated from the web theme module, populated screens as built, dated explorations; DESIGN.md stays the single authority and code never follows a frame it does not yet reflect; a UX review of the populated office screens, driven in the browser against the demo fixture, precedes Stage 4 line 5 and ships no screen change itself | DESIGN "theme module per app" (2026-10-13 six-doc set), for tooling only |
 | 2026-11-09 | Office UX review (DESIGN: Layout, UI components, Brand), measured in the browser against the demo fixture at 390, 768 and 1280: the office header is 56 pt with `icon.png`, the signed-in name and sign-out (the development route's form until Clerk); navigation is grouped by workflow and `/` redirects to the first destination; a list screen is a page header with one primary action, then the list, its create form opened on demand; narrow table rows are two lines, and a table takes them by its own column's width (a container query at 720 px on the content column), not the viewport's; row editors are sectioned; result notes are announced and only a refusal is `attention`; record states are words, exceptions pills; shared modules in `apps/web/src/app`, no UI dependency, no API change | 2026-11-06 office shell's `logo.png` header mark (the favicon keeps it); 2026-11-07 office web client's narrow rows stacked cell by cell; DESIGN primary button (2026-10-13 six-doc set), for the wide office only |
+| 2026-11-11 | V1 readiness revision: after a full read-only audit at `fbf2e5d`, the owner authorized one revision of PRD, ARCHITECTURE, DESIGN and RULES and of the repository's structure; the rows dated 2026-11-11 are its decisions, proposed by the audit and approved by the owner. Sections Concurrency, Runtime bounds and Before the first deployment are new homes for facts that lived only in rows | RULES 'never edit PRD, ARCHITECTURE or DESIGN to match code', for this revision only |
+| 2026-11-11 | Document line caps removed from RULES and CI; a document states each fact once and is as long as that needs; the decisions table stays append-only | RULES caps (2026-10-13 six-doc set) |
+| 2026-11-11 | Event-time plausibility (to be built): the server compares `client_timestamp` with its receipt. Not offline, not user-timed, yet more than the 5-minute tolerance from receipt: stored `clock_skewed`, reason `clock_skewed`, ordered by `server_timestamp`. Later than receipt plus the tolerance: `rejected` `time_in_future`, as `labor.repair` answers. No new approval reason | 2026-11-05 `offline` as device-recorded evidence alone; the per-push `device_now` reading as the only skew test |
+| 2026-11-11 | `captured_offline` defined: the device's first delivery attempt for the record began more than two minutes after capture | 2026-11-05 'no confirmed API reachability; unknown counts as offline' |
+| 2026-11-11 | Rejected-record trace (to be built): every push record answered `rejected`, and every record omitted after a failure, writes one minimized line through the reporter seam — request id, record id, kind, code, user id, company id; no payload, no location, no time. A request id is generated per HTTP request | 2026-11-05 error reporting 'never … a record rejection', for this one line |
+| 2026-11-11 | `sync.pull` is extended by optional protocol-1 fields; clients parse it loosely and ignore unknown fields; the server's output schema stays strict. Protocol 2 is for a change in meaning. The snapshot carries no `schemaVersion` | 2026-11-06 pilot job suggestion's open choice; 2026-11-05 `sync.pull` 'each record its `schemaVersion`, upcast to v1' |
+| 2026-11-11 | Pay-period membership (to be built): approved hours belong to the period containing their `work_date` when approved before that period closes; hours approved, corrected or repaired after it closes are exported once, as late-entry adjustments in the next period to close, carrying the original work date. A period is inserted open and never earlier than a closed one, enforced by an INSERT trigger | 2026-10-29 pay periods 'derived from `work_date` and `server_timestamp` against `closed_at`', made precise |
+| 2026-11-11 | Hours rounding (to be built): durations are summed in milliseconds per worker, job and work date; that daily total is rounded half-up to 0.01 h; payroll and invoice lines are computed from the rounded figure in integer cents. No quarter-hour rounding | — |
+| 2026-11-11 | Credit memos (to be built, Stage 7): the sum of an invoice's memos never exceeds its total; an invoice with a memo cannot be voided; issuing compares the frozen columns and cannot be combined with a void in one statement | 2026-11-06 open 'credit ceiling and void' |
+| 2026-11-11 | An admin may approve a repair they wrote (unchanged; one-admin companies exist). The repair and its decision are both written to `audit_log` (to be built) | — |
+| 2026-11-11 | `audit_log` is written in V1 for role, activation, invitation and pay-rate writes and for labor repairs and approval decisions: actor, time, before and after, in the write's transaction (to be built, Stage 4) | 2026-11-03 `audit_log` 'written by after-V1 wiring, empty in V1' |
+| 2026-11-11 | Runtime bounds (section above): pool size from `DATABASE_POOL_MAX`, a 5 s wait for a connection, an `error` listener on the pool; every protected call sets `lock_timeout` 5 s and `statement_timeout` 20 s in its first statements, push keeps 2 s and 4 s; a request context may carry `waits: "inherit"` so a caller already inside a transaction keeps that transaction's settings (the test suites); at most 10 calls per HTTP request, the web client batching to the same number; client-asserted instants bounded to what Postgres can store, so an impossible date is `invalid_record`, not a record retried for ever | 2026-11-05 `sync.push` timeouts 'when the caller asks for them' |
+| 2026-11-11 | Tests and the seed refuse to run while `DATABASE_URL` is set (`assertLocalDatabase`); the migrator does not. The seed stays a development and CI fixture | — |
+| 2026-11-11 | `0027`: `trader_app` loses UPDATE on `pay_rates`, which are insert-only; a privilege withdrawn from the application role is not a destructive change (invariant 8, restated). `0019`, `0021` and `0023` relaxed constraints under the same reading | 2026-11-03 runtime role grants, for `pay_rates` |
+| 2026-11-11 | Repository structure: `packages/api/src/core/` holds request plumbing; tests mirror `src/` by folder; the caller lock, the server clock and the closed-day query each have one home (`core/locks.ts`, `core/clock.ts`, `closeout/day.ts`). A gate inventory test names every procedure with its gate. Lint is type-aware for unawaited and misused promises | — |
+| 2026-11-11 | Office web behaviour (DESIGN): every write answers with a result note; a destructive action shows its effect and is confirmed by a second press; a failed load says nothing changed and offers a retry; a row being edited stays in a filtered list until its editor closes; the office is online-only, so a request made offline fails at once and nothing is queued (`networkMode: "always"`); route-level error and not-found screens; baseline response headers on pages and the API | 2026-11-07 office web client 'any other failure the attention banner', refined |
+| 2026-11-11 | Still open, each a TASKS line: the Neon owner role and backups under forced RLS; worker sign-in without an individual email; an admin's own entries; closeout of archived and crew-less jobs; the client-safe contract export; `status.get` answering without running the identity adapter; the startup guard also checking `session_user` and policy presence | — |
