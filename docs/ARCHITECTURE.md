@@ -129,7 +129,7 @@ is retried.
 | Push record                   | lock 2 s, statement 4 s     | `packages/api/src/core/trpc.ts`    |
 | Push batch                    | 100 records, none after 8 s | `packages/api/src/sync/push.ts`    |
 | Calls per HTTP request        | 10                          | `apps/web/src/server/handler.ts`   |
-| Client-asserted instant       | 1970-01-01 to 9999-12-31    | `packages/api/src/core/instant.ts` |
+| Client-asserted instant       | 0001-01-01 to 9999-12-31    | `packages/api/src/core/instant.ts` |
 
 An idle pooled connection that the server drops is logged by class and SQLSTATE and discarded;
 it never ends the process.
@@ -146,8 +146,8 @@ None of these exists yet; each is a line in TASKS Stage 6 and a release gate in 
 - An `Origin` check on state-changing requests, and session-cookie attributes decided with the
   identity provider.
 - A content security policy and transport security, tested against the deployed app. The
-  baseline headers (`nosniff`, frame denial, referrer policy) are already set for pages and the
-  API in `apps/web/next.config.ts`.
+  baseline headers (`nosniff`, frame denial, referrer policy) are already set for a built app
+  in `apps/web/next.config.ts`.
 - A server-enforced sync brake: the kill switch is advisory by design and cannot stop a client
   that ignores it.
 - A readiness check that touches the database and the role; environment validated at start.

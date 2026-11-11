@@ -3,7 +3,7 @@
 // where a destructive button stands last and alone — and the destructive action itself, which
 // says what it will do before it does it. Consumed by the roster, customers, jobs and crews
 // screens.
-import { useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
 import { strings } from "./strings";
@@ -74,6 +74,9 @@ export function EditorFooter({ children }: { children: ReactNode }) {
 // A destructive action (DESIGN, principle 5: ceremony matches consequence). The first press
 // only shows what will happen, in a sentence, with the action and a way out; the second does
 // it. Never a bare "Are you sure?". `quiet` is the text form, for removing one item of a list.
+// Focus moves to Cancel, the safe choice, so a held Enter cannot confirm; both buttons are
+// described by the sentence, so a screen reader reads the consequence with them; and focus
+// returns to the first button when the question closes.
 export function DestructiveAction({
   label,
   effect,
@@ -88,9 +91,23 @@ export function DestructiveAction({
   onConfirm: () => void;
 }) {
   const [asking, setAsking] = useState(false);
+  const effectId = useId();
+  const trigger = useRef<HTMLButtonElement>(null);
+  const returnFocus = useRef(false);
+  useEffect(() => {
+    if (!asking && returnFocus.current) {
+      returnFocus.current = false;
+      trigger.current?.focus();
+    }
+  }, [asking]);
+  const close = () => {
+    returnFocus.current = true;
+    setAsking(false);
+  };
   if (!asking) {
     return (
       <button
+        ref={trigger}
         type="button"
         className={quiet ? controls.quiet : controls.destructive}
         disabled={disabled}
@@ -102,15 +119,17 @@ export function DestructiveAction({
   }
   return (
     <div className={table.confirm} role="group" aria-label={label}>
-      <p className="secondary">{effect}</p>
+      <p id={effectId} className="secondary">
+        {effect}
+      </p>
       <div className={controls.actions}>
         <button
           type="button"
-          autoFocus
           className={controls.destructive}
           disabled={disabled}
+          aria-describedby={effectId}
           onClick={() => {
-            setAsking(false);
+            close();
             onConfirm();
           }}
         >
@@ -118,8 +137,10 @@ export function DestructiveAction({
         </button>
         <button
           type="button"
+          autoFocus
           className={controls.secondary}
-          onClick={() => setAsking(false)}
+          aria-describedby={effectId}
+          onClick={close}
         >
           {strings.cancel}
         </button>

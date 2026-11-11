@@ -11,9 +11,10 @@ permissions:
   contents: read
 
 # A newer push to a pull request supersedes the run before it. On main every merge commit
-# keeps its own run: cancelling one would leave that merge result unverified.
+# keeps its own run: the group is the commit itself there, because a shared group holds only
+# one pending run and would drop the middle of three quick merges unverified.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:

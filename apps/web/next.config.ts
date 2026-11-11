@@ -23,15 +23,15 @@ const config: NextConfig = {
   },
   // No framework banner on responses.
   poweredByHeader: false,
-  // Baseline response headers for every route: no MIME sniffing, no framing by another site,
-  // and no path or query sent to another origin. A content security policy and transport
-  // security are set with the deployment (TASKS, Stage 6), where their values can be tested.
+  // Baseline response headers for every route of a built app: no MIME sniffing, no framing by
+  // another site, and no path or query sent to another origin. Built apps only: a development
+  // server is never exposed, and nothing there needs them. A content security policy and
+  // transport security are set with the deployment (TASKS, Stage 6), where they can be tested.
   async headers() {
+    if (process.env.NODE_ENV !== "production") return [];
     return [
       {
-        // Pages and the API, not the framework's own assets under /_next: `nosniff` on the
-        // development server's hot-reload resources sends the browser into a reload loop.
-        source: "/((?!_next/).*)",
+        source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },

@@ -21,13 +21,13 @@ import { lockCrewShare } from "../crews/lock";
 import { lockCustomerShare, optionalText } from "../customers/write";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
-import { job, location, readJob, type Job } from "./list";
+import { job, locationInput, readJob, type Job } from "./list";
 
 export const createInput = z.strictObject({
   customerId: z.uuid(),
   name: z.string().trim().min(1).max(200),
   address: optionalText(500),
-  location: location.nullable().default(null),
+  location: locationInput.nullable().default(null),
   crewId: z.uuid().nullable().default(null),
 });
 
@@ -40,7 +40,7 @@ export const updateInput = z.strictObject({
   customerId: z.uuid(),
   name: z.string().trim().min(1).max(200),
   address: optionalText(500),
-  location: location.nullable().default(null),
+  location: locationInput.nullable().default(null),
 });
 
 export type UpdateInput = z.infer<typeof updateInput>;
@@ -132,7 +132,7 @@ async function answerWith<R extends string>(
   return { result, job: row };
 }
 
-const locationColumns = (l: z.infer<typeof location> | null) => ({
+const locationColumns = (l: z.infer<typeof locationInput> | null) => ({
   locationLat: l?.lat ?? null,
   locationLng: l?.lng ?? null,
   locationRadiusM: l?.radiusM ?? null,

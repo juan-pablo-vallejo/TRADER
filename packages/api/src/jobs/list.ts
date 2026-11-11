@@ -12,7 +12,13 @@ import type { Tx } from "../core/context";
 export const location = z.strictObject({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  // The column is a 32-bit integer; 100 km is already no jobsite.
+  radiusM: z.number().int().min(1),
+});
+
+// What a writer accepts: the stored shape, with the radius bounded. The column is a 32-bit
+// integer, and 100 km is already no jobsite. Only inputs carry the bound, so a row written
+// before it existed still reads back.
+export const locationInput = location.extend({
   radiusM: z.number().int().min(1).max(100_000),
 });
 

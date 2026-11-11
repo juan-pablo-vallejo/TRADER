@@ -164,8 +164,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   or the procedure's defaults replace the test's and it waits the full 5 s.
 - Tests and the seed throw at start while `DATABASE_URL` is set (`assertLocalDatabase`). To run
   them, blank it; never point them at Neon.
-- `X-Content-Type-Options: nosniff` on `/_next/*` sends `next dev` into an endless Fast Refresh
-  reload. The headers in `next.config.ts` match pages and the API only; keep `_next/` excluded.
+- `next dev` sometimes enters an endless "Fast Refresh rebuilding" reload on the first page
+  load after a start (seen 3 times in about 12 starts on 2026-11-11, with and without the
+  response headers, never in a built app). Cause not found; one guess is another process
+  touching the repository while Turbopack watches it. Restarting the dev server clears it.
 - A table body built as `rows.map((r) => [<tr key>, <tr key>])` is keyed by position at the
   outer level: when a row moves, React remounts its editor and its state (the result note) is
   gone. Wrap the pair in `<Fragment key={r.id}>`.
@@ -223,7 +225,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   clock and closed-day query; pool bounds and error listener; default timeouts on protected
   calls; batch cap; bounded instants; tests and seed refuse `DATABASE_URL`; gate inventory
   test; typed lint; `0027`; office result notes, confirmed destructive actions, load retry,
-  pinned edited row, error and not-found screens, baseline headers, online-only requests;
+  pinned edited row, error and not-found screens, baseline headers on built apps, online-only
+  requests;
   caps removed; PRD, ARCHITECTURE, DESIGN, RULES revised; TASKS rewritten to a deployed V1.
   784 tests.
 - **Decided:** by the owner on 2026-11-11, the rows of that date in ARCHITECTURE: event-time
