@@ -10,7 +10,7 @@ import { crewMembers, crews, userRole, users } from "@trader/db/schema";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 
 export const crew = z.strictObject({
   id: z.uuid(),

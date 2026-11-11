@@ -26,10 +26,14 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import superjson from "superjson";
 import { z } from "zod";
 
-import { createContext, type Tx } from "../src/context";
-import type { VerifiedIdentity } from "../src/identity";
-import { reportingOnError, type ErrorReport, type ErrorReporter } from "../src/report";
-import type { AppUser } from "../src/resolve-user";
+import { createContext, type Tx } from "../src/core/context";
+import type { VerifiedIdentity } from "../src/core/identity";
+import {
+  reportingOnError,
+  type ErrorReport,
+  type ErrorReporter,
+} from "../src/core/report";
+import type { AppUser } from "../src/core/resolve-user";
 import type { ApprovalReason } from "../src/sync/reasons";
 import { appRouter } from "../src/router";
 import {
@@ -37,7 +41,7 @@ import {
   protectedProcedure,
   roleProcedure,
   router,
-} from "../src/trpc";
+} from "../src/core/trpc";
 
 // The owner: writes fixtures and reads them back past RLS.
 export const ownerDb = () => createDb();
@@ -686,7 +690,7 @@ export async function workedDay(tx: Tx, d: CrewDay) {
 // --- Disposable databases ---------------------------------------------------------------
 // Rolled-back transactions prove nothing about commits: a savepoint released inside one is not
 // a commit, and a failure there cannot be seen from another connection. The real-commit suites
-// (sync-push-commit.test.ts) run in a database of their own instead, made by the owner,
+// (sync/push-commit.test.ts) run in a database of their own instead, made by the owner,
 // migrated through the whole journal — which also proves a fresh replay on every run — and
 // dropped afterwards with everything append-only that was committed in it. The compose and CI
 // user is a superuser (MEMORY), so it may CREATE DATABASE; if that ever stops holding, these

@@ -8,7 +8,7 @@
 import { materials, workSessionEvents } from "@trader/db/schema";
 import { and, asc, eq, gte, lt, sql } from "drizzle-orm";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { newestStamp, readWorkerEvents } from "../labor/timeline";
 import {
   workDate as workDateOf,

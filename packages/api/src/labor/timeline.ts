@@ -7,7 +7,7 @@
 import { workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import type { LaborEvent } from "./fold";
 
 export type WorkerTimeline = {

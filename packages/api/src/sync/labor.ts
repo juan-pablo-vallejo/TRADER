@@ -14,11 +14,11 @@ import {
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { replay, type LaborEvent, type Replay, type Session } from "../labor/fold";
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { laborReasons, type ApprovalReason, type Skew } from "./reasons";
 import { lockPushScope, mayRecordLabor } from "./scope";
 

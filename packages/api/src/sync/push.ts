@@ -13,16 +13,16 @@ import {
   closeoutInput,
   submitCloseout,
 } from "../closeout/submit";
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import {
   correctionAcknowledgement,
   correctionInput,
   correctMaterial,
 } from "../materials/correct";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { materialAck, materialPayloadV1, pushMaterial } from "./material";
-import { reportFailure, type ErrorReporter } from "../report";
+import { reportFailure, type ErrorReporter } from "../core/report";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
 

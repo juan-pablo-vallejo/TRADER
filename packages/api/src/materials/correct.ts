@@ -20,10 +20,10 @@ import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf, lockForemanScope } from "../closeout/scope";
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 import { effectiveMaterial, type CorrectionState } from "./effective";
 import { quantity } from "./quantity";
 

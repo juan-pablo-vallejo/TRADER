@@ -8,10 +8,10 @@ import { approvalReason, approvals, materials } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { quantity } from "../materials/quantity";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { receiptReasons, type Skew } from "./reasons";
 import { lockPushScope, mayLogReceipt } from "./scope";
 

@@ -16,11 +16,11 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { lockCrewShare } from "../crews/lock";
 import { lockCustomerShare, optionalText } from "../customers/write";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 import { job, location, readJob, type Job } from "./list";
 
 export const createInput = z.strictObject({

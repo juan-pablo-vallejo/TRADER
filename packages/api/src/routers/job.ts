@@ -15,7 +15,7 @@ import {
   updateJob,
   updateOutput,
 } from "../jobs/write";
-import { roleProcedure, router } from "../trpc";
+import { roleProcedure, router } from "../core/trpc";
 
 export const jobRouter = router({
   list: roleProcedure("admin")

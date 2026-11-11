@@ -10,9 +10,9 @@ import { companies, payRates } from "@trader/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 import { readRosterUser } from "./list";
 
 export const rate = z.strictObject({

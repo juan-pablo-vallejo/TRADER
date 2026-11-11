@@ -10,11 +10,11 @@
 // database. Consumed by run-demo.ts and the demo tests.
 import type { Db, SeedCompany } from "@trader/db";
 
-import { createContext } from "../context";
-import { logReporter } from "../report";
+import { createContext } from "../core/context";
+import { logReporter } from "../core/report";
 import { appRouter } from "../router";
 import type { ApprovalReason } from "../sync/reasons";
-import { createCallerFactory } from "../trpc";
+import { createCallerFactory } from "../core/trpc";
 import {
   AMENDED_RECEIPT,
   BASELINE_TIMES,

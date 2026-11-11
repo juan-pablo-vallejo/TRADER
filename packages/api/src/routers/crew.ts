@@ -24,7 +24,7 @@ import {
   updateInput,
   updateOutput,
 } from "../crews/write";
-import { roleProcedure, router } from "../trpc";
+import { roleProcedure, router } from "../core/trpc";
 
 export const crewRouter = router({
   list: roleProcedure("admin")

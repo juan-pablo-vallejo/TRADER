@@ -2,10 +2,15 @@
 // login, an expired session, a forced update — still learns what to do. It reads no identity and
 // queries no database, so it answers while Postgres is down or cold. The environment is read per
 // request; a deployed value changes only with a new deployment. Consumed by router.ts.
-import { reportConfigFault } from "../report";
-import { createConfigLatch, serviceStatus, statusInput, statusOutput } from "../status";
+import { reportConfigFault } from "../core/report";
+import {
+  createConfigLatch,
+  serviceStatus,
+  statusInput,
+  statusOutput,
+} from "../core/status";
 import { SYNC_PROTOCOL } from "../sync/protocol";
-import { publicProcedure, router } from "../trpc";
+import { publicProcedure, router } from "../core/trpc";
 
 const reportOnce = createConfigLatch();
 

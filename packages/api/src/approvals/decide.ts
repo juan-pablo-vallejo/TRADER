@@ -15,10 +15,10 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 
 // Nothing names a tenant, a decider or a time: those are the server's.
 export const decideInput = z.strictObject({

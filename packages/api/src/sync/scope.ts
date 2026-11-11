@@ -12,9 +12,9 @@
 import { crewMembers, crews, jobs, users } from "@trader/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
-import { unauthorized } from "../trpc";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
+import { unauthorized } from "../core/trpc";
 import type { JobPlace } from "./reasons";
 
 export type PushScope = {

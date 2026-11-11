@@ -13,8 +13,8 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
 import { crew, readCrew, type Crew } from "./list";
 import { lockCrewForWrite, lockUsersShare, type LockedUser } from "./lock";
 

@@ -10,8 +10,8 @@ import { dayCloseouts, users } from "@trader/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
 import { gatherJobDay } from "./day";
 import { reviewFingerprint } from "./fingerprint";
 import { lockForemanScope } from "./scope";

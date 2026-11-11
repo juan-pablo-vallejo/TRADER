@@ -18,14 +18,14 @@ import {
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { eventEffect, sessionApprovals, type Decision } from "../labor/approval";
 import type { LaborEvent } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
 import { workDate } from "../labor/work-date";
 import { receiptAccounting } from "../materials/approval";
 import { effectiveMaterial, type CorrectionState } from "../materials/effective";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 
 // The cursor is the last item's approval id: its created_at is read back in SQL at full
 // precision (a Date would truncate microseconds and repeat rows sharing a timestamp).

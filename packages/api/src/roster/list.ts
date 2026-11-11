@@ -8,7 +8,7 @@ import { userRole, users } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { currentRates, rate } from "./pay-rates";
 
 export const rosterUser = z.strictObject({

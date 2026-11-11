@@ -10,9 +10,9 @@ import { userRole } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
-import { verifiedIdentitySchema } from "../identity";
-import type { AppUser } from "../resolve-user";
+import type { Tx } from "../core/context";
+import { verifiedIdentitySchema } from "../core/identity";
+import type { AppUser } from "../core/resolve-user";
 import { readRosterUser, rosterUser } from "./list";
 
 // The email validated as a sign-in email is, since that is what it will be matched against.

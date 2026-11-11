@@ -7,7 +7,7 @@ import { crews, customers, jobStatus, jobs } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 
 export const location = z.strictObject({
   lat: z.number().min(-90).max(90),

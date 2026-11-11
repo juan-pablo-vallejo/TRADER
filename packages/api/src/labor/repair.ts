@@ -19,11 +19,11 @@ import { inArray, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
 import { afterCloseout, sessionOfEvent } from "../sync/labor";
 import { laborReasons, type ApprovalReason } from "../sync/reasons";
-import { forbidden } from "../trpc";
+import { forbidden } from "../core/trpc";
 import { replay, type LaborEvent } from "./fold";
 import { assertReadCommitted, loadWorkerTimeline } from "./timeline";
 import { validateEvents, type RejectionCode } from "./validate";
