@@ -3,6 +3,7 @@
 // .env, so `DATABASE_URL= POSTGRES_DB=x pnpm db:seed` seeds x. The connection is the
 // migrator's: the same env contract (env.ts), and the owner.
 import { createDb } from "./client";
+import { assertLocalDatabase } from "./env";
 import { seed } from "./seed";
 
 try {
@@ -13,6 +14,8 @@ try {
 }
 
 async function main() {
+  // A development and CI fixture; the pilot's company is onboarded by its own task.
+  assertLocalDatabase(process.env, "the seed");
   const db = createDb();
   try {
     // One transaction: a refusal or a failed statement leaves nothing behind.

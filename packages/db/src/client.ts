@@ -7,13 +7,35 @@ import { Pool } from "pg";
 
 import { parseDatabaseEnv } from "./env";
 
+// How long a caller waits for a free connection before failing. pg's default is to wait for
+// ever, which turns an exhausted pool into requests that never answer.
+export const CONNECTION_TIMEOUT_MS = 5_000;
+
+// What an idle client's failure leaves in the log: the error's class and SQLSTATE, never its
+// message (RULES: a driver message can carry SQL and parameters).
+export function describePoolError(error: unknown): string {
+  const name = error instanceof Error ? error.name : "unknown";
+  const code = (error as { code?: unknown } | null)?.code;
+  return `database pool: idle client failed (${name}${typeof code === "string" ? ` ${code}` : ""})`;
+}
+
 export function createDb(env: Record<string, string | undefined> = process.env) {
-  // One parse: the driver and the connection come from the same validated record.
-  const { driver, connection } = parseDatabaseEnv(env);
+  // One parse: the driver, the connection and the pool's size come from one validated record.
+  const { driver, connection, poolMax } = parseDatabaseEnv(env);
   switch (driver) {
-    case "pg":
+    case "pg": {
       // A pool, not a single client: tests and the API run concurrent queries.
-      return drizzle({ client: new Pool(connection) });
+      const pool = new Pool({
+        ...connection,
+        max: poolMax,
+        connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+      });
+      // An idle client whose server went away (a restart, Neon scaling to zero) emits `error`
+      // on the pool; with no listener Node treats it as uncaught and the process exits. The
+      // pool has already discarded the client, so logging is all there is to do.
+      pool.on("error", (error) => console.error(describePoolError(error)));
+      return drizzle({ client: pool });
+    }
   }
 }
 
