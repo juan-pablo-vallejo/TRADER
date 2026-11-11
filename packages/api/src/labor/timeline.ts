@@ -7,7 +7,8 @@
 import { workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
+import { serverClock } from "../core/clock";
 import type { LaborEvent } from "./fold";
 
 export type WorkerTimeline = {
@@ -80,18 +81,9 @@ export async function loadWorkerTimeline(
   const events = await readWorkerEvents(tx, workerId);
   const baselineStamp = newestStamp(events);
 
-  // greatest() ignores the NULL a worker with no events gives. Epoch milliseconds, so no
-  // text format crosses the driver; the column holds milliseconds (precision 3).
-  const { rows: stamp } = await tx.execute<{ received_ms: string }>(sql`
-    select (extract(epoch from date_trunc('milliseconds', greatest(
-      clock_timestamp(),
-      ${baselineStamp?.toISOString() ?? null}::timestamptz + interval '1 millisecond'
-    ))) * 1000)::bigint as received_ms
-  `);
-  const received = stamp[0]?.received_ms;
-  if (received === undefined) throw new Error("no receipt stamp returned");
+  const receivedAt = await serverClock(tx, baselineStamp);
 
-  return { events, baselineStamp, receivedAt: new Date(Number(received)) };
+  return { events, baselineStamp, receivedAt };
 }
 
 // One worker's whole ledger in the fold's shape, with no lock: callers hold whatever excludes

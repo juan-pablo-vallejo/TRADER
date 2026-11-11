@@ -8,10 +8,12 @@ import { approvalReason, approvals, materials } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
+import { closedOn } from "../closeout/day";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { quantity } from "../materials/quantity";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { receiptReasons, type Skew } from "./reasons";
 import { lockPushScope, mayLogReceipt } from "./scope";
 
@@ -22,7 +24,7 @@ export const materialPayloadV1 = z.strictObject({
   description: z.string().trim().min(1).max(2000),
   quantity,
   unit: z.string().trim().min(1).max(40),
-  loggedAt: z.date(),
+  loggedAt: instant,
   capturedOffline: z.boolean(),
 });
 
@@ -117,17 +119,10 @@ export async function pushMaterial(
 
   // 5. A closeout of the receipt's job for its date, the date in that closeout's stored zone
   // (device time is business time: a material's day is its logged_at's, closeout/day.ts).
-  const { rows } = await tx.execute<{ closed: boolean }>(sql`
-    select exists (
-      select 1 from day_closeouts c
-      where c.job_id = ${p.jobId}
-        and c.work_date = (${p.loggedAt.toISOString()}::timestamptz at time zone c.timezone)::date
-    ) as closed
-  `);
   const reasons = receiptReasons({
     capturedOffline: p.capturedOffline,
     clockSkewed: skew.clockSkewed,
-    afterCloseout: rows[0]?.closed === true,
+    afterCloseout: await closedOn(tx, p.jobId, p.loggedAt),
   });
 
   // The receipt's server stamp, read once, now, after the locks, and written to both created_at

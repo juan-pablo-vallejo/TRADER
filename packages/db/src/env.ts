@@ -13,6 +13,11 @@ const LOCAL_PORT = 5432;
 // value is a validation error, not a stub that fails later.
 const driverSchema = z.object({ DATABASE_DRIVER: z.enum(["pg"]).default("pg") });
 const urlSchema = z.object({ DATABASE_URL: z.string().min(1) });
+// Connections one server instance may hold. pg's own default, stated so it is a decision: a
+// deployment sizes it against the database's connection limit and its instance count.
+const poolSchema = z.object({
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(100).default(10),
+});
 const composeSchema = z.object({
   POSTGRES_USER: z.string().min(1),
   POSTGRES_PASSWORD: z.string().min(1),
@@ -33,7 +38,11 @@ export type DatabaseConnection =
       ssl: false;
     };
 
-export type DatabaseEnv = { driver: DatabaseDriver; connection: DatabaseConnection };
+export type DatabaseEnv = {
+  driver: DatabaseDriver;
+  connection: DatabaseConnection;
+  poolMax: number;
+};
 
 // A blank value in .env (`DATABASE_URL=`) arrives as "" and means "unset".
 const withoutBlanks = (env: Record<string, string | undefined>) =>
@@ -44,13 +53,15 @@ const withoutBlanks = (env: Record<string, string | undefined>) =>
 export function parseDatabaseEnv(env: Record<string, string | undefined>): DatabaseEnv {
   const clean = withoutBlanks(env);
   const driver = driverSchema.parse(clean).DATABASE_DRIVER;
+  const poolMax = poolSchema.parse(clean).DATABASE_POOL_MAX;
   if (clean.DATABASE_URL !== undefined) {
     const { DATABASE_URL } = urlSchema.parse(clean);
-    return { driver, connection: { connectionString: DATABASE_URL } };
+    return { driver, poolMax, connection: { connectionString: DATABASE_URL } };
   }
   const { POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB } = composeSchema.parse(clean);
   return {
     driver,
+    poolMax,
     connection: {
       host: LOCAL_HOST,
       port: LOCAL_PORT,
@@ -74,4 +85,21 @@ export function databaseDriver(
   env: Record<string, string | undefined> = process.env,
 ): DatabaseDriver {
   return parseDatabaseEnv(env).driver;
+}
+
+// Refuses a deployed database. Tests commit fixtures and create and drop databases, and the
+// seed writes a placeholder company: all three belong on the local compose server or CI's
+// service container, both reached through the POSTGRES_* variables. DATABASE_URL is the
+// deployed shape, so its presence means the target is not one of those. Consumed by every
+// package's test/setup.ts and by run-seed.ts; the migrator does not call it.
+export function assertLocalDatabase(
+  env: Record<string, string | undefined>,
+  what: string,
+): void {
+  if ((env.DATABASE_URL ?? "") !== "") {
+    throw new Error(
+      `refusing to run ${what}: DATABASE_URL is set. ${what} run only against the local ` +
+        "compose database (POSTGRES_* variables), never a deployed one.",
+    );
+  }
 }

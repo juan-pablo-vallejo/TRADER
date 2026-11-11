@@ -16,7 +16,17 @@ export function EmptyState({ text, action }: { text: string; action?: React.Reac
   );
 }
 
-export function Failure({ error, devSignIn }: { error: unknown; devSignIn: boolean }) {
+// `onRetry` refetches the query that failed: a failed read changed nothing, so the screen says
+// so and offers the one useful step.
+export function Failure({
+  error,
+  devSignIn,
+  onRetry,
+}: {
+  error: unknown;
+  devSignIn: boolean;
+  onRetry?: () => void;
+}) {
   const code = codeOf(error);
   if (code === "UNAUTHORIZED") {
     return (
@@ -29,8 +39,13 @@ export function Failure({ error, devSignIn }: { error: unknown; devSignIn: boole
   if (code === "FORBIDDEN") return <EmptyState text={strings.notPermitted} />;
   return (
     <div className={controls.banner} role="alert">
-      <p className="body-strong">{strings.requestFailed}</p>
-      <p className="secondary">{strings.requestFailedHelp}</p>
+      <p className="body-strong">{strings.loadFailed}</p>
+      <p className="secondary">{strings.loadFailedHelp}</p>
+      {onRetry !== undefined && (
+        <button type="button" className={controls.secondary} onClick={onRetry}>
+          {strings.tryAgain}
+        </button>
+      )}
     </div>
   );
 }

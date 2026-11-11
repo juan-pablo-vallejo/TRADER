@@ -136,6 +136,9 @@
 .banner p {
   margin: 0;
 }
+.banner button {
+  margin-top: var(--space-3);
+}
 
 /* Controls side by side, wrapping; 12 between them. */
 .actions {

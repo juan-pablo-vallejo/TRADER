@@ -21,7 +21,16 @@ let browserQueryClient: QueryClient | undefined;
 
 function makeQueryClient() {
   // An answer of UNAUTHORIZED or FORBIDDEN is a state the screen shows, not a transient.
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // `networkMode: "always"`: the office is online-only (DESIGN, Layout). The library's default
+  // pauses a request while the browser reports offline and sends it on reconnect, so a write
+  // pressed with no signal would land minutes later, unannounced. Here it fails at once and
+  // the screen says so; nothing is queued.
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, networkMode: "always" },
+      mutations: { networkMode: "always" },
+    },
+  });
 }
 
 function getQueryClient() {
@@ -34,7 +43,9 @@ export function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
-      links: [httpBatchLink({ url: "/api/trpc", transformer: superjson })],
+      // `maxItems` is the server's batch cap (server/handler.ts, MAX_BATCH_SIZE): a larger
+      // set of calls is split into several requests instead of being refused.
+      links: [httpBatchLink({ url: "/api/trpc", transformer: superjson, maxItems: 10 })],
     }),
   );
   return (

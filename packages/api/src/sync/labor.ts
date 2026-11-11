@@ -11,14 +11,16 @@ import {
   attestationLevel,
   workSessionEvents,
 } from "@trader/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import { closedOn } from "../closeout/day";
+import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import { replay, type LaborEvent, type Replay, type Session } from "../labor/fold";
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { laborReasons, type ApprovalReason, type Skew } from "./reasons";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
@@ -29,7 +31,7 @@ export const laborPayloadV1 = z.strictObject({
   workerId: z.uuid(),
   jobId: z.uuid(),
   type: z.enum(["started", "paused", "resumed", "ended"]),
-  clientTimestamp: z.date(),
+  clientTimestamp: instant,
   attestationLevel: z.enum(attestationLevel.enumValues),
   location: z
     .strictObject({
@@ -253,13 +255,5 @@ export function sessionOfEvent(after: Replay, event: LaborEvent): Session {
 // shared, a closeout either committed before (seen here) or covers this record. A closed day
 // the session has left is not consulted: its sealed membership never changes. Consumed by
 // push and by labor/repair.ts.
-export async function afterCloseout(tx: Tx, session: Session): Promise<boolean> {
-  const { rows } = await tx.execute<{ closed: boolean }>(sql`
-    select exists (
-      select 1 from day_closeouts c
-      where c.job_id = ${session.jobId}
-        and c.work_date = (${session.startedAt.toISOString()}::timestamptz at time zone c.timezone)::date
-    ) as closed
-  `);
-  return rows[0]?.closed === true;
-}
+export const afterCloseout = (tx: Tx, session: Session): Promise<boolean> =>
+  closedOn(tx, session.jobId, session.startedAt);

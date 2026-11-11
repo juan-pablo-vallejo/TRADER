@@ -5,7 +5,7 @@
 // scopes the job inside (closeout/review.ts).
 import { reviewDay, reviewInput, reviewOutput } from "../closeout/review";
 import { closeoutInput, closeoutOutput, submitCloseout } from "../closeout/submit";
-import { protectedProcedure, roleProcedure, router } from "../trpc";
+import { protectedProcedure, roleProcedure, router } from "../core/trpc";
 
 export const closeoutRouter = router({
   review: roleProcedure("foreman")

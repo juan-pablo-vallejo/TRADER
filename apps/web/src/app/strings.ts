@@ -25,9 +25,17 @@ export const strings = {
   loading: "Loading…",
   signInToContinue: "Sign in to continue.",
   notPermitted: "Not permitted.",
-  requestFailed: "Request failed.",
-  requestFailedHelp:
-    "Nothing was saved. Try again; if it keeps failing, tell the office.",
+  requestFailed: "That didn't go through. Nothing was saved; try again.",
+  loadFailed: "This page didn't load.",
+  loadFailedHelp: "Nothing was changed. Check the connection and try again.",
+  tryAgain: "Try again",
+  pageError: "Something went wrong on this page.",
+  pageErrorHelp:
+    "Nothing was saved by the step that failed. Reload the page to carry on.",
+  reload: "Reload",
+  notFound: "There is no page at this address.",
+  goToJobs: "Go to Jobs",
+  cancel: "Cancel",
 
   // Editors and create forms
   details: "Details",
@@ -50,6 +58,8 @@ export const strings = {
   deactivate: "Deactivate",
   reactivate: "Reactivate",
   lastAdmin: "This is the last admin. Make someone else an admin first.",
+  deactivatePersonEffect: (name: string) =>
+    `${name} will not be able to sign in or send hours from their phone. Hours the office already has stay on record.`,
   unchanged: "No change.",
   effectiveFrom: "Effective from",
   addRate: "Add rate",
@@ -72,7 +82,9 @@ export const strings = {
   notes: "Notes",
   none: "—",
   jobsUnarchived: (n: number) =>
-    `${n} of this customer's jobs are not archived. Archive them first.`,
+    `${n === 1 ? "1 of this customer's jobs is" : `${n} of this customer's jobs are`} not archived. Archive ${n === 1 ? "it" : "them"} first.`,
+  deactivateCustomerEffect:
+    "No new job can be added for this customer. Its past jobs stay.",
 
   // Crews
   emptyCrews: "No crews yet.",
@@ -87,6 +99,10 @@ export const strings = {
   addMember: "Add member",
   remove: "Remove",
   deactivateCrew: "Deactivate crew",
+  deactivateCrewEffect:
+    "No job can be assigned to this crew, and its foreman can no longer record crew hours or close out its days.",
+  removeMemberEffect: (name: string) =>
+    `Hours ${name} recorded on this crew's jobs and has not synced yet will be refused when they arrive.`,
   userInactive: "That person is deactivated.",
   notAForeman: "The foreman must have the Foreman role.",
   reactivateCrewFirst: "Reactivate the crew first",

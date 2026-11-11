@@ -17,7 +17,7 @@ import {
   setPayRateOutput,
 } from "../roster/pay-rates";
 import { changeOutput, setRole, setRoleInput } from "../roster/role";
-import { roleProcedure, router } from "../trpc";
+import { roleProcedure, router } from "../core/trpc";
 
 export const rosterRouter = router({
   list: roleProcedure("admin")

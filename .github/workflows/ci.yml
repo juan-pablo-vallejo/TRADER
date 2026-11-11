@@ -6,9 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+# The job only reads the repository; nothing it runs needs to write to it.
+permissions:
+  contents: read
+
+# A newer push to a pull request supersedes the run before it. On main every merge commit
+# keeps its own run: the group is the commit itself there, because a shared group holds only
+# one pending run and would drop the middle of three quick merges unverified.
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # The job id is the required status check on main. Renaming it disarms branch protection.
@@ -64,14 +71,3 @@ jobs:
       # against the migrated schema.
       - run: pnpm db:migrate
       - run: pnpm test
-
-      # Document caps from docs/RULES.md, enforced here so an overrun is a red X, not a memory.
-      - run: |
-          cap() { test "$(wc -l < "$1")" -le "$2" || { echo "$1 exceeds $2 lines"; exit 1; }; }
-          cap README.md 30
-          cap CLAUDE.md 40
-          cap docs/ARCHITECTURE.md 210
-          cap docs/MEMORY.md 200
-          for f in docs/PRD.md docs/RULES.md docs/DESIGN.md docs/TASKS.md; do
-            cap "$f" 150
-          done

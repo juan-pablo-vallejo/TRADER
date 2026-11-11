@@ -8,7 +8,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { GET } from "../src/app/api/trpc/[trpc]/route";
 import { getDb } from "../src/server/db";
-import { createTrpcHandler } from "../src/server/handler";
+import { createTrpcHandler, ENDPOINT, MAX_BATCH_SIZE } from "../src/server/handler";
 import { webIdentity } from "../src/server/identity";
 import {
   invitation,
@@ -53,6 +53,30 @@ describe("the route handler", () => {
     expect(r.status).toBe(200);
     expect(r.headers.get("cache-control")).toBe("no-store");
     expect(r.body.result?.data.json).toEqual({ version: 1, state: "normal" });
+  });
+
+  it("refuses a batch above the cap before any call runs", async () => {
+    vi.stubEnv("TRADER_DEV_IDENTITY", "");
+    const handler = createTrpcHandler({
+      getDb: () => unusableDb,
+      identity: webIdentity,
+      reporter: quietReporter,
+    });
+    const batch = (n: number) => {
+      const paths = Array.from({ length: n }, () => "status.get").join(",");
+      const input = Object.fromEntries(
+        Array.from({ length: n }, (_, i) => [
+          i,
+          { json: { protocolVersion: 1, platform: "ios", build: 1 } },
+        ]),
+      );
+      const url = new URL(`http://test${ENDPOINT}/${paths}`);
+      url.searchParams.set("batch", "1");
+      url.searchParams.set("input", JSON.stringify(input));
+      return handler(new Request(url));
+    };
+    expect((await batch(MAX_BATCH_SIZE)).status).toBe(200);
+    expect((await batch(MAX_BATCH_SIZE + 1)).status).toBe(400);
   });
 
   it("answers me.get UNAUTHORIZED, 401, without an identity", async () => {

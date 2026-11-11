@@ -16,11 +16,13 @@ import {
 import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
+import { serverClock } from "../core/clock";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { workDate as workDateOf } from "../labor/work-date";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 import {
   dayMaterialColumns,
   gatherJobDay,
@@ -39,7 +41,7 @@ export const closeoutInput = z.strictObject({
   // Hiding a job (`archived`) is the office's, never the closeout's.
   jobStatus: z.enum(["open", "complete"]),
   note: z.string().trim().min(1).max(2000).nullable(),
-  clientTimestamp: z.date(),
+  clientTimestamp: instant,
   // From the closeout.review the foreman confirmed, kept unchanged on every retry. A
   // precondition of a new acceptance, not part of the record: never stored, never compared
   // when answering a retry. Any well-formed version, so another version is review_stale.
@@ -169,10 +171,7 @@ export async function submitCloseout(
 
   // 7. The server's clock, read after the locks: it judges the date and stamps the record,
   // after everything the closeout covers.
-  const { rows } = await tx.execute<{ now_ms: string }>(
-    sql`select (extract(epoch from date_trunc('milliseconds', clock_timestamp())) * 1000)::bigint as now_ms`,
-  );
-  const now = new Date(Number(rows[0]!.now_ms));
+  const now = await serverClock(tx);
   if (input.workDate > workDateOf(now, timeZone)) return rejected("work_date_in_future");
 
   // 10. The day, from the fold.

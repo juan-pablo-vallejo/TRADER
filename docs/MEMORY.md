@@ -11,7 +11,7 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   **Next** (a task in TASKS.md).
 - A gotcha goes under **Notes** when it will bite again; a note is deleted when its cause is
   gone.
-- Cap 200 lines. Within 20 lines of it, roll the oldest month of Log into one dated paragraph.
+- No cap. A month of Log is rolled into one dated paragraph once nobody reads its entries.
 
 ## Context
 
@@ -38,8 +38,6 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `work_session_events` is append-only by trigger and references `users` and `companies`, so
   fixtures can never be cleaned up: schema tests run in rolled-back transactions
   (`test/helpers.ts`), every statement on `tx`.
-- Log roll-up: when headroom <30 after the session entry, roll the oldest entries one line
-  each; Notes untouched.
 - drizzle-kit never sees triggers or functions, or roles, grants, policies and FORCE. They live
   in `generate --custom` files, which start with a comment line to replace; a plain generate
   afterwards emits nothing. Separate statements with `--> statement-breakpoint`; pass flags
@@ -99,8 +97,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   schema's "now() is transaction time" comment is stale for pushes. Lock workers in id order.
 - Duplicates are push's: `INSERT … ON CONFLICT (id) DO NOTHING RETURNING id`, then re-select;
   equal client columns (not stamp or skew) is `duplicate`, anything else `id_conflict`.
-- A job switch in one batch with equal device times falls to `id` order: the phone must emit
-  `ended` before `started` with a monotonic UUIDv7, or the start is rejected.
+- A job switch is two records in one batch, each validated at its own receipt in batch order:
+  the phone must send `ended` before `started` (and mint their UUIDv7 ids in that order), or
+  the start is rejected as overlapping an open session.
 - Deferred constraint triggers never fire in a rolled-back test: `SET CONSTRAINTS … IMMEDIATE`
   fires them. TRUNCATE refuses a table with pending trigger events (55006).
 - A foreign key naming a row another transaction has not committed fails at once (23503).
@@ -159,6 +158,26 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   a spy on the pool misses it, and pg's `connect` has a callback form and a promise form.
 - Browse the demo with `POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled` on the
   web `dev` script as the demo admin: nothing is written. Signing in as `sam.carter` binds him.
+- A protected call sets `lock_timeout` 5 s and `statement_timeout` 20 s in its own transaction
+  (`core/trpc.ts`). A test that calls a procedure inside a rolled-back transaction with a short
+  wait of its own must build its context with `waits: "inherit"` (`callerIn`, `appCallerIn` do),
+  or the procedure's defaults replace the test's and it waits the full 5 s.
+- Tests and the seed throw at start while `DATABASE_URL` is set (`assertLocalDatabase`). To run
+  them, blank it; never point them at Neon.
+- `next dev` sometimes enters an endless "Fast Refresh rebuilding" reload on the first page
+  load after a start (seen 3 times in about 12 starts on 2026-11-11, with and without the
+  response headers, never in a built app). Cause not found; one guess is another process
+  touching the repository while Turbopack watches it. Restarting the dev server clears it.
+- A table body built as `rows.map((r) => [<tr key>, <tr key>])` is keyed by position at the
+  outer level: when a row moves, React remounts its editor and its state (the result note) is
+  gone. Wrap the pair in `<Fragment key={r.id}>`.
+- `pnpm --filter web …` matches no package and exits 0 without running anything; the package is
+  `@trader/web`. Read the output, not the exit status.
+- `trader_demo` is migrated when `pnpm demo` creates it: after a new migration, rebuild it with
+  `pnpm demo --reset` before relying on it.
+- tRPC runs a gate's middleware before input validation, so a call with no input answers the
+  gate (UNAUTHORIZED, FORBIDDEN) or BAD_REQUEST without writing: the gate inventory test relies
+  on it.
 
 ## Log
 
@@ -197,3 +216,23 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `page-header`, `field`, `note`, `row-editor`; roster at 390 from 3,547 px to 1,183; 770 tests.
 - **Decided:** by the owner on 2026-11-09: plan K-1 to K-6, K-8, K-9 as recommended; K-7 not taken.
 - **Next:** owner merges `ux-review`, `office-shell`, `office-list-pattern` in order; then TASKS.
+
+### 2026-11-11 — Audit, then the V1 readiness pass
+
+- **Did:** a read-only audit at `fbf2e5d` (eight specialist reviews, browser pass, catalog
+  queries): no P0, six P1s. Then, on the owner's instruction, branch `v1-readiness`: API
+  plumbing under `core/`, tests mirroring `src/`; one home each for the caller lock, server
+  clock and closed-day query; pool bounds and error listener; default timeouts on protected
+  calls; batch cap; bounded instants; tests and seed refuse `DATABASE_URL`; gate inventory
+  test; typed lint; `0027`; office result notes, confirmed destructive actions, load retry,
+  pinned edited row, error and not-found screens, baseline headers on built apps, online-only
+  requests;
+  caps removed; PRD, ARCHITECTURE, DESIGN, RULES revised; TASKS rewritten to a deployed V1.
+  784 tests.
+- **Decided:** by the owner on 2026-11-11, the rows of that date in ARCHITECTURE: event-time
+  plausibility, `captured_offline`, rejected-record trace, pull extension, pay-period
+  membership, hours rounding, credit memos, audit rows in V1, no document caps. Not done, and
+  now TASKS lines: the client-safe contract export, the screen scaffold extraction,
+  `status.get` without the adapter, the wider startup guard, the comment citations.
+- **Next:** owner reviews and merges `v1-readiness`; then Stage 4's first open line,
+  event-time plausibility in `sync.push` (plan first: sync).

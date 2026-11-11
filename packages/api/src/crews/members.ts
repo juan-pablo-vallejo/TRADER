@@ -11,9 +11,9 @@ import { crewMembers } from "@trader/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
+import { lockActiveSelf } from "../core/locks";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
 import { crew } from "./list";
 import { lockCrewForWrite, lockUsersShare } from "./lock";
 import { answerWith } from "./write";

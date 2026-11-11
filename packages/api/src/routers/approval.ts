@@ -2,7 +2,7 @@
 // own-record retry to keep open, unlike material.correct.
 import { decideApproval, decideInput, decideOutput } from "../approvals/decide";
 import { approvalQueue, queueInput, queueOutput } from "../approvals/queue";
-import { roleProcedure, router } from "../trpc";
+import { roleProcedure, router } from "../core/trpc";
 
 export const approvalRouter = router({
   queue: roleProcedure("admin")

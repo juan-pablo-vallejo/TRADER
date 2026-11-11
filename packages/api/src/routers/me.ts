@@ -8,7 +8,7 @@ import { userRole, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { protectedProcedure, router } from "../trpc";
+import { protectedProcedure, router } from "../core/trpc";
 
 const meOutput = z.strictObject({
   id: z.uuid(),

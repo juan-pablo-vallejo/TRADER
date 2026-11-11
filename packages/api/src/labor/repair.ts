@@ -18,12 +18,13 @@ import {
 import { inArray, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
+import { lockActiveSelf } from "../core/locks";
+import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
+import type { AppUser } from "../core/resolve-user";
 import { afterCloseout, sessionOfEvent } from "../sync/labor";
 import { laborReasons, type ApprovalReason } from "../sync/reasons";
-import { forbidden } from "../trpc";
+import { forbidden } from "../core/trpc";
 import { replay, type LaborEvent } from "./fold";
 import { assertReadCommitted, loadWorkerTimeline } from "./timeline";
 import { validateEvents, type RejectionCode } from "./validate";
@@ -41,7 +42,7 @@ const operation = z.discriminatedUnion("kind", [
     id: eventId,
     type: positional,
     jobId: z.uuid(),
-    clientTimestamp: z.date(),
+    clientTimestamp: instant,
   }),
   z.strictObject({
     kind: z.literal("correct"),
@@ -52,7 +53,7 @@ const operation = z.discriminatedUnion("kind", [
     replacesEventId: z.uuid(),
     type: positional,
     jobId: z.uuid(),
-    clientTimestamp: z.date(),
+    clientTimestamp: instant,
   }),
   z.strictObject({ kind: z.literal("void"), id: eventId, voidsEventId: z.uuid() }),
 ]);

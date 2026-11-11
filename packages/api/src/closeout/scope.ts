@@ -7,12 +7,13 @@
 // NO KEY UPDATE, serializing closeouts of one job without blocking labor and material inserts,
 // whose foreign-key checks take KEY SHARE) and review.ts (held FOR SHARE: a read), and by
 // materials/correct.ts (held FOR SHARE).
-import { companies, crews, jobs, users } from "@trader/db/schema";
+import { companies, crews, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
-import { forbidden, unauthorized } from "../trpc";
+import type { Tx } from "../core/context";
+import { lockActiveSelf } from "../core/locks";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 
 export type ForemanScope = {
   jobName: string;
@@ -58,21 +59,4 @@ export async function lockForemanScope(
   if (company === undefined) throw new Error("the caller's company is not visible");
 
   return { jobName: job.name, jobStatus: job.status, timeZone: company.timezone };
-}
-
-// The caller, re-read under a lock held to commit: resolution read it without one. A
-// deactivated caller is UNAUTHORIZED, as at resolution; a changed role is FORBIDDEN. Consumed
-// by lockForemanScope above and by materials/correct.ts for an admin.
-export async function lockActiveSelf(
-  tx: Tx,
-  user: AppUser,
-  role: AppUser["role"],
-): Promise<void> {
-  const [self] = await tx
-    .select({ role: users.role, deactivatedAt: users.deactivatedAt })
-    .from(users)
-    .where(eq(users.id, user.id))
-    .for("share");
-  if (self === undefined || self.deactivatedAt !== null) throw unauthorized();
-  if (self.role !== role) throw forbidden();
 }

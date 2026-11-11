@@ -17,12 +17,12 @@ import {
 import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 import { replay } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
 import { effectiveMaterial } from "../materials/effective";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 
 // ARCHITECTURE, sync.pull: today and the 13 days before it in the company's zone, plus any

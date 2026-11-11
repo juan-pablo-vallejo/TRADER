@@ -45,5 +45,19 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Typed rules, for the two mistakes the compiler allows and the database punishes: a
+    // statement on `tx` that is never awaited runs after its transaction has ended, or not
+    // at all, and a promise handed where a plain callback is expected is never observed.
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/await-thenable": "error",
+    },
+  },
   prettier,
 );

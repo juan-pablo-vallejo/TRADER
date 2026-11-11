@@ -21,6 +21,25 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/favicon.ico": ["../../assets/brand/logo.png"],
   },
+  // No framework banner on responses.
+  poweredByHeader: false,
+  // Baseline response headers for every route of a built app: no MIME sniffing, no framing by
+  // another site, and no path or query sent to another origin. Built apps only: a development
+  // server is never exposed, and nothing there needs them. A content security policy and
+  // transport security are set with the deployment (TASKS, Stage 6), where they can be tested.
+  async headers() {
+    if (process.env.NODE_ENV !== "production") return [];
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default config;

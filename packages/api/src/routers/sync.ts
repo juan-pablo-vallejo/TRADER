@@ -3,7 +3,7 @@
 // protected query, open to every active role: it reads only the caller's own (sync/pull.ts).
 import { pullInput, pullOutput, pullSnapshot } from "../sync/pull";
 import { pushInput, pushOutput, pushRecords, reportRecordFailure } from "../sync/push";
-import { protectedProcedure, router, syncProcedure } from "../trpc";
+import { protectedProcedure, router, syncProcedure } from "../core/trpc";
 
 export const syncRouter = router({
   push: syncProcedure

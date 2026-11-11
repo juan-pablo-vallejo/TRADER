@@ -7,7 +7,7 @@ import { customers } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
 
 export const customer = z.strictObject({
   id: z.uuid(),

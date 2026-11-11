@@ -11,10 +11,10 @@ import { customers } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
-import type { Tx } from "../context";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import { lockActiveSelf } from "../core/locks";
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 import { customer, readCustomer, type Customer } from "./list";
 
 // Optional text is NULL at the boundary: blank, whitespace included, never reaches a column.

@@ -13,16 +13,17 @@ import {
   closeoutInput,
   submitCloseout,
 } from "../closeout/submit";
-import type { Tx } from "../context";
+import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import {
   correctionAcknowledgement,
   correctionInput,
   correctMaterial,
 } from "../materials/correct";
-import type { AppUser } from "../resolve-user";
+import type { AppUser } from "../core/resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { materialAck, materialPayloadV1, pushMaterial } from "./material";
-import { reportFailure, type ErrorReporter } from "../report";
+import { reportFailure, type ErrorReporter } from "../core/report";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
 
@@ -116,7 +117,7 @@ function classify(raw: unknown): Classified {
 export const pushInput = z.strictObject({
   protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
   // The device's clock now, once per push: the one reading that says whether it is wrong.
-  deviceNow: z.date(),
+  deviceNow: instant,
   records: z.array(z.unknown()).min(1).max(MAX_RECORDS),
 });
 

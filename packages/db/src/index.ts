@@ -1,5 +1,6 @@
 export { createDb, type Db } from "./client";
 export {
+  assertLocalDatabase,
   databaseConnection,
   databaseDriver,
   parseDatabaseEnv,

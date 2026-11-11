@@ -1,24 +1,24 @@
-export { createContext, type Context } from "./context";
+export { createContext, type Context } from "./core/context";
 export {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,
   DEV_SUBJECT_HEADER,
   devIdentityEnabled,
-} from "./dev-identity";
+} from "./core/dev-identity";
 export {
   verifiedIdentitySchema,
   type IdentityAdapter,
   type VerifiedIdentity,
-} from "./identity";
+} from "./core/identity";
 export {
   logReporter,
   reportingOnError,
   type ErrorReport,
   type ErrorReporter,
-} from "./report";
-export type { AppUser } from "./resolve-user";
+} from "./core/report";
+export type { AppUser } from "./core/resolve-user";
 export { appRouter, type AppRouter } from "./router";
-export { STATES, type ServiceState, type StatusClient } from "./status";
+export { STATES, type ServiceState, type StatusClient } from "./core/status";
 export {
   createCallerFactory,
   protectedProcedure,
@@ -26,4 +26,4 @@ export {
   roleProcedure,
   router,
   syncProcedure,
-} from "./trpc";
+} from "./core/trpc";

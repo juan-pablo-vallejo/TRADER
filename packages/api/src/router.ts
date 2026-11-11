@@ -9,7 +9,7 @@ import { meRouter } from "./routers/me";
 import { rosterRouter } from "./routers/roster";
 import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
-import { router } from "./trpc";
+import { router } from "./core/trpc";
 
 export const appRouter = router({
   approval: approvalRouter,

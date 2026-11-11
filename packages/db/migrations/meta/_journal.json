@@ -190,6 +190,13 @@
       "when": 1793919320644,
       "tag": "0026_event-repair-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1794430811981,
+      "tag": "0027_pay-rates-insert-only",
+      "breakpoints": true
     }
   ]
 }

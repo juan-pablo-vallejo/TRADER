@@ -19,11 +19,15 @@ import {
 import { and, asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf, lockForemanScope } from "../closeout/scope";
-import type { Tx } from "../context";
+import { closedOn } from "../closeout/day";
+import { lockForemanScope } from "../closeout/scope";
+import { serverClock } from "../core/clock";
+import { lockActiveSelf } from "../core/locks";
+import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
-import type { AppUser } from "../resolve-user";
-import { forbidden } from "../trpc";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
 import { effectiveMaterial, type CorrectionState } from "./effective";
 import { quantity } from "./quantity";
 
@@ -43,7 +47,7 @@ export const correctionInput = z.strictObject({
     z.strictObject({ kind: z.literal("void") }),
   ]),
   note: z.string().trim().min(1).max(2000).nullable(),
-  clientTimestamp: z.date(),
+  clientTimestamp: instant,
 });
 
 export type CorrectionInput = z.infer<typeof correctionInput>;
@@ -234,14 +238,8 @@ export async function correctMaterial(
           )
       : [];
   if (member === undefined && late === undefined) {
-    const { rows } = await tx.execute<{ closed: boolean }>(sql`
-      select exists (
-        select 1 from day_closeouts c
-        where c.job_id = ${material.jobId}
-          and c.work_date = (${material.loggedAt.toISOString()}::timestamptz at time zone c.timezone)::date
-      ) as closed
-    `);
-    return rejected(rows[0]?.closed === true ? "not_in_closeout" : "closeout_pending");
+    const closed = await closedOn(tx, material.jobId, material.loggedAt);
+    return rejected(closed ? "not_in_closeout" : "closeout_pending");
   }
 
   // 8. The material as it stands, read under its lock.
@@ -277,13 +275,7 @@ export async function correctMaterial(
   // 9. The receipt stamp: the server's clock after the locks, above every earlier correction
   // of this material, so they take effect in the order they were accepted.
   const newest = history.at(-1)?.serverTimestamp ?? null;
-  const { rows: stamp } = await tx.execute<{ now_ms: string }>(sql`
-    select (extract(epoch from date_trunc('milliseconds', greatest(
-      clock_timestamp(),
-      ${newest?.toISOString() ?? null}::timestamptz + interval '1 millisecond'
-    ))) * 1000)::bigint as now_ms
-  `);
-  const now = new Date(Number(stamp[0]!.now_ms));
+  const now = await serverClock(tx, newest);
 
   // 10. No conflict target: the primary key is this table's only unique key the id does not
   // imply. Nothing comes back when a concurrent call committed this id for another material

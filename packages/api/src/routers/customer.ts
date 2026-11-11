@@ -14,7 +14,7 @@ import {
   updateInput,
   updateOutput,
 } from "../customers/write";
-import { roleProcedure, router } from "../trpc";
+import { roleProcedure, router } from "../core/trpc";
 
 export const customerRouter = router({
   list: roleProcedure("admin")

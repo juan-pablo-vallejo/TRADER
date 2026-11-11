@@ -20,6 +20,12 @@
   gap: var(--space-3);
   min-height: var(--target);
   border-bottom: var(--hairline) solid var(--border);
+  flex-wrap: wrap;
+}
+/* A removal being confirmed takes the line beneath the name, never the space beside it. */
+.members li > [role="group"] {
+  flex-basis: 100%;
+  padding-bottom: var(--space-3);
 }
 .members .caption {
   color: var(--ink-secondary);
