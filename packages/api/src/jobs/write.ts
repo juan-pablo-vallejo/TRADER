@@ -15,7 +15,7 @@ import { invoices, jobStatus, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
+import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import { lockCrewShare } from "../crews/lock";
 import { lockCustomerShare, optionalText } from "../customers/write";

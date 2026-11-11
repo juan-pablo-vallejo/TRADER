@@ -18,7 +18,7 @@ import {
 import { inArray, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
+import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { afterCloseout, sessionOfEvent } from "../sync/labor";

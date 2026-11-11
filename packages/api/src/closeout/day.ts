@@ -125,3 +125,18 @@ export function onDayInIdOrder(
     .filter((m) => workDateOf(m.loggedAt, timeZone) === workDate)
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
 }
+
+// Whether a closeout of `jobId` covers the instant `at`: its date judged in each closeout's
+// own stored zone, never the company's current one, so a later zone change cannot move a
+// record into or out of a closed day. Consumed by sync/labor.ts, sync/material.ts and
+// materials/correct.ts.
+export async function closedOn(tx: Tx, jobId: string, at: Date): Promise<boolean> {
+  const { rows } = await tx.execute<{ closed: boolean }>(sql`
+    select exists (
+      select 1 from day_closeouts c
+      where c.job_id = ${jobId}
+        and c.work_date = (${at.toISOString()}::timestamptz at time zone c.timezone)::date
+    ) as closed
+  `);
+  return rows[0]?.closed === true;
+}

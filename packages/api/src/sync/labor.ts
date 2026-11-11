@@ -11,9 +11,10 @@ import {
   attestationLevel,
   workSessionEvents,
 } from "@trader/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { closedOn } from "../closeout/day";
 import type { Tx } from "../core/context";
 import { replay, type LaborEvent, type Replay, type Session } from "../labor/fold";
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
@@ -253,13 +254,5 @@ export function sessionOfEvent(after: Replay, event: LaborEvent): Session {
 // shared, a closeout either committed before (seen here) or covers this record. A closed day
 // the session has left is not consulted: its sealed membership never changes. Consumed by
 // push and by labor/repair.ts.
-export async function afterCloseout(tx: Tx, session: Session): Promise<boolean> {
-  const { rows } = await tx.execute<{ closed: boolean }>(sql`
-    select exists (
-      select 1 from day_closeouts c
-      where c.job_id = ${session.jobId}
-        and c.work_date = (${session.startedAt.toISOString()}::timestamptz at time zone c.timezone)::date
-    ) as closed
-  `);
-  return rows[0]?.closed === true;
-}
+export const afterCloseout = (tx: Tx, session: Session): Promise<boolean> =>
+  closedOn(tx, session.jobId, session.startedAt);

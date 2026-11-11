@@ -11,11 +11,12 @@ import {
   materials,
   workSessionEvents,
 } from "@trader/db/schema";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
+import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
+import { serverClock } from "../core/clock";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
@@ -153,11 +154,7 @@ export async function decideApproval(
   if (party === user.id) return { result: "rejected", code: "own_entry" };
 
   // 7. The server's clock after the locks, to the millisecond.
-  const { rows: stamp } = await tx.execute<{ now_ms: string }>(sql`
-    select (extract(epoch from date_trunc('milliseconds', clock_timestamp())) * 1000)::bigint
-      as now_ms
-  `);
-  const decidedAt = new Date(Number(stamp[0]!.now_ms));
+  const decidedAt = await serverClock(tx);
 
   // 8. One statement sets all three, which approvals_decision_complete requires together.
   const [written] = await tx

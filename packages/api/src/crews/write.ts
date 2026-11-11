@@ -12,7 +12,7 @@ import { crewMembers, crews } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { lockActiveSelf } from "../closeout/scope";
+import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { crew, readCrew, type Crew } from "./list";

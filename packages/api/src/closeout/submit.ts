@@ -17,6 +17,7 @@ import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { serverClock } from "../core/clock";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { workDate as workDateOf } from "../labor/work-date";
 import type { AppUser } from "../core/resolve-user";
@@ -169,10 +170,7 @@ export async function submitCloseout(
 
   // 7. The server's clock, read after the locks: it judges the date and stamps the record,
   // after everything the closeout covers.
-  const { rows } = await tx.execute<{ now_ms: string }>(
-    sql`select (extract(epoch from date_trunc('milliseconds', clock_timestamp())) * 1000)::bigint as now_ms`,
-  );
-  const now = new Date(Number(rows[0]!.now_ms));
+  const now = await serverClock(tx);
   if (input.workDate > workDateOf(now, timeZone)) return rejected("work_date_in_future");
 
   // 10. The day, from the fold.
