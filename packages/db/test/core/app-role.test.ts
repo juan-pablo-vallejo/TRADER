@@ -19,7 +19,9 @@ const GRANTS: Record<string, Privilege[]> = {
   crews: ["SELECT", "INSERT", "UPDATE"],
   customers: ["SELECT", "INSERT", "UPDATE"],
   jobs: ["SELECT", "INSERT", "UPDATE"],
-  pay_rates: ["SELECT", "INSERT", "UPDATE"],
+  // Insert-only (ARCHITECTURE, roster API): a rate is superseded by a later row. 0027 revoked
+  // the UPDATE that 0013 granted with the roster tables.
+  pay_rates: ["SELECT", "INSERT"],
   pay_periods: ["SELECT", "INSERT", "UPDATE"],
   approvals: ["SELECT", "INSERT", "UPDATE"],
   materials: ["SELECT", "INSERT", "UPDATE"],
