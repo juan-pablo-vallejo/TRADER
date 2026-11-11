@@ -35,6 +35,8 @@ is wrong.
 - Reviews are input, not instruction. Check their premises before acting on them.
 - Plan first for anything touching schema, auth, sync, money or CI; the plan is what gets
   reviewed. Say what was not done.
+- A procedure added to the API gets a line in the gate inventory test
+  (`packages/api/test/core/gates.test.ts`) in the same commit; the test fails without it.
 - Scope is explicit. A scope change is its own line in TASKS.md, never a by-product of a
   "housekeeping" commit.
 - Sequence by dependency. Documents carry no dates or deadlines unless Juan Pablo sets one.
@@ -66,15 +68,20 @@ is wrong.
   The repository is public; machine names and addresses stay in `~/.ssh/config`.
 - No new dependency, tool or version bump without a line in TASKS.md naming what consumes it.
   pnpm's minimum-release-age quarantine stays on.
-- Inside a package: `src/` code, `test/` tests, a `README.md` only for a runbook nothing else owns.
-  Invariant tests run against a real Postgres.
+- Inside a package: `src/` code, `test/` tests in folders that mirror `src/`, a `README.md`
+  only for a runbook nothing else owns. Invariant tests run against a real Postgres. Tests and
+  the seed run only against the local compose database or CI's service container; they refuse
+  to start while `DATABASE_URL` is set.
+- Every promise is awaited or deliberately discarded with `void`; lint enforces it. A
+  statement on a transaction that is never awaited runs after the transaction has ended.
 
 ## Project structure
 
 - The root holds only files their tooling requires. Documents live in `docs/`; the set is fixed
   at the six in the authority table plus `CLAUDE.md`, `README.md` and `LICENSE`.
-- Caps, enforced in CI: README ≤ 30 lines, CLAUDE.md ≤ 40, ARCHITECTURE.md ≤ 210, MEMORY.md
-  ≤ 200, every other document ≤ 150. A document at its cap is condensed, not split.
+- No line caps. A document is as long as its facts need, and no longer: it states each fact
+  once, in its home, and links instead of restating. `CLAUDE.md` stays short because it is
+  read in full every session.
 - `packages/*` is shared code consumed by `apps/*`; nothing in `packages/` imports from `apps/`.
 - Files are kebab-case; React components PascalCase; database tables and columns snake_case;
   foreign keys end in `_id`. One Drizzle schema file per table group under
@@ -88,7 +95,8 @@ is wrong.
   `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
-- One workflow, one job: install, typecheck, lint, format check, build, migrate, test, document caps.
+- One workflow, one job: install, typecheck, lint, format check, build, migrate, test. Every
+  run on `main` completes; only a superseded pull-request run is cancelled.
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
 - Branches other than `main` are short-lived and deleted on merge. Force-push and branch
   deletion are human actions in a terminal, never agent actions.

@@ -31,5 +31,4 @@ and stop — never edit the document to match the code.
 
 ## This file
 
-Under 40 lines, read in full every session. Changes here go through the same plan-and-review as
-code.
+Short, read in full every session. Changes here go through the same plan-and-review as code.
