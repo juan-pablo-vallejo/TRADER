@@ -6,9 +6,15 @@ on:
   pull_request:
     branches: [main]
 
+# The job only reads the repository; nothing it runs needs to write to it.
+permissions:
+  contents: read
+
+# A newer push to a pull request supersedes the run before it. On main every merge commit
+# keeps its own run: cancelling one would leave that merge result unverified.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   # The job id is the required status check on main. Renaming it disarms branch protection.
