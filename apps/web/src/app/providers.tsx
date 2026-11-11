@@ -34,7 +34,9 @@ export function Providers({ children }: { children: ReactNode }) {
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
-      links: [httpBatchLink({ url: "/api/trpc", transformer: superjson })],
+      // `maxItems` is the server's batch cap (server/handler.ts, MAX_BATCH_SIZE): a larger
+      // set of calls is split into several requests instead of being refused.
+      links: [httpBatchLink({ url: "/api/trpc", transformer: superjson, maxItems: 10 })],
     }),
   );
   return (

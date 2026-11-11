@@ -47,7 +47,11 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
       {me.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : me.isError ? (
-        <Failure error={me.error} devSignIn={devSignIn} />
+        <Failure
+          error={me.error}
+          devSignIn={devSignIn}
+          onRetry={() => void me.refetch()}
+        />
       ) : (
         <form className={`${controls.card} ${styles.card}`} onSubmit={submit(me.data)}>
           <Field id="profile-name" label={strings.name}>

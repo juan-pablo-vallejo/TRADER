@@ -6,14 +6,20 @@
 // Edit toggle; the editor row beneath holds the role, the pay rate and, last, the deactivation. A `rejected` answer reads beneath the form it came
 // from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { cents, day, money } from "../format";
 import { Field } from "../field";
 import { Note } from "../note";
-import { EditorFooter, EditorRow, EditorSection, RowToggle } from "../row-editor";
+import {
+  DestructiveAction,
+  EditorFooter,
+  EditorRow,
+  EditorSection,
+  RowToggle,
+} from "../row-editor";
 import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
@@ -58,7 +64,11 @@ export function RosterScreen({ devSignIn }: { devSignIn: boolean }) {
       {list.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : list.isError ? (
-        <Failure error={list.error} devSignIn={devSignIn} />
+        <Failure
+          error={list.error}
+          devSignIn={devSignIn}
+          onRetry={() => void list.refetch()}
+        />
       ) : (
         <>
           {adding && <InviteForm onDone={() => setAdding(false)} />}
@@ -184,41 +194,45 @@ function RosterTable({ rows }: { rows: Rows }) {
       <tbody>
         {rows.map((row) => {
           const open = editing === row.id;
-          return [
-            <tr key={row.id}>
-              <td data-label={strings.name} className="body-strong">
-                {row.name}
-              </td>
-              <td data-label={strings.email}>{row.email}</td>
-              <td data-label={strings.role}>{strings.roles[row.role]}</td>
-              <td data-label={strings.status} className={table.status}>
-                {statusOf(row) === strings.invited ? (
-                  <span className={`label ${table.pillPending}`}>{strings.invited}</span>
-                ) : (
-                  statusOf(row)
-                )}
-              </td>
-              <td
-                data-label={strings.hourlyRate}
-                className={table.number}
-                data-empty={row.currentRate === null ? "" : undefined}
-              >
-                {row.currentRate === null
-                  ? strings.unpriced
-                  : money(row.currentRate.hourlyRateCents, row.currentRate.currency)}
-              </td>
-              <RowToggle
-                rowId={row.id}
-                open={open}
-                onToggle={() => setEditing(open ? null : row.id)}
-              />
-            </tr>,
-            open ? (
-              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
-                <Editor row={row} />
-              </EditorRow>
-            ) : null,
-          ];
+          return (
+            <Fragment key={row.id}>
+              <tr>
+                <td data-label={strings.name} className="body-strong">
+                  {row.name}
+                </td>
+                <td data-label={strings.email}>{row.email}</td>
+                <td data-label={strings.role}>{strings.roles[row.role]}</td>
+                <td data-label={strings.status} className={table.status}>
+                  {statusOf(row) === strings.invited ? (
+                    <span className={`label ${table.pillPending}`}>
+                      {strings.invited}
+                    </span>
+                  ) : (
+                    statusOf(row)
+                  )}
+                </td>
+                <td
+                  data-label={strings.hourlyRate}
+                  className={table.number}
+                  data-empty={row.currentRate === null ? "" : undefined}
+                >
+                  {row.currentRate === null
+                    ? strings.unpriced
+                    : money(row.currentRate.hourlyRateCents, row.currentRate.currency)}
+                </td>
+                <RowToggle
+                  rowId={row.id}
+                  open={open}
+                  onToggle={() => setEditing(open ? null : row.id)}
+                />
+              </tr>
+              {open ? (
+                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
+                  <Editor row={row} />
+                </EditorRow>
+              ) : null}
+            </Fragment>
+          );
         })}
       </tbody>
     </table>
@@ -245,7 +259,7 @@ const noteOf = (answer: { result: string }) =>
     ? strings.lastAdmin
     : answer.result === "unchanged"
       ? strings.unchanged
-      : null;
+      : strings.saved;
 
 function Role({ row }: { row: Row }) {
   const trpc = useTRPC();
@@ -311,14 +325,12 @@ function Access({ row }: { row: Row }) {
   return (
     <>
       {row.deactivatedAt === null ? (
-        <button
-          type="button"
-          className={controls.destructive}
+        <DestructiveAction
+          label={strings.deactivate}
+          effect={strings.deactivatePersonEffect(row.name)}
           disabled={busy}
-          onClick={() => deactivate.mutate({ userId: row.id })}
-        >
-          {strings.deactivate}
-        </button>
+          onConfirm={() => deactivate.mutate({ userId: row.id })}
+        />
       ) : (
         <button
           type="button"
@@ -350,7 +362,7 @@ function Rates({ row }: { row: Row }) {
         }
         setEffectiveFrom("");
         setAmount("");
-        setNote(null);
+        setNote(strings.saved);
         await refresh();
       },
       onError: () => setNote(strings.requestFailed),

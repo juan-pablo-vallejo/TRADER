@@ -6,13 +6,19 @@
 // Save and, last, the deactivation. A `rejected` answer reads
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { Field } from "../field";
 import { Note } from "../note";
-import { EditorFooter, EditorRow, EditorSection, RowToggle } from "../row-editor";
+import {
+  DestructiveAction,
+  EditorFooter,
+  EditorRow,
+  EditorSection,
+  RowToggle,
+} from "../row-editor";
 import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
@@ -71,7 +77,11 @@ export function CustomersScreen({ devSignIn }: { devSignIn: boolean }) {
       {list.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : list.isError ? (
-        <Failure error={list.error} devSignIn={devSignIn} />
+        <Failure
+          error={list.error}
+          devSignIn={devSignIn}
+          onRetry={() => void list.refetch()}
+        />
       ) : (
         <>
           {adding && <CreateForm onDone={() => setAdding(false)} />}
@@ -196,47 +206,49 @@ function CustomersTable({ rows }: { rows: Rows }) {
       <tbody>
         {rows.map((row) => {
           const open = editing === row.id;
-          return [
-            <tr key={row.id}>
-              <td data-label={strings.name} className="body-strong">
-                {row.name}
-              </td>
-              <td
-                data-label={strings.address}
-                data-empty={row.address === null ? "" : undefined}
-              >
-                {row.address ?? strings.none}
-              </td>
-              <td
-                data-label={strings.phone}
-                data-empty={row.phone === null ? "" : undefined}
-              >
-                {row.phone ?? strings.none}
-              </td>
-              <td
-                data-label={strings.email}
-                data-empty={row.email === null ? "" : undefined}
-              >
-                {row.email ?? strings.none}
-              </td>
-              <td data-label={strings.jobs} className={table.number}>
-                {row.unarchivedJobs}
-              </td>
-              <td data-label={strings.status} className={table.status}>
-                {row.deactivatedAt === null ? strings.active : strings.deactivated}
-              </td>
-              <RowToggle
-                rowId={row.id}
-                open={open}
-                onToggle={() => setEditing(open ? null : row.id)}
-              />
-            </tr>,
-            open ? (
-              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={7}>
-                <Editor row={row} />
-              </EditorRow>
-            ) : null,
-          ];
+          return (
+            <Fragment key={row.id}>
+              <tr>
+                <td data-label={strings.name} className="body-strong">
+                  {row.name}
+                </td>
+                <td
+                  data-label={strings.address}
+                  data-empty={row.address === null ? "" : undefined}
+                >
+                  {row.address ?? strings.none}
+                </td>
+                <td
+                  data-label={strings.phone}
+                  data-empty={row.phone === null ? "" : undefined}
+                >
+                  {row.phone ?? strings.none}
+                </td>
+                <td
+                  data-label={strings.email}
+                  data-empty={row.email === null ? "" : undefined}
+                >
+                  {row.email ?? strings.none}
+                </td>
+                <td data-label={strings.jobs} className={table.number}>
+                  {row.unarchivedJobs}
+                </td>
+                <td data-label={strings.status} className={table.status}>
+                  {row.deactivatedAt === null ? strings.active : strings.deactivated}
+                </td>
+                <RowToggle
+                  rowId={row.id}
+                  open={open}
+                  onToggle={() => setEditing(open ? null : row.id)}
+                />
+              </tr>
+              {open ? (
+                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={7}>
+                  <Editor row={row} />
+                </EditorRow>
+              ) : null}
+            </Fragment>
+          );
         })}
       </tbody>
     </table>
@@ -264,7 +276,7 @@ function Editor({ row }: { row: Row }) {
         ? strings.jobsUnarchived(answer.unarchivedJobs ?? 0)
         : answer.result === "unchanged"
           ? strings.unchanged
-          : null,
+          : strings.saved,
     );
     await refresh();
   };
@@ -298,14 +310,12 @@ function Editor({ row }: { row: Row }) {
       </EditorSection>
       <EditorFooter>
         {row.deactivatedAt === null ? (
-          <button
-            type="button"
-            className={controls.destructive}
+          <DestructiveAction
+            label={strings.deactivate}
+            effect={strings.deactivateCustomerEffect}
             disabled={busy}
-            onClick={() => deactivate.mutate({ customerId: row.id })}
-          >
-            {strings.deactivate}
-          </button>
+            onConfirm={() => deactivate.mutate({ customerId: row.id })}
+          />
         ) : (
           <button
             type="button"

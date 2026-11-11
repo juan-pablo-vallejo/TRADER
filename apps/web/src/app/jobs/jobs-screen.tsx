@@ -9,7 +9,7 @@
 // three sections, three answers. A `rejected` answer reads beneath the control it came from. Consumed by
 // page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
@@ -115,7 +115,11 @@ export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
       {list.isPending || customers.isPending || crews.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : failed !== undefined ? (
-        <Failure error={failed.error} devSignIn={devSignIn} />
+        <Failure
+          error={failed.error}
+          devSignIn={devSignIn}
+          onRetry={() => void failed.refetch()}
+        />
       ) : (
         <>
           {adding && (
@@ -140,16 +144,12 @@ export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
               <option value="all">{strings.allJobs}</option>
             </select>
           </Field>
-          {(() => {
-            const rows = list.data!.filter(
-              (j) => filter === "all" || j.status === filter,
-            );
-            return rows.length === 0 ? (
-              <EmptyState text={strings.emptyJobs} />
-            ) : (
-              <JobsTable rows={rows} customers={customers.data!} crews={crews.data!} />
-            );
-          })()}
+          <JobsTable
+            rows={list.data!}
+            filter={filter}
+            customers={customers.data!}
+            crews={crews.data!}
+          />
         </>
       )}
     </>
@@ -338,15 +338,24 @@ function CreateForm({
 }
 
 function JobsTable({
-  rows,
+  rows: all,
+  filter,
   customers,
   crews,
 }: {
   rows: Rows;
+  filter: Status | "all";
   customers: Customers;
   crews: Crews;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
+  // The row whose editor is open stays whatever the filter says: a status change under the
+  // default "Open" filter would otherwise take the row, its editor and the result note away
+  // in the same instant, leaving nothing to say it worked. It leaves when its editor closes.
+  const rows = all.filter(
+    (j) => filter === "all" || j.status === filter || j.id === editing,
+  );
+  if (rows.length === 0) return <EmptyState text={strings.emptyJobs} />;
   return (
     <table className={table.table}>
       <thead>
@@ -364,45 +373,47 @@ function JobsTable({
       <tbody>
         {rows.map((row) => {
           const open = editing === row.id;
-          return [
-            <tr key={row.id}>
-              <td data-label={strings.job} className="body-strong">
-                {row.name}
-              </td>
-              <td data-label={strings.customer}>{row.customer.name}</td>
-              <td
-                data-label={strings.crew}
-                className={
-                  row.crew !== null && !row.crew.active ? table.attention : undefined
-                }
-              >
-                {row.crew === null
-                  ? strings.unassigned
-                  : row.crew.active
-                    ? row.crew.name
-                    : `${row.crew.name} (${strings.deactivated.toLowerCase()})`}
-              </td>
-              <td data-label={strings.status} className={table.status}>
-                {strings.jobStatus[row.status]}
-              </td>
-              <td
-                data-label={strings.address}
-                data-empty={row.address === null ? "" : undefined}
-              >
-                {row.address ?? strings.none}
-              </td>
-              <RowToggle
-                rowId={row.id}
-                open={open}
-                onToggle={() => setEditing(open ? null : row.id)}
-              />
-            </tr>,
-            open ? (
-              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
-                <Editor row={row} customers={customers} crews={crews} />
-              </EditorRow>
-            ) : null,
-          ];
+          return (
+            <Fragment key={row.id}>
+              <tr>
+                <td data-label={strings.job} className="body-strong">
+                  {row.name}
+                </td>
+                <td data-label={strings.customer}>{row.customer.name}</td>
+                <td
+                  data-label={strings.crew}
+                  className={
+                    row.crew !== null && !row.crew.active ? table.attention : undefined
+                  }
+                >
+                  {row.crew === null
+                    ? strings.unassigned
+                    : row.crew.active
+                      ? row.crew.name
+                      : `${row.crew.name} (${strings.deactivated.toLowerCase()})`}
+                </td>
+                <td data-label={strings.status} className={table.status}>
+                  {strings.jobStatus[row.status]}
+                </td>
+                <td
+                  data-label={strings.address}
+                  data-empty={row.address === null ? "" : undefined}
+                >
+                  {row.address ?? strings.none}
+                </td>
+                <RowToggle
+                  rowId={row.id}
+                  open={open}
+                  onToggle={() => setEditing(open ? null : row.id)}
+                />
+              </tr>
+              {open ? (
+                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
+                  <Editor row={row} customers={customers} crews={crews} />
+                </EditorRow>
+              ) : null}
+            </Fragment>
+          );
         })}
       </tbody>
     </table>
@@ -497,7 +508,7 @@ function CrewAndStatus({ row, crews }: { row: Row; crews: Crews }) {
             ? reason(answer.code, "assign")
             : answer.result === "unchanged"
               ? strings.unchanged
-              : null,
+              : strings.saved,
         );
         await refresh();
       },
@@ -514,7 +525,7 @@ function CrewAndStatus({ row, crews }: { row: Row; crews: Crews }) {
               ? strings.unchanged
               : answer.job.status === "archived"
                 ? strings.archivedNote
-                : null,
+                : strings.saved,
         );
         await refresh();
       },

@@ -76,6 +76,11 @@
   padding-top: var(--space-4);
   border-top: var(--hairline) solid var(--border);
 }
+/* A destructive action asked for and not yet confirmed: its effect, then the two buttons. */
+.confirm p {
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+}
 
 /* Rows the narrow way whenever the content column is under 720 px (DESIGN, Layout): every
    narrow viewport, and a wide one whose table would not fit beside the navigation. A container

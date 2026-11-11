@@ -8,13 +8,19 @@
 // change or new member: those controls are disabled with the reason. A `rejected` answer reads
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { Field } from "../field";
 import { Note } from "../note";
-import { EditorFooter, EditorRow, EditorSection, RowToggle } from "../row-editor";
+import {
+  DestructiveAction,
+  EditorFooter,
+  EditorRow,
+  EditorSection,
+  RowToggle,
+} from "../row-editor";
 import { PageHeader, CREATE_FORM_ID } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
@@ -78,9 +84,17 @@ export function CrewsScreen({ devSignIn }: { devSignIn: boolean }) {
       {list.isPending || people.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : list.isError ? (
-        <Failure error={list.error} devSignIn={devSignIn} />
+        <Failure
+          error={list.error}
+          devSignIn={devSignIn}
+          onRetry={() => void list.refetch()}
+        />
       ) : people.isError ? (
-        <Failure error={people.error} devSignIn={devSignIn} />
+        <Failure
+          error={people.error}
+          devSignIn={devSignIn}
+          onRetry={() => void people.refetch()}
+        />
       ) : (
         <>
           {adding && <CreateForm people={people.data} onDone={() => setAdding(false)} />}
@@ -227,41 +241,43 @@ function CrewsTable({ rows, people }: { rows: Rows; people: People }) {
       <tbody>
         {rows.map((row) => {
           const open = editing === row.id;
-          return [
-            <tr key={row.id}>
-              <td data-label={strings.crew} className="body-strong">
-                {row.name}
-              </td>
-              <td data-label={strings.foreman}>
-                {row.foreman.available ? (
-                  row.foreman.name
-                ) : (
-                  <span className={`label ${table.pillAttention}`}>
-                    {strings.needsForeman}
-                  </span>
-                )}
-              </td>
-              <td data-label={strings.members} className={table.number}>
-                {row.members.length}
-              </td>
-              <td data-label={strings.jobs} className={table.number}>
-                {row.jobCount}
-              </td>
-              <td data-label={strings.status} className={table.status}>
-                {row.deactivatedAt === null ? strings.active : strings.deactivated}
-              </td>
-              <RowToggle
-                rowId={row.id}
-                open={open}
-                onToggle={() => setEditing(open ? null : row.id)}
-              />
-            </tr>,
-            open ? (
-              <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
-                <Editor row={row} people={people} />
-              </EditorRow>
-            ) : null,
-          ];
+          return (
+            <Fragment key={row.id}>
+              <tr>
+                <td data-label={strings.crew} className="body-strong">
+                  {row.name}
+                </td>
+                <td data-label={strings.foreman}>
+                  {row.foreman.available ? (
+                    row.foreman.name
+                  ) : (
+                    <span className={`label ${table.pillAttention}`}>
+                      {strings.needsForeman}
+                    </span>
+                  )}
+                </td>
+                <td data-label={strings.members} className={table.number}>
+                  {row.members.length}
+                </td>
+                <td data-label={strings.jobs} className={table.number}>
+                  {row.jobCount}
+                </td>
+                <td data-label={strings.status} className={table.status}>
+                  {row.deactivatedAt === null ? strings.active : strings.deactivated}
+                </td>
+                <RowToggle
+                  rowId={row.id}
+                  open={open}
+                  onToggle={() => setEditing(open ? null : row.id)}
+                />
+              </tr>
+              {open ? (
+                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
+                  <Editor row={row} people={people} />
+                </EditorRow>
+              ) : null}
+            </Fragment>
+          );
         })}
       </tbody>
     </table>
@@ -304,7 +320,7 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
         : reason(answer.code ?? "")
       : answer.result === "unchanged"
         ? strings.unchanged
-        : null;
+        : strings.saved;
   const answering =
     (set: (note: string | null) => void) =>
     async (answer: { result: string; code?: string; jobCount?: number }) => {
@@ -394,14 +410,12 @@ function NameAndForeman({ row, people }: { row: Row; people: People }) {
             {strings.reactivate}
           </button>
         ) : (
-          <button
-            type="button"
-            className={controls.destructive}
+          <DestructiveAction
+            label={strings.deactivateCrew}
+            effect={strings.deactivateCrewEffect}
             disabled={busy}
-            onClick={() => deactivate.mutate({ crewId: row.id })}
-          >
-            {strings.deactivateCrew}
-          </button>
+            onConfirm={() => deactivate.mutate({ crewId: row.id })}
+          />
         )}
         <Note text={stateNote} />
       </EditorFooter>
@@ -421,7 +435,7 @@ function Members({ row, people }: { row: Row; people: People }) {
         ? reason(answer.code ?? "")
         : answer.result === "unchanged"
           ? strings.unchanged
-          : null,
+          : strings.saved,
     );
     if (answer.result === "added") setUserId("");
     await refresh();
@@ -455,14 +469,13 @@ function Members({ row, people }: { row: Row; people: People }) {
               </span>
               {/* The foreman leaves by a foreman change, so their row offers no removal. */}
               {!isForeman && (
-                <button
-                  type="button"
-                  className={controls.quiet}
+                <DestructiveAction
+                  quiet
+                  label={strings.remove}
+                  effect={strings.removeMemberEffect(m.name)}
                   disabled={busy}
-                  onClick={() => remove.mutate({ crewId: row.id, userId: m.id })}
-                >
-                  {strings.remove}
-                </button>
+                  onConfirm={() => remove.mutate({ crewId: row.id, userId: m.id })}
+                />
               )}
             </li>
           );

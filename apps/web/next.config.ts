@@ -21,6 +21,25 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/favicon.ico": ["../../assets/brand/logo.png"],
   },
+  // No framework banner on responses.
+  poweredByHeader: false,
+  // Baseline response headers for every route: no MIME sniffing, no framing by another site,
+  // and no path or query sent to another origin. A content security policy and transport
+  // security are set with the deployment (TASKS, Stage 6), where their values can be tested.
+  async headers() {
+    return [
+      {
+        // Pages and the API, not the framework's own assets under /_next: `nosniff` on the
+        // development server's hot-reload resources sends the browser into a reload loop.
+        source: "/((?!_next/).*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default config;
