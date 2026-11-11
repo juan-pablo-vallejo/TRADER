@@ -17,6 +17,7 @@ import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import { serverClock } from "../core/clock";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { workDate as workDateOf } from "../labor/work-date";
@@ -40,7 +41,7 @@ export const closeoutInput = z.strictObject({
   // Hiding a job (`archived`) is the office's, never the closeout's.
   jobStatus: z.enum(["open", "complete"]),
   note: z.string().trim().min(1).max(2000).nullable(),
-  clientTimestamp: z.date(),
+  clientTimestamp: instant,
   // From the closeout.review the foreman confirmed, kept unchanged on every retry. A
   // precondition of a new acceptance, not part of the record: never stored, never compared
   // when answering a retry. Any well-formed version, so another version is review_stale.

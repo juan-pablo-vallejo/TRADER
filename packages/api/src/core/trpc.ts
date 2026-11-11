@@ -8,7 +8,7 @@ import superjson from "superjson";
 
 import type { Db } from "@trader/db";
 
-import type { Context, Tx } from "./context";
+import type { CallerTimeouts, CallerWaits, Context, Tx } from "./context";
 import type { VerifiedIdentity } from "./identity";
 import { BindConflict, resolveUser, type AppUser } from "./resolve-user";
 
@@ -46,13 +46,13 @@ export const publicProcedure = t.procedure;
 // tenant set; then `body` runs in that transaction, which commits when it returns and rolls back
 // when it throws. The protected procedure runs it once per call; sync.push once per record
 // (ARCHITECTURE, sync.push), so a record's authority is re-read every time.
-export type CallerTimeouts = { lockTimeout: string; statementTimeout: string };
+export type { CallerTimeouts };
 
 export async function inCallerTransaction<T>(
   db: Db,
   identity: VerifiedIdentity,
   body: (tx: Tx, user: AppUser) => Promise<T>,
-  timeouts?: CallerTimeouts,
+  waits: CallerWaits,
 ): Promise<T> {
   try {
     return await db.transaction(async (tx) => {
@@ -63,12 +63,12 @@ export async function inCallerTransaction<T>(
           set_config('app.identity_subject', '', true),
           set_config('app.identity_email', '', true)
       `);
-      // Bounded waits, when the caller asks for them, before anything can wait: a first
-      // sign-in's bind can queue on a users row, and nothing else would cap it.
-      if (timeouts !== undefined) {
+      // Bounded waits before anything can wait: a first sign-in's bind can queue on a users
+      // row, and nothing else would cap it.
+      if (waits !== "inherit") {
         await tx.execute(sql`
-          select set_config('lock_timeout', ${timeouts.lockTimeout}, true),
-            set_config('statement_timeout', ${timeouts.statementTimeout}, true)
+          select set_config('lock_timeout', ${waits.lockTimeout}, true),
+            set_config('statement_timeout', ${waits.statementTimeout}, true)
         `);
       }
       // Every transaction: a pool's connections are checked one by one, not once per process.
@@ -94,21 +94,32 @@ export async function inCallerTransaction<T>(
   }
 }
 
+// Every protected call's waits are bounded: without a bound, one stalled writer holding the
+// company's field-write lock or a users row queues every later call until the pool is empty.
+// Generous beside sync's, because an office call is one person waiting at a screen, not a
+// device that retries: 5 s for a lock, 20 s on a statement. A call that times out fails as
+// an internal error and writes nothing.
+export const PROTECTED_TIMEOUTS: CallerTimeouts = {
+  lockTimeout: "5s",
+  statementTimeout: "20s",
+};
+
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
-  const { db, identity } = ctx;
+  const { db, identity, waits } = ctx;
   if (identity === null) throw unauthorized();
-  return inCallerTransaction(db, identity, async (tx, user) => {
+  const run = async (tx: Tx, user: AppUser) => {
     // tRPC merges this into the existing context ({ ...ctx, ...this }), so the pool and the
     // identity are removed by value here, not only by type: a procedure has `tx` and nothing
     // that could open a connection outside this transaction.
     const result = await next({
-      ctx: { db: undefined, identity: undefined, tx, user },
+      ctx: { db: undefined, identity: undefined, waits: undefined, tx, user },
     });
     // A failed procedure comes back as { ok: false }, not a throw; returning it would let
     // Drizzle commit whatever the procedure wrote before it failed.
     if (!result.ok) throw result.error;
     return result;
-  });
+  };
+  return inCallerTransaction(db, identity, run, waits ?? PROTECTED_TIMEOUTS);
 });
 
 // sync.push's procedure: no transaction of its own. The call gets `runRecord`, which opens one
@@ -123,11 +134,13 @@ export const SYNC_TIMEOUTS: CallerTimeouts = {
 };
 
 export const syncProcedure = t.procedure.use(({ ctx, next }) => {
-  const { db, identity } = ctx;
+  const { db, identity, waits } = ctx;
   if (identity === null) throw unauthorized();
   const runRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) =>
-    inCallerTransaction(db, identity, body, SYNC_TIMEOUTS);
-  return next({ ctx: { db: undefined, identity: undefined, runRecord } });
+    inCallerTransaction(db, identity, body, waits ?? SYNC_TIMEOUTS);
+  return next({
+    ctx: { db: undefined, identity: undefined, waits: undefined, runRecord },
+  });
 });
 
 // A role gate: procedure entry for the listed roles only, judged on the role resolved from the

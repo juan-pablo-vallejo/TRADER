@@ -16,6 +16,7 @@ import { z } from "zod";
 
 import { closedOn } from "../closeout/day";
 import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import { replay, type LaborEvent, type Replay, type Session } from "../labor/fold";
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
@@ -30,7 +31,7 @@ export const laborPayloadV1 = z.strictObject({
   workerId: z.uuid(),
   jobId: z.uuid(),
   type: z.enum(["started", "paused", "resumed", "ended"]),
-  clientTimestamp: z.date(),
+  clientTimestamp: instant,
   attestationLevel: z.enum(attestationLevel.enumValues),
   location: z
     .strictObject({

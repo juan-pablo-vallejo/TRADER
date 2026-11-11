@@ -9,7 +9,8 @@ import { z } from "zod";
 // invitation; `emailVerified` is a literal so an adapter cannot hand one over by accident.
 export const verifiedIdentitySchema = z.object({
   subject: z.string().trim().min(1).max(255),
-  email: z.email().trim(),
+  // 254: the longest address SMTP can carry.
+  email: z.email().trim().max(254),
   emailVerified: z.literal(true),
 });
 

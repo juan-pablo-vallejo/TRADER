@@ -21,7 +21,11 @@ import type { VerifiedIdentity } from "../../src/core/identity";
 import { lockCompanyFieldWrites } from "../../src/labor/timeline";
 import { appRouter } from "../../src/router";
 import { pushRecords, type RunRecord } from "../../src/sync/push";
-import { createCallerFactory, inCallerTransaction } from "../../src/core/trpc";
+import {
+  createCallerFactory,
+  inCallerTransaction,
+  SYNC_TIMEOUTS,
+} from "../../src/core/trpc";
 import {
   boundIn,
   crewDayIn,
@@ -412,7 +416,7 @@ describe("sync.push — transaction boundaries", () => {
     let n = 0;
     return async (body) => {
       if (n++ === 1) await between();
-      return inCallerTransaction(app, who, body);
+      return inCallerTransaction(app, who, body, SYNC_TIMEOUTS);
     };
   }
 

@@ -9,6 +9,7 @@ import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import { closedOn } from "../closeout/day";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { quantity } from "../materials/quantity";
@@ -23,7 +24,7 @@ export const materialPayloadV1 = z.strictObject({
   description: z.string().trim().min(1).max(2000),
   quantity,
   unit: z.string().trim().min(1).max(40),
-  loggedAt: z.date(),
+  loggedAt: instant,
   capturedOffline: z.boolean(),
 });
 

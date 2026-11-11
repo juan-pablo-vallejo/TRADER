@@ -14,6 +14,7 @@ import type { Db } from "@trader/db";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 export const ENDPOINT = "/api/trpc";
+export const MAX_BATCH_SIZE = 10;
 
 export type HandlerDependencies = {
   getDb: () => Db;
@@ -34,6 +35,9 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           reporter: deps.reporter,
         }),
       onError: reportingOnError(deps.reporter),
+      // One request may carry several calls, each a transaction on a pooled connection; an
+      // office screen batches a handful. Without a cap one request could ask for thousands.
+      maxBatchSize: MAX_BATCH_SIZE,
       // Every answer is per caller or per deployment, and `status.get` is read by every
       // build before it syncs: nothing here may be served from a shared cache.
       responseMeta: () => ({ headers: { "cache-control": "no-store" } }),

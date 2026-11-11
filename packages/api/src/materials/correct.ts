@@ -24,6 +24,7 @@ import { lockForemanScope } from "../closeout/scope";
 import { serverClock } from "../core/clock";
 import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
@@ -46,7 +47,7 @@ export const correctionInput = z.strictObject({
     z.strictObject({ kind: z.literal("void") }),
   ]),
   note: z.string().trim().min(1).max(2000).nullable(),
-  clientTimestamp: z.date(),
+  clientTimestamp: instant,
 });
 
 export type CorrectionInput = z.infer<typeof correctionInput>;

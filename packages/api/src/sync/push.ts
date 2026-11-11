@@ -14,6 +14,7 @@ import {
   submitCloseout,
 } from "../closeout/submit";
 import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import {
   correctionAcknowledgement,
   correctionInput,
@@ -116,7 +117,7 @@ function classify(raw: unknown): Classified {
 export const pushInput = z.strictObject({
   protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
   // The device's clock now, once per push: the one reading that says whether it is wrong.
-  deviceNow: z.date(),
+  deviceNow: instant,
   records: z.array(z.unknown()).min(1).max(MAX_RECORDS),
 });
 

@@ -12,7 +12,8 @@ import type { Tx } from "../core/context";
 export const location = z.strictObject({
   lat: z.number().min(-90).max(90),
   lng: z.number().min(-180).max(180),
-  radiusM: z.number().int().min(1),
+  // The column is a 32-bit integer; 100 km is already no jobsite.
+  radiusM: z.number().int().min(1).max(100_000),
 });
 
 export const job = z.strictObject({

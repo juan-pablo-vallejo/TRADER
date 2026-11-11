@@ -221,6 +221,19 @@ describe("sync.push — envelopes", () => {
     });
   });
 
+  // A JS Date reaches years Postgres cannot store. Unbounded, such a record parses, throws
+  // inside its transaction and is retried for ever, holding the outbox behind it.
+  it("answers a time beyond year 9999 invalid_record instead of stalling the batch", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const beyond = labor(d.w.id, d.J, {
+        clientTimestamp: new Date("+010000-01-01T00:00:00.000Z"),
+      });
+      const answer = await push(tx, d.w.who, [beyond, receipt(d.J)]);
+      expect(summary(answer.results)).toEqual(["rejected:invalid_record", "accepted"]);
+    });
+  });
+
   it("stops before a record with no id or a version it does not know: the rest are retried", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);

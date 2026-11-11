@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
+import { instant } from "../core/instant";
 import type { AppUser } from "../core/resolve-user";
 import { afterCloseout, sessionOfEvent } from "../sync/labor";
 import { laborReasons, type ApprovalReason } from "../sync/reasons";
@@ -41,7 +42,7 @@ const operation = z.discriminatedUnion("kind", [
     id: eventId,
     type: positional,
     jobId: z.uuid(),
-    clientTimestamp: z.date(),
+    clientTimestamp: instant,
   }),
   z.strictObject({
     kind: z.literal("correct"),
@@ -52,7 +53,7 @@ const operation = z.discriminatedUnion("kind", [
     replacesEventId: z.uuid(),
     type: positional,
     jobId: z.uuid(),
-    clientTimestamp: z.date(),
+    clientTimestamp: instant,
   }),
   z.strictObject({ kind: z.literal("void"), id: eventId, voidsEventId: z.uuid() }),
 ]);

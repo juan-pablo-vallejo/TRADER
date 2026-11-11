@@ -347,9 +347,16 @@ export async function sealNow(tx: Tx) {
   await tx.execute(sql`set constraints all immediate`);
 }
 
+// `waits: "inherit"`: the test's transaction owns its lock and statement timeouts (lockTimeout
+// below), and the call inside it must not replace them with the procedure's defaults.
 export const callerIn = (tx: Tx, who: unknown) =>
   createCallerFactory(testRouter)(
-    createContext({ db: txAsDb(tx), identity: who, reporter: quietReporter }),
+    createContext({
+      db: txAsDb(tx),
+      identity: who,
+      reporter: quietReporter,
+      waits: "inherit",
+    }),
   );
 
 // One company with a bound user of `role` and a customer, inside `tx`. The subject and email
@@ -499,7 +506,12 @@ export async function materialIn(
 // The application's own router, called inside a rolled-back transaction.
 export const appCallerIn = (tx: Tx, who: unknown) =>
   createCallerFactory(appRouter)(
-    createContext({ db: txAsDb(tx), identity: who, reporter: quietReporter }),
+    createContext({
+      db: txAsDb(tx),
+      identity: who,
+      reporter: quietReporter,
+      waits: "inherit",
+    }),
   );
 
 // Another bound user in the day's company.
