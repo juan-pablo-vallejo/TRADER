@@ -330,8 +330,15 @@ function Day({
                   <td data-label={strings.quantity} className={table.number}>
                     {m.quantity} {m.unit}
                   </td>
-                  <td data-label={strings.loggedBy}>{m.loggedByName}</td>
-                  <td data-label={strings.loggedAt}>{clock(m.loggedAt, zone)}</td>
+                  <td data-label={strings.loggedBy}>
+                    {m.enteredByOffice
+                      ? strings.enteredByOfficeName(m.loggedByName)
+                      : m.loggedByName}
+                  </td>
+                  <td data-label={strings.loggedAt}>
+                    {/* The office names a day, not a moment. */}
+                    {m.enteredByOffice ? strings.noTimeRecorded : clock(m.loggedAt, zone)}
+                  </td>
                 </tr>
               ))}
             </tbody>

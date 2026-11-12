@@ -20,7 +20,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import controls from "../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../failure";
-import { duration, materialFacts as facts, stamp } from "../format";
+import { dayIn, duration, materialFacts as facts, stamp } from "../format";
 import { Note } from "../note";
 import { PageHeader } from "../page-header";
 import { DestructiveAction } from "../row-editor";
@@ -49,12 +49,19 @@ function entryOf(item: Item): string {
     s.correction.kind === "void"
       ? strings.correctionVoid(facts(s.original))
       : strings.correctionAmend(facts(s.original), facts(s.correction));
-  return s.note === null ? change : `${change}. ${strings.correctionNote(s.note)}`;
+  const noted = s.note === null ? change : `${change}. ${strings.correctionNote(s.note)}`;
+  return s.enteredByOffice
+    ? `${noted}. ${strings.receiptEnteredByOffice(s.loggedBy.name)}`
+    : noted;
 }
 
 function whoOf(item: Item): string {
   const s = item.subject;
-  if (s.kind === "material") return s.loggedBy.name;
+  if (s.kind === "material") {
+    return s.enteredByOffice
+      ? strings.enteredByOfficeName(s.loggedBy.name)
+      : s.loggedBy.name;
+  }
   if (s.kind === "material_correction") return s.submittedBy.name;
   return s.initiator.id === s.worker.id
     ? s.worker.name
@@ -73,6 +80,8 @@ function timesOf(item: Item, zone: string): string[] {
       : [recorded];
   }
   if (s.kind === "material") {
+    // The office names a day, not a moment: the stored noon is not shown as a time.
+    if (s.enteredByOffice) return [strings.receiptDated(dayIn(s.loggedAt, zone))];
     const logged = strings.loggedWhen(stamp(s.loggedAt, zone));
     return skewed ? [logged, strings.receivedWhen(stamp(s.receivedAt, zone))] : [logged];
   }
