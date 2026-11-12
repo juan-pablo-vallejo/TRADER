@@ -287,6 +287,58 @@ describe("labor.repair — retries and ids, committed", () => {
     );
     expect(sqlstateOf(error) ?? (error as { code?: string }).code).toBe("23000");
   });
+
+  // V1-D10 as amended: 0032 stands the deferred checks down for an admin's own labor, so a
+  // repair of the caller's own ledger commits with no approval; and for nothing else.
+  it("commits an admin's repair of their own ledger with no approval", async () => {
+    const x = await world();
+    const start = append("started", x.d.J, "12:00");
+    const end = append("ended", x.d.J, "20:00");
+    expect((await repair(x.admin.who, x.admin.id, [start, end])).result).toBe("accepted");
+    const fix = correct(end.id, "ended", x.d.J, "19:00");
+    expect((await repair(x.admin.who, x.admin.id, [fix])).result).toBe("accepted");
+    const ledger = await readWorkerEvents(D.owner as unknown as Tx, x.admin.id);
+    expect(ledger.map((e) => e.id).sort()).toEqual([start.id, end.id, fix.id].sort());
+    expect(
+      await D.owner
+        .select({ id: approvals.id })
+        .from(approvals)
+        .where(
+          inArray(
+            approvals.eventId,
+            ledger.map((e) => e.id),
+          ),
+        ),
+    ).toEqual([]);
+    expect([...sessionApprovals(ledger, new Map()).byRoot.values()]).toMatchObject([
+      { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },
+    ]);
+    expect(
+      (await auditRows(D.owner, x.d.companyId)).map((r) => [r.action, r.actorUserId]),
+    ).toEqual([
+      ["work_session_events.repair", x.admin.id],
+      ["work_session_events.repair", x.admin.id],
+    ]);
+  });
+
+  it("fires 0026 at COMMIT for one admin's correction of another's with no approval", async () => {
+    const x = await world();
+    const start = append("started", x.d.J, "12:00");
+    expect((await repair(x.admin.who, x.admin.id, [start])).result).toBe("accepted");
+    const error = await rejection(
+      D.owner.transaction(async (tx) => {
+        await eventIn(tx, x.d, {
+          worker: x.admin.id,
+          job: x.d.J,
+          type: "started",
+          client: T("13:00"),
+          corrects: start.id,
+          initiator: x.admin2.id,
+        });
+      }),
+    );
+    expect(sqlstateOf(error) ?? (error as { code?: string }).code).toBe("23000");
+  });
 });
 
 describe("labor.repair — concurrent repairs, committed", () => {
