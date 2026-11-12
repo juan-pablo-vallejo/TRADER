@@ -26,6 +26,8 @@ import {
   CUSTOMERS,
   DEMO,
   EXPECTED,
+  EXPECTED_COST,
+  EXPECTED_HOURS,
   JOBS,
   PEOPLE,
   PLANS,
@@ -704,6 +706,39 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       }),
       "updated",
     );
+  });
+
+  // Last, with everything written: what the hours and the receipts come to, read as the
+  // office reads it and held to the figures worked out by hand (content.ts).
+  await step("read hours and job cost against the plan", async () => {
+    const { labor, materials, total } = await admin().job.cost({
+      jobId: jobIds.get(EXPECTED_COST.job)!,
+    });
+    const { lines, ...laborFigures } = labor;
+    const read = { lines: lines.length, labor: laborFigures, materials, total };
+    const { job: _job, ...planned } = EXPECTED_COST;
+    if (JSON.stringify(read) !== JSON.stringify(planned)) {
+      fail(`job cost read ${JSON.stringify(read)}, planned ${JSON.stringify(planned)}`);
+    }
+    for (const h of EXPECTED_HOURS) {
+      const day = days[h.day]!;
+      const { cells } = await admin().labor.hours({
+        from: day,
+        to: day,
+        workerId: userIds.get(h.who)!,
+      });
+      const [cell] = cells;
+      if (
+        cells.length !== 1 ||
+        cell === undefined ||
+        cell.job.id !== jobIds.get(h.job) ||
+        cell.approvedHundredths !== h.approved ||
+        cell.pendingHundredths !== h.pending ||
+        cell.pendingSessions !== h.pendingSessions
+      ) {
+        fail(`${h.who} on ${day} read ${JSON.stringify(cells)}`);
+      }
+    }
   });
 
   // The run's own account against the plan: a drift in either is a failure, not a surprise in

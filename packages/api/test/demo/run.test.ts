@@ -123,6 +123,45 @@ describe("the demo run", () => {
     }
   });
 
+  // The run holds J1 and two days of hours to the plan itself (its last step). J2, worked out
+  // here: Omar's nine approved days at 2700 (9 × 21600), his user-timed last day waiting;
+  // Marcus and Elena have no rate, so his ten days and her nine are unrated, and her last,
+  // 8.50 h with the office's correction, waits unrated. Receipts: the amended one is priced
+  // and counts while its amend waits; the primer is unpriced; the late one waits, unpriced.
+  it("reads the other crew's job cost as the plan works it out", async () => {
+    const jobs = await admin().job.list();
+    const j2 = jobs.find((j) => j.name === "Harbor View unit 4B")!;
+    const { labor, materials, total, job } = await admin().job.cost({ jobId: j2.id });
+    const { lines, ...figures } = labor;
+    expect(job.name).toBe("Harbor View unit 4B");
+    expect(lines).toHaveLength(9 + 10 + 9);
+    expect(figures).toEqual({
+      approvedHundredths: 28 * 800,
+      totals: [{ currency: "USD", cents: 9 * 21600 }],
+      unrated: { hundredths: 19 * 800, lines: 19 },
+      pending: {
+        hundredths: 800 + 850,
+        sessions: 2,
+        totals: [{ currency: "USD", cents: 21600 }],
+        unratedHundredths: 850,
+      },
+      rejectedSessions: 0,
+      openSessions: 0,
+    });
+    expect(materials).toEqual({
+      totals: [{ currency: "USD", cents: 17196 }],
+      receipts: 1,
+      unpriced: 1,
+      pending: { totals: [], receipts: 1, unpriced: 1 },
+      rejected: 0,
+      voided: 0,
+    });
+    expect(total).toEqual([{ currency: "USD", cents: 9 * 21600 + 17196 }]);
+    // A job nobody worked costs nothing.
+    const j3 = jobs.find((j) => j.name === "Greenfield hallway repaint")!;
+    expect((await admin().job.cost({ jobId: j3.id })).total).toEqual([]);
+  });
+
   it("shows the office what the plan says", async () => {
     const roster = await admin().roster.list();
     expect(roster).toHaveLength(EXPECTED.users);
