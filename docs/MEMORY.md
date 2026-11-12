@@ -209,6 +209,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   INSERT on `audit_log`, so it runs only in a disposable database, never the shared one.
 - `pnpm --filter <pkg> test -- <file>` forwards the `--` and runs every suite; for one file,
   `pnpm exec vitest run <file>` from the package's directory.
+- Postgres answers a `time` column with seconds (`07:00:00`): the assignment reads trim it
+  to the wire's `HH:MM` (`toWallTime`), and a test reading the table directly sees seconds.
+- `job_assignments` can be deleted, so its suites use rolled-back calls or committed fixtures
+  with cleanup; only the lock-wait tests need a disposable database, because
+  `waitForLockWait` counts every backend of its database.
+- The demo plans the week after its two recorded weeks (`planWeek`, anchor + 14 days): with
+  the default anchor that is the current week. The plan step runs before the deactivation
+  step, since `assignment.create` refuses a deactivated person.
+- A built app (`next start`) cannot be browsed locally: under `NODE_ENV=production` the pool
+  keeps the compose superuser and the development identity is refused, so every call is a
+  500 by design. Browser checks use `next dev`; a stale `next start` holding port 3000 moves
+  `next dev` to 3001.
 - A new audited action is a member of `AuditEntry` (`core/audit.ts`), a line in the inventory
   test's `WRITERS` and in the demo's `EXPECTED_AUDIT`, and a decision row; the compiler and
   the two tests fail until all three agree.
@@ -340,3 +352,22 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   completes and is audited as the actor.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, dated
   worker-job assignments (V1-D07; plan first: schema).
+
+### 2026-11-12 — Dated worker-job assignments (V1-D07)
+
+- **Did:** branch `dated-assignments` from `2a5a054`, seven commits. `job_assignments`
+  (`0030`, `0031`); `mayStartOn` exported from `sync/scope.ts` unchanged; `assignment.create`,
+  `update`, `remove`, `list`, `mine` with their gate lines; a planned week in the demo (20
+  rows); `/assignments` under Work, checked in the browser on `trader_demo` at 390, 768 and
+  1280 — a week planned in one action, a day moved out of the week with its row kept, a
+  removal confirmed, no sideways scroll, no control under 48 pt narrow. Watched red: the
+  CHECK, the tenant policy, the admin gate, the conflict target, the two refusals, the
+  own-rows filter in `mine`, the flag and `mayStartOn` itself. 894 tests.
+- **Decided:** by the owner on 2026-11-12 ("execute", the plan's eight recommendations), the
+  row of that date in ARCHITECTURE and the DESIGN amendments (Assignments in the Work group;
+  the Assignment row's words for an archived job and a deactivated person). Not done: no
+  pull field (Stage 5), no audit row, no browser test, no Spanish office strings. Worth
+  knowing: the native time control shows the browser's 12- or 24-hour form while the table
+  shows `HH:MM` as written; the week bar starts at the browser's day, not the company's.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, admin
+  closeout (V1-D08; plan first: closeout locks).

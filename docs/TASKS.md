@@ -77,7 +77,7 @@ jobs, assignments, approvals, a closeout, close, export.
       `approval.decide`, each with actor, company and changed fields only. Tests: every listed
       write leaves exactly one row; a rolled-back write leaves none; a row is invisible to
       another tenant; no other procedure writes one (inventory test). Done when all pass
-- [ ] Dated worker-job assignments with expected times (V1-D07; plan first: schema; zone and
+- [x] Dated worker-job assignments with expected times (V1-D07; plan first: schema; zone and
       DST rules decided in the plan). Work: table, migration, invariant tests, admin-gated
       writers for any worker and any job of the company, the authorization-mismatch flag on
       the office read, the office screen (DESIGN, Assignment row). Tests: an assignment
