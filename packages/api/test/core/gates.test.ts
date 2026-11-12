@@ -61,6 +61,7 @@ const EXPECTED: Record<string, Gate> = {
   "job.update": ADMIN,
   "job.assign": ADMIN,
   "job.setStatus": ADMIN,
+  "labor.hours": ADMIN,
   "labor.ledger": ADMIN,
   "labor.repair": ADMIN,
   "material.correct": "protected",

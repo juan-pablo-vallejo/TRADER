@@ -11,7 +11,7 @@
 // 2026-11-12): it is counted apart, so an approved figure never moves while someone is on
 // the clock. Pending and rejected sessions are apart too; a voided one adds nothing anywhere.
 // Hours are integer hundredths everywhere: no float is ever an hour.
-// Consumed by labor/day-hours.ts.
+// Consumed by labor/day-hours.ts (readDayHours).
 import type { sessionApprovals } from "./approval";
 import { workDate } from "./work-date";
 
