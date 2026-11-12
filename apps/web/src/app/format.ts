@@ -1,7 +1,7 @@
 // Display formatting for the office (DESIGN, Typography: money from integer cents through
 // the locale formatter; dates as calendar days). A work date is a YYYY-MM-DD string and is
 // rendered from its parts: `new Date(iso)` would read it as UTC midnight, which is the day
-// before in Eastern. Consumed by the roster screen.
+// before in Eastern. Consumed by the roster and assignments screens.
 export function money(cents: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -18,6 +18,30 @@ export function day(iso: string): string {
     month: "short",
     day: "numeric",
   }).format(new Date(y, m - 1, d));
+}
+
+// A work date with its weekday, as a plan is read: "Mon, Nov 16". From its parts, as `day`.
+export function weekDay(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  if (y === undefined || m === undefined || d === undefined) return iso;
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(new Date(y, m - 1, d));
+}
+
+// A calendar day `days` after `iso`, by calendar arithmetic in UTC so no zone or clock change
+// can move it; and every day from `from` through `to`.
+export function addDays(iso: string, days: number): string {
+  const at = new Date(`${iso}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  return at.toISOString().slice(0, 10);
+}
+export function daysThrough(from: string, to: string): string[] {
+  const days: string[] = [];
+  for (let d = from; d <= to && days.length < 400; d = addDays(d, 1)) days.push(d);
+  return days;
 }
 
 // "25", "25.5" or "25.50" to cents, by digits, never through a float; null when malformed.

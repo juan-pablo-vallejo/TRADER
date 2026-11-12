@@ -9,6 +9,7 @@ import {
   crewMembers,
   crews,
   customers,
+  jobAssignments,
   jobs,
   payRates,
   syncDiagnostics,
@@ -103,6 +104,7 @@ export async function invitation(
   // In reference order: a test may have written any of these.
   const cleanup = async () => {
     await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, companyId));
+    await owner.delete(jobAssignments).where(eq(jobAssignments.companyId, companyId));
     await owner.delete(crewMembers).where(eq(crewMembers.companyId, companyId));
     await owner.delete(jobs).where(eq(jobs.companyId, companyId));
     await owner.delete(crews).where(eq(crews.companyId, companyId));
