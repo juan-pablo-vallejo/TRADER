@@ -1,5 +1,6 @@
-// closeout.submit (PRD, Day closeout): a foreman's day closeout for one job and work date,
-// recorded once and locked. The answers mirror a push record's (ARCHITECTURE, Sync protocol):
+// closeout.submit (PRD, Day closeout): a day closeout for one job and work date, by the
+// foreman of the job's crew or by an admin (V1-D08; closeout/scope.ts), recorded once and
+// locked. The answers mirror a push record's (ARCHITECTURE, Sync protocol):
 // `accepted` or `duplicate` (both success), or `rejected` (permanent, never retried). Anything
 // thrown is retried, except the one-message UNAUTHORIZED and FORBIDDEN answers. Runs in the
 // protected call's transaction; sync.push may later carry closeout records here, each in a
@@ -30,7 +31,7 @@ import {
   type DayMaterial,
 } from "./day";
 import { FINGERPRINT_PATTERN, reviewFingerprint } from "./fingerprint";
-import { lockForemanScope } from "./scope";
+import { lockCloseoutScope } from "./scope";
 
 // Nothing names a company, a submitter, a worker or a role: those are the server's.
 export const closeoutInput = z.strictObject({
@@ -137,7 +138,7 @@ export async function submitCloseout(
   await assertReadCommitted(tx, "closeout.submit");
 
   // 1. The caller's own record first, before any role or scope check: a retry of an accepted
-  // submission succeeds after the foreman is reassigned or demoted, and reveals only what the
+  // submission succeeds after its submitter is reassigned or demoted, and reveals only what the
   // caller sent and the stored facts of its own submission. Another submitter's row under
   // this id is not revealed until the caller is shown to be in scope (step 9).
   const prior = await byId(tx, input.id);
@@ -147,12 +148,12 @@ export async function submitCloseout(
 
   // 2. The role, in the procedure rather than at the gate, so step 1 stays open to the
   // original submitter (an allowlist of one, ARCHITECTURE row 176).
-  if (user.role !== "foreman") throw forbidden();
+  if (user.role !== "foreman" && user.role !== "admin") throw forbidden();
 
   // 3–6. Every authorization input under a lock held to commit (closeout/scope.ts): the job
-  // NO KEY UPDATE, then its crew, the caller and the company's zone, which is stored with the
-  // closeout.
-  const scope = await lockForemanScope(tx, user, input.jobId, "no key update");
+  // NO KEY UPDATE, then for a foreman its crew, then the caller and the company's zone, which
+  // is stored with the closeout. From here on nothing depends on who submits.
+  const scope = await lockCloseoutScope(tx, user, input.jobId, "no key update");
   const timeZone = scope.timeZone;
 
   // 8. No labor or material writer is in flight from here to commit.
@@ -203,7 +204,7 @@ export async function submitCloseout(
   }
   const materialIds = dayMaterials.map((m) => m.id);
 
-  // 11b. The day as it stands under the locks, against the day the foreman reviewed. No writer
+  // 11b. The day as it stands under the locks, against the day the caller reviewed. No writer
   // obeying the field-write lock commits from step 8 to commit, the company row holds the zone
   // and the job row its status, so this is the state the closeout records. Before any write.
   const current = reviewFingerprint({

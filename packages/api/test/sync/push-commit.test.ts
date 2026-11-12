@@ -429,6 +429,88 @@ describe("sync.push — concurrency on real locks", () => {
     // Covered, never ignored: the open session it started refuses the closeout.
     expect(await closeout).toMatchObject({ result: "rejected", code: "sessions_open" });
   });
+
+  // TASKS, Stage 4 (V1-D08): the same two orders with the closeout an admin's. The push is
+  // never lost: it waits and is judged after the closeout, or it lands first and is covered.
+  it("linearizes with an admin's closeout queued first: the late record is after_closeout", async () => {
+    const d = await world();
+    const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
+    const review = await caller(admin.who).closeout.review({
+      jobId: d.J,
+      workDate: "2026-10-05",
+    });
+    const holder = await holdFieldWrites(d, "exclusive");
+    const closeoutId = uuidv7();
+    const closeout = caller(admin.who).closeout.submit({
+      id: closeoutId,
+      jobId: d.J,
+      workDate: "2026-10-05",
+      jobStatus: "open",
+      note: null,
+      clientTimestamp: new Date(),
+      reviewFingerprint: review.fingerprint,
+    });
+    await waitForLockWait(D.owner, "select pg_advisory_xact_lock(%", {
+      n: 1,
+      waitEvent: "advisory",
+    });
+    const lateReceipt = receipt(d.J);
+    const lateEvent = labor(d.w.id, d.J);
+    const late = push(d.w.who, [lateReceipt, lateEvent]);
+    // The admin's closeout holds the job's row as the foreman's does: the push waits there.
+    await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
+    await holder.release();
+    expect(await closeout).toMatchObject({
+      result: "accepted",
+      closeout: { id: closeoutId },
+    });
+    const answer = await late;
+    expect(
+      answer.results.map((r) =>
+        r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
+      ),
+    ).toEqual([["after_closeout"], ["clock_skewed", "after_closeout"]]);
+    expect(await eventIds([lateEvent.id])).toEqual([lateEvent.id]);
+    const { rows } = await D.owner.execute<{ submitter: string; members: number }>(sql`
+      select c.submitted_by_user_id as submitter,
+        (select count(*)::int from day_closeout_materials m where m.closeout_id = c.id)
+          + c.worker_mark_count as members
+      from day_closeouts c where c.id = ${closeoutId}
+    `);
+    // Neither late record is inside the closeout it waited for.
+    expect(rows).toEqual([{ submitter: admin.id, members: 0 }]);
+  });
+
+  it("linearizes with a push queued before an admin's closeout: the closeout sees it", async () => {
+    const d = await world();
+    const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
+    const review = await caller(admin.who).closeout.review({
+      jobId: d.J,
+      workDate: "2026-10-05",
+    });
+    const holder = await holdFieldWrites(d, "exclusive");
+    const early = push(d.w.who, [labor(d.w.id, d.J, { capturedOffline: true })]);
+    await waitForLockWait(D.owner, "select pg_advisory_xact_lock_shared(%", {
+      n: 1,
+      waitEvent: "advisory",
+    });
+    const closeout = caller(admin.who).closeout.submit({
+      id: uuidv7(),
+      jobId: d.J,
+      workDate: "2026-10-05",
+      jobStatus: "open",
+      note: null,
+      clientTimestamp: new Date(),
+      reviewFingerprint: review.fingerprint,
+    });
+    await waitForLockWait(D.owner, '%from "jobs"%for no key update%', { n: 1 });
+    await holder.release();
+    expect((await early).results[0]).toMatchObject({
+      result: "accepted",
+      ack: { reasons: ["offline"] },
+    });
+    expect(await closeout).toMatchObject({ result: "rejected", code: "sessions_open" });
+  });
 });
 
 describe("sync.push — bounded waits", () => {

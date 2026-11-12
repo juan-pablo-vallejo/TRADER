@@ -112,14 +112,12 @@ describe("closeout.submit — who may submit", () => {
     });
   });
 
-  it("answers 403 to a worker and to an admin", async () => {
+  it("answers 403 to a worker", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       const worker = await boundIn(tx, d.companyId, "worker");
-      const admin = await boundIn(tx, d.companyId, "admin");
       await becomeApp(tx);
       await expect(submit(tx, worker.who, input(d))).rejects.toMatchObject(forbidden);
-      await expect(submit(tx, admin.who, input(d))).rejects.toMatchObject(forbidden);
     });
   });
 
@@ -999,6 +997,332 @@ describe("closeout.submit — the review under concurrent writers", () => {
       await editor.done;
       await closeout;
       expect(answer).toEqual({ result: "rejected", code: "review_stale" });
+    } finally {
+      await cleanup();
+    }
+  });
+});
+
+// TASKS, Stage 4 (V1-D08): an admin submits for any job of the company, on the same procedure
+// with the same answers. Everything above is the foreman's, unchanged.
+describe("closeout.submit — an admin", () => {
+  const stored = async (tx: Tx, id: string) =>
+    (await tx.select().from(dayCloseouts).where(eq(dayCloseouts.id, id)))[0];
+  const statusOf = async (tx: Tx, jobId: string) =>
+    (await tx.select({ status: jobs.status }).from(jobs).where(eq(jobs.id, jobId)))[0]
+      ?.status;
+
+  it("closes out a crew's job: marks, materials, the status applied, the admin recorded", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await workedDay(tx, d);
+      const m = await materialIn(tx, d, d.J, "2026-10-05T15:00:00Z");
+      await materialIn(tx, d, d.J, "2026-10-06T15:00:00Z");
+      await becomeApp(tx);
+      const values = input(d);
+      expect(await submit(tx, admin.who, values)).toMatchObject({
+        result: "accepted",
+        closeout: { id: values.id, jobStatusApplied: true },
+      });
+      expect(await stored(tx, values.id)).toMatchObject({
+        submittedByUserId: admin.id,
+        timezone: "America/New_York",
+        jobStatus: "complete",
+        workerMarkCount: 2,
+        materialCount: 1,
+      });
+      const marks = await tx
+        .select()
+        .from(dayCloseoutWorkers)
+        .where(eq(dayCloseoutWorkers.closeoutId, values.id));
+      expect(
+        Object.fromEntries(marks.map((w) => [w.workerId, w.ledgerThrough.toISOString()])),
+      ).toEqual({
+        [d.w1]: "2026-10-05T16:00:00.000Z",
+        [d.w2]: "2026-10-05T21:00:00.000Z",
+      });
+      const { rows } = await tx.execute<{ material_id: string }>(
+        sql`select material_id from day_closeout_materials where closeout_id = ${values.id}`,
+      );
+      expect(rows).toEqual([{ material_id: m }]);
+      expect(await statusOf(tx, d.J)).toBe("complete");
+    });
+  });
+
+  it("closes out a job on no crew, which a foreman still may not", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      for (const [type, client] of [
+        ["started", "2026-10-05T12:00:00Z"],
+        ["ended", "2026-10-05T15:00:00Z"],
+      ] as const) {
+        await eventIn(tx, d, { worker: d.w1, job: d.K, type, client });
+      }
+      await becomeApp(tx);
+      await expect(submit(tx, d.who, input(d, { jobId: d.K }))).rejects.toMatchObject(
+        forbidden,
+      );
+      const values = input(d, { jobId: d.K });
+      expect(await submit(tx, admin.who, values)).toMatchObject({
+        result: "accepted",
+        closeout: { jobStatusApplied: true },
+      });
+      expect(await stored(tx, values.id)).toMatchObject({
+        jobId: d.K,
+        workerMarkCount: 1,
+        submittedByUserId: admin.id,
+      });
+      expect(await statusOf(tx, d.K)).toBe("complete");
+    });
+  });
+
+  it("closes out an archived job and never writes its status", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await workedDay(tx, d);
+      await tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.K));
+      await tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.J));
+      await becomeApp(tx);
+      for (const jobId of [d.J, d.K]) {
+        const values = input(d, { jobId });
+        expect(await submit(tx, admin.who, values)).toMatchObject({
+          result: "accepted",
+          closeout: { jobStatusApplied: false },
+        });
+        expect(await stored(tx, values.id)).toMatchObject({
+          jobStatus: "complete",
+          jobStatusApplied: false,
+        });
+        expect(await statusOf(tx, jobId)).toBe("archived");
+      }
+    });
+  });
+
+  it("closes out a job on a deactivated crew, which its foreman may not", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await tx
+        .update(crews)
+        .set({ deactivatedAt: new Date() })
+        .where(eq(crews.id, d.crewId));
+      await becomeApp(tx);
+      await expect(submit(tx, d.who, input(d))).rejects.toMatchObject(forbidden);
+      expect((await submit(tx, admin.who, input(d))).result).toBe("accepted");
+    });
+  });
+
+  it("answers 403 for another tenant's job or no job, and 401 once deactivated", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const elsewhere = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const off = await boundIn(tx, d.companyId, "admin", { deactivated: true });
+      await becomeApp(tx);
+      for (const jobId of [elsewhere.J, elsewhere.K, uuidv7()]) {
+        await expect(submit(tx, admin.who, input(d, { jobId }))).rejects.toMatchObject(
+          forbidden,
+        );
+      }
+      await expect(submit(tx, off.who, input(d))).rejects.toMatchObject({
+        code: "UNAUTHORIZED",
+      });
+      await asOwner(tx, d, async () => {
+        const all = await tx.select({ id: dayCloseouts.id }).from(dayCloseouts);
+        expect(all).toEqual([]);
+      });
+    });
+  });
+
+  it("answers a retry duplicate, also after a demotion; a new submission is then 403", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await becomeApp(tx);
+      const values = input(d);
+      const first = await submit(tx, admin.who, values);
+      expect(first.result).toBe("accepted");
+      expect(await submit(tx, admin.who, values)).toEqual({
+        ...first,
+        result: "duplicate",
+      });
+      // Whatever fingerprint the retry carries.
+      expect(await submitAsIs(tx, admin.who, values)).toEqual({
+        ...first,
+        result: "duplicate",
+      });
+      expect(await submit(tx, admin.who, { ...values, note: "Changed" })).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+      await asOwner(tx, d, () =>
+        tx.update(users).set({ role: "worker" }).where(eq(users.id, admin.id)),
+      );
+      expect(await submit(tx, admin.who, values)).toEqual({
+        ...first,
+        result: "duplicate",
+      });
+      await expect(
+        submit(tx, admin.who, input(d, { workDate: "2026-10-04" })),
+      ).rejects.toMatchObject(forbidden);
+      await asOwner(tx, d, async () => {
+        const all = await tx
+          .select({ id: dayCloseouts.id })
+          .from(dayCloseouts)
+          .where(eq(dayCloseouts.companyId, d.companyId));
+        expect(all).toEqual([{ id: values.id }]);
+      });
+    });
+  });
+
+  it("shares one closeout per job and day with the foreman, either way round", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await becomeApp(tx);
+      const foremans = input(d);
+      await submit(tx, d.who, foremans);
+      expect(await submit(tx, admin.who, input(d))).toEqual({
+        result: "rejected",
+        code: "already_submitted",
+        conflictingId: foremans.id,
+      });
+      // The foreman's id, sent by the admin: a different submission under that id.
+      expect(await submit(tx, admin.who, foremans)).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+      const admins = input(d, { workDate: "2026-10-04" });
+      await submit(tx, admin.who, admins);
+      expect(await submit(tx, d.who, input(d, { workDate: "2026-10-04" }))).toEqual({
+        result: "rejected",
+        code: "already_submitted",
+        conflictingId: admins.id,
+      });
+      expect(await submit(tx, d.who, admins)).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+    });
+  });
+
+  it("rejects a stale or old-version review, an open day and a day after today, writing nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await workedDay(tx, d);
+      await becomeApp(tx);
+      const values = input(d);
+      const reviewed = await review(tx, admin.who, values);
+      await asOwner(tx, d, () => materialIn(tx, d, d.J, "2026-10-05T15:00:00Z"));
+      expect(
+        await submitAsIs(tx, admin.who, {
+          ...values,
+          reviewFingerprint: reviewed.fingerprint,
+        }),
+      ).toEqual({ result: "rejected", code: "review_stale" });
+      expect(await submitAsIs(tx, admin.who, values)).toEqual({
+        result: "rejected",
+        code: "review_stale",
+      });
+      expect(await submit(tx, admin.who, input(d, { workDate: "2099-01-01" }))).toEqual({
+        result: "rejected",
+        code: "work_date_in_future",
+      });
+      await asOwner(tx, d, () =>
+        eventIn(tx, d, {
+          worker: d.w1,
+          job: d.J,
+          type: "started",
+          client: "2026-10-05T22:00:00Z",
+        }),
+      );
+      expect(await submit(tx, admin.who, input(d))).toEqual({
+        result: "rejected",
+        code: "sessions_open",
+      });
+      await asOwner(tx, d, async () => {
+        const all = await tx
+          .select({ id: dayCloseouts.id })
+          .from(dayCloseouts)
+          .where(eq(dayCloseouts.companyId, d.companyId));
+        expect(all).toEqual([]);
+      });
+    });
+  });
+
+  it("leaves a record trader_app can neither edit nor delete", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await becomeApp(tx);
+      const values = input(d);
+      await submit(tx, admin.who, values);
+      for (const statement of [
+        sql`update day_closeouts set note = 'Edited'`,
+        sql`delete from day_closeouts`,
+      ]) {
+        const refused = await rejection(tx.transaction((sp) => sp.execute(statement)));
+        expect(sqlstateOf(refused)).toBe("42501");
+      }
+    });
+  });
+
+  it("is serialized with the foreman's on the job's row, and holds the caller, not the crew", async () => {
+    const { day: d, cleanup } = await committedCrewDay(owner);
+    try {
+      const admin = await owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
+      await holding(
+        owner,
+        async (tx) => {
+          await becomeApp(tx);
+          expect((await submit(tx, admin.who, input(d))).result).toBe("accepted");
+        },
+        async () => {
+          await rolledBack(other, async (tx) => {
+            await becomeApp(tx);
+            await lockTimeout(tx);
+            expect(sqlstateOf(await rejection(submitAsIs(tx, d.who, input(d))))).toBe(
+              "55P03",
+            );
+          });
+          let code: string | undefined;
+          await rolledBack(third, async (tx) => {
+            await lockTimeout(tx);
+            code = sqlstateOf(
+              await rejection(
+                tx.execute(sql`update users set role = 'worker' where id = ${admin.id}`),
+              ),
+            );
+          });
+          expect(code).toBe("55P03");
+          await rolledBack(third, async (tx) => {
+            await lockTimeout(tx);
+            await tx.execute(
+              sql`update crews set deactivated_at = now() where id = ${d.crewId}`,
+            );
+          });
+        },
+      );
+      // The other way round: the foreman's in flight, the admin's waits on the job's row.
+      await holding(
+        owner,
+        async (tx) => {
+          await becomeApp(tx);
+          expect((await submit(tx, d.who, input(d))).result).toBe("accepted");
+        },
+        () =>
+          rolledBack(other, async (tx) => {
+            await becomeApp(tx);
+            await lockTimeout(tx);
+            expect(sqlstateOf(await rejection(submitAsIs(tx, admin.who, input(d))))).toBe(
+              "55P03",
+            );
+          }),
+      );
     } finally {
       await cleanup();
     }
