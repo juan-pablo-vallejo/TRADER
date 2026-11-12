@@ -72,7 +72,7 @@ jobs, assignments, approvals, a closeout, close, export.
       retention enforced by the store or a scheduled delete. Tests: no payload, location or
       time in a line; a malformed record with no readable id leaves no record id; lines older
       than the period are gone. Done when the office can find a refusal by worker and day
-- [ ] Audit rows (V1-D20). Work: `audit_log` written in the same transaction by the
+- [x] Audit rows (V1-D20). Work: `audit_log` written in the same transaction by the
       invitation, role, activation and deactivation, and pay-rate writers, `labor.repair` and
       `approval.decide`, each with actor, company and changed fields only. Tests: every listed
       write leaves exactly one row; a rolled-back write leaves none; a row is invisible to

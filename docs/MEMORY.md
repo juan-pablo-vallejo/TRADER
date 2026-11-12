@@ -180,9 +180,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   on it.
 - Until their Stage 4 tasks land, code and comments still carry rules the `V1-Dnn` rows
   superseded: `approval.decide`, 0022, 0025 and 0026 treat an admin's own labor like
-  anyone's (V1-D10 as amended); `materials.ts` describes an office writer that does not exist
-  and `audit-log.ts` says V1 ships it empty. The documents are right; correct each in its
-  task and delete this note when the last is done.
+  anyone's (V1-D10 as amended); `materials.ts` describes an office writer that does not
+  exist. The documents are right; correct each in its task and delete this note when the
+  last is done.
 - A push judges a labor event's time against the database clock, which no test can set: an
   event pushed as captured online more than five minutes before now is `clock_skewed` and
   pending. A test of a clean capture times its events inside the tolerance of `Date.now()`;
@@ -199,6 +199,19 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - An unparseable body on `sync.push` reaches the sync procedure in tRPC 11.23.0 (input is read
   inside the call) and leaves a `request_failed` line; `apps/web/test/refusals.test.ts` pins it.
 - The refused-entries screen states "30 days" in `strings.ts`: change it with `RETENTION_DAYS`.
+- `audit_log` is append-only and references `companies` and the acting `users` row: once a
+  roster write, a repair or a decision commits, its company and its admin can never be
+  deleted. Tests call those seven procedures only in a rolled-back transaction or a
+  `disposableDb()` (the web suite has its own in `apps/web/test/helpers.ts`). A manual check
+  of one belongs in `trader_demo` (`pnpm demo --reset` rebuilds it); in the local database
+  only `docker compose down -v` removes the rows.
+- A grant is the whole database's: `withoutAuditInsert` (api helpers) revokes `trader_app`'s
+  INSERT on `audit_log`, so it runs only in a disposable database, never the shared one.
+- `pnpm --filter <pkg> test -- <file>` forwards the `--` and runs every suite; for one file,
+  `pnpm exec vitest run <file>` from the package's directory.
+- A new audited action is a member of `AuditEntry` (`core/audit.ts`), a line in the inventory
+  test's `WRITERS` and in the demo's `EXPECTED_AUDIT`, and a decision row; the compiler and
+  the two tests fail until all three agree.
 
 ## Log
 
@@ -308,3 +321,22 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   cross-tenant delete, now a Stage 6 line; no request id is returned to the client.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, audit rows
   (V1-D20).
+
+### 2026-11-12 — Audit rows (V1-D20)
+
+- **Did:** branch `audit-rows` from `3781aea`, seven commits. `recordAudit`
+  (`core/audit.ts`) on the mutating branch of `roster.invite`, `setRole`, `deactivate`,
+  `reactivate`, `setPayRate`, `labor.repair` and `approval.decide`, in each one's own
+  transaction; no migration, no procedure, no screen. The three roster suites and the web
+  roster test moved to disposable databases first. Inventory test (static) and the demo's
+  per-action counts (dynamic); `pnpm demo --reset` checked by query: 8 invitations, 5 rates,
+  1 repair, 249 decisions, 1 deactivation, 1 demotion, one actor. Watched red: a dropped
+  call, a row written on a duplicate, an email in a row, a swallowed insert failure, an
+  unlisted writer. 847 tests.
+- **Decided:** by the owner on 2026-11-12 ("execute", the plan's recommendations), the four
+  rows of that date in ARCHITECTURE: row contents, one row per repair call, the stamp from
+  the clock, no read path. Not changed and worth knowing: `roster.invite` and
+  `roster.setPayRate` take no lock on the caller, so an admin demoted mid-call still
+  completes and is audited as the actor.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, dated
+  worker-job assignments (V1-D07; plan first: schema).
