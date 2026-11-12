@@ -97,7 +97,7 @@ jobs, assignments, approvals, a closeout, close, export.
       state, admin-gated; the read `labor.repair` needs for its event ids; its read-only
       office screen (DESIGN, Worker ledger). Tests: gate inventory line; another company's
       worker is FORBIDDEN
-- [ ] Approval queue screen with reason tags, approve and reject, the recorded and received
+- [x] Approval queue screen with reason tags, approve and reject, the recorded and received
       times of a `clock skew` entry side by side (DESIGN, Approval row); labor repair from the
       worker's ledger screen. Depends on the ledger read and the event-time line
 - [ ] An admin's own labor needs no approval (V1-D10 as amended; plan first: schema, sync).

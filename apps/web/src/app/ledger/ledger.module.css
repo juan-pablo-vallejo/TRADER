@@ -37,9 +37,44 @@
 .replaced td {
   color: var(--ink-secondary);
 }
+/* Repair: the line of actions under a session or under the person, the editor that opens
+   beneath it, and its fields — one column narrow, two wide. */
+.actions {
+  margin: var(--space-2) 0 0;
+}
+.editor {
+  margin: var(--space-2) 0 0;
+}
+.editor > p {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.fields {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.added {
+  display: grid;
+  gap: 0 var(--space-3);
+  align-items: end;
+}
+.added button {
+  margin-bottom: var(--space-3);
+  justify-self: start;
+}
 
 @media (min-width: 768px) {
   .lookupGrid {
     grid-template-columns: 2fr 1fr 1fr;
+  }
+}
+/* Two to a row only where each control keeps its whole date and time beside the navigation.
+   `minmax(0, …)`: a control's own width must never widen the page. */
+@media (min-width: 1024px) {
+  .fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .added {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
   }
 }

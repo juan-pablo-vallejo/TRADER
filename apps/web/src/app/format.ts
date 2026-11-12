@@ -1,7 +1,10 @@
 // Display formatting for the office (DESIGN, Typography: money from integer cents through
 // the locale formatter; dates as calendar days). A work date is a YYYY-MM-DD string and is
 // rendered from its parts: `new Date(iso)` would read it as UTC midnight, which is the day
-// before in Eastern. Consumed by the roster and assignments screens.
+// before in Eastern. An instant is shown in the zone the server names, never the browser's.
+// Consumed by the roster, assignments, approvals and ledger screens.
+import { strings } from "./strings";
+
 export function money(cents: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",
@@ -52,4 +55,23 @@ export function cents(amount: string): number | null {
   const fraction = (match[2] ?? "").padEnd(2, "0");
   const value = Number(whole) * 100 + Number(fraction);
   return Number.isSafeInteger(value) && value <= 2147483647 ? value : null;
+}
+
+// An instant with its day, in a named zone: an entry is often received, corrected or decided
+// on a later day than the one it is about.
+export function stamp(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  }).format(at);
+}
+
+// Whole minutes from integer milliseconds, rounded down: a display, not the hours figure pay
+// is built from.
+export function duration(ms: number): string {
+  const minutes = Math.floor(ms / 60_000);
+  return strings.duration(Math.floor(minutes / 60), minutes % 60);
 }

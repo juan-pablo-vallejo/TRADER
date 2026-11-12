@@ -19,6 +19,7 @@ export const strings = {
   crews: "Crews",
   assignments: "Assignments",
   closeout: "Closeout",
+  approvals: "Approvals",
   profile: "Profile",
   work: "Work",
   people: "People",
@@ -211,7 +212,7 @@ export const strings = {
   // Labor ledger (DESIGN, Worker ledger)
   ledger: "Labor ledger",
   ledgerExplain:
-    "One person's recorded hours, day by day, with every entry behind them. Nothing here can be changed: a correction is a new entry, and the entry it replaced stays on record.",
+    "One person's recorded hours, day by day, with every entry behind them. Nothing here is erased: a repair is a new entry that waits for approval, and the entry it replaces stays on record.",
   showLedger: "Show ledger",
   ledgerRange: "Choose up to 31 days, the first no later than the last.",
   emptyLedger: "No hours are recorded for this person on these days.",
@@ -253,6 +254,111 @@ export const strings = {
   approvalWaiting: "Waiting",
   approvedBy: (name: string) => `Approved by ${name}`,
   rejectedBy: (name: string) => `Rejected by ${name}`,
+
+  // Labor repair, on the ledger (PRD, Office review)
+  repair: "Repair",
+  repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,
+  repairExplain:
+    "Change a time or the job, or add an entry that is missing. Each change is a new entry that waits for approval.",
+  repairClosedOut:
+    "This day is closed out. The new entries will also be flagged after closeout.",
+  repairTimes: "Times",
+  repairAdded: "Entries to add",
+  addEntry: "Add an entry",
+  addedEntryType: (n: number) => `Entry ${n}`,
+  addedEntryTime: (n: number) => `Entry ${n} time`,
+  saveRepair: "Save repair",
+  repairSaved: "Saved. The new entries wait for approval.",
+  repairBadTime:
+    "Enter a date and a time. A time the clocks skipped that day cannot be used.",
+  repairTooMany: "At most 20 changes at a time. Save some, then make the rest.",
+  repairUnsent:
+    "That didn't go through. Try again: the same repair is sent, so it cannot be recorded twice.",
+  repairChanged:
+    "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
+  voidSession: "Void session",
+  voidSessionEffect:
+    "This session's hours will no longer count. The session and its entries stay on record, and the void waits for approval.",
+  addMissingHours: "Add missing hours",
+  missingHoursExplain:
+    "Hours nobody recorded: a clock in and, when it is known, the clock out. They wait for approval like every entry the office writes.",
+  missingClockIn: "Clock in",
+  missingClockOut: "Clock out (optional)",
+  addHours: "Add hours",
+  jobOptionArchived: (name: string) => `${name} · archived`,
+  // One sentence per answer of labor.repair (labor/repair.ts); the ledger screen holds this
+  // list to the server's codes.
+  repairRejected: {
+    no_open_session:
+      "There is no open session at that time for one of these entries. Check the times.",
+    session_already_open:
+      "They are already clocked in at that time. End or correct that session first.",
+    not_paused: "A break end needs a break start before it.",
+    already_paused: "They are already on a break at that time.",
+    target_missing:
+      "This ledger changed since it was shown. Show the ledger again, then repair.",
+    target_is_correction:
+      "This ledger changed since it was shown. Show the ledger again, then repair.",
+    correction_of_void: "A void cannot be corrected.",
+    correction_type_mismatch:
+      "This ledger changed since it was shown. Show the ledger again, then repair.",
+    correction_job_mismatch: "Only a clock in can move to another job.",
+    void_target_not_started:
+      "This ledger changed since it was shown. Show the ledger again, then repair.",
+    already_voided: "This session is already voided.",
+    breaks_following_event:
+      "That time would put an entry out of order with the ones after it. Change those in the same repair.",
+    correction_superseded:
+      "This ledger changed since it was shown. Show the ledger again, then repair.",
+    correction_moves_session:
+      "That time would move an entry into another session. Keep it inside its own.",
+    job_id_mismatch: "An added entry must be on the session's job.",
+    id_conflict: "That didn't go through. Nothing was saved; save again.",
+    time_in_future: "One of these times has not happened yet.",
+    repair_stale:
+      "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
+  },
+
+  // Approvals (DESIGN, Approval row)
+  approvalsExplain:
+    "Entries that wait for the office before they count, oldest first. Approving keeps an entry as it was recorded; rejecting leaves it out. A decision cannot be changed: hours that are wrong are repaired from the labor ledger.",
+  emptyApprovals: "Nothing is waiting for approval.",
+  who: "Who",
+  time: "Time",
+  hours: "Hours",
+  decision: "Decision",
+  approve: "Approve",
+  reject: "Reject",
+  showMore: "Show more",
+  whoEnteredBy: (who: string, by: string) => `${who}, entered by ${by}`,
+  recordedAt: (when: string) => `Recorded ${when}`,
+  receivedWhen: (when: string) => `Received ${when}`,
+  loggedWhen: (when: string) => `Logged ${when}`,
+  submittedWhen: (when: string) => `Submitted ${when}`,
+  materialEntry: (facts: string) => `Material: ${facts}`,
+  materialVoided: "voided",
+  correctionAmend: (from: string, to: string) =>
+    `Material correction: ${from} changed to ${to}`,
+  correctionVoid: (facts: string) => `Material correction: void ${facts}`,
+  correctionNote: (note: string) => `Note: ${note}`,
+  ownEntry: "Your own entry. Another admin decides it.",
+  approved: "Approved.",
+  rejected: "Rejected.",
+  alreadyDecided: {
+    approved: "Someone else already approved this. Their decision stands.",
+    rejected: "Someone else already rejected this. Their decision stands.",
+  },
+  rejectEffect: {
+    labor:
+      "These hours will be left out until the office repairs them from the labor ledger. A decision cannot be changed.",
+    superseded:
+      "A later correction replaced this entry, so rejecting it changes no hours. A decision cannot be changed.",
+    void: "The session will stay as recorded and its hours will not be voided. A decision cannot be changed.",
+    material:
+      "This material will be left out of the job's cost. A decision cannot be changed.",
+    material_correction:
+      "The material will stay as it was before this correction. A decision cannot be changed.",
+  },
 
   // Closeout (DESIGN, Closeout)
   closeoutExplain:

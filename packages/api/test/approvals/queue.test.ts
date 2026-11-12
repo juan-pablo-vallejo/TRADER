@@ -1,7 +1,7 @@
 // Stage 3 line 8: approval.queue, the admin's pending approvals of every subject, under the
 // runtime role in rolled-back transactions.
-import { approvals } from "@trader/db/schema";
-import { eq } from "drizzle-orm";
+import { approvals, companies, materials } from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type { Db } from "@trader/db";
@@ -262,6 +262,38 @@ describe("approval.queue", () => {
           eligibleWorkedMs: 3.75 * 3_600_000,
         },
       });
+    });
+  });
+
+  it("names the company's zone on every page, and when a receipt was stored", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const [company] = await tx
+        .select({ timezone: companies.timezone })
+        .from(companies)
+        .where(eq(companies.id, d.companyId));
+      await becomeApp(tx);
+      // Nothing pending: the zone is still said.
+      expect(await queue(tx, admin.who)).toEqual({
+        timezone: company!.timezone,
+        items: [],
+        next: null,
+      });
+      await tx.execute(sql`set local role none`);
+      const receipt = await lateReceiptIn(tx, d);
+      const [stored] = await tx
+        .select({ createdAt: materials.createdAt, loggedAt: materials.loggedAt })
+        .from(materials)
+        .where(eq(materials.id, receipt.materialId));
+      await becomeApp(tx);
+      // A page of receipts alone, with no labor to read a zone for.
+      const page = await queue(tx, admin.who);
+      expect(page.timezone).toBe(company!.timezone);
+      expect(page.items.map((i) => i.subject)).toMatchObject([
+        { kind: "material", loggedAt: stored!.loggedAt, receivedAt: stored!.createdAt },
+      ]);
+      expect(stored!.createdAt.getTime()).not.toBe(stored!.loggedAt.getTime());
     });
   });
 

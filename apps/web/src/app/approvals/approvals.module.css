@@ -1,0 +1,20 @@
+/* The approval queue's own layout: the lines above the table, the two times of a clock-skew
+   entry, the button beneath the list. The table itself is table.module.css. */
+.explain {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-secondary);
+}
+.zone {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+/* Each time stays whole; the pair wraps between them, never inside one. */
+.when {
+  white-space: nowrap;
+}
+.more {
+  margin-top: var(--space-4);
+}
+.pill {
+  margin-left: var(--space-2);
+}

@@ -4,7 +4,9 @@
 // may be decided between this read and the admin's click, and approval.decide answers that.
 // Each labor item carries its session as it stands now — live, derived, never a closeout
 // snapshot — and whether this event is what the session is judged on (labor/approval.ts).
-// No coordinates, cost or rates. Consumed by routers/approval.ts.
+// The page names the company's zone, the one its work dates are judged in, so the office
+// reads every time in it; a receipt carries when the server stored it beside the time its
+// phone reported. No coordinates, cost or rates. Consumed by routers/approval.ts.
 import {
   approvalReason,
   approvals,
@@ -80,6 +82,8 @@ const subject = z.discriminatedUnion("kind", [
     job,
     loggedBy: person,
     loggedAt: z.date(),
+    // When the server stored the receipt: the row's `created_at`, the database's clock.
+    receivedAt: z.date(),
     original: facts,
     effective: facts.extend({ voided: z.boolean() }),
     capturedOffline: z.boolean(),
@@ -110,6 +114,8 @@ const subject = z.discriminatedUnion("kind", [
 ]);
 
 export const queueOutput = z.strictObject({
+  // `companies.timezone`: the zone the session work dates below were judged in.
+  timezone: z.string(),
   items: z.array(
     z.strictObject({
       approvalId: z.uuid(),
@@ -199,13 +205,11 @@ export async function approvalQueue(
           .from(workSessionEvents)
           .where(inArray(workSessionEvents.id, eventIds));
   const eventById = new Map(events.map((e) => [e.id, e]));
-  const [company] =
-    events.length === 0
-      ? []
-      : await tx
-          .select({ timezone: companies.timezone })
-          .from(companies)
-          .where(eq(companies.id, user.companyId));
+  const [company] = await tx
+    .select({ timezone: companies.timezone })
+    .from(companies)
+    .where(eq(companies.id, user.companyId));
+  if (company === undefined) throw new Error("the caller's company is not visible");
   const folds = new Map<string, ReturnType<typeof sessionApprovals>>();
   for (const workerId of new Set(events.map((e) => e.workerId))) {
     const ledger: LaborEvent[] = await readWorkerEvents(tx, workerId);
@@ -321,7 +325,7 @@ export async function approvalQueue(
           effect,
           session: {
             rootEventId: s.rootEventId,
-            workDate: workDate(s.startedAt, company!.timezone),
+            workDate: workDate(s.startedAt, company.timezone),
             state: s.state,
             complete: s.complete,
             structuralWorkedMs: s.workedMs,
@@ -342,6 +346,7 @@ export async function approvalQueue(
           job: named(jobNames, m.jobId),
           loggedBy: named(names, m.loggedByUserId),
           loggedAt: m.loggedAt,
+          receivedAt: m.createdAt,
           original,
           effective,
           capturedOffline: m.capturedOffline,
@@ -378,5 +383,5 @@ export async function approvalQueue(
       },
     };
   });
-  return { items, next };
+  return { timezone: company.timezone, items, next };
 }
