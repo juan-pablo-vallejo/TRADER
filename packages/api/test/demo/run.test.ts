@@ -7,10 +7,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createContext } from "../../src/core/context";
 import {
+  COSTS,
   DEMO,
   EXPECTED,
   EXPECTED_AUDIT,
   PEOPLE,
+  RECEIPTS,
   SCENARIOS,
   workDays,
 } from "../../src/demo/content";
@@ -168,6 +170,31 @@ describe("the demo run", () => {
     ]) {
       expect(reasons.has(r as never)).toBe(true);
     }
+  });
+
+  it("shows the office its receipts, three priced and the rest still to price", async () => {
+    const all = await admin().material.list({ show: "all" });
+    expect(all.items).toHaveLength(EXPECTED.materials);
+    expect(
+      all.items
+        .filter((m) => m.cost !== null)
+        .map((m) => [m.original.description, m.cost])
+        .sort(),
+    ).toEqual(
+      COSTS.map((c) => [
+        RECEIPTS[c.receipt].description,
+        { cents: c.cents, currency: c.currency },
+      ]).sort(),
+    );
+    const unpriced = await admin().material.list({});
+    expect(unpriced.items).toHaveLength(EXPECTED.materials - EXPECTED.pricedMaterials);
+    expect(unpriced.items.every((m) => m.cost === null)).toBe(true);
+    // The late receipt waits for the office; pricing it does not depend on that.
+    expect(unpriced.items.map((m) => m.accounting).sort()).toEqual([
+      "eligible",
+      "eligible",
+      "pending",
+    ]);
   });
 
   it("shows the office the corrected day through the worker's ledger", async () => {

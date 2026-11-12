@@ -21,6 +21,7 @@ import {
   AMENDED_RECEIPT,
   BASELINE_TIMES,
   CREW_JOB,
+  COSTS,
   CREWS,
   CUSTOMERS,
   DEMO,
@@ -51,6 +52,7 @@ export type Summary = {
   payRates: number;
   events: number;
   materials: number;
+  pricedMaterials: number;
   materialCorrections: number;
   closeouts: number;
   approvals: number;
@@ -113,6 +115,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     payRates: 0,
     events: 0,
     materials: 0,
+    pricedMaterials: 0,
     materialCorrections: 0,
     closeouts: 0,
     approvals: 0,
@@ -525,6 +528,20 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     if (a.result === "accepted") {
       summary.materialCorrections++;
       summary.approvals++;
+    }
+  });
+
+  await step("price the receipts the office has on file", async () => {
+    for (const c of COSTS) {
+      const r = RECEIPTS[c.receipt];
+      const a = expectResult(
+        await admin().material.setCost({
+          materialId: materialIds.get(`${r.who}:${r.day}`)!,
+          cost: { cents: c.cents, currency: c.currency },
+        }),
+        "saved",
+      );
+      if (a.result === "saved") summary.pricedMaterials++;
     }
   });
 

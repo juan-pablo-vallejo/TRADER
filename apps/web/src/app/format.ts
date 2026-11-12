@@ -2,7 +2,7 @@
 // the locale formatter; dates as calendar days). A work date is a YYYY-MM-DD string and is
 // rendered from its parts: `new Date(iso)` would read it as UTC midnight, which is the day
 // before in Eastern. An instant is shown in the zone the server names, never the browser's.
-// Consumed by the roster, assignments, approvals and ledger screens.
+// Consumed by the roster, assignments, approvals, ledger and materials screens.
 import { strings } from "./strings";
 
 export function money(cents: number, currency: string): string {
@@ -56,6 +56,20 @@ export function cents(amount: string): number | null {
   const value = Number(whole) * 100 + Number(fraction);
   return Number.isSafeInteger(value) && value <= 2147483647 ? value : null;
 }
+
+// Cents as the amount an office types back: "89.99". By integer arithmetic, never a float.
+export function amount(value: number): string {
+  return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`;
+}
+
+// A receipt's facts as the office reads them: "2 gal Eggshell, white". The quantity is the
+// database's numeric(12,3) text ("2.000" as "2", "2.500" as "2.5"), by digits, never a float.
+export const quantity = (q: string) => (q.includes(".") ? q.replace(/\.?0+$/, "") : q);
+export const materialFacts = (f: {
+  description: string;
+  quantity: string;
+  unit: string;
+}) => `${quantity(f.quantity)} ${f.unit} ${f.description}`;
 
 // An instant with its day, in a named zone: an entry is often received, corrected or decided
 // on a later day than the one it is about.

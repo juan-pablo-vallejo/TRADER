@@ -20,7 +20,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import controls from "../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../failure";
-import { duration, stamp } from "../format";
+import { duration, materialFacts as facts, stamp } from "../format";
 import { Note } from "../note";
 import { PageHeader } from "../page-header";
 import { DestructiveAction } from "../row-editor";
@@ -30,13 +30,8 @@ import { useTRPC } from "../trpc";
 import styles from "./approvals.module.css";
 
 type Item = inferRouterOutputs<AppRouter>["approval"]["queue"]["items"][number];
-type Facts = { description: string; quantity: string; unit: string };
 
 const PAGE = 50;
-
-// "2.000" as the office reads a quantity: "2"; "2.500" as "2.5". By digits, never a float.
-const quantity = (q: string) => (q.includes(".") ? q.replace(/\.?0+$/, "") : q);
-const facts = (f: Facts) => `${quantity(f.quantity)} ${f.unit} ${f.description}`;
 
 function entryOf(item: Item): string {
   const s = item.subject;

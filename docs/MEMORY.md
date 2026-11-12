@@ -255,6 +255,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The office table's narrow row labels only `number` cells: any other cell must read on its
   own without its column heading ("Entered by Dana Ortiz", not the name alone), and an
   empty one carries `data-empty` so its separator is dropped.
+- `closeout.submit` holds the day's receipts `FOR SHARE` once it has the field-write lock
+  exclusive (`submit.ts`, step 11): a real-commit test that needs a closeout stopped past
+  that lock holds a receipt's row `FOR UPDATE` and waits on `from "materials" … for share`,
+  not on the membership insert (`materials/cost-commit.test.ts`).
+- `strings.ts` is one flat object: a new key that repeats an old one (`material`, `loggedBy`)
+  is TS1117 at typecheck, not in the editor's first glance. Search the file before adding.
 
 ## Log
 
@@ -509,3 +515,29 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   an admin, the promoted worker's `own_entry`.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, material
   cost entry by the office.
+
+### 2026-11-12 — Material cost entry by the office
+
+- **Did:** branch `material-cost-entry` from `f081ea6`, five commits. `material.list` and
+  `material.setCost`, admin-gated, with their gate lines; three receipts priced in the demo;
+  `/materials` under Work, checked in the browser on `trader_demo` at 390, 768, 1024 and
+  1280 — an unpriced receipt priced by keyboard, the same cost sent again, a correction, a
+  clear in two presses, a malformed amount refused under its field, a sealed receipt and the
+  after-closeout one priced, the job filter, both empty states, no sideways scroll, no
+  control under 48 pt narrow or 44 pt wide. Watched red: a second column in the update (on
+  an open receipt and on a frozen one), the `unchanged` answer, the caller re-read, the
+  field-write lock, the row lock, the unpriced filter, the cursor's read-back, the job
+  refusal, both gate lines. No migration. 999 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its seven
+  recommendations), the row of that date in ARCHITECTURE and the DESIGN amendments
+  (Materials in the Work group; Material cost): the screen's home, currency required with
+  no default, the field-write lock taken, clearing allowed, any standing priced, the demo's
+  three costs, no column-level grant. Changed from the plan: the real-commit test stops the
+  closeout at its `FOR SHARE` of the day's receipts, where it truly waits; no Note about
+  hand-made costs, which bite nothing. Not done: no browser test in CI, no Spanish office
+  strings. Not seen in the browser, covered by tests only: "Show more", the `Rejected` and
+  `Voided` pills, a refusal from the server. Worth knowing: who priced a receipt is not
+  recorded (V1-D20); the corrections-with-decisions query now has three copies (`queue.ts`,
+  `pull.ts`, `list.ts`); if `job.list` fails the job filter offers only "All jobs".
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line,
+  office-created material entries (V1-D09; plan first: schema).

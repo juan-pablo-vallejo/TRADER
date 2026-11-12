@@ -109,7 +109,7 @@ jobs, assignments, approvals, a closeout, close, export.
       worker or a foreman is pending and its worker's own decision is still `own_entry`; an
       admin's receipt and correction still refuse their own decision; a repair of another
       person stays pending; a role change after receipt moves nothing
-- [ ] Material cost entry by the office: API under the closed-day freeze's cost exception,
+- [x] Material cost entry by the office: API under the closed-day freeze's cost exception,
       and its screen. Tests: only `cost_cents` and `currency` change on a frozen receipt
 - [ ] Office-created material entries (V1-D09; plan first: schema). Work: the provenance
       column and its migration, an admin-gated insert under the shared field-write lock, the

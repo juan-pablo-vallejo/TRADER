@@ -278,6 +278,15 @@ export const RECEIPTS = [
   },
 ] as const;
 
+// What the office has read off three of the receipts above and entered; the other two and the
+// late one are still unpriced. `receipt` is an index into RECEIPTS: the amended sealed receipt
+// is one of the three, so a frozen row carries a cost. Integer cents with their currency.
+export const COSTS = [
+  { receipt: 0, cents: 38990, currency: "USD" },
+  { receipt: 1, cents: 17196, currency: "USD" },
+  { receipt: 4, cents: 7188, currency: "USD" },
+] as const;
+
 export const AMENDED_RECEIPT = {
   original: RECEIPTS[1],
   amend: { description: "Eggshell interior, Harbor Grey", quantity: "4", unit: "gal" },
@@ -383,6 +392,7 @@ export const EXPECTED = {
   // office correction.
   events: 6 * 10 * 4 + 4 * 4 + 2 + 1,
   materials: RECEIPTS.length + 1,
+  pricedMaterials: COSTS.length,
   materialCorrections: 1,
   // Nine closed days on each crew's job.
   closeouts: 9 * 2,
