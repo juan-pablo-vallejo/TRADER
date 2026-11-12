@@ -273,20 +273,20 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
 
   // An ordinary day's four events, with the day's scenario facts applied.
   const ordinaryDay = (who: string, day: number): Record_[] => {
-    const offline = SCENARIOS.offlineDay.who === who && SCENARIOS.offlineDay.day === day;
     const userTimed =
       SCENARIOS.userTimedEnd.who === who && SCENARIOS.userTimedEnd.day === day;
     const outside =
       SCENARIOS.outOfRadiusStart.who === who && SCENARIOS.outOfRadiusStart.day === day;
-    const base: ApprovalReason[] = offline ? SCENARIOS.offlineDay.reasons : [];
-    const facts: Facts = offline ? { capturedOffline: true } : {};
+    // The seeded history is a backlog, and says so (content.ts, SCENARIOS.backlog).
+    const base: ApprovalReason[] = SCENARIOS.backlog.reasons;
+    const facts: Facts = { capturedOffline: true };
     return [
       labor(
         who,
         day,
         "started",
         BASELINE_TIMES.started,
-        outside ? [...base, ...SCENARIOS.outOfRadiusStart.reasons] : base,
+        outside ? SCENARIOS.outOfRadiusStart.reasons : base,
         {
           ...facts,
           ...(outside ? { stamp: STAMPS.outside } : {}),
@@ -299,7 +299,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         day,
         "ended",
         BASELINE_TIMES.ended,
-        userTimed ? [...base, ...SCENARIOS.userTimedEnd.reasons] : base,
+        userTimed ? SCENARIOS.userTimedEnd.reasons : base,
         {
           ...facts,
           ...(userTimed ? { timeSetByUser: true, attestation: "none" } : {}),
@@ -547,6 +547,43 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       }
       summary.events++;
       summary.approvals++;
+    }
+  });
+
+  // The office works through the backlog: every clock event flagged `offline` and nothing
+  // else is approved, but the one day left for the office to look at (SCENARIOS.offlineDay).
+  await step("approve the ordinary backlog", async () => {
+    const held = new Set(
+      (["started", "paused", "resumed", "ended"] as const).map((type) =>
+        eventIds.get(`${SCENARIOS.offlineDay.who}:${SCENARIOS.offlineDay.day}:${type}`),
+      ),
+    );
+    const only = SCENARIOS.backlog.reasons.join(",");
+    let after: string | undefined;
+    for (;;) {
+      const page = await admin().approval.queue({
+        limit: 100,
+        ...(after === undefined ? {} : { after }),
+      });
+      for (const item of page.items) {
+        if (
+          item.subject.kind !== "labor_event" ||
+          item.reasons.join(",") !== only ||
+          held.has(item.subject.eventId)
+        ) {
+          continue;
+        }
+        expectResult(
+          await admin().approval.decide({
+            approvalId: item.approvalId,
+            decision: "approved",
+          }),
+          "decided",
+        );
+        summary.decided++;
+      }
+      if (page.next === null) break;
+      after = page.next;
     }
   });
 
