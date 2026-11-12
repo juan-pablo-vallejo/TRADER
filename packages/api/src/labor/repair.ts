@@ -7,7 +7,8 @@
 // reads a decision, so a repair's validity never depends on one (row 209). Answers mirror a
 // push record's: `accepted` or `duplicate` (both success) with acknowledgements in input order,
 // or `rejected` with a code, writing nothing, so the same ids may be sent again. Anything
-// thrown rolls the call back. Consumed by routers/labor.ts.
+// thrown rolls the call back. An accepted repair leaves one audit row (core/audit.ts); a
+// duplicate and a rejection leave none. Consumed by routers/labor.ts.
 import {
   approvalReason,
   approvals,
@@ -18,6 +19,7 @@ import {
 import { inArray, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { recordAudit } from "../core/audit";
 import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import { instant } from "../core/instant";
@@ -427,7 +429,22 @@ export async function repairLabor(
     throw error;
   }
 
-  // 11. In input order, whatever order the database returned rows in.
+  // 11. The repair's audit row: one for the set, since it was written as one. Ids only —
+  // each event's time, job and type are its own row's.
+  await recordAudit(tx, user, {
+    action: "work_session_events.repair",
+    entityId: null,
+    after: {
+      worker_id: input.workerId,
+      events: input.operations.map((op) => ({
+        id: op.id,
+        kind: op.kind,
+        target_event_id: targetOf(op),
+      })),
+    },
+  });
+
+  // 12. In input order, whatever order the database returned rows in.
   const events: Acknowledgement[] = candidates.map((c, i) => ({
     id: c.id,
     serverTimestamp: receivedAt,

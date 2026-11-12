@@ -15,6 +15,7 @@ import { lockCompanyFieldWrites, readWorkerEvents } from "../../src/labor/timeli
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
 import {
+  auditRows,
   boundIn,
   crewDayIn,
   disposableDb,
@@ -27,6 +28,7 @@ import {
   waitForLockWait,
   quietReporter,
   REQUEST_ID,
+  withoutAuditInsert,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -159,7 +161,8 @@ async function counts(companyId: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(approvals)
     .where(eq(approvals.companyId, companyId));
-  return { events: e!.n, approvals: a!.n };
+  const audit = (await auditRows(D.owner, companyId)).length;
+  return { events: e!.n, approvals: a!.n, audit };
 }
 
 const decide = (
@@ -210,6 +213,32 @@ describe("labor.repair — retries and ids, committed", () => {
     expect(await counts(x.d.companyId)).toEqual({
       events: before.events + 2,
       approvals: before.approvals + 2,
+      // One set stored, one audit row: the duplicate added none.
+      audit: before.audit + 1,
+    });
+    expect((await auditRows(D.owner, x.d.companyId)).at(-1)).toMatchObject({
+      actorUserId: x.admin.id,
+      action: "work_session_events.repair",
+      after: { worker_id: x.w.id, events: ops.map((op) => ({ id: op.id })) },
+    });
+  });
+
+  it("stores no event when its audit row cannot be written, then the set and its row", async () => {
+    const x = await world();
+    const ops = [append("started", x.d.J, "21:00")];
+    const before = await counts(x.d.companyId);
+    await withoutAuditInsert(D.owner, async () => {
+      expect(await outcome(repair(x.admin.who, x.w.id, ops))).toBe(
+        "INTERNAL_SERVER_ERROR",
+      );
+    });
+    expect(await counts(x.d.companyId)).toEqual(before);
+    // The same ids again: nothing of the failed call was kept, so this is the first write.
+    expect((await repair(x.admin.who, x.w.id, ops)).result).toBe("accepted");
+    expect(await counts(x.d.companyId)).toEqual({
+      events: before.events + 1,
+      approvals: before.approvals + 1,
+      audit: before.audit + 1,
     });
   });
 
