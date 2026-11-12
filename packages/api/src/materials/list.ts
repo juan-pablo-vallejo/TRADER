@@ -5,15 +5,8 @@
 // its approved corrections, and with whether it counts (materials/approval.ts): pricing is
 // open for any of them, and what a job cost is a later derivation's. No coordinates, rates,
 // capture evidence or sums. Consumed by routers/material.ts.
-import {
-  approvals,
-  companies,
-  jobs,
-  materialCorrections,
-  materials,
-  users,
-} from "@trader/db/schema";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { companies, jobs, materials, users } from "@trader/db/schema";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
@@ -21,7 +14,8 @@ import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { readJob } from "../jobs/list";
 import { receiptAccounting } from "./approval";
-import { effectiveMaterial, type CorrectionState } from "./effective";
+import { effectiveMaterial } from "./effective";
+import { receiptStandings } from "./standing";
 
 // The cursor is the last item's id: its logged_at is read back in SQL at full precision (a
 // Date would truncate microseconds and repeat rows sharing a timestamp).
@@ -136,29 +130,10 @@ export async function listMaterials(
 
   // 2. Every correction of the page's receipts, for their effective facts, and each
   // receipt's own decision.
-  const history = await tx
-    .select({
-      materialId: materialCorrections.materialId,
-      id: materialCorrections.id,
-      kind: materialCorrections.kind,
-      description: materialCorrections.description,
-      quantity: materialCorrections.quantity,
-      unit: materialCorrections.unit,
-      serverTimestamp: materialCorrections.serverTimestamp,
-      decision: approvals.decision,
-    })
-    .from(materialCorrections)
-    .leftJoin(approvals, eq(approvals.materialCorrectionId, materialCorrections.id))
-    .where(inArray(materialCorrections.materialId, ids));
-  const decided = await tx
-    .select({ materialId: approvals.materialId, decision: approvals.decision })
-    .from(approvals)
-    .where(inArray(approvals.materialId, ids));
-  const decisions = new Map(decided.map((a) => [a.materialId!, a.decision]));
+  const standings = await receiptStandings(tx, ids);
 
   const items = page.map((m) => {
-    const states: CorrectionState[] = history.filter((c) => c.materialId === m.id);
-    const e = effectiveMaterial(m, states);
+    const e = effectiveMaterial(m, standings.correctionsOf(m.id));
     return {
       id: m.id,
       job: { id: m.jobId, name: m.jobName },
@@ -172,7 +147,7 @@ export async function listMaterials(
         unit: e.unit,
         voided: e.voided,
       },
-      accounting: receiptAccounting(decisions.get(m.id), e),
+      accounting: receiptAccounting(standings.decisionOf(m.id), e),
       cost: costOf(m),
     };
   });
