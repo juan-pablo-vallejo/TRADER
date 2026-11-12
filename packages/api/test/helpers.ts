@@ -19,6 +19,7 @@ import {
   materialCorrections,
   materials,
   payRates,
+  jobAssignments,
   syncDiagnostics,
   users,
   workSessionEvents,
@@ -139,6 +140,7 @@ export async function world(owner: Db) {
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
     await owner.delete(syncDiagnostics).where(inArray(syncDiagnostics.companyId, ids));
+    await owner.delete(jobAssignments).where(inArray(jobAssignments.companyId, ids));
     await owner.delete(crewMembers).where(inArray(crewMembers.companyId, ids));
     await owner.delete(jobs).where(inArray(jobs.companyId, ids));
     await owner.delete(crews).where(inArray(crews.companyId, ids));
@@ -554,6 +556,7 @@ export async function committedCrewDay(owner: Db) {
   const cleanup = async () => {
     const id = day.companyId;
     await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, id));
+    await owner.delete(jobAssignments).where(eq(jobAssignments.companyId, id));
     await owner.delete(materials).where(eq(materials.companyId, id));
     await owner.delete(jobs).where(eq(jobs.companyId, id));
     await owner.delete(crewMembers).where(eq(crewMembers.companyId, id));
