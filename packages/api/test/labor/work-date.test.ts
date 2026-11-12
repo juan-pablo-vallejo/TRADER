@@ -91,7 +91,7 @@ describe("deriveSessions", () => {
     expect(s).toMatchObject({ workDate: "2026-10-31", workedMs: 3 * HOUR });
   });
 
-  it("dates a skewed start by its receipt", () => {
+  it("dates a skewed start by its captured time, not its receipt (V1-D01)", () => {
     const ev = builder();
     // The phone says 23:00 EDT on 4 October; the server received it at 09:00 EDT on 5 October.
     const start = ev("started", utc("2026-10-05T03:00:00"), {
@@ -99,7 +99,7 @@ describe("deriveSessions", () => {
       skewed: true,
     });
     const [s] = deriveSessions([start, ev("ended", utc("2026-10-05T21:00:00"))], NY);
-    expect(s).toMatchObject({ workDate: "2026-10-05", workedMs: 8 * HOUR });
+    expect(s).toMatchObject({ workDate: "2026-10-04", workedMs: 18 * HOUR });
   });
 
   it("dates every session of a day independently", () => {

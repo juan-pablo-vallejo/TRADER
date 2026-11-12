@@ -268,7 +268,7 @@ describe("sync.push — envelopes", () => {
 });
 
 describe("sync.push — the day as the field sends it", () => {
-  it("measures skew once per push and places a skewed event at its receipt", async () => {
+  it("measures skew once per push and keeps a skewed event at its captured time", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
       const ahead = new Date(Date.now() + 600_000);
@@ -282,8 +282,8 @@ describe("sync.push — the day as the field sends it", () => {
         await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
         NY,
       );
-      // Effective instant is the receipt, not the device's 12:00.
-      expect(session!.startedAt.getTime()).toBeGreaterThan(Date.now() - 60_000);
+      // Effective instant is the device's 12:00, flagged; never the receipt (V1-D01).
+      expect(session!.startedAt).toEqual(new Date("2026-10-05T12:00:00Z"));
     });
   });
 
@@ -488,6 +488,181 @@ describe("sync.push — the day as the field sends it", () => {
       ]);
       // The closeout and its membership are exactly as submitted.
       expect(await snapshot()).toEqual(before);
+
+      // Delivered late, kept where it was captured (V1-D01): each day's session at its own
+      // times, in order, and nothing flagged for a delay alone.
+      expect(
+        answer.results.every(
+          (r) =>
+            r.result === "accepted" &&
+            (r.ack as { clockSkewed: boolean }).clockSkewed === false,
+        ),
+      ).toBe(true);
+      const sessions = deriveSessions(
+        await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
+        NY,
+      );
+      expect(
+        sessions.map((s) => [
+          s.workDate,
+          s.startedAt.toISOString(),
+          s.endedAt?.toISOString(),
+          s.workedMs,
+          s.breakMs,
+        ]),
+      ).toEqual(
+        ["2026-10-05", "2026-10-06"].map((date) => [
+          date,
+          `${date}T12:00:00.000Z`,
+          `${date}T20:00:00.000Z`,
+          7.5 * 3_600_000,
+          0.5 * 3_600_000,
+        ]),
+      );
+
+      // The foreman's own hour on the closed day, sent now as if captured online then: flagged,
+      // judged on the day it claims, and the closeout still exactly as submitted.
+      const claimed = await push(tx, d.who, [
+        labor(d.foremanId, d.J),
+        labor(d.foremanId, d.J, {
+          type: "ended",
+          clientTimestamp: new Date("2026-10-05T13:00:00Z"),
+        }),
+      ]);
+      expect(
+        claimed.results.map((r) =>
+          r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
+        ),
+      ).toEqual(Array(2).fill(["clock_skewed", "after_closeout"]));
+      expect(await snapshot()).toEqual(before);
+    });
+  });
+
+  it("refuses a future event and goes on; the office enters its hours (labor.repair)", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const admin = await asOwner(tx, d.companyId, () =>
+        boundIn(tx, d.companyId, "admin"),
+      );
+      const future = labor(d.w.id, d.J, {
+        clientTimestamp: new Date(Date.now() + 3_600_000),
+      });
+      const answer = await push(tx, d.w.who, [future, receipt(d.J)]);
+      // An ordinary per-record rejection: the record behind it still runs.
+      expect(answer.results[0]).toEqual({
+        id: future.id,
+        kind: "labor_event",
+        result: "rejected",
+        code: "time_in_future",
+      });
+      expect(summary(answer.results)).toEqual(["rejected:time_in_future", "accepted"]);
+      const ledger = () => asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id));
+      expect(await ledger()).toEqual([]);
+
+      // The phone keeps the record; the office recovers the hours as its own events.
+      const start = new Date(Date.now() - 8 * 3_600_000);
+      const end = new Date(Date.now() - 3_600_000);
+      const repaired = await appCallerIn(tx, admin.who).labor.repair({
+        workerId: d.w.id,
+        operations: [
+          {
+            kind: "append",
+            id: uuidv7(),
+            type: "started",
+            jobId: d.J,
+            clientTimestamp: start,
+          },
+          {
+            kind: "append",
+            id: uuidv7(),
+            type: "ended",
+            jobId: d.J,
+            clientTimestamp: end,
+          },
+        ],
+      });
+      expect(repaired.result).toBe("accepted");
+      const events = await ledger();
+      expect(events.map((e) => e.id)).not.toContain(future.id);
+      expect(deriveSessions(events, NY)).toMatchObject([
+        { startedAt: start, endedAt: end, workedMs: 7 * 3_600_000, complete: true },
+      ]);
+    });
+  });
+
+  it("takes a backlog from a slow clock at its captured times, every event flagged", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      // The phone runs ten minutes slow; its day was captured offline on that clock.
+      const deviceNow = new Date(Date.now() - 600_000);
+      const t = (minutesBefore: number) =>
+        new Date(deviceNow.getTime() - minutesBefore * 60_000);
+      const offline = { capturedOffline: true };
+      const batch = [
+        labor(d.w.id, d.J, { clientTimestamp: t(480), ...offline }),
+        labor(d.w.id, d.J, {
+          type: "paused",
+          clientTimestamp: t(240),
+          location: null,
+          ...offline,
+        }),
+        labor(d.w.id, d.J, {
+          type: "resumed",
+          clientTimestamp: t(210),
+          location: null,
+          ...offline,
+        }),
+        labor(d.w.id, d.J, { type: "ended", clientTimestamp: t(0), ...offline }),
+      ];
+      const answer = await push(tx, d.w.who, batch, deviceNow);
+      expect(answer.clockSkewMs).toBeLessThan(-599_000);
+      expect(answer.results).toMatchObject(
+        batch.map((r) => ({
+          id: r.id,
+          result: "accepted",
+          ack: { clockSkewed: true, reasons: ["offline", "clock_skewed"] },
+        })),
+      );
+      expect(
+        deriveSessions(
+          await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
+          NY,
+        ),
+      ).toMatchObject([
+        {
+          startedAt: t(480),
+          endedAt: t(0),
+          workedMs: 450 * 60_000,
+          breakMs: 30 * 60_000,
+          complete: true,
+        },
+      ]);
+    });
+  });
+
+  it("refuses what a fast clock dates in the future and keeps the rest of its batch", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      // Ten minutes fast: the start, two device-hours ago, is in the past; the end, captured
+      // this instant on that clock, is ten minutes ahead of its receipt.
+      const deviceNow = new Date(Date.now() + 600_000);
+      const start = labor(d.w.id, d.J, {
+        clientTimestamp: new Date(deviceNow.getTime() - 2 * 3_600_000),
+        capturedOffline: true,
+      });
+      const end = labor(d.w.id, d.J, { type: "ended", clientTimestamp: deviceNow });
+      const answer = await push(tx, d.w.who, [start, end], deviceNow);
+      expect(summary(answer.results)).toEqual(["accepted", "rejected:time_in_future"]);
+      expect(answer.results[0]).toMatchObject({
+        ack: { clockSkewed: true, reasons: ["offline", "clock_skewed"] },
+      });
+      // The session stays open at its captured start until the office ends it.
+      expect(
+        deriveSessions(
+          await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
+          NY,
+        ),
+      ).toMatchObject([{ startedAt: start.payload.clientTimestamp, complete: false }]);
     });
   });
 

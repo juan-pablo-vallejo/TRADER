@@ -160,6 +160,19 @@ describe("illegal transitions", () => {
     );
   });
 
+  it("judges a skewed candidate where it was captured, not where it arrived (V1-D01)", () => {
+    const ev = builder();
+    const day = [ev("started", at("08:00")), ev("ended", at("16:00"))];
+    // Captured at 12:00 inside the session, flagged, received the next night: at its receipt
+    // it would open a legal second session; at its captured time it does not.
+    const start = ev("started", at("12:00"), { server: RECEIVED, skewed: true });
+    expect(push(day, start)).toEqual(no("session_already_open", day[0]!.id));
+    // And one captured after the session is legal however late and flagged it arrives.
+    expect(
+      push(day, ev("started", at("17:00"), { server: RECEIVED, skewed: true })),
+    ).toEqual(ok);
+  });
+
   it("rejects a start inside a voided session's span", () => {
     const ev = builder();
     const start = ev("started", at("08:00"));

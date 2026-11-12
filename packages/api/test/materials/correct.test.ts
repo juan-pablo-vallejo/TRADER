@@ -643,8 +643,9 @@ describe("material.correct — the closeout stays as submitted", () => {
     });
   });
 
-  it("leaves the review fingerprint's v1 golden vector alone", () => {
-    // Pinned in closeout/fingerprint.test.ts; re-asserted here only that v1 is still current.
+  it("leaves the review fingerprint's version alone", () => {
+    // Pinned in closeout/fingerprint.test.ts; re-asserted here only that corrections took no
+    // version of their own: v2 is the fold's (V1-D01), and still current.
     expect(
       reviewFingerprint({
         companyId: "x",
@@ -655,7 +656,7 @@ describe("material.correct — the closeout stays as submitted", () => {
         sessions: [],
         materials: [],
       }),
-    ).toMatch(/^v1\./);
+    ).toMatch(/^v2\./);
   });
 });
 

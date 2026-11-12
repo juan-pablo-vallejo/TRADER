@@ -820,7 +820,7 @@ describe("closeout.submit — the review", () => {
       const otherDate = (await review(tx, d.who, { ...values, workDate: "2026-10-04" }))
         .fingerprint;
       expect(new Set([own, otherJob, otherDate]).size).toBe(3);
-      for (const reviewFingerprint of [otherJob, otherDate, own.replace(/^v1/, "v2")]) {
+      for (const reviewFingerprint of [otherJob, otherDate, own.replace(/^v2/, "v1")]) {
         expect(await submitAsIs(tx, d.who, { ...values, reviewFingerprint })).toEqual(
           stale,
         );

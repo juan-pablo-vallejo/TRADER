@@ -55,7 +55,7 @@ jobs, assignments, approvals, a closeout, close, export.
       caps removed; the 2026-11-11 decision rows
 - [x] V1 owner decisions V1-D01 to V1-D21 written into PRD, ARCHITECTURE, DESIGN and this
       file (the `V1-Dnn` decision rows); documents only, nothing below is built by it
-- [ ] Event time kept and judged (V1-D01; plan first: sync). Objective: a suspicious time is
+- [x] Event time kept and judged (V1-D01; plan first: sync). Objective: a suspicious time is
       reviewed at its captured value and a future one is refused recoverably. Work: the fold's
       effective instant becomes `client_timestamp` for every event, with the closeout day
       query; a new review-fingerprint version and the stated reading of closeouts sealed under

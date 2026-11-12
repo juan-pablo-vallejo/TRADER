@@ -1,8 +1,8 @@
 // One labor event from a push (ARCHITECTURE, Sync protocol; sync.push of 2026-11-05), in the
 // record's own transaction: the caller's own id first; the scope under row locks; the worker's
 // timeline under its lock (loadWorkerTimeline, which takes the field-write lock shared first);
-// the id again; two-sided validation; the approval facts; the insert and, in the same
-// transaction, its approval. Answers `accepted` or `duplicate` with an acknowledgement of fixed
+// the id again; the time it claims against its receipt (V1-D01); two-sided validation; the
+// approval facts; the insert and, in the same transaction, its approval. Answers `accepted` or `duplicate` with an acknowledgement of fixed
 // facts only, or `rejected` with a code, writing nothing. Anything thrown is the loop's: the
 // record is omitted and retried. Consumed by sync/push.ts.
 import {
@@ -21,12 +21,13 @@ import { replay, type LaborEvent, type Replay, type Session } from "../labor/fol
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
 import type { AppUser } from "../core/resolve-user";
-import { laborReasons, type ApprovalReason, type Skew } from "./reasons";
+import { judgeEventTime, laborReasons, type ApprovalReason, type Skew } from "./reasons";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
 // Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
 // receipt stamp, a skew or an approval: those are the server's. No corrections or voids from a
-// device: the office writes those (labor.repair, ARCHITECTURE row 187).
+// device: the office writes those (labor.repair; ARCHITECTURE, 2026-11-04, office-only
+// repair sets).
 export const laborPayloadV1 = z.strictObject({
   workerId: z.uuid(),
   jobId: z.uuid(),
@@ -55,7 +56,13 @@ export const laborAck = z.strictObject({
   reasons: z.array(z.enum(approvalReason.enumValues)),
 });
 
-export type LaborRejection = RejectionCode | "id_conflict" | "not_permitted";
+export type LaborRejection =
+  | RejectionCode
+  | "id_conflict"
+  | "not_permitted"
+  // Timed later than its receipt by more than the tolerance. Nothing is written; the record
+  // stays on the device under its id and the office recovers the hours (labor.repair).
+  | "time_in_future";
 
 export type LaborResult =
   | { result: "accepted" | "duplicate"; ack: z.infer<typeof laborAck> }
@@ -155,7 +162,20 @@ export async function pushLaborEvent(
       : rejected("id_conflict");
   }
 
-  // 5. Two-sided validation with the event at its effective instant.
+  // 5. The time the event claims, against the receipt it will be stored with. After the
+  // caller's own id and the scope, so a retry never re-judges and a caller out of scope learns
+  // nothing; before validation, so a future time is named as that. A flagged event goes on at
+  // its captured time: the flag is the per-push reading or this one (reasons.ts).
+  const time = judgeEventTime({
+    clientTimestamp: p.clientTimestamp,
+    receivedAt: timeline.receivedAt,
+    capturedOffline: p.capturedOffline,
+    timeSetByUser: p.timeSetByUser,
+  });
+  if (time === "future") return rejected("time_in_future");
+  const clockSkewed = skew.clockSkewed || time === "skewed";
+
+  // 6. Two-sided validation with the event at its effective instant.
   const candidate: LaborEvent = {
     id: r.id,
     workerId: p.workerId,
@@ -163,7 +183,7 @@ export async function pushLaborEvent(
     type: p.type,
     clientTimestamp: p.clientTimestamp,
     serverTimestamp: timeline.receivedAt,
-    clockSkewed: skew.clockSkewed,
+    clockSkewed,
     voidsEventId: null,
     correctsEventId: null,
   };
@@ -179,7 +199,7 @@ export async function pushLaborEvent(
   if (verdict.verdict === "rejected")
     return rejected(verdict.code, verdict.conflictingEventId);
 
-  // 6. The approval facts, the closeout among them judged in each closeout's stored zone.
+  // 7. The approval facts, the closeout among them judged in each closeout's stored zone.
   const reasons: ApprovalReason[] = laborReasons({
     type: p.type,
     corrected: false,
@@ -187,14 +207,14 @@ export async function pushLaborEvent(
     timeSetByUser: p.timeSetByUser,
     stamp: p.location,
     job: scope!.place,
-    clockSkewed: skew.clockSkewed,
+    clockSkewed,
     afterCloseout: await afterCloseout(
       tx,
       sessionOfEvent(replay([...timeline.events, candidate]), candidate),
     ),
   });
 
-  // 7. No conflict target: the primary key ends here. Nothing comes back when a concurrent
+  // 8. No conflict target: the primary key ends here. Nothing comes back when a concurrent
   // push committed this id (seen above, then) or another tenant holds it (invisible): that is
   // `id_conflict`, and says nothing more.
   const [inserted] = await tx
@@ -207,7 +227,9 @@ export async function pushLaborEvent(
       type: p.type,
       clientTimestamp: p.clientTimestamp,
       serverTimestamp: timeline.receivedAt,
-      clockSkewed: skew.clockSkewed,
+      clockSkewed,
+      // The per-push reading alone, signed; the receipt comparison's evidence is the row's
+      // own two timestamps.
       clockSkewMs: skew.clockSkewMs,
       attestationLevel: p.attestationLevel,
       locationLat: p.location?.lat ?? null,
@@ -227,7 +249,7 @@ export async function pushLaborEvent(
       : rejected("id_conflict");
   }
 
-  // 8. Its approval, pending, in the same transaction (0022 requires the column-derived
+  // 9. Its approval, pending, in the same transaction (0022 requires the column-derived
   // reasons at commit).
   if (reasons.length > 0) {
     await tx
@@ -249,7 +271,8 @@ export function sessionOfEvent(after: Replay, event: LaborEvent): Session {
 
 // Whether a session lies on a (job, date) whose closeout is already accepted, judged on the
 // session as it stands with the new events in place: its effective `started` source's job and
-// effective instant (fold.ts), the rule the closeout was built by (ARCHITECTURE row 201). Each
+// captured time (fold.ts, effectiveAt), the rule the closeout was built by (ARCHITECTURE,
+// 2026-11-05, approval triggers are six). Each
 // closeout is judged in its own stored zone, never the company's current one, so a later zone
 // change cannot move a record into or out of a closed day. Under the field-write lock held
 // shared, a closeout either committed before (seen here) or covers this record. A closed day

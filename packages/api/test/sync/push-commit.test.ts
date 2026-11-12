@@ -201,24 +201,42 @@ describe("sync.push — commits, record by record", () => {
         clientTimestamp: new Date("2026-10-05T16:00:00Z"),
       }),
     ];
-    const first = await push(d.w.who, batch); // the response the device never saw
+    // Timed an hour ahead: refused, and refused again on the resend (V1-D01).
+    const future = labor(d.w.id, d.J, {
+      clientTimestamp: new Date(Date.now() + 3_600_000),
+    });
+    const sent = [...batch, future];
+    const ledger = () =>
+      D.owner
+        .select()
+        .from(workSessionEvents)
+        .where(eq(workSessionEvents.companyId, d.companyId))
+        .orderBy(workSessionEvents.id);
+    const first = await push(d.w.who, sent); // the response the device never saw
     const before = await D.owner
       .select()
       .from(approvals)
       .where(eq(approvals.companyId, d.companyId));
-    const again = await push(d.w.who, batch);
+    const rows = await ledger();
+    const again = await push(d.w.who, sent);
     expect(again.results).toEqual(
-      first.results.map((r) => ({ ...r, result: "duplicate" })),
+      first.results.map((r) =>
+        r.result === "rejected" ? r : { ...r, result: "duplicate" },
+      ),
     );
-    expect(first.results.map((r) => r.result)).toEqual([
-      "accepted",
-      "accepted",
-      "accepted",
-    ]);
+    expect(
+      first.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
+    ).toEqual(["accepted", "accepted", "accepted", "time_in_future"]);
+    // The end claims an online capture in October: flagged at its receipt, and the resend
+    // answers from the stored row, never judging it again.
+    expect(first.results[2]).toMatchObject({
+      ack: { clockSkewed: true, reasons: ["clock_skewed"] },
+    });
     expect(
       await D.owner.select().from(approvals).where(eq(approvals.companyId, d.companyId)),
     ).toEqual(before);
-    expect(await eventIds(batch.map((r) => r.id))).toHaveLength(2);
+    expect(await ledger()).toEqual(rows);
+    expect(await eventIds(sent.map((r) => r.id))).toHaveLength(2);
   });
 });
 
@@ -322,7 +340,9 @@ describe("sync.push — concurrency on real locks", () => {
       answer.results.map((r) =>
         r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
       ),
-    ).toEqual([["after_closeout"], ["after_closeout"]]);
+      // The event claims an online capture on the closed day, weeks before its receipt: it is
+      // flagged and judged on the day it claims (V1-D01). Receipts are not compared.
+    ).toEqual([["after_closeout"], ["clock_skewed", "after_closeout"]]);
   });
 
   it("linearizes with a push queued first: the closeout sees it and refuses", async () => {
@@ -332,7 +352,7 @@ describe("sync.push — concurrency on real locks", () => {
       workDate: "2026-10-05",
     });
     const holder = await holdFieldWrites(d, "exclusive");
-    const early = push(d.w.who, [labor(d.w.id, d.J)]);
+    const early = push(d.w.who, [labor(d.w.id, d.J, { capturedOffline: true })]);
     await waitForLockWait(D.owner, "select pg_advisory_xact_lock_shared(%", {
       n: 1,
       waitEvent: "advisory",
@@ -351,7 +371,7 @@ describe("sync.push — concurrency on real locks", () => {
     await holder.release();
     expect((await early).results[0]).toMatchObject({
       result: "accepted",
-      ack: { reasons: [] },
+      ack: { reasons: ["offline"] },
     });
     // Covered, never ignored: the open session it started refuses the closeout.
     expect(await closeout).toMatchObject({ result: "rejected", code: "sessions_open" });

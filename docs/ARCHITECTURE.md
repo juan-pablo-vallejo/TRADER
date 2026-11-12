@@ -88,17 +88,19 @@ change is wrong, not the test.
   written, flagged, and routed to approval.
 - A suspicious time is reviewed, never replaced (V1-D01). The event's effective instant is the
   `client_timestamp` it was captured with, flagged or not; `clock_skewed` is evidence and an
-  approval reason, and a person decides. To be built, TASKS Stage 4: the fold today takes
-  `server_timestamp` for a `clock_skewed` event (`labor/fold.ts`, `effectiveAt`), and the
-  closeout's day query repeats that rule. The change is a change of fold semantics: it takes
-  a new review-fingerprint version and a statement of how existing closeouts are read.
-- Event time is judged by the server as well as asserted by the device (to be built, TASKS
-  Stage 4; push compares nothing with the receipt today): an event that claims it was captured
-  online at the time it carries, yet differs from its receipt by more than the tolerance, is
-  flagged `clock_skewed` and goes to approval at its captured time; an event timed later than
-  its receipt plus the tolerance is rejected `time_in_future`. That rejection writes nothing,
-  so the ledger and every closeout are untouched; the record stays on the phone under its id,
-  shown as needing attention, and the office recovers the hours through `labor.repair`.
+  approval reason, and a person decides. The fold (`labor/fold.ts`, `effectiveAt`) and the
+  closeout's day query read `client_timestamp` alone; the review fingerprint is `v2.`, and a
+  `v1.` value is `review_stale`.
+- Event time is judged by the server as well as asserted by the device. A labor event's
+  receipt is the `server_timestamp` it is stored with. An event that claims it was captured
+  online at the time it carries — not captured offline, not timed by the user — yet precedes
+  its receipt by more than the tolerance is flagged `clock_skewed` and goes to approval at its
+  captured time; an event timed later than its receipt by more than the tolerance, whatever
+  it claims, is rejected `time_in_future`. Exactly the tolerance is neither. `clock_skewed`
+  is that verdict or the per-push reading; `clock_skew_ms` is the per-push reading alone. The
+  rejection writes nothing, so the ledger and every closeout are untouched; the record stays
+  on the phone under its id, shown as needing attention, and the office recovers the hours
+  through `labor.repair`. Receipts (materials) are not compared.
 - `captured_offline` is true unless the device held a confirmed, fresh API reachability
   reading when the record was captured; unknown, absent or stale is offline (V1-D02). Capture
   reads the last reading and never waits for a probe. Delivery delay is not the test. The
@@ -447,3 +449,7 @@ Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersed
 | 2026-11-11 | V1-D17 — Pilot launch: the whole pilot crew starts only after every required release gate (TASKS Stage 8) has passed; a phased small-crew rollout is not a prerequisite; partner acceptance, physical-device tests, data-correctness tests and restore verification stay gates | — |
 | 2026-11-11 | V1-D20 — Audit trail scope (to be built, Stage 4): `audit_log` for invitations, role changes, activation and deactivation, pay-rate changes, labor repairs and approval decisions only; actor, tenant, action, entity and the changed fields, in the write's transaction; no universal API or event auditing, no snapshot of unchanged or unnecessary sensitive columns | 2026-11-03 '`before`/`after` jsonb snapshots of the audited row', narrowed to the changed fields; confirms 2026-11-11 `audit_log` written in V1 |
 | 2026-11-11 | V1-D21 — Server-enforced sync states (to be built, Stage 6): `sync.push` and `sync.pull` honour `normal`, `read_only`, `paused` and `update_required` with the meanings of the Operational sync states table; enforcement at transaction boundaries, a stable retryable answer distinct from any per-record rejection, defined behaviour for an interrupted batch, client recovery by a fresh `status.get`; the device keeps its outbox, ids and records; the protocol is not redesigned | 2026-11-05 kill switch 'Advisory to cooperative clients: push and pull do not read it'; Before the first deployment 'advisory by design' |
+| 2026-11-11 | Review fingerprint `v2.`: the `v1.` tuple unchanged, issued over the fold at captured times (V1-D01); the version is in the canonical value and the prefix, so no `v2.` equals a `v1.`. A `v1.` fingerprint presented at submit is `review_stale`; a retry of an accepted closeout never compares it. Pinned by a golden vector recomputed outside the code | 2026-11-04 Review fingerprint `v1.`, the version only |
+| 2026-11-11 | Closeouts sealed under the old fold: a closeout stores no derived labor value — keys, zone, status, counts, per-worker `ledger_through`, material members — so the fold change rewrites nothing stored and no accounting snapshot exists to invalidate. Closeouts are read under the current fold; no fold version is stored and no migration is made. The two folds differ only for a session with a `clock_skewed` event in effect; no closeout sealed under the old fold exists outside development and CI databases (V1-D01), which are rebuilt, not migrated | — |
+| 2026-11-11 | Receipt comparison, as built: `sync.push` judges a labor event against the `receivedAt` it is stored with, after the caller's own id and the scope, before validation. With `d = client_timestamp − receipt` and the 5-minute tolerance `T`: `d > T` is `rejected` `time_in_future` whatever the event claims; otherwise an event neither `captured_offline` nor `time_set_by_user` with `d < −T` is stored `clock_skewed`; exactly `T` either way is neither. `clock_skewed` is that or the per-push reading; `clock_skew_ms` stays the signed per-push reading. A retry answers from the stored row and is never judged again; a record that wrote nothing is judged at its new receipt. Labor events only: a receipt (material) is not compared and has no `time_in_future` — the PRD's "entry" is read as a labor entry until the office can enter a receipt itself (V1-D09) | — |
+| 2026-11-11 | Demo fixture under V1-D01: the seeded history is delivered long after its capture, so every seeded clock event is `captured_offline` and carries `offline`; the demo admin approves those flagged `offline` alone through `approval.decide`, but one worker-day left for the office; one worker-day claims an online capture and is `clock_skewed` by the receipt comparison. No device clock is simulated | 2026-11-08 Demo fixture, 'clock skew is not simulated' |

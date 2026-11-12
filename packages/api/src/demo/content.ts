@@ -286,12 +286,28 @@ export const AMENDED_RECEIPT = {
 // The abnormal scenarios, each once. Expected reasons are in the enum's order (sync/reasons.ts);
 // run.ts compares every acknowledgement to them exactly, so a drifted rule fails the run.
 export const SCENARIOS = {
-  // Tom's phone had no signal on the last day: captured offline, synced the same evening.
+  // The history is a backlog: every seeded clock event is delivered long after it was
+  // captured, so it says so — captured offline — and carries `offline` (V1-D01: an entry that
+  // claimed to be online that long ago would be flagged instead). The admin approves the
+  // ordinary ones in a step of their own; the scenarios below stay pending.
+  backlog: { reasons: ["offline"] as ApprovalReason[] },
+  // Luis's second Thursday reached the office claiming an online capture, days after the
+  // fact: the server's receipt comparison flags every event of it, at the time it claims.
+  lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as ApprovalReason[] },
+  // Tom's last day is the one ordinary day the office has not approved yet.
   offlineDay: { who: "tom", day: 9, reasons: ["offline"] as ApprovalReason[] },
   // Omar forgot to clock out and set the time himself on the last day.
-  userTimedEnd: { who: "omar", day: 9, reasons: ["user_timed"] as ApprovalReason[] },
+  userTimedEnd: {
+    who: "omar",
+    day: 9,
+    reasons: ["offline", "user_timed"] as ApprovalReason[],
+  },
   // Ana clocked in from the supply store on the last day: a kilometre outside J1's radius.
-  outOfRadiusStart: { who: "ana", day: 9, reasons: ["location"] as ApprovalReason[] },
+  outOfRadiusStart: {
+    who: "ana",
+    day: 9,
+    reasons: ["offline", "location"] as ApprovalReason[],
+  },
   // Priya's Wednesday of week one reached the office after that day's closeout: her phone was
   // offline until Thursday. Pushed after the closeout, before any later day of hers.
   lateOfflineDay: {
@@ -326,7 +342,8 @@ export const SCENARIOS = {
   demotedForeman: "marcus",
   // Old Mill's only job is archived, then the customer is deactivated.
   deactivatedCustomer: "oldmill",
-  // The admin decides the first three pending approvals, oldest first.
+  // After the backlog is approved, the admin decides the first three still pending, oldest
+  // first.
   decisions: ["approved", "approved", "rejected"] as const,
 } as const;
 
@@ -349,8 +366,11 @@ export const EXPECTED = {
   materialCorrections: 1,
   // Nine closed days on each crew's job.
   closeouts: 9 * 2,
-  // Offline day 4, user-timed 1, out of radius 1, late day 2, correction 1, late receipt 1,
-  // amend 1.
-  approvals: 4 + 1 + 1 + 2 + 1 + 1 + 1,
-  decided: 3,
+  // Every pushed clock event (the backlog, the late day included), the correction, the late
+  // receipt, the amend.
+  approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1 + 1 + 1,
+  // The ordinary backlog — every event flagged `offline` alone but Tom's last day's four —
+  // then the three decisions. Omar's user-timed end and Ana's out-of-radius start carry a
+  // second reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
+  decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 - 4 + 3,
 } as const;

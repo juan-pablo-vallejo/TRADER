@@ -42,7 +42,8 @@ export type JobDay = {
   sessions: DaySession[];
   // Workers with at least one session on the day, in id order, each with the newest receipt
   // stamp of their ledger: their events stamped at or before it are what the day was built
-  // from (receipt stamps rise per worker, ARCHITECTURE row 185).
+  // from (receipt stamps rise per worker: ARCHITECTURE, 2026-11-04, pushed
+  // `server_timestamp` written explicitly).
   workers: { workerId: string; ledgerThrough: Date }[];
   // In id order.
   materials: DayMaterial[];
@@ -61,11 +62,10 @@ export async function gatherJobDay(
 ): Promise<JobDay> {
   const { jobId, workDate, timeZone } = day;
 
-  // Every session on the job has an effective `started` naming the job (decision D5: a
-  // session's job is its effective start's), at its effective instant (D1), so these workers
-  // are all that can have one on the day.
-  const effective = sql`case when ${workSessionEvents.clockSkewed}
-    then ${workSessionEvents.serverTimestamp} else ${workSessionEvents.clientTimestamp} end`;
+  // Every session on the job has an effective `started` naming the job (ARCHITECTURE, 2026-11-04: a
+  // session's job is its effective start's), at its captured time (V1-D01; fold.ts,
+  // effectiveAt), so these workers are all that can have one on the day.
+  const effective = workSessionEvents.clientTimestamp;
   const candidates = await tx
     .selectDistinct({ workerId: workSessionEvents.workerId })
     .from(workSessionEvents)

@@ -8,6 +8,7 @@ export type ApprovalReason = (typeof approvalReason.enumValues)[number];
 
 // ARCHITECTURE, Sync protocol: device skew is |device_now − server_now| against a five-minute
 // tolerance, measured once per push. Strictly beyond it is skewed: exactly five minutes is not.
+// One of the two sources of a labor event's `clock_skewed`; judgeEventTime below is the other.
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 
 export type Skew = { clockSkewMs: number; clockSkewed: boolean };
@@ -16,6 +17,28 @@ export type Skew = { clockSkewMs: number; clockSkewed: boolean };
 export function measureSkew(deviceNow: Date, serverNow: Date): Skew {
   const clockSkewMs = deviceNow.getTime() - serverNow.getTime();
   return { clockSkewMs, clockSkewed: Math.abs(clockSkewMs) > CLOCK_SKEW_TOLERANCE_MS };
+}
+
+// The server's own check on the time an event claims (V1-D01; ARCHITECTURE, Sync protocol),
+// against its receipt: the stamp the event is stored with (`server_timestamp`), so the verdict
+// can be read back off the row. `future`: later than the receipt by more than the tolerance,
+// whatever the event says of itself; it is refused. `skewed`: it claims an online capture at
+// the moment it carries — not captured offline, not timed by the user — yet precedes its
+// receipt by more than the tolerance; it is stored at that time, flagged, and a person
+// decides. An offline or user-timed event is already in approval for that, however old.
+// Strict on both sides, as measureSkew is: exactly the tolerance is neither.
+export type EventTimeVerdict = "plausible" | "skewed" | "future";
+
+export function judgeEventTime(e: {
+  clientTimestamp: Date;
+  receivedAt: Date;
+  capturedOffline: boolean;
+  timeSetByUser: boolean;
+}): EventTimeVerdict {
+  const ahead = e.clientTimestamp.getTime() - e.receivedAt.getTime();
+  if (ahead > CLOCK_SKEW_TOLERANCE_MS) return "future";
+  const claimsNow = !e.capturedOffline && !e.timeSetByUser;
+  return claimsNow && ahead < -CLOCK_SKEW_TOLERANCE_MS ? "skewed" : "plausible";
 }
 
 export type Point = { lat: number; lng: number };

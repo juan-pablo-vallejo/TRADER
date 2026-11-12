@@ -157,13 +157,28 @@ describe("ordering", () => {
     expect(foldSessions([b, a])).toHaveLength(1);
   });
 
-  it("places a skewed event at its receipt, not its device time", () => {
+  it("keeps a skewed event at its captured time, not its receipt (V1-D01)", () => {
     const ev = builder();
     const start = ev("started", at("08:00"));
-    // A phone clock reset to 03:00 ends the session; receipt at 16:00 places it.
-    const end = ev("ended", at("03:00"), { server: at("16:00"), skewed: true });
+    // Flagged and received a day later: the end still sits at the 16:00 it was captured with.
+    const end = ev("ended", at("16:00"), {
+      server: at("09:00", "2026-10-06"),
+      skewed: true,
+    });
     const [s] = foldSessions([start, end]);
     expect(s).toMatchObject({ workedMs: 8 * HOUR, endedAt: at("16:00") });
+  });
+
+  it("orders a skewed event by its captured time among unflagged ones", () => {
+    const ev = builder();
+    // The skewed start arrives last and far later; captured first, it opens the session.
+    const end = ev("ended", at("16:00"));
+    const start = ev("started", at("08:00"), {
+      server: at("12:00", "2026-10-07"),
+      skewed: true,
+    });
+    const [s] = foldSessions([end, start]);
+    expect(s).toMatchObject({ startedAt: at("08:00"), workedMs: 8 * HOUR });
   });
 });
 
@@ -187,6 +202,26 @@ describe("voids", () => {
     });
   });
 
+  it("zeroes a voided session with a skewed start, its span at the captured instants", () => {
+    const ev = builder();
+    const start = ev("started", at("08:00"), {
+      server: at("09:00", "2026-10-06"),
+      skewed: true,
+    });
+    const [s] = foldSessions([
+      start,
+      ev("ended", at("16:00"), { server: at("09:01", "2026-10-06") }),
+      ev("voided", at("10:00", "2026-10-06"), { voids: start.id }),
+    ]);
+    expect(s).toMatchObject({
+      voided: true,
+      workedMs: 0,
+      startedAt: at("08:00"),
+      endedAt: at("16:00"),
+      elapsedMs: 8 * HOUR,
+    });
+  });
+
   it("leaves a voided open session open", () => {
     const ev = builder();
     const start = ev("started", at("08:00"));
@@ -206,6 +241,23 @@ describe("corrections", () => {
     expect(r.winners.get(end.id)).toBe(fix.id);
     expect(r.sessions[0]!.eventSourceIds).toContain(fix.id);
     expect(r.sessions[0]!.eventSourceIds).not.toContain(end.id);
+  });
+
+  it("puts the correction of a skewed event at the correction's own time", () => {
+    const ev = builder();
+    const start = ev("started", at("08:00"));
+    const end = ev("ended", at("16:00"), {
+      server: at("09:00", "2026-10-06"),
+      skewed: true,
+    });
+    // Accepted later, so it wins; it sits at 15:00, neither the root's time nor any receipt.
+    const fix = ev("ended", at("15:00"), {
+      corrects: end.id,
+      server: at("10:00", "2026-10-06"),
+    });
+    const [s] = foldSessions([start, end, fix]);
+    expect(s).toMatchObject({ workedMs: 7 * HOUR, endedAt: at("15:00") });
+    expect(s!.eventSourceIds).toEqual([start.id, fix.id]);
   });
 
   it("lets the newest accepted correction win", () => {

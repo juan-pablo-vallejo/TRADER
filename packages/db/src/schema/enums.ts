@@ -41,8 +41,9 @@ export const attestationLevel = pgEnum("attestation_level", [
 // PRD, Office approval: why an entry is in the queue, every reason that applies. `offline` is
 // captured_offline, the device's evidence at capture (delivery delay is evidence, never a
 // reason); `corrected` is a corrects_event_id, a void or a material correction; `user_timed` is
-// time_set_by_user; `location` is a missing or out-of-radius stamp; `clock_skewed` is the push
-// verdict (ARCHITECTURE, Sync protocol); `after_closeout` is arrival after the day's accepted
+// time_set_by_user; `location` is a missing or out-of-radius stamp; `clock_skewed` is the push's
+// verdict on the device clock or on an event's time against its receipt (ARCHITECTURE, Sync
+// protocol); `after_closeout` is arrival after the day's accepted
 // closeout. `after_closeout` arrived by ADD VALUE, so no CHECK, DEFAULT or index predicate may
 // name it (see workSessionEventType above); plpgsql may.
 export const approvalReason = pgEnum("approval_reason", [
