@@ -318,6 +318,7 @@ export const strings = {
 
   // Pay periods (DESIGN, Pay-period close)
   payPeriods: "Pay periods",
+  hideDetails: "Hide details",
   payPeriodsExplain:
     "The weeks or months payroll is run for. A period is closed once, when its hours are ready to export; after that it never changes, and anything approved or corrected later is carried by the next period as an adjustment.",
   emptyPayPeriods: "No pay period yet. Open the first one.",

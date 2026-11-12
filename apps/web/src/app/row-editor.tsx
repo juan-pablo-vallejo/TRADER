@@ -11,17 +11,20 @@ import table from "./table.module.css";
 
 const editorId = (rowId: string) => `editor-${rowId}`;
 
-// `label` names what the toggle opens when it is not an editor of the row's own fields.
+// `label` names what the toggle opens when it is not an editor of the row's own fields, and
+// `closeLabel` what shuts it where "Close" would be read as an action on the row itself.
 export function RowToggle({
   rowId,
   open,
   onToggle,
   label = strings.edit,
+  closeLabel = strings.close,
 }: {
   rowId: string;
   open: boolean;
   onToggle: () => void;
   label?: string;
+  closeLabel?: string;
 }) {
   return (
     <td className={table.toggle}>
@@ -32,7 +35,7 @@ export function RowToggle({
         aria-controls={editorId(rowId)}
         onClick={onToggle}
       >
-        {open ? strings.close : label}
+        {open ? closeLabel : label}
       </button>
     </td>
   );

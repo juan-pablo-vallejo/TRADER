@@ -16,7 +16,7 @@
 // Every figure is the server's, formatted here and never added in the browser. Consumed by
 // page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState, type FormEvent } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
@@ -244,6 +244,8 @@ function PeriodsTable({
                   rowId={p.id}
                   open={open}
                   label={strings.details}
+                  // Never "Close" beside a period: that word here closes the period.
+                  closeLabel={strings.hideDetails}
                   onToggle={() => setShown(open ? null : p.id)}
                 />
               </tr>
@@ -417,6 +419,13 @@ function Close({
 }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
+  // Once the period is closed its button is gone, and focus with it: the answer takes it,
+  // so a keyboard or a screen reader is left on what happened, not at the top of the page.
+  const answerRef = useRef<HTMLDivElement>(null);
+  const answered = period.closed !== null && note !== null;
+  useEffect(() => {
+    if (answered) answerRef.current?.focus();
+  }, [answered]);
   const close = useMutation(
     trpc.payPeriod.close.mutationOptions({
       onSuccess: async (answer) => {
@@ -482,10 +491,12 @@ function Close({
           }}
         />
       ) : null}
-      <Note
-        text={note?.text ?? null}
-        tone={note === null ? undefined : note.saved ? "saved" : "error"}
-      />
+      <div ref={answerRef} tabIndex={-1}>
+        <Note
+          text={note?.text ?? null}
+          tone={note === null ? undefined : note.saved ? "saved" : "error"}
+        />
+      </div>
     </>
   );
 }
