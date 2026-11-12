@@ -26,6 +26,7 @@ const groups = [
     links: [
       ["/roster", strings.roster],
       ["/crews", strings.crews],
+      ["/ledger", strings.ledger],
       ["/refusals", strings.refusals],
     ],
   },

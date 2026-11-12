@@ -1,0 +1,45 @@
+/* The labor ledger's own layout: the lookup grid, the lines above the days, the gap between
+   one session and the next. The tables themselves are table.module.css. */
+.lookupGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.explain {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.heading {
+  margin: 0 0 var(--space-1);
+}
+.line {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-secondary);
+}
+.day {
+  margin: var(--space-6) 0 0;
+}
+.day h3 {
+  margin: 0 0 var(--space-2);
+}
+.session {
+  margin: var(--space-4) 0 0;
+}
+.session h4 {
+  margin: 0 0 var(--space-1);
+}
+.flags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+/* An entry a correction replaced: kept, and read as history. */
+.replaced td {
+  color: var(--ink-secondary);
+}
+
+@media (min-width: 768px) {
+  .lookupGrid {
+    grid-template-columns: 2fr 1fr 1fr;
+  }
+}

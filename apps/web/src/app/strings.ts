@@ -208,6 +208,52 @@ export const strings = {
     unknown: "—",
   },
 
+  // Labor ledger (DESIGN, Worker ledger)
+  ledger: "Labor ledger",
+  ledgerExplain:
+    "One person's recorded hours, day by day, with every entry behind them. Nothing here can be changed: a correction is a new entry, and the entry it replaced stays on record.",
+  showLedger: "Show ledger",
+  ledgerRange: "Choose up to 31 days, the first no later than the last.",
+  emptyLedger: "No hours are recorded for this person on these days.",
+  ledgerOpenSession: (day: string) =>
+    `A session started ${day} is still open. They cannot clock in again until it is ended or repaired.`,
+  sessionCounts: {
+    eligible: "Counts",
+    pending: "Waiting for approval",
+    rejected: "Rejected",
+    voided: "Voided",
+  },
+  sessionClosedOut: "Closed out",
+  entry: "Entry",
+  recorded: "Recorded",
+  enteredBy: "Entered by",
+  // The cell says it whole: a narrow row shows no column heading.
+  enteredByName: (name: string) => `Entered by ${name}`,
+  flags: "Flags",
+  approval: "Approval",
+  entryId: "Id",
+  entryTypes: {
+    started: "Clock in",
+    paused: "Break start",
+    resumed: "Break end",
+    ended: "Clock out",
+    voided: "Void",
+  },
+  entryReplaced: "Replaced",
+  entryVoids: "Voids this session",
+  reasonTags: {
+    offline: "offline",
+    corrected: "edited",
+    user_timed: "time set by user",
+    location: "location",
+    clock_skewed: "clock skew",
+    after_closeout: "after closeout",
+  },
+  approvedByDefault: "Approved by default",
+  approvalWaiting: "Waiting",
+  approvedBy: (name: string) => `Approved by ${name}`,
+  rejectedBy: (name: string) => `Rejected by ${name}`,
+
   // Closeout (DESIGN, Closeout)
   closeoutExplain:
     "Review a job's day, then submit it. A submitted closeout is locked: later changes are correcting entries that go through approval, and entries that arrive afterwards wait for approval.",
