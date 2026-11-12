@@ -351,6 +351,25 @@ export const SCENARIOS = {
 // Days the deactivated worker is absent before leaving: nothing of hers after week one.
 export const PRIYA_LAST_DAY = 4;
 
+// The week the office is planning: the one after the two recorded weeks, which with the
+// default anchor is the week the demo is opened in. `days` are offsets from that Monday.
+// Ordinary plans on a person's own crew's job, and one of each thing the office is shown
+// when a plan does not let its person clock in: Tom and Elena planned on jobs that are not
+// their crews' (J3 has no crew; J1 is crew A's and Elena is on crew B), and Priya planned
+// before she is deactivated. A plan never changes any of that (V1-D07).
+export const planWeek = (anchor: string): string[] =>
+  [14, 15, 16, 17, 18].map((n) => addDays(anchor, n));
+
+export const PLANS = [
+  { who: "ana", job: "j1", days: [0, 1, 2, 3, 4], start: "07:00", end: "15:30" },
+  { who: "omar", job: "j2", days: [0, 1, 2, 3, 4], start: "07:00", end: "15:30" },
+  { who: "tom", job: "j1", days: [0, 1, 2], start: "07:00", end: "15:30" },
+  { who: "tom", job: "j3", days: [3, 4], start: "16:00", end: "20:00" },
+  { who: "elena", job: "j2", days: [0, 1], start: "07:00", end: "11:30" },
+  { who: "elena", job: "j1", days: [0, 1], start: "12:30", end: "15:30" },
+  { who: "priya", job: "j1", days: [0], start: "07:00", end: "15:30" },
+] as const;
+
 // What a complete run writes, by the plan above. The run reports what it wrote; the test holds
 // both to these numbers.
 export const EXPECTED = {
@@ -374,6 +393,8 @@ export const EXPECTED = {
   // then the three decisions. Omar's user-timed end and Ana's out-of-radius start carry a
   // second reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
   decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 - 4 + 3,
+  // One row per planned person, job and day.
+  assignments: PLANS.reduce((n, p) => n + p.days.length, 0),
 } as const;
 
 // The audit rows the same run leaves, by action (core/audit.ts): one per invitation, rate,

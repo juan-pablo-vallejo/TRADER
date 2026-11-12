@@ -81,6 +81,7 @@ export async function counts(db: Db) {
     closeouts,
     approvals,
     decided,
+    assignments,
   ] = await Promise.all([
     count(db, "users"),
     count(db, "customers"),
@@ -98,6 +99,7 @@ export async function counts(db: Db) {
         sql`select count(*)::int as n from approvals where decision is not null`,
       )
       .then((r) => r.rows[0]!.n),
+    count(db, "job_assignments"),
   ]);
   return {
     users,
@@ -112,6 +114,7 @@ export async function counts(db: Db) {
     closeouts,
     approvals,
     decided,
+    assignments,
   };
 }
 

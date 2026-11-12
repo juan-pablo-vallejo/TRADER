@@ -27,6 +27,8 @@ import {
   EXPECTED,
   JOBS,
   PEOPLE,
+  PLANS,
+  planWeek,
   PRIYA_LAST_DAY,
   RATES,
   RECEIPTS,
@@ -53,6 +55,7 @@ export type Summary = {
   closeouts: number;
   approvals: number;
   decided: number;
+  assignments: number;
 };
 
 export type RunOptions = {
@@ -114,6 +117,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     closeouts: 0,
     approvals: 0,
     decided: 0,
+    assignments: 0,
   };
 
   let current: Step = { index: 0, name: "start" };
@@ -611,6 +615,27 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         "decided",
       );
       summary.decided++;
+    }
+  });
+
+  // Before the deactivation below: a plan is refused for a person already deactivated.
+  await step("plan the coming week", async () => {
+    const week = planWeek(opts.anchor);
+    for (const p of PLANS) {
+      const a = expectResult(
+        await admin().assignment.create({
+          userId: userIds.get(p.who)!,
+          jobId: jobIds.get(p.job)!,
+          workDates: p.days.map((d) => week[d]!),
+          expectedStart: p.start,
+          expectedEnd: p.end,
+        }),
+        "created",
+      );
+      if (a.result !== "created") return;
+      if (a.existing !== 0)
+        fail(`${p.who} on ${p.job}: ${a.existing} days already planned`);
+      summary.assignments += a.created;
     }
   });
 
