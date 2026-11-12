@@ -169,7 +169,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   response headers, never in a built app). Cause not found; one guess is another process
   touching the repository while Turbopack watches it. Restarting the dev server clears it;
   on 2026-11-12 two restarts did not while the browser tab stayed on the looping page, and
-  the third did after the tab was sent to `about:blank` first.
+  the third did after the tab was sent to `about:blank` first. The same day, later: two
+  starts looped on every route; the third did not, after the tab was closed and the route
+  was requested once with `curl` before the browser's first load.
 - A table body built as `rows.map((r) => [<tr key>, <tr key>])` is keyed by position at the
   outer level: when a row moves, React remounts its editor and its state (the result note) is
   gone. Wrap the pair in `<Fragment key={r.id}>`.
@@ -236,6 +238,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A test fixture's event id is minted from its receipt time (`eventIn`), so id order always
   agrees with receipt order: a test of an ordering's receipt key against its id key writes
   the row itself with an id from a later instant (`labor/ledger.test.ts`).
+- An office labor entry carries no location stamp, so the server flags it `location` as
+  well: an appended entry's reasons are `user_timed`, `location`, and the queue and the
+  ledger show that tag on every repair.
+- A repair or a decision made by hand can never be removed: check `/approvals` and the
+  ledger's repair only in `trader_demo`, then `pnpm demo --reset`. The demo has fewer than
+  50 pending approvals, so "Show more" never appears there.
+- `table.module.css`: the narrow separator rule and the `number` label rule must keep equal
+  specificity, the `number` one last; a `:not()` added to one and not the other drops the
+  label ("Hours") from narrow rows.
 - The office table's narrow row labels only `number` cells: any other cell must read on its
   own without its column heading ("Entered by Dana Ortiz", not the name alone), and an
   empty one carries `data-empty` so its separator is dropped.
@@ -439,3 +450,31 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the API tests only: the open-session line, a rejected session, a void.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, the approval
   queue screen and labor repair from the ledger screen.
+
+### 2026-11-12 — Approval queue screen and labor repair from the ledger
+
+- **Did:** branch `approval-queue-and-repair` from `e7e81f1`, seven commits. `approval.queue`
+  answers `timezone` and a receipt's `receivedAt`. `zoned.ts` (wall time in a zone, both
+  ways) and `ledger/repair-set.ts` (a draft to `labor.repair` operations, ids, the minter).
+  `/approvals` under Work; the repair editors, Void session and "Add missing hours" on
+  `/ledger`. Checked in the browser on `trader_demo` at 390, 768, 1024 and 1280 — both
+  times on Luis's clock-skew day, approve by keyboard, reject in two presses, a corrected
+  clock-out, a break added as a pair and refused alone, a void, missing hours, a skipped and
+  a future time refused, the repairs then approved from the queue; no sideways scroll, no
+  control under 44 pt wide or 48 pt narrow. Watched red: the zone and the receipt time, the
+  earlier instant and the skipped hour, a correction's root, the kept ids and their order,
+  the job of a corrected entry and of an added one. No migration, no new procedure.
+  957 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its recommendations
+  1 to 8), the row of that date in ARCHITECTURE and the DESIGN amendments (Approvals in the
+  Work group; Approval row; Worker ledger, no longer read-only). Changed from the plan: the
+  queue is read fresh on every visit instead of being invalidated by a repair; an
+  `id_conflict` takes new ids; editor fields sit two to a row from 1024, not 768; `stamp`
+  and `duration` moved to `format.ts`. Not done: no component or browser test, no Spanish
+  office strings, no link from a queue row to the ledger. Not seen in the browser, covered
+  by tests only: "Show more", an own entry, `already_decided`, a skewed receipt,
+  `repair_stale`, the repeated hour. Open for the owner: the plan's question 9 — the
+  request asked to keep independent approval of an admin's own labor, which is the code
+  today and the rule the next line retires; confirm that line still stands.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, an admin's
+  own labor needs no approval (V1-D10 as amended; plan first: schema, sync).
