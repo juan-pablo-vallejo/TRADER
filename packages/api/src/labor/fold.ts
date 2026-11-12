@@ -102,13 +102,14 @@ export type Session = {
   rootEventId: string;
   // The row supplying the start time and job: the root or its winning correction.
   startedSourceEventId: string;
-  // From the effective `started` only; other events' job ids are provenance (decision D5).
+  // From the effective `started` only; other events' job ids are provenance
+  // (ARCHITECTURE, 2026-11-04, a session's job).
   jobId: string;
   startedAt: Date;
   endedAt: Date | null;
   complete: boolean;
   state: "working" | "paused" | "ended";
-  // Accounting-only (decision D4): hours are zero, the span stays on the timeline.
+  // Accounting-only (ARCHITECTURE, 2026-11-04, voids): hours are zero, the span stays on the timeline.
   voided: boolean;
   // Elapsed milliseconds of closed working and paused intervals. An open session counts
   // closed intervals only: no clock is read here, so accrual for display is the caller's.
@@ -162,7 +163,7 @@ export function replay(events: readonly LaborEvent[]): Replay {
     if (target.type === "voided") return at("correction_of_void");
     if (target.type !== e.type) return at("correction_type_mismatch");
     // A correction of a pause, resume or end keeps its root's job as provenance; only a
-    // corrected start re-attributes the session (decision D5).
+    // corrected start re-attributes the session (ARCHITECTURE, 2026-11-04, a session's job).
     if (e.type !== "started" && e.jobId !== target.jobId) {
       return at("correction_job_mismatch");
     }

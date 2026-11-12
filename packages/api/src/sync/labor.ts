@@ -26,7 +26,8 @@ import { lockPushScope, mayRecordLabor } from "./scope";
 
 // Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
 // receipt stamp, a skew or an approval: those are the server's. No corrections or voids from a
-// device: the office writes those (labor.repair, ARCHITECTURE row 187).
+// device: the office writes those (labor.repair; ARCHITECTURE, 2026-11-04, office-only
+// repair sets).
 export const laborPayloadV1 = z.strictObject({
   workerId: z.uuid(),
   jobId: z.uuid(),
@@ -270,7 +271,8 @@ export function sessionOfEvent(after: Replay, event: LaborEvent): Session {
 
 // Whether a session lies on a (job, date) whose closeout is already accepted, judged on the
 // session as it stands with the new events in place: its effective `started` source's job and
-// captured time (fold.ts, effectiveAt), the rule the closeout was built by (ARCHITECTURE row 201). Each
+// captured time (fold.ts, effectiveAt), the rule the closeout was built by (ARCHITECTURE,
+// 2026-11-05, approval triggers are six). Each
 // closeout is judged in its own stored zone, never the company's current one, so a later zone
 // change cannot move a record into or out of a closed day. Under the field-write lock held
 // shared, a closeout either committed before (seen here) or covers this record. A closed day
