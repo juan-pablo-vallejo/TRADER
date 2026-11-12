@@ -10,7 +10,15 @@ import type { Db } from "@trader/db";
 
 import type { CallerTimeouts, CallerWaits, Context, Tx } from "./context";
 import type { VerifiedIdentity } from "./identity";
+import { reportFailure } from "./report";
 import { BindConflict, resolveUser, type AppUser } from "./resolve-user";
+import {
+  DIAGNOSTIC_TIMEOUTS,
+  requestFailed,
+  writeDiagnostics,
+  type DiagnosticLine,
+  type Note,
+} from "../sync/diagnostics";
 
 // One message for every way of not being a signed-in, active, invited user, so a response
 // never says whether an invitation exists.
@@ -53,6 +61,8 @@ export async function inCallerTransaction<T>(
   identity: VerifiedIdentity,
   body: (tx: Tx, user: AppUser) => Promise<T>,
   waits: CallerWaits,
+  // False only for the diagnostics write below: it resolves a bound caller and binds no one.
+  bind = true,
 ): Promise<T> {
   try {
     return await db.transaction(async (tx) => {
@@ -77,7 +87,7 @@ export async function inCallerTransaction<T>(
         select set_config('app.identity_subject', ${identity.subject}, true),
           set_config('app.identity_email', ${identity.email}, true)
       `);
-      const user = await resolveUser(tx, identity);
+      const user = await resolveUser(tx, identity, { bind });
       if (user === null) throw unauthorized();
       // Identity settings off before the tenant goes on: 0015's guard refuses every update
       // but the bind while either is present.
@@ -133,14 +143,52 @@ export const SYNC_TIMEOUTS: CallerTimeouts = {
   statementTimeout: "4s",
 };
 
-export const syncProcedure = t.procedure.use(({ ctx, next }) => {
-  const { db, identity, waits } = ctx;
+//
+// It also keeps the call's diagnostic lines (sync/diagnostics.ts). The procedure gets `note`,
+// which only collects; once the call has settled — every record's transaction ended, the answer
+// decided — the lines are written in one more caller transaction. A call that failed as a whole
+// leaves one line in place of whatever was noted, and none when the failure is UNAUTHORIZED:
+// that caller has no tenant to write under. The write resolves a caller who is already bound
+// and never performs a first sign-in: a push that failed before binding still binds nothing. The write is awaited, because a serverless function
+// may be frozen once it answers, and guarded: whatever it throws is reported and dropped, and
+// the call's result is returned exactly as it was.
+export const syncProcedure = t.procedure.use(async ({ ctx, next }) => {
+  const { db, identity, waits, reporter, requestId } = ctx;
   if (identity === null) throw unauthorized();
   const runRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) =>
     inCallerTransaction(db, identity, body, waits ?? SYNC_TIMEOUTS);
-  return next({
-    ctx: { db: undefined, identity: undefined, waits: undefined, runRecord },
+  const noted: DiagnosticLine[] = [];
+  const note: Note = (line) => {
+    noted.push(line);
+  };
+  const result = await next({
+    ctx: { db: undefined, identity: undefined, waits: undefined, runRecord, note },
   });
+  const lines = result.ok
+    ? noted
+    : result.error.code === "UNAUTHORIZED"
+      ? []
+      : [requestFailed(result.error.code)];
+  if (lines.length > 0) {
+    try {
+      await inCallerTransaction(
+        db,
+        identity,
+        (tx, user) => writeDiagnostics(tx, user, requestId, lines),
+        waits === "inherit" ? "inherit" : DIAGNOSTIC_TIMEOUTS,
+        false,
+      );
+    } catch (error) {
+      // Reported when it is an incident; a caller deactivated since is not one.
+      reportFailure(reporter, error, {
+        source: "diagnostics",
+        path: "sync.push",
+        type: "mutation",
+        requestId,
+      });
+    }
+  }
+  return result;
 });
 
 // A role gate: procedure entry for the listed roles only, judged on the role resolved from the

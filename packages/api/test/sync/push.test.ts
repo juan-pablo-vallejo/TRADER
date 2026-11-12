@@ -26,6 +26,7 @@ import {
   type PushResult,
   type RunRecord,
 } from "../../src/sync/push";
+import type { DiagnosticLine } from "../../src/sync/diagnostics";
 import {
   appCallerIn,
   asTenant,
@@ -824,6 +825,73 @@ describe("pushRecords — the loop, without a database", () => {
     };
     const out = await pushRecords(input(records(5)), run, clock);
     expect(out.results).toHaveLength(2);
+  });
+
+  // V1-D04: what the loop notes for the diagnostics (sync/diagnostics.ts).
+  const noting = () => {
+    const noted: DiagnosticLine[] = [];
+    return { noted, note: (line: DiagnosticLine) => void noted.push(line) };
+  };
+
+  it("notes each rejection, the record it stopped on and each identifiable one behind it", async () => {
+    const { noted, note } = noting();
+    const rs = [...records(3), { payload: "no id" }, ...records(1)];
+    const out = await pushRecords(
+      input(rs),
+      fakeRun({ 1: new Error("transient") }),
+      Date.now,
+      undefined,
+      note,
+    );
+    expect(out.results).toHaveLength(1);
+    const id = (i: number) => (rs[i] as { id: string }).id;
+    expect(noted).toEqual([
+      // fakeRun answers under an id of its own: the line carries the answer's.
+      {
+        recordId: out.results[0]!.id,
+        recordKind: "material",
+        outcome: "rejected",
+        code: "r_0",
+      },
+      {
+        recordId: id(1),
+        recordKind: "material",
+        outcome: "omitted",
+        code: "record_failed",
+      },
+      {
+        recordId: id(2),
+        recordKind: "material",
+        outcome: "omitted",
+        code: "not_attempted",
+      },
+      {
+        recordId: id(4),
+        recordKind: "material",
+        outcome: "omitted",
+        code: "not_attempted",
+      },
+    ]);
+    // A line is an id, a kind and a code: never the record it came from.
+    expect(JSON.stringify(noted)).not.toContain("jobId");
+  });
+
+  it("notes nothing for an accepted record, a duplicate, or records the budget left out", async () => {
+    const { noted, note } = noting();
+    let now = 0;
+    let n = 0;
+    const run: RunRecord = async () => {
+      now += BUDGET_MS / 2 + 1;
+      return {
+        id: uuidv7(),
+        kind: "material",
+        result: n++ === 0 ? "accepted" : "duplicate",
+        ack: {},
+      } as never;
+    };
+    const out = await pushRecords(input(records(5)), run, () => now, undefined, note);
+    expect(out.results).toHaveLength(2);
+    expect(noted).toEqual([]);
   });
 
   // TASKS:50: what the loop swallows reaches the reporter; nothing else changes.
