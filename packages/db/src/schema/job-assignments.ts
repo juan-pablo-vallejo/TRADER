@@ -19,8 +19,9 @@ import { users } from "./users";
 // (PRD, Jobs and location; ARCHITECTURE, Office authority: dated assignments, V1-D07). It is
 // planning only. Nothing that judges or counts labor reads this table — not push authority,
 // validation, the fold, approvals, closeouts, pay or invoices — and a row here creates no
-// crew_members row and widens no read. Written by the office (api assignments/write.ts), read
-// by `assignment.list` and `assignment.mine`.
+// crew_members row and widens no read but one: the planned person sees that job's name and
+// address. Written by the office (api assignments/write.ts), read by `assignment.list` and
+// `assignment.mine`.
 //
 // work_date is the calendar day in companies.timezone as the office wrote it: a business key,
 // never derived from an instant. expected_start and expected_end are wall-clock times on that
