@@ -635,6 +635,31 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     }
   });
 
+  // After the decisions above, which take the oldest pending rows: this one is the admin's
+  // own and theirs never to decide.
+  await step("enter a receipt the crew never logged", async () => {
+    const s = SCENARIOS.officeReceipt;
+    const a = expectResult(
+      await admin().material.create({
+        id: idAt(at(s.day, "12:00")),
+        jobId: jobIds.get(s.job)!,
+        workDate: days[s.day]!,
+        description: s.description,
+        quantity: s.quantity,
+        unit: s.unit,
+        cost: s.cost,
+      }),
+      "created",
+    );
+    if (a.result !== "created") return;
+    if (a.entry.reasons.join() !== s.reasons.join()) {
+      fail(`the office receipt carries ${a.entry.reasons.join()}`);
+    }
+    summary.materials++;
+    summary.pricedMaterials++;
+    summary.approvals++;
+  });
+
   // Before the deactivation below: a plan is refused for a person already deactivated.
   await step("plan the coming week", async () => {
     const week = planWeek(opts.anchor);

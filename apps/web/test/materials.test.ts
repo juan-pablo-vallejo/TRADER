@@ -1,4 +1,4 @@
-// TASKS, Stage 4: material cost entry over the real transport — the route module as Next calls
+// TASKS, Stage 4: material cost entry and office material entry over the real transport — the route module as Next calls
 // it. An admin reads their company's receipts and states what one cost; nobody else does
 // either, and a receipt that is not theirs to see is refused. A receipt no closeout covers
 // can be deleted, so this runs on committed fixtures; the frozen ones and the locks are the
@@ -63,6 +63,7 @@ async function receipt() {
     capturedOffline: false,
     clockSkewed: false,
     clockSkewMs: 0,
+    enteredByOffice: false,
   });
   return { id, jobId: job!.id };
 }
@@ -171,5 +172,93 @@ describe("material cost entry through the route handler", () => {
       .from(materials)
       .where(eq(materials.id, RECEIPT));
     expect(row).toEqual({ costCents: null });
+  });
+});
+
+// A receipt the office enters itself (V1-D09). On a day no closeout covers it has no
+// approval, so it is deleted with the rest; the closed-day rules are the api suite's.
+describe("office material entry through the route handler", () => {
+  const entry = (jobId: string) => ({
+    id: uuidv7(),
+    jobId,
+    workDate: "2026-10-05",
+    description: "Drop cloths",
+    quantity: "4",
+    unit: "ea",
+    cost: usd(4590),
+  });
+
+  it("answers 401 anonymous and 403 to a worker", async () => {
+    const input = entry(NO_RECEIPT);
+    expect((await mutate(POST, "material.create", { input })).status).toBe(401);
+    const worker = await invitation(owner);
+    try {
+      const refused = await mutate(POST, "material.create", {
+        input,
+        headers: as(worker.email),
+      });
+      expect(refused.status).toBe(403);
+    } finally {
+      await worker.cleanup();
+    }
+  });
+
+  it("lets an admin enter a receipt, read it back as the office's, and resend it", async () => {
+    const headers = as(admin.email);
+    const { jobId } = await receipt();
+    const input = entry(jobId);
+    const created = await mutate(POST, "material.create", { input, headers });
+    expect(created.status).toBe(200);
+    expect(created.body.result?.data.json).toMatchObject({
+      result: "created",
+      entry: { id: input.id, reasons: [] },
+    });
+    const resent = await mutate(POST, "material.create", { input, headers });
+    expect(resent.body.result?.data.json).toMatchObject({ result: "duplicate" });
+
+    const all = await query(GET, "material.list", {
+      input: { jobId, show: "all" },
+      headers,
+    });
+    const items = (
+      all.body.result?.data.json as {
+        items: { id: string; enteredByOffice: boolean; loggedBy: { id: string } }[];
+      }
+    ).items;
+    expect(items).toHaveLength(2);
+    // The same admin logged both rows: the stored column tells them apart.
+    expect(items.find((i) => i.id === input.id)).toMatchObject({
+      enteredByOffice: true,
+      loggedBy: { id: admin.userId },
+      effective: { description: "Drop cloths", quantity: "4.000", unit: "ea" },
+      cost: usd(4590),
+      accounting: "eligible",
+    });
+    expect(items.find((i) => i.id !== input.id)).toMatchObject({
+      enteredByOffice: false,
+      loggedBy: { id: admin.userId },
+    });
+  });
+
+  it("refuses a job the admin cannot see and a malformed entry", async () => {
+    const headers = as(admin.email);
+    const unseen = await mutate(POST, "material.create", {
+      input: entry(NO_RECEIPT),
+      headers,
+    });
+    expect(unseen.status).toBe(403);
+    const { jobId } = await receipt();
+    for (const bad of [{ workDate: "2026-02-30" }, { quantity: "0" }, { office: true }]) {
+      const malformed = await mutate(POST, "material.create", {
+        input: { ...entry(jobId), ...bad },
+        headers,
+      });
+      expect([bad, malformed.status]).toEqual([bad, 400]);
+    }
+    const rows = await owner
+      .select({ id: materials.id })
+      .from(materials)
+      .where(eq(materials.companyId, admin.companyId));
+    expect(rows).toHaveLength(1);
   });
 });

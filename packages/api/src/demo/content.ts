@@ -345,6 +345,18 @@ export const SCENARIOS = {
     unit: "each",
     reasons: ["after_closeout"] as ApprovalReason[],
   },
+  // A receipt the crew never logged, entered by the office from the paper it has, with its
+  // cost, for a day already closed out: marked as the office's, and pending for another
+  // admin — the demo has one, so it stays in the queue (V1-D09).
+  officeReceipt: {
+    day: 6,
+    job: "j1",
+    description: "Roller covers, 9 in",
+    quantity: "10",
+    unit: "each",
+    cost: { cents: 4590, currency: "USD" },
+    reasons: ["after_closeout"] as ApprovalReason[],
+  },
   // The amend of a sealed receipt is its own pending approval, `corrected`.
   amendedReceipt: { reasons: ["corrected"] as ApprovalReason[] },
   // Priya leaves after week one; Marcus steps down as foreman, so Crew B needs one.
@@ -391,14 +403,15 @@ export const EXPECTED = {
   // Six people for ten days and Priya for four, four events each; her late day of two; one
   // office correction.
   events: 6 * 10 * 4 + 4 * 4 + 2 + 1,
-  materials: RECEIPTS.length + 1,
-  pricedMaterials: COSTS.length,
+  // The crew's receipts, the late one, and the one the office entered itself, with its cost.
+  materials: RECEIPTS.length + 1 + 1,
+  pricedMaterials: COSTS.length + 1,
   materialCorrections: 1,
   // Nine closed days on each crew's job.
   closeouts: 9 * 2,
   // Every pushed clock event (the backlog, the late day included), the correction, the late
-  // receipt, the amend.
-  approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1 + 1 + 1,
+  // receipt, the amend, the office's receipt.
+  approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1 + 1 + 1 + 1,
   // The ordinary backlog — every event flagged `offline` alone but Tom's last day's four —
   // then the three decisions. Omar's user-timed end and Ana's out-of-radius start carry a
   // second reason, Luis's claimed-online day is `clock_skewed`: they stay pending.

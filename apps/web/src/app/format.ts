@@ -2,7 +2,7 @@
 // the locale formatter; dates as calendar days). A work date is a YYYY-MM-DD string and is
 // rendered from its parts: `new Date(iso)` would read it as UTC midnight, which is the day
 // before in Eastern. An instant is shown in the zone the server names, never the browser's.
-// Consumed by the roster, assignments, approvals, ledger and materials screens.
+// Consumed by the roster, assignments, approvals, ledger, closeout and materials screens.
 import { strings } from "./strings";
 
 export function money(cents: number, currency: string): string {
@@ -79,6 +79,17 @@ export function stamp(at: Date, timeZone: string): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone,
+  }).format(at);
+}
+
+// The calendar day of an instant in a named zone, as `day` prints one: for an entry that has
+// a day and no time of its own (a receipt the office entered).
+export function dayIn(at: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
     timeZone,
   }).format(at);
 }

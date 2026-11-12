@@ -147,6 +147,7 @@ async function receipt(
     capturedOffline: flags.capturedOffline ?? false,
     clockSkewed: flags.clockSkewed ?? false,
     clockSkewMs: flags.clockSkewed ? 600_000 : 0,
+    enteredByOffice: false,
   });
   return id;
 }

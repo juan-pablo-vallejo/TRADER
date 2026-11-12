@@ -29,6 +29,11 @@ export type DayMaterial = Pick<
   "id" | "loggedByUserId" | "description" | "quantity" | "unit" | "loggedAt"
 >;
 
+// The same with the receipt's stored provenance, which the review shows and the fingerprint
+// does not read: its tuple is DayMaterial's fields (fingerprint.ts).
+export type DayReceipt = DayMaterial &
+  Pick<typeof materials.$inferSelect, "enteredByOffice">;
+
 export const dayMaterialColumns = {
   id: materials.id,
   loggedByUserId: materials.loggedByUserId,
@@ -36,6 +41,7 @@ export const dayMaterialColumns = {
   quantity: materials.quantity,
   unit: materials.unit,
   loggedAt: materials.loggedAt,
+  enteredByOffice: materials.enteredByOffice,
 };
 
 export type JobDay = {
@@ -46,7 +52,7 @@ export type JobDay = {
   // `server_timestamp` written explicitly).
   workers: { workerId: string; ledgerThrough: Date }[];
   // In id order.
-  materials: DayMaterial[];
+  materials: DayReceipt[];
 };
 
 // A window around the day, in the zone, wide enough to hold it under any offset: SQL only
@@ -116,11 +122,11 @@ export async function gatherJobDay(
 }
 
 // The rows whose logged_at falls on the day in the zone, in id order.
-export function onDayInIdOrder(
-  rows: readonly DayMaterial[],
+export function onDayInIdOrder<M extends DayMaterial>(
+  rows: readonly M[],
   workDate: string,
   timeZone: string,
-): DayMaterial[] {
+): M[] {
   return rows
     .filter((m) => workDateOf(m.loggedAt, timeZone) === workDate)
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));

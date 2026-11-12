@@ -58,6 +58,8 @@ export const reviewOutput = z.strictObject({
       loggedAt: z.date(),
       loggedByUserId: z.uuid(),
       loggedByName: z.string(),
+      // Stored provenance: an admin entered it in the office, and is its logger.
+      enteredByOffice: z.boolean(),
     }),
   ),
   fingerprint: z.string(),
@@ -141,6 +143,7 @@ export async function reviewDay(
       loggedAt: m.loggedAt,
       loggedByUserId: m.loggedByUserId,
       loggedByName: nameOf(m.loggedByUserId),
+      enteredByOffice: m.enteredByOffice,
     })),
     fingerprint: reviewFingerprint({
       companyId: user.companyId,

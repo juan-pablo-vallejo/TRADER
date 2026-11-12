@@ -232,6 +232,13 @@
       "when": 1794497232511,
       "tag": "0032_admin-own-labor",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1794509903575,
+      "tag": "0033_office-material-entries",
+      "breakpoints": true
     }
   ]
 }

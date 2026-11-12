@@ -432,6 +432,30 @@ export const strings = {
     voided: "Voided",
   },
 
+  // Material entry (DESIGN, Material entry): a receipt the office enters itself.
+  addReceipt: "Add a receipt",
+  addReceiptExplain:
+    "For a receipt the crew never logged. It is saved as entered by the office, under your name. A receipt someone else logged is not changed here.",
+  receiptDescription: "Description",
+  receiptUnit: "Unit",
+  receiptTotalOptional: "Receipt total (optional)",
+  saveReceipt: "Save receipt",
+  receiptSaved: "Saved, as entered by the office.",
+  receiptSavedPending:
+    "Saved. That day is closed out, so this receipt now waits for another admin's approval.",
+  badQuantity: "Enter a quantity above zero, like 2 or 2.5.",
+  fillThisIn: "Fill this in.",
+  receiptRejected: {
+    id_conflict:
+      "That didn't go through. Check the list for this receipt before saving it again.",
+    date_in_future: "That day has not happened yet.",
+  },
+  // Each says it whole: a narrow row shows no column heading.
+  enteredByOfficeName: (name: string) => `Entered by the office · ${name}`,
+  receiptEnteredByOffice: (name: string) => `Receipt entered by the office · ${name}`,
+  receiptDated: (day: string) => `Dated ${day}`,
+  noTimeRecorded: "No time recorded",
+
   // Profile
   contactPhone: "Contact phone",
   managedBySignIn: "Managed by your sign-in provider",

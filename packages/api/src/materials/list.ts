@@ -64,6 +64,9 @@ export const listOutput = z.strictObject({
       id: z.uuid(),
       job: z.strictObject({ id: z.uuid(), name: z.string() }),
       loggedBy: z.strictObject({ id: z.uuid(), name: z.string() }),
+      // Stored provenance: an admin entered it in the office, and `loggedBy` is that admin;
+      // its `loggedAt` is then noon of the date they named, not a time anyone recorded.
+      enteredByOffice: z.boolean(),
       loggedAt: z.date(),
       original: facts,
       effective: facts.extend({ voided: z.boolean() }),
@@ -106,6 +109,7 @@ export async function listMaterials(
       jobName: jobs.name,
       loggedByUserId: materials.loggedByUserId,
       loggedByName: users.name,
+      enteredByOffice: materials.enteredByOffice,
       loggedAt: materials.loggedAt,
       description: materials.description,
       quantity: materials.quantity,
@@ -159,6 +163,7 @@ export async function listMaterials(
       id: m.id,
       job: { id: m.jobId, name: m.jobName },
       loggedBy: { id: m.loggedByUserId, name: m.loggedByName },
+      enteredByOffice: m.enteredByOffice,
       loggedAt: m.loggedAt,
       original: { description: m.description, quantity: m.quantity, unit: m.unit },
       effective: {

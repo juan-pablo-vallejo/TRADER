@@ -17,7 +17,11 @@ import type { Tx } from "../../src/core/context";
 import { lockCompanyFieldWrites } from "../../src/labor/timeline";
 import { setMaterialCost } from "../../src/materials/cost";
 import type { AppUser } from "../../src/core/resolve-user";
-import { pushMaterial, type MaterialRecord } from "../../src/sync/material";
+import {
+  materialPayloadV1,
+  pushMaterial,
+  type MaterialRecord,
+} from "../../src/sync/material";
 import { measureSkew } from "../../src/sync/reasons";
 import {
   asTenant,
@@ -420,6 +424,7 @@ describe("sync.push receipt — idempotency", () => {
         capturedOffline: false,
         clockSkewed: false,
         clockSkewMs: 0,
+        enteredByOffice: false,
       });
       const { d, w1 } = await dayFor(tx);
       expect(await push(tx, w1, record({ jobId: d.J }, id))).toEqual({
@@ -427,6 +432,65 @@ describe("sync.push receipt — idempotency", () => {
         code: "id_conflict",
       });
       expect(await rowsOf(tx, d)).toEqual({ materials: 0, approvals: 0 });
+    });
+  });
+});
+
+describe("sync.push receipt — provenance", () => {
+  it("has no key by which a device could claim an office entry", () => {
+    const { payload } = record({ jobId: uuidv7() });
+    expect(materialPayloadV1.safeParse(payload).success).toBe(true);
+    expect(
+      materialPayloadV1.safeParse({ ...payload, enteredByOffice: true }).success,
+    ).toBe(false);
+  });
+
+  it("stores an admin's own push as a device's receipt", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await asTenant(tx, d.companyId);
+      const r = record({ jobId: d.J });
+      expect((await push(tx, appUser(d, admin.id, "admin"), r)).result).toBe("accepted");
+      const row = await asOwner(
+        tx,
+        d,
+        async () => (await tx.select().from(materials).where(eq(materials.id, r.id)))[0],
+      );
+      expect(row?.enteredByOffice).toBe(false);
+    });
+  });
+
+  it("answers a replay of the caller's own office entry as id_conflict and leaves it", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const r = record({ jobId: d.J });
+      await tx.insert(materials).values({
+        id: r.id,
+        companyId: d.companyId,
+        jobId: d.J,
+        loggedByUserId: admin.id,
+        description: r.payload.description,
+        quantity: r.payload.quantity,
+        unit: r.payload.unit,
+        loggedAt: r.payload.loggedAt,
+        capturedOffline: false,
+        clockSkewed: false,
+        clockSkewMs: 0,
+        enteredByOffice: true,
+      });
+      await asTenant(tx, d.companyId);
+      expect(await push(tx, appUser(d, admin.id, "admin"), r)).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+      const row = await asOwner(
+        tx,
+        d,
+        async () => (await tx.select().from(materials).where(eq(materials.id, r.id)))[0],
+      );
+      expect(row?.enteredByOffice).toBe(true);
     });
   });
 });

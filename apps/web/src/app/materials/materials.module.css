@@ -1,5 +1,5 @@
-/* The materials screen's own layout: the lines above the table, the two filters, the button
-   beneath the list. The table itself is table.module.css. */
+/* The materials screen's own layout: the lines above the table, the receipt form, the two
+   filters, the button beneath the list. The table itself is table.module.css. */
 .explain {
   margin: 0 0 var(--space-2);
   color: var(--ink-secondary);
@@ -27,10 +27,27 @@
 .costForm {
   max-width: 20rem;
 }
+/* The receipt form: one column narrow; quantity and unit, date and total, side by side. */
+.receiptGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--space-3);
+}
+.listNote {
+  margin-bottom: var(--space-3);
+}
 
 @media (min-width: 768px) {
   .filters {
     grid-template-columns: 1fr 1fr;
     max-width: 40rem;
+  }
+  .receiptGrid {
+    grid-template-columns: 1fr 1fr;
+    max-width: 48rem;
   }
 }

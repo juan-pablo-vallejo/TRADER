@@ -1,6 +1,6 @@
 // Stage 2 line 5: materials, asserted against the migrated container. Rolled-back
 // transactions throughout; see helpers.ts.
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
@@ -22,6 +22,7 @@ const material = (refs: Refs): typeof materials.$inferInsert => ({
   capturedOffline: false,
   clockSkewed: false,
   clockSkewMs: 0,
+  enteredByOffice: false,
 });
 
 // A statement expected to fail, in its own savepoint so the test can go on.
@@ -104,6 +105,41 @@ describe("materials", () => {
       const refs = await fixture(tx);
       expect(await rejected(tx, { ...material(refs), costCents: 100 })).toBe("23514");
       expect(await rejected(tx, { ...material(refs), currency: "USD" })).toBe("23514");
+    });
+  });
+
+  it("stores an office entry's provenance and refuses a receipt that states none", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const row = one(
+        await tx
+          .insert(materials)
+          .values({ ...material(refs), enteredByOffice: true })
+          .returning({ enteredByOffice: materials.enteredByOffice }),
+      );
+      expect(row.enteredByOffice).toBe(true);
+      // 0033 leaves no default behind: a writer that names no provenance is refused.
+      const code = await sqlstate(
+        tx.transaction((sp) =>
+          sp.execute(sql`
+            insert into materials (id, company_id, job_id, logged_by_user_id, description,
+              quantity, unit, logged_at, captured_offline, clock_skewed, clock_skew_ms)
+            values (${uuidv7()}, ${refs.companyId}, ${refs.jobId}, ${refs.workerId}, 'x',
+              1, 'ea', now(), false, false, 0)
+          `),
+        ),
+      );
+      expect(code).toBe("23502");
+    });
+  });
+
+  it("rejects an office entry that claims device evidence", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const office = { ...material(refs), enteredByOffice: true };
+      expect(await rejected(tx, { ...office, capturedOffline: true })).toBe("23514");
+      expect(await rejected(tx, { ...office, clockSkewed: true })).toBe("23514");
+      expect(await rejected(tx, { ...office, clockSkewMs: 1 })).toBe("23514");
     });
   });
 

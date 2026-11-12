@@ -127,6 +127,7 @@ describe("invoice_line_items", () => {
             capturedOffline: false,
             clockSkewed: false,
             clockSkewMs: 0,
+            enteredByOffice: false,
           })
           .returning({ id: materials.id }),
       );

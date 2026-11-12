@@ -182,8 +182,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - tRPC runs a gate's middleware before input validation, so a call with no input answers the
   gate (UNAUTHORIZED, FORBIDDEN) or BAD_REQUEST without writing: the gate inventory test relies
   on it.
-- Until its Stage 4 task lands, `materials.ts` describes an office writer that does not
-  exist (V1-D09). The documents are right; correct it in that task and delete this note.
+- A receipt the office entered on a closed-out day is pending for an admin who is not its
+  author, and with one admin in the database nobody can decide it: the demo's stays pending
+  by design. Check `/materials`' form only in `trader_demo`, then `pnpm demo --reset`; a
+  closed-day entry made by hand in the local database is removed only by
+  `docker compose down -v`.
+- `materials.entered_by_office` has no default (0033): a fixture that inserts a receipt
+  states it, and `materialIn` takes it as its last argument.
+- Two ids from the test `uuidv7()` minted in one millisecond order either way: a test of a
+  read that sorts by id compares by id, never by position.
+- Never restore a file after a watched-red edit with `git checkout`: it discards the
+  uncommitted work in that file. Copy the file aside first and copy it back.
 - An admin's own labor has no approvals row (0032): a fixture that needs a pending labor
   approval uses a worker or a foreman, or an admin's event written by a different admin; a
   test that needs an admin's event to carry reasons has none to read. 0032's checks read
@@ -593,3 +602,36 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   and the emulator has no PIN or enrolled finger, left so on purpose.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line,
   office-created material entries (V1-D09; plan first: schema).
+
+### 2026-11-12 — Office-created material entries (V1-D09)
+
+- **Did:** branch `office-material-entries` from `e3f653c`, seven commits. `0033`:
+  `materials.entered_by_office` and its CHECK, back-filled `false`. `material.list`,
+  `approval.queue` and `closeout.review` answer the provenance. `material.create`, admin-gated,
+  with its gate line; one office receipt in the demo; the form on `/materials` and "Entered
+  by the office" on `/materials`, `/approvals` and `/closeout`, checked in the browser on
+  `trader_demo` at 390, 768, 1024 and 1280 — an open-day entry by keyboard, a closed-day
+  one with its approval sentence and its row in the queue as the admin's own, an archived
+  job, an empty form, a zero quantity, a malformed amount and a future date refused under
+  their fields, no sideways scroll, no control under 48 pt narrow or 44 pt wide. Watched
+  red: the CHECK, the dropped default, push's provenance clause and its literal, the three
+  read fields, the gate, the caller re-read, the job lookup, the future refusal, the
+  field-write lock, the approval insert, create's provenance clause and literal, noon, the
+  raced answer. No dependency. 1,028 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its seven
+  recommendations), the row of that date in ARCHITECTURE and the DESIGN amendment (Material
+  entry): archived jobs admitted; noon of the named day in the company's zone; a future day
+  refused, no lower bound; an open-day entry counts without approval; the back-fill; the
+  demo's entry; no audit row. Changed from the plan: no second read of the id after the
+  field-write lock — the insert's conflict answers it, and a test of the same entry sent
+  twice at once pins that; a closeout and an entry on one job meet on the job's row, before
+  the field-write lock; a correction's queue item also carries its receipt's logger. One
+  extra commit fixed a test of mine that compared two receipts by position. Not done: no
+  browser test in CI (its own TASKS line), no Spanish office strings, no pull change.
+  Not seen in the browser, covered by tests only: `id_conflict`, a `duplicate` resend, a
+  correction of an office receipt in the queue, a second admin deciding an entry. Worth
+  knowing: the office row's `logged_at` is a convention, so nothing should sort or judge
+  office receipts by time of day; a company with one admin can never decide its own
+  closed-day entry.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, hours and
+  cost aggregation (V1-D13).
