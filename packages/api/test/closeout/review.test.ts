@@ -166,9 +166,35 @@ describe("closeout.review — content", () => {
           loggedAt: new Date("2026-10-05T15:00:00Z"),
           loggedByUserId: d.w1,
           loggedByName: "w1",
+          enteredByOffice: false,
         },
       ]);
       expect(r.fingerprint).toMatch(/^v2\.[0-9a-f]{64}$/);
+    });
+  });
+
+  it("shows a receipt the office entered with its stored provenance and the admin's name", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const pushed = await materialIn(tx, d, d.J, "2026-10-05T15:00:00Z", admin.id);
+      const entered = await materialIn(
+        tx,
+        d,
+        d.J,
+        "2026-10-05T16:00:00Z",
+        admin.id,
+        true,
+      );
+      await becomeApp(tx);
+      const r = await review(tx, d.who, d.J);
+      expect(r.materials.map((m) => [m.id, m.loggedByUserId, m.enteredByOffice])).toEqual(
+        [
+          [pushed, admin.id, false],
+          [entered, admin.id, true],
+        ],
+      );
+      expect(r.materials[1]!.loggedByName).toMatch(/^admin-/);
     });
   });
 

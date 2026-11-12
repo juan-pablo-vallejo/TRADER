@@ -81,6 +81,8 @@ const subject = z.discriminatedUnion("kind", [
     materialId: z.uuid(),
     job,
     loggedBy: person,
+    // Stored provenance: an admin entered the receipt in the office (`loggedBy`).
+    enteredByOffice: z.boolean(),
     loggedAt: z.date(),
     // When the server stored the receipt: the row's `created_at`, the database's clock.
     receivedAt: z.date(),
@@ -97,6 +99,9 @@ const subject = z.discriminatedUnion("kind", [
     materialId: z.uuid(),
     job,
     submittedBy: person,
+    // The corrected receipt's logger and stored provenance.
+    loggedBy: person,
+    enteredByOffice: z.boolean(),
     correction: z.discriminatedUnion("kind", [
       z.strictObject({
         kind: z.literal("amend"),
@@ -348,6 +353,7 @@ export async function approvalQueue(
           materialId: m.id,
           job: named(jobNames, m.jobId),
           loggedBy: named(names, m.loggedByUserId),
+          enteredByOffice: m.enteredByOffice,
           loggedAt: m.loggedAt,
           receivedAt: m.createdAt,
           original,
@@ -370,6 +376,8 @@ export async function approvalQueue(
         materialId: c.materialId,
         job: named(jobNames, m.jobId),
         submittedBy: named(names, c.submittedByUserId),
+        loggedBy: named(names, m.loggedByUserId),
+        enteredByOffice: m.enteredByOffice,
         correction:
           c.kind === "amend"
             ? {

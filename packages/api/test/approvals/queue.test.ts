@@ -14,6 +14,7 @@ import {
   crewDayIn,
   eventIn,
   lateReceiptIn,
+  materialIn,
   outcome,
   ownerDb,
   pendingApproval,
@@ -116,6 +117,43 @@ describe("approval.queue", () => {
       });
       // No coordinates or cost cross.
       expect(JSON.stringify(items)).not.toMatch(/location_lat|locationLat|cost/i);
+    });
+  });
+
+  it("carries a receipt's stored provenance on the receipt and on its correction", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const entering = await boundIn(tx, d.companyId, "admin");
+      const pushed = await lateReceiptIn(tx, d, entering.id);
+      const entered = await materialIn(
+        tx,
+        d,
+        d.J,
+        "2026-10-05T14:30:00Z",
+        entering.id,
+        true,
+      );
+      await pendingApproval(tx, d.companyId, { materialId: entered }, ["after_closeout"]);
+      await correctionIn(tx, d, entered, d.foremanId);
+      await becomeApp(tx);
+      const { items } = await queue(tx, admin.who);
+      const shown = items.map((i) =>
+        i.subject.kind === "labor_event"
+          ? null
+          : [
+              i.subject.kind,
+              i.subject.materialId,
+              i.subject.loggedBy.id,
+              i.subject.enteredByOffice,
+            ],
+      );
+      // The same admin logged both: only the stored column tells them apart.
+      expect(shown).toEqual([
+        ["material", pushed.materialId, entering.id, false],
+        ["material", entered, entering.id, true],
+        ["material_correction", entered, entering.id, true],
+      ]);
     });
   });
 

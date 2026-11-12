@@ -497,6 +497,7 @@ export async function materialIn(
   job: string,
   loggedAt: string,
   by = day.w1,
+  enteredByOffice = false,
 ) {
   const id = uuidv7();
   await tx.insert(materials).values({
@@ -511,7 +512,7 @@ export async function materialIn(
     capturedOffline: false,
     clockSkewed: false,
     clockSkewMs: 0,
-    enteredByOffice: false,
+    enteredByOffice,
   });
   return id;
 }

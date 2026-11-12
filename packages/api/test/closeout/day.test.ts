@@ -347,9 +347,17 @@ describe("gatherJobDay", () => {
       await asTenant(tx, d.companyId);
       const day = await gather(tx, d, d.J, "2026-10-05");
       expect(day.materials.map((m) => m.id)).toEqual([late, morning].sort());
-      // The facts the foreman sees, and no cost.
+      // The facts the foreman sees with the stored provenance, and no cost.
       expect(Object.keys(day.materials[0]!).sort()).toEqual(
-        ["description", "id", "loggedAt", "loggedByUserId", "quantity", "unit"].sort(),
+        [
+          "description",
+          "enteredByOffice",
+          "id",
+          "loggedAt",
+          "loggedByUserId",
+          "quantity",
+          "unit",
+        ].sort(),
       );
       expect(day.materials[0]).toMatchObject({
         description: "Eggshell, white",

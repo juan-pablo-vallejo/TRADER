@@ -59,17 +59,24 @@ describe("material.list", () => {
       const admin = await boundIn(tx, d.companyId, "admin");
       const early = await materialIn(tx, d, d.J, T("12:00"));
       const late = await materialIn(tx, d, d.K, T("15:00"), d.w2);
+      const office = await materialIn(tx, d, d.J, T("11:00"), admin.id, true);
       await price(tx, early, 8999);
       await becomeApp(tx);
 
       const { items, next, timezone } = await list(tx, admin.who, { show: "all" });
       expect(timezone).toBe("America/New_York");
       expect(next).toBeNull();
-      expect(items.map((i) => i.id)).toEqual([late, early]);
+      expect(items.map((i) => i.id)).toEqual([late, early, office]);
+      // Provenance as stored, never read off the logger's role.
+      expect(items[2]).toMatchObject({
+        loggedBy: { id: admin.id },
+        enteredByOffice: true,
+      });
       expect(items[1]).toEqual({
         id: early,
         job: { id: d.J, name: "J" },
         loggedBy: { id: d.w1, name: "w1" },
+        enteredByOffice: false,
         loggedAt: new Date(T("12:00")),
         original: { description: "Eggshell, white", quantity: "2.000", unit: "gal" },
         effective: {
