@@ -1,0 +1,43 @@
+/* The closeout screen's own layout: the lookup grid, the lines above the review, the gaps
+   between its tables and the note field. The tables themselves are table.module.css. */
+.lookupGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.explain {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.heading {
+  margin: 0 0 var(--space-1);
+}
+.line {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-secondary);
+}
+.section {
+  margin: var(--space-4) 0 var(--space-6);
+}
+.section h3 {
+  margin: 0 0 var(--space-2);
+}
+.note {
+  min-height: 96px;
+  padding: var(--space-3);
+  resize: vertical;
+}
+.flags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.reason {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-secondary);
+}
+
+@media (min-width: 768px) {
+  .lookupGrid {
+    grid-template-columns: 2fr 1fr;
+  }
+}

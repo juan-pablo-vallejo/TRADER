@@ -18,6 +18,7 @@ export const strings = {
   jobs: "Jobs",
   crews: "Crews",
   assignments: "Assignments",
+  closeout: "Closeout",
   profile: "Profile",
   work: "Work",
   people: "People",
@@ -205,6 +206,54 @@ export const strings = {
     closeout: "Day closeout",
     material_correction: "Material correction",
     unknown: "—",
+  },
+
+  // Closeout (DESIGN, Closeout)
+  closeoutExplain:
+    "Review a job's day, then submit it. A submitted closeout is locked: later changes are correcting entries that go through approval, and entries that arrive afterwards wait for approval.",
+  workDate: "Work date",
+  reviewDay: "Review",
+  reviewAgain: "Review again",
+  closeoutArchived: "Archived job. Its status will not change.",
+  closeoutNoCrew: "No crew on this job.",
+  noCrewOption: "no crew",
+  closeoutZone: (zone: string) => `Times in ${zone}.`,
+  closeoutLabor: "Labor",
+  closeoutMaterials: "Materials",
+  closeoutNoLabor: "No labor on this day.",
+  closeoutNoMaterials: "No materials on this day.",
+  closeoutEmptyDay: "No labor or materials on this day. Submitting closes it out empty.",
+  started: "Started",
+  ended: "Ended",
+  worked: "Worked",
+  breaks: "Breaks",
+  sessionNotes: "Notes",
+  stillOpen: "Still open",
+  sessionVoided: "Voided",
+  sessionEdited: "Edited",
+  duration: (h: number, m: number) => `${h} h ${String(m).padStart(2, "0")} min`,
+  material: "Material",
+  quantity: "Quantity",
+  loggedBy: "Logged by",
+  loggedAt: "Logged",
+  statusAfter: "Job status after this day",
+  closeoutNote: "Note (optional)",
+  submitCloseout: "Submit closeout",
+  sessionsOpenReason: (n: number) =>
+    `${n === 1 ? "1 session is" : `${n} sessions are`} still open. End or repair ${n === 1 ? "it" : "them"} before closing out.`,
+  closedOut: "Closed out.",
+  closedOutStatusKept: "Closed out. The job's status was not changed.",
+  closedOutAt: (when: string) =>
+    `Closed out ${when}. Locked: what is shown below is the day as it stands now.`,
+  closeoutUnsent:
+    "That didn't go through. Try again: the same closeout is sent, so it cannot be recorded twice.",
+  closeoutRejected: {
+    id_conflict: "That didn't go through. Review the day again, then submit.",
+    already_submitted: "This day was already closed out.",
+    sessions_open:
+      "A session on this day is still open. End or repair it, then review again.",
+    work_date_in_future: "That day has not happened yet.",
+    review_stale: "The day changed since this review. Check it again, then submit.",
   },
 
   // Profile
