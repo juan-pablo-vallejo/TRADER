@@ -1,37 +1,42 @@
 // TASKS:45: roster.invite — a users row with email, name and role, worker unless named, bound
 // by the first sign-in with that email; a second email per company, whatever its case, is
 // `email_taken` with nothing written and no error; admin only.
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@trader/db";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { appRouter } from "../../src/router";
 import {
   appCaller,
-  appDb,
+  disposableDb,
   failure,
   http,
   identity,
   member,
   outcome,
-  ownerDb,
   userCount,
   userRow,
   world,
   type World,
 } from "../helpers";
 
-const owner = ownerDb();
-const app = appDb();
+// A database of its own (helpers.ts, disposableDb): these writers leave audit_log rows, which
+// are append-only and reference the company and the actor, so nothing committed here could be
+// deleted again. Each test's world stays until the database is dropped.
+let D: Awaited<ReturnType<typeof disposableDb>>;
+let owner: Db;
+let app: Db;
 let w: World;
 
+beforeAll(async () => {
+  D = await disposableDb();
+  owner = D.owner;
+  app = D.app();
+}, 60_000);
 beforeEach(async () => {
   w = await world(owner);
 });
-afterEach(async () => {
-  await w.cleanup();
-});
 afterAll(async () => {
-  await app.$client.end();
-  await owner.$client.end();
+  await D.drop();
 });
 
 type Input = Parameters<ReturnType<typeof appCaller>["roster"]["invite"]>[0];

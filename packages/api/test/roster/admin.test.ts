@@ -3,33 +3,38 @@
 // to each other included; a deactivated account is no user and a reactivated one is itself
 // again; admin only, a missing or foreign target one FORBIDDEN.
 import { sql } from "drizzle-orm";
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@trader/db";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   appCaller,
-  appDb,
+  disposableDb,
   member,
   outcome,
-  ownerDb,
   userRow,
   waitForLockWait,
   world,
   type World,
 } from "../helpers";
 
-const owner = ownerDb();
-const app = appDb({ max: 4 });
+// A database of its own (helpers.ts, disposableDb): these writers leave audit_log rows, which
+// are append-only and reference the company and the actor, so nothing committed here could be
+// deleted again. Each test's world stays until the database is dropped.
+let D: Awaited<ReturnType<typeof disposableDb>>;
+let owner: Db;
+let app: Db;
 let w: World;
 
+beforeAll(async () => {
+  D = await disposableDb();
+  owner = D.owner;
+  app = D.app({ max: 4 });
+}, 60_000);
 beforeEach(async () => {
   w = await world(owner);
 });
-afterEach(async () => {
-  await w.cleanup();
-});
 afterAll(async () => {
-  await app.$client.end();
-  await owner.$client.end();
+  await D.drop();
 });
 
 const roster = (who: unknown) => appCaller(app, who).roster;

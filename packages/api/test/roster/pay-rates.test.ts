@@ -1,31 +1,29 @@
 // TASKS:45: roster.setPayRate and roster.payRates — effective-dated, insert-only: a second rate
 // for the same day is `rate_exists` and the history never changes; the rate in force is the
 // newest on or before today in the company's zone; admin only.
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@trader/db";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import {
-  appCaller,
-  appDb,
-  member,
-  outcome,
-  ownerDb,
-  world,
-  type World,
-} from "../helpers";
+import { appCaller, disposableDb, member, outcome, world, type World } from "../helpers";
 
-const owner = ownerDb();
-const app = appDb();
+// A database of its own (helpers.ts, disposableDb): these writers leave audit_log rows, which
+// are append-only and reference the company and the actor, so nothing committed here could be
+// deleted again. Each test's world stays until the database is dropped.
+let D: Awaited<ReturnType<typeof disposableDb>>;
+let owner: Db;
+let app: Db;
 let w: World;
 
+beforeAll(async () => {
+  D = await disposableDb();
+  owner = D.owner;
+  app = D.app();
+}, 60_000);
 beforeEach(async () => {
   w = await world(owner);
 });
-afterEach(async () => {
-  await w.cleanup();
-});
 afterAll(async () => {
-  await app.$client.end();
-  await owner.$client.end();
+  await D.drop();
 });
 
 const roster = (who: unknown) => appCaller(app, who).roster;

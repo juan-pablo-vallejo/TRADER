@@ -2,7 +2,7 @@
 // transactions throughout; see helpers.ts. V1 writes no row here (the writers are after-V1
 // wiring), so these tests are the only writer and insert as the API will. The mutations are
 // raw SQL on purpose: no Drizzle update or delete against this table exists anywhere.
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
@@ -24,6 +24,11 @@ const exported = (companyId: string): typeof auditLog.$inferInsert => ({
   entityTable: "companies",
   after: { format: "csv", period: "2026-10-19..2026-11-01" },
 });
+
+// The fixture company's rows only: a row committed in this database by hand can never be
+// deleted, and must not be counted here.
+const rowsOf = (tx: Tx, companyId: string) =>
+  tx.select().from(auditLog).where(eq(auditLog.companyId, companyId));
 
 // A rate change as the Stage 4 procedure would record it: both snapshots, one actor.
 async function rateChange(tx: Tx) {
@@ -137,7 +142,7 @@ describe("audit_log", () => {
 
   it("rejects UPDATE and the row survives (23000)", async () => {
     await rolledBack(db, async (tx) => {
-      const { row } = await rateChange(tx);
+      const { refs, row } = await rateChange(tx);
       await tx.insert(auditLog).values(row);
       const error = await pgError(
         tx.transaction((sp) =>
@@ -146,33 +151,33 @@ describe("audit_log", () => {
       );
       expect(error.code).toBe("23000");
       expect(error.message).toBe("audit_log is append-only: UPDATE rejected");
-      expect(one(await tx.select().from(auditLog)).action).toBe("pay_rates.update");
+      expect(one(await rowsOf(tx, refs.companyId)).action).toBe("pay_rates.update");
     });
   });
 
   it("rejects DELETE and the row survives (23000)", async () => {
     await rolledBack(db, async (tx) => {
-      const { row } = await rateChange(tx);
+      const { refs, row } = await rateChange(tx);
       await tx.insert(auditLog).values(row);
       const error = await pgError(
         tx.transaction((sp) => sp.execute(sql`delete from audit_log`)),
       );
       expect(error.code).toBe("23000");
       expect(error.message).toBe("audit_log is append-only: DELETE rejected");
-      expect(await tx.select().from(auditLog)).toHaveLength(1);
+      expect(await rowsOf(tx, refs.companyId)).toHaveLength(1);
     });
   });
 
   it("rejects TRUNCATE, which bypasses row triggers (23000)", async () => {
     await rolledBack(db, async (tx) => {
-      const { row } = await rateChange(tx);
+      const { refs, row } = await rateChange(tx);
       await tx.insert(auditLog).values(row);
       const error = await pgError(
         tx.transaction((sp) => sp.execute(sql`truncate audit_log`)),
       );
       expect(error.code).toBe("23000");
       expect(error.message).toBe("audit_log is append-only: TRUNCATE rejected");
-      expect(await tx.select().from(auditLog)).toHaveLength(1);
+      expect(await rowsOf(tx, refs.companyId)).toHaveLength(1);
     });
   });
 });
