@@ -35,7 +35,7 @@ import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { mayStartOn } from "../sync/scope";
-import { toWallTime, wallTime } from "./write";
+import { toWallTime, wallTime, workDay } from "./write";
 
 // The longest range one read covers: any month.
 export const MAX_RANGE_DAYS = 31;
@@ -44,10 +44,7 @@ export const LIST_LIMIT = 2000;
 
 const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
 
-const range = {
-  from: z.iso.date(),
-  to: z.iso.date(),
-};
+const range = { from: workDay, to: workDay };
 const bounded = (v: { from: string; to: string }) => {
   const days = dayNumber(v.to) - dayNumber(v.from);
   return days >= 0 && days < MAX_RANGE_DAYS;

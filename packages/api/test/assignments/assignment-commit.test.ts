@@ -191,4 +191,58 @@ describe("assignment.create against the office's other writers", () => {
     expect(await call).toBe("UNAUTHORIZED");
     expect(await plansOf(d.companyId)).toEqual([]);
   });
+
+  it("names days in any order without two calls waiting on each other", async () => {
+    const d = await world();
+    const days = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"];
+    const input = { userId: d.w1, jobId: d.J, ...HOURS };
+    let calls!: Promise<{ result: string }[]>;
+    await D.owner.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
+      calls = Promise.all([
+        plan(d.admin.who).create({ ...input, workDates: days }),
+        plan(d.second.who).create({ ...input, workDates: [...days].reverse() }),
+      ]);
+      await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
+    });
+    expect((await calls).map((a) => a.result).sort()).toEqual(["created", "unchanged"]);
+    expect(await plansOf(d.companyId)).toHaveLength(5);
+  });
+});
+
+describe("assignment.update and remove re-read the caller", () => {
+  for (const change of ["deactivated_at = now()", "role = 'worker'"] as const) {
+    const expected = change.startsWith("role") ? "FORBIDDEN" : "UNAUTHORIZED";
+    it(`refuse an admin whose ${change} committed while they waited: ${expected}`, async () => {
+      const d = await world();
+      const id = await planned(d);
+      for (const call of [
+        () =>
+          plan(d.second.who).update({
+            assignmentId: id,
+            workDate: "2026-11-18",
+            ...HOURS,
+          }),
+        () => plan(d.second.who).remove({ assignmentId: id }),
+      ]) {
+        let answer!: Promise<string>;
+        await D.owner.transaction(async (tx) => {
+          await tx.execute(sql`select 1 from users where id = ${d.second.id} for update`);
+          answer = outcome(call());
+          await waitForLockWait(D.owner, '%from "users"%for share%');
+          await tx.execute(
+            sql`update users set ${sql.raw(change)} where id = ${d.second.id}`,
+          );
+        });
+        expect(await answer).toBe(expected);
+        // Put back for the second call.
+        await D.owner.execute(
+          sql`update users set deactivated_at = null, role = 'admin' where id = ${d.second.id}`,
+        );
+      }
+      expect(await plansOf(d.companyId)).toEqual([
+        { id, workDate: DAY, expectedStart: "07:00:00", expectedEnd: "15:30:00" },
+      ]);
+    });
+  }
 });

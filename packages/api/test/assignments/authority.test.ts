@@ -267,9 +267,9 @@ describe("the office read's flag is push's answer", () => {
   for (const c of cases) {
     it(`${c.name}: ${c.blockedBy ?? "may clock in"}`, async () => {
       await rolledBack(owner, async (tx) => {
-        const { day, admin, list } = await office(tx);
+        const { day, list } = await office(tx);
         const outsider = await boundIn(tx, day.companyId, "worker");
-        // A second admin plans and reads, so the planned admin's own state is the case's.
+        // The admin who reads is not the admin who is planned.
         const planned = await boundIn(tx, day.companyId, "admin");
         const userId = c.who(day, { admin: planned.id, outsider: outsider.id });
         await tx.insert(jobAssignments).values({
@@ -280,7 +280,6 @@ describe("the office read's flag is push's answer", () => {
           ...HOURS,
         });
         await c.arrange?.(tx, day);
-        void admin;
         const [row] = await list();
         const pushed = await clockIn(tx, day, userId, c.role, day[c.job]);
         expect(pushed).toBe(c.push);

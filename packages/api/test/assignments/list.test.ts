@@ -151,6 +151,7 @@ describe("assignment.list", () => {
         { from: "2026-11-17", to: "2026-11-16" },
         { from: "2026-11-16", to: "2026-11-31" },
         { from: "16/11/2026", to: "2026-11-17" },
+        { from: "0000-01-01", to: "0000-01-02" },
       ]) {
         expect([bad, await outcome(list(bad))]).toEqual([bad, "BAD_REQUEST"]);
       }
@@ -255,6 +256,15 @@ describe("assignment.mine", () => {
           appCallerIn(tx, ana.who).assignment.mine({
             from: "2026-11-01",
             to: "2026-12-15",
+          }),
+        ),
+      ).toBe("BAD_REQUEST");
+      // Year 0000 parses as an ISO date and is no date in Postgres: refused at the input.
+      expect(
+        await outcome(
+          appCallerIn(tx, ana.who).assignment.mine({
+            from: "0000-01-01",
+            to: "0000-01-02",
           }),
         ),
       ).toBe("BAD_REQUEST");

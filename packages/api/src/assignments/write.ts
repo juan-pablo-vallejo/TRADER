@@ -36,6 +36,14 @@ export const MAX_DAYS = 14;
 // A wall-clock time to the minute, 24-hour, as `<input type="time">` writes it.
 export const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
+// A calendar day a plan can be on. This century: `z.iso.date()` alone admits year 0000, which
+// Postgres has no date for, and a typed year of 0206 is a slip, not a plan.
+export const workDay = z.iso
+  .date()
+  .refine((day) => day >= "2000-01-01" && day <= "2099-12-31", {
+    message: "A day between 2000 and 2099.",
+  });
+
 // Both are HH:MM, so text order is time order.
 const endsAfterStart = (v: { expectedStart: string; expectedEnd: string }) =>
   v.expectedEnd > v.expectedStart;
@@ -49,7 +57,7 @@ export const createInput = z
     userId: z.uuid(),
     jobId: z.uuid(),
     workDates: z
-      .array(z.iso.date())
+      .array(workDay)
       .min(1)
       .max(MAX_DAYS)
       .refine((days) => new Set(days).size === days.length, {
@@ -63,7 +71,7 @@ export const createInput = z
 export const updateInput = z
   .strictObject({
     assignmentId: z.uuid(),
-    workDate: z.iso.date(),
+    workDate: workDay,
     expectedStart: wallTime,
     expectedEnd: wallTime,
   })
@@ -123,7 +131,10 @@ export async function createAssignments(
   const created = await tx
     .insert(jobAssignments)
     .values(
-      input.workDates.map((workDate) => ({
+      // In day order whatever order they were named in: two calls planning the same days
+      // then meet the same key first, and one waits instead of each holding what the other
+      // wants (40P01).
+      [...input.workDates].sort().map((workDate) => ({
         companyId: user.companyId,
         userId: person.id,
         jobId: job.id,

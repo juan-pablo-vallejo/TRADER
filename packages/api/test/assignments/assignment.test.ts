@@ -174,6 +174,10 @@ describe("assignment.create", () => {
         { ...good, workDates: ["2026-11-16", "2026-11-16"] },
         { ...good, workDates: ["2026-02-30"] },
         { ...good, workDates: ["11/16/2026"] },
+        // A year Postgres has no date for, and one nobody plans in.
+        { ...good, workDates: ["0000-12-27"] },
+        { ...good, workDates: ["1999-12-31"] },
+        { ...good, workDates: ["2100-01-01"] },
       ]) {
         expect([bad, await outcome(plan.create(bad))]).toEqual([bad, "BAD_REQUEST"]);
       }
