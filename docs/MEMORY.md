@@ -541,3 +541,25 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `pull.ts`, `list.ts`); if `job.list` fails the job filter offers only "All jobs".
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line,
   office-created material entries (V1-D09; plan first: schema).
+
+### 2026-11-12 — Maestro chosen for native UI flows; documents only
+
+- **Did:** branch `maestro-e2e-decision` from `499ac50`, documents only. A read-only
+  evaluation: no mobile app and no Playwright exist yet, so nothing can be driven today; on
+  the Mac, Xcode 26.6 with iOS 26.2 and 26.5 simulators, Android Studio with one API 36.1
+  emulator and its bundled JDK 21, no Maestro, no system JDK. Three Stage 5 lines in TASKS
+  (the CLI and MCP, the development sign-in with its smoke flow, the flow suite), the
+  emulator line moved to the Mac, one decision row, the `testID` rule in RULES. No code, no
+  dependency, no CI change. 999 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its six
+  recommendations), the row of that date in ARCHITECTURE. Not done: Maestro is not
+  installed and its MCP server is not registered — the session's permission classifier
+  refused the Homebrew tap and the `~/.zshenv` edit, so both are the owner's to run and the
+  new CLI line stays open. Not yet proven, and that line's to prove: that Maestro 2.12
+  drives iOS 26.x simulators and an API 36.1 emulator (its docs list older ones), that it
+  runs on Android Studio's runtime as `JAVA_HOME`, and whether a flow can answer a biometric
+  prompt. Read on Maestro's pages that day: physical iPhones are not supported, and
+  `setAirplaneMode` works on Android only.
+- **Next:** owner installs Maestro and registers its MCP server, then reviews and merges the
+  branch; then Stage 4's next open line, office-created material entries (V1-D09; plan
+  first: schema).
