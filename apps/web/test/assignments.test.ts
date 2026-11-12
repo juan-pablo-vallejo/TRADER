@@ -37,6 +37,7 @@ describe("assignments through the route handler", () => {
   it("answers 401 anonymous and 403 as a worker, never cached", async () => {
     const anonymous = await query(GET, "assignment.list", { input: WEEK });
     expect(anonymous.status).toBe(401);
+    expect(anonymous.headers.get("cache-control")).toBe("no-store");
     const worker = await invitation(owner);
     try {
       const r = await query(GET, "assignment.list", {
@@ -44,6 +45,7 @@ describe("assignments through the route handler", () => {
         headers: as(worker.email),
       });
       expect(r.status).toBe(403);
+      expect(r.headers.get("cache-control")).toBe("no-store");
       expect(r.body.error?.json.data.code).toBe("FORBIDDEN");
       const write = await mutate(POST, "assignment.create", {
         input: {

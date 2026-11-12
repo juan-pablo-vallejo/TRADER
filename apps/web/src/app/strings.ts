@@ -173,7 +173,8 @@ export const strings = {
   tooManyDays: "Plan at most 14 days at a time.",
   alreadyPlanned: "They are already planned on this job that day.",
   jobArchived: "That job is archived.",
-  planGone: "This plan was removed by someone else.",
+  planGone:
+    "This plan is no longer there, or you can no longer change it. Nothing was saved.",
   notOnCrew: "Not on this job's crew",
   notOnCrewHelp:
     "This plan does not let them clock in here — add them to the crew to allow it",

@@ -78,7 +78,8 @@ function today(): string {
   return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
 }
 
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
+// A day the API takes (api assignments/write.ts, workDay): this century.
+const DAY = /^20\d{2}-\d{2}-\d{2}$/;
 
 const reason = (code: string): string =>
   ({
@@ -107,9 +108,13 @@ export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
   const [listNote, setListNote] = useState<string | null>(null);
   const failed = [roster, jobs, plans].find((q) => q.isError);
   const ready = roster.isSuccess && jobs.isSuccess && plans.isSuccess;
-  const week = (weekOf: string) => {
-    if (DAY.test(weekOf)) setFilter((f) => ({ ...f, weekOf }));
+  // A change of week or filter is a new question: the last write's note no longer answers it.
+  const show = (change: Partial<Filter>, note: string | null = null) => {
+    if (change.weekOf !== undefined && !DAY.test(change.weekOf)) return;
+    setListNote(note);
+    setFilter((f) => ({ ...f, ...change }));
   };
+  const week = (weekOf: string) => show({ weekOf });
   return (
     <>
       <PageHeader
@@ -145,9 +150,8 @@ export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
               firstDay={filter.weekOf}
               onDone={(note, from) => {
                 setAdding(false);
-                setListNote(note);
                 // The days just planned are the ones to look at.
-                week(from);
+                show({ weekOf: from }, note);
               }}
             />
           )}
@@ -167,7 +171,7 @@ export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
                 id="plans-person"
                 className={controls.select}
                 value={filter.userId}
-                onChange={(e) => setFilter((f) => ({ ...f, userId: e.target.value }))}
+                onChange={(e) => show({ userId: e.target.value })}
               >
                 <option value="">{strings.allPeople}</option>
                 {roster.data!.map((p) => (
@@ -182,7 +186,7 @@ export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
                 id="plans-job"
                 className={controls.select}
                 value={filter.jobId}
-                onChange={(e) => setFilter((f) => ({ ...f, jobId: e.target.value }))}
+                onChange={(e) => show({ jobId: e.target.value })}
               >
                 <option value="">{strings.everyJob}</option>
                 {jobs.data!.map((j) => (
@@ -210,10 +214,17 @@ export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
             </button>
           </div>
           <Note text={listNote} tone="saved" />
-          <PlansTable
-            rows={plans.data!}
-            onRemoved={() => setListNote(strings.planRemoved)}
-          />
+          <div aria-busy={plans.isPlaceholderData}>
+            {plans.isPlaceholderData && (
+              <p className="secondary" role="status">
+                {strings.loading}
+              </p>
+            )}
+            <PlansTable
+              rows={plans.data!}
+              onRemoved={() => setListNote(strings.planRemoved)}
+            />
+          </div>
         </>
       )}
     </>
@@ -240,6 +251,8 @@ function PlanForm({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [note, setNote] = useState<string | null>(null);
+  // "Already planned" is no refusal: it reads as "No change." does, not as an error.
+  const [nothingNew, setNothingNew] = useState(false);
   const create = useMutation(
     trpc.assignment.create.mutationOptions({
       onSuccess: async (answer) => {
@@ -248,6 +261,7 @@ function PlanForm({
           return;
         }
         if (answer.result === "unchanged") {
+          setNothingNew(true);
           setNote(strings.alreadyPlannedAll);
           return;
         }
@@ -262,6 +276,7 @@ function PlanForm({
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
+    setNothingNew(false);
     if (days.length === 0) {
       setNote(strings.throughAfterFrom);
       return;
@@ -382,7 +397,7 @@ function PlanForm({
       {tooMany && (
         <p className={`secondary ${controls.caption}`}>{strings.tooManyDays}</p>
       )}
-      <Note text={note} />
+      <Note text={note} tone={nothingNew ? "neutral" : undefined} />
     </form>
   );
 }
