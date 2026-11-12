@@ -64,6 +64,8 @@ is wrong.
   database driver behind an environment variable, the error-reporting wrapper.
 - Every crew-facing string goes through the i18n layer with English and Spanish entries; a
   hard-coded string in a crew screen fails review.
+- Every control in `apps/mobile` carries a `testID`; a Maestro flow selects by it, never by
+  visible text, which is in two languages.
 - Secrets never enter the repository. `NEXT_PUBLIC_` and `EXPO_PUBLIC_` mean public, literally.
   The repository is public; machine names and addresses stay in `~/.ssh/config`.
 - No new dependency, tool or version bump without a line in TASKS.md naming what consumes it.
