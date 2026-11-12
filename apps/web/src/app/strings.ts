@@ -19,6 +19,7 @@ export const strings = {
   crews: "Crews",
   assignments: "Assignments",
   closeout: "Closeout",
+  approvals: "Approvals",
   profile: "Profile",
   work: "Work",
   people: "People",
@@ -253,6 +254,47 @@ export const strings = {
   approvalWaiting: "Waiting",
   approvedBy: (name: string) => `Approved by ${name}`,
   rejectedBy: (name: string) => `Rejected by ${name}`,
+
+  // Approvals (DESIGN, Approval row)
+  approvalsExplain:
+    "Entries that wait for the office before they count, oldest first. Approving keeps an entry as it was recorded; rejecting leaves it out. A decision cannot be changed: hours that are wrong are repaired from the labor ledger.",
+  emptyApprovals: "Nothing is waiting for approval.",
+  who: "Who",
+  time: "Time",
+  hours: "Hours",
+  decision: "Decision",
+  approve: "Approve",
+  reject: "Reject",
+  showMore: "Show more",
+  whoEnteredBy: (who: string, by: string) => `${who}, entered by ${by}`,
+  recordedAt: (when: string) => `Recorded ${when}`,
+  receivedWhen: (when: string) => `Received ${when}`,
+  loggedWhen: (when: string) => `Logged ${when}`,
+  submittedWhen: (when: string) => `Submitted ${when}`,
+  materialEntry: (facts: string) => `Material: ${facts}`,
+  materialVoided: "voided",
+  correctionAmend: (from: string, to: string) =>
+    `Material correction: ${from} changed to ${to}`,
+  correctionVoid: (facts: string) => `Material correction: void ${facts}`,
+  correctionNote: (note: string) => `Note: ${note}`,
+  ownEntry: "Your own entry. Another admin decides it.",
+  approved: "Approved.",
+  rejected: "Rejected.",
+  alreadyDecided: {
+    approved: "Someone else already approved this. Their decision stands.",
+    rejected: "Someone else already rejected this. Their decision stands.",
+  },
+  rejectEffect: {
+    labor:
+      "These hours will be left out until the office repairs them from the labor ledger. A decision cannot be changed.",
+    superseded:
+      "A later correction replaced this entry, so rejecting it changes no hours. A decision cannot be changed.",
+    void: "The session will stay as recorded and its hours will not be voided. A decision cannot be changed.",
+    material:
+      "This material will be left out of the job's cost. A decision cannot be changed.",
+    material_correction:
+      "The material will stay as it was before this correction. A decision cannot be changed.",
+  },
 
   // Closeout (DESIGN, Closeout)
   closeoutExplain:

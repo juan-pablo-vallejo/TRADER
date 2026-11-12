@@ -44,6 +44,18 @@
   background: var(--canvas);
 }
 
+/* A row's own buttons, where the row is acted on in place and not through an editor (the
+   approval queue): trailing, and wide enough for the sentence a destructive action shows. */
+.table td.act {
+  width: 1%;
+  min-width: 15rem;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+.act p {
+  margin: 0;
+}
+
 /* Status pill (DESIGN): 24 pt, the tint plus the word. Office record states are words; only
    an exception is a pill. */
 .pill {
@@ -139,13 +151,20 @@
   .table
     tr:not(.editor)
     td:not(:first-child):not(.toggle):not([data-empty])
-    ~ td:not(.toggle):not([data-empty])::before {
+    ~ td:not(.toggle):not(.act):not([data-empty])::before {
     content: "\00a0· ";
+  }
+  /* The row's buttons take the line beneath its text, full width of the card. */
+  .table tr:not(.editor) td.act {
+    display: block;
+    min-width: 0;
+    width: auto;
+    margin: var(--space-2) calc(-1 * (var(--space-6) * 3)) 0 0;
   }
   .table
     tr:not(.editor)
     td:not(:first-child):not(.toggle):not([data-empty])
-    ~ td.number:not([data-empty])::before {
+    ~ td.number:not(.act):not([data-empty])::before {
     content: "\00a0· " attr(data-label) " ";
   }
   .table tr:not(.editor) td.toggle {
