@@ -140,6 +140,45 @@ export const strings = {
   archivedNote:
     "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
 
+  // Job page: cost to date (DESIGN, Job cost)
+  backToJobs: "All jobs",
+  jobCostToDate: "Job cost to date",
+  jobCostExplain:
+    "Approved hours at each person's pay rate on the day, plus the receipts that are priced. For your reference: it is what the job has cost, not a price.",
+  noCostYet: "Nothing counts toward this job's cost yet.",
+  costLabor: (hours: string) => `Labor · ${hours} h approved`,
+  costMaterials: (n: number) =>
+    `Materials · ${n === 1 ? "1 priced receipt" : `${n} priced receipts`}`,
+  noAmount: "—",
+  notInTotal: "Not in this total",
+  apartUnrated: (hours: string, lines: number) =>
+    `${hours} h of approved labor has no pay rate for its day (${lines === 1 ? "1 line" : `${lines} lines`} below). Add the rate on the roster to count it.`,
+  apartPendingLabor: (hours: string, sessions: number) =>
+    `${hours} h of labor waits for approval, in ${sessions === 1 ? "1 session" : `${sessions} sessions`}.`,
+  apartWouldAdd: (amounts: string) => ` Approved, it would add ${amounts}.`,
+  apartPendingUnrated: (hours: string) => ` ${hours} h of it has no pay rate.`,
+  apartRejectedSessions: (n: number) =>
+    `${n === 1 ? "1 session was" : `${n} sessions were`} rejected. ${n === 1 ? "Its" : "Their"} hours are left out until repaired from the labor ledger.`,
+  apartOpenSessions: (n: number) =>
+    `${n === 1 ? "1 session is" : `${n} sessions are`} still open. Nothing of ${n === 1 ? "it" : "them"} counts until the clock out.`,
+  apartUnpricedReceipts: (n: number) =>
+    `${n === 1 ? "1 receipt is" : `${n} receipts are`} not priced. Enter the cost under Materials.`,
+  apartPendingReceipts: (n: number) =>
+    `${n === 1 ? "1 receipt waits" : `${n} receipts wait`} for approval.`,
+  apartPendingPriced: (amounts: string) => ` Priced so far: ${amounts}.`,
+  apartPendingUnpriced: (n: number) =>
+    ` ${n === 1 ? "1 of them is" : `${n} of them are`} not priced.`,
+  apartRejectedReceipts: (n: number) =>
+    `${n === 1 ? "1 receipt was" : `${n} receipts were`} rejected and ${n === 1 ? "is" : "are"} left out.`,
+  apartVoidedReceipts: (n: number) =>
+    `${n === 1 ? "1 receipt was" : `${n} receipts were`} voided and ${n === 1 ? "is" : "are"} left out.`,
+  laborByDay: "Labor by day",
+  rate: "Rate",
+  ratePerHour: (amount: string) => `${amount}/h`,
+  noRate: "No rate",
+  emptyJobCost: "Nothing has been recorded on this job yet.",
+  noSuchJob: "There is no job at this address.",
+
   // Assignments
   planWork: "Plan work",
   emptyAssignments: "Nothing is planned for these days.",

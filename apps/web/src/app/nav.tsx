@@ -63,18 +63,23 @@ export function Nav() {
               {group.label}
             </p>
             <ul className={styles.list}>
-              {group.links.map(([href, label]) => (
-                <li key={href}>
-                  <Link
-                    href={href}
-                    className={`${styles.link} ${path === href ? styles.current : ""}`}
-                    aria-current={path === href ? "page" : undefined}
-                    onClick={() => setOpen(false)}
-                  >
-                    {label}
-                  </Link>
-                </li>
-              ))}
+              {group.links.map(([href, label]) => {
+                // A screen beneath a destination (a job's page under Jobs) keeps it marked.
+                const here = path === href;
+                const within = here || path.startsWith(`${href}/`);
+                return (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className={`${styles.link} ${within ? styles.current : ""}`}
+                      aria-current={here ? "page" : within ? "true" : undefined}
+                      onClick={() => setOpen(false)}
+                    >
+                      {label}
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </section>
         ))}
