@@ -277,9 +277,14 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       SCENARIOS.userTimedEnd.who === who && SCENARIOS.userTimedEnd.day === day;
     const outside =
       SCENARIOS.outOfRadiusStart.who === who && SCENARIOS.outOfRadiusStart.day === day;
-    // The seeded history is a backlog, and says so (content.ts, SCENARIOS.backlog).
-    const base: ApprovalReason[] = SCENARIOS.backlog.reasons;
-    const facts: Facts = { capturedOffline: true };
+    // The seeded history is a backlog, and says so (content.ts, SCENARIOS.backlog) — but for
+    // the one day that claims an online capture and is flagged for it (lateOnlineDay).
+    const claimsOnline =
+      SCENARIOS.lateOnlineDay.who === who && SCENARIOS.lateOnlineDay.day === day;
+    const base: ApprovalReason[] = claimsOnline
+      ? SCENARIOS.lateOnlineDay.reasons
+      : SCENARIOS.backlog.reasons;
+    const facts: Facts = claimsOnline ? {} : { capturedOffline: true };
     return [
       labor(
         who,

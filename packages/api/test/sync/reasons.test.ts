@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   CLOCK_SKEW_TOLERANCE_MS,
   haversineMeters,
+  judgeEventTime,
   laborReasons,
   locationFlagged,
   measureSkew,
@@ -47,6 +48,48 @@ describe("measureSkew", () => {
       clockSkewMs: -600_000,
       clockSkewed: true,
     });
+  });
+});
+
+describe("judgeEventTime", () => {
+  const T = CLOCK_SKEW_TOLERANCE_MS;
+  const flags = [
+    { capturedOffline: false, timeSetByUser: false },
+    { capturedOffline: true, timeSetByUser: false },
+    { capturedOffline: false, timeSetByUser: true },
+    { capturedOffline: true, timeSetByUser: true },
+  ];
+  const judge = (ms: number, f = flags[0]!) =>
+    judgeEventTime({ clientTimestamp: at(ms), receivedAt: SERVER, ...f });
+
+  it("refuses a time later than the receipt by more than the tolerance, whatever it claims", () => {
+    for (const f of flags) {
+      expect(judge(T, f)).not.toBe("future");
+      expect(judge(T + 1, f)).toBe("future");
+      expect(judge(365 * 24 * 3_600_000, f)).toBe("future");
+    }
+  });
+
+  it("flags a claimed online capture earlier than the receipt by more than the tolerance", () => {
+    expect(judge(0)).toBe("plausible");
+    expect(judge(T)).toBe("plausible");
+    expect(judge(-T)).toBe("plausible");
+    expect(judge(-T - 1)).toBe("skewed");
+    // A dead clock still reports (core/instant.ts): year 1 is flagged, never refused.
+    expect(
+      judgeEventTime({
+        clientTimestamp: new Date("0001-01-01T00:00:00.000Z"),
+        receivedAt: SERVER,
+        ...flags[0]!,
+      }),
+    ).toBe("skewed");
+  });
+
+  it("leaves an offline or user-timed event alone however old: delay decides nothing", () => {
+    for (const f of flags.slice(1)) {
+      expect(judge(-T - 1, f)).toBe("plausible");
+      expect(judge(-2 * 24 * 3_600_000, f)).toBe("plausible");
+    }
   });
 });
 

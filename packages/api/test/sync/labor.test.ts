@@ -18,6 +18,8 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
 import type { AppUser } from "../../src/core/resolve-user";
+import { readWorkerEvents } from "../../src/labor/timeline";
+import { deriveSessions } from "../../src/labor/work-date";
 import { pushLaborEvent, type LaborRecord } from "../../src/sync/labor";
 import { measureSkew } from "../../src/sync/reasons";
 import {
@@ -111,6 +113,10 @@ async function dayFor(tx: Tx) {
 }
 
 const at = (iso: string) => new Date(iso);
+// Inside the receipt tolerance: a capture the server takes as made when it says (V1-D01). The
+// default record's fixed October time is a backlog: pushed as captured online it is flagged
+// `clock_skewed`, so a test of a clean capture times its events with this.
+const ago = (seconds: number) => new Date(Date.now() - seconds * 1000);
 
 describe("sync.push labor — a worker's own day", () => {
   it("accepts a day in order, stamps rising, with no approval for a clean capture", async () => {
@@ -121,27 +127,27 @@ describe("sync.push labor — a worker's own day", () => {
           workerId: d.w1,
           jobId: d.J,
           type: "started",
-          clientTimestamp: at("2026-10-05T12:00:00Z"),
+          clientTimestamp: ago(240),
         }),
         record({
           workerId: d.w1,
           jobId: d.J,
           type: "paused",
-          clientTimestamp: at("2026-10-05T14:00:00Z"),
+          clientTimestamp: ago(180),
           location: null,
         }),
         record({
           workerId: d.w1,
           jobId: d.J,
           type: "resumed",
-          clientTimestamp: at("2026-10-05T14:30:00Z"),
+          clientTimestamp: ago(120),
           location: null,
         }),
         record({
           workerId: d.w1,
           jobId: d.J,
           type: "ended",
-          clientTimestamp: at("2026-10-05T16:00:00Z"),
+          clientTimestamp: ago(60),
         }),
       ];
       const stamps: number[] = [];
@@ -215,7 +221,7 @@ describe("sync.push labor — a worker's own day", () => {
         result: "rejected",
         code: "no_open_session",
       });
-      const first = record({ workerId: d.w1, jobId: d.J });
+      const first = record({ workerId: d.w1, jobId: d.J, clientTimestamp: ago(120) });
       await push(tx, w1, first);
       expect(
         await push(
@@ -224,7 +230,7 @@ describe("sync.push labor — a worker's own day", () => {
           record({
             workerId: d.w1,
             jobId: d.J,
-            clientTimestamp: at("2026-10-05T13:00:00Z"),
+            clientTimestamp: ago(60),
           }),
         ),
       ).toMatchObject({ result: "rejected", code: "session_already_open" });
@@ -236,7 +242,7 @@ describe("sync.push labor — a worker's own day", () => {
             workerId: d.w1,
             jobId: d.K,
             type: "paused",
-            clientTimestamp: at("2026-10-05T13:00:00Z"),
+            clientTimestamp: ago(60),
           }),
         ),
       ).toMatchObject({
@@ -262,13 +268,14 @@ describe("sync.push labor — approval facts", () => {
           ["offline", "user_timed", "location"],
         ],
       ];
-      let hour = 0;
+      let n = 0;
       for (const [o, reasons] of cases) {
-        // A clean `ended` closes each session, so the next start is legal.
+        // A clean `ended` closes each session, so the next start is legal. All inside the
+        // receipt tolerance, so no case gains `clock_skewed`.
         const start = record({
           workerId: d.w1,
           jobId: d.J,
-          clientTimestamp: at(`2026-10-0${6 + hour}T12:00:00Z`),
+          clientTimestamp: ago(240 - 40 * n),
           ...o,
         });
         const answer = await push(tx, w1, start);
@@ -292,10 +299,10 @@ describe("sync.push labor — approval facts", () => {
             workerId: d.w1,
             jobId: d.J,
             type: "ended",
-            clientTimestamp: at(`2026-10-0${6 + hour}T13:00:00Z`),
+            clientTimestamp: ago(220 - 40 * n),
           }),
         );
-        hour++;
+        n++;
       }
     });
   });
@@ -313,27 +320,15 @@ describe("sync.push labor — approval facts", () => {
         const answer = await push(tx, w1, record({ workerId: d.w1, jobId: d.J, ...o }));
         return answer.result === "accepted" ? answer.ack.reasons : answer;
       };
-      expect(await reasonsOf({ location: HERE })).toEqual([]);
+      expect(await reasonsOf({ location: HERE, clientTimestamp: ago(240) })).toEqual([]);
       expect(
-        await reasonsOf({
-          type: "paused",
-          location: null,
-          clientTimestamp: at("2026-10-05T13:00:00Z"),
-        }),
+        await reasonsOf({ type: "paused", location: null, clientTimestamp: ago(180) }),
       ).toEqual([]);
       expect(
-        await reasonsOf({
-          type: "resumed",
-          location: FAR,
-          clientTimestamp: at("2026-10-05T13:30:00Z"),
-        }),
+        await reasonsOf({ type: "resumed", location: FAR, clientTimestamp: ago(120) }),
       ).toEqual([]);
       expect(
-        await reasonsOf({
-          type: "ended",
-          location: FAR,
-          clientTimestamp: at("2026-10-05T16:00:00Z"),
-        }),
+        await reasonsOf({ type: "ended", location: FAR, clientTimestamp: ago(60) }),
       ).toEqual(["location"]);
     });
   });
@@ -438,21 +433,24 @@ describe("sync.push labor — after its day's closeout, in the closeout's stored
             .set({ timezone: c.company })
             .where(eq(companies.id, d.companyId)),
         );
+        // A day long past is a backlog, and says so: captured offline.
         const start = record({
           workerId: d.w1,
           jobId: d.J,
           clientTimestamp: at(c.start),
+          capturedOffline: true,
         });
         const end = record({
           workerId: d.w1,
           jobId: d.J,
           type: "ended",
           clientTimestamp: new Date(at(c.start).getTime() + 3_600_000),
+          capturedOffline: true,
         });
         for (const r of [start, end]) {
           expect(await push(tx, w1, r)).toMatchObject({
             result: "accepted",
-            ack: { reasons: c.late ? ["after_closeout"] : [] },
+            ack: { reasons: c.late ? ["offline", "after_closeout"] : ["offline"] },
           });
         }
       });
@@ -468,16 +466,18 @@ describe("sync.push labor — after its day's closeout, in the closeout's stored
         workerId: d.w1,
         jobId: d.J,
         clientTimestamp: at("2026-10-06T03:00:00Z"),
+        capturedOffline: true,
       });
       const end = record({
         workerId: d.w1,
         jobId: d.J,
         type: "ended",
         clientTimestamp: at("2026-10-06T05:00:00Z"),
+        capturedOffline: true,
       });
       for (const r of [start, end]) {
         expect(await push(tx, w1, r)).toMatchObject({
-          ack: { reasons: ["after_closeout"] },
+          ack: { reasons: ["offline", "after_closeout"] },
         });
       }
     });
@@ -490,10 +490,180 @@ describe("sync.push labor — after its day's closeout, in the closeout's stored
       const admin = await asOwner(tx, d, () => boundIn(tx, d.companyId, "admin"));
       const user = appUser(d, admin.id, "admin");
       expect(
-        await push(tx, user, record({ workerId: admin.id, jobId: d.K })),
+        await push(
+          tx,
+          user,
+          record({ workerId: admin.id, jobId: d.K, capturedOffline: true }),
+        ),
       ).toMatchObject({
-        ack: { reasons: [] },
+        ack: { reasons: ["offline"] },
       });
+    });
+  });
+});
+
+describe("sync.push labor — the time an event claims, against its receipt (V1-D01)", () => {
+  const HOUR = 3_600_000;
+  const rowOf = (tx: Tx, d: CrewDay, id: string) =>
+    asOwner(
+      tx,
+      d,
+      async () =>
+        (
+          await tx.select().from(workSessionEvents).where(eq(workSessionEvents.id, id))
+        )[0]!,
+    );
+
+  it("flags a backdated event that claims an online capture, pending, at the time it carries", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const claimed = new Date(Date.now() - HOUR);
+      const r = record({ workerId: d.w1, jobId: d.J, clientTimestamp: claimed });
+      // The device's clock is right (ONLINE): only the receipt comparison can flag it.
+      const answer = await push(tx, w1, r);
+      expect(answer).toMatchObject({
+        result: "accepted",
+        ack: { clockSkewed: true, reasons: ["clock_skewed"] },
+      });
+      const row = await rowOf(tx, d, r.id);
+      expect(row).toMatchObject({
+        clientTimestamp: claimed,
+        clockSkewed: true,
+        clockSkewMs: 0,
+        capturedOffline: false,
+        timeSetByUser: false,
+      });
+      // The evidence is on the row: its receipt is more than the tolerance after its time.
+      expect(row.serverTimestamp.getTime() - claimed.getTime()).toBeGreaterThan(
+        HOUR - 60_000,
+      );
+      const [approval] = await asOwner(tx, d, () =>
+        tx.select().from(approvals).where(eq(approvals.eventId, r.id)),
+      );
+      expect(approval).toMatchObject({ reasons: ["clock_skewed"], decision: null });
+      // Kept, not replaced: the session starts when the event says it did.
+      const [session] = deriveSessions(await readWorkerEvents(tx, d.w1), "UTC");
+      expect(session!.startedAt).toEqual(claimed);
+    });
+  });
+
+  it("does not flag an old event that says it was captured offline or timed by the user", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const cases: [Partial<Payload>, string[]][] = [
+        [{ capturedOffline: true }, ["offline"]],
+        [{ timeSetByUser: true }, ["user_timed"]],
+      ];
+      let n = 0;
+      for (const [o, reasons] of cases) {
+        // Two days old, then a day old: delivery delay alone decides nothing.
+        const start = record({
+          workerId: d.w1,
+          jobId: d.J,
+          clientTimestamp: new Date(Date.now() - (48 - 24 * n) * HOUR),
+          ...o,
+        });
+        expect(await push(tx, w1, start)).toMatchObject({
+          result: "accepted",
+          ack: { clockSkewed: false, reasons },
+        });
+        expect((await rowOf(tx, d, start.id)).clockSkewed).toBe(false);
+        await push(
+          tx,
+          w1,
+          record({
+            workerId: d.w1,
+            jobId: d.J,
+            type: "ended",
+            clientTimestamp: new Date(Date.now() - (47 - 24 * n) * HOUR),
+            capturedOffline: true,
+          }),
+        );
+        n++;
+      }
+    });
+  });
+
+  it("refuses a future event whatever it says of itself, writing nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const future = new Date(Date.now() + HOUR);
+      const refused = { result: "rejected", code: "time_in_future" };
+      const variants: Partial<Payload>[] = [
+        {},
+        { capturedOffline: true },
+        { timeSetByUser: true },
+        { capturedOffline: true, timeSetByUser: true },
+      ];
+      for (const o of variants) {
+        const r = record({ workerId: d.w1, jobId: d.J, clientTimestamp: future, ...o });
+        expect(await push(tx, w1, r)).toEqual(refused);
+        // The same record sent again is judged again and refused again: nothing was kept.
+        expect(await push(tx, w1, r)).toEqual(refused);
+      }
+      // A skewed device clock excuses nothing.
+      expect(
+        await push(
+          tx,
+          w1,
+          record({ workerId: d.w1, jobId: d.J, clientTimestamp: future }),
+          SKEWED,
+        ),
+      ).toEqual(refused);
+      expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+      // Inside the tolerance a slightly fast clock is taken as it is: accepted, unflagged.
+      expect(
+        await push(
+          tx,
+          w1,
+          record({
+            workerId: d.w1,
+            jobId: d.J,
+            clientTimestamp: new Date(Date.now() + 120_000),
+          }),
+        ),
+      ).toMatchObject({ result: "accepted", ack: { clockSkewed: false, reasons: [] } });
+    });
+  });
+
+  it("answers scope before time, and time before the timeline", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const future = new Date(Date.now() + HOUR);
+      // K is not w1's crew's job: a caller out of scope learns no time verdict.
+      expect(
+        await push(
+          tx,
+          w1,
+          record({ workerId: d.w1, jobId: d.K, clientTimestamp: future }),
+        ),
+      ).toEqual({ result: "rejected", code: "not_permitted" });
+      // An end with no session, in the future: named as the future time it is.
+      expect(
+        await push(
+          tx,
+          w1,
+          record({ workerId: d.w1, jobId: d.J, type: "ended", clientTimestamp: future }),
+        ),
+      ).toEqual({ result: "rejected", code: "time_in_future" });
+      expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+    });
+  });
+
+  it("answers a flagged event's retry from the stored row, never judging it again", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const r = record({
+        workerId: d.w1,
+        jobId: d.J,
+        clientTimestamp: new Date(Date.now() - HOUR),
+      });
+      const first = await push(tx, w1, r);
+      expect(first).toMatchObject({ ack: { reasons: ["clock_skewed"] } });
+      const stored = await rowOf(tx, d, r.id);
+      expect(await push(tx, w1, r, SKEWED)).toEqual({ ...first, result: "duplicate" });
+      expect(await rowOf(tx, d, r.id)).toEqual(stored);
+      expect(await rowsOf(tx, d)).toEqual({ events: 1, approvals: 1 });
     });
   });
 });
@@ -695,7 +865,7 @@ describe("sync.push labor — idempotency", () => {
   it("answers id_conflict for any device field that differs, the schema version included", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
-      const r = record({ workerId: d.w1, jobId: d.J });
+      const r = record({ workerId: d.w1, jobId: d.J, clientTimestamp: ago(60) });
       await push(tx, w1, r);
       const variants: LaborRecord[] = [
         { ...r, schemaVersion: 2 },
@@ -703,7 +873,10 @@ describe("sync.push labor — idempotency", () => {
         { ...r, payload: { ...r.payload, type: "ended" } },
         {
           ...r,
-          payload: { ...r.payload, clientTimestamp: at("2026-10-05T12:00:00.001Z") },
+          payload: {
+            ...r.payload,
+            clientTimestamp: new Date(r.payload.clientTimestamp.getTime() + 1),
+          },
         },
         { ...r, payload: { ...r.payload, attestationLevel: "none" } },
         { ...r, payload: { ...r.payload, location: null } },

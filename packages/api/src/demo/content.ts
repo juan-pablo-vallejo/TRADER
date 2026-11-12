@@ -291,6 +291,9 @@ export const SCENARIOS = {
   // claimed to be online that long ago would be flagged instead). The admin approves the
   // ordinary ones in a step of their own; the scenarios below stay pending.
   backlog: { reasons: ["offline"] as ApprovalReason[] },
+  // Luis's second Thursday reached the office claiming an online capture, days after the
+  // fact: the server's receipt comparison flags every event of it, at the time it claims.
+  lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as ApprovalReason[] },
   // Tom's last day is the one ordinary day the office has not approved yet.
   offlineDay: { who: "tom", day: 9, reasons: ["offline"] as ApprovalReason[] },
   // Omar forgot to clock out and set the time himself on the last day.
@@ -368,6 +371,6 @@ export const EXPECTED = {
   approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1 + 1 + 1,
   // The ordinary backlog — every event flagged `offline` alone but Tom's last day's four —
   // then the three decisions. Omar's user-timed end and Ana's out-of-radius start carry a
-  // second reason and stay pending.
-  decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 + 3,
+  // second reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
+  decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 - 4 + 3,
 } as const;

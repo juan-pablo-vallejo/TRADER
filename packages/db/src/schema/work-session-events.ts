@@ -35,8 +35,8 @@ export const workSessionEvents = pgTable(
     workerId: uuid("worker_id").notNull(),
     jobId: uuid("job_id").notNull(),
     type: workSessionEventType("type").notNull(),
-    // Device time is business time: recorded as the device reported it, never clamped, never
-    // used to settle a dispute (PRD, Labor).
+    // Device time is business time: recorded as the device reported it, never clamped, and the
+    // instant the fold places the event at, flagged or not (PRD, Labor; V1-D01).
     clientTimestamp: timestamp("client_timestamp", { withTimezone: true }).notNull(),
     // Receipt. Milliseconds, because the device holds its copy as a JS timestamp and "snap to
     // server truth" must compare equal. now() is transaction time, so one push stamps its
@@ -44,11 +44,14 @@ export const workSessionEvents = pgTable(
     serverTimestamp: timestamp("server_timestamp", { withTimezone: true, precision: 3 })
       .notNull()
       .defaultNow(),
-    // Skew is measured per push as |device_now − server_now| against the 5-minute tolerance
-    // (ARCHITECTURE, Sync protocol; the constant lives in the API, Stage 3). The verdict is
-    // stored so the ledger's order never moves if the tolerance does, and the signed
-    // measurement is kept beside it because a ledger cannot be backfilled. bigint: integer
-    // caps at ±24.8 days, and an event from a reset phone clock must still be written.
+    // Evidence for the approval rule, never a rule of the fold (V1-D01). `clock_skewed` is true
+    // when the push's |device_now − server_now| exceeded the 5-minute tolerance, or when the
+    // event claimed an online capture more than the tolerance before its receipt (ARCHITECTURE,
+    // Sync protocol; the constant and both tests live in the API, sync/reasons.ts). The verdict
+    // is stored so it never moves if the tolerance does. `clock_skew_ms` is the per-push
+    // reading alone, signed, kept because a ledger cannot be backfilled; the receipt
+    // comparison's evidence is the row's own two timestamps. bigint: integer caps at ±24.8
+    // days, and an event from a reset phone clock must still be written.
     clockSkewed: boolean("clock_skewed").notNull(),
     clockSkewMs: bigint("clock_skew_ms", { mode: "number" }).notNull(),
     // No default: the zod payload schema requires the field, so `none` is always written by

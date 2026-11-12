@@ -140,12 +140,12 @@ describe("the demo run", () => {
       "offline",
       "user_timed",
       "location",
+      "clock_skewed",
       "after_closeout",
       "corrected",
     ]) {
       expect(reasons.has(r as never)).toBe(true);
     }
-    expect(reasons.has("clock_skewed" as never)).toBe(false);
   });
 
   it("refuses an owner pool as the application pool before writing anything", async () => {
