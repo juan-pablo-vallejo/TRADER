@@ -137,6 +137,32 @@ export const strings = {
   archivedNote:
     "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
 
+  // Refused entries
+  refusals: "Refused entries",
+  refusalsExplain:
+    "What the server refused or could not process from a phone, kept for 30 days. Entries are listed under the person whose phone sent them and the day the server received them, which may be later than the day worked. The entry itself stays on the phone.",
+  sentBy: "Sent by",
+  receivedOn: "Received on",
+  findRefusals: "Find",
+  emptyRefusals: "Nothing from this person was refused on this day.",
+  refusalResult: "Result",
+  refusalKind: "Entry",
+  refusalCode: "Reason code",
+  receivedAt: "Received",
+  requestId: "Request",
+  refusalOutcomes: {
+    rejected: "Refused",
+    omitted: "Not processed; the phone sends it again",
+    request_failed: "The whole send failed",
+  },
+  refusalKinds: {
+    labor_event: "Hours",
+    material: "Material",
+    closeout: "Day closeout",
+    material_correction: "Material correction",
+    unknown: "—",
+  },
+
   // Profile
   contactPhone: "Contact phone",
   managedBySignIn: "Managed by your sign-in provider",
