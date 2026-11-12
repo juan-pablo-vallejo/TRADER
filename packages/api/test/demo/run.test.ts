@@ -12,6 +12,7 @@ import {
   EXPECTED_AUDIT,
   PEOPLE,
   SCENARIOS,
+  workDays,
 } from "../../src/demo/content";
 import { runDemo, type Step, type Summary } from "../../src/demo/run";
 import { prepareTarget, type Target } from "../../src/demo/target";
@@ -167,6 +168,44 @@ describe("the demo run", () => {
     ]) {
       expect(reasons.has(r as never)).toBe(true);
     }
+  });
+
+  it("shows the office the corrected day through the worker's ledger", async () => {
+    const s = SCENARIOS.repairedEnd;
+    const elena = (await admin().roster.list()).find(
+      (u) => u.email === PEOPLE.find((p) => p.key === s.who)!.email,
+    )!;
+    const day = workDays(ANCHOR)[s.day]!;
+    const ledger = await admin().labor.ledger({
+      workerId: elena.id,
+      from: day,
+      to: day,
+    });
+    expect(ledger.openSession).toBeNull();
+    const session = ledger.sessions.at(-1)!;
+    expect(session).toMatchObject({
+      workDate: day,
+      complete: true,
+      corrected: true,
+      // The last recorded day: the one day of the ten with no closeout.
+      closedOut: false,
+      accounting: "pending",
+    });
+    // The clock-out as the phone recorded it stays beside the office's correction of it.
+    const ends = session.events.filter((e) => e.type === "ended");
+    expect(ends.map((e) => e.effect)).toEqual(["superseded", "in_effect"]);
+    const [original, correction] = ends;
+    expect(correction).toMatchObject({
+      correctsEventId: original!.id,
+      initiator: { name: DEMO.adminName },
+      approval: { decision: "pending", reasons: s.reasons },
+    });
+    expect(session.endedAt).toEqual(correction!.clientTimestamp);
+    // What the admin approved in the backlog reads as decided, by name.
+    expect(original!.approval).toMatchObject({
+      decision: "approved",
+      decidedBy: { name: DEMO.adminName },
+    });
   });
 
   it("refuses an owner pool as the application pool before writing anything", async () => {
