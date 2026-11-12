@@ -50,6 +50,7 @@ const EXPECTED: Record<string, Gate> = {
   "customer.update": ADMIN,
   "customer.deactivate": ADMIN,
   "customer.reactivate": ADMIN,
+  "diagnostic.list": ADMIN,
   "job.list": ADMIN,
   "job.create": ADMIN,
   "job.update": ADMIN,

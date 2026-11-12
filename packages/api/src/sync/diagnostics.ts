@@ -9,8 +9,9 @@
 // kind where they could be read, an outcome and a code — under the caller's user and company.
 // Never the payload, a location, the record's own time or an error's text. Consumed by
 // core/trpc.ts (the sync procedure writes) and sync/push.ts (the loop notes).
-import { syncDiagnostics } from "@trader/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { companies, syncDiagnostics } from "@trader/db/schema";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { z } from "zod";
 
 import type { CallerTimeouts, Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
@@ -115,4 +116,55 @@ export async function writeDiagnostics(
     // No target, on purpose: the only unique rule a line can meet is one line per record and
     // code, and a record refused the same way again keeps its first line.
     .onConflictDoNothing();
+}
+
+// diagnostic.list (TASKS, Stage 4: "the office can find a refusal by worker and day"). One
+// caller's lines received on one day, newest first, for the admin. `userId` is who sent the
+// push — a foreman's push for a crew member is the foreman's — and `day` is the calendar day
+// the server received it, in the company's zone: never the day worked, which a line does not
+// hold. Expired lines are never returned, whether or not a write has deleted them yet. A
+// plain read under RLS, no locks. Consumed by routers/diagnostic.ts.
+export const LIST_LIMIT = 200;
+
+export const listInput = z.strictObject({
+  userId: z.uuid(),
+  day: z.iso.date(),
+});
+
+export const listOutput = z.array(
+  z.strictObject({
+    requestId: z.uuid(),
+    recordId: z.uuid().nullable(),
+    recordKind: z.string().nullable(),
+    outcome: z.enum(["rejected", "omitted", "request_failed"]),
+    code: z.string(),
+    receivedAt: z.date(),
+  }),
+);
+
+export async function listDiagnostics(
+  tx: Tx,
+  input: z.infer<typeof listInput>,
+): Promise<z.infer<typeof listOutput>> {
+  const rows = await tx
+    .select({
+      requestId: syncDiagnostics.requestId,
+      recordId: syncDiagnostics.recordId,
+      recordKind: syncDiagnostics.recordKind,
+      outcome: syncDiagnostics.outcome,
+      code: syncDiagnostics.code,
+      receivedAt: syncDiagnostics.createdAt,
+    })
+    .from(syncDiagnostics)
+    .innerJoin(companies, eq(companies.id, syncDiagnostics.companyId))
+    .where(
+      and(
+        eq(syncDiagnostics.userId, input.userId),
+        sql`${syncDiagnostics.createdAt} >= now() - make_interval(days => ${RETENTION_DAYS})`,
+        sql`(${syncDiagnostics.createdAt} at time zone ${companies.timezone})::date = ${input.day}::date`,
+      ),
+    )
+    .orderBy(desc(syncDiagnostics.createdAt), desc(syncDiagnostics.id))
+    .limit(LIST_LIMIT);
+  return rows.map((r) => ({ ...r, outcome: r.outcome as DiagnosticOutcome }));
 }
