@@ -172,7 +172,7 @@ describe("the demo run", () => {
     }
   });
 
-  it("shows the office its receipts, three priced and the rest still to price", async () => {
+  it("shows the office its receipts: three it priced, one it entered, the rest to price", async () => {
     const all = await admin().material.list({ show: "all" });
     expect(all.items).toHaveLength(EXPECTED.materials);
     expect(
@@ -181,11 +181,20 @@ describe("the demo run", () => {
         .map((m) => [m.original.description, m.cost])
         .sort(),
     ).toEqual(
-      COSTS.map((c) => [
-        RECEIPTS[c.receipt].description,
-        { cents: c.cents, currency: c.currency },
-      ]).sort(),
+      [
+        ...COSTS.map((c) => [
+          RECEIPTS[c.receipt].description,
+          { cents: c.cents, currency: c.currency },
+        ]),
+        [SCENARIOS.officeReceipt.description, SCENARIOS.officeReceipt.cost],
+      ].sort(),
     );
+    // One receipt is the office's own, by the admin, waiting for an admin who is not them.
+    expect(
+      all.items
+        .filter((m) => m.enteredByOffice)
+        .map((m) => [m.original.description, m.loggedBy.name, m.accounting]),
+    ).toEqual([[SCENARIOS.officeReceipt.description, DEMO.adminName, "pending"]]);
     const unpriced = await admin().material.list({});
     expect(unpriced.items).toHaveLength(EXPECTED.materials - EXPECTED.pricedMaterials);
     expect(unpriced.items.every((m) => m.cost === null)).toBe(true);
