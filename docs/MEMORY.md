@@ -167,7 +167,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `next dev` sometimes enters an endless "Fast Refresh rebuilding" reload on the first page
   load after a start (seen 3 times in about 12 starts on 2026-11-11, with and without the
   response headers, never in a built app). Cause not found; one guess is another process
-  touching the repository while Turbopack watches it. Restarting the dev server clears it.
+  touching the repository while Turbopack watches it. Restarting the dev server clears it;
+  on 2026-11-12 two restarts did not while the browser tab stayed on the looping page, and
+  the third did after the tab was sent to `about:blank` first.
 - A table body built as `rows.map((r) => [<tr key>, <tr key>])` is keyed by position at the
   outer level: when a row moves, React remounts its editor and its state (the result note) is
   gone. Wrap the pair in `<Fragment key={r.id}>`.
@@ -231,6 +233,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A rolled-back test cannot tell whether a closeout holds its job's row: the exclusive
   field-write lock stops a second submit either way. Only the real-commit tests
   (`push-commit.test.ts`, waiting on `from "jobs" … for share`) go red when that lock is gone.
+- A test fixture's event id is minted from its receipt time (`eventIn`), so id order always
+  agrees with receipt order: a test of an ordering's receipt key against its id key writes
+  the row itself with an id from a later instant (`labor/ledger.test.ts`).
+- The office table's narrow row labels only `number` cells: any other cell must read on its
+  own without its column heading ("Entered by Dana Ortiz", not the name alone), and an
+  empty one carries `data-empty` so its separator is dropped.
 
 ## Log
 
@@ -410,3 +418,24 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `closeout.get` read of the day as submitted would need its own TASKS line.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, the worker
   ledger read.
+
+### 2026-11-12 — Worker ledger read
+
+- **Did:** branch `worker-ledger-read` from `7fd3107`, four commits. `labor.ledger`
+  (`labor/ledger.ts`), admin-gated, with its gate line; the demo's corrected day read
+  through it; `/ledger` under People, checked in the browser on `trader_demo` at 390, 768
+  and 1280 — the corrected clock-out beside its replaced original, a deactivated person, an
+  empty range, a range past 31 days refused under its field, no sideways scroll, no control
+  under 48 pt. Watched red: the gate, the person lookup, the range filter and its bound, the
+  zone of the work date, the receipt and id ordering keys, the decisions, the effect, the
+  open-session pointer, the closeout match, `corrected`. No migration. 932 tests.
+- **Decided:** by the owner on 2026-11-12 ("execute", the plan's seven recommendations), the
+  row of that date in ARCHITECTURE and the DESIGN amendments (Labor ledger in the People
+  group; Worker ledger): the screen in this line, the open-session pointer, 31 days with no
+  pagination, no job or approval filter, `hasLocation` and no coordinates. Changed from the
+  plan: `Still open` is a pill, as on the closeout screen; an entry entered by someone else
+  says "Entered by" in its cell. Not done: no browser test, no Spanish office strings, no
+  link to a queue or a repair (neither screen exists). Not seen in the browser, covered by
+  the API tests only: the open-session line, a rejected session, a void.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, the approval
+  queue screen and labor repair from the ledger screen.
