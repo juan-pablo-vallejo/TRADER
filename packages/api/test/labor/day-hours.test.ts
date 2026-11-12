@@ -218,6 +218,137 @@ describe("labor.hours", () => {
     });
   });
 
+  it("sums the cells per worker and for the whole answer, and rounds nothing again", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin } = await office(tx);
+      // w1: 2.00 h on J and 3.50 h on K on the 5th. w2: 8.00 h on the 5th and 1.25 h on the
+      // 6th, then a session that waits, one that was rejected and one still open.
+      await shift(tx, d, d.w1, T("12:00"), T("14:00"));
+      await shift(tx, d, d.w1, T("14:30"), T("18:00"), d.K);
+      await shift(tx, d, d.w2, T("12:00"), T("20:00"));
+      await shift(tx, d, d.w2, T("12:00", "2026-10-06"), T("13:15", "2026-10-06"));
+      const waits = await shift(
+        tx,
+        d,
+        d.w2,
+        T("14:00", "2026-10-06"),
+        T("16:00", "2026-10-06"),
+      );
+      await pendingApproval(tx, d.companyId, { eventId: waits.started });
+      const refused = await shift(
+        tx,
+        d,
+        d.w2,
+        T("12:00", "2026-10-07"),
+        T("13:00", "2026-10-07"),
+      );
+      const refusal = await pendingApproval(tx, d.companyId, { eventId: refused.ended });
+      await tx
+        .update(approvals)
+        .set({
+          decision: "rejected",
+          decidedAt: new Date(T("12:00")),
+          decidedByUserId: admin.id,
+        })
+        .where(eq(approvals.id, refusal));
+      await eventIn(tx, d, {
+        worker: d.w2,
+        job: d.J,
+        type: "started",
+        client: T("12:00", "2026-10-08"),
+      });
+      await becomeApp(tx);
+
+      const all = await hours(tx, admin.who);
+      const w1 = {
+        approvedHundredths: 550,
+        pendingHundredths: 0,
+        pendingSessions: 0,
+        rejectedSessions: 0,
+        openSessions: 0,
+      };
+      const w2 = {
+        approvedHundredths: 925,
+        pendingHundredths: 200,
+        pendingSessions: 1,
+        rejectedSessions: 1,
+        openSessions: 1,
+      };
+      // By name: w1 before w2.
+      expect(all.workers).toEqual([
+        { worker: { id: d.w1, name: "w1" }, ...w1 },
+        { worker: { id: d.w2, name: "w2" }, ...w2 },
+      ]);
+      expect(all.totals).toEqual({
+        approvedHundredths: 1475,
+        pendingHundredths: 200,
+        pendingSessions: 1,
+        rejectedSessions: 1,
+        openSessions: 1,
+      });
+      // Every sum is the sum of the cells answered with it, figure by figure.
+      const keys = Object.keys(w1) as (keyof typeof w1)[];
+      for (const answer of [
+        all,
+        await hours(tx, admin.who, { workerId: d.w2 }),
+        await hours(tx, admin.who, { jobId: d.K }),
+        await hours(tx, admin.who, { from: "2026-10-06", to: "2026-10-06" }),
+      ]) {
+        for (const key of keys) {
+          const of = (cells: typeof answer.cells) =>
+            cells.reduce((sum, c) => sum + c[key], 0);
+          expect(answer.totals[key]).toBe(of(answer.cells));
+          for (const w of answer.workers) {
+            expect(w[key]).toBe(
+              of(answer.cells.filter((c) => c.worker.id === w.worker.id)),
+            );
+          }
+        }
+        expect(answer.workers.map((w) => w.worker.id).sort()).toEqual(
+          [...new Set(answer.cells.map((c) => c.worker.id))].sort(),
+        );
+      }
+      // Narrowed with the cells: one person, one job.
+      expect((await hours(tx, admin.who, { workerId: d.w2 })).totals).toEqual(w2);
+      expect((await hours(tx, admin.who, { jobId: d.K })).workers).toEqual([
+        { worker: { id: d.w1, name: "w1" }, ...w1, approvedHundredths: 350 },
+      ]);
+    });
+  });
+
+  it("totals a rounded cell as it stands, and answers zeros for a range with nothing in it", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin } = await office(tx);
+      // Two days of 20 min 10 s: 0.34 h each (0.336…), 0.68 h together — where the two
+      // days' milliseconds, summed and rounded once more, would be 0.67 h.
+      for (const day of [DAY, "2026-10-06"]) {
+        const start = new Date(T("12:00", day));
+        const end = new Date(start.getTime() + 20 * 60_000 + 10_000);
+        await shift(tx, d, d.w1, start.toISOString(), end.toISOString());
+      }
+      await becomeApp(tx);
+      const answer = await hours(tx, admin.who);
+      expect(answer.cells.map((c) => c.approvedHundredths)).toEqual([34, 34]);
+      expect(answer.totals.approvedHundredths).toBe(68);
+      expect(answer.workers[0]?.approvedHundredths).toBe(68);
+
+      expect(
+        await hours(tx, admin.who, { from: "2026-09-01", to: "2026-09-07" }),
+      ).toEqual({
+        timezone: "America/New_York",
+        cells: [],
+        workers: [],
+        totals: {
+          approvedHundredths: 0,
+          pendingHundredths: 0,
+          pendingSessions: 0,
+          rejectedSessions: 0,
+          openSessions: 0,
+        },
+      });
+    });
+  });
+
   it("moves a session from pending to approved when it is decided, and never counts a rejected one", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);

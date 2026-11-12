@@ -294,6 +294,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   it with `-p`, then `-p com.apple.BiometricKit_Sim.fingerTouch.match` (or `.nomatch`); on
   the emulator `adb emu finger touch 1`, which needs a device PIN and an enrolled finger
   first. Neither has been tried against a real prompt: no app shows one yet.
+- A link inside a sentence is one line of text tall (18 pt measured), under the 48 pt narrow
+  target: a link is a line of its own (`.back`, `.links a`), or the first cell of a table
+  row (`table.rowLink`), never a word in a paragraph.
+- A name link in a wide table cell wraps where the bare name did: a 49 pt row there is two
+  lines of name, not the link.
+- `materials/create-commit.test.ts`, "answers the same entry sent twice at once…", failed
+  once on 2026-11-12 in a full `pnpm check` of a documents-only tree, and passed 15 reruns
+  alone: 23505 on `materials_company_id_id_unique` from `material.create`'s insert
+  (`create.ts`, step 6). Its `ON CONFLICT` names `id`, and `materials` has a second unique
+  on `(company_id, id)`, which a conflict target does not cover — the likely cause, not
+  proven. One of two identical entries sent at once would answer a failure and write
+  nothing, and its resend `duplicate`. Rerun; the fix is its own line.
 
 ## Log
 
@@ -676,3 +688,38 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   strike.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, the
   reconciliation view and job cost on the job screen.
+
+### 2026-11-12 — Job cost on the job page, and the reconciliation view
+
+- **Did:** branch `reconciliation-and-job-cost` from `a7cd4e0`, four commits. `labor.hours`
+  also answers `workers` and `totals`, sums of its rounded cells. `/jobs/<id>`, linked from
+  the job's name on the jobs list: job cost to date from `job.cost`, what is in no total
+  listed apart, labor by day. `/reconciliation` under People: approved hours per person by
+  day and job for up to 31 work dates, and the days with something waiting, rejected or
+  open apart. Pure view modules (`cost-view.ts`, `reconcile-view.ts`) and `format.hours`.
+  Checked in the browser on `trader_demo` at 390, 768, 1024 and 1280 — the first job against
+  `EXPECTED_COST` to the cent, a job with nothing recorded, an unknown id, a non-id address,
+  the demo's two weeks with Priya's 6.50 h day and Elena's 8.50 h waiting, an empty range,
+  a backward and a 32-day range refused under the field with no request made, the job link
+  and the form by keyboard; no sideways scroll, no control under 48 pt narrow or 44 wide.
+  Watched red: a sum that skips a cell, a total rounded again from milliseconds, the worker
+  order, a dropped line beside the total, pending labor judged by hours, the line order,
+  hours through a float, approved cells unfiltered, a person's total recomputed in the
+  browser, rejected left out of unresolved. No migration, no new procedure. 1,079 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its four
+  recommendations), the row of that date in ARCHITECTURE and the DESIGN amendments
+  (Reconciliation in the People group; Job cost; Reconciliation): the view reads a range of
+  work dates now, and its period picker and carried adjustments moved to the pay-period
+  line in TASKS; totals come from the server. Changed from the plan: the two links under
+  "Not in these hours" are lines of their own, not words in the sentence; an id the server
+  will not parse reads "There is no job at this address". Not done: no browser test in CI,
+  no Spanish office strings, no receipt list on the job page, no link that opens the ledger
+  or the queue on the entry, Figma's screens as built. Not seen in the browser, covered by
+  tests only or not at all: two currencies, the open-session and rejected- or
+  voided-receipt lines, "No hours are approved on these days yet", the load-failure banner,
+  a worker's or foreman's refusal. For the owner: `TASKS.md` line 14, "Resync every other
+  clone", is still unticked; and the last `pnpm check` of this branch was red once on a
+  race in `material.create` from the previous line (Notes), green on the rerun — a fix
+  needs its own TASKS line.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, pay periods
+  (V1-D03; plan first: schema, money).

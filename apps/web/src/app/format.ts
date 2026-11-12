@@ -2,7 +2,8 @@
 // the locale formatter; dates as calendar days). A work date is a YYYY-MM-DD string and is
 // rendered from its parts: `new Date(iso)` would read it as UTC midnight, which is the day
 // before in Eastern. An instant is shown in the zone the server names, never the browser's.
-// Consumed by the roster, assignments, approvals, ledger, closeout and materials screens.
+// Consumed by the roster, assignments, approvals, ledger, closeout, materials and job
+// screens.
 import { strings } from "./strings";
 
 export function money(cents: number, currency: string): string {
@@ -60,6 +61,14 @@ export function cents(amount: string): number | null {
 // Cents as the amount an office types back: "89.99". By integer arithmetic, never a float.
 export function amount(value: number): string {
   return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, "0")}`;
+}
+
+// Hours from the server's integer hundredths, as they are read and compared: "8.00",
+// "0.05". By integer arithmetic, never a float; the figure is the server's and is not
+// rounded here (labor/hours.ts rounds, once).
+export function hours(hundredths: number): string {
+  const abs = Math.abs(hundredths);
+  return `${hundredths < 0 ? "-" : ""}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
 }
 
 // A receipt's facts as the office reads them: "2 gal Eggshell, white". The quantity is the

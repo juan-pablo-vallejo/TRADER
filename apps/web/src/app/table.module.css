@@ -44,6 +44,15 @@
   background: var(--canvas);
 }
 
+/* A row's name as a link to that record's own page: the whole row height is its target. */
+.rowLink {
+  /* A block-level box: an inline one would sit on the text baseline and make the row taller. */
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  min-height: var(--row);
+}
+
 /* A row's own buttons, where the row is acted on in place and not through an editor (the
    approval queue): trailing, and wide enough for the sentence a destructive action shows. */
 .table td.act {
@@ -144,6 +153,14 @@
   }
   .table tr:not(.editor) td[data-empty] {
     display: none;
+  }
+  /* 48 pt of target around a one-line name link, without making the row taller: its own
+     padding reaches into the row's padding above and below, and a name on two lines keeps
+     both. */
+  .rowLink {
+    min-height: 0;
+    padding: var(--space-3) 0;
+    margin: calc(-1 * var(--space-3)) 0;
   }
   .table tr:not(.editor) td.number::before {
     content: attr(data-label) " ";

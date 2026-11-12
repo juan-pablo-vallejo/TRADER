@@ -1,0 +1,48 @@
+/* The job page's own layout: the line under the title, the cost summary card, the list of
+   what is beside the total, and the gaps between sections. The table is table.module.css. */
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
+.line {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.explain {
+  margin: 0 0 var(--space-3);
+  color: var(--ink-secondary);
+}
+.section {
+  margin: 0 0 var(--space-6);
+}
+.section h2 {
+  margin: 0 0 var(--space-2);
+}
+.total {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+.parts {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: var(--hairline) solid var(--border);
+  display: grid;
+  gap: var(--space-1) var(--space-4);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.parts dt {
+  color: var(--ink-secondary);
+}
+.parts dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.apart {
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+}
+.apart li + li {
+  margin-top: var(--space-2);
+}

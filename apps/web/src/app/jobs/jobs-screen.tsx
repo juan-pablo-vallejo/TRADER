@@ -6,9 +6,10 @@
 // table on the client. The page header's action opens the create form; the location waits
 // behind a disclosure. Each row is text plus one Edit toggle; the editor row beneath holds the
 // details with Save, the crew with Assign, and the status with Set status — three procedures,
-// three sections, three answers. A `rejected` answer reads beneath the control it came from. Consumed by
-// page.tsx.
+// three sections, three answers. A `rejected` answer reads beneath the control it came from.
+// A job's name opens its own page, where its cost to date is. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
@@ -377,7 +378,9 @@ function JobsTable({
             <Fragment key={row.id}>
               <tr>
                 <td data-label={strings.job} className="body-strong">
-                  {row.name}
+                  <Link href={`/jobs/${row.id}`} className={table.rowLink}>
+                    {row.name}
+                  </Link>
                 </td>
                 <td data-label={strings.customer}>{row.customer.name}</td>
                 <td
