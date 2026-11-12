@@ -224,6 +224,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A new audited action is a member of `AuditEntry` (`core/audit.ts`), a line in the inventory
   test's `WRITERS` and in the demo's `EXPECTED_AUDIT`, and a decision row; the compiler and
   the two tests fail until all three agree.
+- The office closeout screen commits a closeout, which can never be deleted: check it by hand
+  only in `trader_demo` and run `pnpm demo --reset` after; its web test has a disposable
+  database. The demo has no open session: to see the blocked submit, insert one `started`
+  row into `trader_demo` as the owner before the check.
+- A rolled-back test cannot tell whether a closeout holds its job's row: the exclusive
+  field-write lock stops a second submit either way. Only the real-commit tests
+  (`push-commit.test.ts`, waiting on `from "jobs" … for share`) go red when that lock is gone.
 
 ## Log
 
@@ -376,3 +383,30 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   not archived — the PRD sentence is the owner's to amend.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, admin
   closeout (V1-D08; plan first: closeout locks).
+
+### 2026-11-12 — Admin closeout (V1-D08)
+
+- **Did:** branch `admin-closeout` from `837c3f7`, four commits. `lockCloseoutScope` beside the
+  foreman's scope; `closeout.review` gated to foreman and admin, `closeout.submit` admitting
+  both in the procedure; no migration, no new procedure. `/closeout` under Work: job and
+  date, the review, then one submit, checked in the browser on `trader_demo` at 390, 768 and
+  1280 — a worked day submitted by keyboard, an archived crew-less job closed with its
+  status kept, an open session blocking with its reason, a closed day shown locked, no
+  sideways scroll, no control under 48 pt. Watched red: the review gate, the admin's
+  self re-read, the missing-job refusal, the job lock (review and, through the real-commit
+  push tests, submit), the role check in submit, a crew-less refusal, the id's version.
+  918 tests.
+- **Decided:** by the owner on 2026-11-12 ("execute", the plan's seven recommendations), the
+  row of that date in ARCHITECTURE and the DESIGN amendment (Closeout in the Work group): a
+  deactivated crew's job is in an admin's scope; no audit row; no read of a closeout as
+  submitted; flags only from the review's own fields; no demo change. Changed from the plan:
+  the push-first test answers `sessions_open`, as the foreman's does, not `review_stale`.
+  Not done: no browser test, no Spanish office strings, no approval state in the review.
+  Worth knowing: the role check in `submit.ts` is one of three that refuse a worker (the
+  scope and `lockActiveSelf` are the others), so removing it alone turns no test red. For
+  the owner: DESIGN's Closeout row reads as saying the status will not change for a job with
+  no crew too, while ARCHITECTURE writes it for any job not archived; the screen says "will
+  not change" only for an archived job. The DESIGN sentence is the owner's to amend. A
+  `closeout.get` read of the day as submitted would need its own TASKS line.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, the worker
+  ledger read.
