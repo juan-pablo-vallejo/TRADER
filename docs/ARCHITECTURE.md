@@ -196,11 +196,15 @@ Each rule's decision row carries the detail; rows marked to be built name their 
 - **Identity.** Every user row has an email, unique per company; an invitation binds one
   person. Pilot workers each have an individual, reachable address; no shared account, and no
   sign-in path without an email is built (V1-D06).
-- **Dated assignments** (to be built, Stage 4). An admin assigns any active worker to any job
-  of the company, whatever the worker's crew membership. An assignment is never read by push
-  authority, validation, the fold, approvals, closeouts, pay or invoices, creates no
-  `crew_members` row, and widens no read. The office read derives, per assignment, whether
-  push authority would admit that worker on that job now, and reports a mismatch (V1-D07).
+- **Dated assignments.** An admin assigns any active user to any job of the company that is
+  not archived, whatever the person's crew membership or role. An assignment is never read by
+  push authority, validation, the fold, approvals, closeouts, pay or invoices, creates no
+  `crew_members` row, and widens no read. Its day is a calendar day in `companies.timezone`
+  and its expected start and end are wall-clock times on that day, kept as written and never
+  turned into an instant or a duration. The office read derives, per assignment, whether
+  push authority would admit that person on that job now, and reports what stands in the
+  way; a person reads their own assignments and nobody else's, each with its job's name and
+  address — the one thing a plan shows them that their crews' jobs might not (V1-D07).
 - **Admin closeout** (to be built, Stage 4). `closeout.review` and `closeout.submit` also
   admit an admin, for any job of the company — archived or with no crew included — with the
   input, answers, own-id-first retry, fingerprint, field-write lock and lock order unchanged.
@@ -273,7 +277,8 @@ One global lock order, so no two writers can wait on each other:
 1. `jobs` rows, 2. `customers` rows, 3. `crews` rows, 4. `users` rows in id order (the caller
    re-read among them, `lockActiveSelf`), 5. `companies` row, 6. the company's field-write
    advisory lock (shared by every labor and material writer, exclusive for a closeout), 7. the
-   worker's advisory lock, 8. `materials` rows, 9. the `approvals` row.
+   worker's advisory lock, 8. `materials` rows, 9. the `approvals` row, 10. `job_assignments`
+   rows.
 
 A holder of the field-write lock takes no row lock on the first five beyond foreign-key
 `KEY SHARE`. Every stamp that must sort after a lock is read from the server's clock after
@@ -504,3 +509,4 @@ Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersed
 | 2026-11-12 | A labor repair is one audit row per accepted call, not one per event: `entity_id` NULL, `after` the worker's id and each new event's id, kind and target. A set is written and validated as one, and each event already records its initiator and receipt | — |
 | 2026-11-12 | An audit row's `created_at` is `clock_timestamp()` at the insert, set by the writer, not the column's transaction-start default: rows sort in the order their writes took effect after the writers' locks (Concurrency) | — |
 | 2026-11-12 | No audit read procedure and no office screen in V1; the rows are read by the owner in SQL. The tenant policy and the SELECT grant already bound any later reader | — |
+| 2026-11-12 | Dated assignments, as built (V1-D07): table `job_assignments` (0030, 0031) — company, user, job, `work_date`, `expected_start`, `expected_end` — one row per person, job and day, several jobs in a day allowed and overlapping times not judged; tenant policy under FORCE, composite foreign keys, and SELECT, INSERT, UPDATE and DELETE for the application role, because a plan is edited and removed and nothing references it. Zone and DST: `work_date` is the calendar day in `companies.timezone` as the office wrote it, a business key never derived; the times are `time` without zone, minute precision, `HH:MM` on the wire; the server never converts them to an instant, compares them with now or computes a duration, so a time that does not exist or occurs twice on a clock-change day is kept and shown as written; the end is after the start on the same day, so an overnight shift is not one row; no day is refused for being past. Writers, admin-gated: `assignment.create` plans one person on one job for 1–14 named days in one statement, `ON CONFLICT DO NOTHING` on the natural key, answering `created` with the counts written and already there, `unchanged`, or `rejected` `user_inactive` / `job_archived`; `assignment.update` changes the day and the times only (`already_planned` on a taken day) and is allowed whatever has become of the job or the person; `assignment.remove` deletes, a row that is not visible answering `unchanged`. A job or a person that is missing or another company's is FORBIDDEN; any active user may be planned, whatever their role; no writer reads crew membership. Locks: `create` takes the job then the users rows `FOR SHARE`, as a push does; `update` and `remove` re-read the caller, then the plan's row, position 10 in the lock order; concurrent edits of one plan are serialized by its row and the later stands. Reads: `assignment.list`, admin-gated, an inclusive range of at most 31 days with optional person and job filters, each row with `mayClockIn` — the worker active and `mayStartOn` of `sync/scope.ts`, the function push uses, asked of the planned person — and `blockedBy` (`worker_inactive`, `job_archived`, `crew`), read without locks; `assignment.mine`, any active user, takes no person and answers the caller's own rows with the job's id, name and address only, its query the one the pull extension will use (V1-D12). Not audited (V1-D20's inventory is closed). Office screen `/assignments` under Work (DESIGN, Assignment row) | 2026-11-11 V1-D07 '(zone and DST rules stay that task's)'; 2026-11-06 dated assignments 'zone and DST rules … decided in the consuming task'; V1-D07 and PRD (Jobs and location) 'any worker … any of the company's jobs', narrowed to an active person and a job not archived; 'widens no read', for the planned person's own read of that job's name and address |

@@ -1,0 +1,62 @@
+/* The assignments screen's own layout: the week bar, the create form's grid and the editor's
+   grid. The data table itself is table.module.css. */
+.explain {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.weekBar {
+  display: grid;
+  gap: 0 var(--space-3);
+  margin-bottom: var(--space-2);
+}
+.weekSteps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.formGrid,
+.editorGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+/* Start and end side by side at every width: two short fields. */
+.times {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 var(--space-3);
+}
+.plannedLabel {
+  color: var(--ink-secondary);
+}
+.times,
+.planned {
+  font-variant-numeric: tabular-nums;
+}
+.help {
+  display: block;
+  color: var(--ink-secondary);
+}
+/* A day and a pair of times are read whole, never broken across lines. */
+.date,
+.planned {
+  white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+  .weekBar {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .formGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .editorGrid {
+    grid-template-columns: 1fr 1fr;
+    max-width: 640px;
+  }
+  .clockIn {
+    max-width: 320px;
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+}

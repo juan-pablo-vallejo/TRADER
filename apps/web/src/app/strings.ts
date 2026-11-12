@@ -17,6 +17,7 @@ export const strings = {
   customers: "Customers",
   jobs: "Jobs",
   crews: "Crews",
+  assignments: "Assignments",
   profile: "Profile",
   work: "Work",
   people: "People",
@@ -136,6 +137,49 @@ export const strings = {
   hasInvoices: "This job has invoices; its customer can no longer change.",
   archivedNote:
     "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
+
+  // Assignments
+  planWork: "Plan work",
+  emptyAssignments: "Nothing is planned for these days.",
+  assignmentsExplain:
+    "A plan says where someone is expected and when. It does not let anyone clock in: that is still the job's crew.",
+  weekOf: "Week of",
+  previousWeek: "Previous week",
+  nextWeek: "Next week",
+  person: "Person",
+  allPeople: "Everyone",
+  everyJob: "Every job",
+  chooseJob: "Choose a job",
+  planFrom: "From",
+  planThrough: "Through",
+  expectedStart: "Start",
+  expectedEnd: "End",
+  date: "Date",
+  planned: "Planned",
+  clockIn: "Clock-in",
+  savePlan: "Save plan",
+  removePlan: "Remove plan",
+  removePlanEffect: (name: string, job: string) =>
+    `${name} will no longer be planned on ${job} that day. Their hours and their crews do not change.`,
+  planRemoved: "Plan removed.",
+  plannedDays: (created: number, existing: number) =>
+    `Planned ${created === 1 ? "1 day" : `${created} days`}.` +
+    (existing === 0
+      ? ""
+      : ` ${existing === 1 ? "1 day was" : `${existing} days were`} already planned and ${existing === 1 ? "was" : "were"} left as ${existing === 1 ? "it was" : "they were"}.`),
+  alreadyPlannedAll: "Every one of those days is already planned. No change.",
+  endAfterStart: "The end must be after the start.",
+  throughAfterFrom: "The last day cannot be before the first.",
+  tooManyDays: "Plan at most 14 days at a time.",
+  alreadyPlanned: "They are already planned on this job that day.",
+  jobArchived: "That job is archived.",
+  planGone:
+    "This plan is no longer there, or you can no longer change it. Nothing was saved.",
+  notOnCrew: "Not on this job's crew",
+  notOnCrewHelp:
+    "This plan does not let them clock in here — add them to the crew to allow it",
+  jobArchivedHelp: "Nobody can clock in on an archived job",
+  workerInactiveHelp: "A deactivated person cannot clock in",
 
   // Refused entries
   refusals: "Refused entries",

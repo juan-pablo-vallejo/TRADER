@@ -35,6 +35,11 @@ const ADMIN = ["admin"] as const;
 const EXPECTED: Record<string, Gate> = {
   "approval.queue": ADMIN,
   "approval.decide": ADMIN,
+  "assignment.list": ADMIN,
+  "assignment.mine": "protected",
+  "assignment.create": ADMIN,
+  "assignment.update": ADMIN,
+  "assignment.remove": ADMIN,
   "closeout.review": ["foreman"],
   "closeout.submit": "protected",
   "crew.list": ADMIN,
