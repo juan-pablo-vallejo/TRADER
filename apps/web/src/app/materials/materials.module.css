@@ -1,0 +1,36 @@
+/* The materials screen's own layout: the lines above the table, the two filters, the button
+   beneath the list. The table itself is table.module.css. */
+.explain {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-secondary);
+}
+.zone {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.filters {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+/* A time and an amount are read whole, never broken across lines. */
+.when,
+.cost {
+  white-space: nowrap;
+}
+.pill {
+  margin-left: var(--space-2);
+}
+.more {
+  margin-top: var(--space-4);
+}
+/* One short field: it does not stretch across a wide editor. */
+.costForm {
+  max-width: 20rem;
+}
+
+@media (min-width: 768px) {
+  .filters {
+    grid-template-columns: 1fr 1fr;
+    max-width: 40rem;
+  }
+}

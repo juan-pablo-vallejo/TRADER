@@ -410,6 +410,28 @@ export const strings = {
     review_stale: "The day changed since this review. Check it again, then submit.",
   },
 
+  // Materials (DESIGN, Material cost)
+  materials: "Materials",
+  materialsExplain:
+    "What each receipt cost, as read off the receipt. A cost can be entered or changed at any time, on a closed-out day too; nothing else about a receipt changes here.",
+  loggedByName: (name: string) => `Logged by ${name}`,
+  cost: "Cost",
+  notPriced: "Not priced",
+  receiptTotal: "Receipt total",
+  saveCost: "Save cost",
+  clearCost: "Clear cost",
+  clearCostEffect: "This receipt goes back to not priced. Nothing else about it changes.",
+  showUnpriced: "Not priced",
+  showAllReceipts: "All receipts",
+  allJobsOption: "All jobs",
+  emptyUnpriced: "Every receipt has a cost.",
+  emptyMaterials: "No receipts to show.",
+  materialStanding: {
+    pending: "Waiting for approval",
+    rejected: "Rejected",
+    voided: "Voided",
+  },
+
   // Profile
   contactPhone: "Contact phone",
   managedBySignIn: "Managed by your sign-in provider",
