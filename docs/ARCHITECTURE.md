@@ -19,7 +19,7 @@ flowchart LR
   M -->|"push events (UUIDv7, idempotent) · pull snapshot"| API
   API --> DB[("Postgres · Neon · system of record · RLS")]
   AUTH["Clerk · passkeys"] -.-> M & W & API
-  API -->|"PDF on demand · CSV exports"| OFFICE([Office / QuickBooks])
+  API -->|"PDF on demand · CSV and IIF exports"| OFFICE([Office / QuickBooks])
 ```
 
 | Piece          | Role                    | Notes                                                                                   |
@@ -85,24 +85,147 @@ change is wrong, not the test.
   never run at once. A record stuck `syncing` is reclaimed after two minutes.
 - Ordering: `client_timestamp`, then `server_timestamp`, then `id`. Device skew is measured per
   push as `|device_now − server_now|` with a 5-minute tolerance; a skewed event is still
-  written, ordered by `server_timestamp`, flagged, and routed to approval.
-- Versioning on two axes: `schema_version` per event, accepted forever through upcasters; a
-  protocol version per request. The kill switch ships in build 1: `status.get`, public, answers
-  `normal`, `read_only`, `paused` or `update_required`; no state stops capture or drops a record.
-- Sync bookkeeping — state, attempts, next attempt — stays on the device and is never sent.
+  written, flagged, and routed to approval.
+- A suspicious time is reviewed, never replaced (V1-D01). The event's effective instant is the
+  `client_timestamp` it was captured with, flagged or not; `clock_skewed` is evidence and an
+  approval reason, and a person decides. To be built, TASKS Stage 4: the fold today takes
+  `server_timestamp` for a `clock_skewed` event (`labor/fold.ts`, `effectiveAt`), and the
+  closeout's day query repeats that rule. The change is a change of fold semantics: it takes
+  a new review-fingerprint version and a statement of how existing closeouts are read.
 - Event time is judged by the server as well as asserted by the device (to be built, TASKS
-  Stage 4): an event that claims it was captured online at the time it carries, yet differs
-  from its receipt by more than the tolerance, is flagged `clock_skewed` and goes to approval;
-  an event timed later than its receipt plus the tolerance is rejected `time_in_future`.
-- `captured_offline` is true when the device's first delivery attempt for the record began
-  more than two minutes after capture. The device records it; the server check above is what
-  keeps a false "online" from skipping approval.
-- A record the server did not accept leaves a trace (to be built, TASKS Stage 4): one
-  minimized line through the error-reporting seam — request id, record id, kind, result code,
-  user id, company id — and never the payload.
+  Stage 4; push compares nothing with the receipt today): an event that claims it was captured
+  online at the time it carries, yet differs from its receipt by more than the tolerance, is
+  flagged `clock_skewed` and goes to approval at its captured time; an event timed later than
+  its receipt plus the tolerance is rejected `time_in_future`. That rejection writes nothing,
+  so the ledger and every closeout are untouched; the record stays on the phone under its id,
+  shown as needing attention, and the office recovers the hours through `labor.repair`.
+- `captured_offline` is true unless the device held a confirmed, fresh API reachability
+  reading when the record was captured; unknown, absent or stale is offline (V1-D02). Capture
+  reads the last reading and never waits for a probe. Delivery delay is not the test. The
+  device records the flag; the server check above is what keeps a false "online" from skipping
+  approval. The reading and its staleness bound are the device's, built in Stage 5.
+- Rejected-record diagnostics (V1-D04; to be built, TASKS Stage 4; nothing is recorded for a
+  rejection today): a push record answered `rejected` or omitted after a failure, whose id
+  the server could read, and a request that failed as a whole, each leave one minimized line —
+  request id, record id where there is one, kind, result code, user id, company id — and
+  never the payload, a location or a time. Retention is bounded; the store and the period are
+  that task's plan. A record that never reached the server leaves nothing there: the device's
+  outbox is the durable copy and the only recovery path for it.
+- Versioning on two axes: `schema_version` per event, accepted forever through upcasters; a
+  protocol version per request.
+- Sync bookkeeping — state, attempts, next attempt — stays on the device and is never sent.
 - The pull snapshot grows by optional fields within protocol 1, which clients ignore when they
   do not know them; a new protocol version is for a change in meaning. The snapshot is derived
-  per request and carries no `schemaVersion`.
+  per request and carries no `schemaVersion`. The extension (V1-D12; to be built, Stage 5)
+  adds, each scoped to what the caller may already act on: coordinates and detection radius of
+  the jobs the caller may start on; those jobs' customer name; the caller's own dated
+  assignments; the stored approval reasons of the caller's own entries. Nothing of another
+  worker's, no cost, no rate, no contact detail.
+
+### Operational sync states
+
+`status.get`, public, ships in build 1 and answers the state below. No state stops capture or
+drops a record.
+
+| State             | Push                        | Pull                        |
+| ----------------- | --------------------------- | --------------------------- |
+| `normal`          | Allowed                     | Allowed                     |
+| `read_only`       | Temporarily restricted      | Allowed                     |
+| `paused`          | Temporarily restricted      | Temporarily restricted      |
+| `update_required` | Restricted until compatible | Restricted until compatible |
+
+The server enforces the state, not only the client (V1-D21; to be built, TASKS Stage 6).
+Today the state is advisory: `sync.push` and `sync.pull` never read it, and only a
+cooperative client obeys. When built:
+
+- A restricted call answers one stable, retryable result that names the state. It is a
+  transport-level answer about the service, never a per-record `rejected`: no record is
+  marked permanent, needing attention or failed because of it.
+- The state is read at a transaction boundary. A push checks before each record's
+  transaction and never inside one, so a record is wholly written or not started; a batch
+  interrupted by a change of state returns the results so far and omits the rest, which the
+  client retries as it retries any omitted record.
+- A client that meets a restricted answer keeps its outbox, every event id and every captured
+  record, stops sending, and tries again after a fresh `status.get`; under `update_required`
+  it keeps capturing and tells the user to update.
+- The states, their meanings, `status.get` and protocol 1 are unchanged.
+
+## Office authority
+
+Each rule's decision row carries the detail; rows marked to be built name their TASKS stage.
+
+- **Roles.** A worker writes own labor and receipts under push authority, reads own entries
+  through `sync.pull`, and writes own `name` and `phone` (`me.update`). No role has an UPDATE
+  path on a ledger row; a correction is an appended row. A foreman's authority is the crews
+  they lead. An admin's is the company: bounded by RLS, by every append-only and frozen-row
+  guard, and by the decision rules below (V1-D11).
+- **Identity.** Every user row has an email, unique per company; an invitation binds one
+  person. Pilot workers each have an individual, reachable address; no shared account, and no
+  sign-in path without an email is built (V1-D06).
+- **Dated assignments** (to be built, Stage 4). An admin assigns any active worker to any job
+  of the company, whatever the worker's crew membership. An assignment is never read by push
+  authority, validation, the fold, approvals, closeouts, pay or invoices, creates no
+  `crew_members` row, and widens no read. The office read derives, per assignment, whether
+  push authority would admit that worker on that job now, and reports a mismatch (V1-D07).
+- **Admin closeout** (to be built, Stage 4). `closeout.review` and `closeout.submit` also
+  admit an admin, for any job of the company — archived or with no crew included — with the
+  input, answers, own-id-first retry, fingerprint, field-write lock and lock order unchanged.
+  The foreman path is as today: the job's current crew's foreman, a crew-less job refused. An
+  archived job's status is still never written by a closeout (V1-D08).
+- **Office material entries** (to be built, Stage 4). An admin inserts a receipt the crew
+  never logged. The row records that it is office-originated and who entered it — stored
+  provenance, not inferred from the logger's role. It is a new row under the field-write lock
+  and the ordinary receipt rules: on a closed-out day it is `after_closeout`, pending, and
+  never decided by the admin who entered it. It never updates a logged, sealed or frozen
+  receipt; those change only through `material.correct` (V1-D09).
+- **Deciding approvals.** Implemented: a receipt's logger and a correction's submitter never
+  decide their own row, and a labor event's worker never decides that event (API and SQL);
+  the admin who wrote a repair for another person may decide it. To be built, Stage 4: an
+  admin's own labor needs no approval (V1-D10 as amended) — no approvals row is written for
+  an event whose worker is an admin, whether pushed or written through `labor.repair` for
+  themself; the evidence columns are stored as for anyone. Receipts and material corrections
+  are unchanged, and so is a repair of another person's labor.
+- **Audit trail.** `audit_log` rows are written (to be built, Stage 4; no writer exists) by
+  the invitation, role, activation and deactivation, and pay-rate writers, by `labor.repair`
+  and by `approval.decide` — nothing else. Each row carries the actor, the company, the
+  action, the entity and the fields that changed, and is inserted in the transaction of the
+  write it records, so a rolled-back write leaves no row and a committed one always has its
+  row. No request-level or generic write interception; no snapshot of a column the action did
+  not change (V1-D20).
+
+## Accounting and exports
+
+None of this is built except the tables and their guards; Stage 4 builds hours, cost and pay
+periods, Stage 7 invoices and their exports.
+
+- **Rounding.** Durations are summed in milliseconds per worker, job and work date; that
+  daily total is rounded half-up to 0.01 h. Approved-hours accounting, job cost, the payroll
+  CSV and the quantity of an invoice line drawn from labor read that one figure from one
+  derivation. Ledger rows are never rounded; money stays integer cents (V1-D13).
+- **Pay-period close.** A period closes with approvals still pending in it once the caller
+  has acknowledged them. The acknowledgment is part of the close call, judged by the server
+  against what is unresolved at that moment, not only a step on the screen; its form is the
+  pay-period task's plan. A closed period and what it exported are frozen (V1-D03).
+- **Late adjustments.** Hours approved, corrected or repaired after their period closed are
+  exported once, as adjustment lines in the next period to close, each carrying its original
+  work date and the signed difference from what earlier closed periods exported for that
+  worker, job and date. The basis for "already exported" is stored at close, so an adjustment
+  is derived deterministically, appears in exactly one period, and no closed export is
+  recomputed. How that basis is stored is the pay-period task's plan.
+- **Invoice pricing.** A draft line's `unit_price_cents` is entered by an admin. A line may
+  take its description and quantity from job labor or a material as a snapshot; no rule
+  derives a price from a pay rate or a receipt's cost. Issue freezes the lines (V1-D14).
+- **Credit and void.** The sum of an invoice's credit memos never exceeds its total as
+  issued; an invoice with a memo cannot be voided; numbering and the issue lock are as the
+  2026-11-03 rows state (V1-D15).
+- **Exports.** One authoritative snapshot — the issued invoice and its frozen lines, or the
+  closed period's approved hours — and independent adapters over it, none of which writes:
+  QuickBooks Online invoice CSV, QuickBooks Desktop invoice IIF, payroll-hours CSV, and the
+  full data export. Each adapter's columns are checked against Intuit's current import
+  documentation when it is built, never recalled. What an edition's import does not support
+  (some tax configurations, credit memos) is not exported as if it were: the export screen
+  gives the figures and the manual entry and reconciliation steps (DESIGN). No payroll
+  processing, no accounting API, no automatic synchronization (V1-D16, V1-D18, V1-D19).
 
 ## Concurrency
 
@@ -148,8 +271,8 @@ None of these exists yet; each is a line in TASKS Stage 6 and a release gate in 
 - A content security policy and transport security, tested against the deployed app. The
   baseline headers (`nosniff`, frame denial, referrer policy) are already set for a built app
   in `apps/web/next.config.ts`.
-- A server-enforced sync brake: the kill switch is advisory by design and cannot stop a client
-  that ignores it.
+- Server-enforced sync states (Sync protocol, Operational sync states): until it is built the
+  state is advisory and cannot stop a client that ignores it.
 - A readiness check that touches the database and the role; environment validated at start.
 - Backups, a rehearsed restore, and a written migrate-and-rollback procedure.
 - An error reporter that keeps the minimized event and sends nothing else.
@@ -184,6 +307,7 @@ packages/*/test/         mirrors `src/` by folder; `helpers.ts` and `setup.ts` a
 
 One line each; the date is when it was settled. A change is a new row naming the row it supersedes, never an edit to an old row.
 Rows dated 2026-11-05 or earlier cite another as `row N`, meaning line N − 3 of this file at `779894f`; later rows cite one by date and subject.
+Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersedes a row of the same date, the `V1-Dnn` row governs.
 
 <!-- prettier-ignore -->
 | Date       | Decision                                                                                 | Supersedes                        |
@@ -304,3 +428,22 @@ Rows dated 2026-11-05 or earlier cite another as `row N`, meaning line N − 3 o
 | 2026-11-11 | Repository structure: `packages/api/src/core/` holds request plumbing; tests mirror `src/` by folder; the caller lock, the server clock and the closed-day query each have one home (`core/locks.ts`, `core/clock.ts`, `closeout/day.ts`). A gate inventory test names every procedure with its gate. Lint is type-aware for unawaited and misused promises | — |
 | 2026-11-11 | Office web behaviour (DESIGN): every write answers with a result note; a destructive action shows its effect and is confirmed by a second press; a failed load says nothing changed and offers a retry; a row being edited stays in a filtered list until its editor closes; the office is online-only, so a request made offline fails at once and nothing is queued (`networkMode: "always"`); route-level error and not-found screens; baseline response headers on pages and the API | 2026-11-07 office web client 'any other failure the attention banner', refined |
 | 2026-11-11 | Still open, each a TASKS line: the Neon owner role and backups under forced RLS; worker sign-in without an individual email; an admin's own entries; closeout of archived and crew-less jobs; the client-safe contract export; `status.get` answering without running the identity adapter; the startup guard also checking `session_user` and policy presence | — |
+| 2026-11-11 | V1 owner decision register: the owner approved decisions V1-D01 to V1-D21 for a documentation-only alignment of the six documents; each row below beginning `V1-Dnn` is one of them, and none is implemented by this change. V1-D05 — the no-line-cap policy of the 2026-11-11 caps row stands: documents stay concise, single-home and without a cap, and no document is added | RULES 'never edit PRD, ARCHITECTURE or DESIGN to match code', for this alignment only (no document is edited to match code) |
+| 2026-11-11 | V1-D01 — Suspicious event times (to be built, Stage 4): an event's effective instant for ordering, intervals and `work_date` is always its `client_timestamp`; `clock_skewed` — from the per-push reading or the receipt comparison — is stored evidence and the `clock_skewed` approval reason, never a substitution of `server_timestamp`. An event timed after its receipt plus the tolerance is `rejected` `time_in_future`: nothing is written, the record stays on the device under its id, and the office recovers through `labor.repair`. The fold's `effectiveAt` and the closeout day query implement the superseded rule today; the change takes a new fingerprint version (the 2026-11-04 `v1.` row forbids editing v1) and states how closeouts sealed under the old fold are read — none exists outside development and CI databases | 2026-11-04 labor fold '`server_timestamp` when `clock_skewed`'; 2026-11-11 event-time plausibility 'ordered by `server_timestamp`'; Sync protocol 'ordered by `server_timestamp`' |
+| 2026-11-11 | V1-D02 — `captured_offline` is capture evidence from confirmed API connectivity at capture: false only when the device holds a fresh confirmed reachability reading; unknown, absent or stale is offline; capture never waits on a probe; delivery delay alone decides nothing (to be built with the device, Stage 5; the server stores the flag as sent). The receipt comparison of V1-D01 stays the server's check on a false 'online' | 2026-11-11 '`captured_offline` defined: … first delivery attempt … more than two minutes after capture'; restores 2026-11-05 '`offline` is capture evidence' |
+| 2026-11-11 | V1-D03 — Pay-period close (to be built, Stage 4): an admin may close a period with approvals unresolved in it after an explicit warning and an acknowledgment the server judges; a closed period and its export are immutable; hours approved, corrected or repaired after the close appear exactly once, as explicit signed adjustments in the next period to close, carrying the original work date, derived from a basis stored at close | 2026-11-11 pay-period membership, extended (its membership and INSERT-trigger rules stand); PRD 'everything that still blocks the close' |
+| 2026-11-11 | V1-D04 — Rejected-record diagnostics (to be built, Stage 4): minimized lines for rejected or omitted push records the server could identify and for requests that failed as a whole; no payload, location or time; bounded retention, the store and period decided in the task's plan; the device outbox stays the durable copy, and nothing is claimed for a record the server never received | 2026-11-11 rejected-record trace 'every push record … writes one minimized line', narrowed to identifiable records and given retention; PRD 'the server keeps a record that it was refused' as an unconditional promise |
+| 2026-11-11 | V1-D06 — Pilot identity: every pilot worker has an individual, accessible email address; invitation-only, passkeys and the email-code fallback and recovery are unchanged; shared worker accounts are not permitted; no sign-in or recovery path without an individual email is designed. `users.email` is already NOT NULL and unique per company | 2026-11-11 still open 'worker sign-in without an individual email'; 2026-11-06 open item of the same name |
+| 2026-11-11 | V1-D07 — Dated assignments (to be built, Stage 4): an admin may assign any worker to any job of their company whatever the worker's crew membership; assignments stay informational and never create membership, authority or access to another worker's records; the office read reports, per assignment, whether push authority would admit the worker on the job | 2026-11-06 dated assignments 'writers, membership at assignment time … decided in the consuming task', for writers and membership (zone and DST rules stay that task's) |
+| 2026-11-11 | V1-D08 — Admin closeout scope (to be built, Stage 4): an admin may review and submit a closeout for any job of the company, archived and crew-less included; review, locks, lock order, fingerprint, own-id-first retry and append-only history unchanged; a foreman's scope and answers unchanged, a crew-less job still refused to a foreman; an archived job's status is still not written | 2026-11-06 admin day closeout 'archived and crew-less jobs are that task's decision'; 2026-11-11 still open 'closeout of archived and crew-less jobs' |
+| 2026-11-11 | V1-D09 — Office-created material entries (to be built, Stage 4): an admin may insert a receipt the crew never logged; provenance — office-originated, entered by whom — is stored on the row; the ordinary receipt rules apply (field-write lock, `after_closeout` approval never decided by its logger); no logged, sealed or frozen receipt is updated by it | 2026-11-07 crew membership lifecycle 'office receipt entry is a later task'; 2026-11-07 open 'office receipt entry' |
+| 2026-11-11 | V1-D10 — As registered: an administrator's own labor requires approval by a different administrator, with no single-administrator exception. Amended by the owner in the alignment session the same day, on a direct question: an administrator's own labor never needs approval, flagged or not (to be built, Stage 4). No approvals row is written for a labor event whose worker is an admin, pushed or self-repaired; evidence columns are stored unchanged. Unchanged: a receipt is never decided by its logger, a correction never by its submitter, a worker's or foreman's event never by that worker; a repair an admin writes for another person is pending and may be decided by its writer (2026-11-11 'An admin may approve a repair they wrote'). Today push and `labor.repair` write the row, the deferred triggers of 0022 and 0026 require it at commit, and `approval.decide` and 0025 refuse the worker's own decision; relaxing the triggers for these events is a constraint relaxation under invariant 8 | V1-D10 as registered; 2026-11-05 approval queue 'nobody decides their own entry — a labor event's worker', for an admin's own labor; 2026-11-05 six approval triggers, for an admin's own labor; 2026-11-11 still open 'an admin's own entries' |
+| 2026-11-11 | V1-D11 — Worker records: a worker creates own authorized labor and receipts, reads own history, and writes own name and phone; no direct edit of a historical record and no read of another worker's private history; corrections stay the append-only workflow; foreman authority stays crew-scoped; admin authority is company-wide under tenant isolation, immutability and the decision rules of V1-D10. All implemented except the wider own-history read, which is today the 14-day `sync.pull` window | — (confirms 2026-11-05 push authority and `sync.pull`, 2026-11-06 own profile) |
+| 2026-11-11 | V1-D12 — Pull extension fields (to be built, Stage 5), all optional within protocol 1 and scoped to the caller: job coordinates and detection radius, customer name, the worker's own dated assignments, approval reasons of the caller's own entries; role authorization, tenant isolation and loose client parsing as the 2026-11-11 pull row states; no protocol 2 | 2026-11-11 `sync.pull` extended, fields now fixed; TASKS 'decide the pull extension's fields'; 2026-11-05 `sync.pull` 'no coordinates' and approval state without reasons, for the caller's own scope |
+| 2026-11-11 | V1-D13 — Labor rounding (to be built, Stage 4): worker/job durations are summed per day before rounding, half-up to 0.01 h, one figure for approved accounting, the payroll CSV and the quantity of invoice lines drawn from labor; ledger records stay exact, money integer cents | 2026-11-11 hours rounding 'invoice lines are computed from the rounded figure', narrowed to quantity (price is V1-D14's) |
+| 2026-11-11 | V1-D14 — Invoice pricing (to be built, Stage 7): admins set customer-facing draft line prices independently of internal job cost; no mandatory conversion of cost into charge; issued snapshots immutable. `invoice_line_items.unit_price_cents` already stands alone, with no cost reference | PRD 'line items are snapshots of job labor and materials', for price; TASKS 'invoice drafting from job labor and materials', for price |
+| 2026-11-11 | V1-D15 — Credit memos and voids (to be built, Stage 7): credit memos never total more than the invoice's original total; an invoice with a credit memo cannot be voided; numbering, history and the concurrency rules stand | — (confirms 2026-11-11 credit memos) |
+| 2026-11-11 | V1-D16, V1-D18, V1-D19 — Exports (to be built, Stage 4 payroll, Stage 7 invoices): a QuickBooks Online invoice CSV, a QuickBooks Desktop invoice IIF and a separate payroll-hours CSV, as independent adapters over one authoritative snapshot; the partner's edition is unconfirmed and the two are not assumed to share a format; file imports where the edition supports them, manual-entry and reconciliation instructions where it does not, no promise of import success; no payroll processing and no accounting synchronization | 2026-10 'QuickBooks CSV' as the one invoice export |
+| 2026-11-11 | V1-D17 — Pilot launch: the whole pilot crew starts only after every required release gate (TASKS Stage 8) has passed; a phased small-crew rollout is not a prerequisite; partner acceptance, physical-device tests, data-correctness tests and restore verification stay gates | — |
+| 2026-11-11 | V1-D20 — Audit trail scope (to be built, Stage 4): `audit_log` for invitations, role changes, activation and deactivation, pay-rate changes, labor repairs and approval decisions only; actor, tenant, action, entity and the changed fields, in the write's transaction; no universal API or event auditing, no snapshot of unchanged or unnecessary sensitive columns | 2026-11-03 '`before`/`after` jsonb snapshots of the audited row', narrowed to the changed fields; confirms 2026-11-11 `audit_log` written in V1 |
+| 2026-11-11 | V1-D21 — Server-enforced sync states (to be built, Stage 6): `sync.push` and `sync.pull` honour `normal`, `read_only`, `paused` and `update_required` with the meanings of the Operational sync states table; enforcement at transaction boundaries, a stable retryable answer distinct from any per-record rejection, defined behaviour for an interrupted batch, client recovery by a fresh `status.get`; the device keeps its outbox, ids and records; the protocol is not redesigned | 2026-11-05 kill switch 'Advisory to cooperative clients: push and pull do not read it'; Before the first deployment 'advisory by design' |
