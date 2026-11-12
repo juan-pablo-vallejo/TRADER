@@ -100,7 +100,7 @@ jobs, assignments, approvals, a closeout, close, export.
 - [x] Approval queue screen with reason tags, approve and reject, the recorded and received
       times of a `clock skew` entry side by side (DESIGN, Approval row); labor repair from the
       worker's ledger screen. Depends on the ledger read and the event-time line
-- [ ] An admin's own labor needs no approval (V1-D10 as amended; plan first: schema, sync).
+- [x] An admin's own labor needs no approval (V1-D10 as amended; plan first: schema, sync).
       Work: push and `labor.repair` write no approvals row for an event whose worker is an
       admin at receipt; the deferred triggers of 0022 and 0026 relaxed for those events by a
       new migration, with its decision row; evidence columns stored as before; the queue's
