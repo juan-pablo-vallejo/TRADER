@@ -29,6 +29,7 @@ const groups = [
       ["/roster", strings.roster],
       ["/crews", strings.crews],
       ["/ledger", strings.ledger],
+      ["/reconciliation", strings.reconciliation],
       ["/refusals", strings.refusals],
     ],
   },

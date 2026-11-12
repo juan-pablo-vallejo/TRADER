@@ -294,6 +294,28 @@ export const strings = {
   approvedBy: (name: string) => `Approved by ${name}`,
   rejectedBy: (name: string) => `Rejected by ${name}`,
 
+  // Reconciliation (DESIGN, Reconciliation)
+  reconciliation: "Reconciliation",
+  reconExplain:
+    "Each person's approved hours by day and job, for the days you choose. Hours count once they are approved and the session has ended; a day's time on a job is added up first, then rounded to the hundredth of an hour.",
+  showHours: "Show hours",
+  workDatesIn: (zone: string) => `Work dates in ${zone}.`,
+  approvedHours: "Approved hours",
+  reconTotal: (hours: string) => `${hours} h approved on these days`,
+  hoursValue: (hours: string) => `${hours} h`,
+  noApprovedHours: "No hours are approved on these days yet.",
+  emptyReconciliation: "No hours are recorded on these days.",
+  notInHours: "Not in these hours",
+  notInHoursExplain:
+    "What waits for approval, was rejected or is still open. None of it is in the approved hours above.",
+  decideInApprovals: "Decide what waits in Approvals",
+  repairInLedger: "Repair hours in the Labor ledger",
+  waitingHours: "Waiting",
+  unresolvedState: "Why",
+  sessionsWaiting: (n: number) => `${n} waiting for approval`,
+  sessionsRejected: (n: number) => `${n} rejected`,
+  sessionsOpen: (n: number) => `${n} still open`,
+
   // Labor repair, on the ledger (PRD, Office review)
   repair: "Repair",
   repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,

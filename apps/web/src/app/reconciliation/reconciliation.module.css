@@ -1,0 +1,52 @@
+/* The reconciliation screen's own layout: the range form, the lines above the hours, and
+   the gaps between one person and the next. The tables themselves are table.module.css. */
+.lookupGrid {
+  display: grid;
+  gap: 0 var(--space-3);
+}
+.explain {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.line {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.explain + .links {
+  margin: calc(-1 * var(--space-4)) 0 var(--space-2);
+}
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
+.section {
+  margin: 0 0 var(--space-6);
+}
+.section h2 {
+  margin: 0 0 var(--space-1);
+}
+.total {
+  margin: 0 0 var(--space-4);
+  font-variant-numeric: tabular-nums;
+}
+.person {
+  margin: var(--space-4) 0 0;
+}
+.person h3 {
+  margin: 0 0 var(--space-2);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 var(--space-4);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 768px) {
+  .links a {
+    min-height: var(--row);
+  }
+  .lookupGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
