@@ -74,7 +74,8 @@ export const workSessionEvents = pgTable(
     // The single event this one replaces: a corrected clock-out is a new `ended` event naming
     // the old one, and the fold reads the newest accepted correction. Never set on a void.
     // Corrections and voids are the office's (labor.repair); migration 0026 requires each to
-    // have an approval holding `corrected` at commit.
+    // have an approval holding `corrected` at commit, except an admin's repair of their own
+    // labor, which needs none (0032, V1-D10 as amended).
     correctsEventId: uuid("corrects_event_id"),
     // The approval rule's "recorded time was set by the user rather than taken from the moment
     // of capture" (PRD, Office approval). NOT NULL with no default, like attestation_level: the

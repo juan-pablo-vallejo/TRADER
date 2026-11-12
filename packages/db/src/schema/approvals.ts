@@ -37,6 +37,11 @@ import { workSessionEvents } from "./work-session-events";
 // correction's decision by its own submitter; 0022 does the same for a receipt's logger, and
 // 0025 for an event's worker (never its initiator). All three subjects are written pending.
 // 0026 requires a labor correction's or void's row to hold `corrected`.
+//
+// An admin's own labor needs no approval (V1-D10 as amended): push and labor.repair write no
+// row for an event whose worker is an admin unless a different admin wrote it, and 0032
+// stands 0022's and 0026's checks down for exactly those events. A row for one stays legal:
+// those written before 0032, and a role change after receipt, move nothing.
 export const approvals = pgTable(
   "approvals",
   {
