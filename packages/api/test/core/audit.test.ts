@@ -2,13 +2,17 @@
 // whose it is; that it shares its procedure's fate; that a tenant neither reads nor writes
 // another's; that nothing a client sends names the actor or the company. Each audited
 // procedure's own row is its own suite's (roster, approvals, labor).
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { Db } from "@trader/db";
 import { auditLog } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { recordAudit } from "../../src/core/audit";
+import { AUDIT_ACTIONS, recordAudit, type AuditAction } from "../../src/core/audit";
 import { createContext } from "../../src/core/context";
 import { createCallerFactory, roleProcedure, router } from "../../src/core/trpc";
 import {
@@ -200,5 +204,55 @@ describe("the audited procedures' inputs", () => {
       expect(await auditRowsIn(tx, c.companyId)).toEqual([]);
       expect(await auditRowsIn(tx, other.companyId)).toEqual([]);
     });
+  });
+});
+
+// The inventory (TASKS: no other procedure writes one). Static, over the API's source: which
+// module performs each action, and that nothing else reaches the writer or the table. The
+// demo test (demo/run.test.ts) is its other half: a run through every kind of procedure
+// leaves rows for these actions alone.
+describe("the audit inventory", () => {
+  const WRITERS: Record<AuditAction, string> = {
+    "users.invite": "roster/invite.ts",
+    "users.set_role": "roster/role.ts",
+    "users.deactivate": "roster/deactivation.ts",
+    "users.reactivate": "roster/deactivation.ts",
+    "pay_rates.add": "roster/pay-rates.ts",
+    "work_session_events.repair": "labor/repair.ts",
+    "approvals.decide": "approvals/decide.ts",
+  };
+  const WRITER = "core/audit.ts";
+  const SRC = fileURLToPath(new URL("../../src", import.meta.url));
+  const sources = readdirSync(SRC, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts"))
+    .map((file) => ({
+      file: file.replaceAll("\\", "/"),
+      text: readFileSync(join(SRC, file), "utf8"),
+    }));
+  const having = (pattern: RegExp) =>
+    sources
+      .filter((s) => pattern.test(s.text))
+      .map((s) => s.file)
+      .sort();
+
+  it("names the actions of V1-D20, and nothing else", () => {
+    expect([...AUDIT_ACTIONS].sort()).toEqual(Object.keys(WRITERS).sort());
+  });
+
+  it("has each action performed by its one writer", () => {
+    for (const [action, file] of Object.entries(WRITERS)) {
+      expect([action, having(new RegExp(`action: "${action}"`))]).toEqual([
+        action,
+        [WRITER, file].sort(),
+      ]);
+    }
+  });
+
+  it("lets no other module call the writer or reach the table", () => {
+    expect(having(/\brecordAudit\(/)).toEqual(
+      [...new Set([WRITER, ...Object.values(WRITERS)])].sort(),
+    );
+    expect(having(/\bauditLog\b/)).toEqual([WRITER]);
+    expect(having(/\b(into|update|from)\s+"?audit_log\b/i)).toEqual([]);
   });
 });
