@@ -5,7 +5,8 @@
 // The last approved amend replaces description, quantity and unit together; an approved void
 // takes the receipt out of effect for good, whatever comes after it. Pending and rejected
 // corrections, and a correction with no approval at all, change nothing. Cost is not a
-// corrected fact: it stays the receipt's own. Consumed by correct.ts; job cost (Stage 4).
+// corrected fact: it stays the receipt's own. Consumed by correct.ts and list.ts; job cost
+// (Stage 4).
 
 export type MaterialFacts = {
   description: string;
