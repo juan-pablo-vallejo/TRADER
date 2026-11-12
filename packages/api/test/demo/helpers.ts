@@ -77,6 +77,7 @@ export async function counts(db: Db) {
     payRates,
     events,
     materials,
+    priced,
     corrections,
     closeouts,
     approvals,
@@ -91,6 +92,11 @@ export async function counts(db: Db) {
     count(db, "pay_rates"),
     count(db, "work_session_events"),
     count(db, "materials"),
+    db
+      .execute<{ n: number }>(
+        sql`select count(*)::int as n from materials where cost_cents is not null`,
+      )
+      .then((r) => r.rows[0]!.n),
     count(db, "material_corrections"),
     count(db, "day_closeouts"),
     count(db, "approvals"),
@@ -110,6 +116,7 @@ export async function counts(db: Db) {
     payRates,
     events,
     materials,
+    pricedMaterials: priced,
     materialCorrections: corrections,
     closeouts,
     approvals,
