@@ -29,7 +29,7 @@ with no signal.
 5. The contractor can leave with their data: invoice exports for QuickBooks Online and QuickBooks
    Desktop, a payroll-hours export, and a full export.
 
-Non-goals for V1: payments, estimates and quotes, scheduling beyond assignments, a customer
+Non-goals for V1: payment processing, estimates and quotes, scheduling beyond assignments, a customer
 portal, a marketplace, an AI estimator, and anything that requires a second contractor to exist.
 
 ## Target users
@@ -40,7 +40,8 @@ portal, a marketplace, an AI estimator, and anything that requires a second cont
 | Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs, the crew's current state when online, and the day closeout                                                                                      |
 | Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, any worker's hours and their repair, material costs and missing material entries, job cost, closeouts, pay periods, payroll export, invoices, exports |
 
-Everyone is a user with their own login and their own email address; nobody shares an account.
+Everyone is a user with their own login — a crew member's on their own phone number, an office
+admin's on their own email address; nobody shares an account.
 
 - A worker creates their own labor and material records on the jobs they are allowed to work,
   sees their own recorded history, and changes their own name and phone. A worker never edits a
@@ -167,9 +168,12 @@ the jobs of a crew they lead.
   costs — informs the admin and is never turned into a price by rule.
 - Credit memos against an invoice never total more than the invoice's original total; an
   invoice that has a credit memo cannot be voided.
-- The admin enters tax per invoice; TRADER only does the arithmetic. No paid flag and no
-  payment capture: the office records payment in their accounting package.
-- PDF rendered on demand.
+- The admin enters tax per invoice; TRADER only does the arithmetic.
+- The office records the payments a customer makes against an issued invoice — amount, date,
+  method — and the invoice shows what is still owed and when it is paid in full. TRADER never
+  captures or processes a payment, and a recorded payment changes nothing on the invoice.
+- PDF rendered on demand, and sent to the customer by email from TRADER when the admin
+  chooses; the invoice shows when it was sent and to whom.
 - Exports, each its own file from the same issued invoices or approved hours: invoices for
   QuickBooks Online (CSV), invoices for QuickBooks Desktop (IIF), and payroll hours (CSV); and
   the full data export. The two QuickBooks editions do not take the same file, and which one
@@ -195,36 +199,44 @@ connection it says so and saves nothing for later.
 
 ### Access
 
-Invitation-only accounts, one per person, each on that person's own email address that they
-can reach; a pilot worker without one gets one before they are invited. Sign-in by passkey
-with an email-code fallback, which is also how an account is recovered; no passwords, no SMS.
-A new user starts as a worker; roles are a deliberate roster action.
+Invitation-only accounts, one per person. A crew member is invited by their own mobile number
+and signs in with a one-time code sent to it by SMS; an office admin is invited by their own
+email address and signs in with a one-time code sent to it. The same code is how an account
+is recovered; no passwords. SMS codes go to United States and Canada numbers only. A new user
+starts as a worker; roles are a deliberate roster action.
 
 ## Pilot and V1 completion
 
-- Pilot build: sign-in, clock in/out and job switch with the job suggestion, materials, photos,
-  offline sync, dated assignments, approvals, foreman and admin closeout, pay periods, payroll
-  export, invoices created, issued and exported in TRADER for both QuickBooks editions (no
-  discount feature), the office web on phone and desktop. TestFlight public link, Play internal
-  track; the pilot is unpaid.
-- The pilot starts with the whole crew at once, and only after every release gate has passed;
-  a smaller first group is not a required step.
+- Release 0.1 — the first production release, for the design partner: sign-in; assigned
+  jobs, clock in/out and job switch with offline capture and the location stamp, in English
+  and Spanish; own hours; the office web on phone and desktop with dated assignments,
+  approvals, repairs, admin closeout and pay periods; invoices created, issued, sent as a
+  PDF by email, and their payments recorded. Distributed through the App Store and Google
+  Play, published under the owner's own developer accounts.
+- The crew starts all at once, and only after Release 0.1's go/no-go line in
+  [TASKS.md](TASKS.md) is recorded as passed; a smaller first group is not a required step.
+- The pilot continues on Release 0.1 while the rest of V1 is built: the job suggestion,
+  biometric confirmation, materials and photos, the foreman's closeout on the phone, the
+  payroll export, and invoices exported for both QuickBooks editions (no discount feature).
+  The pilot is unpaid.
 - V1 complete — the billing trigger — requires every V1 feature above, production distribution
   on the App Store and Google Play (US storefronts), and a partner-signed acceptance checklist.
-- Neither is declared from a feeling: the pilot opens when the release gates in
-  [TASKS.md](TASKS.md), Stage 8, are met and recorded, and V1 closes on Stage 10's.
+- Neither is declared from a feeling: Release 0.1 opens on its go/no-go line in TASKS, and
+  V1 closes on Stage 10's.
 
 ## Compliance before real users
 
-Privacy policy and terms of service; account deletion as deactivate-and-pseudonymize, because
-labor records are retained by law; Apple App Privacy details and Google Play Data Safety form,
+Privacy policy and terms of service, public on `jpteq.app`; account deletion as
+deactivate-and-pseudonymize, because labor records are retained by law, requested from inside
+the app and from a public web page; sign-in credentials for a demonstration company for each
+store's reviewers; Apple App Privacy details and Google Play Data Safety form,
 each declaring location (background too, before arrival reminders) and what Sentry and PostHog
 collect; Sentry PII scrubbing; local employment rules on location checked before Smart Clock-In.
 
 ## After V1
 
-Push notifications, web approval by push to the admin's phone, SMS, roster self-service beyond own
+Push notifications, web approval by push to the admin's phone, SMS notifications, roster self-service beyond own
 name and phone, an audit log of every write (V1 records the roster, pay-rate, repair and
-approval actions named above), dark theme, payments, a customer portal, per-company branding (each
+approval actions named above), dark theme, payment processing, a customer portal, per-company branding (each
 contractor's own logo in the crew app and office header), and a second contractor — the schema is
 tenant-safe from the first migration, so that is onboarding work, not restructuring.
