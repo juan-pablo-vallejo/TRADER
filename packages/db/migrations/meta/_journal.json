@@ -267,6 +267,13 @@
       "when": 1794527742295,
       "tag": "0037_sign-in-phone",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794527848719,
+      "tag": "0038_sign-in-phone-binding",
+      "breakpoints": true
     }
   ]
 }
