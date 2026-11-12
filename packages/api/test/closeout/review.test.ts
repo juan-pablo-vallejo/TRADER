@@ -170,7 +170,7 @@ describe("closeout.review — content", () => {
           loggedByName: "w1",
         },
       ]);
-      expect(r.fingerprint).toMatch(/^v1\.[0-9a-f]{64}$/);
+      expect(r.fingerprint).toMatch(/^v2\.[0-9a-f]{64}$/);
     });
   });
 
@@ -248,7 +248,7 @@ describe("closeout.review — content", () => {
       // 23:30 EST on 1 November, after the clocks fell back; a fixed EDT offset says the 2nd.
       await ev("2026-11-02T04:30:00Z", "started");
       await ev("2026-11-02T05:30:00Z", "ended");
-      // The device said 23:00 on the 7th; skewed, so it sits at its receipt on the 8th.
+      // The device said 23:00 on the 7th; skewed and received on the 8th, it stays on the 7th.
       await ev("2026-10-08T03:00:00Z", "started", {
         server: "2026-10-08T14:00:00Z",
         skewed: true,
@@ -263,8 +263,8 @@ describe("closeout.review — content", () => {
       expect(await hours("2026-10-06")).toEqual([]);
       expect(await hours("2026-11-01")).toEqual([1]);
       expect(await hours("2026-11-02")).toEqual([]);
-      expect(await hours("2026-10-07")).toEqual([]);
-      expect(await hours("2026-10-08")).toEqual([2]);
+      expect(await hours("2026-10-07")).toEqual([13]);
+      expect(await hours("2026-10-08")).toEqual([]);
     });
   });
 

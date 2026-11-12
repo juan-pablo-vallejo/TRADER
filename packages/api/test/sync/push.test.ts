@@ -268,7 +268,7 @@ describe("sync.push — envelopes", () => {
 });
 
 describe("sync.push — the day as the field sends it", () => {
-  it("measures skew once per push and places a skewed event at its receipt", async () => {
+  it("measures skew once per push and keeps a skewed event at its captured time", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
       const ahead = new Date(Date.now() + 600_000);
@@ -282,8 +282,8 @@ describe("sync.push — the day as the field sends it", () => {
         await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
         NY,
       );
-      // Effective instant is the receipt, not the device's 12:00.
-      expect(session!.startedAt.getTime()).toBeGreaterThan(Date.now() - 60_000);
+      // Effective instant is the device's 12:00, flagged; never the receipt (V1-D01).
+      expect(session!.startedAt).toEqual(new Date("2026-10-05T12:00:00Z"));
     });
   });
 

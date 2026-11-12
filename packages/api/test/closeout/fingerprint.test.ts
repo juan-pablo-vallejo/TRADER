@@ -1,5 +1,6 @@
-// Stage 3 line 5: the review fingerprint, pure. The golden vector pins v1: a change to the
-// canonical tuple, its order or its serialization fails here and needs a new version.
+// Stage 3 line 5: the review fingerprint, pure. The golden vector pins v2 (v1 with the fold at
+// captured times, V1-D01): a change to the canonical tuple, its order or its serialization
+// fails here and needs a new version.
 import { describe, expect, it } from "vitest";
 
 import type { DayMaterial, DaySession } from "../../src/closeout/day";
@@ -79,8 +80,16 @@ const base = (): ReviewState => ({
 
 describe("reviewFingerprint", () => {
   // Recomputed outside the code from the canonical JSON written by hand (shasum -a 256).
-  it("pins v1 to a golden vector", () => {
+  it("pins v2 to a golden vector", () => {
     expect(reviewFingerprint(base())).toBe(
+      "v2.85cdbc050861d7da8f5b7e457137d60ab8519e4109f64affe01d495179eec69d",
+    );
+  });
+
+  // v1's digest of this state (the same canonical JSON with version 1), kept so the two can
+  // never be taken for each other: a v1 value is review_stale at submit.
+  it("never equals the v1 value of the same state", () => {
+    expect(reviewFingerprint(base())).not.toBe(
       "v1.366d6350ecbc620a102d06160bfb4f88e6ae739602d8439b07249705b89afafb",
     );
   });
@@ -94,7 +103,7 @@ describe("reviewFingerprint", () => {
     };
     expect(reviewFingerprint(permuted)).toBe(reviewFingerprint(b));
     expect(reviewFingerprint(base())).toBe(reviewFingerprint(b));
-    expect(reviewFingerprint(b)).toMatch(/^v1\.[0-9a-f]{64}$/);
+    expect(reviewFingerprint(b)).toMatch(/^v2\.[0-9a-f]{64}$/);
   });
 
   it("changes with every field of the tuple", () => {

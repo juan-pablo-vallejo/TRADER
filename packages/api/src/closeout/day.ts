@@ -62,10 +62,9 @@ export async function gatherJobDay(
   const { jobId, workDate, timeZone } = day;
 
   // Every session on the job has an effective `started` naming the job (decision D5: a
-  // session's job is its effective start's), at its effective instant (D1), so these workers
-  // are all that can have one on the day.
-  const effective = sql`case when ${workSessionEvents.clockSkewed}
-    then ${workSessionEvents.serverTimestamp} else ${workSessionEvents.clientTimestamp} end`;
+  // session's job is its effective start's), at its captured time (V1-D01; fold.ts,
+  // effectiveAt), so these workers are all that can have one on the day.
+  const effective = workSessionEvents.clientTimestamp;
   const candidates = await tx
     .selectDistinct({ workerId: workSessionEvents.workerId })
     .from(workSessionEvents)

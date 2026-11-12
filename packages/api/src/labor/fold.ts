@@ -7,7 +7,9 @@ import type { workSessionEvents } from "@trader/db/schema";
 
 type Row = typeof workSessionEvents.$inferSelect;
 
-// The columns the fold reads; everything else on the row is evidence for the office.
+// The columns the fold reads, and `clockSkewed`, which it does not: the flag is evidence that
+// travels with the ledger rows (sync.pull shows it), never a rule here. Everything else on the
+// row is evidence for the office.
 export type LaborEvent = Pick<
   Row,
   | "id"
@@ -56,11 +58,10 @@ export class LedgerInconsistentError extends Error {
   }
 }
 
-// One instant per event for ordering, intervals and work date (decision D1). A skewed
-// event's device time is not trusted to place it, so it sits at its receipt (ARCHITECTURE,
-// Sync protocol); the verdict is stored, so the position never moves (row 148).
-export const effectiveAt = (e: LaborEvent): Date =>
-  e.clockSkewed ? e.serverTimestamp : e.clientTimestamp;
+// One instant per event for ordering, intervals and work date: the time it was captured with,
+// flagged or not (V1-D01; ARCHITECTURE, Sync protocol). A suspicious time is reviewed by a
+// person through its approval, never replaced by the receipt.
+export const effectiveAt = (e: LaborEvent): Date => e.clientTimestamp;
 
 const compareIds = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 

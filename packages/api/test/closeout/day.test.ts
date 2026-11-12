@@ -312,7 +312,7 @@ describe("gatherJobDay", () => {
     });
   });
 
-  it("places a skewed start at its receipt (decision D1)", async () => {
+  it("keeps a skewed start on the day it was captured (V1-D01)", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       const { w1, J } = d;
@@ -331,8 +331,8 @@ describe("gatherJobDay", () => {
         client: "2026-10-08T15:00:00Z",
       });
       await asTenant(tx, d.companyId);
-      expect((await gather(tx, d, J, "2026-10-05")).sessions).toHaveLength(0);
-      expect((await gather(tx, d, J, "2026-10-08")).sessions).toHaveLength(1);
+      expect((await gather(tx, d, J, "2026-10-05")).sessions).toHaveLength(1);
+      expect((await gather(tx, d, J, "2026-10-08")).sessions).toHaveLength(0);
     });
   });
 

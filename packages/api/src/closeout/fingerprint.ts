@@ -7,12 +7,14 @@
 //
 // The canonical value is positional arrays only, so no object key order can change it, and
 // every list is sorted here, never trusted to SQL or Map order. Any change to the tuple, the
-// fold or workDate semantics is a new version; the golden vector in the tests pins v1.
+// fold or workDate semantics is a new version; the golden vector in the tests pins the current
+// one. v1 was issued over the fold that placed a clock-skewed event at its receipt; v2 is the
+// same tuple over the fold at captured times (V1-D01). A v1 value is answered review_stale.
 import { createHash } from "node:crypto";
 
 import type { DayMaterial, DaySession } from "./day";
 
-export const FINGERPRINT_VERSION = 1;
+export const FINGERPRINT_VERSION = 2;
 
 // Any well-formed version, so a fingerprint of another version is answered review_stale
 // rather than refused as input (a thrown error is retried).
