@@ -18,6 +18,7 @@ const groups = [
       ["/jobs", strings.jobs],
       ["/customers", strings.customers],
       ["/assignments", strings.assignments],
+      ["/closeout", strings.closeout],
     ],
   },
   {

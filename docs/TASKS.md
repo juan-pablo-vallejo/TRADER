@@ -85,7 +85,7 @@ jobs, assignments, approvals, a closeout, close, export.
       outside their crews is still `not_permitted` there; a worker reads only their own; a
       job or worker of another company is FORBIDDEN; the mismatch flag follows a membership
       change. Done when an admin plans a week for a worker on phone and desktop
-- [ ] Admin closeout (V1-D08; plan first: closeout locks). Work: `closeout.review` and
+- [x] Admin closeout (V1-D08; plan first: closeout locks). Work: `closeout.review` and
       `closeout.submit` admit an admin for any job of the company, archived and crew-less
       included, on the foreman procedures; the office screen, review then submit (DESIGN,
       Closeout). Tests: every existing foreman test unchanged and green; an admin closes out

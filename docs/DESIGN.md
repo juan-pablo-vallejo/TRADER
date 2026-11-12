@@ -92,7 +92,7 @@ integer cents through the locale formatter; dates and times render in the compan
   data table whose own column is under 720 pt shows its rows the narrow way.
 - Office shell: a 56 pt header with the mark, the wordmark, the signed-in name linking to the
   profile, and Sign out. Navigation is grouped by the work, not the table: Work — Jobs,
-  Customers, Assignments; People — Roster, Crews, Refused entries; a destination appears when its screen exists, and `/` opens
+  Customers, Assignments, Closeout; People — Roster, Crews, Refused entries; a destination appears when its screen exists, and `/` opens
   the first one. Keyboard focus is a 2 pt `accent` outline, offset 2 pt.
 - Icons: one icon set at 24 pt with a 2 pt stroke, chosen by the first screen that needs one and
   never mixed with emoji.
