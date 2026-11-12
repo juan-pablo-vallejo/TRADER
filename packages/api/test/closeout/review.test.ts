@@ -72,12 +72,11 @@ describe("closeout.review — who may read", () => {
     });
   });
 
-  it("answers one 403 for a worker, an admin, another crew's, another tenant's, unstaffed or no job", async () => {
+  it("answers one 403 for a worker, another crew's, another tenant's, unstaffed or no job", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       const elsewhere = await crewDayIn(tx);
       const worker = await boundIn(tx, d.companyId, "worker");
-      const admin = await boundIn(tx, d.companyId, "admin");
       const rival = await boundIn(tx, d.companyId, "foreman");
       const [rivalCrew] = await tx
         .insert(crews)
@@ -94,7 +93,6 @@ describe("closeout.review — who may read", () => {
         .returning({ id: jobs.id });
       await becomeApp(tx);
       await expect(review(tx, worker.who, d.J)).rejects.toMatchObject(forbidden);
-      await expect(review(tx, admin.who, d.J)).rejects.toMatchObject(forbidden);
       for (const jobId of [rivalJob!.id, elsewhere.J, d.K, uuidv7()]) {
         await expect(review(tx, d.who, jobId)).rejects.toMatchObject(forbidden);
       }
@@ -520,6 +518,144 @@ describe("closeout.review — locks", () => {
             const timeline = await loadWorkerTimeline(tx, d.w1);
             expect(timeline.events).toEqual([]);
           }),
+      );
+    } finally {
+      await cleanup();
+    }
+  });
+});
+
+// TASKS, Stage 4 (V1-D08): an admin reviews any job of the company. The foreman's answers
+// above are unchanged.
+describe("closeout.review — an admin", () => {
+  it("reads a crew's job, one on no crew, an archived one and one on a deactivated crew", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await workedDay(tx, d);
+      await eventIn(tx, d, {
+        worker: d.w1,
+        job: d.K,
+        type: "started",
+        client: "2026-10-06T13:00:00Z",
+      });
+      await eventIn(tx, d, {
+        worker: d.w1,
+        job: d.K,
+        type: "ended",
+        client: "2026-10-06T15:00:00Z",
+      });
+      await becomeApp(tx);
+      const onCrew = await review(tx, admin.who, d.J);
+      expect(onCrew.job).toEqual({ name: "J", status: "open" });
+      expect(onCrew.workers).toHaveLength(2);
+      // The same day, the same server state: the value the foreman's review carries.
+      expect(onCrew.fingerprint).toBe((await review(tx, d.who, d.J)).fingerprint);
+
+      const noCrew = await review(tx, admin.who, d.K, "2026-10-06");
+      expect(noCrew.job).toEqual({ name: "K", status: "open" });
+      expect(noCrew.workers.map((w) => w.sessions.map((s) => s.workedMs / HOUR))).toEqual(
+        [[2]],
+      );
+      await expect(review(tx, d.who, d.K, "2026-10-06")).rejects.toMatchObject(forbidden);
+
+      await asOwner(tx, d, async () => {
+        await tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.J));
+        await tx
+          .update(crews)
+          .set({ deactivatedAt: new Date() })
+          .where(eq(crews.id, d.crewId));
+      });
+      const archived = await review(tx, admin.who, d.J);
+      expect(archived.job.status).toBe("archived");
+      expect(archived.workers).toHaveLength(2);
+      expect(archived.fingerprint).not.toBe(onCrew.fingerprint);
+      await expect(review(tx, d.who, d.J)).rejects.toMatchObject(forbidden);
+    });
+  });
+
+  it("answers 403 for another tenant's job or no job, and 401 once deactivated", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const elsewhere = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const off = await boundIn(tx, d.companyId, "admin", { deactivated: true });
+      await becomeApp(tx);
+      for (const jobId of [elsewhere.J, elsewhere.K, uuidv7()]) {
+        await expect(review(tx, admin.who, jobId)).rejects.toMatchObject(forbidden);
+      }
+      await expect(review(tx, off.who, d.J)).rejects.toMatchObject({
+        code: "UNAUTHORIZED",
+      });
+    });
+  });
+
+  it("dates an overnight session on a crew-less job in the company's zone", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      // 23:30–01:30 New York: the 5th, though both instants are the 6th in UTC.
+      await eventIn(tx, d, {
+        worker: d.w1,
+        job: d.K,
+        type: "started",
+        client: "2026-10-06T03:30:00Z",
+      });
+      await eventIn(tx, d, {
+        worker: d.w1,
+        job: d.K,
+        type: "ended",
+        client: "2026-10-06T05:30:00Z",
+      });
+      await becomeApp(tx);
+      const hours = async (date: string) =>
+        (await review(tx, admin.who, d.K, date)).workers.flatMap((w) =>
+          w.sessions.map((s) => s.workedMs / HOUR),
+        );
+      expect(await hours("2026-10-05")).toEqual([2]);
+      expect(await hours("2026-10-06")).toEqual([]);
+    });
+  });
+
+  it("holds the job, the caller and the zone while it runs, and no crew", async () => {
+    const { day: d, cleanup } = await committedCrewDay(owner);
+    try {
+      const admin = await owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
+      await holding(
+        owner,
+        async (tx) => {
+          await becomeApp(tx);
+          await review(tx, admin.who, d.J);
+        },
+        async () => {
+          const attempt = async (statement: ReturnType<typeof sql>) => {
+            let code: string | undefined;
+            await rolledBack(other, async (tx) => {
+              await lockTimeout(tx);
+              code = sqlstateOf(await rejection(tx.execute(statement)));
+            });
+            return code;
+          };
+          for (const statement of [
+            sql`update users set role = 'worker' where id = ${admin.id}`,
+            sql`update jobs set status = 'complete' where id = ${d.J}`,
+            sql`update companies set timezone = 'UTC' where id = ${d.companyId}`,
+          ]) {
+            expect(await attempt(statement)).toBe("55P03");
+          }
+          // An admin's authority reads no crew, so the crew and its foreman are free.
+          await rolledBack(other, async (tx) => {
+            await lockTimeout(tx);
+            await tx.execute(
+              sql`update crews set deactivated_at = now() where id = ${d.crewId}`,
+            );
+            await tx.execute(
+              sql`update users set role = 'worker' where id = ${d.foremanId}`,
+            );
+            await asTenant(tx, d.companyId);
+            expect((await loadWorkerTimeline(tx, d.w1)).events).toEqual([]);
+          });
+        },
       );
     } finally {
       await cleanup();

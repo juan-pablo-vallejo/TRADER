@@ -1,4 +1,5 @@
-// closeout.review (PRD, Day closeout: the foreman reviews the day's labor and materials): one
+// closeout.review (PRD, Day closeout: the foreman of the job's crew, or an admin, reviews the
+// day's labor and materials; scope.ts says who may, for which jobs): one
 // job's day as the server derives it, with the fingerprint closeout.submit checks. A read: no
 // field-write lock and no writes. The scope rows are held FOR SHARE to the call's end, so the
 // caller's authority, the job's status and the zone hold for the read; the labor and materials
@@ -14,7 +15,7 @@ import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { gatherJobDay } from "./day";
 import { reviewFingerprint } from "./fingerprint";
-import { lockForemanScope } from "./scope";
+import { lockCloseoutScope } from "./scope";
 
 export const reviewInput = z.strictObject({
   jobId: z.uuid(),
@@ -69,7 +70,7 @@ export async function reviewDay(
   user: AppUser,
   input: ReviewInput,
 ): Promise<Review> {
-  const scope = await lockForemanScope(tx, user, input.jobId, "share");
+  const scope = await lockCloseoutScope(tx, user, input.jobId, "share");
   const { timeZone } = scope;
 
   const day = await gatherJobDay(tx, {
