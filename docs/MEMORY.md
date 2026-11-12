@@ -277,6 +277,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `take_screenshot` takes about 25 s, the rest under a second; the first use leaves a
   `maestro-driver-ios` app on the simulator. `assertVisible` takes no `timeout`
   (`extendedWaitUntil` does), and a wrong key fails the whole flow before it starts.
+- `materials/cost.test.ts`, "prices an open receipt…", asserts `updated_at` changed: the
+  fixture's insert and the save can share a millisecond of the Node clock (seen once on
+  2026-11-12, red in a full `pnpm check`, green on the rerun). Rerun; the fix is its own line.
+- `roster/pay-rates.ts` and `roster/list.ts` import each other: a module that loads
+  `pay-rates.ts` first finds `rate` undefined at load. Pure consumers import
+  `roster/rate-on.ts`; a query on `pay_rates` elsewhere selects the table itself.
+- Two `eventIn` events of one worker at one instant order by their random ids: a fixture's
+  job switch starts the second session a minute later, or the fold answers
+  `session_already_open`.
+- The demo's last step holds `job.cost` and `labor.hours` to `EXPECTED_COST` and
+  `EXPECTED_HOURS` (`demo/content.ts`), worked out by hand; `run.test.ts` does the same for
+  J2. A new seeded event, rate, receipt, cost or decision changes them.
 - Maestro has no biometric command. The host answers the prompt instead: on the simulator
   `xcrun simctl spawn <udid> notifyutil -s com.apple.BiometricKit.enrollmentChanged 1`, post
   it with `-p`, then `-p com.apple.BiometricKit_Sim.fingerTouch.match` (or `.nomatch`); on
@@ -635,3 +647,32 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   closed-day entry.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, hours and
   cost aggregation (V1-D13).
+
+### 2026-11-12 — Hours and cost aggregation (V1-D13)
+
+- **Did:** branch `hours-cost-aggregation` from `cd28d90`, seven commits. `labor/hours.ts`
+  (the one rounding, cells per worker, job and work date), `roster/rate-on.ts`, the money
+  arithmetic in `jobs/cost.ts`, `materials/standing.ts` (the receipt read `material.list`
+  had inline), `readDayHours`; `labor.hours` and `job.cost`, admin-gated, with their gate
+  lines; the demo's last step and `run.test.ts` hold both jobs to figures worked out by
+  hand, and `pnpm demo --reset` was checked by query. No migration, no screen, no
+  dependency. Watched red: the half-up hour, rounding per session, an open session
+  counted, a voided one kept, the zone, both gates, the person and job lookups, both range
+  ends, both edges of the worker window, the decisions, the job filter, the 31-day bound,
+  the half-up cent, a total across currencies, the rate of the day, unrated as zero,
+  pending labor and pending, rejected and voided receipts folded in, another job's cells
+  and receipts, a free receipt read as unpriced. 1,063 tests.
+- **Decided:** by the owner on 2026-11-12, in the plan's two questions and its approval:
+  a cost line is rounded half-up to the cent and totals are sums of lines; a session that
+  counts but is still open adds nothing until it ends. The row of that date in
+  ARCHITECTURE. Changed from the plan: `rateOn` is a file of its own and the rates query is
+  in `jobs/cost.ts`, not `pay-rates.ts` (Notes, the import cycle); the money helper is
+  `byCurrency`; pending labor also reports its unrated hours. Not done: no screen and no
+  browser check (the next line's); `queue.ts` and `pull.ts` keep their own copies of the
+  receipt read. Worth knowing: both reads fold the whole ledger of every worker involved,
+  with no limit; a pending session whose void waits shows zero pending hours, as the queue
+  does; who has no rate is unrated, never free. Open for the owner: `TASKS.md` line 14,
+  "Resync every other clone", is still unticked in Stage 0 — a human action, to tick or
+  strike.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, the
+  reconciliation view and job cost on the job screen.
