@@ -53,8 +53,9 @@ export async function lockForemanScope(
   return { jobName: job.name, jobStatus: job.status, timeZone: await lockZone(tx, user) };
 }
 
-// The company may change its zone; the lock holds it for the caller's transaction.
-async function lockZone(tx: Tx, user: AppUser): Promise<string> {
+// The company may change its zone; the lock holds it for the caller's transaction. Also
+// consumed by materials/create.ts.
+export async function lockZone(tx: Tx, user: AppUser): Promise<string> {
   const [company] = await tx
     .select({ timezone: companies.timezone })
     .from(companies)

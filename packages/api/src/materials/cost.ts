@@ -27,16 +27,17 @@ import { forbidden } from "../core/trpc";
 import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
 import { costOf, storedCost } from "./list";
 
+// The receipt total in integer minor units (RULES); the column is integer. The currency is
+// stated by the caller, never supplied here: no `_cents` column implies one (materials.ts).
+// Also consumed by materials/create.ts.
+export const costInput = z.strictObject({
+  cents: z.number().int().min(0).max(2147483647),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+});
+
 export const setCostInput = z.strictObject({
   materialId: z.uuid(),
-  // The receipt total in integer minor units (RULES); the column is integer. The currency is
-  // stated by the caller, never supplied here: no `_cents` column implies one (materials.ts).
-  cost: z
-    .strictObject({
-      cents: z.number().int().min(0).max(2147483647),
-      currency: z.string().regex(/^[A-Z]{3}$/),
-    })
-    .nullable(),
+  cost: costInput.nullable(),
 });
 
 export type SetCostInput = z.infer<typeof setCostInput>;

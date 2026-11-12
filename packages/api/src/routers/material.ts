@@ -4,6 +4,9 @@
 // `list` and `setCost` are the office's read of receipts and its entry of what each cost (PRD,
 // Office review and job cost), admin only, at the gate: the office client is online, so there
 // is no device retry to keep open, and a receipt's cost is nobody else's to read or state.
+// `create` is the office's entry of a receipt the crew never logged (V1-D09), admin only at
+// the gate for the same reason; a device logs a receipt through sync.push.
+import { createInput, createMaterial, createOutput } from "../materials/create";
 import { setCostInput, setCostOutput, setMaterialCost } from "../materials/cost";
 import { correctionInput, correctionOutput, correctMaterial } from "../materials/correct";
 import { listInput, listMaterials, listOutput } from "../materials/list";
@@ -14,6 +17,10 @@ export const materialRouter = router({
     .input(correctionInput)
     .output(correctionOutput)
     .mutation(({ ctx, input }) => correctMaterial(ctx.tx, ctx.user, input)),
+  create: roleProcedure("admin")
+    .input(createInput)
+    .output(createOutput)
+    .mutation(({ ctx, input }) => createMaterial(ctx.tx, ctx.user, input)),
   list: roleProcedure("admin")
     .input(listInput)
     .output(listOutput)

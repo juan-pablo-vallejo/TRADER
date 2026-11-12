@@ -3,7 +3,8 @@
 // under row locks; the company's field-write lock shared, so a closeout either committed before
 // this record (seen below) or covers it; the id again; the approval facts; the insert and, in
 // the same transaction, its approval. No cost: the office fills it in later. Answers as
-// sync/labor.ts does. Consumed by sync/push.ts.
+// sync/labor.ts does. Consumed by sync/push.ts; a receipt the office enters itself is
+// materials/create.ts.
 import { approvalReason, approvals, materials } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -93,6 +94,17 @@ const conflict = (): MaterialResult => ({ result: "rejected", code: "id_conflict
 const answerFor = (tx: Tx, row: Prior, user: AppUser, p: MaterialPayload) =>
   same(row, user, p) ? ack(tx, "duplicate", row) : Promise.resolve(conflict());
 
+// A receipt's server stamp, read once, after the locks, and written to both created_at and
+// updated_at: their default is now(), the transaction's start, which precedes a closeout the
+// writer waited behind. As text, so the microseconds survive the round trip. Also consumed
+// by materials/create.ts.
+export async function receiptStamp(tx: Tx) {
+  const { rows: clock } = await tx.execute<{ at: string }>(
+    sql`select clock_timestamp()::text as at`,
+  );
+  return sql`${clock[0]!.at}::timestamptz`;
+}
+
 export async function pushMaterial(
   tx: Tx,
   user: AppUser,
@@ -127,13 +139,7 @@ export async function pushMaterial(
     afterCloseout: await closedOn(tx, p.jobId, p.loggedAt),
   });
 
-  // The receipt's server stamp, read once, now, after the locks, and written to both created_at
-  // and updated_at: their default is now(), the transaction's start, which precedes a closeout
-  // this record waited behind. As text, so the microseconds survive the round trip.
-  const { rows: clock } = await tx.execute<{ at: string }>(
-    sql`select clock_timestamp()::text as at`,
-  );
-  const stampedAt = sql`${clock[0]!.at}::timestamptz`;
+  const stampedAt = await receiptStamp(tx);
 
   // 6. As in sync/labor.ts: nothing back is a concurrent commit of this id, or another
   // tenant's row, which is `id_conflict` and says nothing more.
