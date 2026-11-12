@@ -261,6 +261,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   not on the membership insert (`materials/cost-commit.test.ts`).
 - `strings.ts` is one flat object: a new key that repeats an old one (`material`, `loggedBy`)
   is TS1117 at typecheck, not in the editor's first glance. Search the file before adding.
+- An MCP server registered while a Claude Code session is open has no tools in that session;
+  restart it. Until then `maestro mcp` answers MCP over stdio (`initialize`, `tools/list`,
+  `tools/call`) from any script.
+- Maestro's MCP has no tap or type tool: every action is `run` with inline YAML.
+  `take_screenshot` takes about 25 s, the rest under a second; the first use leaves a
+  `maestro-driver-ios` app on the simulator. `assertVisible` takes no `timeout`
+  (`extendedWaitUntil` does), and a wrong key fails the whole flow before it starts.
+- Maestro has no biometric command. The host answers the prompt instead: on the simulator
+  `xcrun simctl spawn <udid> notifyutil -s com.apple.BiometricKit.enrollmentChanged 1`, post
+  it with `-p`, then `-p com.apple.BiometricKit_Sim.fingerTouch.match` (or `.nomatch`); on
+  the emulator `adb emu finger touch 1`, which needs a device PIN and an enrolled finger
+  first. Neither has been tried against a real prompt: no app shows one yet.
 
 ## Log
 
@@ -539,5 +551,45 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `Voided` pills, a refusal from the server. Worth knowing: who priced a receipt is not
   recorded (V1-D20); the corrections-with-decisions query now has three copies (`queue.ts`,
   `pull.ts`, `list.ts`); if `job.list` fails the job filter offers only "All jobs".
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line,
+  office-created material entries (V1-D09; plan first: schema).
+
+### 2026-11-12 — Maestro chosen for native UI flows; documents only
+
+- **Did:** branch `maestro-e2e-decision` from `499ac50`, documents only. A read-only
+  evaluation: no mobile app and no Playwright exist yet, so nothing can be driven today; on
+  the Mac, Xcode 26.6 with iOS 26.2 and 26.5 simulators, Android Studio with one API 36.1
+  emulator and its bundled JDK 21, no Maestro, no system JDK. Three Stage 5 lines in TASKS
+  (the CLI and MCP, the development sign-in with its smoke flow, the flow suite), the
+  emulator line moved to the Mac, one decision row, the `testID` rule in RULES. No code, no
+  dependency, no CI change. 999 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its six
+  recommendations), the row of that date in ARCHITECTURE. Not done: Maestro is not
+  installed and its MCP server is not registered — the session's permission classifier
+  refused the Homebrew tap and the `~/.zshenv` edit, so both are the owner's to run and the
+  new CLI line stays open. Not yet proven, and that line's to prove: that Maestro 2.12
+  drives iOS 26.x simulators and an API 36.1 emulator (its docs list older ones), that it
+  runs on Android Studio's runtime as `JAVA_HOME`, and whether a flow can answer a biometric
+  prompt. Read on Maestro's pages that day: physical iPhones are not supported, and
+  `setAirplaneMode` works on Android only.
+- **Next:** owner installs Maestro and registers its MCP server, then reviews and merges the
+  branch; then Stage 4's next open line, office-created material entries (V1-D09; plan
+  first: schema).
+
+### 2026-11-12 — Maestro's MCP proven on the iOS 26.2 simulator and the API 36.1 emulator
+
+- **Did:** on `maestro-e2e-decision`, no code. Maestro 2.12.1 (installed by the owner) on
+  Android Studio's JDK 21, driven through `maestro mcp` over stdio. On iPhone 17 Pro, iOS
+  26.2, and on `Medium_Phone_API_36.1` (Android 16, arm64): `list_devices`,
+  `take_screenshot`, `inspect_screen`, a flow that opens Settings, taps a row and asserts
+  the next screen, and the same flow red on a wrong assertion. `setAirplaneMode` on and off
+  on the emulator, read back with `adb`. Both devices shut down after; the emulator ran
+  with `-no-snapshot-save`. The CLI line in TASKS ticked. 999 tests.
+- **Decided:** nothing. Not done: the tools were not called through Claude Code's own
+  binding — `claude mcp list` shows the server connected, but it was registered after the
+  session began (Notes); iOS 26.5 was not booted; no flow is committed. Not provable until
+  `apps/mobile` exists: a `testID` reaching Maestro's `id`, the New Architecture, and a
+  biometric prompt answered end to end — the host channels exist on both platforms (Notes),
+  and the emulator has no PIN or enrolled finger, left so on purpose.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line,
   office-created material entries (V1-D09; plan first: schema).

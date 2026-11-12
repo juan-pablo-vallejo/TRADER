@@ -169,9 +169,16 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
       (`@aws-sdk/client-s3` and its presigner in `packages/api`, or the vendor's lighter
       client, chosen on the vendor's page)
 - [ ] Xcode with the iOS Simulator (Mac)
-- [ ] Android Studio with one emulator (Linux workstation)
+- [ ] Android Studio with one emulator (Mac)
+- [x] Maestro CLI and its MCP server on the Mac, Java from Android Studio's bundled runtime;
+      consumer: the flows in `apps/mobile/.maestro/`. Done when the MCP lists the local
+      devices and returns a screenshot of a booted simulator and of the emulator
 - [ ] Expo app with a development build; `app.jpteq.trader`; theme module from DESIGN.md; app
       icon, adaptive icon and splash from `assets/brand/` (asset specs checked on docs.expo.dev)
+- [ ] Development sign-in on the device behind the identity seam (plan first: auth): the two
+      development headers, absent from a release build; a `testID` on every control; one
+      Maestro smoke flow that launches the build, signs in as the demo foreman against
+      `trader_demo_e2e` and reads the job list, on the iOS simulator and the Android emulator
 - [ ] i18n layer with English and Spanish catalogs; every crew string through it; layouts
       measured with the Spanish strings
 - [ ] Sign-in on the device: the identity provider's Expo SDK, token storage in the secure
@@ -204,6 +211,10 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
 - [ ] Crew labor for a foreman; day closeout: review and submit; material correction
 - [ ] Accessibility pass: screen-reader labels, dynamic type at the largest sizes, 48 pt
       targets, contrast, in both languages
+- [ ] Mobile flow suite (Maestro): one flow per crew workflow as its screen lands, selected
+      by `testID`; every flow that writes is followed by a server assertion against
+      `trader_demo_e2e`, reset before each run; run on the Mac before a release build, not
+      in CI
 
 ## Stage 6 — Accounts, deploy, operations
 
