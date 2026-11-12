@@ -123,12 +123,15 @@ jobs, assignments, approvals, a closeout, close, export.
       every consumer below. Tests: three sessions of 20 min 10 s on one job and day round
       once on their sum, not three times; a half-way value rounds up; ledger rows unchanged;
       money in integer cents with no float
-- [ ] Reconciliation view and job cost on the job screen; a job detail route; unresolved
-      entries and carried adjustments shown apart (DESIGN, Adjustment line)
+- [x] Reconciliation view and job cost on the job screen; a job detail route; unresolved
+      entries shown apart. The view reads a range of work dates: its period picker and the
+      carried adjustments (DESIGN, Adjustment line) are the pay-period line's, below
 - [ ] Pay periods (V1-D03; plan first: schema, money). Depends on the aggregation. Work: the
       INSERT trigger, open and close, the acknowledged close with approvals unresolved, the
       basis stored at close, adjustments in the next period to close, a rate inside a closed
-      period; the close screen (DESIGN, Pay-period close). Tests: a close with pending
+      period; the reconciliation view reading a period, with the adjustments it carries
+      shown apart (DESIGN, Adjustment line); the close screen (DESIGN, Pay-period close).
+      Tests: a close with pending
       entries is refused without the acknowledgment and succeeds with it; a closed period
       and its export are byte-identical before and after a later approval, correction and
       repair; each of those appears as one adjustment, in one period, once — closing two
