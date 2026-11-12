@@ -30,6 +30,7 @@ const groups = [
       ["/crews", strings.crews],
       ["/ledger", strings.ledger],
       ["/reconciliation", strings.reconciliation],
+      ["/pay-periods", strings.payPeriods],
       ["/refusals", strings.refusals],
     ],
   },

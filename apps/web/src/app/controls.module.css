@@ -107,6 +107,27 @@
 .error {
   color: var(--attention);
 }
+/* A checkbox with its sentence: the whole line is the 48 pt target, the box sits on the
+   sentence's first line. */
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-height: var(--target);
+  margin: 0 0 var(--space-3);
+  color: var(--ink);
+  cursor: pointer;
+}
+.check input {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 12px 0;
+  accent-color: var(--accent);
+}
+.check span {
+  padding: 14px 0;
+}
 
 /* Card: surface, one hairline, 16 padding; sections 24 apart. */
 .card {

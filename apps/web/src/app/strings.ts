@@ -316,6 +316,64 @@ export const strings = {
   sessionsRejected: (n: number) => `${n} rejected`,
   sessionsOpen: (n: number) => `${n} still open`,
 
+  // Pay periods (DESIGN, Pay-period close)
+  payPeriods: "Pay periods",
+  payPeriodsExplain:
+    "The weeks or months payroll is run for. A period is closed once, when its hours are ready to export; after that it never changes, and anything approved or corrected later is carried by the next period as an adjustment.",
+  emptyPayPeriods: "No pay period yet. Open the first one.",
+  openPeriod: "Open a period",
+  periodStarts: "Starts",
+  periodEnds: "Ends",
+  periodStartsAfterLast: "The day after the period before it ends.",
+  period: "Period",
+  periodRange: (from: string, to: string) => `${from} – ${to}`,
+  periodIsOpen: "Open",
+  periodClosedBy: (when: string, name: string) => `Closed ${when} by ${name}`,
+  periodOpened: "Opened.",
+  periodExists: "A period with these dates is already open.",
+  periodNotContiguous: (day: string) =>
+    `A period starts the day after the one before it ends: ${day}.`,
+  periodNotLatest: "Only the latest period's dates can be changed.",
+  periodAlreadyClosed: (name: string) =>
+    `Already closed by ${name}. Nothing was changed.`,
+  periodDates: "Dates",
+  saveDates: "Save dates",
+  periodHours: "Hours",
+  periodApprovedSoFar: (hours: string) => `${hours} h approved so far.`,
+  periodExported: (hours: string) => `${hours} h closed as this period's hours.`,
+  periodAdjustments: (n: number, hours: string) =>
+    n === 1
+      ? `1 adjustment from earlier periods: ${hours} h.`
+      : `${n} adjustments from earlier periods: ${hours} h in all.`,
+  periodNoAdjustments: "No adjustments from earlier periods.",
+  periodAdjustmentsJoin: (range: string) =>
+    `Adjustments from earlier periods join ${range} first: it closes before this one.`,
+  periodUnresolvedNow: (waiting: number, open: number) =>
+    `Not in these hours now: ${waiting} waiting for approval, ${open} still open.`,
+  periodAcknowledged: (waiting: number, open: number) =>
+    `At the close, ${waiting} waited for approval and ${open} were still open.`,
+  closePeriod: "Close period",
+  closePeriodEffect: (range: string) =>
+    `Closing ${range} is permanent. The period and its payroll export can never be changed.`,
+  // Only what there is: a count of zero is not a thing to acknowledge.
+  closePeriodAcknowledge: (waiting: number, open: number) => {
+    const parts = [
+      waiting === 0
+        ? null
+        : `${waiting} ${waiting === 1 ? "entry still waits" : "entries still wait"} for approval`,
+      open === 0
+        ? null
+        : `${open} ${open === 1 ? "session is" : "sessions are"} still open`,
+    ].filter((part) => part !== null);
+    return `${parts.join(" and ")}; they will be paid as adjustments in a later period.`;
+  },
+  closeEarlierFirst: (range: string) => `Close ${range} first: periods close in order.`,
+  closeNotEnded: (day: string) =>
+    `This period runs through ${day}. It can be closed the day after.`,
+  periodClosed: "Closed. This period can no longer change.",
+  closeUnresolvedChanged: (waiting: number, open: number) =>
+    `What is unresolved changed while you were deciding: now ${waiting} waiting for approval and ${open} still open. Nothing was closed. Read it again, then close.`,
+
   // Labor repair, on the ledger (PRD, Office review)
   repair: "Repair",
   repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,
