@@ -305,6 +305,9 @@ export async function approvalQueue(
       const counted = fold.byRoot.get(sessionRootEventId)!;
       return {
         ...base,
+        // Still possible for labor (V1-D10 as amended writes no row for an admin's own): an
+        // event received while the caller was not an admin, or another admin's repair of
+        // their hours. approval.decide answers `own_entry` for exactly these.
         ownEntry: e.workerId === user.id,
         subject: {
           kind: "labor_event" as const,

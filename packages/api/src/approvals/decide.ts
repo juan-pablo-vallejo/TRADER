@@ -2,7 +2,11 @@
 // records one decision on one pending approval, once: migration 0004 freezes a decided row, so
 // a decision is never reversed, only answered. Nobody decides their own entry — the worker of a
 // labor event (never merely its initiator), a receipt's logger, a correction's submitter — and
-// migrations 0020, 0022 and 0025 refuse the same in SQL. A decision changes no structural fact:
+// migrations 0020, 0022 and 0025 refuse the same in SQL. An admin's own labor is written with
+// no approval at all (V1-D10 as amended), so there is nothing of theirs to decide; the refusal
+// still stands for the rows that exist — labor received while they were not an admin, a
+// repair another admin wrote for them, anything stored before 0032. A decision changes no
+// structural fact:
 // the ledger, materials, closeouts and their fingerprints stay as they are, and what counts is
 // derived (labor/approval.ts, materials/approval.ts). A recorded decision leaves one audit row
 // (core/audit.ts); a duplicate and a refusal leave none. Consumed by routers/approval.ts.

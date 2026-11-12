@@ -677,6 +677,117 @@ describe("labor.repair — approvals and accounting", () => {
   });
 });
 
+// Stage 4 (V1-D10 as amended): an admin's own labor needs no approval, so a repair of the
+// caller's own ledger writes none. "Own" is the caller's ledger, never the worker's role: a
+// repair one admin writes for another is a repair of another person.
+describe("labor.repair — an admin's own labor (V1-D10 as amended)", () => {
+  it("writes no approval for a repair of the caller's own ledger; it counts at once", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin } = await world(tx);
+      await asTenant(tx, d.companyId);
+      const start = append("started", d.J, "08:00");
+      const end = append("ended", d.J, "16:00");
+      const first = await repair(tx, admin.who, admin.id, [start, end]);
+      expect(first).toMatchObject({
+        result: "accepted",
+        events: [
+          { id: start.id, reasons: [] },
+          { id: end.id, reasons: [] },
+        ],
+      });
+      // Stored with the facts of any office event: what would have sent it to approval.
+      const [row] = await tx
+        .select()
+        .from(workSessionEvents)
+        .where(eq(workSessionEvents.id, start.id));
+      expect(row).toMatchObject({
+        workerId: admin.id,
+        initiatorUserId: admin.id,
+        timeSetByUser: true,
+        capturedOffline: false,
+        locationLat: null,
+      });
+      expect(await accounting(tx, admin.id)).toMatchObject([
+        { accounting: "eligible", eligibleWorkedMs: 8 * HOUR },
+      ]);
+      // A retry answers as the first call did.
+      expect(await repair(tx, admin.who, admin.id, [start, end])).toEqual({
+        result: "duplicate",
+        events: first.result === "accepted" ? first.events : [],
+      });
+
+      // A correction is in effect at once, and a void voids at once.
+      const fix = correct(end.id, "ended", d.J, "15:00");
+      expect(await repair(tx, admin.who, admin.id, [fix])).toMatchObject({
+        result: "accepted",
+        events: [{ id: fix.id, reasons: [] }],
+      });
+      expect(await accounting(tx, admin.id)).toMatchObject([
+        { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },
+      ]);
+      const v = voidOf(start.id);
+      expect(await repair(tx, admin.who, admin.id, [v])).toMatchObject({
+        result: "accepted",
+        events: [{ id: v.id, reasons: [] }],
+      });
+      expect(await accounting(tx, admin.id)).toMatchObject([
+        { accounting: "voided", eligibleWorkedMs: 0 },
+      ]);
+
+      // Four events, no approval, and one audit row per accepted set, each the admin's own.
+      expect(await counts(tx, d)).toEqual({ events: 4, approvals: 0, audit: 3 });
+      expect(await auditRowsIn(tx, d.companyId)).toEqual([
+        repaired(d, admin.id, admin.id, [
+          { id: start.id, kind: "append", target_event_id: null },
+          { id: end.id, kind: "append", target_event_id: null },
+        ]),
+        repaired(d, admin.id, admin.id, [
+          { id: fix.id, kind: "correct", target_event_id: end.id },
+        ]),
+        repaired(d, admin.id, admin.id, [
+          { id: v.id, kind: "void", target_event_id: start.id },
+        ]),
+      ]);
+    });
+  });
+
+  it("leaves a repair of another admin pending: theirs not to decide, its writer's to", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin, admin2 } = await world(tx);
+      await asTenant(tx, d.companyId);
+      const start = append("started", d.J, "08:00");
+      const end = append("ended", d.J, "16:00");
+      expect(await repair(tx, admin.who, admin2.id, [start, end])).toMatchObject({
+        result: "accepted",
+        events: [
+          { id: start.id, reasons: ["user_timed", "location"] },
+          { id: end.id, reasons: ["user_timed", "location"] },
+        ],
+      });
+      expect(await accounting(tx, admin2.id)).toMatchObject([{ accounting: "pending" }]);
+      expect(await decide(tx, admin2.who, start.id, "approved")).toEqual({
+        result: "rejected",
+        code: "own_entry",
+      });
+      for (const id of [start.id, end.id]) {
+        expect(await decide(tx, admin.who, id, "approved")).toMatchObject({
+          result: "decided",
+        });
+      }
+      expect(await accounting(tx, admin2.id)).toMatchObject([
+        { accounting: "eligible", eligibleWorkedMs: 8 * HOUR },
+      ]);
+      // A void and a correction of their hours wait the same way.
+      const v = voidOf(start.id);
+      expect(await repair(tx, admin.who, admin2.id, [v])).toMatchObject({
+        result: "accepted",
+        events: [{ id: v.id, reasons: ["corrected"] }],
+      });
+      expect(await accounting(tx, admin2.id)).toMatchObject([{ accounting: "pending" }]);
+    });
+  });
+});
+
 describe("labor.repair — retries and ids", () => {
   it("answers a retry as the first call, ignoring the unstored precondition", async () => {
     await rolledBack(owner, async (tx) => {

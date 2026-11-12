@@ -269,6 +269,8 @@ export const strings = {
   addedEntryTime: (n: number) => `Entry ${n} time`,
   saveRepair: "Save repair",
   repairSaved: "Saved. The new entries wait for approval.",
+  // An admin's own hours need no approval (PRD, Office approval).
+  repairCounted: "Saved. These are your own hours, so they count without approval.",
   repairBadTime:
     "Enter a date and a time. A time the clocks skipped that day cannot be used.",
   repairTooMany: "At most 20 changes at a time. Save some, then make the rest.",

@@ -182,11 +182,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - tRPC runs a gate's middleware before input validation, so a call with no input answers the
   gate (UNAUTHORIZED, FORBIDDEN) or BAD_REQUEST without writing: the gate inventory test relies
   on it.
-- Until their Stage 4 tasks land, code and comments still carry rules the `V1-Dnn` rows
-  superseded: `approval.decide`, 0022, 0025 and 0026 treat an admin's own labor like
-  anyone's (V1-D10 as amended); `materials.ts` describes an office writer that does not
-  exist. The documents are right; correct each in its task and delete this note when the
-  last is done.
+- Until its Stage 4 task lands, `materials.ts` describes an office writer that does not
+  exist (V1-D09). The documents are right; correct it in that task and delete this note.
+- An admin's own labor has no approvals row (0032): a fixture that needs a pending labor
+  approval uses a worker or a foreman, or an admin's event written by a different admin; a
+  test that needs an admin's event to carry reasons has none to read. 0032's checks read
+  `users.role` when they run, so a fixture that changes a role before firing them is judged
+  by the new one.
+- The ledger screen's explanatory sentences say a repair "waits for approval" on every
+  ledger, the signed-in admin's own included, where it does not; only the saved note
+  follows the server's answer. The screen does not know who is signed in.
 - A push judges a labor event's time against the database clock, which no test can set: an
   event pushed as captured online more than five minutes before now is `clock_skewed` and
   pending. A test of a clean capture times its events inside the tolerance of `Date.now()`;
@@ -478,3 +483,29 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   today and the rule the next line retires; confirm that line still stands.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, an admin's
   own labor needs no approval (V1-D10 as amended; plan first: schema, sync).
+
+### 2026-11-12 — An admin's own labor needs no approval (V1-D10 as amended)
+
+- **Did:** branch `admin-own-labor` from `2f4be42`, five commits. `0032`: one SQL rule,
+  `labor_event_needs_no_approval`, and the deferred checks of 0022 and 0026 standing down
+  for it. `sync.push` writes no approval for a worker who is an admin, the role read from
+  the rows its scope locks; `labor.repair` writes none for the caller's own ledger. The
+  ledger screen's saved note follows the answer. Checked in the browser on `trader_demo` at
+  1280 and 390 — the demo admin's own missing hours `Counts` with "Approved by default" and
+  nothing new on `/approvals`; the same for another person waits. Watched red: the rule
+  never true, the rule without its initiator clause, the unconditional insert in push, the
+  caller's resolved role in place of the locked worker's, a repair never own, the worker's
+  role in place of the caller's own ledger, and the exemption broken at a true commit.
+  973 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its three
+  readings of the V1-D10 row), the row of that date in ARCHITECTURE: a foreman's push for
+  an admin writes no approval; one admin's repair of another's is pending; rows already
+  stored are left as they are. Changed from the plan: the saved note reads "These are your
+  own hours, so they count without approval"; a closeout test that used an admin's push to
+  carry a reason now gives the crew the job and pushes as a worker. Not done: the ledger
+  screen's explanatory sentences (a Note), no `after_closeout` case for an admin's push,
+  no browser test, no Spanish office strings, no check at 768 or 1024. Not seen in the
+  browser, covered by tests only: an admin's own correction and void, a foreman's push for
+  an admin, the promoted worker's `own_entry`.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, material
+  cost entry by the office.

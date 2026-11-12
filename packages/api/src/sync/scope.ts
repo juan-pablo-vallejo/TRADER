@@ -27,6 +27,10 @@ export type PushScope = {
   crew: { foremanUserId: string; members: Set<string> } | null;
   // Whether the worker named by the record exists in the tenant and is active.
   workerActive: boolean;
+  // Whether that worker is an admin, as locked now: an admin's own labor needs no approval
+  // (V1-D10 as amended), so a labor push writes none for them (sync/labor.ts). Authority
+  // never reads it.
+  workerAdmin: boolean;
 };
 
 export async function lockPushScope(
@@ -87,6 +91,7 @@ export async function lockPushScope(
     place,
     crew,
     workerActive: selves.workerActive,
+    workerAdmin: selves.workerAdmin,
   };
 }
 
@@ -105,6 +110,7 @@ async function lockSelves(tx: Tx, user: AppUser, workerId: string) {
   return {
     role: self.role,
     workerActive: worker !== undefined && worker.deactivatedAt === null,
+    workerAdmin: worker?.role === "admin",
   };
 }
 

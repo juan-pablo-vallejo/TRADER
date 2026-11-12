@@ -3,8 +3,11 @@
 // worker's ledger with a set of operations — `append` a missing event, `correct` one (a new
 // event naming its root), `void` a session — validated as one timeline (validateEvents), so a
 // repair needing two events at once is legal when the pair is, and written all or nothing.
-// Every new event gets its pending approval in the same transaction (0022, 0026); nothing here
-// reads a decision, so a repair's validity never depends on one (row 209). Answers mirror a
+// Every new event gets its pending approval in the same transaction (0022, 0026) — except in
+// an admin's repair of their own ledger, which writes none: an admin's own labor needs no
+// approval (V1-D10 as amended; 0032). A repair of anyone else, another admin included, is
+// pending as before. Nothing here reads a decision, so a repair's validity never depends on
+// one (row 209). Answers mirror a
 // push record's: `accepted` or `duplicate` (both success) with acknowledgements in input order,
 // or `rejected` with a code, writing nothing, so the same ids may be sent again. Anything
 // thrown rolls the call back. An accepted repair leaves one audit row (core/audit.ts); a
@@ -364,11 +367,19 @@ export async function repairLabor(
   }
 
   // 9. The approval facts, the closeout among them judged on the session as repaired, in each
-  // closeout's stored zone (ARCHITECTURE row 201).
+  // closeout's stored zone (ARCHITECTURE row 201). None for the caller's own ledger: the
+  // caller is an admin under the lock of step 2, so the worker is an admin at this receipt
+  // and no different admin is writing — the whole of 0032's rule. Their events are stored
+  // with the same facts as anyone's and, with no approvals row, are approved by default.
+  const own = input.workerId === user.id;
   const after = replay([...timeline.events, ...candidates]);
   const reasons: ApprovalReason[][] = [];
   for (const [i, op] of input.operations.entries()) {
     const c = candidates[i]!;
+    if (own) {
+      reasons.push([]);
+      continue;
+    }
     reasons.push(
       laborReasons({
         type: c.type,
@@ -413,12 +424,15 @@ export async function repairLabor(
         const written = new Set(inserted.map((r) => r.id));
         throw new IdHeld(candidates.find((c) => !written.has(c.id))!.id);
       }
-      await sp.insert(approvals).values(
-        candidates.map((c, i) => {
-          if (reasons[i]!.length === 0) throw new Error("an office event has a reason");
-          return { companyId: user.companyId, eventId: c.id, reasons: reasons[i]! };
-        }),
-      );
+      if (!own) {
+        await sp.insert(approvals).values(
+          candidates.map((c, i) => {
+            if (reasons[i]!.length === 0) throw new Error("an office event has a reason");
+            return { companyId: user.companyId, eventId: c.id, reasons: reasons[i]! };
+          }),
+        );
+      }
+      // Fired for an own repair too: 0032 stands them down only for the events it names.
       await sp.execute(APPROVED);
       await sp.execute(DEFERRED);
     });

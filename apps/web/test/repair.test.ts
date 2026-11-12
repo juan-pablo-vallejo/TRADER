@@ -306,20 +306,17 @@ describe("labor repair through the route handler", () => {
     ]);
   });
 
-  // As built today. TASKS, Stage 4, "An admin's own labor needs no approval" (V1-D10 as
-  // amended) retires this rule for labor and rewrites this test with it.
-  it("leaves an admin's own repaired hours to another admin", async () => {
-    expect((await repair(hours(admin.userId))).data).toMatchObject({
+  // V1-D10 as amended: an admin's own labor needs no approval. The answer carries no
+  // reasons, which is what the screen's saved note reads.
+  it("counts an admin's own repaired hours at once, with nothing to decide", async () => {
+    const saved = (await repair(hours(admin.userId))).data;
+    expect(saved).toMatchObject({
       result: "accepted",
+      events: [{ reasons: [] }, { reasons: [] }],
     });
-    const waiting = (await queue()).data!.items;
-    expect(waiting.map((i) => i.ownEntry)).toEqual([true, true]);
-    expect((await decide(waiting[0]!.approvalId, "approved")).data).toEqual({
-      result: "rejected",
-      code: "own_entry",
-    });
+    expect((await queue()).data!.items).toEqual([]);
     expect((await ledger(admin.userId)).data?.sessions).toMatchObject([
-      { accounting: "pending" },
+      { accounting: "eligible", events: [{ approval: null }, { approval: null }] },
     ]);
     expect(await audited()).toEqual(["work_session_events.repair"]);
   });
