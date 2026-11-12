@@ -7,8 +7,8 @@
 // to commit and never lands under a push that relied on it; then the users
 // rows FOR SHARE in id order, so two pushes never wait on each other's in opposite orders. A
 // caller deactivated meanwhile is UNAUTHORIZED, as at resolution; every other refusal is one
-// `not_permitted` that says nothing of which check failed. Consumed by sync/labor.ts and
-// sync/material.ts.
+// `not_permitted` that says nothing of which check failed. Consumed by sync/labor.ts,
+// sync/material.ts and, for `mayStartOn` alone, assignments/list.ts.
 import { crewMembers, crews, jobs, users } from "@trader/db/schema";
 import { and, eq, inArray } from "drizzle-orm";
 
@@ -110,8 +110,11 @@ async function lockSelves(tx: Tx, user: AppUser, workerId: string) {
 
 // A `started`, or a receipt, needs a job the caller may work on: not archived, and of an
 // active crew the caller is in or leads (a lead counts without a member row: crews.ts), or any
-// job for an admin.
-function mayStartOn(scope: PushScope, user: AppUser): boolean {
+// job for an admin. Exported for the office's read of dated assignments
+// (assignments/list.ts), which asks this same question of a planned worker — "could they
+// clock in here as things stand" — and must never answer it by a rule of its own. It reads
+// the scope's role and the person's id, nothing else of the caller.
+export function mayStartOn(scope: PushScope, user: { id: string }): boolean {
   if (scope.jobArchived) return false;
   if (scope.role === "admin") return true;
   return (
