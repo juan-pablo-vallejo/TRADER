@@ -188,13 +188,17 @@ describe("closeout.review — content", () => {
       );
       await becomeApp(tx);
       const r = await review(tx, d.who, d.J);
-      expect(r.materials.map((m) => [m.id, m.loggedByUserId, m.enteredByOffice])).toEqual(
-        [
-          [pushed, admin.id, false],
-          [entered, admin.id, true],
-        ],
+      // The review lists receipts in id order, and two ids minted in one millisecond order
+      // either way: compared by id. The same admin logged both, so only the stored column
+      // tells them apart.
+      const shown = Object.fromEntries(
+        r.materials.map((m) => [m.id, [m.loggedByUserId, m.enteredByOffice]]),
       );
-      expect(r.materials[1]!.loggedByName).toMatch(/^admin-/);
+      expect(shown).toEqual({
+        [pushed]: [admin.id, false],
+        [entered]: [admin.id, true],
+      });
+      expect(r.materials.every((m) => /^admin-/.test(m.loggedByName))).toBe(true);
     });
   });
 
