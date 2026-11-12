@@ -170,7 +170,7 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
       client, chosen on the vendor's page)
 - [ ] Xcode with the iOS Simulator (Mac)
 - [ ] Android Studio with one emulator (Mac)
-- [ ] Maestro CLI and its MCP server on the Mac, Java from Android Studio's bundled runtime;
+- [x] Maestro CLI and its MCP server on the Mac, Java from Android Studio's bundled runtime;
       consumer: the flows in `apps/mobile/.maestro/`. Done when the MCP lists the local
       devices and returns a screenshot of a booted simulator and of the emulator
 - [ ] Expo app with a development build; `app.jpteq.trader`; theme module from DESIGN.md; app
