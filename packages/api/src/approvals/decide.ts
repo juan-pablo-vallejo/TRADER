@@ -4,7 +4,8 @@
 // labor event (never merely its initiator), a receipt's logger, a correction's submitter — and
 // migrations 0020, 0022 and 0025 refuse the same in SQL. A decision changes no structural fact:
 // the ledger, materials, closeouts and their fingerprints stay as they are, and what counts is
-// derived (labor/approval.ts, materials/approval.ts). Consumed by routers/approval.ts.
+// derived (labor/approval.ts, materials/approval.ts). A recorded decision leaves one audit row
+// (core/audit.ts); a duplicate and a refusal leave none. Consumed by routers/approval.ts.
 import {
   approvals,
   materialCorrections,
@@ -14,6 +15,7 @@ import {
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
+import { recordAudit } from "../core/audit";
 import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import { serverClock } from "../core/clock";
@@ -163,6 +165,13 @@ export async function decideApproval(
     .where(and(eq(approvals.id, input.approvalId), isNull(approvals.decision)))
     .returning({ decision: approvals.decision, decidedAt: approvals.decidedAt });
   if (written === undefined) throw new Error("the approval was decided under its lock");
+  // 9. The decision's audit row, in this transaction. The row itself keeps who and when.
+  await recordAudit(tx, user, {
+    action: "approvals.decide",
+    entityId: input.approvalId,
+    before: { decision: null },
+    after: { decision: input.decision },
+  });
   return {
     result: "decided",
     approval: {
