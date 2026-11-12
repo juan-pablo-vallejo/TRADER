@@ -18,8 +18,9 @@ flowchart LR
   end
   M -->|"push events (UUIDv7, idempotent) · pull snapshot"| API
   API --> DB[("Postgres · Neon · system of record · RLS")]
-  AUTH["Clerk · passkeys"] -.-> M & W & API
+  AUTH["Clerk · phone and email codes"] -.-> M & W & API
   API -->|"PDF on demand · CSV and IIF exports"| OFFICE([Office / QuickBooks])
+  API -->|"invoice email · Resend"| CUST([Customer])
 ```
 
 | Piece          | Role                    | Notes                                                                                   |
@@ -31,22 +32,23 @@ flowchart LR
 
 ## Technology stack
 
-| Layer         | Choice                                                              | Why                                                                    |
-| ------------- | ------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Mobile        | Expo (React Native), EAS builds                                     | One codebase for iOS and Android; managed builds                       |
-| Local store   | Drizzle on `expo-sqlite`                                            | Same ORM as the server; storage only — the sync layer is ours          |
-| Web + API     | Next.js on Vercel Pro, Node runtime, `iad1`                         | One deployment, one bill; `pg` Pool with `attachDatabasePool`          |
-| API           | tRPC + zod + superjson                                              | End-to-end types; validation at every boundary; Dates survive the wire |
-| ORM           | Drizzle                                                             | SQL-shaped, TypeScript-native, first-class migrations                  |
-| Database      | PostgreSQL — Docker locally, Neon Launch (`aws-us-east-1`) deployed | Plain Postgres only; autoscale 0.25–1 CU, scale-to-zero on             |
-| Auth          | Clerk Pro                                                           | Passkeys + email-code fallback; invitation-only; 30-day max session    |
-| Observability | Sentry, PostHog                                                     | Errors and product analytics; PII scrubbed before the pilot            |
-| Jobs          | Vercel Cron; GitHub Actions for backups                             | No queue to run                                                        |
-| Backups       | Nightly encrypted `pg_dump` to Cloudflare R2; weekly restore-verify | Plus a timed restore drill before the pilot                            |
-| Secrets       | Vercel env vars, EAS secrets, GitHub Actions secrets                | Each platform holds what it needs; nothing in the repository           |
+| Layer         | Choice                                                              | Why                                                                       |
+| ------------- | ------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Mobile        | Expo (React Native), EAS builds                                     | One codebase for iOS and Android; managed builds                          |
+| Local store   | Drizzle on `expo-sqlite`                                            | Same ORM as the server; storage only — the sync layer is ours             |
+| Web + API     | Next.js on Vercel Pro, Node runtime, `iad1`                         | One deployment, one bill; `pg` Pool with `attachDatabasePool`             |
+| API           | tRPC + zod + superjson                                              | End-to-end types; validation at every boundary; Dates survive the wire    |
+| ORM           | Drizzle                                                             | SQL-shaped, TypeScript-native, first-class migrations                     |
+| Database      | PostgreSQL — Docker locally, Neon Launch (`aws-us-east-1`) deployed | Plain Postgres only; autoscale 0.25–1 CU, scale-to-zero on                |
+| Auth          | Clerk Pro                                                           | SMS code (crew), email code (office); invitation-only; 30-day max session |
+| Observability | Sentry, PostHog                                                     | Errors and product analytics; PII scrubbed before the pilot               |
+| Jobs          | Vercel Cron; GitHub Actions for backups                             | No queue to run                                                           |
+| Backups       | Neon point-in-time restore in Release 0.1; `pg_dump` to R2 after it | A timed restore drill before the crew starts                              |
+| Email         | Resend                                                              | Invoice delivery only                                                     |
+| Secrets       | Vercel env vars, EAS secrets, GitHub Actions secrets                | Each platform holds what it needs; nothing in the repository              |
 
 Rejected: WatermelonDB and PowerSync (sync), SQLCipher (OS encryption plus data minimization
-instead), SMS and passwords (auth), a separate backend host, AWS App Runner and ECS. Inngest,
+instead), passwords (auth), a separate backend host, AWS App Runner and ECS. Inngest,
 Twilio and Cloudflare Images are adopted only if a task shows them cheaper than the alternative.
 
 ## Invariants
@@ -193,9 +195,11 @@ Each rule's decision row carries the detail; rows marked to be built name their 
   path on a ledger row; a correction is an appended row. A foreman's authority is the crews
   they lead. An admin's is the company: bounded by RLS, by every append-only and frozen-row
   guard, and by the decision rules below (V1-D11).
-- **Identity.** Every user row has an email, unique per company; an invitation binds one
-  person. Pilot workers each have an individual, reachable address; no shared account, and no
-  sign-in path without an email is built (V1-D06).
+- **Identity.** An invitation binds one person and nobody shares an account. A crew member
+  signs in with a code sent by SMS to their own phone number; an office admin with a code
+  sent to their own email address (2026-11-12 Release 0.1 sign-in). To be built, Release 0.1
+  track R1 and R2: until then every user row has an email, unique per company, binding is by
+  that email, and `phone` identifies nobody.
 - **Dated assignments.** An admin assigns any active user to any job of the company that is
   not archived, whatever the person's crew membership or role. An assignment is never read by
   push authority, validation, the fold, approvals, closeouts, pay or invoices, creates no
@@ -259,7 +263,8 @@ Each rule's decision row carries the detail; rows marked to be built name their 
 ## Accounting and exports
 
 Hours, job cost and pay periods are built. Of the payroll CSV, invoices and their exports
-only the tables and their guards exist: Stage 4 builds the first, Stage 7 the rest.
+only the tables and their guards exist: Stage 4 builds the first, Stage 7 the rest, and the
+Release 0.1 track takes invoice drafting, issue, void and the PDF ahead of both.
 
 - **Rounding.** Durations are summed in milliseconds per worker, job and work date; that
   daily total is rounded half-up to 0.01 h. Approved-hours accounting, job cost, the payroll
@@ -310,6 +315,12 @@ only the tables and their guards exist: Stage 4 builds the first, Stage 7 the re
 - **Credit and void.** The sum of an invoice's credit memos never exceeds its total as
   issued; an invoice with a memo cannot be voided; numbering and the issue lock are as the
   2026-11-03 rows state (V1-D15).
+- **Payments and delivery (to be built, Release 0.1 track R7).** The office records what a
+  customer paid against an issued invoice — amount, date, method, a note; TRADER captures and
+  processes nothing. What is owed and whether an invoice is paid are derived from the
+  recorded payments and the invoice's total, never stored as a status. An issued invoice's
+  PDF is sent to the customer by email when an admin chooses, and each send is recorded. The
+  tables, their guards and the money rules are R7's plan (2026-11-12 Release 0.1 invoicing).
 - **Exports.** One authoritative snapshot — the issued invoice and its frozen lines, or the
   closed period's approved hours — and independent adapters over it, none of which writes:
   QuickBooks Online invoice CSV, QuickBooks Desktop invoice IIF, payroll-hours CSV, and the
@@ -356,7 +367,8 @@ it never ends the process.
 
 ## Before the first deployment
 
-None of these exists yet; each is a line in TASKS Stage 6 and a release gate in Stage 8.
+None of these exists yet; each is a line in TASKS Stage 6 and a release gate in Stage 8. The
+Release 0.1 track in TASKS names the ones it takes and the ones it leaves for after it.
 
 - Production identity: the Clerk adapter behind the identity seam; the development adapter is
   not wired into a production build at all.
@@ -378,10 +390,11 @@ None of these exists yet; each is a line in TASKS Stage 6 and a release gate in 
 
 ## Domain and identifiers
 
-`jpteq.app` is the only domain: the apex serves the web app and the association files, `www`
-redirects to the apex, `api.` aliases it, `clerk.` is DNS-only, and the subdomain allowlist is
-closed. Passkey rpID `jpteq.app` — irreversible once the first credential exists. Bundle ID and
-package name `app.jpteq.trader`.
+`jpteq.app` is the only domain, and one Vercel deployment answers on all of it:
+`app.jpteq.app` serves the office and the API at `/api/trpc`, which is the origin the field
+app calls; the apex serves the public pages — privacy policy, terms, support, the
+account-deletion request — and `www` redirects to it; `clerk.` is DNS-only; the subdomain
+allowlist is closed. No `api.` host exists. Bundle ID and package name `app.jpteq.trader`.
 
 ## Folder structure
 
@@ -570,3 +583,9 @@ Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersed
 | 2026-11-12 | Hours and cost aggregation, as built (V1-D13): no migration. `labor/hours.ts`, pure: `roundHours` — milliseconds to integer hundredths of an hour, `floor((ms + 18,000) / 36,000)` — and one cell per worker, session job and work date (the effective start's day in `companies.timezone`), rounded once on the cell's sum. By the owner on 2026-11-12: a session that counts but is still open adds nothing to approved hours or job cost until it ends, and is counted apart; a labor cost line is one cell's hundredths times the hourly rate in cents, `floor((h × rate + 50) / 100)`, half-up to the cent, and a total is the sum of its lines. `readDayHours` (`labor/day-hours.ts`) folds the whole ledger of each worker named with its decisions, read in one statement, through `sessionApprovals`; a pending session's figure is the fold's worked milliseconds, as the approval queue shows it. `labor.hours`, a query gated to admin: an inclusive range of at most 31 work dates, optionally one person and one job, answering each cell's approved and pending hundredths and its pending, rejected and open session counts; workers are found by an event recorded from a day before the range to a day after it; a person or job not visible is the one FORBIDDEN. `job.cost`, a query gated to admin, one job: lines per worker and work date with the rate in force that day (`roster/rate-on.ts`: the greatest `effective_from` on or before it, none meaning unrated, never zero), labor totals, unrated hours, pending labor priced the same way, rejected and open session counts; receipts judged by `receiptAccounting` and priced by their stored total — counted, unpriced, pending, rejected, voided; `total` is labor totals plus counted receipt totals per currency and nothing else. The workers of a job are those with an event naming it, which a corrected start that moves a session onto it does. Reads only: no lock, write or audit row; rates and receipts are read after the ledger and may be newer, so a figure to be frozen is the pay-period close's to lock. A rate added later with an earlier `effective_from` changes job cost to date. No limit and no cursor on either read. The corrections-and-decision read of a receipt is `materials/standing.ts`, used by `material.list` and `job.cost`. No screen: the next TASKS line's | — (2026-11-05 approval accounting stands: `eligibleWorkedMs` is unchanged, and still counts an open session's closed intervals for its other readers) |
 | 2026-11-12 | Job cost screen and reconciliation view, as built: no migration and no new procedure. `labor.hours` also answers `workers` — each worker with a cell in the answer and the sum of their cells, by name then id — and `totals`, the sum of every cell: integer hundredths and session counts, sums of the rounded cells and never rounded again, so the screen and the payroll CSV's check read one server figure. `/jobs/<id>` — a job's name on the jobs list links to it, and Jobs stays marked in the navigation — reads `job.cost` and, for the customer and crew, `job.list`: the total per currency with labor and materials beneath it, then apart what is in no total, then labor by day; an address that is not an id is the not-found screen, an id that is not visible the gate's FORBIDDEN. `/reconciliation`, under People, reads `labor.hours` for an inclusive range of at most 31 work dates: approved hours per person by day and job with the server's totals, and apart the cells with a session waiting, rejected or still open. By the owner on 2026-11-12: the range stands in for a pay period until periods exist; the period picker and the carried adjustments (DESIGN, Adjustment line) join the view in the pay-period task, and nothing is shown for adjustments meanwhile. The browser formats and places the server's figures and adds, rounds and multiplies nothing. Read-only: no lock, write or audit row | 2026-11-12 hours and cost aggregation's 'No screen: the next TASKS line's'; TASKS 'carried adjustments shown apart', moved to the pay-period line; PRD (Office review and job cost) 'for a pay period', read as a range of work dates until periods exist |
 | 2026-11-12 | Pay periods, as built (V1-D03): `0034` adds `pay_period_lines` and, on `pay_periods`, `unresolved_pending_sessions` and `unresolved_open_sessions`, NULL while open; `0035` makes the lines append-only, tenant-scoped under FORCE, SELECT and INSERT for the application role; `0036` adds `lock_pay_periods(company)`, a transaction advisory lock of its own key space taken by the triggers below and first by the API; a period is inserted open and neither inserted nor moved earlier than a closed one; `check_pay_period_close` replaced in place — behind the lock, and the closing update states both counts; a line is inserted only while its period's row, locked `FOR NO KEY UPDATE`, is open, never past its last day, positive on its own dates, and a deferred check holds that the period is closed at commit, so lines exist only for closed periods and only from the closing transaction. By the owner on 2026-11-12: a pay rate dated inside a closed period is accepted — a close stores hours and reads no rate; hours on work dates before the first period, or in no period, are never exported and never an adjustment; a period closes only after its last day has passed in the company's zone (`not_ended`); the latest open period's dates may be changed (`payPeriod.update`), the first period's start included, because the application role cannot delete a period; the acknowledgment is the two counts, compared for equality; unresolved means sessions waiting for approval and sessions that count but are still open, on the period's dates — rejected sessions are decided and receipts are not payroll; a period is 1 to 31 days. Procedures, admin-gated: `payPeriod.list` (newest first, with the zone and today in it), `open` (`opened`, `exists` for the same dates again, `rejected` `not_contiguous` with the day a period may start), `update` (`updated`, `unchanged`, `rejected` `closed`, `not_latest`, `not_contiguous`), `read` (a period's own hours with the server's per-person sums and total, its adjustments with their signed total, and the cells on its dates with a session waiting, rejected or open: stored lines for a closed period, a preview of what a close would store for an open one, adjustments previewed only on the earliest open period, the others naming it; unresolved always live) and `close` (`closed` with the line counts, or `rejected` `already_closed` with the standing close, `earlier_open` with the period to close first, `not_ended`, `unacknowledged`, `unresolved_changed`); a period not visible is FORBIDDEN. Writers re-read the caller, take the pay-period lock, then read the calendar and every stored line in one statement; the close then reads every worker's ledger with its decisions in one statement through `readDayHours`, writes the lines (`pay-periods/lines.ts`, pure) and stamps the row from the server's clock. No field-write lock, no audit row (V1-D20's inventory is closed: the row names its closer). The demo opens its two recorded weeks, closes the first with one entry acknowledged as waiting, and leaves the second open carrying that entry, approved since, as an adjustment. `/pay-periods` under People: the calendar, the next period's form, a period's details and the close (DESIGN, Pay-period close); `/reconciliation` opens on the next period to close and reads `payPeriod.read`, with a range of dates kept as "Other dates" (DESIGN, Reconciliation, Adjustment line). The payroll CSV is the next TASKS line: it prints the stored lines, so "a closed period and its export are byte-identical" is held here on the lines and the read | 'its form is the pay-period task's plan' and 'How that basis is stored is the pay-period task's plan' (Accounting and exports); 2026-11-07 roster API 'a rate inside a closed period is the pay-period task's rule'; 2026-10-29 pay periods 'derived from `work_date` and `server_timestamp` against `closed_at`' (membership is the close's read); 2026-11-12 reconciliation 'the range stands in for a pay period until periods exist'; TASKS 'open and close', extended with `update` |
+| 2026-11-12 | Release 0.1 — the first production release, for D Sierra Painting, ahead of the pilot build and of V1: phone sign-in; assigned jobs, clock in/out and job switch on iOS and Android with a durable outbox, the foreground location stamp, English and Spanish, and own hours; the office as built, with invoices drafted, issued, voided, rendered to PDF, emailed, and their payments recorded; production on Vercel and Neon with error reporting and a rehearsed restore; both stores. Sequenced by the Release 0.1 track in TASKS, worked before the open lines of Stages 4 to 10. Nothing built is removed and every V1 feature outside it stays required for V1 complete. Left for after it: biometric attestation, materials, photos, the foreman's closeout and the job suggestion on the phone, the payroll CSV, the QuickBooks exports, a credit-memo procedure, the full data export, PostHog, the daily diagnostics delete, server-enforced sync states. The whole crew starts only after the track's go/no-go line is recorded as passed | 2026-11-06 pilot scope, as the first thing the crew uses; TASKS 'a stage starts when the one before it is done', for the track; V1-D17's gate list, replaced for Release 0.1 by the go/no-go line |
+| 2026-11-12 | Release 0.1 sign-in: a crew member signs in with a one-time code sent by SMS to their own phone number, United States and Canada numbers only; an office admin with a one-time code sent to their own email; invitation-only, no passwords, no shared account. Passkeys are not built. An invitation may therefore name a phone number and no email, and first sign-in binds on the verified phone number or the verified email. The binding key's uniqueness, the adapter's shape, the invitation's fields and the migration are decided in the plan of track line R1, before code | 2026-10 passkeys with email-code fallback, 'no SMS'; V1-D06; 2026-11-06 own profile, '`phone` is contact data, never identity', for a phone the roster invited; Technology stack 'SMS' rejected |
+| 2026-11-12 | Release 0.1 distribution: production on the App Store and Google Play, United States storefronts, published from the owner's individual Apple Developer and Google Play accounts with the owner's name as the seller — decided by the owner, not reopened without a publishing blocker a store states. TestFlight and Play's closed track carry the crew while reviews run; where Play requires a closed test of a personal account before production, the crew's Android users are its testers | PRD pilot 'TestFlight public link, Play internal track'; TASKS Stage 10's store line, moved to the track |
+| 2026-11-12 | Release 0.1 invoicing: the office records payments against an issued invoice and reads what is owed, with no payment capture and no stored status; an issued invoice's PDF is sent by email through Resend, each send recorded. The QuickBooks exports, the manual-entry guidance and a credit-memo procedure are not in Release 0.1 and stay V1 (V1-D15, V1-D16, V1-D18, V1-D19 unchanged for V1) | 2026-10 'Payments out of V1', for a recorded payment only; 2026-10 'Resend deferred past V1', for invoice mail only; PRD 'No paid flag and no payment capture', for the record |
+| 2026-11-12 | Hosts: one Vercel deployment on `app.jpteq.app` (office and API) and the apex (public pages); no `api.` host, since the API is a route handler of that deployment (2026-07 modular monolith). No passkey is built, so no rpID is fixed and no association file is served | 2026-10 '`jpteq.app` everywhere', for the host layout; Domain and identifiers 'the apex serves the web app and the association files … `api.` aliases it'; TASKS Stage 6 'Associated Domains and `assetlinks.json`' |
+| 2026-11-12 | Release 0.1 backups: Neon's point-in-time restore, with one timed restore drill on the staging branch before the crew starts; its retention window is read on Neon's page for the plan chosen, in track line R3, and recorded there. The nightly `pg_dump` to R2 and its weekly verify follow Release 0.1, still required for V1 | 2026-10 production row, 'nightly `pg_dump` to R2, weekly verify', for Release 0.1 only |
