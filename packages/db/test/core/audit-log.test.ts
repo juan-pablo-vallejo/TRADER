@@ -1,7 +1,7 @@
 // Stage 2 line 6: the audit log, asserted against the migrated container. Rolled-back
-// transactions throughout; see helpers.ts. V1 writes no row here (the writers are after-V1
-// wiring), so these tests are the only writer and insert as the API will. The mutations are
-// raw SQL on purpose: no Drizzle update or delete against this table exists anywhere.
+// transactions throughout; see helpers.ts. These tests insert as the API's one writer does
+// (api core/audit.ts), and nothing they write is committed. The mutations are raw SQL on
+// purpose: no Drizzle update or delete against this table exists anywhere.
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -30,7 +30,7 @@ const exported = (companyId: string): typeof auditLog.$inferInsert => ({
 const rowsOf = (tx: Tx, companyId: string) =>
   tx.select().from(auditLog).where(eq(auditLog.companyId, companyId));
 
-// A rate change as the Stage 4 procedure would record it: both snapshots, one actor.
+// A row with both snapshots and one actor, to exercise the constraints.
 async function rateChange(tx: Tx) {
   const refs = await fixture(tx);
   const rate = one(

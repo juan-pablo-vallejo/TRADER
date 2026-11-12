@@ -9,6 +9,7 @@ import { fileURLToPath } from "node:url";
 import { createDb, type Db } from "@trader/db";
 import {
   approvals,
+  auditLog,
   companies,
   crewMembers,
   crews,
@@ -23,7 +24,7 @@ import {
 } from "@trader/db/schema";
 import type { AnyRouter } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
+import { asc, DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import superjson from "superjson";
 import { z } from "zod";
@@ -818,4 +819,37 @@ export async function lateReceiptIn(tx: Tx, day: CrewDay, by = day.w1) {
     "after_closeout",
   ]);
   return { materialId, approvalId };
+}
+
+// --- Audit rows --------------------------------------------------------------------------
+// audit_log is append-only and references the company and the actor, so a procedure that
+// writes it is called only inside a rolled-back transaction or in a disposable database.
+
+const auditColumns = {
+  companyId: auditLog.companyId,
+  actorUserId: auditLog.actorUserId,
+  action: auditLog.action,
+  entityTable: auditLog.entityTable,
+  entityId: auditLog.entityId,
+  before: auditLog.before,
+  after: auditLog.after,
+};
+
+// A company's audit rows in the order written, as the owner reads them past RLS.
+export const auditRows = (owner: Db, companyId: string) =>
+  owner
+    .select(auditColumns)
+    .from(auditLog)
+    .where(eq(auditLog.companyId, companyId))
+    .orderBy(asc(auditLog.id));
+
+// The same inside a rolled-back transaction, whatever role it runs as: the tenant is set
+// first, because a failed call's savepoint undid the one its procedure had set.
+export async function auditRowsIn(tx: Tx, companyId: string) {
+  await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
+  return tx
+    .select(auditColumns)
+    .from(auditLog)
+    .where(eq(auditLog.companyId, companyId))
+    .orderBy(asc(auditLog.id));
 }
