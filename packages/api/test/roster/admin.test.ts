@@ -8,11 +8,14 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   appCaller,
+  auditRow,
+  auditRows,
   disposableDb,
   member,
   outcome,
   userRow,
   waitForLockWait,
+  withoutAuditInsert,
   world,
   type World,
 } from "../helpers";
@@ -40,6 +43,15 @@ afterAll(async () => {
 const roster = (who: unknown) => appCaller(app, who).roster;
 const me = (who: unknown) => appCaller(app, who).me.get();
 
+// Company a's audit rows, in the order written, and one expected row of them.
+const audit = () => auditRows(owner, w.a.companyId);
+const row = (
+  actor: string,
+  action: string,
+  entityId: string,
+  change: { before?: unknown; after: unknown },
+) => auditRow(w.a.companyId, actor, action, entityId, change);
+
 describe("roster.setRole", () => {
   it("changes a role, answers unchanged for the same one, and shows the row", async () => {
     const admin = await member(owner, w, "a", "admin");
@@ -51,6 +63,13 @@ describe("roster.setRole", () => {
     expect(
       await roster(admin.who).setRole({ userId: worker.id, role: "foreman" }),
     ).toMatchObject({ result: "unchanged", user: { id: worker.id, role: "foreman" } });
+    // One row for the change, none for the repeat: the role alone, as it was and became.
+    expect(await audit()).toEqual([
+      row(admin.id, "users.set_role", worker.id, {
+        before: { role: "worker" },
+        after: { role: "foreman" },
+      }),
+    ]);
   });
 
   it("refuses to demote the last active admin, a deactivated admin not counting", async () => {
@@ -63,6 +82,7 @@ describe("roster.setRole", () => {
       },
     );
     expect(await userRow(owner, admin.id)).toMatchObject({ role: "admin" });
+    expect(await audit()).toEqual([]);
   });
 
   it("demotes an admin while another remains, then refuses the last one", async () => {
@@ -87,6 +107,17 @@ describe("roster.setRole", () => {
       result: "updated",
       user: { role: "admin" },
     });
+    // The two changes; the refusal and the forbidden call left nothing.
+    expect(await audit()).toEqual([
+      row(one.id, "users.set_role", two.id, {
+        before: { role: "admin" },
+        after: { role: "foreman" },
+      }),
+      row(one.id, "users.set_role", two.id, {
+        before: { role: "foreman" },
+        after: { role: "admin" },
+      }),
+    ]);
   });
 });
 
@@ -111,6 +142,18 @@ describe("roster.deactivate and roster.reactivate", () => {
     expect(await roster(admin.who).reactivate({ userId: worker.id })).toMatchObject({
       result: "unchanged",
     });
+    // One row each way, the stored instant in both; the two repeats left nothing.
+    const at = off.user.deactivatedAt!.toISOString();
+    expect(await audit()).toEqual([
+      row(admin.id, "users.deactivate", worker.id, {
+        before: { deactivated_at: null },
+        after: { deactivated_at: at },
+      }),
+      row(admin.id, "users.reactivate", worker.id, {
+        before: { deactivated_at: at },
+        after: { deactivated_at: null },
+      }),
+    ]);
   });
 
   it("keeps an unbound invitation an invitation across deactivation", async () => {
@@ -121,6 +164,10 @@ describe("roster.deactivate and roster.reactivate", () => {
       identity_subject: null,
       deactivated_at: null,
     });
+    expect(await audit()).toMatchObject([
+      { action: "users.deactivate", actorUserId: admin.id, entityId: w.a.inviteId },
+      { action: "users.reactivate", actorUserId: admin.id, entityId: w.a.inviteId },
+    ]);
   });
 
   it("refuses to deactivate the last active admin, and lets one go while another stays", async () => {
@@ -140,6 +187,11 @@ describe("roster.deactivate and roster.reactivate", () => {
       result: "rejected",
       code: "last_admin",
     });
+    // An admin's own deactivation: actor and entity are the same user.
+    expect(await audit()).toMatchObject([
+      { action: "users.deactivate", actorUserId: one.id, entityId: one.id },
+    ]);
+    expect(await audit()).toHaveLength(1);
   });
 });
 
@@ -188,6 +240,14 @@ describe("two admins racing to demote each other", () => {
       (await userRow(owner, y.id))!.role,
     ];
     expect(roles.filter((r) => r === "admin")).toHaveLength(1);
+    // One row, the winner's: the caller answered `updated` demoted the other.
+    const [winner, demoted] = settled[0] === updated[0] ? [x, y] : [y, x];
+    expect(await audit()).toEqual([
+      row(winner.id, "users.set_role", demoted.id, {
+        before: { role: "admin" },
+        after: { role: "worker" },
+      }),
+    ]);
   });
 });
 
@@ -213,5 +273,34 @@ describe("gates and targets", () => {
       expect(await outcome(roster(admin.who).reactivate({ userId }))).toBe("FORBIDDEN");
     }
     expect(await userRow(owner, w.b.boundId)).toMatchObject({ deactivated_at: null });
+    expect(await audit()).toEqual([]);
+    expect(await auditRows(owner, w.b.companyId)).toEqual([]);
+  });
+});
+
+describe("a failing audit write", () => {
+  it("fails the call and leaves the role and the activation as they were", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const worker = await member(owner, w, "a", "worker");
+    const off = await member(owner, w, "a", "worker", { deactivated: true });
+    const before = [await userRow(owner, worker.id), await userRow(owner, off.id)];
+    await withoutAuditInsert(owner, async () => {
+      for (const call of [
+        () => roster(admin.who).setRole({ userId: worker.id, role: "foreman" }),
+        () => roster(admin.who).deactivate({ userId: worker.id }),
+        () => roster(admin.who).reactivate({ userId: off.id }),
+      ]) {
+        expect(await outcome(call())).toBe("INTERNAL_SERVER_ERROR");
+      }
+    });
+    expect([await userRow(owner, worker.id), await userRow(owner, off.id)]).toEqual(
+      before,
+    );
+    expect(await audit()).toEqual([]);
+    // With the grant back, the same call commits with its row.
+    expect(
+      await roster(admin.who).setRole({ userId: worker.id, role: "foreman" }),
+    ).toMatchObject({ result: "updated" });
+    expect(await audit()).toHaveLength(1);
   });
 });
