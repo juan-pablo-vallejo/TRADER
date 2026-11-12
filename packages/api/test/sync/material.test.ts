@@ -15,6 +15,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
 import { lockCompanyFieldWrites } from "../../src/labor/timeline";
+import { setMaterialCost } from "../../src/materials/cost";
 import type { AppUser } from "../../src/core/resolve-user";
 import { pushMaterial, type MaterialRecord } from "../../src/sync/material";
 import { measureSkew } from "../../src/sync/reasons";
@@ -334,6 +335,28 @@ describe("sync.push receipt — idempotency", () => {
       );
       expect(await push(tx, w1, r, SKEWED)).toEqual({ ...first, result: "duplicate" });
       expect(await rowsOf(tx, d)).toEqual({ materials: 1, approvals: 1 });
+    });
+  });
+
+  it("answers a retry duplicate after the office priced the receipt, the cost kept", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const r = record({ jobId: d.J });
+      const first = await push(tx, w1, r);
+      const admin = await asOwner(tx, d, () => boundIn(tx, d.companyId, "admin"));
+      await tx.transaction((sp) =>
+        setMaterialCost(sp, appUser(d, admin.id, "admin"), {
+          materialId: r.id,
+          cost: { cents: 8999, currency: "USD" },
+        }),
+      );
+      // Cost is not a fact the device sent: the same receipt, and nothing overwritten.
+      expect(await push(tx, w1, r)).toEqual({ ...first, result: "duplicate" });
+      const [row] = await tx
+        .select({ costCents: materials.costCents, currency: materials.currency })
+        .from(materials)
+        .where(eq(materials.id, r.id));
+      expect(row).toEqual({ costCents: 8999, currency: "USD" });
     });
   });
 

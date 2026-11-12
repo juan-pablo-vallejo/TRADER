@@ -65,6 +65,7 @@ const EXPECTED: Record<string, Gate> = {
   "labor.repair": ADMIN,
   "material.correct": "protected",
   "material.list": ADMIN,
+  "material.setCost": ADMIN,
   "me.get": "protected",
   "me.update": "protected",
   "roster.list": ADMIN,
