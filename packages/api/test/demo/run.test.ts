@@ -11,6 +11,7 @@ import {
   DEMO,
   EXPECTED,
   EXPECTED_AUDIT,
+  EXPECTED_PERIODS,
   PEOPLE,
   RECEIPTS,
   SCENARIOS,
@@ -293,6 +294,54 @@ describe("the demo run", () => {
       }),
     ).rejects.toThrow(/superuser|bypasses row-level security/);
     expect(await counts(target.owner)).toEqual(before);
+  });
+
+  it("shows the office its pay periods: week one closed as it stood, week two carrying the late day", async () => {
+    const { periods, timezone } = await admin().payPeriod.list();
+    expect(timezone).toBe(DEMO.timezone);
+    // Newest first: week two open, week one closed by the demo admin.
+    expect(periods.map((p) => [p.startsOn, p.endsOn, p.closed === null])).toEqual([
+      ["2026-10-26", "2026-11-01", true],
+      [ANCHOR, "2026-10-25", false],
+    ]);
+    const [open, closed] = periods as [(typeof periods)[0], (typeof periods)[0]];
+    expect(closed.closed).toMatchObject({
+      by: { name: DEMO.adminName },
+      unresolved: EXPECTED_PERIODS.closed.acknowledged,
+    });
+
+    // Week one is what its close stored: Priya's Wednesday is in none of its lines, though
+    // it has been approved since.
+    const one = await admin().payPeriod.read({ periodId: closed.id });
+    expect(one.approved.cells).toHaveLength(EXPECTED_PERIODS.closed.lines);
+    expect(one.approved.total).toBe(EXPECTED_PERIODS.closed.hundredths);
+    expect(new Set(one.approved.cells.map((c) => c.hundredths))).toEqual(new Set([800]));
+    expect(
+      one.approved.cells.filter(
+        (c) => c.worker.name === "Priya Shah" && c.workDate === "2026-10-21",
+      ),
+    ).toEqual([]);
+    expect(one.adjustments).toEqual({ lines: [], total: 0, carriedBy: null });
+    expect(one.unresolved).toEqual({ cells: [], pendingSessions: 0, openSessions: 0 });
+    const { rows } = await target.owner.execute<{ n: number; total: number }>(sql`
+      select count(*)::int as n, sum(hundredths)::int as total from pay_period_lines
+    `);
+    expect(rows).toEqual([
+      { n: EXPECTED_PERIODS.closed.lines, total: EXPECTED_PERIODS.closed.hundredths },
+    ]);
+
+    // Week two would carry it, apart from its own hours.
+    const two = await admin().payPeriod.read({ periodId: open.id });
+    expect(two.approved.total).toBe(EXPECTED_PERIODS.open.hundredths);
+    expect(
+      two.adjustments.lines.map((l) => [l.worker.name, l.workDate, l.hundredths]),
+    ).toEqual([
+      ["Priya Shah", "2026-10-21", EXPECTED_PERIODS.open.adjustment.hundredths],
+    ]);
+    expect(two.unresolved).toMatchObject(EXPECTED_PERIODS.open.unresolved);
+    // Luis's rejected day is listed apart with the four that wait.
+    expect(two.unresolved.cells).toHaveLength(5);
+    expect(two.unresolved.cells.filter((c) => c.rejectedSessions === 1)).toHaveLength(1);
   });
 
   it("names its scenarios' people", () => {

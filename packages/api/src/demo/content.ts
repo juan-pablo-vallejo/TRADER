@@ -391,6 +391,13 @@ export const PLANS = [
   { who: "priya", job: "j1", days: [0], start: "07:00", end: "15:30" },
 ] as const;
 
+// The pay periods the office keeps: the two recorded weeks, Monday to Sunday. Week one is
+// closed while Priya's late Wednesday still waits for approval — the close acknowledges it —
+// and that day is approved afterwards, so week two, left open for the office to close,
+// carries it as an adjustment (V1-D03).
+export const payWeeks = (anchor: string) =>
+  [0, 7].map((n) => ({ startsOn: addDays(anchor, n), endsOn: addDays(anchor, n + 6) }));
+
 // What a complete run writes, by the plan above. The run reports what it wrote; the test holds
 // both to these numbers.
 export const EXPECTED = {
@@ -418,6 +425,9 @@ export const EXPECTED = {
   decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 - 4 + 3,
   // One row per planned person, job and day.
   assignments: PLANS.reduce((n, p) => n + p.days.length, 0),
+  payPeriods: 2,
+  // Week one's close: six people for five days and Priya for four, one line each.
+  payPeriodLines: 6 * 5 + 4,
 } as const;
 
 // What the run's labor and receipts come to, worked out by hand from the plan above; run.ts
@@ -468,9 +478,31 @@ export const EXPECTED_HOURS = [
   { who: "elena", day: 9, job: "j2", approved: 0, pending: 850, pendingSessions: 1 },
 ] as const;
 
+// The two pay periods as `payPeriod.read` answers them last, worked out by hand. Week one,
+// closed: its 34 lines of 8.00 h, the one session that waited at the close, and no
+// adjustment — it is the first close. Week two, open: six people for five days less the five
+// days that do not count yet (Tom's, Omar's, Ana's and Elena's last days wait; Luis's
+// claimed-online day was rejected), and the adjustment it would carry if closed now: Priya's
+// Wednesday of week one, 6.50 h, approved after week one closed.
+export const EXPECTED_PERIODS = {
+  closed: {
+    lines: 6 * 5 + 4,
+    hundredths: (6 * 5 + 4) * 800,
+    acknowledged: { pendingSessions: 1, openSessions: 0 },
+    adjustments: 0,
+  },
+  open: {
+    cells: 6 * 5 - 5,
+    hundredths: (6 * 5 - 5) * 800,
+    unresolved: { pendingSessions: 4, openSessions: 0 },
+    adjustment: { who: "priya", day: 2, job: "j1", hundredths: 650 },
+  },
+} as const;
+
 // The audit rows the same run leaves, by action (core/audit.ts): one per invitation, rate,
 // repair call, decision, deactivation and demotion — and none from any other step, which is
-// what the demo test holds the database to. Nobody is reactivated.
+// what the demo test holds the database to. Nobody is reactivated, and opening or closing
+// a pay period is not an audited action (V1-D20).
 export const EXPECTED_AUDIT: Record<AuditAction, number> = {
   "users.invite": PEOPLE.length,
   "users.set_role": 1,

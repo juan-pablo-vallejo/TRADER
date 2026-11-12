@@ -83,6 +83,8 @@ export async function counts(db: Db) {
     approvals,
     decided,
     assignments,
+    payPeriods,
+    payPeriodLines,
   ] = await Promise.all([
     count(db, "users"),
     count(db, "customers"),
@@ -106,6 +108,8 @@ export async function counts(db: Db) {
       )
       .then((r) => r.rows[0]!.n),
     count(db, "job_assignments"),
+    count(db, "pay_periods"),
+    count(db, "pay_period_lines"),
   ]);
   return {
     users,
@@ -122,6 +126,8 @@ export async function counts(db: Db) {
     approvals,
     decided,
     assignments,
+    payPeriods,
+    payPeriodLines,
   };
 }
 
