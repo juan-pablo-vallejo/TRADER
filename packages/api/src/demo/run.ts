@@ -8,6 +8,8 @@
 // 2026-11-04), so the database the caller prepared is the unit of atomicity: a failed step
 // throws DemoFailure naming the step and what answered, and target.ts's recovery drops that
 // database. Consumed by run-demo.ts and the demo tests.
+import { randomUUID } from "node:crypto";
+
 import type { Db, SeedCompany } from "@trader/db";
 
 import { createContext } from "../core/context";
@@ -151,6 +153,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
           db: opts.app,
           identity: { subject: `dev:${email}`, email, emailVerified: true },
           reporter: logReporter,
+          requestId: randomUUID(),
         }),
       );
       callers.set(email, c);

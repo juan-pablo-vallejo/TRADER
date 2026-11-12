@@ -22,6 +22,7 @@ import {
   pendingApproval,
   waitForLockWait,
   quietReporter,
+  REQUEST_ID,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -41,7 +42,12 @@ const decide = (
   decision: "approved" | "rejected",
 ) =>
   createCallerFactory(appRouter)(
-    createContext({ db: app, identity: who, reporter: quietReporter }),
+    createContext({
+      db: app,
+      identity: who,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
   ).approval.decide({
     approvalId,
     decision,

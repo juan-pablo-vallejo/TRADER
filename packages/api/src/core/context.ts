@@ -10,10 +10,13 @@ export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 // `reporter` is a stateless sink (report.ts) that procedures use for failures they answer
 // themselves; it holds no identity and no request state. Required, so a handler cannot forget it.
+// `requestId` is the HTTP request's: made by the handler, never read from the client, shared
+// by every call in a batch. It names a request in an error report and a diagnostic line.
 export type Context = {
   db: Db;
   identity: VerifiedIdentity | null;
   reporter: ErrorReporter;
+  requestId: string;
   waits?: CallerWaits;
 };
 
@@ -30,6 +33,7 @@ export function createContext(opts: {
   db: Db;
   identity: unknown;
   reporter: ErrorReporter;
+  requestId: string;
   waits?: CallerWaits;
 }): Context {
   const parsed = verifiedIdentitySchema.safeParse(opts.identity);
@@ -37,6 +41,7 @@ export function createContext(opts: {
     db: opts.db,
     identity: parsed.success ? parsed.data : null,
     reporter: opts.reporter,
+    requestId: opts.requestId,
     ...(opts.waits !== undefined && { waits: opts.waits }),
   };
 }

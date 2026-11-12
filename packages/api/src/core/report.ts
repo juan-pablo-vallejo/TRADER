@@ -9,7 +9,10 @@
 import { TRPCError } from "@trpc/server";
 
 export type ErrorReport = {
-  source: "request" | "push_record" | "config";
+  source: "request" | "push_record" | "diagnostics" | "config";
+  // The HTTP request's id (apps/web handler): random, made by the server, naming nobody. It
+  // ties this event to that request's sync_diagnostics lines. Null where no request is known.
+  requestId: string | null;
   path: string | null;
   type: "query" | "mutation" | "subscription" | "unknown";
   // Constructor names down the cause chain, outermost first.
@@ -25,15 +28,17 @@ export type ErrorReport = {
 export type ErrorReporter = { report(event: ErrorReport): void | Promise<void> };
 
 export type ReportWhere = {
-  source: "request" | "push_record";
+  source: "request" | "push_record" | "diagnostics";
   path: string | null | undefined;
   type: string | undefined;
+  requestId?: string | null | undefined;
 };
 
 const NAME = /^[A-Za-z0-9_$]{1,64}$/;
 const SQLSTATE = /^[0-9A-Z]{5}$/;
 const PATH = /^[A-Za-z0-9.]{1,100}$/;
 const VARIABLE = /^TRADER_[A-Z_]{1,40}$/;
+const REQUEST_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const TYPES = ["query", "mutation", "subscription"] as const;
 const MAX_CHAIN = 5;
 
@@ -60,8 +65,13 @@ export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
   const path =
     typeof where.path === "string" && PATH.test(where.path) ? where.path : null;
   const type = TYPES.find((t) => t === where.type) ?? "unknown";
+  const requestId =
+    typeof where.requestId === "string" && REQUEST_ID.test(where.requestId)
+      ? where.requestId
+      : null;
   const event: ErrorReport = {
     source: where.source,
+    requestId,
     path,
     type,
     errorNames: [],
@@ -133,6 +143,7 @@ export function reportConfigFault(
 ): void {
   deliver(reporter, () => ({
     source: "config",
+    requestId: null,
     path: "status.get",
     type: "query",
     errorNames: [],
@@ -151,14 +162,16 @@ export const logReporter: ErrorReporter = {
 
 // The fetch adapter's `onError` (Stage 4's route handler). tRPC calls it after the call has
 // settled, so a protected call's transaction has already rolled back, and calls it with no
-// guard of its own, so this one never throws.
-export function reportingOnError(reporter: ErrorReporter) {
+// guard of its own, so this one never throws. `requestId` is the handler's, made before the
+// context is: a request whose context could not be built is still reported under its id.
+export function reportingOnError(reporter: ErrorReporter, requestId?: string) {
   return (opts: { error: unknown; path?: string; type?: string }): void => {
     try {
       reportFailure(reporter, opts.error, {
         source: "request",
         path: opts.path,
         type: opts.type,
+        requestId,
       });
     } catch {
       // An unreadable `opts`: nothing to report, and nothing to break.

@@ -3,6 +3,8 @@
 // (api trpc.ts). `onError` is the error-reporting seam, called by tRPC after a call has
 // settled. Dependencies are passed in so tests hand it an unusable database or a recording
 // reporter; route.ts wires the real ones.
+import { randomUUID } from "node:crypto";
+
 import {
   appRouter,
   createContext,
@@ -23,8 +25,11 @@ export type HandlerDependencies = {
 };
 
 export function createTrpcHandler(deps: HandlerDependencies) {
-  return (req: Request): Promise<Response> =>
-    fetchRequestHandler({
+  return (req: Request): Promise<Response> => {
+    // One id per HTTP request, made here and never read from a header: it exists before the
+    // context does, so a request whose context cannot be built is still reported under it.
+    const requestId = randomUUID();
+    return fetchRequestHandler({
       endpoint: ENDPOINT,
       router: appRouter,
       req,
@@ -33,8 +38,9 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           db: deps.getDb(),
           identity: await deps.identity.identify(req.headers),
           reporter: deps.reporter,
+          requestId,
         }),
-      onError: reportingOnError(deps.reporter),
+      onError: reportingOnError(deps.reporter, requestId),
       // One request may carry several calls, each a transaction on a pooled connection; an
       // office screen batches a handful. Without a cap one request could ask for thousands.
       maxBatchSize: MAX_BATCH_SIZE,
@@ -42,4 +48,5 @@ export function createTrpcHandler(deps: HandlerDependencies) {
       // build before it syncs: nothing here may be served from a shared cache.
       responseMeta: () => ({ headers: { "cache-control": "no-store" } }),
     });
+  };
 }

@@ -104,6 +104,25 @@ describe("the route handler", () => {
     expect(JSON.stringify(events)).not.toContain(fixture.email);
   });
 
+  it("makes one request id per request, and never takes the client's", async () => {
+    vi.stubEnv("TRADER_DEV_IDENTITY", "enabled");
+    const { reporter, events } = recordingReporter();
+    const handler = createTrpcHandler({
+      getDb: () => unusableDb,
+      identity: webIdentity,
+      reporter,
+    });
+    const claimed = "11111111-1111-4111-8111-111111111111";
+    const headers = { ...signedIn(), "x-request-id": claimed };
+    await query(handler, "me.get", { headers });
+    await query(handler, "me.get", { headers });
+    const ids = events.map((e) => e.requestId);
+    expect(ids).toHaveLength(2);
+    expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(ids[0]).not.toBe(ids[1]);
+    expect(ids).not.toContain(claimed);
+  });
+
   it("answers me.get 200 for a signed-in invitation, binding it under trader_app", async () => {
     vi.stubEnv("TRADER_DEV_IDENTITY", "enabled");
     const r = await query(GET, "me.get", { headers: signedIn() });

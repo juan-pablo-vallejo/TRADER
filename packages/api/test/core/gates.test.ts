@@ -22,6 +22,7 @@ import {
   outcome,
   ownerDb,
   quietReporter,
+  REQUEST_ID,
   world,
   type World,
 } from "../helpers";
@@ -136,7 +137,12 @@ describe("a protected call's waits", () => {
   it("are bounded from the transaction's first statements", async () => {
     const { who } = await member(owner, w, "a", "worker", { label: "waits" });
     const waits = await createCallerFactory(probe)(
-      createContext({ db: app, identity: who, reporter: quietReporter }),
+      createContext({
+        db: app,
+        identity: who,
+        reporter: quietReporter,
+        requestId: REQUEST_ID,
+      }),
     ).waits();
     expect(waits).toEqual({
       lock: PROTECTED_TIMEOUTS.lockTimeout,

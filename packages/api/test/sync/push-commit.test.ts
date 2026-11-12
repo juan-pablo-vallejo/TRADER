@@ -37,6 +37,7 @@ import {
   waitForLockWait,
   type CrewDay,
   quietReporter,
+  REQUEST_ID,
   recordingReporter,
 } from "../helpers";
 
@@ -52,7 +53,9 @@ afterAll(async () => {
 });
 
 const caller = (who: VerifiedIdentity, reporter: ErrorReporter = quietReporter) =>
-  createCallerFactory(appRouter)(createContext({ db: app, identity: who, reporter }));
+  createCallerFactory(appRouter)(
+    createContext({ db: app, identity: who, reporter, requestId: REQUEST_ID }),
+  );
 
 // A committed crew day with a bound worker `w` on the crew (crewDayIn's own workers are
 // invitations: no identity to push with), and a second crew job J2.

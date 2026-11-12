@@ -214,12 +214,13 @@ async function runOne(tx: Tx, user: AppUser, r: Parsed, skew: Skew): Promise<Pus
 // record's transaction rolled back and while the request goes on. reportFailure classifies it:
 // a mid-batch UNAUTHORIZED is an expected answer, never an incident.
 export const reportRecordFailure =
-  (reporter: ErrorReporter) =>
+  (reporter: ErrorReporter, requestId?: string) =>
   (error: unknown): void =>
     reportFailure(reporter, error, {
       source: "push_record",
       path: "sync.push",
       type: "mutation",
+      requestId,
     });
 
 // `clock` is the batch budget's; `onRecordFailure` receives what the loop swallows, and must

@@ -19,6 +19,7 @@ import {
   crewDayIn,
   disposableDb,
   quietReporter,
+  REQUEST_ID,
   rolledBack,
   uuidv7,
   waitForLockWait,
@@ -37,7 +38,12 @@ afterAll(async () => {
 
 const caller = (who: VerifiedIdentity) =>
   createCallerFactory(appRouter)(
-    createContext({ db: app, identity: who, reporter: quietReporter }),
+    createContext({
+      db: app,
+      identity: who,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
   );
 
 // A committed crew day with a bound worker `w` on the crew and a bound admin.
