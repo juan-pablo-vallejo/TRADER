@@ -23,7 +23,12 @@ export const users = pgTable(
     // per company without regard to case; stored as given.
     email: text("email").notNull(),
     name: text("name").notNull(),
+    // Contact data the person writes themselves (me.update); it identifies nobody.
     phone: text("phone"),
+    // The second invitation join key: the mobile number a one-time code is sent to, E.164,
+    // United States and Canada only (ARCHITECTURE, 2026-11-12 Release 0.1 sign-in). Written by
+    // roster.invite and by nothing else. Unique per company, as the email is.
+    signInPhone: text("sign_in_phone"),
     role: userRole("role").notNull().default("worker"),
     deactivatedAt,
     createdAt,
@@ -39,5 +44,7 @@ export const users = pgTable(
     ),
     check("users_name_not_blank", sql`btrim(${t.name}) <> ''`),
     check("users_email_not_blank", sql`btrim(${t.email}) <> ''`),
+    unique("users_company_id_sign_in_phone_unique").on(t.companyId, t.signInPhone),
+    check("users_sign_in_phone_e164", sql`${t.signInPhone} ~ '^\\+1[2-9][0-9]{9}$'`),
   ],
 );
