@@ -306,6 +306,29 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   on `(company_id, id)`, which a conflict target does not cover — the likely cause, not
   proven. One of two identical entries sent at once would answer a failure and write
   nothing, and its resend `duplicate`. Rerun; the fix is its own line.
+- A closed pay period and its `pay_period_lines` can never be deleted, and they reference
+  the company, the closer, the workers and the jobs: tests close periods only in a
+  rolled-back transaction or a `disposableDb()`. Check `/pay-periods` by hand only in
+  `trader_demo`, then `pnpm demo --reset`.
+- A `pay_period_lines` fixture inserts its lines while the period is open and closes the
+  period in the same transaction, counts stated (0036); the deferred seal fires in a
+  rolled-back test only under `SET CONSTRAINTS ALL IMMEDIATE`, and a test that then repairs
+  labor defers them again (`seal` in `pay-periods/close.test.ts`).
+- Inserting a `pay_periods` row takes the company's pay-period lock in its trigger: a
+  fixture that must leave the lock free inserts under `session_replication_role = replica`.
+- An advisory transaction lock taken inside a savepoint that rolls back is released: a
+  failed call in a rolled-back test proves nothing about a lock it took.
+- After a test's `asOwner` the transaction's tenant setting is empty: a direct select as
+  `trader_app` then sees no row. Read fixtures as the owner.
+- Every event of a session has its own approval, and the session waits while any of them
+  does: approving one event of a four-event day leaves the pay period's count unchanged.
+- The demo closes week one, so `--anchor` must leave both recorded weeks ended: a later
+  anchor fails at the close step with `not_ended`. `EXPECTED_PERIODS` (`demo/content.ts`)
+  is worked out by hand like `EXPECTED_COST`.
+- `RowToggle` reads "Close" when open; on a row where that word is an action of its own
+  (a pay period), pass `closeLabel`.
+- An eslint rule (`react-hooks/refs`) refuses `ref.current` inside a mutation's `onSuccess`
+  written in render: move focus from an effect keyed on the state that changed.
 
 ## Log
 
@@ -723,3 +746,38 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   needs its own TASKS line.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, pay periods
   (V1-D03; plan first: schema, money).
+
+### 2026-11-12 — Pay periods (V1-D03)
+
+- **Did:** branch `pay-periods` from `fe0fea8`, ten commits. `0034`–`0036`:
+  `pay_period_lines`, the close's unresolved counts, the pay-period lock, a period inserted
+  open and never earlier than a closed one, lines sealed at the close. `pay-periods/lines.ts`
+  (pure: the close's subtraction), `payPeriod.list`, `open`, `update`, `read`, `close` with
+  their gate lines; two periods in the demo, week one closed with an entry waiting.
+  `/pay-periods` under People and the period picker with adjustments on `/reconciliation`,
+  checked in the browser on `trader_demo` at 390, 768, 1024 and 1280 — week one at 272.00 h,
+  week two at 200.00 h carrying +6.50 h, the close by keyboard with the box ticked, a stale
+  count refused with the new one, a close already made elsewhere, the next period opened,
+  its dates moved, a 32-day period refused under its field; no sideways scroll, no control
+  under 48 pt narrow or 44 wide. Watched red: every 0035 and 0036 guard, the lock, the
+  caller re-read, each refusal, the acknowledgment's two comparisons, the stored counts,
+  `exported` left out, the earlier-period filter, a closed period derived again, the
+  preview's carrier, the view rules. 1,156 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its nine
+  recommendations), the row of that date in ARCHITECTURE and the DESIGN amendments (Pay
+  periods in the People group; Reconciliation; Pay-period close). Changed from the plan:
+  three migrations, not two — access (`0035`) apart from guards (`0036`), as 0030 and 0031;
+  no `overlaps` answer, since contiguity already refuses it as `not_contiguous`; ten
+  commits, not nine, one of them a fix found in the browser (the toggle read "Close" beside a period;
+  closing dropped focus to the page). Not done: the payroll CSV (next line), no browser
+  test in CI, no Spanish office strings, no audit row, no field-write lock. Not seen in the
+  browser, covered by tests only: `earlier_open`, an open session in the acknowledgment, a
+  negative adjustment, an open period that is not the next to close, the load-failure
+  banner, a worker's refusal. Worth knowing: a close folds every worker's whole ledger in
+  one statement, with no limit; a session moved by correction onto a date in no period
+  leaves a negative adjustment and no positive one; the second of two closers waits up to
+  5 s; the first `pnpm check` of the screen commit ran before its one added format test.
+  For the owner: `TASKS.md` line 14, "Resync every other clone", is still unticked; the
+  Stage 6 Neon line says "29-file journal" and the journal now has 37.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, the
+  payroll-hours CSV (V1-D18; columns decided in its plan).
