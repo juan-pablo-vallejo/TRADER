@@ -38,6 +38,8 @@ const GRANTS: Record<string, Privilege[]> = {
   material_corrections: ["SELECT", "INSERT"],
   // Short-lived (0029): the writer deletes its company's expired lines; never edited.
   sync_diagnostics: ["SELECT", "INSERT", "DELETE"],
+  // A plan, not a fact (0031): the office edits and removes it.
+  job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
 };
 
 let db: Db;

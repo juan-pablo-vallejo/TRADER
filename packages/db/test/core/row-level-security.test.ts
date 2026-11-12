@@ -18,6 +18,7 @@ import {
   dayCloseoutWorkers,
   invoiceLineItems,
   invoices,
+  jobAssignments,
   materialCorrections,
   materials,
   payPeriods,
@@ -41,7 +42,7 @@ import {
   type Tx,
 } from "../helpers";
 
-// The tables that carry company_id, as 0014, 0017, 0020 and 0029 list them; companies is checked on its own id.
+// The tables that carry company_id, as 0014, 0017, 0020, 0029 and 0031 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -55,6 +56,7 @@ const TENANT_TABLES = [
   "invoice_counters",
   "invoice_line_items",
   "invoices",
+  "job_assignments",
   "jobs",
   "material_corrections",
   "materials",
@@ -198,6 +200,14 @@ async function everything(tx: Tx, name: string) {
     recordKind: "labor_event",
     outcome: "rejected",
     code: "not_permitted",
+  });
+  await tx.insert(jobAssignments).values({
+    companyId: refs.companyId,
+    userId: refs.workerId,
+    jobId: refs.jobId,
+    workDate: "2026-11-16",
+    expectedStart: "07:00",
+    expectedEnd: "15:30",
   });
   return refs;
 }
