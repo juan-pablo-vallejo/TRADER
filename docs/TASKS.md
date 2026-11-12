@@ -111,7 +111,7 @@ jobs, assignments, approvals, a closeout, close, export.
       person stays pending; a role change after receipt moves nothing
 - [x] Material cost entry by the office: API under the closed-day freeze's cost exception,
       and its screen. Tests: only `cost_cents` and `currency` change on a frozen receipt
-- [ ] Office-created material entries (V1-D09; plan first: schema). Work: the provenance
+- [x] Office-created material entries (V1-D09; plan first: schema). Work: the provenance
       column and its migration, an admin-gated insert under the shared field-write lock, the
       form (DESIGN, Material entry). Tests: provenance is stored and shown and a device push
       cannot claim it; an entry on a closed-out day is pending `after_closeout` and its
