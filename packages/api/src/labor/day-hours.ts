@@ -8,9 +8,12 @@
 //
 // labor.hours answers the cells of a range of work dates, for the company or one person,
 // optionally on one job: approved hours as rounded hundredths, with what is pending, rejected
-// or still open beside them and never inside. No cost and no rate (jobs/cost.ts). The range
-// is refused past its bound, never truncated, and there is no limit, so nothing in it is left
-// out. Consumed by routers/labor.ts and jobs/cost.ts.
+// or still open beside them and never inside, and the sums of those cells per worker and for
+// the whole answer: a total is the sum of rounded cells and is never rounded again, so the
+// office's reconciliation and whatever exports it read one figure and add nothing themselves.
+// No cost and no rate (jobs/cost.ts). The range is refused past its bound, never truncated,
+// and there is no limit, so nothing in it is left out. Consumed by routers/labor.ts and
+// jobs/cost.ts.
 import { approvals, companies, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -79,6 +82,43 @@ export const hoursInput = z
   })
   .refine(rangeWithinBound, RANGE_REFUSAL);
 
+// The figures of a cell, and of any sum of cells: integer hundredths and counts.
+const figures = {
+  // Hundredths of an hour: the day's approved milliseconds, rounded once, half-up.
+  approvedHundredths: z.number().int(),
+  // Waiting for a decision; in no approved figure.
+  pendingHundredths: z.number().int(),
+  pendingSessions: z.number().int(),
+  rejectedSessions: z.number().int(),
+  // Sessions that count but have no clock-out yet: nothing of theirs is above.
+  openSessions: z.number().int(),
+};
+type Figures = { [K in keyof typeof figures]: number };
+
+const NOTHING: Figures = {
+  approvedHundredths: 0,
+  pendingHundredths: 0,
+  pendingSessions: 0,
+  rejectedSessions: 0,
+  openSessions: 0,
+};
+
+// The sum of cells' figures. Each cell was rounded once (hours.ts); nothing is rounded here.
+function sumOf(cells: readonly Figures[]): Figures {
+  const sum = { ...NOTHING };
+  for (const c of cells) {
+    sum.approvedHundredths += c.approvedHundredths;
+    sum.pendingHundredths += c.pendingHundredths;
+    sum.pendingSessions += c.pendingSessions;
+    sum.rejectedSessions += c.rejectedSessions;
+    sum.openSessions += c.openSessions;
+  }
+  if (!Object.values(sum).every(Number.isSafeInteger)) {
+    throw new Error("a total of hours is a whole number of hundredths");
+  }
+  return sum;
+}
+
 export const hoursOutput = z.strictObject({
   // The zone every work date here was judged in.
   timezone: z.string(),
@@ -88,16 +128,18 @@ export const hoursOutput = z.strictObject({
       worker: z.strictObject({ id: z.uuid(), name: z.string() }),
       job: z.strictObject({ id: z.uuid(), name: z.string() }),
       workDate: z.iso.date(),
-      // Hundredths of an hour: the day's approved milliseconds, rounded once, half-up.
-      approvedHundredths: z.number().int(),
-      // Waiting for a decision; in no approved figure.
-      pendingHundredths: z.number().int(),
-      pendingSessions: z.number().int(),
-      rejectedSessions: z.number().int(),
-      // Sessions that count but have no clock-out yet: nothing of theirs is above.
-      openSessions: z.number().int(),
+      ...figures,
     }),
   ),
+  // Each worker with a cell above and the sum of their cells, by name then id.
+  workers: z.array(
+    z.strictObject({
+      worker: z.strictObject({ id: z.uuid(), name: z.string() }),
+      ...figures,
+    }),
+  ),
+  // The sum of every cell above.
+  totals: z.strictObject(figures),
 });
 
 export type HoursOutput = z.infer<typeof hoursOutput>;
@@ -147,7 +189,7 @@ export async function listHours(
       c.workDate <= input.to &&
       (input.jobId === undefined || c.jobId === input.jobId),
   );
-  if (kept.length === 0) return { timezone, cells: [] };
+  if (kept.length === 0) return { timezone, cells: [], workers: [], totals: NOTHING };
 
   const names = async (table: typeof users | typeof jobs, ids: string[]) =>
     new Map(
@@ -166,24 +208,32 @@ export async function listHours(
     return { id, name };
   };
 
-  return {
-    timezone,
-    cells: kept
-      .sort(
-        (a, b) =>
-          compare(a.workDate, b.workDate) ||
-          compare(a.workerId, b.workerId) ||
-          compare(a.jobId, b.jobId),
-      )
-      .map((c) => ({
-        worker: named(workerNames, c.workerId),
-        job: named(jobNames, c.jobId),
-        workDate: c.workDate,
-        approvedHundredths: c.approvedHundredths,
-        pendingHundredths: c.pendingHundredths,
-        pendingSessions: c.pendingSessions,
-        rejectedSessions: c.rejectedSessions,
-        openSessions: c.openSessions,
-      })),
-  };
+  const cells = kept
+    .sort(
+      (a, b) =>
+        compare(a.workDate, b.workDate) ||
+        compare(a.workerId, b.workerId) ||
+        compare(a.jobId, b.jobId),
+    )
+    .map((c) => ({
+      worker: named(workerNames, c.workerId),
+      job: named(jobNames, c.jobId),
+      workDate: c.workDate,
+      approvedHundredths: c.approvedHundredths,
+      pendingHundredths: c.pendingHundredths,
+      pendingSessions: c.pendingSessions,
+      rejectedSessions: c.rejectedSessions,
+      openSessions: c.openSessions,
+    }));
+  const workers = [...workerNames]
+    .map(([id, name]) => ({
+      worker: { id, name },
+      ...sumOf(cells.filter((c) => c.worker.id === id)),
+    }))
+    .sort(
+      (a, b) =>
+        compare(a.worker.name.toLowerCase(), b.worker.name.toLowerCase()) ||
+        compare(a.worker.id, b.worker.id),
+    );
+  return { timezone, cells, workers, totals: sumOf(cells) };
 }
