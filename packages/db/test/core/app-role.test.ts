@@ -36,6 +36,8 @@ const GRANTS: Record<string, Privilege[]> = {
   day_closeout_workers: ["SELECT", "INSERT"],
   day_closeout_materials: ["SELECT", "INSERT"],
   material_corrections: ["SELECT", "INSERT"],
+  // Short-lived (0029): the writer deletes its company's expired lines; never edited.
+  sync_diagnostics: ["SELECT", "INSERT", "DELETE"],
 };
 
 let db: Db;

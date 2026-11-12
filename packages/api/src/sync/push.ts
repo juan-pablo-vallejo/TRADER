@@ -24,6 +24,7 @@ import type { AppUser } from "../core/resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { materialAck, materialPayloadV1, pushMaterial } from "./material";
 import { reportFailure, type ErrorReporter } from "../core/report";
+import type { DiagnosticLine, Note } from "./diagnostics";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
 
@@ -92,23 +93,42 @@ type Parsed =
 
 // What one element of the batch is: a record to run, one answered `invalid_record` without a
 // transaction, or one the batch stops before (no id to answer with, or a version this server
-// does not know yet: retried after it upgrades, never condemned).
+// does not know yet: retried after it upgrades, never condemned). A stop says what could be
+// read of the record, for its diagnostic line (diagnostics.ts).
 type Classified =
   | { kind: "run"; record: Parsed }
   | { kind: "invalid"; id: string; recordKind: Kind | null }
-  | { kind: "stop" };
+  | {
+      kind: "stop";
+      id: string | null;
+      recordKind: Kind | null;
+      code: "unreadable_record" | "unknown_schema_version";
+    };
+
+const kindOf = (raw: unknown): Kind | null => {
+  const k = z.enum(RECORD_KINDS).safeParse((raw as { kind?: unknown } | null)?.kind);
+  return k.success ? k.data : null;
+};
 
 function classify(raw: unknown): Classified {
   const env = envelope.safeParse(raw);
   if (!env.success) {
     const id = addressable.safeParse(raw);
-    if (!id.success) return { kind: "stop" };
-    const k = z.enum(RECORD_KINDS).safeParse((raw as { kind?: unknown }).kind);
-    return { kind: "invalid", id: id.data.id, recordKind: k.success ? k.data : null };
+    if (!id.success) {
+      return {
+        kind: "stop",
+        id: null,
+        recordKind: kindOf(raw),
+        code: "unreadable_record",
+      };
+    }
+    return { kind: "invalid", id: id.data.id, recordKind: kindOf(raw) };
   }
   const { id, kind, schemaVersion, payload } = env.data;
   const parser = (PAYLOADS[kind] as Record<number, z.ZodType>)[schemaVersion];
-  if (parser === undefined) return { kind: "stop" };
+  if (parser === undefined) {
+    return { kind: "stop", id, recordKind: kind, code: "unknown_schema_version" };
+  }
   const p = parser.safeParse(payload);
   if (!p.success) return { kind: "invalid", id, recordKind: kind };
   return { kind: "run", record: { kind, id, schemaVersion, payload: p.data } as Parsed };
@@ -214,21 +234,33 @@ async function runOne(tx: Tx, user: AppUser, r: Parsed, skew: Skew): Promise<Pus
 // record's transaction rolled back and while the request goes on. reportFailure classifies it:
 // a mid-batch UNAUTHORIZED is an expected answer, never an incident.
 export const reportRecordFailure =
-  (reporter: ErrorReporter) =>
+  (reporter: ErrorReporter, requestId?: string) =>
   (error: unknown): void =>
     reportFailure(reporter, error, {
       source: "push_record",
       path: "sync.push",
       type: "mutation",
+      requestId,
     });
 
+const omitted = (
+  recordId: string | null,
+  recordKind: Kind | null,
+  code: string,
+): DiagnosticLine => ({ recordId, recordKind, outcome: "omitted", code });
+
 // `clock` is the batch budget's; `onRecordFailure` receives what the loop swallows, and must
-// not throw (reportRecordFailure never does).
+// not throw (reportRecordFailure never does). `note` receives a diagnostic line for every
+// record answered `rejected` and, when the loop stops on a record, for that record and each
+// one behind it whose id can be read (diagnostics.ts); it must not throw either. A line holds
+// an id, a kind and a code: `note` is never handed a payload. The budget running out is not
+// a failure and notes nothing: those records are simply attempted next cycle.
 export async function pushRecords(
   input: z.infer<typeof pushInput>,
   run: RunRecord,
   clock: () => number = Date.now,
   onRecordFailure: (error: unknown) => void = () => undefined,
+  note: Note = () => undefined,
 ): Promise<PushOutput> {
   const started = clock();
   const serverNow = new Date(started);
@@ -237,23 +269,45 @@ export async function pushRecords(
   // Records that ran a transaction. Until one has, a failure is the call's: a deactivated or
   // anonymous caller learns nothing, not even which records were malformed.
   let ran = 0;
+  const answer = (result: PushResult) => {
+    results.push(result);
+    if (result.result === "rejected") {
+      note({
+        recordId: result.id,
+        recordKind: result.kind,
+        outcome: "rejected",
+        code: result.code,
+      });
+    }
+  };
+  // The records behind the one the loop stopped on: read for an id and a kind, nothing else.
+  const noteRest = (from: number) => {
+    for (const raw of input.records.slice(from)) {
+      const id = addressable.safeParse(raw);
+      if (id.success) note(omitted(id.data.id, kindOf(raw), "not_attempted"));
+    }
+  };
 
-  for (const raw of input.records) {
+  for (const [i, raw] of input.records.entries()) {
     if (clock() - started > BUDGET_MS) break;
     const c = classify(raw);
-    if (c.kind === "stop") break;
+    if (c.kind === "stop") {
+      note(omitted(c.id, c.recordKind, c.code));
+      noteRest(i + 1);
+      break;
+    }
     if (c.kind === "invalid") {
-      results.push(rejectedAs({ id: c.id, kind: c.recordKind }, "invalid_record"));
+      answer(rejectedAs({ id: c.id, kind: c.recordKind }, "invalid_record"));
       continue;
     }
     const r = c.record;
     try {
-      results.push(await run((tx, user) => runOne(tx, user, r, skew)));
+      answer(await run((tx, user) => runOne(tx, user, r, skew)));
       ran++;
     } catch (error) {
       // A refusal in a delegate's scope: its transaction rolled back, the record is answered.
       if (error instanceof TRPCError && error.code === "FORBIDDEN") {
-        results.push(rejectedAs(r, "not_permitted"));
+        answer(rejectedAs(r, "not_permitted"));
         ran++;
         continue;
       }
@@ -261,6 +315,8 @@ export async function pushRecords(
       // left out and retried; what committed before is answered.
       if (ran === 0) throw error;
       onRecordFailure(error);
+      note(omitted(r.id, r.kind, "record_failed"));
+      noteRest(i + 1);
       break;
     }
   }

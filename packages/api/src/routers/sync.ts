@@ -10,7 +10,13 @@ export const syncRouter = router({
     .input(pushInput)
     .output(pushOutput)
     .mutation(({ ctx, input }) =>
-      pushRecords(input, ctx.runRecord, Date.now, reportRecordFailure(ctx.reporter)),
+      pushRecords(
+        input,
+        ctx.runRecord,
+        Date.now,
+        reportRecordFailure(ctx.reporter, ctx.requestId),
+        ctx.note,
+      ),
     ),
   pull: protectedProcedure
     .input(pullInput)

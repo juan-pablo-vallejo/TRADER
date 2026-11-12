@@ -9,6 +9,7 @@ import {
   outcome,
   ownerDb,
   quietReporter,
+  REQUEST_ID,
   world,
   type World,
 } from "../helpers";
@@ -30,7 +31,12 @@ afterAll(async () => {
 
 const me = (who: unknown) =>
   createCallerFactory(appRouter)(
-    createContext({ db: app, identity: who, reporter: quietReporter }),
+    createContext({
+      db: app,
+      identity: who,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
   ).me.get();
 
 describe("me.get", () => {

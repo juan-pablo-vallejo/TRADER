@@ -58,6 +58,7 @@ describe("the minimized report", () => {
     expect(Object.keys(event).sort()).toEqual([
       "errorNames",
       "path",
+      "requestId",
       "source",
       "sqlstate",
       "type",
@@ -205,6 +206,15 @@ describe("reportingOnError and reportConfigFault", () => {
     expect(events).toMatchObject([{ source: "request", path: "a.b", type: "mutation" }]);
   });
 
+  it("carries the request's id, and only a value shaped like one", () => {
+    const { reporter, events } = recordingReporter();
+    const id = "3f2c1a9e-0b7d-4c55-9a1e-6d2f8b4c7e10";
+    reportingOnError(reporter, id)({ error: new Error("x"), path: "a.b", type: "query" });
+    reportingOnError(reporter)({ error: new Error("x"), path: "a.b", type: "query" });
+    reportingOnError(reporter, "worker@co.test")({ error: new Error("x") });
+    expect(events.map((e) => e.requestId)).toEqual([id, null, null]);
+  });
+
   it("never throws, whatever it is handed", () => {
     const onError = reportingOnError(throwingReporter);
     expect(() => onError({ error: new Error("x") })).not.toThrow();
@@ -217,6 +227,7 @@ describe("reportingOnError and reportConfigFault", () => {
     expect(events).toEqual<ErrorReport[]>([
       {
         source: "config",
+        requestId: null,
         path: "status.get",
         type: "query",
         errorNames: [],

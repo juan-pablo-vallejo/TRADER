@@ -190,6 +190,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   inserted as the owner never pass through push. A fixture dated after today is refused.
 - The demo's history is `captured_offline` for the same reason; `EXPECTED.decided` counts the
   backlog the demo admin approves, so a new seeded event changes it.
+- `sync_diagnostics` references `users` and `companies`: a test's cleanup deletes its lines
+  first, and any authenticated `sync.push` that fails or refuses a record on committed fixtures
+  writes one — a bad-input call in the gate inventory included.
+- The diagnostics write resolves its caller with `bind: false`. Resolving the ordinary way
+  would make a failed push's diagnostics transaction perform the first sign-in the push
+  itself gave up on (seen: "binding nothing" in `push-commit.test.ts` turned red).
+- An unparseable body on `sync.push` reaches the sync procedure in tRPC 11.23.0 (input is read
+  inside the call) and leaves a `request_failed` line; `apps/web/test/refusals.test.ts` pins it.
+- The refused-entries screen states "30 days" in `strings.ts`: change it with `RETENTION_DAYS`.
 
 ## Log
 
@@ -281,3 +290,21 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   truthful online capture delivered more than five minutes late is flagged.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, rejected-record
   diagnostics (V1-D04; plan first: the store and the retention period).
+
+### 2026-11-11 — Rejected-record diagnostics (V1-D04)
+
+- **Did:** branch `rejected-record-diagnostics` from `2e8b12d`, six commits. A request id per
+  HTTP request in the context and the error report. `sync_diagnostics` (`0028`, `0029`):
+  tenant policy, SELECT, INSERT, DELETE. The push loop notes refusals, the record it stopped on
+  and the identifiable records behind it; the sync procedure writes them after the call
+  settles, guarded, with a bounded delete of expired lines and a per-caller cap.
+  `diagnostic.list` and its gate line; `/refusals`, checked in the browser on `trader_demo` at
+  390 and 1280. Watched red: the client-supplied id, the bind, the prune, the cap, the write's
+  guard, the rest-of-batch note, the read's retention and zone filters. 832 tests.
+- **Decided:** by the owner on 2026-11-11 ("execute", the plan's recommendations), the five
+  rows of that date in ARCHITECTURE: the table as the store, 30 days, the receipt time in a
+  line, the request id in `ErrorReport`, DELETE on this one table, `/refusals`. Found while
+  building and not in the plan: the non-binding resolve (its own row). Not done: the daily
+  cross-tenant delete, now a Stage 6 line; no request id is returned to the client.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, audit rows
+  (V1-D20).

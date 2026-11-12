@@ -9,6 +9,7 @@ import {
   dayCloseouts,
   jobs,
   materials,
+  syncDiagnostics,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -20,6 +21,7 @@ import type { ErrorReporter } from "../../src/core/report";
 import type { VerifiedIdentity } from "../../src/core/identity";
 import { lockCompanyFieldWrites } from "../../src/labor/timeline";
 import { appRouter } from "../../src/router";
+import { PRUNE_BATCH, RETENTION_DAYS, USER_DAILY_CAP } from "../../src/sync/diagnostics";
 import { pushRecords, type RunRecord } from "../../src/sync/push";
 import {
   createCallerFactory,
@@ -30,6 +32,7 @@ import {
   boundIn,
   crewDayIn,
   disposableDb,
+  http,
   rejection,
   rolledBack,
   sqlstateOf,
@@ -37,7 +40,10 @@ import {
   waitForLockWait,
   type CrewDay,
   quietReporter,
+  REQUEST_ID,
   recordingReporter,
+  rejectingReporter,
+  throwingReporter,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -51,8 +57,14 @@ afterAll(async () => {
   await D.drop();
 });
 
-const caller = (who: VerifiedIdentity, reporter: ErrorReporter = quietReporter) =>
-  createCallerFactory(appRouter)(createContext({ db: app, identity: who, reporter }));
+const caller = (
+  who: VerifiedIdentity,
+  reporter: ErrorReporter = quietReporter,
+  requestId = REQUEST_ID,
+) =>
+  createCallerFactory(appRouter)(
+    createContext({ db: app, identity: who, reporter, requestId }),
+  );
 
 // A committed crew day with a bound worker `w` on the crew (crewDayIn's own workers are
 // invitations: no identity to push with), and a second crew job J2.
@@ -121,8 +133,27 @@ function receipt(jobId: string, o: Record<string, unknown> = {}, id = uuidv7()) 
   };
 }
 
-const push = (who: VerifiedIdentity, records: unknown[], reporter?: ErrorReporter) =>
-  caller(who, reporter).sync.push({ protocolVersion: 1, deviceNow: new Date(), records });
+const push = (
+  who: VerifiedIdentity,
+  records: unknown[],
+  reporter?: ErrorReporter,
+  requestId?: string,
+) =>
+  caller(who, reporter, requestId).sync.push({
+    protocolVersion: 1,
+    deviceNow: new Date(),
+    records,
+  });
+
+// A company's diagnostic lines (sync/diagnostics.ts), oldest first, without id and time.
+const lines = async (companyId: string) =>
+  (
+    await D.owner
+      .select()
+      .from(syncDiagnostics)
+      .where(eq(syncDiagnostics.companyId, companyId))
+      .orderBy(syncDiagnostics.id)
+  ).map(({ id: _id, createdAt: _at, companyId: _c, ...line }) => line);
 
 const eventIds = async (ids: string[]) =>
   (
@@ -189,6 +220,14 @@ describe("sync.push — commits, record by record", () => {
       .from(approvals)
       .where(inArray(approvals.eventId, [a.id, b.id, c.id]));
     expect(approvalRows).toEqual([{ eventId: a.id }]);
+    // V1-D04: B, which threw, and C behind it each leave a line under the request's id, the
+    // one the report carries; A, accepted, leaves none.
+    expect(events[0]?.requestId).toBe(REQUEST_ID);
+    const left = { userId: d.foremanId, requestId: REQUEST_ID, outcome: "omitted" };
+    expect(await lines(d.companyId)).toEqual([
+      { ...left, recordId: b.id, recordKind: "labor_event", code: "record_failed" },
+      { ...left, recordId: c.id, recordKind: "labor_event", code: "not_attempted" },
+    ]);
   });
 
   it("answers a resent batch after a dropped response with the original acknowledgements", async () => {
@@ -213,6 +252,10 @@ describe("sync.push — commits, record by record", () => {
         .where(eq(workSessionEvents.companyId, d.companyId))
         .orderBy(workSessionEvents.id);
     const first = await push(d.w.who, sent); // the response the device never saw
+    const noted = await D.owner
+      .select()
+      .from(syncDiagnostics)
+      .where(eq(syncDiagnostics.companyId, d.companyId));
     const before = await D.owner
       .select()
       .from(approvals)
@@ -237,6 +280,16 @@ describe("sync.push — commits, record by record", () => {
     ).toEqual(before);
     expect(await ledger()).toEqual(rows);
     expect(await eventIds(sent.map((r) => r.id))).toHaveLength(2);
+    // V1-D04: the refusal left one line; refused again on the resend, it leaves no second.
+    expect(noted).toMatchObject([
+      { recordId: future.id, outcome: "rejected", code: "time_in_future" },
+    ]);
+    expect(
+      await D.owner
+        .select()
+        .from(syncDiagnostics)
+        .where(eq(syncDiagnostics.companyId, d.companyId)),
+    ).toEqual(noted);
   });
 });
 
@@ -397,6 +450,17 @@ describe("sync.push — bounded waits", () => {
     });
     expect(await outcome).toBe("INTERNAL_SERVER_ERROR");
     expect(await eventIds([r.id])).toEqual([]);
+    // V1-D04: nothing ran, so the call failed as a whole: one line, naming no record.
+    expect(await lines(d.companyId)).toEqual([
+      {
+        userId: d.w.id,
+        requestId: REQUEST_ID,
+        recordId: null,
+        recordKind: null,
+        outcome: "request_failed",
+        code: "internal_server_error",
+      },
+    ]);
   }, 15_000);
 });
 
@@ -680,5 +744,284 @@ describe("sync.push — a closeout id another tenant holds", () => {
       conflictingId: rival,
     });
     expect(await closeoutsOf(d)).toEqual([rival]);
+  });
+});
+
+// V1-D04 (ARCHITECTURE, Sync protocol: rejected-record diagnostics). What a push leaves in
+// sync_diagnostics, written after every record's own transaction: proven on real commits,
+// because a line must survive the call and must never be what changes it.
+describe("sync.push — rejected-record diagnostics", () => {
+  const whole = { recordId: null, recordKind: null, outcome: "request_failed" };
+  const expired = (d: { companyId: string }, userId: string, n: number, days: number) =>
+    D.owner.execute(sql`
+      insert into sync_diagnostics (company_id, user_id, request_id, outcome, code, created_at)
+      select ${d.companyId}, ${userId}, gen_random_uuid(), 'request_failed', 'bad_request',
+        now() - make_interval(days => ${days})
+      from generate_series(1, ${n})
+    `);
+  const count = async (companyId: string) => (await lines(companyId)).length;
+
+  it("leaves one line for each refused record, and none for an accepted one", async () => {
+    const d = await world();
+    const requestId = crypto.randomUUID();
+    const kept = receipt(d.J, { capturedOffline: true });
+    const future = labor(d.w.id, d.J, {
+      clientTimestamp: new Date(Date.now() + 3_600_000),
+    });
+    // A worker recording another worker's labor: refused by scope.
+    const others = labor(d.w1, d.J, { capturedOffline: true });
+    const malformed = { id: uuidv7(), kind: "material", schemaVersion: 1, payload: {} };
+    const answer = await push(
+      d.w.who,
+      [kept, future, others, malformed],
+      undefined,
+      requestId,
+    );
+    expect(
+      answer.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
+    ).toEqual(["accepted", "time_in_future", "not_permitted", "invalid_record"]);
+    const line = { userId: d.w.id, requestId, outcome: "rejected" };
+    expect(await lines(d.companyId)).toEqual(
+      expect.arrayContaining([
+        {
+          ...line,
+          recordId: future.id,
+          recordKind: "labor_event",
+          code: "time_in_future",
+        },
+        {
+          ...line,
+          recordId: others.id,
+          recordKind: "labor_event",
+          code: "not_permitted",
+        },
+        {
+          ...line,
+          recordId: malformed.id,
+          recordKind: "material",
+          code: "invalid_record",
+        },
+      ]),
+    );
+    expect(await count(d.companyId)).toBe(3);
+    // A refusal writes nothing to the ledger; the line is not a ledger write.
+    expect(await eventIds([future.id, others.id])).toEqual([]);
+  });
+
+  it("leaves no record id for a record whose id it could not read, and a line for each behind it", async () => {
+    const d = await world();
+    const unreadable = {
+      id: "not-an-id",
+      kind: "material",
+      schemaVersion: 1,
+      payload: {},
+    };
+    const behind = receipt(d.J, { capturedOffline: true });
+    // Behind the stop and itself unreadable: nothing identifies it, so nothing is claimed.
+    const nameless = { payload: { note: "no id here" } };
+    const answer = await push(d.w.who, [unreadable, behind, nameless]);
+    expect(answer.results).toEqual([]);
+    const line = { userId: d.w.id, requestId: REQUEST_ID, outcome: "omitted" };
+    expect(await lines(d.companyId)).toEqual([
+      { ...line, recordId: null, recordKind: "material", code: "unreadable_record" },
+      { ...line, recordId: behind.id, recordKind: "material", code: "not_attempted" },
+    ]);
+    expect(
+      await D.owner.select().from(materials).where(eq(materials.id, behind.id)),
+    ).toEqual([]);
+  });
+
+  it("leaves a line for a record of a version this server does not know", async () => {
+    const d = await world();
+    const newer = { ...receipt(d.J), schemaVersion: 2 };
+    expect((await push(d.w.who, [newer])).results).toEqual([]);
+    expect(await lines(d.companyId)).toMatchObject([
+      { recordId: newer.id, outcome: "omitted", code: "unknown_schema_version" },
+    ]);
+  });
+
+  it("holds nothing of a record but its id and kind: no payload, place, time or text", async () => {
+    const d = await world();
+    const at = new Date(Date.now() + 7_200_000);
+    const { reporter, events } = recordingReporter();
+    await push(
+      d.w.who,
+      [
+        labor(d.w.id, d.J, {
+          clientTimestamp: at,
+          location: { lat: 12.345678, lng: -98.765432, accuracyM: 7 },
+        }),
+        {
+          id: uuidv7(),
+          kind: "material",
+          schemaVersion: 1,
+          payload: { description: "MARKER-TEXT", secret: "MARKER-TOKEN" },
+        },
+        { id: "MARKER-ID", kind: "MARKER-KIND", payload: "MARKER-PAYLOAD" },
+      ],
+      reporter,
+    );
+    const rows = await D.owner
+      .select()
+      .from(syncDiagnostics)
+      .where(eq(syncDiagnostics.companyId, d.companyId));
+    expect(rows).toHaveLength(3);
+    const text = JSON.stringify([rows, events]);
+    for (const secret of [
+      "MARKER",
+      "12.345678",
+      "98.765432",
+      at.toISOString(),
+      d.w.who.email,
+      d.w.who.subject,
+    ]) {
+      expect(text).not.toContain(secret);
+    }
+    // The only time in a line is the database's, at the write: never the record's own.
+    for (const row of rows) {
+      expect(Math.abs(row.createdAt.getTime() - Date.now())).toBeLessThan(60_000);
+    }
+  });
+
+  it("leaves one line for a call that failed as a whole, and none for a caller it cannot resolve", async () => {
+    const d = await world();
+    const bad = { protocolVersion: 2, deviceNow: new Date(), records: [receipt(d.J)] };
+    await expect(caller(d.w.who).sync.push(bad as never)).rejects.toMatchObject({
+      code: "BAD_REQUEST",
+    });
+    expect(await lines(d.companyId)).toEqual([
+      { ...whole, userId: d.w.id, requestId: REQUEST_ID, code: "bad_request" },
+    ]);
+    // Nobody: no identity, an unknown one, and an invitation never signed in with.
+    const tag = uuidv7();
+    const email = `invite-${tag}@co.test`;
+    const [invited] = await D.owner
+      .insert(users)
+      .values({ companyId: d.companyId, email, name: "Invited" })
+      .returning({ id: users.id });
+    const stranger = { subject: `sub-${uuidv7()}`, email: "nobody@co.test" };
+    for (const who of [
+      { ...stranger, emailVerified: true as const },
+      { subject: `sub-${tag}`, email, emailVerified: true as const },
+    ]) {
+      // A bad request from someone a caller transaction never resolved.
+      await caller(who)
+        .sync.push(bad as never)
+        .catch(() => undefined);
+    }
+    expect(await count(d.companyId)).toBe(1);
+    // The diagnostics write is never what signs someone in.
+    const [row] = await D.owner
+      .select({ subject: users.identitySubject })
+      .from(users)
+      .where(eq(users.id, invited!.id));
+    expect(row).toEqual({ subject: null });
+  });
+
+  it("carries the HTTP request's id, one per request, shared by its calls", async () => {
+    const d = await world();
+    const call = () => ({
+      path: "sync.push",
+      mutation: true,
+      input: {
+        protocolVersion: 1,
+        deviceNow: new Date(),
+        records: [
+          labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+        ],
+      },
+    });
+    const first = await http(app, d.w.who, [call(), call()], { router: appRouter });
+    const second = await http(app, d.w.who, [call()], { router: appRouter });
+    expect((await lines(d.companyId)).map((l) => l.requestId)).toEqual([
+      first.requestId,
+      first.requestId,
+      second.requestId,
+    ]);
+    expect(first.requestId).not.toBe(second.requestId);
+  });
+
+  it("changes no answer and no commit when the lines cannot be written", async () => {
+    const d = await world();
+    const batch = () => [
+      receipt(d.J, { capturedOffline: true }),
+      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+    ];
+    const shape = (a: Awaited<ReturnType<typeof push>>) =>
+      a.results.map((r) => [r.kind, r.result === "rejected" ? r.code : r.result]);
+    const working = await push(d.w.who, batch());
+    const before = await count(d.companyId);
+    await D.owner.execute(sql`revoke insert on sync_diagnostics from trader_app`);
+    try {
+      const { reporter, events } = recordingReporter();
+      const sent = batch();
+      const broken = await push(d.w.who, sent, reporter);
+      expect(shape(broken)).toEqual(shape(working));
+      // The accepted record committed before the write was tried, and stays committed.
+      expect(
+        await D.owner.select().from(materials).where(eq(materials.id, sent[0]!.id)),
+      ).toHaveLength(1);
+      expect(events).toMatchObject([
+        {
+          source: "diagnostics",
+          path: "sync.push",
+          requestId: REQUEST_ID,
+          sqlstate: "42501",
+        },
+      ]);
+      expect(JSON.stringify(events)).not.toContain(d.companyId);
+      // A reporter that fails as well changes nothing either.
+      for (const failing of [throwingReporter, rejectingReporter]) {
+        expect(shape(await push(d.w.who, batch(), failing))).toEqual(shape(working));
+      }
+      expect(await count(d.companyId)).toBe(before);
+    } finally {
+      await D.owner.execute(sql`grant insert on sync_diagnostics to trader_app`);
+    }
+  });
+
+  it("deletes the company's expired lines at its next write, and no other company's", async () => {
+    const d = await world();
+    const other = await world();
+    await expired(d, d.w.id, 3, RETENTION_DAYS + 1);
+    await expired(d, d.w.id, 2, RETENTION_DAYS - 1);
+    await expired(other, other.w.id, 4, RETENTION_DAYS + 1);
+    await push(d.w.who, [
+      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+    ]);
+    // Counted by the owner, past row-level security: gone from the table, not hidden.
+    expect(await count(d.companyId)).toBe(3);
+    // A company that writes nothing keeps its expired lines until something deletes them
+    // (ARCHITECTURE: the daily delete is Stage 6's).
+    expect(await count(other.companyId)).toBe(4);
+  });
+
+  it("deletes a backlog of expired lines a bounded number at a time", async () => {
+    const d = await world();
+    await expired(d, d.w.id, PRUNE_BATCH + 20, RETENTION_DAYS + 5);
+    const refuse = () =>
+      push(d.w.who, [
+        labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+      ]);
+    await refuse();
+    expect(await count(d.companyId)).toBe(20 + 1);
+    await refuse();
+    expect(await count(d.companyId)).toBe(2);
+  });
+
+  it("stops writing a caller's lines at the daily cap", async () => {
+    const d = await world();
+    await expired(d, d.w.id, USER_DAILY_CAP - 1, 0);
+    const answer = await push(d.w.who, [
+      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+    ]);
+    // Both refused and both answered; one line fits under the cap, and then none.
+    expect(answer.results).toHaveLength(2);
+    expect(await count(d.companyId)).toBe(USER_DAILY_CAP);
+    await push(d.w.who, [
+      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
+    ]);
+    expect(await count(d.companyId)).toBe(USER_DAILY_CAP);
   });
 });

@@ -66,7 +66,7 @@ jobs, assignments, approvals, a closeout, close, export.
       through `labor.repair`; a skewed multi-event backlog; a duplicate push and a dropped
       response replay to the same ledger; UPDATE and DELETE on the ledger and on a submitted
       closeout still fail. Done when the Stage 3 six-scenario suite and these pass
-- [ ] Rejected-record diagnostics (V1-D04; plan first: the store and the retention period).
+- [x] Rejected-record diagnostics (V1-D04; plan first: the store and the retention period).
       Depends on nothing above. Work: a request id per HTTP request; one minimized line per
       identifiable record rejected or omitted, and per request failed as a whole; bounded
       retention enforced by the store or a scheduled delete. Tests: no payload, location or
@@ -222,13 +222,18 @@ ARCHITECTURE.md is a line here.
       `roster.invite`; how `users.email` follows a changed sign-in email
 - [ ] Neon Launch project; `trader_app` created in SQL and used as the login role;
       migrations re-baselined before the first run, with a full catalog diff against the
-      27-file journal proving nothing hand-written was lost; the Neon driver behind the seam
+      29-file journal proving nothing hand-written was lost; the Neon driver behind the seam
       if the pooled connection needs it
 - [ ] Environments: production and preview with separate databases and identity instances;
       the environment validated at start; a readiness check that touches the database and
       asserts the role
 - [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs;
       `attachDatabasePool` from `@vercel/functions`; pool size set against Neon's limit
+- [ ] Daily delete of expired `sync_diagnostics` lines under Vercel Cron, in every company
+      (ARCHITECTURE, rejected-record diagnostics: the writer deletes only its own company's).
+      Plan first: the role it runs as, since the application role sees one tenant. Tests: a
+      company that writes nothing loses its expired lines; an unexpired line stays. Done
+      when no line older than the period survives a day
 - [ ] Migration procedure, written in `packages/db/README.md`: who runs it, in what order
       against deploys, how a failed migration is rolled forward, the `0021` precondition
 - [ ] Edge protection: rate limits per identity and per address, a request body limit, an

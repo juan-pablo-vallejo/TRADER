@@ -23,6 +23,7 @@ import {
   payPeriods,
   payRates,
   photos,
+  syncDiagnostics,
   workSessionEvents,
 } from "../../src/schema";
 import {
@@ -40,7 +41,7 @@ import {
   type Tx,
 } from "../helpers";
 
-// The tables that carry company_id, as 0014, 0017 and 0020 list them; companies is checked on its own id.
+// The tables that carry company_id, as 0014, 0017, 0020 and 0029 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -60,6 +61,7 @@ const TENANT_TABLES = [
   "pay_periods",
   "pay_rates",
   "photos",
+  "sync_diagnostics",
   "users",
   "work_session_events",
 ];
@@ -187,6 +189,15 @@ async function everything(tx: Tx, name: string) {
     action: "companies.export",
     entityTable: "companies",
     after: { format: "csv" },
+  });
+  await tx.insert(syncDiagnostics).values({
+    companyId: refs.companyId,
+    userId: refs.workerId,
+    requestId: crypto.randomUUID(),
+    recordId: uuidv7(),
+    recordKind: "labor_event",
+    outcome: "rejected",
+    code: "not_permitted",
   });
   return refs;
 }

@@ -49,7 +49,16 @@ describe("the procedure context", () => {
     expect(seen.identityIsUndefined).toBe(true);
     // `reporter` is a stateless sink (report.ts): it opens no connection and names no one.
     // `waits` is present and undefined, like the pool: a procedure cannot read or change its bounds.
-    expect(seen.keys).toEqual(["db", "identity", "reporter", "tx", "user", "waits"]);
+    // `requestId` is the HTTP request's (context.ts): random, and nobody's.
+    expect(seen.keys).toEqual([
+      "db",
+      "identity",
+      "reporter",
+      "requestId",
+      "tx",
+      "user",
+      "waits",
+    ]);
   });
 
   it("runs with the caller's tenant and no identity setting", async () => {

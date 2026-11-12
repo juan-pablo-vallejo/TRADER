@@ -57,7 +57,8 @@ describe("reporting a failed call", () => {
     const quiet = await http(app, asA(), failedWrite(`Quiet ${w.run}`));
     for (const reporter of [throwingReporter, rejectingReporter]) {
       const answer = await http(app, asA(), failedWrite(`Broken ${w.run}`), { reporter });
-      expect(answer).toEqual(quiet);
+      // The answer, not the request's own id, which differs by request.
+      expect({ ...answer, requestId: null }).toEqual({ ...quiet, requestId: null });
     }
     const kept = await http(
       app,
@@ -104,6 +105,23 @@ describe("reporting a failed call", () => {
       reporter,
     });
     expect(events.map((e) => e.path)).toEqual(["probe.divideByZero"]);
+  });
+
+  it("reports every failed call of one request under that request's id", async () => {
+    const { reporter, events } = recordingReporter();
+    const first = await http(
+      app,
+      asA(),
+      [{ path: "probe.divideByZero" }, { path: "probe.divideByZero" }],
+      { reporter },
+    );
+    const second = await http(app, asA(), [{ path: "probe.divideByZero" }], { reporter });
+    expect(events.map((e) => e.requestId)).toEqual([
+      first.requestId,
+      first.requestId,
+      second.requestId,
+    ]);
+    expect(first.requestId).not.toBe(second.requestId);
   });
 
   it("reports no expected answer: anonymous, uninvited, wrong role, bad input", async () => {

@@ -12,7 +12,7 @@ import { prepareTarget, type Target } from "../../src/demo/target";
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
 import { counts, MIGRATIONS, spyOnQueries, uniqueDemoName } from "./helpers";
-import { quietReporter } from "../helpers";
+import { quietReporter, REQUEST_ID } from "../helpers";
 
 const ANCHOR = "2026-10-19";
 
@@ -58,6 +58,7 @@ const admin = () =>
         emailVerified: true,
       },
       reporter: quietReporter,
+      requestId: REQUEST_ID,
     }),
   );
 

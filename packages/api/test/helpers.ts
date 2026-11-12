@@ -3,6 +3,7 @@
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
 // a work_session_event, so the deletes are always allowed. Procedures that write append-only
 // rows run through the rolled-back calls further down instead.
+import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
@@ -16,6 +17,7 @@ import {
   materialCorrections,
   materials,
   payRates,
+  syncDiagnostics,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -56,6 +58,9 @@ export function appDb(opts: { max?: number } = {}): Db {
   if (opts.max !== undefined) db.$client.options.max = opts.max;
   return db;
 }
+
+// A request id for callers that are not HTTP requests: the context requires one.
+export const REQUEST_ID = "00000000-0000-4000-8000-000000000000";
 
 // Reporters (report.ts): one that drops every event, one that keeps them, one that fails.
 export const quietReporter: ErrorReporter = { report() {} };
@@ -131,6 +136,7 @@ export async function world(owner: Db) {
   // In reference order, as committedCrewDay deletes: a test may have written any of these.
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
+    await owner.delete(syncDiagnostics).where(inArray(syncDiagnostics.companyId, ids));
     await owner.delete(crewMembers).where(inArray(crewMembers.companyId, ids));
     await owner.delete(jobs).where(inArray(jobs.companyId, ids));
     await owner.delete(crews).where(inArray(crews.companyId, ids));
@@ -298,14 +304,14 @@ export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(
-    createContext({ db, identity: who, reporter: quietReporter }),
+    createContext({ db, identity: who, reporter: quietReporter, requestId: REQUEST_ID }),
   );
 
 // The application's own router on committed fixtures, for procedures that write nothing
 // append-only (roster, me). Consumed by the roster and me-update tests.
 export const appCaller = (db: Db, who: unknown) =>
   createCallerFactory(appRouter)(
-    createContext({ db, identity: who, reporter: quietReporter }),
+    createContext({ db, identity: who, reporter: quietReporter, requestId: REQUEST_ID }),
   );
 
 // --- Rolled-back calls -----------------------------------------------------------------
@@ -355,6 +361,7 @@ export const callerIn = (tx: Tx, who: unknown) =>
       db: txAsDb(tx),
       identity: who,
       reporter: quietReporter,
+      requestId: REQUEST_ID,
       waits: "inherit",
     }),
   );
@@ -510,6 +517,7 @@ export const appCallerIn = (tx: Tx, who: unknown) =>
       db: txAsDb(tx),
       identity: who,
       reporter: quietReporter,
+      requestId: REQUEST_ID,
       waits: "inherit",
     }),
   );
@@ -542,6 +550,7 @@ export async function committedCrewDay(owner: Db) {
   const day = await owner.transaction((tx) => crewDayIn(tx));
   const cleanup = async () => {
     const id = day.companyId;
+    await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, id));
     await owner.delete(materials).where(eq(materials.companyId, id));
     await owner.delete(jobs).where(eq(jobs.companyId, id));
     await owner.delete(crewMembers).where(eq(crewMembers.companyId, id));
@@ -578,6 +587,8 @@ export async function http(
   } = {},
 ) {
   const reporter = opts.reporter ?? quietReporter;
+  // As the route handler does: one id per HTTP request, shared by its calls and its reports.
+  const requestId = randomUUID();
   const batched = calls.length > 1;
   const mutation = calls.some((c) => c.mutation);
   const serialized = batched
@@ -589,7 +600,7 @@ export async function http(
   const response = await fetchRequestHandler({
     endpoint: "/trpc",
     router: opts.router ?? testRouter,
-    onError: reportingOnError(reporter),
+    onError: reportingOnError(reporter, requestId),
     req: new Request(url, {
       method: mutation ? "POST" : "GET",
       headers: {
@@ -603,10 +614,15 @@ export async function http(
         db,
         identity: opts.identify ? await opts.identify(req.headers) : who,
         reporter,
+        requestId,
       }),
   });
   const body = (await response.json()) as HttpResult | HttpResult[];
-  return { status: response.status, results: Array.isArray(body) ? body : [body] };
+  return {
+    status: response.status,
+    results: Array.isArray(body) ? body : [body],
+    requestId,
+  };
 }
 
 export type HttpResult = {

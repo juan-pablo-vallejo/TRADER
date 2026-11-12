@@ -8,6 +8,7 @@ import {
   customers,
   jobs,
   payRates,
+  syncDiagnostics,
   users,
 } from "@trader/db/schema";
 import type { ErrorReport, ErrorReporter } from "@trader/api";
@@ -97,6 +98,7 @@ export async function invitation(
     .returning({ id: users.id });
   // In reference order: a test may have written any of these.
   const cleanup = async () => {
+    await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, companyId));
     await owner.delete(crewMembers).where(eq(crewMembers.companyId, companyId));
     await owner.delete(jobs).where(eq(jobs.companyId, companyId));
     await owner.delete(crews).where(eq(crews.companyId, companyId));

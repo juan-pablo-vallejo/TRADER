@@ -106,13 +106,45 @@ change is wrong, not the test.
   reads the last reading and never waits for a probe. Delivery delay is not the test. The
   device records the flag; the server check above is what keeps a false "online" from skipping
   approval. The reading and its staleness bound are the device's, built in Stage 5.
-- Rejected-record diagnostics (V1-D04; to be built, TASKS Stage 4; nothing is recorded for a
-  rejection today): a push record answered `rejected` or omitted after a failure, whose id
-  the server could read, and a request that failed as a whole, each leave one minimized line —
-  request id, record id where there is one, kind, result code, user id, company id — and
-  never the payload, a location or a time. Retention is bounded; the store and the period are
-  that task's plan. A record that never reached the server leaves nothing there: the device's
-  outbox is the durable copy and the only recovery path for it.
+- Rejected-record diagnostics (V1-D04): a push leaves minimized lines in `sync_diagnostics`
+  for what the server refused or did not process. A line holds the request id, the record's id
+  and kind where they could be read, an outcome, a code, the caller's user id and company id,
+  and the database's receipt time — never the payload, a location, the record's own time, an
+  email or an error's text. The user is who sent the push: a foreman's push for a crew member
+  is the foreman's, because the subject is in the payload, which is never read for this. A
+  record id is a UUIDv7 and so carries the device's clock at minting; it is kept as an id and
+  never read as a time.
+  - Outcomes: `rejected`, with the code the record was answered (`invalid_record` and
+    `not_permitted` included); `omitted` — `record_failed` for a record that threw after an
+    earlier one ran, `unreadable_record` (no record id) or `unknown_schema_version` for a
+    record the batch stopped on, `not_attempted` for each record behind either whose id can be
+    read; `request_failed`, one line naming no record, with tRPC's code, for a call that failed
+    as a whole. An accepted record, a duplicate, and records left out because the batch budget
+    ran out leave nothing: the last is not a failure.
+  - The lines are written after the call has settled, in one more caller transaction (lock
+    1 s, statement 2 s), awaited before the answer returns. That transaction resolves a caller
+    who is already bound and never performs a first sign-in. Whatever it throws is reported
+    (`source: diagnostics`) and dropped: no answer changes, and no committed record is undone.
+    Lines are therefore best-effort: lost if the write fails or the process dies first.
+  - Nothing is written for a caller who cannot be resolved — anonymous, uninvited, never
+    signed in, deactivated — including lines for records refused earlier in that request;
+    nor for a request refused before the procedure runs (too many calls, a context that
+    cannot be built). A record that never reached the server leaves nothing: the device's
+    outbox is the durable copy and the only recovery path, and a line never says a write
+    committed.
+  - One line per record and code: a record re-sent and refused the same way keeps its first
+    line and its first request id. A line with no record id repeats per attempt. A caller
+    leaves at most 1,000 lines in 24 hours; past that they are dropped.
+  - Retention is 30 days. Each write first deletes up to 500 of the company's expired lines,
+    and `diagnostic.list` never returns one. A company that writes no new line keeps its
+    expired rows, unread, until the daily delete (to be built, TASKS Stage 6). Backups and
+    database history keep a deleted line for their own windows.
+  - `diagnostic.list`, admin only: one sender's lines received on one calendar day in
+    `companies.timezone`, newest first, at most 200. The day is the day of receipt, not the
+    day worked. The office screen is `/refusals`.
+  - One request id per HTTP request, made by the route handler and never read from the client,
+    shared by every call in a batch, carried by the context, the error report and each line;
+    it is not returned to the client.
 - Versioning on two axes: `schema_version` per event, accepted forever through upcasters; a
   protocol version per request.
 - Sync bookkeeping — state, attempts, next attempt — stays on the device and is never sent.
@@ -246,15 +278,18 @@ is retried.
 
 ## Runtime bounds
 
-| Bound                         | Value                       | Where                              |
-| ----------------------------- | --------------------------- | ---------------------------------- |
-| Pool size per server instance | `DATABASE_POOL_MAX`, 10     | `packages/db/src/env.ts`           |
-| Wait for a free connection    | 5 s                         | `packages/db/src/client.ts`        |
-| Protected call                | lock 5 s, statement 20 s    | `packages/api/src/core/trpc.ts`    |
-| Push record                   | lock 2 s, statement 4 s     | `packages/api/src/core/trpc.ts`    |
-| Push batch                    | 100 records, none after 8 s | `packages/api/src/sync/push.ts`    |
-| Calls per HTTP request        | 10                          | `apps/web/src/server/handler.ts`   |
-| Client-asserted instant       | 0001-01-01 to 9999-12-31    | `packages/api/src/core/instant.ts` |
+| Bound                         | Value                          | Where                                  |
+| ----------------------------- | ------------------------------ | -------------------------------------- |
+| Pool size per server instance | `DATABASE_POOL_MAX`, 10        | `packages/db/src/env.ts`               |
+| Wait for a free connection    | 5 s                            | `packages/db/src/client.ts`            |
+| Protected call                | lock 5 s, statement 20 s       | `packages/api/src/core/trpc.ts`        |
+| Push record                   | lock 2 s, statement 4 s        | `packages/api/src/core/trpc.ts`        |
+| Push batch                    | 100 records, none after 8 s    | `packages/api/src/sync/push.ts`        |
+| Diagnostics write             | lock 1 s, statement 2 s        | `packages/api/src/sync/diagnostics.ts` |
+| Diagnostic lines per caller   | 1,000 in 24 h                  | `packages/api/src/sync/diagnostics.ts` |
+| Diagnostic retention          | 30 days, 500 deleted per write | `packages/api/src/sync/diagnostics.ts` |
+| Calls per HTTP request        | 10                             | `apps/web/src/server/handler.ts`       |
+| Client-asserted instant       | 0001-01-01 to 9999-12-31       | `packages/api/src/core/instant.ts`     |
 
 An idle pooled connection that the server drops is logged by class and SQLSTATE and discarded;
 it never ends the process.
@@ -278,6 +313,8 @@ None of these exists yet; each is a line in TASKS Stage 6 and a release gate in 
 - A readiness check that touches the database and the role; environment validated at start.
 - Backups, a rehearsed restore, and a written migrate-and-rollback procedure.
 - An error reporter that keeps the minimized event and sends nothing else.
+- A daily delete of expired `sync_diagnostics` lines in every company: until it runs, a
+  company that leaves no new line keeps its expired ones on disk.
 
 ## Domain and identifiers
 
@@ -453,3 +490,8 @@ Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersed
 | 2026-11-11 | Closeouts sealed under the old fold: a closeout stores no derived labor value — keys, zone, status, counts, per-worker `ledger_through`, material members — so the fold change rewrites nothing stored and no accounting snapshot exists to invalidate. Closeouts are read under the current fold; no fold version is stored and no migration is made. The two folds differ only for a session with a `clock_skewed` event in effect; no closeout sealed under the old fold exists outside development and CI databases (V1-D01), which are rebuilt, not migrated | — |
 | 2026-11-11 | Receipt comparison, as built: `sync.push` judges a labor event against the `receivedAt` it is stored with, after the caller's own id and the scope, before validation. With `d = client_timestamp − receipt` and the 5-minute tolerance `T`: `d > T` is `rejected` `time_in_future` whatever the event claims; otherwise an event neither `captured_offline` nor `time_set_by_user` with `d < −T` is stored `clock_skewed`; exactly `T` either way is neither. `clock_skewed` is that or the per-push reading; `clock_skew_ms` stays the signed per-push reading. A retry answers from the stored row and is never judged again; a record that wrote nothing is judged at its new receipt. Labor events only: a receipt (material) is not compared and has no `time_in_future` — the PRD's "entry" is read as a labor entry until the office can enter a receipt itself (V1-D09) | — |
 | 2026-11-11 | Demo fixture under V1-D01: the seeded history is delivered long after its capture, so every seeded clock event is `captured_offline` and carries `offline`; the demo admin approves those flagged `offline` alone through `approval.decide`, but one worker-day left for the office; one worker-day claims an online capture and is `clock_skewed` by the receipt comparison. No device clock is simulated | 2026-11-08 Demo fixture, 'clock skew is not simulated' |
+| 2026-11-11 | Rejected-record diagnostics, as built: the store is the tenant table `sync_diagnostics` (0028, 0029), not the platform's logs or the error reporter — only a table gives the office a query, the tenant its isolation and the retention a delete we run and test; the period is 30 days, enforced by the writer's bounded delete and the read's filter, with a daily cross-tenant delete left to Stage 6. A line carries the database's receipt time, which is what "by day" and the period are measured in; "never a time" is read as never the record's own time. The user is the caller; a budget stop leaves no line; an unresolvable caller leaves none; the write binds no one; one line per record and code; 1,000 lines per caller per 24 h | 2026-11-11 V1-D04, 'no payload, location or time', narrowed to the record's own time; 'the store and period decided in the task's plan', decided |
+| 2026-11-11 | Request id: one per HTTP request, `crypto.randomUUID()` in the route handler before the context is built, never read from a header, required in the context, not returned to the client. `ErrorReport` gains `requestId` (null for a configuration report) and the source `diagnostics`; it still carries no identity, tenant, message or input | 2026-11-05 Error reporting, 'a minimized event (source, path, type, error names, SQLSTATE)', for the request id and the new source |
+| 2026-11-11 | `sync_diagnostics` grants: `trader_app` holds SELECT, INSERT and DELETE and no UPDATE; the table has no append-only guard. DELETE exists so the writer can remove its own company's expired lines under the tenant policy; it is the one fact table the application may delete from by age | 2026-11-03 Runtime role, 'append-only tables get SELECT and INSERT', for this table |
+| 2026-11-11 | `resolveUser` takes `bind: false`: a bound caller resolves, an unclaimed invitation does not and is left unclaimed. Used only by the diagnostics write, so a transaction that is not the caller's own call never signs anyone in | — |
+| 2026-11-11 | Office screen `/refusals` (DESIGN, Refused entries): a lookup by sender and day of receipt over `diagnostic.list`, read-only, under People in the navigation | — |

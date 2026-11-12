@@ -26,6 +26,7 @@ import {
   uuidv7,
   waitForLockWait,
   quietReporter,
+  REQUEST_ID,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -45,7 +46,12 @@ type Positional = "started" | "paused" | "resumed" | "ended";
 
 const caller = (who: VerifiedIdentity) =>
   createCallerFactory(appRouter)(
-    createContext({ db: app, identity: who, reporter: quietReporter }),
+    createContext({
+      db: app,
+      identity: who,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
   );
 
 type Op =

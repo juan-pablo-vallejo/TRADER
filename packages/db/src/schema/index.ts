@@ -19,3 +19,4 @@ export * from "./credit-memos";
 export * from "./audit-log";
 export * from "./day-closeouts";
 export * from "./material-corrections";
+export * from "./sync-diagnostics";

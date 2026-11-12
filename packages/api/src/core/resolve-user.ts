@@ -51,13 +51,18 @@ async function bySubject(tx: Tx, subject: string) {
   return row;
 }
 
+// `bind: false` resolves a caller who is already bound and no one else: an invitation is
+// left unclaimed and the caller is no user. For a transaction that must never be what signs
+// someone in (the sync procedure's diagnostics write, trpc.ts).
 export async function resolveUser(
   tx: Tx,
   identity: VerifiedIdentity,
+  opts: { bind: boolean } = { bind: true },
 ): Promise<AppUser | null> {
   // 1. Every request after the first. Deactivated resolves to no user (TASKS, Stage 3).
   const bound = await bySubject(tx, identity.subject);
   if (bound !== undefined) return active(bound);
+  if (!opts.bind) return null;
 
   // 2. First sign-in: unbound invitations to this email, in every company. Anything but
   //    exactly one fails closed; deactivated invitations count, so ambiguity is judged
