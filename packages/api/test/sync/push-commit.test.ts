@@ -293,6 +293,39 @@ describe("sync.push — commits, record by record", () => {
   });
 });
 
+// V1-D10 as amended: an admin's own labor carries no approval, so the deferred checks of 0022
+// (relaxed by 0032) meet a flagged event with no approvals row at a true commit. A rolled-back
+// test only fires them by hand.
+describe("sync.push — an admin's own labor at commit", () => {
+  it("commits an admin's flagged event with no approval, and their receipt with one", async () => {
+    const d = await world();
+    const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
+    const event = labor(admin.id, d.K, {
+      capturedOffline: true,
+      timeSetByUser: true,
+      location: null,
+    });
+    const bought = receipt(d.K, { capturedOffline: true });
+    const answer = await push(admin.who, [event, bought]);
+    expect(answer.results).toMatchObject([
+      { id: event.id, result: "accepted", ack: { reasons: [] } },
+      { id: bought.id, result: "accepted", ack: { reasons: ["offline"] } },
+    ]);
+    expect(await eventIds([event.id])).toEqual([event.id]);
+    const rows = await D.owner
+      .select({ eventId: approvals.eventId, materialId: approvals.materialId })
+      .from(approvals)
+      .where(eq(approvals.companyId, d.companyId));
+    expect(rows).toEqual([{ eventId: null, materialId: bought.id }]);
+    // The resend answers from what was stored.
+    const again = await push(admin.who, [event]);
+    expect(again.results).toMatchObject([
+      { id: event.id, result: "duplicate", ack: { reasons: [] } },
+    ]);
+    expect(await lines(d.companyId)).toEqual([]);
+  });
+});
+
 describe("sync.push — concurrency on real locks", () => {
   // Holds w's worker lock on another connection until both pushes wait behind it.
   async function race(d: World, pushes: (() => ReturnType<typeof push>)[]) {

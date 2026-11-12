@@ -184,6 +184,7 @@ export async function listAssignments(
                 }
               : null,
           workerActive: active,
+          workerAdmin: r.workerRole === "admin",
         },
         { id: r.workerId },
       );

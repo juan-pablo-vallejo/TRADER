@@ -2,8 +2,9 @@
 // record's own transaction: the caller's own id first; the scope under row locks; the worker's
 // timeline under its lock (loadWorkerTimeline, which takes the field-write lock shared first);
 // the id again; the time it claims against its receipt (V1-D01); two-sided validation; the
-// approval facts; the insert and, in the same transaction, its approval. Answers `accepted` or `duplicate` with an acknowledgement of fixed
-// facts only, or `rejected` with a code, writing nothing. Anything thrown is the loop's: the
+// approval facts; the insert and, in the same transaction, its approval — none when the worker
+// is an admin, whose own labor needs no approval (V1-D10 as amended). Answers `accepted` or
+// `duplicate` with an acknowledgement of fixed facts only, or `rejected` with a code, writing nothing. Anything thrown is the loop's: the
 // record is omitted and retried. Consumed by sync/push.ts.
 import {
   approvalReason,
@@ -250,8 +251,12 @@ export async function pushLaborEvent(
   }
 
   // 9. Its approval, pending, in the same transaction (0022 requires the column-derived
-  // reasons at commit).
-  if (reasons.length > 0) {
+  // reasons at commit). None for a worker who is an admin at this receipt, the role locked
+  // with the scope: the evidence columns above are stored all the same, 0032 stands 0022
+  // down for the event, and with no row it is approved by default (labor/approval.ts). A
+  // push for another person is a foreman's, never an admin's (scope.ts), so "the worker is an
+  // admin" is the whole rule here. The acknowledgement reads the stored row: no reasons.
+  if (reasons.length > 0 && !scope!.workerAdmin) {
     await tx
       .insert(approvals)
       .values({ companyId: user.companyId, eventId: r.id, reasons });

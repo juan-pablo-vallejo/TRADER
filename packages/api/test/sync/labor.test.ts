@@ -18,6 +18,9 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
 import type { AppUser } from "../../src/core/resolve-user";
+import { decideApproval } from "../../src/approvals/decide";
+import { approvalQueue } from "../../src/approvals/queue";
+import { sessionApprovals, type Decision } from "../../src/labor/approval";
 import { readWorkerEvents } from "../../src/labor/timeline";
 import { deriveSessions } from "../../src/labor/work-date";
 import { pushLaborEvent, type LaborRecord } from "../../src/sync/labor";
@@ -485,16 +488,15 @@ describe("sync.push labor — after its day's closeout, in the closeout's stored
 
   it("is another job's closeout's business only if it is this job's", async () => {
     await rolledBack(owner, async (tx) => {
-      const { d } = await dayFor(tx);
+      const { d, w1 } = await dayFor(tx);
       await closeout(tx, d, "2026-10-05", NY);
-      const admin = await asOwner(tx, d, () => boundIn(tx, d.companyId, "admin"));
-      const user = appUser(d, admin.id, "admin");
+      // K given to the crew, so a worker may start there: an admin's own event would carry
+      // no reasons at all (V1-D10 as amended) and prove nothing here.
+      await asOwner(tx, d, () =>
+        tx.update(jobs).set({ crewId: d.crewId }).where(eq(jobs.id, d.K)),
+      );
       expect(
-        await push(
-          tx,
-          user,
-          record({ workerId: admin.id, jobId: d.K, capturedOffline: true }),
-        ),
+        await push(tx, w1, record({ workerId: d.w1, jobId: d.K, capturedOffline: true })),
       ).toMatchObject({
         ack: { reasons: ["offline"] },
       });
@@ -943,6 +945,154 @@ describe("sync.push labor — idempotency", () => {
         code: "id_conflict",
       });
       expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+    });
+  });
+});
+
+// Stage 4 (V1-D10 as amended): an admin's own labor needs no approval. The worker's role is
+// read under the lock the scope takes, at this receipt; nothing is judged again afterwards.
+describe("sync.push labor — an admin's own labor (V1-D10 as amended)", () => {
+  // Every reason a push can compute without a closeout, and the reading that flags the clock.
+  const FLAGGED = { capturedOffline: true, timeSetByUser: true, location: null } as const;
+  const REASONS = ["offline", "user_timed", "location", "clock_skewed"];
+
+  const approvalsOf = (tx: Tx, d: CrewDay, eventId: string) =>
+    asOwner(tx, d, () =>
+      tx.select().from(approvals).where(eq(approvals.eventId, eventId)),
+    );
+
+  // How one worker's sessions count, by the accounting every reader uses.
+  async function accounting(tx: Tx, d: CrewDay, workerId: string) {
+    return asOwner(tx, d, async () => {
+      const ledger = await readWorkerEvents(tx, workerId);
+      const rows = await tx
+        .select({ eventId: approvals.eventId, decision: approvals.decision })
+        .from(approvals)
+        .where(eq(approvals.companyId, d.companyId));
+      const decisions = new Map<string, Decision>(
+        rows.flatMap((r) => (r.eventId === null ? [] : [[r.eventId, r.decision]])),
+      );
+      return [...sessionApprovals(ledger, decisions).byRoot.values()].map(
+        (s) => s.accounting,
+      );
+    });
+  }
+
+  async function adminIn(tx: Tx, d: CrewDay) {
+    const a = await asOwner(tx, d, () => boundIn(tx, d.companyId, "admin"));
+    return appUser(d, a.id, "admin");
+  }
+
+  it("writes no approval for an admin's flagged event, keeps its evidence, and it counts", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1, foreman } = await dayFor(tx);
+      const admin = await adminIn(tx, d);
+      const r = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
+      expect(await push(tx, admin, r, SKEWED)).toMatchObject({
+        result: "accepted",
+        ack: { id: r.id, clockSkewed: true, reasons: [] },
+      });
+      expect(await approvalsOf(tx, d, r.id)).toEqual([]);
+      const [row] = await asOwner(tx, d, () =>
+        tx.select().from(workSessionEvents).where(eq(workSessionEvents.id, r.id)),
+      );
+      expect(row).toMatchObject({
+        workerId: admin.id,
+        initiatorUserId: admin.id,
+        capturedOffline: true,
+        timeSetByUser: true,
+        clockSkewed: true,
+        clockSkewMs: SKEWED.clockSkewMs,
+        locationLat: null,
+      });
+      expect(await accounting(tx, d, admin.id)).toEqual(["eligible"]);
+
+      // The same event from a worker and from a foreman is pending, with every reason.
+      for (const who of [w1, foreman]) {
+        const theirs = record({ workerId: who.id, jobId: d.J, ...FLAGGED });
+        expect(await push(tx, who, theirs, SKEWED)).toMatchObject({
+          result: "accepted",
+          ack: { reasons: REASONS },
+        });
+        expect(await approvalsOf(tx, d, theirs.id)).toMatchObject([
+          { reasons: REASONS, decision: null },
+        ]);
+        expect(await accounting(tx, d, who.id)).toEqual(["pending"]);
+      }
+    });
+  });
+
+  it("writes none for an admin's labor their foreman recorded", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, foreman } = await dayFor(tx);
+      const admin = await adminIn(tx, d);
+      await asOwner(tx, d, () =>
+        tx
+          .insert(crewMembers)
+          .values({ companyId: d.companyId, crewId: d.crewId, userId: admin.id }),
+      );
+      const r = record({ workerId: admin.id, jobId: d.J, ...FLAGGED });
+      expect(await push(tx, foreman, r)).toMatchObject({
+        result: "accepted",
+        ack: { reasons: [] },
+      });
+      expect(await approvalsOf(tx, d, r.id)).toEqual([]);
+      // The same push for a member who is no admin is pending.
+      const other = record({ workerId: d.w2, jobId: d.J, ...FLAGGED });
+      expect((await push(tx, foreman, other)).result).toBe("accepted");
+      expect(await approvalsOf(tx, d, other.id)).toHaveLength(1);
+    });
+  });
+
+  it("moves nothing when the role changes after receipt", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const admin = await adminIn(tx, d);
+      const setRole = (id: string, role: AppUser["role"]) =>
+        asOwner(tx, d, () => tx.update(users).set({ role }).where(eq(users.id, id)));
+
+      // An admin's event, then a demotion: still no approval, and the retry answers as stored.
+      const theirs = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
+      await push(tx, admin, theirs);
+      await setRole(admin.id, "worker");
+      expect(await push(tx, { ...admin, role: "worker" }, theirs)).toMatchObject({
+        result: "duplicate",
+        ack: { reasons: [] },
+      });
+      expect(await approvalsOf(tx, d, theirs.id)).toEqual([]);
+      expect(await accounting(tx, d, admin.id)).toEqual(["eligible"]);
+      // What they push from now on is a worker's: the resolved role the call carries is not
+      // what is read.
+      const later = record({
+        workerId: admin.id,
+        jobId: d.K,
+        type: "ended",
+        clientTimestamp: new Date("2026-10-05T16:00:00Z"),
+        ...FLAGGED,
+      });
+      expect((await push(tx, admin, later)).result).toBe("accepted");
+      expect(await approvalsOf(tx, d, later.id)).toHaveLength(1);
+
+      // A worker's event, then a promotion: the approval stays pending, it is still theirs
+      // not to decide, and the queue says so.
+      const mine = record({ workerId: d.w1, jobId: d.J, ...FLAGGED });
+      await push(tx, w1, mine);
+      await setRole(d.w1, "admin");
+      const [pending] = await approvalsOf(tx, d, mine.id);
+      expect(pending).toMatchObject({ decision: null });
+      const promoted = appUser(d, d.w1, "admin");
+      expect(
+        await tx.transaction((sp) =>
+          decideApproval(sp, promoted, { approvalId: pending!.id, decision: "approved" }),
+        ),
+      ).toEqual({ result: "rejected", code: "own_entry" });
+      const { items } = await tx.transaction((sp) =>
+        approvalQueue(sp, promoted, { limit: 50 }),
+      );
+      expect(
+        items.filter((i) => i.approvalId === pending!.id).map((i) => i.ownEntry),
+      ).toEqual([true]);
+      expect(await accounting(tx, d, d.w1)).toEqual(["pending"]);
     });
   });
 });
