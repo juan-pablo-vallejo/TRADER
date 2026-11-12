@@ -38,18 +38,20 @@ export const MAX_RANGE_DAYS = 31;
 
 const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
 
+// A range of work dates, both ends included: forward, and no longer than the bound. Refused
+// past it, never truncated. Also labor/day-hours.ts's.
+export const rangeWithinBound = (v: { from: string; to: string }) => {
+  const days = dayNumber(v.to) - dayNumber(v.from);
+  return days >= 0 && days < MAX_RANGE_DAYS;
+};
+export const RANGE_REFUSAL = {
+  message: `A range runs forward and covers at most ${MAX_RANGE_DAYS} days.`,
+  path: ["to"],
+};
+
 export const ledgerInput = z
   .strictObject({ workerId: z.uuid(), from: workDay, to: workDay })
-  .refine(
-    (v) => {
-      const days = dayNumber(v.to) - dayNumber(v.from);
-      return days >= 0 && days < MAX_RANGE_DAYS;
-    },
-    {
-      message: `A range runs forward and covers at most ${MAX_RANGE_DAYS} days.`,
-      path: ["to"],
-    },
-  );
+  .refine(rangeWithinBound, RANGE_REFUSAL);
 
 const person = z.strictObject({ id: z.uuid(), name: z.string() });
 

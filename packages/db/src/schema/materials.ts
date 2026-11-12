@@ -79,8 +79,7 @@ export const materials = pgTable(
       columns: [t.companyId, t.loggedByUserId],
       foreignColumns: [users.companyId, users.id],
     }),
-    // Job cost to date (Stage 4) and the closeout review (Stage 5); the per-user pull snapshot
-    // (Stage 3).
+    // Job cost to date (job.cost) and the closeout review; the per-user pull snapshot.
     index("materials_job_id_logged_at_idx").on(t.jobId, t.loggedAt),
     index("materials_logged_by_user_id_logged_at_idx").on(t.loggedByUserId, t.loggedAt),
     check("materials_id_v7", sql`uuid_extract_version(${t.id}) = 7`),

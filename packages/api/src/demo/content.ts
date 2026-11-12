@@ -420,6 +420,54 @@ export const EXPECTED = {
   assignments: PLANS.reduce((n, p) => n + p.days.length, 0),
 } as const;
 
+// What the run's labor and receipts come to, worked out by hand from the plan above; run.ts
+// reads `job.cost` and `labor.hours` last and holds them to these, so a drifted rounding,
+// rate or approval rule fails the run. An ordinary day is 5 h, lunch, 3 h: 8.00 h. Hours are
+// hundredths; money is cents, every rate in USD.
+//
+// J1, crew A. Ana: nine approved days at the rate in force from the anchor, 3000, never the
+// 2800 before it (9 × 24000); her last day's start is out of radius and waits. Tom: nine
+// days at 2600 (9 × 20800); his last day waits. Priya: four days and her late 6.50 h — the
+// two oldest pending approvals, both approved — at 2500 (4 × 20000 + 16250). Luis has no
+// rate: nine days unrated; his claimed-online day's start is the third oldest pending
+// approval, rejected, and takes the session with it.
+// Receipts: 38990 and 7188 are priced and count, the tape is unpriced, and the office's own
+// entry, 4590, waits for another admin.
+export const EXPECTED_COST = {
+  job: "j1",
+  lines: 9 + 9 + 4 + 1 + 9,
+  labor: {
+    approvedHundredths: 9 * 800 + 9 * 800 + 4 * 800 + 650 + 9 * 800,
+    totals: [{ currency: "USD", cents: 9 * 24000 + 9 * 20800 + 4 * 20000 + 16250 }],
+    unrated: { hundredths: 9 * 800, lines: 9 },
+    pending: {
+      hundredths: 2 * 800,
+      sessions: 2,
+      totals: [{ currency: "USD", cents: 24000 + 20800 }],
+      unratedHundredths: 0,
+    },
+    rejectedSessions: 1,
+    openSessions: 0,
+  },
+  materials: {
+    totals: [{ currency: "USD", cents: 38990 + 7188 }],
+    receipts: 2,
+    unpriced: 1,
+    pending: { totals: [{ currency: "USD", cents: 4590 }], receipts: 1, unpriced: 0 },
+    rejected: 0,
+    voided: 0,
+  },
+  total: [{ currency: "USD", cents: 499450 + 46178 }],
+} as const;
+
+// Two days read through `labor.hours`: Priya's late day, approved, 07:30 to 14:00; and
+// Elena's last, whose clock-out the office moved to 16:00 — 8.50 h, waiting with the
+// correction, and nothing of the day approved meanwhile.
+export const EXPECTED_HOURS = [
+  { who: "priya", day: 2, job: "j1", approved: 650, pending: 0, pendingSessions: 0 },
+  { who: "elena", day: 9, job: "j2", approved: 0, pending: 850, pendingSessions: 1 },
+] as const;
+
 // The audit rows the same run leaves, by action (core/audit.ts): one per invitation, rate,
 // repair call, decision, deactivation and demotion — and none from any other step, which is
 // what the demo test holds the database to. Nobody is reactivated.

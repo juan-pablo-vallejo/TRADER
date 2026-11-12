@@ -117,7 +117,7 @@ jobs, assignments, approvals, a closeout, close, export.
       cannot claim it; an entry on a closed-out day is pending `after_closeout` and its
       author's decision is `own_entry`; no existing receipt, sealed member or frozen row
       changes; a concurrent closeout either includes the entry or sends it to approval
-- [ ] Hours and cost aggregation (V1-D13): approved hours per worker, job and work date,
+- [x] Hours and cost aggregation (V1-D13): approved hours per worker, job and work date,
       summed in milliseconds then rounded half-up to 0.01 h; job cost to date from the rate
       in force and priced materials; pending and unpriced shown apart; one derivation used by
       every consumer below. Tests: three sessions of 20 min 10 s on one job and day round

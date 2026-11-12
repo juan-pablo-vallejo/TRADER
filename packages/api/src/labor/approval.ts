@@ -5,7 +5,8 @@
 // accounting reads decisions, and only of the events in effect for a session — its winning
 // positional sources and its void; a superseded correction's decision is moot. Eligibility is
 // not export readiness: an open session counts its closed intervals only, and is still open.
-// Consumed by approvals/queue.ts; the payroll export and job cost (Stage 4).
+// Consumed by approvals/queue.ts, labor/ledger.ts and labor/day-hours.ts, which sums what
+// counts for every hours and cost figure.
 import { LedgerInconsistentError, replay, type LaborEvent, type Replay } from "./fold";
 
 // NULL is pending; an event with no approvals row is approved by default (absent from the map).
