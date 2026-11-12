@@ -2,26 +2,43 @@
 // development headers as the cookie bridge sets them: 401 anonymous, 403 as a worker, and an
 // admin's invite answering `invited` then `email_taken` through POST.
 import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Db } from "@trader/db";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
 import { getDb } from "../src/server/db";
-import { invitation, mutate, ownerDb, query } from "./helpers";
+import { disposableDb, invitation, mutate, query } from "./helpers";
 
-const owner = ownerDb();
+// A database of its own: an invitation leaves an audit_log row, which is append-only and
+// references the company and the admin, so no fixture here could be deleted again. The route
+// handler's pool is pointed at it before the first request.
+let D: Awaited<ReturnType<typeof disposableDb>>;
+let owner: Db;
 let admin: Awaited<ReturnType<typeof invitation>>;
 
+beforeAll(async () => {
+  D = await disposableDb();
+  owner = D.owner;
+  getDb(D.env);
+}, 60_000);
 beforeEach(async () => {
   admin = await invitation(owner, { role: "admin" });
   vi.stubEnv("TRADER_DEV_IDENTITY", "enabled");
 });
-afterEach(async () => {
-  await admin.cleanup();
+afterEach(() => {
   vi.unstubAllEnvs();
 });
 afterAll(async () => {
-  await getDb().$client.end();
-  await owner.$client.end();
+  await D.drop([getDb()]);
 });
 
 const as = (email: string) => ({

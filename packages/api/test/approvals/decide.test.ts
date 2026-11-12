@@ -12,6 +12,8 @@ import type { Tx } from "../../src/core/context";
 import {
   appCallerIn,
   asTenant,
+  auditRow,
+  auditRowsIn,
   boundIn,
   correctionIn,
   crewDayIn,
@@ -94,6 +96,16 @@ describe("approval.decide — decisions", () => {
           r.result === "decided" ? r.approval.decidedAt : null,
         );
       }
+      // One audit row per decision, whatever the subject: the admin, the approval, the
+      // decision as it was and became — no reason, no worker, no time of its own.
+      expect(await auditRowsIn(tx, d.companyId)).toEqual(
+        subjects.map((id, i) =>
+          auditRow(d.companyId, admin.id, "approvals.decide", id, {
+            before: { decision: null },
+            after: { decision: i % 2 === 0 ? "approved" : "rejected" },
+          }),
+        ),
+      );
       // And the other polarity in another company, its own admin deciding (each call sets
       // its own tenant).
       for (const [i, id] of more.subjects.entries()) {
@@ -101,6 +113,12 @@ describe("approval.decide — decisions", () => {
         expect((await decide(tx, more.admin.who, id, decision)).result).toBe("decided");
         expect((await stored(tx, id)).decision).toBe(decision);
       }
+      // The other company's rows are its own admin's, and the first company's are unchanged.
+      const theirs = await auditRowsIn(tx, more.d.companyId);
+      expect(theirs.map((r) => [r.actorUserId, r.entityId])).toEqual(
+        more.subjects.map((id) => [more.admin.id, id]),
+      );
+      expect(await auditRowsIn(tx, d.companyId)).toHaveLength(subjects.length);
     });
   });
 
@@ -116,6 +134,8 @@ describe("approval.decide — decisions", () => {
         approval: first.result === "decided" ? first.approval : null,
       });
       expect(await stored(tx, subjects[0]!)).toEqual(row);
+      // The retry answered; it did not decide, so it left no second row.
+      expect(await auditRowsIn(tx, d.companyId)).toHaveLength(1);
     });
   });
 
@@ -142,6 +162,10 @@ describe("approval.decide — decisions", () => {
         standing,
       });
       expect(await stored(tx, subjects[1]!)).toEqual(row);
+      // The standing decision's row alone, its actor the admin who decided.
+      expect(await auditRowsIn(tx, d.companyId)).toMatchObject([
+        { actorUserId: admin.id, entityId: subjects[1], after: { decision: "rejected" } },
+      ]);
     });
   });
 });
@@ -161,6 +185,8 @@ describe("approval.decide — own entries", () => {
       });
       expect(await stored(tx, own)).toEqual(row);
       expect((await decide(tx, admin.who, recorded, "approved")).result).toBe("decided");
+      // The refused own entry left no row; the audit trail admits nothing the rule refuses.
+      expect(await auditRowsIn(tx, d.companyId)).toMatchObject([{ entityId: recorded }]);
     });
   });
 
@@ -179,6 +205,7 @@ describe("approval.decide — own entries", () => {
         });
         expect((await stored(tx, id)).decision).toBeNull();
       }
+      expect(await auditRowsIn(tx, d.companyId)).toEqual([]);
     });
   });
 
@@ -223,6 +250,8 @@ describe("approval.decide — who may call", () => {
         for (const id of [...subjects, ...theirs.subjects]) {
           expect((await stored(tx, id)).decision).toBeNull();
         }
+        expect(await auditRowsIn(tx, d.companyId)).toEqual([]);
+        expect(await auditRowsIn(tx, theirs.d.companyId)).toEqual([]);
       });
     });
   });

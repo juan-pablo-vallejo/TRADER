@@ -1,5 +1,8 @@
 // Shared by the web tests. Fixtures are committed by the owner under a run suffix and deleted
-// afterwards, as the api suite does; nothing here writes an append-only row.
+// afterwards, as the api suite does; a suite whose requests leave append-only rows (the
+// roster's audit_log) runs in a disposable database instead.
+import { fileURLToPath } from "node:url";
+
 import { createDb, type Db } from "@trader/db";
 import {
   companies,
@@ -12,7 +15,8 @@ import {
   users,
 } from "@trader/db/schema";
 import type { ErrorReport, ErrorReporter } from "@trader/api";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 
 import { ENDPOINT } from "../src/server/handler";
 
@@ -108,4 +112,36 @@ export async function invitation(
     await owner.delete(companies).where(eq(companies.id, companyId));
   };
   return { run, companyId, userId: user!.id, email, cleanup };
+}
+
+// A database of its own, as the api suite's disposableDb: made by the owner, migrated through
+// the whole journal, dropped afterwards with whatever append-only rows were committed in it.
+// `env` is what `getDb` is given before the first request, so the route handler's pool is this
+// database's; `drop` takes every pool to end first, the handler's included.
+export async function disposableDb() {
+  const name = `trader_t_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+  const admin = createDb();
+  await admin.execute(sql.raw(`create database ${name}`));
+  // A blank DATABASE_URL means unset (db env.ts).
+  const env = { ...process.env, POSTGRES_DB: name, DATABASE_URL: "" };
+  const owner = createDb(env);
+  await migrate(owner, {
+    migrationsFolder: fileURLToPath(
+      new URL("../../../packages/db/migrations", import.meta.url),
+    ),
+  });
+  // pool.end() resolves before the server's backends have gone; wait them out before the drop.
+  const drop = async (pools: Db[]) => {
+    await Promise.all([owner, ...pools].map((p) => p.$client.end()));
+    for (let i = 0; i < 200; i++) {
+      const { rows } = await admin.execute<{ n: number }>(
+        sql`select count(*)::int as n from pg_stat_activity where datname = ${name}`,
+      );
+      if (rows[0]?.n === 0) break;
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    await admin.execute(sql.raw(`drop database ${name}`));
+    await admin.$client.end();
+  };
+  return { env, owner, drop };
 }

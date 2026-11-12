@@ -4,6 +4,7 @@
 // Concurrency and commits are labor/repair-commit.test.ts's.
 import {
   approvals,
+  auditLog,
   companies,
   dayCloseouts,
   dayCloseoutWorkers,
@@ -22,6 +23,8 @@ import { readWorkerEvents } from "../../src/labor/timeline";
 import {
   appCallerIn,
   asTenant,
+  auditRow,
+  auditRowsIn,
   boundIn,
   crewDayIn,
   eventIn,
@@ -115,9 +118,24 @@ async function counts(tx: Tx, d: CrewDay) {
       .select({ n: sql<number>`count(*)::int` })
       .from(approvals)
       .where(eq(approvals.companyId, d.companyId));
-    return { events: e!.n, approvals: a!.n };
+    const [u] = await tx
+      .select({ n: sql<number>`count(*)::int` })
+      .from(auditLog)
+      .where(eq(auditLog.companyId, d.companyId));
+    return { events: e!.n, approvals: a!.n, audit: u!.n };
   });
 }
+
+// One accepted repair's audit row: the set's ids, kinds and targets, and nothing else.
+const repaired = (
+  d: CrewDay,
+  actor: string,
+  workerId: string,
+  events: { id: string; kind: Op["kind"]; target_event_id: string | null }[],
+) =>
+  auditRow(d.companyId, actor, "work_session_events.repair", null, {
+    after: { worker_id: workerId, events },
+  });
 
 async function rejectsWritingNothing(
   tx: Tx,
@@ -172,6 +190,21 @@ describe("labor.repair — who may repair", () => {
       expect(await outcome(repair(tx, gone.who, d.w1, ops()))).toBe("UNAUTHORIZED");
       expect(await outcome(repair(tx, worker.who, d.w1, ops()))).toBe("FORBIDDEN");
       expect(await outcome(repair(tx, d.who, d.w1, ops()))).toBe("FORBIDDEN");
+      expect(await counts(tx, d)).toEqual({ events: 0, approvals: 0, audit: 0 });
+    });
+  });
+
+  it("audits an admin's repair of their own ledger as their own act", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin } = await world(tx);
+      await asTenant(tx, d.companyId);
+      const start = append("started", d.J, "08:00");
+      expect((await repair(tx, admin.who, admin.id, [start])).result).toBe("accepted");
+      expect(await auditRowsIn(tx, d.companyId)).toEqual([
+        repaired(d, admin.id, admin.id, [
+          { id: start.id, kind: "append", target_event_id: null },
+        ]),
+      ]);
     });
   });
 
@@ -467,6 +500,17 @@ describe("labor.repair — append, correct, void", () => {
       // Positional corrections stay legal after a void.
       const later = correct(end, "ended", d.J, "15:00");
       expect((await repair(tx, admin.who, d.w1, [later])).result).toBe("accepted");
+      // One audit row per accepted repair, in order; the three rejections left none. A
+      // void's row names its target and carries no job and no time.
+      expect(await auditRowsIn(tx, d.companyId)).toEqual([
+        repaired(d, admin.id, d.w1, [
+          { id: fix.id, kind: "correct", target_event_id: start },
+        ]),
+        repaired(d, admin.id, d.w1, [{ id: v.id, kind: "void", target_event_id: start }]),
+        repaired(d, admin.id, d.w1, [
+          { id: later.id, kind: "correct", target_event_id: end },
+        ]),
+      ]);
     });
   });
 
@@ -539,6 +583,7 @@ describe("labor.repair — approvals and accounting", () => {
       expect(await counts(tx, d)).toEqual({
         events: before.events + 1,
         approvals: before.approvals + 1,
+        audit: before.audit + 1,
       });
       expect((await accounting(tx, d.w1))[0]).toMatchObject({ accounting: "pending" });
 
@@ -621,6 +666,13 @@ describe("labor.repair — approvals and accounting", () => {
       expect(await decide(tx, admin.who, end.id, "approved")).toMatchObject({
         result: "decided",
       });
+      // The repair and its decision are both audited, each as the admin's (ARCHITECTURE).
+      expect(
+        (await auditRowsIn(tx, d.companyId)).map((r) => [r.action, r.actorUserId]),
+      ).toEqual([
+        ["work_session_events.repair", admin.id],
+        ["approvals.decide", admin.id],
+      ]);
     });
   });
 });
@@ -635,6 +687,13 @@ describe("labor.repair — retries and ids", () => {
       const ops = [correct(end, "ended", d.J, "16:00"), append("started", d.J, "19:00")];
       const first = await repair(tx, admin.who, d.w1, ops);
       expect(first.result).toBe("accepted");
+      // One row for the set of two, in input order; every retry below adds none (counts).
+      expect(await auditRowsIn(tx, d.companyId)).toEqual([
+        repaired(d, admin.id, d.w1, [
+          { id: ops[0]!.id, kind: "correct", target_event_id: end },
+          { id: ops[1]!.id, kind: "append", target_event_id: null },
+        ]),
+      ]);
       const before = await counts(tx, d);
       const events = first.result === "accepted" ? first.events : [];
       expect(await repair(tx, admin.who, d.w1, ops)).toEqual({

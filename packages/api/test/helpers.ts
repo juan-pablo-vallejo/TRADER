@@ -2,13 +2,15 @@
 // transaction: the code under test opens its own. Fixtures are therefore committed by the
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
 // a work_session_event, so the deletes are always allowed. Procedures that write append-only
-// rows run through the rolled-back calls further down instead.
+// rows — labor, closeouts, and every audited write (core/audit.ts) — run through the
+// rolled-back calls further down or in a disposable database instead.
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
 import {
   approvals,
+  auditLog,
   companies,
   crewMembers,
   crews,
@@ -23,7 +25,7 @@ import {
 } from "@trader/db/schema";
 import type { AnyRouter } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
+import { asc, DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import superjson from "superjson";
 import { z } from "zod";
@@ -307,8 +309,9 @@ export const caller = (db: Db, who: unknown) =>
     createContext({ db, identity: who, reporter: quietReporter, requestId: REQUEST_ID }),
   );
 
-// The application's own router on committed fixtures, for procedures that write nothing
-// append-only (roster, me). Consumed by the roster and me-update tests.
+// The application's own router on committed fixtures: in the shared database only for
+// procedures that write nothing append-only (me, the lists), in a disposable one for the
+// roster's audited writers. Consumed by the roster, me-update and gate tests.
 export const appCaller = (db: Db, who: unknown) =>
   createCallerFactory(appRouter)(
     createContext({ db, identity: who, reporter: quietReporter, requestId: REQUEST_ID }),
@@ -818,4 +821,66 @@ export async function lateReceiptIn(tx: Tx, day: CrewDay, by = day.w1) {
     "after_closeout",
   ]);
   return { materialId, approvalId };
+}
+
+// --- Audit rows --------------------------------------------------------------------------
+// audit_log is append-only and references the company and the actor, so a procedure that
+// writes it is called only inside a rolled-back transaction or in a disposable database.
+
+const auditColumns = {
+  companyId: auditLog.companyId,
+  actorUserId: auditLog.actorUserId,
+  action: auditLog.action,
+  entityTable: auditLog.entityTable,
+  entityId: auditLog.entityId,
+  before: auditLog.before,
+  after: auditLog.after,
+};
+
+// A company's audit rows in the order written, as the owner reads them past RLS.
+export const auditRows = (owner: Db, companyId: string) =>
+  owner
+    .select(auditColumns)
+    .from(auditLog)
+    .where(eq(auditLog.companyId, companyId))
+    .orderBy(asc(auditLog.id));
+
+// The same inside a rolled-back transaction, whatever role it runs as: the tenant is set
+// first, because a failed call's savepoint undid the one its procedure had set.
+export async function auditRowsIn(tx: Tx, companyId: string) {
+  await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
+  return tx
+    .select(auditColumns)
+    .from(auditLog)
+    .where(eq(auditLog.companyId, companyId))
+    .orderBy(asc(auditLog.id));
+}
+
+// One expected row, as auditRows returns it.
+export const auditRow = (
+  companyId: string,
+  actorUserId: string,
+  action: string,
+  entityId: string | null,
+  change: { before?: unknown; after: unknown },
+) => ({
+  companyId,
+  actorUserId,
+  action,
+  entityTable: action.slice(0, action.indexOf(".")),
+  entityId,
+  before: change.before ?? null,
+  after: change.after,
+});
+
+// The runtime role's INSERT on audit_log taken away while `body` runs: what a failing audit
+// write looks like to a procedure. A grant is the whole database's, so only ever in a
+// disposable one.
+export async function withoutAuditInsert(owner: Db, body: () => Promise<void>) {
+  await owner.execute(sql`revoke insert on audit_log from trader_app`);
+  try {
+    await body();
+  } finally {
+    await owner.execute(sql`grant insert on audit_log to trader_app`);
+  }
 }

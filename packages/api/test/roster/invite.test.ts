@@ -1,37 +1,45 @@
 // TASKS:45: roster.invite — a users row with email, name and role, worker unless named, bound
 // by the first sign-in with that email; a second email per company, whatever its case, is
 // `email_taken` with nothing written and no error; admin only.
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@trader/db";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { appRouter } from "../../src/router";
 import {
   appCaller,
-  appDb,
+  auditRow,
+  auditRows,
+  disposableDb,
   failure,
   http,
   identity,
   member,
   outcome,
-  ownerDb,
   userCount,
   userRow,
+  withoutAuditInsert,
   world,
   type World,
 } from "../helpers";
 
-const owner = ownerDb();
-const app = appDb();
+// A database of its own (helpers.ts, disposableDb): these writers leave audit_log rows, which
+// are append-only and reference the company and the actor, so nothing committed here could be
+// deleted again. Each test's world stays until the database is dropped.
+let D: Awaited<ReturnType<typeof disposableDb>>;
+let owner: Db;
+let app: Db;
 let w: World;
 
+beforeAll(async () => {
+  D = await disposableDb();
+  owner = D.owner;
+  app = D.app();
+}, 60_000);
 beforeEach(async () => {
   w = await world(owner);
 });
-afterEach(async () => {
-  await w.cleanup();
-});
 afterAll(async () => {
-  await app.$client.end();
-  await owner.$client.end();
+  await D.drop();
 });
 
 type Input = Parameters<ReturnType<typeof appCaller>["roster"]["invite"]>[0];
@@ -61,6 +69,13 @@ describe("roster.invite", () => {
     expect(me.id).toBe(answer.user.id);
     const rows = await appCaller(app, admin.who).roster.list();
     expect(rows.find((r) => r.id === answer.user.id)).toMatchObject({ invited: false });
+    // One row, by the admin, about the invited user: the role and no contact data. The
+    // first sign-in's bind is not an audited action and left nothing.
+    expect(await auditRows(owner, w.a.companyId)).toEqual([
+      auditRow(w.a.companyId, admin.id, "users.invite", answer.user.id, {
+        after: { role: "worker" },
+      }),
+    ]);
   });
 
   it("takes the role named", async () => {
@@ -71,6 +86,9 @@ describe("roster.invite", () => {
       role: "admin",
     });
     expect(answer).toMatchObject({ result: "invited", user: { role: "admin" } });
+    expect(await auditRows(owner, w.a.companyId)).toMatchObject([
+      { action: "users.invite", before: null, after: { role: "admin" } },
+    ]);
   });
 
   it("answers email_taken for an email of this company, whatever its case, writing nothing", async () => {
@@ -83,6 +101,7 @@ describe("roster.invite", () => {
       });
     }
     expect(await userCount(owner, [w.a.companyId])).toBe(before);
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 
   it("invites the same email in another company", async () => {
@@ -96,6 +115,13 @@ describe("roster.invite", () => {
     expect(await userRow(owner, answer.user.id)).toMatchObject({
       company_id: w.b.companyId,
     });
+    // The row is the inviting company's, and the other company has none.
+    expect(await auditRows(owner, w.b.companyId)).toEqual([
+      auditRow(w.b.companyId, adminB.id, "users.invite", answer.user.id, {
+        after: { role: "worker" },
+      }),
+    ]);
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 
   it("refuses a blank name, a bad email or an unknown field with BAD_REQUEST", async () => {
@@ -107,6 +133,7 @@ describe("roster.invite", () => {
     ]) {
       expect(await outcome(invite(admin.who, input as Input))).toBe("BAD_REQUEST");
     }
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 
   it("is admin only, over HTTP too", async () => {
@@ -126,5 +153,20 @@ describe("roster.invite", () => {
       status: 403,
       code: "FORBIDDEN",
     });
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
+  });
+
+  it("invites no one when its audit row cannot be written", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const before = await userCount(owner, [w.a.companyId]);
+    await withoutAuditInsert(owner, async () => {
+      expect(
+        await outcome(
+          invite(admin.who, { email: `lost-${w.run}@co.test`, name: "Lost" }),
+        ),
+      ).toBe("INTERNAL_SERVER_ERROR");
+    });
+    expect(await userCount(owner, [w.a.companyId])).toBe(before);
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 });

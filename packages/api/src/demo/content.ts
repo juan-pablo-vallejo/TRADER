@@ -5,6 +5,7 @@
 // coordinates are a point in Providence used only as a job's place. Consumed by demo/run.ts.
 import type { SeedCompany } from "@trader/db";
 
+import type { AuditAction } from "../core/audit";
 import type { ApprovalReason } from "../sync/reasons";
 import { addDays } from "./ids";
 
@@ -374,3 +375,16 @@ export const EXPECTED = {
   // second reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
   decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 - 4 + 3,
 } as const;
+
+// The audit rows the same run leaves, by action (core/audit.ts): one per invitation, rate,
+// repair call, decision, deactivation and demotion — and none from any other step, which is
+// what the demo test holds the database to. Nobody is reactivated.
+export const EXPECTED_AUDIT: Record<AuditAction, number> = {
+  "users.invite": PEOPLE.length,
+  "users.set_role": 1,
+  "users.deactivate": 1,
+  "users.reactivate": 0,
+  "pay_rates.add": EXPECTED.payRates,
+  "work_session_events.repair": 1,
+  "approvals.decide": EXPECTED.decided,
+};

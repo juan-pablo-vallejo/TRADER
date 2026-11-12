@@ -5,11 +5,13 @@
 // per company without regard to case (users.ts); a second one answers `email_taken` through
 // ON CONFLICT … DO NOTHING on the expression index — raw SQL, as the seed writes it, because
 // Drizzle's onConflict names columns only — so the conflict is never raised and the
-// transaction is never aborted. Consumed by routers/roster.ts.
+// transaction is never aborted. An invitation leaves one audit row (core/audit.ts). Consumed
+// by routers/roster.ts.
 import { userRole } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
 import { verifiedIdentitySchema } from "../core/identity";
 import type { AppUser } from "../core/resolve-user";
@@ -45,6 +47,12 @@ export async function rosterInvite(
   `);
   const inserted = rows[0];
   if (inserted === undefined) return { result: "rejected", code: "email_taken" };
+  // The row names who was invited; the audit row repeats no email and no name.
+  await recordAudit(tx, user, {
+    action: "users.invite",
+    entityId: inserted.id,
+    after: { role: input.role },
+  });
   const invited = await readRosterUser(tx, inserted.id);
   if (invited === undefined) throw new Error("the invited row is not visible");
   return { result: "invited", user: invited };

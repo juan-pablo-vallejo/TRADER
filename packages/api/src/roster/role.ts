@@ -2,11 +2,13 @@
 // under lock.ts's locks: demoting the last active admin is `rejected` `last_admin`, so a
 // company can never lose its last admin to a demotion, two admins racing included. An admin may
 // demote themself while another remains; their call commits and the next is FORBIDDEN. The
-// same role again is `unchanged` and writes nothing. Consumed by routers/roster.ts.
+// same role again is `unchanged` and writes nothing. A change leaves one audit row
+// (core/audit.ts). Consumed by routers/roster.ts.
 import { userRole, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { readRosterUser, rosterUser, type RosterUser } from "./list";
@@ -51,5 +53,11 @@ export async function setRole(
     return { result: "rejected", code: "last_admin" };
   }
   await tx.update(users).set({ role: input.role }).where(eq(users.id, target.id));
+  await recordAudit(tx, user, {
+    action: "users.set_role",
+    entityId: target.id,
+    before: { role: target.role },
+    after: { role: input.role },
+  });
   return answerWith(tx, "updated", target.id);
 }

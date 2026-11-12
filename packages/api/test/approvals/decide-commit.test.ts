@@ -17,12 +17,15 @@ import {
   crewDayIn,
   disposableDb,
   eventIn,
+  auditRow,
+  auditRows,
   lateReceiptIn,
   outcome,
   pendingApproval,
   waitForLockWait,
   quietReporter,
   REQUEST_ID,
+  withoutAuditInsert,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -124,6 +127,35 @@ describe("approval.decide — real commits", () => {
       result: "decided",
       approval: { id: w.labor, decision: row.decision, decidedAt: row.decidedAt },
     });
+    // One audit row, the winner's: the caller answered `decided`, with their decision.
+    const actor = results[0]!.result === "decided" ? w.x.id : w.y.id;
+    expect(row.decidedByUserId).toBe(actor);
+    expect(await auditRows(D.owner, w.d.companyId)).toEqual([
+      auditRow(w.d.companyId, actor, "approvals.decide", w.labor, {
+        before: { decision: null },
+        after: { decision: row.decision },
+      }),
+    ]);
+  });
+
+  it("decides nothing when its audit row cannot be written, then commits both together", async () => {
+    const w = await world();
+    const subjects = [w.labor, w.receipt.approvalId, w.correction.approvalId];
+    await withoutAuditInsert(D.owner, async () => {
+      for (const id of subjects) {
+        expect(await outcome(decide(w.x.who, id, "approved"))).toBe(
+          "INTERNAL_SERVER_ERROR",
+        );
+        expect((await stored(id)).decision).toBeNull();
+      }
+    });
+    expect(await auditRows(D.owner, w.d.companyId)).toEqual([]);
+    for (const id of subjects) {
+      expect((await decide(w.x.who, id, "approved")).result).toBe("decided");
+    }
+    expect(
+      (await auditRows(D.owner, w.d.companyId)).map((r) => [r.actorUserId, r.entityId]),
+    ).toEqual(subjects.map((id) => [w.x.id, id]));
   });
 
   it("refuses an admin demoted while the decision waited, and decides nothing", async () => {

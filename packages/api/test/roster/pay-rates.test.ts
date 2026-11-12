@@ -1,31 +1,39 @@
 // TASKS:45: roster.setPayRate and roster.payRates — effective-dated, insert-only: a second rate
 // for the same day is `rate_exists` and the history never changes; the rate in force is the
 // newest on or before today in the company's zone; admin only.
-import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { Db } from "@trader/db";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
   appCaller,
-  appDb,
+  auditRow,
+  auditRows,
+  disposableDb,
   member,
   outcome,
-  ownerDb,
+  withoutAuditInsert,
   world,
   type World,
 } from "../helpers";
 
-const owner = ownerDb();
-const app = appDb();
+// A database of its own (helpers.ts, disposableDb): these writers leave audit_log rows, which
+// are append-only and reference the company and the actor, so nothing committed here could be
+// deleted again. Each test's world stays until the database is dropped.
+let D: Awaited<ReturnType<typeof disposableDb>>;
+let owner: Db;
+let app: Db;
 let w: World;
 
+beforeAll(async () => {
+  D = await disposableDb();
+  owner = D.owner;
+  app = D.app();
+}, 60_000);
 beforeEach(async () => {
   w = await world(owner);
 });
-afterEach(async () => {
-  await w.cleanup();
-});
 afterAll(async () => {
-  await app.$client.end();
-  await owner.$client.end();
+  await D.drop();
 });
 
 const roster = (who: unknown) => appCaller(app, who).roster;
@@ -75,6 +83,22 @@ describe("roster.setPayRate and roster.payRates", () => {
     expect(
       (await r.payRates({ userId: w.a.boundId })).map((x) => x.hourlyRateCents),
     ).toEqual([9900, 3000, 2800, 2500]);
+    // One row per rate added, in the order added; the first in full.
+    if (first.result !== "added") throw new Error("unreachable");
+    const audited = await auditRows(owner, w.a.companyId);
+    expect(audited[0]).toEqual(
+      auditRow(w.a.companyId, admin.id, "pay_rates.add", first.rate.id, {
+        after: {
+          user_id: w.a.boundId,
+          effective_from: "2020-01-01",
+          hourly_rate_cents: 2500,
+          currency: "USD",
+        },
+      }),
+    );
+    expect(
+      audited.map((x) => (x.after as { hourly_rate_cents: number }).hourly_rate_cents),
+    ).toEqual([2500, 2800, 3000, 9900]);
   });
 
   it("never edits history: a second rate for the same day is rate_exists", async () => {
@@ -100,6 +124,12 @@ describe("roster.setPayRate and roster.payRates", () => {
     const history = await r.payRates({ userId: w.a.boundId });
     expect(history).toHaveLength(4);
     expect(history.find((x) => x.effectiveFrom === "2022-03-01")).toEqual(added.rate);
+    // Four rates, four rows: the refused second rate for 1 March left none.
+    const audited = await auditRows(owner, w.a.companyId);
+    expect(audited.map((x) => x.action)).toEqual(Array(4).fill("pay_rates.add"));
+    expect(
+      audited.map((x) => (x.after as { hourly_rate_cents: number }).hourly_rate_cents),
+    ).toEqual([2000, 2200, 2200, 2200]);
   });
 
   it("refuses a bad currency, a negative rate, a non-integer or a bad date", async () => {
@@ -115,6 +145,7 @@ describe("roster.setPayRate and roster.payRates", () => {
         await outcome(roster(admin.who).setPayRate({ userId: w.a.boundId, ...input })),
       ).toBe("BAD_REQUEST");
     }
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 
   it("prices a deactivated user, refuses a missing or foreign one, and is admin only", async () => {
@@ -155,5 +186,26 @@ describe("roster.setPayRate and roster.payRates", () => {
     expect(await outcome(roster(null).payRates({ userId: worker.id }))).toBe(
       "UNAUTHORIZED",
     );
+    // The deactivated user's rate, and nothing from the refused calls or the other tenant.
+    expect(await auditRows(owner, w.a.companyId)).toMatchObject([
+      { action: "pay_rates.add", actorUserId: admin.id, after: { user_id: off.id } },
+    ]);
+    expect(await auditRows(owner, w.b.companyId)).toEqual([]);
+  });
+
+  it("adds no rate when its audit row cannot be written", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const input = {
+      userId: w.a.boundId,
+      effectiveFrom: "2023-01-01",
+      hourlyRateCents: 2600,
+    };
+    await withoutAuditInsert(owner, async () => {
+      expect(await outcome(roster(admin.who).setPayRate(input))).toBe(
+        "INTERNAL_SERVER_ERROR",
+      );
+    });
+    expect(await roster(admin.who).payRates({ userId: w.a.boundId })).toEqual([]);
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 });

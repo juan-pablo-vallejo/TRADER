@@ -114,3 +114,11 @@ export async function counts(db: Db) {
     decided,
   };
 }
+
+// The audit rows by action, as the owner reads them: an action nobody performed is absent.
+export async function auditCounts(db: Db): Promise<Record<string, number>> {
+  const { rows } = await db.execute<{ action: string; n: number }>(
+    sql`select action, count(*)::int as n from audit_log group by action`,
+  );
+  return Object.fromEntries(rows.map((r) => [r.action, r.n]));
+}

@@ -6,12 +6,18 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createContext } from "../../src/core/context";
-import { DEMO, EXPECTED, PEOPLE, SCENARIOS } from "../../src/demo/content";
+import {
+  DEMO,
+  EXPECTED,
+  EXPECTED_AUDIT,
+  PEOPLE,
+  SCENARIOS,
+} from "../../src/demo/content";
 import { runDemo, type Step, type Summary } from "../../src/demo/run";
 import { prepareTarget, type Target } from "../../src/demo/target";
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
-import { counts, MIGRATIONS, spyOnQueries, uniqueDemoName } from "./helpers";
+import { auditCounts, counts, MIGRATIONS, spyOnQueries, uniqueDemoName } from "./helpers";
 import { quietReporter, REQUEST_ID } from "../helpers";
 
 const ANCHOR = "2026-10-19";
@@ -69,6 +75,20 @@ describe("the demo run", () => {
     expect(n).toBe(steps.length);
     expect(steps.map((s) => s.index)).toEqual(steps.map((_, i) => i + 1));
     expect(await counts(target.owner)).toEqual(EXPECTED);
+  });
+
+  it("left an audit row for each audited write, and for nothing else it did", async () => {
+    // The run goes through crews, customers, jobs, pushes, closeouts, corrections and
+    // sign-ins as well: any of them writing a row would add to a count or add an action.
+    const performed = Object.fromEntries(
+      Object.entries(EXPECTED_AUDIT).filter(([, n]) => n > 0),
+    );
+    expect(await auditCounts(target.owner)).toEqual(performed);
+    // Every row's actor is the demo admin: the one caller of the audited procedures.
+    const { rows } = await target.owner.execute<{ email: string }>(sql`
+      select distinct u.email from audit_log a join users u on u.id = a.actor_user_id
+    `);
+    expect(rows).toEqual([{ email: DEMO.adminEmail }]);
   });
 
   it("let the owner write the bootstrap and nothing else", () => {
