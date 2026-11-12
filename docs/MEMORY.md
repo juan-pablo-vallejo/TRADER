@@ -23,7 +23,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   (October 2026), then this rebuild. The decisions table in ARCHITECTURE.md is the synthesis
   outcome; the archived documents predate it.
 - No vendor account is in use yet. Apple Developer (individual) and Google Play Console
-  (personal) are enrolled; Clerk, Neon, Vercel, Sentry, PostHog and EAS are created in Stage 6.
+  (personal) are enrolled; Clerk, Neon, Vercel, Sentry, Resend and EAS are
+  created by the owner on the Release 0.1 track (TASKS), PostHog after it.
 - The archive: tag `archive/pre-rebuild` (35 commits) holds the previous repository in full —
   `docs/SPEC.md`, `LOGIC.md`, `DECISIONS.md`, `ROADMAP.md`, `ACCOUNTS.md`, `WORKLOG.md`, the
   Drizzle schema and migrations, the sync implementation, its tests, and both apps. Read it with
@@ -781,3 +782,29 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   Stage 6 Neon line says "29-file journal" and the journal now has 37.
 - **Next:** owner reviews and merges the branch; then Stage 4's next open line, the
   payroll-hours CSV (V1-D18; columns decided in its plan).
+
+### 2026-11-12 — Release 0.1 fast-track planned; its decisions written into the documents
+
+- **Did:** a read-only readiness assessment at `6a2da5e` (code, documents, tooling,
+  accounts, the stores' and vendors' pages), then branch `release-0.1-track`, documents
+  only: six decision rows, ARCHITECTURE's stack, identity, accounting and domain sections,
+  PRD Access, Invoicing and the release definitions, the Release 0.1 track at the head of
+  TASKS with the stage lines it changes. No code, no migration, no dependency. Found: no
+  `apps/mobile`, no Clerk, no deploy configuration, invoices as schema only; the API is a
+  route handler whose every call is one transaction, so it runs on Vercel with no second
+  host; `eas whoami` not signed in; `jpteq.app` delegated to Cloudflare with no record
+  resolving; no Sentry configuration anywhere to reuse.
+- **Decided:** by the owner on 2026-11-12 (the fast-track brief, the publisher-identity
+  note, and the plan approved with its recommendations), the Release 0.1 rows of that date
+  in ARCHITECTURE: SMS-code sign-in for the crew and email code for the office, passkeys
+  not built; both stores from the individual accounts; recorded payments and invoice email;
+  one deployment on `app.jpteq.app` and the apex, no `api.` host; Neon point-in-time restore
+  for the release; the outbox, the location stamp and Spanish kept in the first field
+  build. Not done: nothing is installed or created — the accounts and the Claude Code
+  connectors are the owner's two lines in the track; MEMORY's log was not rolled up. Not
+  verified, each named on its line: the Play account's creation date, whether store or Expo
+  records exist, Neon's restore window, how a store reviewer passes an SMS code on a
+  production Clerk instance. For the owner: `TASKS.md`, "Resync every other clone", is
+  still unticked.
+- **Next:** owner reviews and merges the branch and works the two owner lines; then track
+  line R1, phone identity (plan first: schema, auth).

@@ -4,7 +4,104 @@ The build order and what is done: every line between here and a deployed V1. Sta
 dependency-ordered; a stage starts when the one before it is done, except where a stage says
 it may overlap. No dates. A task is ticked when its done-criterion holds, not when the code
 exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not in code.
-**Current stage: 4.**
+**Current work: the Release 0.1 track**, taken ahead of the open lines of Stages 4 to 10.
+
+## Release 0.1 — first production release
+
+Done when the go/no-go line is recorded as passed and D Sierra Painting's crew is on the
+store builds (ARCHITECTURE, the 2026-11-12 Release 0.1 rows). Lines are ordered by
+dependency; R4 to R5 and R6 to R7 may run beside each other, and the owner's lines beside
+R1. Each line is planned and approved on its own, and names the packages it installs in
+that plan, here, before they are installed. A line that takes a stage's line ticks it there.
+Staging and production are separate databases and identity instances throughout; nothing
+paid is created and no production migration runs without the owner's approval of that step.
+
+- [x] R0 — Documents: the Release 0.1 decision rows, PRD Access, Invoicing and the release
+      definitions, this track. Documents only
+- [ ] Owner — accounts, checked before anything is created (no secret enters the repository
+      or a session): whether an Expo account or project, an App Store Connect record, a Play
+      Console record and a Sentry organization already exist for TRADER; the Play account's
+      creation date, which decides whether a closed test precedes production; the
+      `jpteq.app` zone active in Cloudflare. Then: a Neon project with production and
+      staging branches; a Clerk application with SMS and email codes, invitation-only; a
+      Vercel project rooted at `apps/web` with production and preview environments; the
+      Resend sending domain. Done when each is reported as existing or created
+- [ ] Owner — Claude Code connectors, each the vendor's own with browser sign-in: the Expo
+      plugin; Vercel; Neon, read-only; Clerk; Cloudflare; Sentry; Resend. Consumer: reading
+      the deployed stack in R3, R9, R10 and the go/no-go line instead of screenshots. No
+      connector for either store: none is published by Apple or Google
+- [ ] R1 — Phone identity (plan first: schema, auth). Work: the identity adapter carries a
+      verified phone number or a verified email; `roster.invite` takes a phone number, an
+      email, or both; first sign-in binds on either; an additive migration for the binding
+      key; the roster screen. Tests: a phone invitation binds once and only to its number;
+      one number invited by two companies binds neither; an email invitation binds as
+      today; a caller with neither is UNAUTHORIZED; `me.update` cannot change a number that
+      is a binding key; every existing identity test green
+- [ ] R2 — Clerk behind the identity seam (plan first: auth; takes Stage 6's Clerk line).
+      Depends on R1 and the owner's Clerk application. Work: the Clerk adapter for the
+      route handler, office sign-in and sign-out, an invitation sent on `roster.invite`,
+      the development adapter absent from a production build. Tests: a request with no
+      session is 401; a session whose number or email matches no invitation is refused
+      and binds nothing; the development route answers 404 in a production build
+- [ ] R3 — Production path on staging (plan first: CI, auth; takes Stage 6's Neon owner-role
+      **decide**, Neon, Environments and Sentry lines, and the security headers of its edge
+      line). Work: the owner role's attributes read on Neon and decided; `trader_app` as
+      the login role over the pooled endpoint, migrations over the direct one; the
+      environment validated at start; a readiness check that touches the database and
+      asserts the role; an owner-run onboarding script for a company, its invoice counter
+      and its first admin; a content security policy and transport security; the Sentry
+      reporter behind `ErrorReporter`; the migration procedure in `packages/db/README.md`;
+      the restore window read and recorded. Done when the office runs on the staging
+      deployment as `trader_app`, a forced error reaches Sentry with no PII, and a
+      point-in-time restore of staging has been timed
+- [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
+      sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
+      the theme and brand assets; a development build on the iOS simulator and the Android
+      emulator; the i18n layer with English and Spanish catalogs; one Maestro smoke flow.
+      Done when the flow signs in as the demo foreman and reads the job list on both
+- [ ] R5 — Field app, time tracking (plan first: sync; takes Stage 5's pull extension,
+      sign-in, outbox, offline evidence, clock, job list and history, sync states and own
+      profile lines, less biometrics, the job suggestion and pause/resume if the plan
+      leaves it out). Depends on R2 and R4. Done when a worker on a physical iPhone and a
+      physical Android phone signs in by SMS code, clocks in on an assigned job, switches
+      jobs and clocks out across an airplane-mode gap, and the office shows the hours once,
+      per job
+- [ ] R6 — Invoices (plan first: money; takes Stage 7's drafting and issue lines, less
+      credit memos). Work: draft, lines priced by the admin, tax, issue with gap-free
+      numbering continuing the partner's series, void; the office screens. Tests as those
+      two lines state them
+- [ ] R7 — Invoice PDF, payments and delivery (plan first: schema, money; takes Stage 7's
+      PDF line). Depends on R6 and the Resend domain. Work: the PDF from the issued
+      snapshot; recorded payments and the derived amount owed; the PDF sent by email with
+      each send recorded. Tests: a payment changes no invoice row; payments never total
+      more than the invoice unless the plan allows an overpayment and says how it reads;
+      a void invoice takes no payment; a failed send records its failure and can be sent
+      again; another company's invoice is FORBIDDEN on every procedure
+- [ ] R8 — Public pages and account deletion (plan first: auth; takes Stage 8's privacy
+      line). Work: privacy policy, terms, support and the deletion request on the apex;
+      the deletion request in the app's profile; deactivate-and-pseudonymize as an
+      admin-confirmed action. The policy's text is the owner's to supply or approve
+- [ ] R9 — Production cutover, each step approved by the owner when it is reached: the
+      journal migrated into production; D Sierra Painting onboarded with its first admin
+      and its invoice counter; the roster invited by phone number; a demonstration company
+      for store reviewers
+- [ ] R10 — Stores (takes Stage 10's store line and Stage 8's distribution line). Work: EAS
+      production builds; App Store Connect and Play Console records, listings, privacy
+      labels and the Data safety form declaring name, phone number, location at clock
+      events and diagnostics; reviewer access, how a reviewer passes the SMS code checked
+      on Clerk's page first; TestFlight and the Play closed track opened to the crew;
+      submission to both reviews
+- [ ] Go/no-go, recorded in MEMORY with who checked each: production's login role is
+      `trader_app`, neither superuser nor `BYPASSRLS`, and a second company's rows cannot
+      be read; the staging restore drill timed; R5's done-criterion repeated on the store
+      builds; the office corrects an entry, closes a pay period, issues an invoice,
+      receives its PDF by email, records a payment and reads it as paid; a forced error
+      from the web and from each store build reaches Sentry; sync paused and resumed with
+      `TRADER_SYNC_MODE` and a minimum build refused, nothing lost; the public pages live
+      and both store forms accepted; a Spanish speaker has read the crew screens; the
+      partner's admin has signed the acceptance checklist
+
+Left where they are until this track is done: every other open line of Stages 4 to 10.
 
 ## Stage 0 — Repo rebuild
 
@@ -227,17 +324,17 @@ ARCHITECTURE.md is a line here.
 
 - [ ] **decide** Neon owner role: checked for `rolbypassrls` on the role itself; if absent, a
       decision covering the migrator-as-owner, onboarding and `pg_dump` under forced RLS
-- [ ] Individual email for every pilot worker (V1-D06): the pilot roster checked with the
-      partner, each worker's own reachable address recorded before their invitation; a
-      worker without one gets one first; no shared address. Done when every roster row to be
-      invited has a distinct address its owner has confirmed they can open
-- [ ] Clerk production instance: passkeys on `jpteq.app`, email-code fallback,
+- [ ] A sign-in address for every person on the roster (2026-11-12 Release 0.1 sign-in): the
+      roster checked with the partner, each crew member's own mobile number and each
+      admin's own email recorded before their invitation; no shared number or address. Done
+      when every roster row to be invited has a distinct one its owner has confirmed
+- [ ] Clerk production instance: SMS codes for the crew, email codes for the office,
       invitation-only, 30-day sessions; the Clerk identity adapter behind the seam, with the
       development adapter left out of the production wiring; invitations sent on
-      `roster.invite`; how `users.email` follows a changed sign-in email
+      `roster.invite`; how `users.email` and a bound phone number follow a changed sign-in address
 - [ ] Neon Launch project; `trader_app` created in SQL and used as the login role;
       migrations re-baselined before the first run, with a full catalog diff against the
-      29-file journal proving nothing hand-written was lost; the Neon driver behind the seam
+      journal proving nothing hand-written was lost; the Neon driver behind the seam
       if the pooled connection needs it
 - [ ] Environments: production and preview with separate databases and identity instances;
       the environment validated at start; a readiness check that touches the database and
@@ -265,11 +362,11 @@ ARCHITECTURE.md is a line here.
       answer is a per-record `rejected`; a client that ignores `status.get` is still stopped
 - [ ] `status.get` answers without running the identity adapter; the startup guard also
       checks `session_user` and that every tenant table has its policy
-- [ ] Associated Domains and `assetlinks.json` served from the apex
 - [ ] Sentry reporter implementing `ErrorReporter` with the minimized event only; PostHog;
       EAS project; structured request logs carrying the request id
-- [ ] Nightly encrypted `pg_dump` to R2 and weekly restore-verify in Actions; timed restore
-      drill; the restore creates `trader_app` first
+- [ ] Nightly encrypted `pg_dump` to R2 and weekly restore-verify in Actions, after
+      Release 0.1, which runs on Neon's point-in-time restore; timed restore drill; the
+      restore creates `trader_app` first
 - [ ] Repository hygiene: vulnerability alerts on; Actions pinned by commit; a sweep of
       leftover `trader_t_*` test databases in the suites' global setup; `seed.test.ts` in a
       database of its own
@@ -333,14 +430,14 @@ first group is required.
       with neither superuser nor `BYPASSRLS`; timeouts and pool limits in force; no
       development-identity route reachable; rate limits live; Sentry events inspected for PII
 - [ ] Release gates, human: an airplane-mode day on one physical iPhone and one physical
-      Android phone, with the server's duplicate and rejection counts recorded; a passkey
-      created and used on both, and the email-code fallback; a Spanish-language pass at large
+      Android phone, with the server's duplicate and rejection counts recorded; sign-in
+      by SMS code on both, and by email code in the office; a Spanish-language pass at large
       type sizes; a timed restore drill on the production database's backup; the partner
       walks one real pay period, closed with an entry still pending and its adjustment in the
-      next, and one invoice exported for the edition they run; every pilot worker's own email
+      next, and one invoice exported for the edition they run; every roster row's sign-in address
       confirmed (Stage 6); sync paused and resumed on both phones with nothing lost
-- [ ] TestFlight public link and Play internal track; crew onboarding in English and Spanish,
-      opened to the whole crew when the gates above are recorded as passed
+- [ ] TestFlight and the Play closed track (Release 0.1, R10); crew onboarding in English and
+      Spanish, opened to the whole crew when the gates above are recorded as passed
 - [ ] Weekly feedback loop; defects become tasks here
 
 ## Stage 9 — Smart Clock-In arrival reminders
@@ -365,15 +462,15 @@ sees ordinary clock events (PRD, Smart Clock-In).
 Done when the partner signs the acceptance checklist and the first invoice to the partner goes
 out.
 
-- [ ] Play closed test (12 or more testers, 14 days), then production; App Store listing; US
-      storefronts only
+- [ ] Production on the App Store and Google Play, US storefronts only (Release 0.1, R10;
+      a Play closed test first where Play requires one of the account)
 - [ ] Acceptance checklist drafted from PRD's V1 features, walked with the partner, signed
 - [ ] First invoice to the partner — issued through TRADER
 
 ## After V1 (unscheduled)
 
-Push notifications and web approval by push · SMS · roster self-service beyond own name and phone
+Push notifications and web approval by push · SMS notifications · roster self-service beyond own name and phone
 · audit log of every write beyond the V1 actions · dark theme · per-company logo (additive
 `companies` column, upload, shown in crew app and office header) · second contractor onboarding
-· payments · customer portal · PowerSync re-evaluation · ledger checkpointing if replay cost is
+· payment processing · customer portal · PowerSync re-evaluation · ledger checkpointing if replay cost is
 ever measured as a problem · periodic location-sampling experiment (separate owner approval).
