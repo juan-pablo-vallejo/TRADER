@@ -178,6 +178,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - tRPC runs a gate's middleware before input validation, so a call with no input answers the
   gate (UNAUTHORIZED, FORBIDDEN) or BAD_REQUEST without writing: the gate inventory test relies
   on it.
+- Until their Stage 4 tasks land, code and comments still carry rules the `V1-Dnn` rows
+  superseded: `effectiveAt` in `labor/fold.ts` and the day query in `closeout/day.ts` take
+  `server_timestamp` for a skewed event (V1-D01); `approval.decide`, 0022, 0025 and 0026
+  treat an admin's own labor like anyone's (V1-D10 as amended); `materials.ts` describes an
+  office writer that does not exist and `audit-log.ts` says V1 ships it empty. The documents
+  are right; correct each in its task and delete this note when the last is done.
 
 ## Log
 
@@ -236,3 +242,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `status.get` without the adapter, the wider startup guard, the comment citations.
 - **Next:** owner reviews and merges `v1-readiness`; then Stage 4's first open line,
   event-time plausibility in `sync.push` (plan first: sync).
+
+### 2026-11-11 — V1 owner decisions D01–D21 written into the documents
+
+- **Did:** branch `docs-v1-final-alignment` from `076fcd6`, documents only: PRD, ARCHITECTURE
+  (sections Operational sync states, Office authority, Accounting and exports; one decision
+  row per `V1-Dnn`), DESIGN (ten component rows), TASKS (Stages 4–8 open lines rewritten with
+  their tests; every `**decide**` but the Neon owner role resolved). No code, no migration.
+- **Decided:** by the owner on 2026-11-11, V1-D01 to V1-D21 (ARCHITECTURE, Decisions), and in
+  the session an amendment to V1-D10: an admin's own labor never needs approval. Superseded
+  rows of the same date: event-time ordering by `server_timestamp`, the two-minute
+  `captured_offline` definition, the every-record trace, advisory-only sync states. Left to
+  each task's plan: diagnostics retention, the reachability staleness bound, the restricted
+  answer's wire shape, the adjustment basis stored at close.
+- **Next:** independent review of the branch's diff, then the owner merges; then Stage 4's
+  first open line, event time kept and judged (plan first: sync, fold, fingerprint version).
