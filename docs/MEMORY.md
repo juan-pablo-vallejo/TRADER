@@ -179,11 +179,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   gate (UNAUTHORIZED, FORBIDDEN) or BAD_REQUEST without writing: the gate inventory test relies
   on it.
 - Until their Stage 4 tasks land, code and comments still carry rules the `V1-Dnn` rows
-  superseded: `effectiveAt` in `labor/fold.ts` and the day query in `closeout/day.ts` take
-  `server_timestamp` for a skewed event (V1-D01); `approval.decide`, 0022, 0025 and 0026
-  treat an admin's own labor like anyone's (V1-D10 as amended); `materials.ts` describes an
-  office writer that does not exist and `audit-log.ts` says V1 ships it empty. The documents
-  are right; correct each in its task and delete this note when the last is done.
+  superseded: `approval.decide`, 0022, 0025 and 0026 treat an admin's own labor like
+  anyone's (V1-D10 as amended); `materials.ts` describes an office writer that does not exist
+  and `audit-log.ts` says V1 ships it empty. The documents are right; correct each in its
+  task and delete this note when the last is done.
+- A push judges a labor event's time against the database clock, which no test can set: an
+  event pushed as captured online more than five minutes before now is `clock_skewed` and
+  pending. A test of a clean capture times its events inside the tolerance of `Date.now()`;
+  a test about a calendar day pushes `capturedOffline: true` and expects `offline`. Fixtures
+  inserted as the owner never pass through push. A fixture dated after today is refused.
+- The demo's history is `captured_offline` for the same reason; `EXPECTED.decided` counts the
+  backlog the demo admin approves, so a new seeded event changes it.
 
 ## Log
 
@@ -257,3 +263,21 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   answer's wire shape, the adjustment basis stored at close.
 - **Next:** independent review of the branch's diff, then the owner merges; then Stage 4's
   first open line, event time kept and judged (plan first: sync, fold, fingerprint version).
+
+### 2026-11-11 — Event time kept and judged (V1-D01)
+
+- **Did:** branch `event-time-kept-and-judged` from `d06c4f7`, five commits. The fold and the
+  closeout day query read `client_timestamp` alone; fingerprint `v2.`. `judgeEventTime`
+  (`sync/reasons.ts`) in `pushLaborEvent`: `clock_skewed` from the receipt comparison,
+  `time_in_future`. Demo history as an offline backlog the admin approves, one claimed-online
+  day. Citations by date and subject in `fold.ts`, `day.ts`, `sync/labor.ts`. No migration, no protocol
+  change. Each guard watched red: the old ternary, the old day query, version 1, the future
+  guard, the flag merge. 800 tests.
+- **Decided:** by the owner on 2026-11-11 ("execute", the plan's recommendations): receipts
+  are not compared; the demo treatment; the citation cleanup. Rows of that date in
+  ARCHITECTURE: fingerprint `v2.`, closeouts sealed under the old fold, the receipt
+  comparison as built, the demo fixture. Consequences of V1-D01 worth knowing: a phone more
+  than five minutes fast has every fresh event refused until the office repairs it; a
+  truthful online capture delivered more than five minutes late is flagged.
+- **Next:** owner reviews and merges the branch; then Stage 4's next open line, rejected-record
+  diagnostics (V1-D04; plan first: the store and the retention period).
