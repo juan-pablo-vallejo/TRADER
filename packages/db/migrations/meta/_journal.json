@@ -253,6 +253,13 @@
       "when": 1794520192441,
       "tag": "0035_pay-period-lines-access",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794520364391,
+      "tag": "0036_pay-period-guards",
+      "breakpoints": true
     }
   ]
 }

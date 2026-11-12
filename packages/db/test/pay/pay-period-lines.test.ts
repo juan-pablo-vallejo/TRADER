@@ -186,3 +186,65 @@ describe("pay_period_lines", () => {
     });
   });
 });
+
+describe("the pay-period line seal (0036)", () => {
+  const message = async (tx: Tx, statement: (sp: Tx) => Promise<unknown>) => {
+    const error = await refused(tx, statement);
+    expect(error.code).toBe("23000");
+    return error.message;
+  };
+
+  it("refuses a line whose period is still open at commit", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await world(tx);
+      await tx.insert(payPeriodLines).values(line(refs));
+      expect(
+        await message(tx, (sp) => sp.execute(sql`set constraints all immediate`)),
+      ).toBe("pay_period_lines: lines are committed only with their period's close");
+    });
+  });
+
+  it("refuses a line added to a closed period", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await world(tx);
+      await tx.insert(payPeriodLines).values(line(refs));
+      await close(tx, refs);
+      expect(
+        await message(tx, (sp) =>
+          sp.insert(payPeriodLines).values(line(refs, "2026-10-14")),
+        ),
+      ).toBe("pay_period_lines: a line is written only while its period is open");
+    });
+  });
+
+  it("refuses a work date after the period's last day", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await world(tx);
+      expect(
+        await message(tx, (sp) =>
+          sp.insert(payPeriodLines).values(line(refs, "2026-10-19")),
+        ),
+      ).toBe("pay_period_lines: a work date never lies after its period");
+      // The last day itself is the period's.
+      await tx.insert(payPeriodLines).values(line(refs, "2026-10-18"));
+    });
+  });
+
+  it("refuses negative hours on the period's own dates, the first day included", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await world(tx);
+      for (const day of ["2026-10-12", "2026-10-18"]) {
+        expect(
+          await message(tx, (sp) =>
+            sp.insert(payPeriodLines).values(line(refs, day, -1)),
+          ),
+          day,
+        ).toBe(
+          "pay_period_lines: a period's own hours are positive; only an adjustment is signed",
+        );
+      }
+      // The day before the period is an adjustment's.
+      await tx.insert(payPeriodLines).values(line(refs, "2026-10-11", -1));
+    });
+  });
+});
