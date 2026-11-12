@@ -42,6 +42,7 @@ async function receipt(tx: Tx, refs: Refs, jobId = refs.jobId) {
         capturedOffline: false,
         clockSkewed: false,
         clockSkewMs: 0,
+        enteredByOffice: false,
       })
       .returning({ id: materials.id }),
   );

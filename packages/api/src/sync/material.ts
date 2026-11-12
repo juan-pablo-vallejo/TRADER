@@ -18,7 +18,7 @@ import { receiptReasons, type Skew } from "./reasons";
 import { lockPushScope, mayLogReceipt } from "./scope";
 
 // Schema version 1 of a receipt's payload. The logger is the caller; nothing names a company,
-// a cost, a stamp or an approval.
+// a cost, a stamp, an approval or a provenance: a pushed receipt is a device's.
 export const materialPayloadV1 = z.strictObject({
   jobId: z.uuid(),
   description: z.string().trim().min(1).max(2000),
@@ -51,8 +51,10 @@ type Prior = typeof materials.$inferSelect;
 
 // The same receipt: the caller as logger and every fact the device fixed. A receipt row has no
 // schema version (the version is an envelope's, upcast before this), so a re-encoded retry
-// with equal facts is the same receipt; the device never re-encodes its outbox.
+// with equal facts is the same receipt; the device never re-encodes its outbox. A receipt the
+// office entered is never a device's, whatever id and facts a push replays.
 const same = (row: Prior, user: AppUser, p: MaterialPayload) =>
+  !row.enteredByOffice &&
   row.loggedByUserId === user.id &&
   row.jobId === p.jobId &&
   row.description === p.description &&
@@ -149,6 +151,7 @@ export async function pushMaterial(
       capturedOffline: p.capturedOffline,
       clockSkewed: skew.clockSkewed,
       clockSkewMs: skew.clockSkewMs,
+      enteredByOffice: false,
       createdAt: stampedAt,
       updatedAt: stampedAt,
     })

@@ -46,6 +46,7 @@ async function material(tx: Tx, refs: Refs) {
     capturedOffline: false,
     clockSkewed: false,
     clockSkewMs: 0,
+    enteredByOffice: false,
   });
   return id;
 }

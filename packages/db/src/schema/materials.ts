@@ -21,9 +21,10 @@ import { users } from "./users";
 
 // A receipt: material logged against a job by the person who bought it (PRD, Materials and
 // photos). The phone creates the row, so the id is the device's UUIDv7 with no default
-// (invariant 2); the office logs one through the API, which supplies uuidv7() itself. Logging
-// never waits on cost: cost is nullable and the office fills it in later through the ORM,
-// which is why this row keeps updated_at. The receipt photo points here from photos.
+// (invariant 2); a receipt the office enters arrives under a UUIDv7 the browser minted and
+// keeps across retries. Logging never waits on cost: cost is nullable and the office fills
+// it in later through the ORM, which is why this row keeps updated_at. The receipt photo
+// points here from photos.
 export const materials = pgTable(
   "materials",
   {
@@ -54,6 +55,11 @@ export const materials = pgTable(
     capturedOffline: boolean("captured_offline").notNull(),
     clockSkewed: boolean("clock_skewed").notNull(),
     clockSkewMs: bigint("clock_skew_ms", { mode: "number" }).notNull(),
+    // Provenance, stored and never inferred from the logger's role (ARCHITECTURE, Office
+    // material entries): true for a receipt an admin entered in the office, whose
+    // logged_by_user_id is that admin; false for one a device pushed, an admin's own phone
+    // included. No default: every writer states it. Rows older than 0033 are device rows.
+    enteredByOffice: boolean("entered_by_office").notNull(),
     createdAt,
     updatedAt,
   },
@@ -87,5 +93,11 @@ export const materials = pgTable(
       sql`(${t.costCents} IS NULL) = (${t.currency} IS NULL)`,
     ),
     check("materials_currency_iso_4217", sql`${t.currency} ~ '^[A-Z]{3}$'`),
+    // The office has no device evidence to claim: an office entry is neither offline nor
+    // skewed, so the only approval reason it can carry is after_closeout.
+    check(
+      "materials_office_entry_facts",
+      sql`NOT ${t.enteredByOffice} OR (NOT ${t.capturedOffline} AND NOT ${t.clockSkewed} AND ${t.clockSkewMs} = 0)`,
+    ),
   ],
 );

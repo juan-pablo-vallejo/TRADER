@@ -511,6 +511,7 @@ export async function materialIn(
     capturedOffline: false,
     clockSkewed: false,
     clockSkewMs: 0,
+    enteredByOffice: false,
   });
   return id;
 }

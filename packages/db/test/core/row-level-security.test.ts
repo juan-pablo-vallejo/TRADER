@@ -127,6 +127,7 @@ async function everything(tx: Tx, name: string) {
     capturedOffline: false,
     clockSkewed: false,
     clockSkewMs: 0,
+    enteredByOffice: false,
   });
   const photoId = uuidv7();
   await tx.insert(photos).values({

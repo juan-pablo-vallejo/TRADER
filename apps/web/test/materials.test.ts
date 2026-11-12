@@ -63,6 +63,7 @@ async function receipt() {
     capturedOffline: false,
     clockSkewed: false,
     clockSkewMs: 0,
+    enteredByOffice: false,
   });
   return { id, jobId: job!.id };
 }
