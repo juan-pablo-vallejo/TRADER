@@ -84,7 +84,9 @@ const toggleId = (key: string) => `repair-toggle-${key}`;
 type JobOption = { id: string; name: string; archived: boolean };
 // What a repair did, said beneath the control that opened its editor.
 type Notice = { key: string; text: string; ok: boolean };
-type Outcome = "saved" | "changed";
+// `counted`: saved with no approval written — the caller's own hours (V1-D10 as amended),
+// known from the server's answer and never from who the screen thinks is signed in.
+type Outcome = "saved" | "counted" | "changed";
 
 export function LedgerScreen({ devSignIn }: { devSignIn: boolean }) {
   const trpc = useTRPC();
@@ -218,12 +220,18 @@ function Ledger({ asked, devSignIn }: { asked: Lookup; devSignIn: boolean }) {
   // the ledger had moved under stays open on the ledger as it is now. Either way the ledger
   // is read again: what is shown is the server's.
   const settle = (key: string) => (outcome: Outcome) => {
+    const written = outcome !== "changed";
     setNotice({
       key,
-      text: outcome === "saved" ? strings.repairSaved : strings.repairChanged,
-      ok: outcome === "saved",
+      text:
+        outcome === "saved"
+          ? strings.repairSaved
+          : outcome === "counted"
+            ? strings.repairCounted
+            : strings.repairChanged,
+      ok: written,
     });
-    if (outcome === "saved") {
+    if (written) {
       setOpen(null);
       document.getElementById(toggleId(key))?.focus();
     }
@@ -438,7 +446,12 @@ function useRepair(workerId: string, onDone: (outcome: Outcome) => void) {
     const input: RepairInput = minter.current(workerId, operations);
     repair.mutate(input, {
       onSuccess: (answer) => {
-        if (answer.result !== "rejected") return onDone("saved");
+        if (answer.result !== "rejected") {
+          // No reasons on any entry is no approval written for the set.
+          return onDone(
+            answer.events.every((e) => e.reasons.length === 0) ? "counted" : "saved",
+          );
+        }
         if (answer.code === "repair_stale") return onDone("changed");
         // The ids are taken: the same set goes again under new ones.
         if (answer.code === "id_conflict") minter.current = createMinter();
