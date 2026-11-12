@@ -16,6 +16,7 @@
 // Every figure is the server's, formatted here and never added in the browser. Consumed by
 // page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { Fragment, useEffect, useRef, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
@@ -326,6 +327,11 @@ function Details({
             </p>
           )}
         </div>
+        <p className={styles.links}>
+          <Link href={`/reconciliation?period=${period.id}`}>
+            {strings.openInReconciliation}
+          </Link>
+        </p>
       </EditorSection>
       {dates.end && <DatesEditor period={period} startFixed={!dates.start} />}
       {(period.closed === null || closeNote !== null) && (

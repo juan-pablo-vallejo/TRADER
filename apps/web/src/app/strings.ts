@@ -297,7 +297,7 @@ export const strings = {
   // Reconciliation (DESIGN, Reconciliation)
   reconciliation: "Reconciliation",
   reconExplain:
-    "Each person's approved hours by day and job, for the days you choose. Hours count once they are approved and the session has ended; a day's time on a job is added up first, then rounded to the hundredth of an hour.",
+    "Each person's approved hours by day and job, for the pay period or the days you choose. Hours count once they are approved and the session has ended; a day's time on a job is added up first, then rounded to the hundredth of an hour.",
   showHours: "Show hours",
   workDatesIn: (zone: string) => `Work dates in ${zone}.`,
   approvedHours: "Approved hours",
@@ -315,6 +315,32 @@ export const strings = {
   sessionsWaiting: (n: number) => `${n} waiting for approval`,
   sessionsRejected: (n: number) => `${n} rejected`,
   sessionsOpen: (n: number) => `${n} still open`,
+
+  // Reconciliation of a pay period (DESIGN, Reconciliation; Adjustment line)
+  reconPeriod: "Pay period",
+  reconOtherDates: "Other dates",
+  reconPeriodOption: (range: string, closed: boolean) =>
+    `${range} · ${closed ? "Closed" : "Open"}`,
+  reconNoPeriods: "No pay period is open yet, so choose the days to read.",
+  goToPayPeriods: "Open a pay period",
+  reconPeriodOpen: "Open: these figures move until the period is closed.",
+  reconPeriodClosed: (when: string, name: string) =>
+    `Closed ${when} by ${name}: these are the hours the close stored, and they no longer change.`,
+  reconPeriodTotal: (hours: string) => `${hours} h approved in this period`,
+  noApprovedInPeriod: "No hours are approved in this period yet.",
+  noHoursInClosedPeriod: "This period closed with no approved hours.",
+  notInHoursClosedExplain:
+    "What still waits for approval, was rejected or is still open on these days. None of it is in the hours above; what is approved later is paid as an adjustment in a later period.",
+  adjustments: "Adjustments from earlier periods",
+  adjustmentsOpenExplain:
+    "Hours approved, corrected or repaired after their own period closed. This period carries them when it closes. They are in no day's total above.",
+  adjustmentsClosedExplain:
+    "Hours approved, corrected or repaired after their own period closed, carried by this one. They are in no day's total above.",
+  adjustmentsTotal: (hours: string) => `${hours} h in adjustments`,
+  noAdjustments: "None.",
+  workedOn: (day: string) => `Worked ${day}`,
+  dateWorked: "Date worked",
+  openInReconciliation: "Read this period in Reconciliation",
 
   // Pay periods (DESIGN, Pay-period close)
   payPeriods: "Pay periods",
