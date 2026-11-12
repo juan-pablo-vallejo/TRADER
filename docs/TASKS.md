@@ -93,9 +93,10 @@ jobs, assignments, approvals, a closeout, close, export.
       is still FORBIDDEN on a crew-less job and on another crew's; a worker is FORBIDDEN;
       another company's job is FORBIDDEN; retry by id answers `duplicate`; a stale fingerprint
       is `review_stale`; a concurrent push on the job waits or is omitted, never lost
-- [ ] Worker ledger read: one worker's sessions and events for a date range with approval
-      state, admin-gated; the read `labor.repair` needs for its event ids. Tests: gate
-      inventory line; another company's worker is FORBIDDEN
+- [x] Worker ledger read: one worker's sessions and events for a date range with approval
+      state, admin-gated; the read `labor.repair` needs for its event ids; its read-only
+      office screen (DESIGN, Worker ledger). Tests: gate inventory line; another company's
+      worker is FORBIDDEN
 - [ ] Approval queue screen with reason tags, approve and reject, the recorded and received
       times of a `clock skew` entry side by side (DESIGN, Approval row); labor repair from the
       worker's ledger screen. Depends on the ledger read and the event-time line
