@@ -21,6 +21,7 @@ import {
   jobAssignments,
   materialCorrections,
   materials,
+  payPeriodLines,
   payPeriods,
   payRates,
   photos,
@@ -42,7 +43,7 @@ import {
   type Tx,
 } from "../helpers";
 
-// The tables that carry company_id, as 0014, 0017, 0020, 0029 and 0031 list them; companies is checked on its own id.
+// The tables that carry company_id, as 0014, 0017, 0020, 0029, 0031 and 0035 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -60,6 +61,7 @@ const TENANT_TABLES = [
   "jobs",
   "material_corrections",
   "materials",
+  "pay_period_lines",
   "pay_periods",
   "pay_rates",
   "photos",
@@ -104,11 +106,30 @@ async function everything(tx: Tx, name: string) {
     hourlyRateCents: 2500,
     currency: "USD",
   });
-  await tx.insert(payPeriods).values({
+  const period = one(
+    await tx
+      .insert(payPeriods)
+      .values({ companyId: refs.companyId, startsOn: "2026-10-19", endsOn: "2026-11-01" })
+      .returning({ id: payPeriods.id }),
+  );
+  // A line is written while its period is open, by the transaction that closes it (0036).
+  await tx.insert(payPeriodLines).values({
     companyId: refs.companyId,
-    startsOn: "2026-10-19",
-    endsOn: "2026-11-01",
+    periodId: period.id,
+    workerId: refs.workerId,
+    jobId: refs.jobId,
+    workDate: "2026-10-19",
+    hundredths: 800,
   });
+  await tx
+    .update(payPeriods)
+    .set({
+      closedAt: new Date(),
+      closedByUserId: refs.adminId,
+      unresolvedPendingSessions: 0,
+      unresolvedOpenSessions: 0,
+    })
+    .where(eq(payPeriods.id, period.id));
   const event = started(refs);
   await tx.insert(workSessionEvents).values(event);
   await tx

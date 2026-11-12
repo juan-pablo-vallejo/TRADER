@@ -1,17 +1,20 @@
 "use client";
 
-// The reconciliation view (PRD, Office review and job cost: every worker's approved hours by
-// day and job, and everything still unresolved; DESIGN, Reconciliation). The office picks a
-// range of up to 31 work dates and reads `labor.hours` for it: each person's approved hours
-// with their total, the range's total, and — apart, never added in — the days on which
-// something waits for approval, was rejected or is still open. Read-only.
+// The reconciliation view (PRD, Office review and job cost: for a pay period, every worker's
+// approved hours by day and job, everything still unresolved, and every adjustment the period
+// carries from earlier ones; DESIGN, Reconciliation, Adjustment line). The office picks a pay
+// period — the view opens on the next one to close — and reads `payPeriod.read` for it: each
+// person's hours with their total, the period's total, then apart the adjustments it carries
+// as signed lines, and apart again the days on which something waits for approval, was
+// rejected or is still open. A closed period shows what its close stored, which never moves.
+// "Other dates" reads a range of up to 31 work dates through `labor.hours` instead: days in
+// no period, or across two. Read-only.
 //
-// Every figure is the server's: the cells, each person's sum and the range's sum are fields
-// of the answer (labor/day-hours.ts), formatted here and never added or rounded in the
-// browser. The range stands in for a pay period until periods exist; the adjustments a
-// period carries from earlier ones join this view with them (TASKS, pay periods).
+// Every figure is the server's: the cells, each person's sum, the totals and the adjustments
+// are fields of the answers (pay-periods/read.ts, labor/day-hours.ts), formatted here and
+// never added or rounded in the browser.
 //
-// One query, asked for by the form. Consumed by page.tsx.
+// The calendar is one query; the chosen period or range is another. Consumed by page.tsx.
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
@@ -19,12 +22,22 @@ import { useState, type FormEvent } from "react";
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { Field } from "../field";
-import { addDays, day as formatDay, hours, weekDay } from "../format";
+import { addDays, day as formatDay, dayIn, hours, signedHours, weekDay } from "../format";
 import { PageHeader } from "../page-header";
 import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
-import { approvedByPerson, unresolved, type Cell, type Hours } from "./reconcile-view";
+import {
+  approvedByPerson,
+  DATES,
+  defaultChoice,
+  periodByPerson,
+  unresolved,
+  type Calendar,
+  type PeriodRead,
+  type PersonView,
+  type UnresolvedCell,
+} from "./reconcile-view";
 import styles from "./reconciliation.module.css";
 
 type Range = { from: string; to: string };
@@ -40,7 +53,92 @@ function today(): string {
   return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
 }
 
-export function ReconciliationScreen({ devSignIn }: { devSignIn: boolean }) {
+const rangeOf = (r: { startsOn: string; endsOn: string }) =>
+  strings.periodRange(formatDay(r.startsOn), formatDay(r.endsOn));
+
+export function ReconciliationScreen({
+  devSignIn,
+  initialPeriod,
+}: {
+  devSignIn: boolean;
+  initialPeriod: string | null;
+}) {
+  const trpc = useTRPC();
+  const calendar = useQuery(trpc.payPeriod.list.queryOptions());
+  // Null until the office chooses: the view then opens where the calendar says.
+  const [chosen, setChosen] = useState<string | null>(null);
+  return (
+    <>
+      <PageHeader title={strings.reconciliation} />
+      <p className={`secondary ${styles.explain}`}>{strings.reconExplain}</p>
+      {calendar.isPending ? (
+        <p className="body">{strings.loading}</p>
+      ) : calendar.isError ? (
+        <Failure
+          error={calendar.error}
+          devSignIn={devSignIn}
+          onRetry={() => void calendar.refetch()}
+        />
+      ) : (
+        <Chosen
+          calendar={calendar.data}
+          choice={chosen ?? defaultChoice(calendar.data, initialPeriod)}
+          onChoose={setChosen}
+          devSignIn={devSignIn}
+        />
+      )}
+    </>
+  );
+}
+
+function Chosen({
+  calendar,
+  choice,
+  onChoose,
+  devSignIn,
+}: {
+  calendar: Calendar;
+  choice: string;
+  onChoose: (choice: string) => void;
+  devSignIn: boolean;
+}) {
+  return (
+    <>
+      {calendar.periods.length === 0 ? (
+        <>
+          <p className={`secondary ${styles.explain}`}>{strings.reconNoPeriods}</p>
+          <p className={`${controls.actions} ${styles.links}`}>
+            <Link href="/pay-periods">{strings.goToPayPeriods}</Link>
+          </p>
+        </>
+      ) : (
+        <Field id="recon-period" label={strings.reconPeriod}>
+          <select
+            id="recon-period"
+            className={controls.select}
+            value={choice}
+            onChange={(e) => onChoose(e.target.value)}
+          >
+            {calendar.periods.map((p) => (
+              <option key={p.id} value={p.id}>
+                {strings.reconPeriodOption(rangeOf(p), p.closed !== null)}
+              </option>
+            ))}
+            <option value={DATES}>{strings.reconOtherDates}</option>
+          </select>
+        </Field>
+      )}
+      {choice === DATES ? (
+        <ByDates devSignIn={devSignIn} />
+      ) : (
+        // Keyed, so one period's answer is never shown under another's name.
+        <ByPeriod key={choice} periodId={choice} devSignIn={devSignIn} />
+      )}
+    </>
+  );
+}
+
+function ByDates({ devSignIn }: { devSignIn: boolean }) {
   const [to, setTo] = useState(today);
   const [from, setFrom] = useState(() => addDays(today(), -6));
   const [asked, setAsked] = useState<Range | null>(null);
@@ -54,8 +152,6 @@ export function ReconciliationScreen({ devSignIn }: { devSignIn: boolean }) {
   };
   return (
     <>
-      <PageHeader title={strings.reconciliation} />
-      <p className={`secondary ${styles.explain}`}>{strings.reconExplain}</p>
       <form
         aria-label={strings.reconciliation}
         className={controls.card}
@@ -99,6 +195,49 @@ export function ReconciliationScreen({ devSignIn }: { devSignIn: boolean }) {
   );
 }
 
+function ByPeriod({ periodId, devSignIn }: { periodId: string; devSignIn: boolean }) {
+  const trpc = useTRPC();
+  const read = useQuery(trpc.payPeriod.read.queryOptions({ periodId }));
+  if (read.isPending) return <p className="body">{strings.loading}</p>;
+  if (read.isError) {
+    return (
+      <Failure
+        error={read.error}
+        devSignIn={devSignIn}
+        onRetry={() => void read.refetch()}
+      />
+    );
+  }
+  const answer = read.data;
+  const closed = answer.period.closed;
+  return (
+    <>
+      <p className={`secondary ${styles.line}`}>
+        {rangeOf(answer.period)} · {strings.workDatesIn(answer.timezone)}
+      </p>
+      <p className={`secondary ${styles.state}`}>
+        {closed === null
+          ? strings.reconPeriodOpen
+          : strings.reconPeriodClosed(dayIn(closed.at, answer.timezone), closed.by.name)}
+      </p>
+      <Approved
+        people={periodByPerson(answer)}
+        total={strings.reconPeriodTotal(hours(answer.approved.total))}
+        none={
+          closed === null ? strings.noApprovedInPeriod : strings.noHoursInClosedPeriod
+        }
+      />
+      <Adjustments answer={answer} />
+      <Unresolved
+        cells={answer.unresolved.cells}
+        explain={
+          closed === null ? strings.notInHoursExplain : strings.notInHoursClosedExplain
+        }
+      />
+    </>
+  );
+}
+
 function Reconciliation({ asked, devSignIn }: { asked: Range; devSignIn: boolean }) {
   const trpc = useTRPC();
   const read = useQuery(trpc.labor.hours.queryOptions(asked));
@@ -127,26 +266,37 @@ function Reconciliation({ asked, devSignIn }: { asked: Range; devSignIn: boolean
       <p className={`secondary ${styles.line}`}>
         {range} · {strings.workDatesIn(answer.timezone)}
       </p>
-      <Approved answer={answer} />
-      <Unresolved cells={unresolved(answer)} />
+      <Approved
+        people={approvedByPerson(answer)}
+        total={strings.reconTotal(hours(answer.totals.approvedHundredths))}
+        none={strings.noApprovedHours}
+      />
+      <Unresolved cells={unresolved(answer)} explain={strings.notInHoursExplain} />
     </>
   );
 }
 
-function Approved({ answer }: { answer: Hours }) {
-  const people = approvedByPerson(answer);
+// Each person's approved hours by day and job. `total` and `none` are the sentences for the
+// whole: a range's or a period's.
+function Approved({
+  people,
+  total,
+  none,
+}: {
+  people: PersonView[];
+  total: string;
+  none: string;
+}) {
   return (
     <section className={styles.section} aria-labelledby="recon-approved">
       <h2 id="recon-approved" className="heading">
         {strings.approvedHours}
       </h2>
       {people.length === 0 ? (
-        <p className={`body ${styles.total}`}>{strings.noApprovedHours}</p>
+        <p className={`body ${styles.total}`}>{none}</p>
       ) : (
         <>
-          <p className={`body-strong ${styles.total}`}>
-            {strings.reconTotal(hours(answer.totals.approvedHundredths))}
-          </p>
+          <p className={`body-strong ${styles.total}`}>{total}</p>
           {people.map((p) => (
             <section
               key={p.worker.id}
@@ -191,7 +341,7 @@ function Approved({ answer }: { answer: Hours }) {
 
 // What a cell holds that is in no approved figure, in words: "1 waiting for approval ·
 // 1 rejected".
-const why = (c: Cell) =>
+const why = (c: UnresolvedCell) =>
   [
     c.pendingSessions > 0 ? strings.sessionsWaiting(c.pendingSessions) : null,
     c.rejectedSessions > 0 ? strings.sessionsRejected(c.rejectedSessions) : null,
@@ -200,14 +350,75 @@ const why = (c: Cell) =>
     .filter((part) => part !== null)
     .join(" · ");
 
-function Unresolved({ cells }: { cells: Cell[] }) {
+// The adjustments a period carries (DESIGN, Adjustment line): apart from its own hours, each
+// a signed line with the day it was worked, never part of a day's total. An open period that
+// is not the next to close carries none yet, and says which period will.
+function Adjustments({ answer }: { answer: PeriodRead }) {
+  const { lines, total, carriedBy } = answer.adjustments;
+  return (
+    <section className={styles.section} aria-labelledby="recon-adjustments">
+      <h2 id="recon-adjustments" className="heading">
+        {strings.adjustments}
+      </h2>
+      <p className={`secondary ${styles.explain}`}>
+        {answer.period.closed === null
+          ? strings.adjustmentsOpenExplain
+          : strings.adjustmentsClosedExplain}
+      </p>
+      {carriedBy !== null ? (
+        <p className={`body ${styles.total}`}>
+          {strings.periodAdjustmentsJoin(rangeOf(carriedBy))}
+        </p>
+      ) : lines.length === 0 ? (
+        <p className={`body ${styles.total}`}>{strings.noAdjustments}</p>
+      ) : (
+        <>
+          <p className={`body-strong ${styles.total}`}>
+            {strings.adjustmentsTotal(signedHours(total))}
+          </p>
+          <table className={table.table}>
+            <thead>
+              <tr>
+                <th scope="col">{strings.person}</th>
+                <th scope="col">{strings.job}</th>
+                <th scope="col">{strings.dateWorked}</th>
+                <th scope="col" className={table.number}>
+                  {strings.hours}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {lines.map((l) => (
+                <tr key={`${l.workDate}-${l.worker.id}-${l.job.id}`}>
+                  <td data-label={strings.person} className="body-strong">
+                    {l.worker.name}
+                  </td>
+                  <td data-label={strings.job}>{l.job.name}</td>
+                  {/* Reads on its own in a narrow row, where no heading stands over it. */}
+                  <td data-label={strings.dateWorked}>
+                    {strings.workedOn(weekDay(l.workDate))}
+                  </td>
+                  <td data-label={strings.hours} className={table.number}>
+                    {signedHours(l.hundredths)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </section>
+  );
+}
+
+function Unresolved({ cells, explain }: { cells: UnresolvedCell[]; explain: string }) {
   if (cells.length === 0) return null;
   return (
     <section className={styles.section} aria-labelledby="recon-unresolved">
       <h2 id="recon-unresolved" className="heading">
         {strings.notInHours}
       </h2>
-      <p className={`secondary ${styles.explain}`}>{strings.notInHoursExplain}</p>
+      <p className={`secondary ${styles.explain}`}>{explain}</p>
       {/* Each link a target of its own, never a word inside the sentence. */}
       <p className={`${controls.actions} ${styles.links}`}>
         <Link href="/approvals">{strings.decideInApprovals}</Link>

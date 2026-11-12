@@ -16,6 +16,7 @@ const TENANT_TABLES = [
   "work_session_events",
   "pay_rates",
   "pay_periods",
+  "pay_period_lines",
   "approvals",
 ];
 

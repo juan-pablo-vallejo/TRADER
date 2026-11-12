@@ -8,6 +8,7 @@ import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
 import { materialRouter } from "./routers/material";
 import { meRouter } from "./routers/me";
+import { payPeriodRouter } from "./routers/pay-period";
 import { rosterRouter } from "./routers/roster";
 import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
@@ -24,6 +25,7 @@ export const appRouter = router({
   labor: laborRouter,
   material: materialRouter,
   me: meRouter,
+  payPeriod: payPeriodRouter,
   roster: rosterRouter,
   status: statusRouter,
   sync: syncRouter,

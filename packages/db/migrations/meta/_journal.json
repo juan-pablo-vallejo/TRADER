@@ -239,6 +239,27 @@
       "when": 1794509903575,
       "tag": "0033_office-material-entries",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1794520141355,
+      "tag": "0034_pay-period-lines",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1794520192441,
+      "tag": "0035_pay-period-lines-access",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1794520364391,
+      "tag": "0036_pay-period-guards",
+      "breakpoints": true
     }
   ]
 }

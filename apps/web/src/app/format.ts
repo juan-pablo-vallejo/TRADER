@@ -71,6 +71,11 @@ export function hours(hundredths: number): string {
   return `${hundredths < 0 ? "-" : ""}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
 }
 
+// A signed figure, as an adjustment is read: "+6.50", "-0.50". The sign is always written,
+// so a line is never mistaken for hours worked.
+export const signedHours = (hundredths: number) =>
+  `${hundredths > 0 ? "+" : ""}${hours(hundredths)}`;
+
 // A receipt's facts as the office reads them: "2 gal Eggshell, white". The quantity is the
 // database's numeric(12,3) text ("2.000" as "2", "2.500" as "2.5"), by digits, never a float.
 export const quantity = (q: string) => (q.includes(".") ? q.replace(/\.?0+$/, "") : q);

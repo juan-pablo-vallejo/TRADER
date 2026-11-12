@@ -28,7 +28,9 @@ import {
   EXPECTED,
   EXPECTED_COST,
   EXPECTED_HOURS,
+  EXPECTED_PERIODS,
   JOBS,
+  payWeeks,
   PEOPLE,
   PLANS,
   planWeek,
@@ -60,6 +62,8 @@ export type Summary = {
   approvals: number;
   decided: number;
   assignments: number;
+  payPeriods: number;
+  payPeriodLines: number;
 };
 
 export type RunOptions = {
@@ -123,6 +127,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     approvals: 0,
     decided: 0,
     assignments: 0,
+    payPeriods: 0,
+    payPeriodLines: 0,
   };
 
   let current: Step = { index: 0, name: "start" };
@@ -178,6 +184,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   const crewIds = new Map<string, string>();
   const jobIds = new Map<string, string>();
   const materialIds = new Map<string, string>();
+  const periodIds: string[] = [];
   // Every accepted labor event by (who, day, type); the repair names one.
   const eventIds = new Map<string, string>();
 
@@ -618,6 +625,43 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     }
   });
 
+  // After the backlog and before the decisions below: week one closes with Priya's late day
+  // still waiting, which the close is told it knows, and the decision that follows approves
+  // it — so it reaches payroll as an adjustment of week two, never by changing week one.
+  await step("open the two recorded weeks as pay periods", async () => {
+    for (const week of payWeeks(opts.anchor)) {
+      const a = expectResult(await admin().payPeriod.open(week), "opened");
+      if (a.result !== "opened") return;
+      periodIds.push(a.period.id);
+      summary.payPeriods++;
+    }
+  });
+
+  await step("close the first pay period with an entry still waiting", async () => {
+    const periodId = periodIds[0]!;
+    const { unresolved } = await admin().payPeriod.read({ periodId });
+    const waiting = {
+      pendingSessions: unresolved.pendingSessions,
+      openSessions: unresolved.openSessions,
+    };
+    if (
+      JSON.stringify(waiting) !== JSON.stringify(EXPECTED_PERIODS.closed.acknowledged)
+    ) {
+      fail(`week one has ${JSON.stringify(waiting)} unresolved`);
+    }
+    // Without the acknowledgment the close is refused, and writes nothing.
+    const refused = await admin().payPeriod.close({ periodId });
+    if (refused.result !== "rejected" || refused.code !== "unacknowledged") {
+      fail(`an unacknowledged close answered ${refused.result}`);
+    }
+    const a = expectResult(
+      await admin().payPeriod.close({ periodId, acknowledged: waiting }),
+      "closed",
+    );
+    if (a.result !== "closed") return;
+    summary.payPeriodLines += a.lines.own + a.lines.adjustments;
+  });
+
   await step("decide the oldest pending approvals", async () => {
     const queue = await admin().approval.queue({ limit: SCENARIOS.decisions.length });
     if (queue.items.length < SCENARIOS.decisions.length) {
@@ -738,6 +782,47 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       ) {
         fail(`${h.who} on ${day} read ${JSON.stringify(cells)}`);
       }
+    }
+  });
+
+  await step("read the pay periods against the plan", async () => {
+    const [closedId, openId] = periodIds as [string, string];
+    const closed = await admin().payPeriod.read({ periodId: closedId });
+    const wasClosed = {
+      lines: closed.approved.cells.length,
+      hundredths: closed.approved.total,
+      acknowledged: closed.period.closed?.unresolved,
+      adjustments: closed.adjustments.lines.length,
+    };
+    if (JSON.stringify(wasClosed) !== JSON.stringify(EXPECTED_PERIODS.closed)) {
+      fail(`week one read ${JSON.stringify(wasClosed)}`);
+    }
+    const open = await admin().payPeriod.read({ periodId: openId });
+    const plan = EXPECTED_PERIODS.open;
+    const [carried] = open.adjustments.lines;
+    const isOpen = {
+      cells: open.approved.cells.length,
+      hundredths: open.approved.total,
+      unresolved: {
+        pendingSessions: open.unresolved.pendingSessions,
+        openSessions: open.unresolved.openSessions,
+      },
+    };
+    const { adjustment, ...figures } = plan;
+    if (
+      open.period.closed !== null ||
+      JSON.stringify(isOpen) !== JSON.stringify(figures) ||
+      open.adjustments.lines.length !== 1 ||
+      carried === undefined ||
+      carried.worker.id !== userIds.get(adjustment.who) ||
+      carried.job.id !== jobIds.get(adjustment.job) ||
+      carried.workDate !== days[adjustment.day] ||
+      carried.hundredths !== adjustment.hundredths ||
+      open.adjustments.total !== adjustment.hundredths
+    ) {
+      fail(
+        `week two read ${JSON.stringify(isOpen)} carrying ${JSON.stringify(open.adjustments)}`,
+      );
     }
   });
 

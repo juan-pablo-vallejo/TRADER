@@ -1,8 +1,8 @@
 // The row editor (DESIGN, UI components): a table row's Edit toggle and the editor row that
 // opens beneath it, plus the two pieces every editor is built from — a section and the footer
 // where a destructive button stands last and alone — and the destructive action itself, which
-// says what it will do before it does it. Consumed by the roster, customers, jobs and crews
-// screens.
+// says what it will do before it does it. Consumed by the roster, customers, jobs, crews
+// and pay-periods screens.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
@@ -11,14 +11,20 @@ import table from "./table.module.css";
 
 const editorId = (rowId: string) => `editor-${rowId}`;
 
+// `label` names what the toggle opens when it is not an editor of the row's own fields, and
+// `closeLabel` what shuts it where "Close" would be read as an action on the row itself.
 export function RowToggle({
   rowId,
   open,
   onToggle,
+  label = strings.edit,
+  closeLabel = strings.close,
 }: {
   rowId: string;
   open: boolean;
   onToggle: () => void;
+  label?: string;
+  closeLabel?: string;
 }) {
   return (
     <td className={table.toggle}>
@@ -29,7 +35,7 @@ export function RowToggle({
         aria-controls={editorId(rowId)}
         onClick={onToggle}
       >
-        {open ? strings.close : strings.edit}
+        {open ? closeLabel : label}
       </button>
     </td>
   );
@@ -76,21 +82,27 @@ export function EditorFooter({ children }: { children: ReactNode }) {
 // it. Never a bare "Are you sure?". `quiet` is the text form, for removing one item of a list.
 // Focus moves to Cancel, the safe choice, so a held Enter cannot confirm; both buttons are
 // described by the sentence, so a screen reader reads the consequence with them; and focus
-// returns to the first button when the question closes.
+// returns to the first button when the question closes. With `acknowledge`, the question
+// also holds a checkbox carrying that sentence, and the destructive button stays disabled
+// until it is ticked (DESIGN, Pay-period close): the tick is asked for again every time the
+// question opens.
 export function DestructiveAction({
   label,
   effect,
   disabled,
   quiet = false,
+  acknowledge,
   onConfirm,
 }: {
   label: string;
   effect: string;
   disabled: boolean;
   quiet?: boolean;
+  acknowledge?: string;
   onConfirm: () => void;
 }) {
   const [asking, setAsking] = useState(false);
+  const [ticked, setTicked] = useState(false);
   const effectId = useId();
   const trigger = useRef<HTMLButtonElement>(null);
   const returnFocus = useRef(false);
@@ -103,6 +115,7 @@ export function DestructiveAction({
   const close = () => {
     returnFocus.current = true;
     setAsking(false);
+    setTicked(false);
   };
   if (!asking) {
     return (
@@ -122,11 +135,21 @@ export function DestructiveAction({
       <p id={effectId} className="secondary">
         {effect}
       </p>
+      {acknowledge !== undefined && (
+        <label className={controls.check}>
+          <input
+            type="checkbox"
+            checked={ticked}
+            onChange={(e) => setTicked(e.target.checked)}
+          />
+          <span className="secondary">{acknowledge}</span>
+        </label>
+      )}
       <div className={controls.actions}>
         <button
           type="button"
           className={controls.destructive}
-          disabled={disabled}
+          disabled={disabled || (acknowledge !== undefined && !ticked)}
           aria-describedby={effectId}
           onClick={() => {
             close();

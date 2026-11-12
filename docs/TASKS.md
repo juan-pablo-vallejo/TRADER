@@ -126,7 +126,7 @@ jobs, assignments, approvals, a closeout, close, export.
 - [x] Reconciliation view and job cost on the job screen; a job detail route; unresolved
       entries shown apart. The view reads a range of work dates: its period picker and the
       carried adjustments (DESIGN, Adjustment line) are the pay-period line's, below
-- [ ] Pay periods (V1-D03; plan first: schema, money). Depends on the aggregation. Work: the
+- [x] Pay periods (V1-D03; plan first: schema, money). Depends on the aggregation. Work: the
       INSERT trigger, open and close, the acknowledged close with approvals unresolved, the
       basis stored at close, adjustments in the next period to close, a rate inside a closed
       period; the reconciliation view reading a period, with the adjustments it carries

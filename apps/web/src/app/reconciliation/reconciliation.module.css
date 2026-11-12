@@ -12,6 +12,10 @@
   margin: 0 0 var(--space-4);
   color: var(--ink-secondary);
 }
+.state {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+  color: var(--ink);
+}
 .explain + .links {
   margin: calc(-1 * var(--space-4)) 0 var(--space-2);
 }

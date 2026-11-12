@@ -40,6 +40,8 @@ const GRANTS: Record<string, Privilege[]> = {
   sync_diagnostics: ["SELECT", "INSERT", "DELETE"],
   // A plan, not a fact (0031): the office edits and removes it.
   job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+  // What a close exported (0035): added by the closing transaction, never edited or removed.
+  pay_period_lines: ["SELECT", "INSERT"],
 };
 
 let db: Db;
