@@ -3,9 +3,10 @@
 // stands: one row per (user, effective_from), no end date, the rate in force on a day the row
 // with the greatest effective_from on or before it. This API only inserts: a second rate for
 // the same day is `rate_exists` with the standing row, and no rate is ever updated or deleted,
-// so the history a closed period relied on is never rewritten here (the closed-period rule is
-// the pay-period task's). The unique index is the race guard; no row lock beyond the foreign
-// key's. An added rate leaves one audit row (core/audit.ts). Consumed by routers/roster.ts
+// so a rate once read is never rewritten here. A rate may be dated inside a closed pay period
+// (owner, 2026-11-12): a close stores hours and reads no rate, so it changes job cost to date
+// and nothing a close stored. The unique index is the race guard; no row lock beyond the
+// foreign key's. An added rate leaves one audit row (core/audit.ts). Consumed by routers/roster.ts
 // and, for the rate in force, by list.ts.
 import { companies, payRates } from "@trader/db/schema";
 import { and, desc, eq, sql } from "drizzle-orm";
