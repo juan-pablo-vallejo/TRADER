@@ -57,10 +57,10 @@ const rangeOf = (r: { startsOn: string; endsOn: string }) =>
   strings.periodRange(formatDay(r.startsOn), formatDay(r.endsOn));
 
 export function ReconciliationScreen({
-  devSignIn,
+  signInHref,
   initialPeriod,
 }: {
-  devSignIn: boolean;
+  signInHref: string;
   initialPeriod: string | null;
 }) {
   const trpc = useTRPC();
@@ -76,7 +76,7 @@ export function ReconciliationScreen({
       ) : calendar.isError ? (
         <Failure
           error={calendar.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void calendar.refetch()}
         />
       ) : (
@@ -84,7 +84,7 @@ export function ReconciliationScreen({
           calendar={calendar.data}
           choice={chosen ?? defaultChoice(calendar.data, initialPeriod)}
           onChoose={setChosen}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
         />
       )}
     </>
@@ -95,12 +95,12 @@ function Chosen({
   calendar,
   choice,
   onChoose,
-  devSignIn,
+  signInHref,
 }: {
   calendar: Calendar;
   choice: string;
   onChoose: (choice: string) => void;
-  devSignIn: boolean;
+  signInHref: string;
 }) {
   return (
     <>
@@ -129,16 +129,16 @@ function Chosen({
         </Field>
       )}
       {choice === DATES ? (
-        <ByDates devSignIn={devSignIn} />
+        <ByDates signInHref={signInHref} />
       ) : (
         // Keyed, so one period's answer is never shown under another's name.
-        <ByPeriod key={choice} periodId={choice} devSignIn={devSignIn} />
+        <ByPeriod key={choice} periodId={choice} signInHref={signInHref} />
       )}
     </>
   );
 }
 
-function ByDates({ devSignIn }: { devSignIn: boolean }) {
+function ByDates({ signInHref }: { signInHref: string }) {
   const [to, setTo] = useState(today);
   const [from, setFrom] = useState(() => addDays(today(), -6));
   const [asked, setAsked] = useState<Range | null>(null);
@@ -190,12 +190,12 @@ function ByDates({ devSignIn }: { devSignIn: boolean }) {
           {strings.showHours}
         </button>
       </form>
-      {asked !== null && <Reconciliation asked={asked} devSignIn={devSignIn} />}
+      {asked !== null && <Reconciliation asked={asked} signInHref={signInHref} />}
     </>
   );
 }
 
-function ByPeriod({ periodId, devSignIn }: { periodId: string; devSignIn: boolean }) {
+function ByPeriod({ periodId, signInHref }: { periodId: string; signInHref: string }) {
   const trpc = useTRPC();
   const read = useQuery(trpc.payPeriod.read.queryOptions({ periodId }));
   if (read.isPending) return <p className="body">{strings.loading}</p>;
@@ -203,7 +203,7 @@ function ByPeriod({ periodId, devSignIn }: { periodId: string; devSignIn: boolea
     return (
       <Failure
         error={read.error}
-        devSignIn={devSignIn}
+        signInHref={signInHref}
         onRetry={() => void read.refetch()}
       />
     );
@@ -238,7 +238,7 @@ function ByPeriod({ periodId, devSignIn }: { periodId: string; devSignIn: boolea
   );
 }
 
-function Reconciliation({ asked, devSignIn }: { asked: Range; devSignIn: boolean }) {
+function Reconciliation({ asked, signInHref }: { asked: Range; signInHref: string }) {
   const trpc = useTRPC();
   const read = useQuery(trpc.labor.hours.queryOptions(asked));
   if (read.isPending) return <p className="body">{strings.loading}</p>;
@@ -246,7 +246,7 @@ function Reconciliation({ asked, devSignIn }: { asked: Range; devSignIn: boolean
     return (
       <Failure
         error={read.error}
-        devSignIn={devSignIn}
+        signInHref={signInHref}
         onRetry={() => void read.refetch()}
       />
     );

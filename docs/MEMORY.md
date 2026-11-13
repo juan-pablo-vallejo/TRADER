@@ -345,6 +345,43 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The browser's development sign-in takes an email only: a person invited by number alone is
   signed in with `curl` and the three development headers, or through an invitation that
   names both.
+- Clerk reads its two keys from the environment itself. Handed to `clerkMiddleware` as the
+  `secretKey` option, every request is a 500 asking for a third key, `CLERK_ENCRYPTION_KEY`.
+- Clerk's `appearance` takes `colorPrimary` as a literal colour: given `var(--accent)` the
+  form's Continue button draws blank (white on white), though the focus ring takes it.
+- `@clerk/nextjs/server` is Next's server-only code and cannot load in vitest: a module the
+  suites import reaches it by `await import(…)` at the point of use (`server/identity.ts`).
+- The web suite deletes the Clerk variables after loading `.env` (`test/setup.ts`), so it never
+  reaches Clerk whatever the owner's `.env` holds; a test that wants Clerk configured stubs them.
+- `apps/web`'s vitest does not render JSX ("React is not defined"): a page test can assert
+  what a server component throws before its JSX (`notFound()`), not what it draws.
+- `apps/web` has no `zod` of its own; it validates through the schemas `@trader/api` exports
+  (`signInEmailSchema`, `signInPhoneSchema`, `verifiedIdentitySchema`). Adding it is a TASKS line.
+- Clerk's `POST /v1/users`, read on the development instance 2026-11-12: a number alone is
+  accepted and marked verified; an address another user holds is 422
+  `form_identifier_exists` with `meta.param_name`; an email with no number is 422
+  `form_data_missing`; Clerk lower-cases an email and rewrites a typed number to E.164; a
+  user id is `user_` and 27 letters and digits.
+- Clerk's script takes several seconds to draw `/sign-in` on a development instance, longer
+  right after a recompile; a screenshot taken at once shows the shell and an empty column.
+- `next dev` on Clerk needs `TRADER_DEV_IDENTITY` blank in the shell; the development
+  identity and Clerk never run together, and each one's sign-in route is 404 under the other.
+- A `createContext` call names its `directory`: `localDirectory` in every suite and the demo,
+  and a recording one where a test reads what the provider was told (`roster/invite.test.ts`).
+- The office shell stays mounted across a sign-out and the next sign-in: whatever a query
+  answered for the last person is still drawn for the next. `ClerkSessionReset`
+  (`clerk-session.tsx`) empties every query when Clerk's user changes; a new per-person
+  cache outside the query client needs its own reset.
+- Clerk's test numbers are `+1 XXX 555-0100` to `-0199` only, code `424242`, and send
+  nothing; `555-0000` is outside the range and is a real, undeliverable SMS. A check of
+  sign-in runs on a throwaway database (`create database`, `db:migrate`, `db:seed`, the seed
+  admin given a test number as the owner), with the Clerk users made and deleted through
+  `POST` and `DELETE /v1/users`.
+- Clerk's phone field answers "Identifier is invalid." when Enter follows the last digit at
+  once (seen twice from a script); the Continue button a moment later is accepted.
+- Clerk's form stuck once on its code step, "needs_first_factor not supported yet", with the
+  sign-in in fact made (2026-11-12, one of six sign-ins, straight after a hot reload of
+  edited files; not reproduced over the same steps). Reloading the page showed the office.
 
 ## Log
 
@@ -858,3 +895,65 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   says "29-file journal" and the journal now has 40.
 - **Next:** owner reviews and merges the branch; then track line R2, Clerk behind the
   identity seam (plan first: auth; needs the owner's Clerk application).
+
+### 2026-11-12 — Clerk behind the identity seam (Release 0.1, R2): built, not yet signed in to
+
+- **Did:** the owner created the Clerk application (development instance, Hobby): invite-only,
+  email and SMS codes, a number required, passwords, passkeys, usernames and SSO off, no
+  self-service address change or deletion, 7-day sessions. Branch `clerk-identity-seam` from
+  `f8e0243`, six commits. `IdentityDirectory` in every context and `roster.invite` admitting
+  through it, a number now required; `@clerk/nextjs` 7.9.25 in `apps/web`; the claims adapter,
+  the identity mode, `proxy.ts`, Clerk's provider, `/sign-in`, sign-out and the
+  not-on-a-roster state; the Clerk directory over `POST /v1/users`; `.env.example`, three
+  decision rows, DESIGN, TASKS. No migration, no new procedure. Seen: a build with no Clerk
+  key passes; in the browser at 1280 and 390, `/sign-in` drawing Clerk's form with no
+  sign-up; by `curl` on `next dev`, each mode's sign-in route 404 under the other, `me.get`
+  401 with and without the development headers, `status.get` 200. Watched red: the invite's
+  admission, its order and the required number; the flag rule, the mode rule and the
+  adapter's catch; the sign-in 404; four rules of the directory. 1,213 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its seven
+  recommendations, and "phone required" set by hand in Clerk), the three rows of that date in
+  ARCHITECTURE. Changed from the plan: the directory creates the user by number alone when
+  only the email is already held at Clerk, which the plan had counted as admitted; the
+  proxy passes no key option (Notes); `apps/web` validates without `zod` (Notes); the
+  sign-in page's other two states are not unit-tested (Notes). Not done: **R2 is not
+  ticked** — nobody has signed in through Clerk. The four session claims are not on the
+  instance yet (a probe token carried none), so every Clerk session is 401 until the owner
+  pastes them (`.env.example`); after that, unseen and still owed: a sign-in end to end, the
+  bind to Clerk's user id, an invitation creating a user from the screen, sign-out, the
+  not-on-a-roster state, how the four claims render, a tab asleep past 60 s, the built
+  app's 404 and 401 by `curl`. Not done at all: Spanish office strings, a browser test in
+  CI, a session from the phone (R5). For the owner: PRD Access still says "an office admin
+  is invited by their own email address", and the code now requires a number of everyone —
+  the PRD sentence is the owner's to amend; `/sign-in` is drawn inside the office shell,
+  navigation included, where DESIGN's Brand section speaks of a sign-in screen on its own;
+  Pro is needed before a production instance (SMS, 30-day sessions), not before; `TASKS.md`,
+  "Resync every other clone", is still unticked.
+- **Next:** owner pastes the four claims into Clerk (Sessions, Customize session token) and
+  creates one test admin there; then R2's end-to-end check on a throwaway database, and the
+  tick.
+
+### 2026-11-12 — R2 signed in end to end and ticked
+
+- **Did:** the owner pasted the four session claims into Clerk. A real token then carried
+  them as the adapter reads them: the flags as booleans, the number in E.164, a missing
+  email as `null`. On a throwaway database and Clerk test numbers, in the browser on
+  `next dev`: the seed admin signed in by code and was bound to Clerk's user id; the roster
+  loaded; an invitation from the screen wrote the row, its audit row and the Clerk user;
+  sign-out; a Clerk user no roster names read the not-on-a-roster state and signed out
+  from it; the admin signed in again with no reload. On a built app with
+  `TRADER_DEV_IDENTITY=enabled`, by `curl`: `/dev-signin` 404 to GET and POST, `/sign-in`
+  200, `me.get` 401 with no session, with the development headers and with the cookie. One
+  more commit on `clerk-identity-seam`, found by that check: the header kept the last
+  person's name after a sign-out (Notes). The database dropped and the three test users
+  deleted after. 1,213 tests.
+- **Decided:** nothing. Not done: a tab left asleep past Clerk's 60-second token was not
+  tried — a headless tab never sleeps; `CLERK_AUTHORIZED_PARTIES` was left blank
+  throughout, so the option was never exercised against a real token; the session reset and
+  the sign-in page's two drawn states have no unit test; nothing was checked at 768 or 1024;
+  email-code sign-in was not tried, only the number. Seen once and not explained: Clerk's
+  form stuck on its code step (Notes). For the owner, unchanged from the entry above: the
+  PRD Access sentence, `/sign-in` inside the shell, Pro before production; and one test
+  user of the owner's own, `+1 201 555 0000`, is still on the development instance.
+- **Next:** owner reviews and merges the branch; then track line R3, the production path
+  on staging (plan first: CI, auth).

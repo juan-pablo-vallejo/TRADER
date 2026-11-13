@@ -1,10 +1,13 @@
-// roster.invite — a users row with a sign-in address (a mobile number, an email, or both),
-// name and role, worker unless named, bound by the first sign-in verified for either address;
-// a second use of an address in the company is `email_taken` or `phone_taken` with nothing
-// written and no error; admin only.
+// roster.invite — a users row with a sign-in number, an email when one is given, name and
+// role, worker unless named, bound by the first sign-in verified for either address; a second
+// use of an address in the company is `email_taken` or `phone_taken` with nothing written and
+// no error; the person admitted at the identity provider in the same transaction; admin only.
 import type { Db } from "@trader/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createContext } from "../../src/core/context";
+import type { IdentityDirectory } from "../../src/core/identity";
+import { createCallerFactory } from "../../src/core/trpc";
 import { appRouter } from "../../src/router";
 import {
   appCaller,
@@ -17,6 +20,8 @@ import {
   member,
   outcome,
   phoneIdentity,
+  quietReporter,
+  REQUEST_ID,
   testPhone,
   userCount,
   userRow,
@@ -48,6 +53,30 @@ afterAll(async () => {
 type Input = Parameters<ReturnType<typeof appCaller>["roster"]["invite"]>[0];
 const invite = (who: unknown, input: Input) => appCaller(app, who).roster.invite(input);
 
+// The same call with a directory of the test's own: what the provider was told, or a
+// provider that refuses.
+const inviteThrough = (who: unknown, input: Input, directory: IdentityDirectory) =>
+  createCallerFactory(appRouter)(
+    createContext({
+      db: app,
+      identity: who,
+      directory,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
+  ).roster.invite(input);
+
+const recordingDirectory = () => {
+  const admitted: { email: string | null; phone: string }[] = [];
+  const directory: IdentityDirectory = {
+    admit: (person) => {
+      admitted.push(person);
+      return Promise.resolve();
+    },
+  };
+  return { admitted, directory };
+};
+
 // An E.164 number as an admin might type it.
 const typed = (e164: string) =>
   `(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`;
@@ -56,7 +85,11 @@ describe("roster.invite", () => {
   it("inserts a worker invitation that the first sign-in with that email binds", async () => {
     const admin = await member(owner, w, "a", "admin");
     const email = `new-${w.run}@co.test`;
-    const answer = await invite(admin.who, { email, name: "  New Person " });
+    const answer = await invite(admin.who, {
+      email,
+      phone: testPhone(),
+      name: "  New Person ",
+    });
     expect(answer).toMatchObject({
       result: "invited",
       user: {
@@ -89,6 +122,7 @@ describe("roster.invite", () => {
     const admin = await member(owner, w, "a", "admin");
     const answer = await invite(admin.who, {
       email: `second-admin-${w.run}@co.test`,
+      phone: testPhone(),
       name: "Second",
       role: "admin",
     });
@@ -102,7 +136,9 @@ describe("roster.invite", () => {
     const admin = await member(owner, w, "a", "admin");
     const before = await userCount(owner, [w.a.companyId]);
     for (const email of [w.a.boundEmail, w.a.boundEmail.toUpperCase()]) {
-      expect(await invite(admin.who, { email, name: "Again" })).toEqual({
+      expect(
+        await invite(admin.who, { email, phone: testPhone(), name: "Again" }),
+      ).toEqual({
         result: "rejected",
         code: "email_taken",
       });
@@ -115,6 +151,7 @@ describe("roster.invite", () => {
     const adminB = await member(owner, w, "b", "admin");
     const answer = await invite(adminB.who, {
       email: w.a.boundEmail,
+      phone: testPhone(),
       name: "Same email",
     });
     expect(answer).toMatchObject({ result: "invited", user: { email: w.a.boundEmail } });
@@ -226,11 +263,13 @@ describe("roster.invite", () => {
     }
   });
 
-  it("refuses no address, or a number that is not a United States or Canada one", async () => {
+  it("refuses no number, an email alone, or a number that is not a United States or Canada one", async () => {
     const admin = await member(owner, w, "a", "admin");
     const before = await userCount(owner, [w.a.companyId]);
     for (const input of [
       { name: "Nobody" },
+      // An email alone was an invitation once; the provider holds no login without a number.
+      { email: `only-${w.run}@co.test`, name: "Email Only" },
       { phone: "", name: "Name" },
       { phone: "555-0100", name: "Name" },
       { phone: "+44 1632 960100", name: "Name" },
@@ -250,9 +289,9 @@ describe("roster.invite", () => {
   it("refuses a blank name, a bad email or an unknown field with BAD_REQUEST", async () => {
     const admin = await member(owner, w, "a", "admin");
     for (const input of [
-      { email: `x-${w.run}@co.test`, name: "   " },
-      { email: "not an email", name: "Name" },
-      { email: `x-${w.run}@co.test`, name: "Name", companyId: w.b.companyId },
+      { phone: testPhone(), name: "   " },
+      { phone: testPhone(), email: "not an email", name: "Name" },
+      { phone: testPhone(), name: "Name", companyId: w.b.companyId },
     ]) {
       expect(await outcome(invite(admin.who, input as Input))).toBe("BAD_REQUEST");
     }
@@ -260,7 +299,7 @@ describe("roster.invite", () => {
   });
 
   it("is admin only, over HTTP too", async () => {
-    const input = { email: `gate-${w.run}@co.test`, name: "Gate" };
+    const input = { phone: testPhone(), name: "Gate" };
     const worker = await member(owner, w, "a", "worker");
     expect(await outcome(invite(worker.who, input))).toBe("FORBIDDEN");
     expect(await outcome(invite(null, input))).toBe("UNAUTHORIZED");
@@ -283,12 +322,63 @@ describe("roster.invite", () => {
     const admin = await member(owner, w, "a", "admin");
     const before = await userCount(owner, [w.a.companyId]);
     await withoutAuditInsert(owner, async () => {
-      expect(
-        await outcome(
-          invite(admin.who, { email: `lost-${w.run}@co.test`, name: "Lost" }),
-        ),
-      ).toBe("INTERNAL_SERVER_ERROR");
+      expect(await outcome(invite(admin.who, { phone: testPhone(), name: "Lost" }))).toBe(
+        "INTERNAL_SERVER_ERROR",
+      );
     });
+    expect(await userCount(owner, [w.a.companyId])).toBe(before);
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
+  });
+
+  it("admits the person at the provider with the stored number, and the email when given", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const { admitted, directory } = recordingDirectory();
+    const first = testPhone();
+    const second = testPhone();
+    const email = `both-${w.run}@co.test`;
+    await inviteThrough(admin.who, { phone: typed(first), name: "By Number" }, directory);
+    await inviteThrough(
+      admin.who,
+      { phone: second, email: email.toUpperCase(), name: "By Both" },
+      directory,
+    );
+    // The number as it is stored and will be matched, never as it was typed.
+    expect(admitted).toEqual([
+      { email: null, phone: first },
+      { email: email.toUpperCase(), phone: second },
+    ]);
+  });
+
+  it("tells the provider nothing when the address is already taken", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const { admitted, directory } = recordingDirectory();
+    const phone = testPhone();
+    await inviteThrough(admin.who, { phone, name: "First" }, directory);
+    expect(await inviteThrough(admin.who, { phone, name: "Second" }, directory)).toEqual({
+      result: "rejected",
+      code: "phone_taken",
+    });
+    expect(
+      await inviteThrough(
+        admin.who,
+        { phone: testPhone(), email: w.a.boundEmail, name: "Third" },
+        directory,
+      ),
+    ).toEqual({ result: "rejected", code: "email_taken" });
+    expect(admitted).toEqual([{ email: null, phone }]);
+  });
+
+  it("invites no one when the provider cannot be told", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const before = await userCount(owner, [w.a.companyId]);
+    const refusing: IdentityDirectory = {
+      admit: () => Promise.reject(new Error("the provider refused")),
+    };
+    expect(
+      await outcome(
+        inviteThrough(admin.who, { phone: testPhone(), name: "Unadmitted" }, refusing),
+      ),
+    ).toBe("INTERNAL_SERVER_ERROR");
     expect(await userCount(owner, [w.a.companyId])).toBe(before);
     expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });

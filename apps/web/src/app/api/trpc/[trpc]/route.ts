@@ -3,6 +3,7 @@
 import { logReporter } from "@trader/api";
 
 import { getDb } from "../../../../server/db";
+import { webDirectory } from "../../../../server/directory";
 import { createTrpcHandler } from "../../../../server/handler";
 import { webIdentity } from "../../../../server/identity";
 
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 const handler = createTrpcHandler({
   getDb,
   identity: webIdentity,
+  directory: webDirectory,
   reporter: logReporter,
 });
 

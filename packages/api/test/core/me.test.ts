@@ -2,6 +2,7 @@
 // entry point.
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { appRouter, createCallerFactory, createContext } from "../../src/index";
 import {
   appDb,
@@ -32,6 +33,7 @@ afterAll(async () => {
 const me = (who: unknown) =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: app,
       identity: who,
       reporter: quietReporter,

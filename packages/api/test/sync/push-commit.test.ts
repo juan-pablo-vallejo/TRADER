@@ -16,6 +16,7 @@ import {
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
 import type { ErrorReporter } from "../../src/core/report";
 import type { VerifiedIdentity } from "../../src/core/identity";
@@ -63,7 +64,13 @@ const caller = (
   requestId = REQUEST_ID,
 ) =>
   createCallerFactory(appRouter)(
-    createContext({ db: app, identity: who, reporter, requestId }),
+    createContext({
+      directory: localDirectory,
+      db: app,
+      identity: who,
+      reporter,
+      requestId,
+    }),
   );
 
 // A committed crew day with a bound worker `w` on the crew (crewDayIn's own workers are

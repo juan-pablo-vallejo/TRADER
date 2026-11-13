@@ -61,7 +61,7 @@ const duration = (ms: number) => {
   return strings.duration(Math.floor(minutes / 60), minutes % 60);
 };
 
-export function CloseoutScreen({ devSignIn }: { devSignIn: boolean }) {
+export function CloseoutScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const jobs = useQuery(trpc.job.list.queryOptions());
   const [jobId, setJobId] = useState("");
@@ -83,7 +83,7 @@ export function CloseoutScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : jobs.isError ? (
         <Failure
           error={jobs.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void jobs.refetch()}
         />
       ) : (
@@ -135,7 +135,7 @@ export function CloseoutScreen({ devSignIn }: { devSignIn: boolean }) {
               key={round}
               asked={asked}
               noCrew={jobs.data.find((j) => j.id === asked.jobId)?.crew?.active !== true}
-              devSignIn={devSignIn}
+              signInHref={signInHref}
             />
           )}
         </>
@@ -148,11 +148,11 @@ export function CloseoutScreen({ devSignIn }: { devSignIn: boolean }) {
 function Day({
   asked,
   noCrew,
-  devSignIn,
+  signInHref,
 }: {
   asked: Asked;
   noCrew: boolean;
-  devSignIn: boolean;
+  signInHref: string;
 }) {
   const trpc = useTRPC();
   // Never served from a cache: what is submitted is the fingerprint of what is on screen.
@@ -171,7 +171,7 @@ function Day({
     return (
       <Failure
         error={review.error}
-        devSignIn={devSignIn}
+        signInHref={signInHref}
         onRetry={() => void review.refetch()}
       />
     );

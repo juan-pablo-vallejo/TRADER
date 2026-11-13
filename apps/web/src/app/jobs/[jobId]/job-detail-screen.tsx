@@ -62,10 +62,10 @@ function sentence(line: Apart): string {
 
 export function JobDetailScreen({
   jobId,
-  devSignIn,
+  signInHref,
 }: {
   jobId: string;
-  devSignIn: boolean;
+  signInHref: string;
 }) {
   const trpc = useTRPC();
   const cost = useQuery(trpc.job.cost.queryOptions({ jobId }));
@@ -86,7 +86,7 @@ export function JobDetailScreen({
         ) : (
           <Failure
             error={failed.error}
-            devSignIn={devSignIn}
+            signInHref={signInHref}
             onRetry={() => void failed.refetch()}
           />
         )

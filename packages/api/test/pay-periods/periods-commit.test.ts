@@ -6,6 +6,7 @@ import { payPeriods } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
 import { createCallerFactory } from "../../src/core/trpc";
@@ -34,6 +35,7 @@ afterAll(async () => {
 const api = (who: VerifiedIdentity) =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: app,
       identity: who,
       reporter: quietReporter,

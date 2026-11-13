@@ -27,6 +27,8 @@ export const strings = {
   // States every screen can be in
   loading: "Loading…",
   signInToContinue: "Sign in to continue.",
+  notOnRoster: "This sign-in is not on a roster. Ask your office.",
+  signInNotSetUp: "Sign-in is not set up on this server.",
   notPermitted: "Not permitted.",
   requestFailed: "That didn't go through. Nothing was saved; try again.",
   loadFailed: "This page didn't load.",
@@ -60,10 +62,10 @@ export const strings = {
   phoneTaken: "Someone on this roster already has that mobile number.",
   mobileNumber: "Mobile number",
   signInAddress: "Sign-in",
-  signInAddressNeeded: "Enter a mobile number or an email.",
+  mobileNumberNeeded: "Enter a mobile number.",
   mobileNumberInvalid: "Enter a ten-digit United States or Canada number.",
   inviteAddressHint:
-    "A crew member signs in with a code sent to their mobile number; the office can use an email.",
+    "The sign-in code is sent to this mobile number. An email is optional: the office can also sign in with a code sent to it.",
   saveRole: "Save role",
   deactivate: "Deactivate",
   reactivate: "Reactivate",

@@ -44,15 +44,18 @@ afterAll(async () => {
 const asA = () => identity(w.a.boundSubject, w.a.boundEmail);
 
 describe("the procedure context", () => {
-  it("holds tx, user and the reporter: the pool and the identity are gone at runtime", async () => {
+  it("holds tx, user, the reporter and the directory: the pool and the identity are gone at runtime", async () => {
     const seen = await caller(app, asA()).probe.inside();
     expect(seen.dbIsUndefined).toBe(true);
     expect(seen.identityIsUndefined).toBe(true);
     // `reporter` is a stateless sink (report.ts): it opens no connection and names no one.
     // `waits` is present and undefined, like the pool: a procedure cannot read or change its bounds.
     // `requestId` is the HTTP request's (context.ts): random, and nobody's.
+    // `directory` is the identity provider as roster.invite tells it of a person
+    // (identity.ts): it reaches no database and reads nothing back.
     expect(seen.keys).toEqual([
       "db",
+      "directory",
       "identity",
       "reporter",
       "requestId",

@@ -7,6 +7,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
 import {
   createCallerFactory,
@@ -155,6 +156,7 @@ describe("a protected call's waits", () => {
     const { who } = await member(owner, w, "a", "worker", { label: "waits" });
     const waits = await createCallerFactory(probe)(
       createContext({
+        directory: localDirectory,
         db: app,
         identity: who,
         reporter: quietReporter,

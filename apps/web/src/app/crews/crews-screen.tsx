@@ -63,7 +63,7 @@ const reason = (code: string) =>
           ? strings.changeForemanFirst
           : strings.requestFailed;
 
-export function CrewsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function CrewsScreen({ signInHref }: { signInHref: string }) {
   const list = useCrews();
   const people = useRoster();
   const [adding, setAdding] = useState(false);
@@ -86,13 +86,13 @@ export function CrewsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : list.isError ? (
         <Failure
           error={list.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void list.refetch()}
         />
       ) : people.isError ? (
         <Failure
           error={people.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void people.refetch()}
         />
       ) : (

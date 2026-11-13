@@ -1,7 +1,8 @@
 // The identity adapter seam (RULES: three thin seams). An adapter turns an HTTP request's
 // headers into a verified identity, or null. Verification happens inside the adapter, at the
-// HTTP edge; this package never sees a token. The development adapter (dev-identity.ts) is the
-// only implementation until Clerk's (Stage 6), which implements the same interface.
+// HTTP edge; this package never sees a token. The development adapter (dev-identity.ts) and
+// Clerk's, in apps/web, implement the same interface. The directory beside it is the same
+// seam facing the other way: where an invitation is made known to the provider.
 import { z } from "zod";
 
 // A sign-in email. 254: the longest address SMTP can carry.
@@ -35,4 +36,19 @@ export type VerifiedIdentity = z.infer<typeof verifiedIdentitySchema>;
 
 export type IdentityAdapter = {
   identify(headers: Headers): Promise<VerifiedIdentity | null>;
+};
+
+// Where an invited person is made known to the identity provider, so that the provider will
+// let them sign in (PRD, Access: invitation-only). `admit` returns once the provider holds a
+// login for these addresses, whether it made one now or already had one: a second admission
+// is not an error, and it never says whose the existing login is. It throws when the provider
+// could not be reached or refused, and roster.invite then invites no one.
+export type IdentityDirectory = {
+  admit(person: { email: string | null; phone: string }): Promise<void>;
+};
+
+// The directory where no provider is connected — the development identity, the demo and the
+// tests: the users row is the whole invitation, as it was before a provider existed.
+export const localDirectory: IdentityDirectory = {
+  admit: () => Promise.resolve(),
 };

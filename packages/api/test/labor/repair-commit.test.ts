@@ -7,6 +7,7 @@ import { approvals, crewMembers, users, workSessionEvents } from "@trader/db/sch
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext, type Tx } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
 import { sessionApprovals } from "../../src/labor/approval";
@@ -49,6 +50,7 @@ type Positional = "started" | "paused" | "resumed" | "ended";
 const caller = (who: VerifiedIdentity) =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: app,
       identity: who,
       reporter: quietReporter,

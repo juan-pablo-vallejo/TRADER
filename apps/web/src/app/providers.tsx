@@ -8,9 +8,10 @@
 // Consumed by layout.tsx.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
-import { useState, type ReactNode } from "react";
+import { createContext, useContext, useState, type ReactNode } from "react";
 import superjson from "superjson";
 
+import { ClerkSessionReset } from "./clerk-session";
 import { TRPCProvider } from "./trpc";
 
 import type { AppRouter } from "@trader/api";
@@ -39,7 +40,12 @@ function getQueryClient() {
   return browserQueryClient;
 }
 
-export function Providers({ children }: { children: ReactNode }) {
+// Whether Clerk's provider is around the office (layout.tsx): Clerk's hooks throw outside
+// it, so the components that use them (clerk-session.tsx) are drawn only when this is true.
+const ClerkOn = createContext(false);
+export const useClerkOn = () => useContext(ClerkOn);
+
+export function Providers({ children, clerk }: { children: ReactNode; clerk: boolean }) {
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
@@ -49,10 +55,13 @@ export function Providers({ children }: { children: ReactNode }) {
     }),
   );
   return (
-    <QueryClientProvider client={queryClient}>
-      <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
-        {children}
-      </TRPCProvider>
-    </QueryClientProvider>
+    <ClerkOn value={clerk}>
+      <QueryClientProvider client={queryClient}>
+        <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+          {clerk && <ClerkSessionReset />}
+          {children}
+        </TRPCProvider>
+      </QueryClientProvider>
+    </ClerkOn>
   );
 }

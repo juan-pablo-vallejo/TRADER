@@ -88,7 +88,7 @@ type Notice = { key: string; text: string; ok: boolean };
 // known from the server's answer and never from who the screen thinks is signed in.
 type Outcome = "saved" | "counted" | "changed";
 
-export function LedgerScreen({ devSignIn }: { devSignIn: boolean }) {
+export function LedgerScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const roster = useQuery(trpc.roster.list.queryOptions());
   const [workerId, setWorkerId] = useState("");
@@ -111,7 +111,7 @@ export function LedgerScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : roster.isError ? (
         <Failure
           error={roster.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void roster.refetch()}
         />
       ) : (
@@ -173,14 +173,14 @@ export function LedgerScreen({ devSignIn }: { devSignIn: boolean }) {
               {strings.showLedger}
             </button>
           </form>
-          {asked !== null && <Ledger asked={asked} devSignIn={devSignIn} />}
+          {asked !== null && <Ledger asked={asked} signInHref={signInHref} />}
         </>
       )}
     </>
   );
 }
 
-function Ledger({ asked, devSignIn }: { asked: Lookup; devSignIn: boolean }) {
+function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   const trpc = useTRPC();
   // Not refetched behind an open editor: a repair is built from what is on screen, and the
   // server refuses one built from an entry that is no longer in effect.
@@ -195,7 +195,7 @@ function Ledger({ asked, devSignIn }: { asked: Lookup; devSignIn: boolean }) {
     return (
       <Failure
         error={ledger.error}
-        devSignIn={devSignIn}
+        signInHref={signInHref}
         onRetry={() => void ledger.refetch()}
       />
     );

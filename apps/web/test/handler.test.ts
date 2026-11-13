@@ -2,7 +2,12 @@
 // database and `no-store`; a protected call without an identity is 401; a failing call
 // reaches the reporter once; a signed-in call runs under trader_app against the real pool.
 import { companies, users } from "@trader/db/schema";
-import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER, logReporter } from "@trader/api";
+import {
+  DEV_EMAIL_HEADER,
+  DEV_SUBJECT_HEADER,
+  localDirectory,
+  logReporter,
+} from "@trader/api";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -45,6 +50,7 @@ describe("the route handler", () => {
     const handler = createTrpcHandler({
       getDb: () => unusableDb,
       identity: webIdentity,
+      directory: localDirectory,
       reporter: quietReporter,
     });
     const r = await query(handler, "status.get", {
@@ -60,6 +66,7 @@ describe("the route handler", () => {
     const handler = createTrpcHandler({
       getDb: () => unusableDb,
       identity: webIdentity,
+      directory: localDirectory,
       reporter: quietReporter,
     });
     const batch = (n: number) => {
@@ -93,6 +100,7 @@ describe("the route handler", () => {
     const handler = createTrpcHandler({
       getDb: () => unusableDb,
       identity: webIdentity,
+      directory: localDirectory,
       reporter,
     });
     const r = await query(handler, "me.get", { headers: signedIn() });
@@ -110,6 +118,7 @@ describe("the route handler", () => {
     const handler = createTrpcHandler({
       getDb: () => unusableDb,
       identity: webIdentity,
+      directory: localDirectory,
       reporter,
     });
     const claimed = "11111111-1111-4111-8111-111111111111";

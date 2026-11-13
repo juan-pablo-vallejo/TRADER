@@ -31,6 +31,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import superjson from "superjson";
 import { z } from "zod";
 
+import { localDirectory } from "../src/core/identity";
 import { createContext, type Tx } from "../src/core/context";
 import type { VerifiedIdentity } from "../src/core/identity";
 import {
@@ -326,7 +327,13 @@ export const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(
-    createContext({ db, identity: who, reporter: quietReporter, requestId: REQUEST_ID }),
+    createContext({
+      directory: localDirectory,
+      db,
+      identity: who,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
   );
 
 // The application's own router on committed fixtures: in the shared database only for
@@ -334,7 +341,13 @@ export const caller = (db: Db, who: unknown) =>
 // roster's audited writers. Consumed by the roster, me-update and gate tests.
 export const appCaller = (db: Db, who: unknown) =>
   createCallerFactory(appRouter)(
-    createContext({ db, identity: who, reporter: quietReporter, requestId: REQUEST_ID }),
+    createContext({
+      directory: localDirectory,
+      db,
+      identity: who,
+      reporter: quietReporter,
+      requestId: REQUEST_ID,
+    }),
   );
 
 // --- Rolled-back calls -----------------------------------------------------------------
@@ -381,6 +394,7 @@ export async function sealNow(tx: Tx) {
 export const callerIn = (tx: Tx, who: unknown) =>
   createCallerFactory(testRouter)(
     createContext({
+      directory: localDirectory,
       db: txAsDb(tx),
       identity: who,
       reporter: quietReporter,
@@ -539,6 +553,7 @@ export async function materialIn(
 export const appCallerIn = (tx: Tx, who: unknown) =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: txAsDb(tx),
       identity: who,
       reporter: quietReporter,
@@ -637,6 +652,7 @@ export async function http(
     }),
     createContext: async ({ req }) =>
       createContext({
+        directory: localDirectory,
         db,
         identity: opts.identify ? await opts.identify(req.headers) : who,
         reporter,

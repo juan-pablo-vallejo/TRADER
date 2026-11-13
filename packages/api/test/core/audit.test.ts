@@ -12,6 +12,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { localDirectory } from "../../src/core/identity";
 import { AUDIT_ACTIONS, recordAudit, type AuditAction } from "../../src/core/audit";
 import { createContext } from "../../src/core/context";
 import { createCallerFactory, roleProcedure, router } from "../../src/core/trpc";
@@ -55,6 +56,7 @@ const probe = router({
 const probeCaller = (db: Db, who: unknown, inherit = false) =>
   createCallerFactory(probe)(
     createContext({
+      directory: localDirectory,
       db,
       identity: who,
       reporter: quietReporter,
@@ -176,7 +178,11 @@ describe("the audited procedures' inputs", () => {
       const userId = c.userId;
       const calls: (() => Promise<unknown>)[] = [
         () =>
-          api.roster.invite({ email: "f@co.test", name: "Forged", ...forged } as never),
+          api.roster.invite({
+            phone: "+14015550160",
+            name: "Forged",
+            ...forged,
+          } as never),
         () => api.roster.setRole({ userId, role: "worker", ...forged } as never),
         () => api.roster.deactivate({ userId, ...forged } as never),
         () => api.roster.reactivate({ userId, ...forged } as never),

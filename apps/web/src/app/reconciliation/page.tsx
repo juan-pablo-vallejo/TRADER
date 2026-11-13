@@ -1,6 +1,5 @@
-import { devIdentityEnabled } from "@trader/api";
-
 import { ReconciliationScreen } from "./reconciliation-screen";
+import { signInPath } from "../../server/identity-mode";
 
 // Reconciliation (TASKS, Stage 4): a dynamic server page rendering one client component,
 // which calls the API through the route handler like the phone does. `?period=<id>` names the
@@ -14,7 +13,7 @@ export default async function ReconciliationPage(props: PageProps<"/reconciliati
   const { period } = await props.searchParams;
   return (
     <ReconciliationScreen
-      devSignIn={devIdentityEnabled(process.env)}
+      signInHref={signInPath(process.env)}
       initialPeriod={typeof period === "string" && UUID.test(period) ? period : null}
     />
   );

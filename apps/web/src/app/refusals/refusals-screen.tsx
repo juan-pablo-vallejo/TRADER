@@ -40,7 +40,7 @@ const kindOf = (kind: string | null) =>
     ? strings.refusalKinds.unknown
     : ((strings.refusalKinds as Record<string, string>)[kind] ?? kind);
 
-export function RefusalsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function RefusalsScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const roster = useQuery(trpc.roster.list.queryOptions());
   const [userId, setUserId] = useState("");
@@ -63,7 +63,7 @@ export function RefusalsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : roster.isError ? (
         <Failure
           error={roster.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void roster.refetch()}
         />
       ) : (
@@ -107,7 +107,7 @@ export function RefusalsScreen({ devSignIn }: { devSignIn: boolean }) {
           ) : found.isError ? (
             <Failure
               error={found.error}
-              devSignIn={devSignIn}
+              signInHref={signInHref}
               onRetry={() => void found.refetch()}
             />
           ) : found.data.length === 0 ? (

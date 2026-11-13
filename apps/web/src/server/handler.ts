@@ -11,6 +11,7 @@ import {
   reportingOnError,
   type ErrorReporter,
   type IdentityAdapter,
+  type IdentityDirectory,
 } from "@trader/api";
 import type { Db } from "@trader/db";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
@@ -21,6 +22,7 @@ export const MAX_BATCH_SIZE = 10;
 export type HandlerDependencies = {
   getDb: () => Db;
   identity: IdentityAdapter;
+  directory: IdentityDirectory;
   reporter: ErrorReporter;
 };
 
@@ -37,6 +39,7 @@ export function createTrpcHandler(deps: HandlerDependencies) {
         createContext({
           db: deps.getDb(),
           identity: await deps.identity.identify(req.headers),
+          directory: deps.directory,
           reporter: deps.reporter,
           requestId,
         }),

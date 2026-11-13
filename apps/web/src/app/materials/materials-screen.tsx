@@ -68,7 +68,7 @@ const PAGE = 50;
 // its own; a receipt already priced keeps the currency it has.
 const CURRENCY = "USD";
 
-export function MaterialsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function MaterialsScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const [jobId, setJobId] = useState("");
   const [show, setShow] = useState<Show>("unpriced");
@@ -185,7 +185,7 @@ export function MaterialsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : first.isError ? (
         <Failure
           error={first.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void first.refetch()}
         />
       ) : (
@@ -284,7 +284,7 @@ export function MaterialsScreen({ devSignIn }: { devSignIn: boolean }) {
           {cursors.length > 1 && last.isError && (
             <Failure
               error={last.error}
-              devSignIn={devSignIn}
+              signInHref={signInHref}
               onRetry={() => void last.refetch()}
             />
           )}
