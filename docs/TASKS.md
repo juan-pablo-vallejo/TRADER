@@ -37,7 +37,7 @@ paid is created and no production migration runs without the owner's approval of
       one number invited by two companies binds neither; an email invitation binds as
       today; a caller with neither is UNAUTHORIZED; `me.update` cannot change a number that
       is a binding key; every existing identity test green
-- [ ] R2 — Clerk behind the identity seam (plan first: auth; takes Stage 6's Clerk line).
+- [x] R2 — Clerk behind the identity seam (plan first: auth; takes Stage 6's Clerk line).
       Depends on R1 and the owner's Clerk application. Work: the Clerk adapter for the
       route handler, office sign-in and sign-out, an invitation sent on `roster.invite`,
       the development adapter absent from a production build. Installs `@clerk/nextjs`,

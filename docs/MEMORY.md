@@ -368,6 +368,20 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   identity and Clerk never run together, and each one's sign-in route is 404 under the other.
 - A `createContext` call names its `directory`: `localDirectory` in every suite and the demo,
   and a recording one where a test reads what the provider was told (`roster/invite.test.ts`).
+- The office shell stays mounted across a sign-out and the next sign-in: whatever a query
+  answered for the last person is still drawn for the next. `ClerkSessionReset`
+  (`clerk-session.tsx`) empties every query when Clerk's user changes; a new per-person
+  cache outside the query client needs its own reset.
+- Clerk's test numbers are `+1 XXX 555-0100` to `-0199` only, code `424242`, and send
+  nothing; `555-0000` is outside the range and is a real, undeliverable SMS. A check of
+  sign-in runs on a throwaway database (`create database`, `db:migrate`, `db:seed`, the seed
+  admin given a test number as the owner), with the Clerk users made and deleted through
+  `POST` and `DELETE /v1/users`.
+- Clerk's phone field answers "Identifier is invalid." when Enter follows the last digit at
+  once (seen twice from a script); the Continue button a moment later is accepted.
+- Clerk's form stuck once on its code step, "needs_first_factor not supported yet", with the
+  sign-in in fact made (2026-11-12, one of six sign-ins, straight after a hot reload of
+  edited files; not reproduced over the same steps). Reloading the page showed the office.
 
 ## Log
 
@@ -918,3 +932,28 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** owner pastes the four claims into Clerk (Sessions, Customize session token) and
   creates one test admin there; then R2's end-to-end check on a throwaway database, and the
   tick.
+
+### 2026-11-12 — R2 signed in end to end and ticked
+
+- **Did:** the owner pasted the four session claims into Clerk. A real token then carried
+  them as the adapter reads them: the flags as booleans, the number in E.164, a missing
+  email as `null`. On a throwaway database and Clerk test numbers, in the browser on
+  `next dev`: the seed admin signed in by code and was bound to Clerk's user id; the roster
+  loaded; an invitation from the screen wrote the row, its audit row and the Clerk user;
+  sign-out; a Clerk user no roster names read the not-on-a-roster state and signed out
+  from it; the admin signed in again with no reload. On a built app with
+  `TRADER_DEV_IDENTITY=enabled`, by `curl`: `/dev-signin` 404 to GET and POST, `/sign-in`
+  200, `me.get` 401 with no session, with the development headers and with the cookie. One
+  more commit on `clerk-identity-seam`, found by that check: the header kept the last
+  person's name after a sign-out (Notes). The database dropped and the three test users
+  deleted after. 1,213 tests.
+- **Decided:** nothing. Not done: a tab left asleep past Clerk's 60-second token was not
+  tried — a headless tab never sleeps; `CLERK_AUTHORIZED_PARTIES` was left blank
+  throughout, so the option was never exercised against a real token; the session reset and
+  the sign-in page's two drawn states have no unit test; nothing was checked at 768 or 1024;
+  email-code sign-in was not tried, only the number. Seen once and not explained: Clerk's
+  form stuck on its code step (Notes). For the owner, unchanged from the entry above: the
+  PRD Access sentence, `/sign-in` inside the shell, Pro before production; and one test
+  user of the owner's own, `+1 201 555 0000`, is still on the development instance.
+- **Next:** owner reviews and merges the branch; then track line R3, the production path
+  on staging (plan first: CI, auth).
