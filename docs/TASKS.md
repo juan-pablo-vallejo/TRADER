@@ -57,6 +57,20 @@ paid is created and no production migration runs without the owner's approval of
       `apps/web`: the reporter and the start-up hook. Done when the office runs on the staging
       deployment as `trader_app`, a forced error reaches Sentry with no PII, and a
       point-in-time restore of staging has been timed
+- [ ] PRD Access brought into line with the sign-in decisions (documents only; the wording
+      is the owner's). PRD says an office admin is invited by their own email address; since
+      the 2026-11-12 row "A sign-in number on every new invitation" every invitation requires
+      a number and takes an email beside it. Done when PRD Access and its summary sentence
+      state the rule the decision row states
+- [ ] Toolbox (documents only; plan first). A "Toolbox" section in RULES with its row in the
+      home table, and the lines in `CLAUDE.md` that point to it: how a session discovers its
+      tools, which tool is preferred for which job, what a vendor tool may read and may
+      never write, how a tool is upgraded, and how one is verified before it is relied on.
+      Consumer: every session that reads the deployed stack. No new document
+- [ ] `.claude/settings.json` committed with a deny list for the vendor tools that write or
+      read a secret (plan first: it changes what a session can do). Depends on the Toolbox
+      line. Consumer: Claude Code in this repository. Done when a denied tool is refused in
+      a new session and a read tool still answers
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
@@ -348,6 +362,10 @@ ARCHITECTURE.md is a line here.
       asserts the role
 - [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs;
       `attachDatabasePool` from `@vercel/functions`; pool size set against Neon's limit
+- [ ] **decide** A stable staging origin, with the domain layout at R9: a pull request's
+      preview answers on its branch's alias, which is gone when the branch is deleted, and
+      `CLERK_AUTHORIZED_PARTIES` names one origin. Done when staging has an origin that
+      outlives a branch and the Preview variables name it
 - [ ] Daily delete of expired `sync_diagnostics` lines under Vercel Cron, in every company
       (ARCHITECTURE, rejected-record diagnostics: the writer deletes only its own company's).
       Plan first: the role it runs as, since the application role sees one tenant. Tests: a
