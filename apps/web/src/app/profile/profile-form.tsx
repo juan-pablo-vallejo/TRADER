@@ -10,6 +10,7 @@ import { useState, type FormEvent } from "react";
 import controls from "../controls.module.css";
 import { Failure } from "../failure";
 import { Field } from "../field";
+import { signInPhone } from "../format";
 import { Note } from "../note";
 import { strings } from "../strings";
 import { useTRPC } from "../trpc";
@@ -77,16 +78,32 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
               onChange={(e) => setDraft({ ...fields(me.data), phone: e.target.value })}
             />
           </Field>
-          <Field id="profile-email" label={strings.email}>
-            <input
-              id="profile-email"
-              className={controls.input}
-              type="email"
-              readOnly
-              value={me.data.email ?? ""}
-            />
-            <p className={`secondary ${controls.caption}`}>{strings.managedBySignIn}</p>
-          </Field>
+          {me.data.signInPhone !== null && (
+            <Field id="profile-sign-in-phone" label={strings.signInNumber}>
+              <input
+                id="profile-sign-in-phone"
+                className={controls.input}
+                type="tel"
+                readOnly
+                value={signInPhone(me.data.signInPhone)}
+              />
+              <p className={`secondary ${controls.caption}`}>
+                {strings.signInNumberCaption}
+              </p>
+            </Field>
+          )}
+          {me.data.email !== null && (
+            <Field id="profile-email" label={strings.email}>
+              <input
+                id="profile-email"
+                className={controls.input}
+                type="email"
+                readOnly
+                value={me.data.email}
+              />
+              <p className={`secondary ${controls.caption}`}>{strings.managedBySignIn}</p>
+            </Field>
+          )}
           <Note text={note} />
           <button type="submit" className={controls.primary} disabled={save.isPending}>
             {strings.save}

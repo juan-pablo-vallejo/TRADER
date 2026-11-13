@@ -2,7 +2,38 @@
 // figure is never rounded or divided as a float on the way to the screen.
 import { describe, expect, it } from "vitest";
 
-import { hours, signedHours } from "../src/app/format";
+import { hours, looksLikeSignInPhone, signedHours, signInPhone } from "../src/app/format";
+
+describe("a sign-in number", () => {
+  it("is shown as it is said, and anything else as it is", () => {
+    expect(signInPhone("+14015550100")).toBe("(401) 555-0100");
+    expect(signInPhone("+441632960100")).toBe("+441632960100");
+    expect(signInPhone("401-555-0100")).toBe("401-555-0100");
+  });
+
+  it("is accepted as typed when it is ten digits, or eleven starting with 1", () => {
+    for (const typed of [
+      "4015550100",
+      "(401) 555-0100",
+      "401.555.0100",
+      "1 401 555 0100",
+      " +1 (401) 555-0100 ",
+    ]) {
+      expect(looksLikeSignInPhone(typed), typed).toBe(true);
+    }
+    for (const typed of [
+      "555-0100",
+      "(101) 555-0100",
+      "2 401 555 0100",
+      "+44 1632 960100",
+      "+40 1234 5678",
+      "401-555-01000",
+      "",
+    ]) {
+      expect(looksLikeSignInPhone(typed), typed).toBe(false);
+    }
+  });
+});
 
 describe("hours from hundredths", () => {
   it("prints two decimals by integer arithmetic", () => {
