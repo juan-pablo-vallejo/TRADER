@@ -283,7 +283,12 @@ describe("the SDK under these options", () => {
   const start = () => {
     const bodies: string[] = [];
     Sentry.init({
-      ...sentryInitOptions(DSN, { VERCEL_ENV: "preview" }),
+      // The release is stated: left out, the SDK takes one from the machine's environment
+      // (GITHUB_SHA under Actions), and the event would differ between CI and a laptop.
+      ...sentryInitOptions(DSN, {
+        VERCEL_ENV: "preview",
+        VERCEL_GIT_COMMIT_SHA: "abc123",
+      }),
       transport: (options: Parameters<typeof Sentry.createTransport>[0]) =>
         Sentry.createTransport(options, (request) => {
           bodies.push(
@@ -340,6 +345,7 @@ describe("the SDK under these options", () => {
         "level",
         "message",
         "platform",
+        "release",
         // The SDK's own name and version, added after the allow-list.
         "sdk",
         "tags",

@@ -129,7 +129,9 @@ export function scrubEvent(event: Event): ErrorEvent {
 // Sentry.init's options: errors only, from the server only. No default integration (so no
 // request, console or HTTP capture and no process-wide handlers), no tracing, no logs, no
 // breadcrumbs, every data-collection switch off, and the allow-list on what is left.
-// `environment` and `release` are Vercel's own variables, absent anywhere else.
+// `environment` and `release` are Vercel's own variables. Off Vercel the SDK still finds a
+// release where a commit variable is set (GITHUB_SHA under Actions): a commit hash, and
+// held to `token` by the allow-list like any other.
 export function sentryInitOptions(
   dsn: string,
   env: Record<string, string | undefined>,
