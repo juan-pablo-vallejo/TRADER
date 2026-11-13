@@ -330,10 +330,15 @@ ARCHITECTURE.md is a line here.
       roster checked with the partner, each crew member's own mobile number and each
       admin's own email recorded before their invitation; no shared number or address. Done
       when every roster row to be invited has a distinct one its owner has confirmed
-- [ ] Clerk production instance: SMS codes for the crew, email codes for the office,
-      invitation-only, 30-day sessions; the Clerk identity adapter behind the seam, with the
-      development adapter left out of the production wiring; invitations sent on
-      `roster.invite`; how `users.email` and a bound phone number follow a changed sign-in address
+- [ ] Clerk production instance (Release 0.1, R9; owner): the paid plan, the instance on
+      `jpteq.app` with its DNS records, the development instance's settings and its four
+      session claims copied, 30-day sessions, production keys and
+      `CLERK_AUTHORIZED_PARTIES` in the deployment. The adapter, the sign-in and the
+      invitation are R2's. Still to decide: how `users.email` and a bound phone number
+      follow a changed sign-in address
+- [ ] An invitation notice to the person (2026-11-12 invitation at the provider: none is
+      sent): what it says, and whether it is an email through Resend, after R7. Until then
+      the office tells each person to sign in with their number
 - [ ] Neon Launch project; `trader_app` created in SQL and used as the login role;
       migrations re-baselined before the first run, with a full catalog diff against the
       journal proving nothing hand-written was lost; the Neon driver behind the seam
