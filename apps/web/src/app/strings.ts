@@ -60,10 +60,10 @@ export const strings = {
   phoneTaken: "Someone on this roster already has that mobile number.",
   mobileNumber: "Mobile number",
   signInAddress: "Sign-in",
-  signInAddressNeeded: "Enter a mobile number or an email.",
+  mobileNumberNeeded: "Enter a mobile number.",
   mobileNumberInvalid: "Enter a ten-digit United States or Canada number.",
   inviteAddressHint:
-    "A crew member signs in with a code sent to their mobile number; the office can use an email.",
+    "The sign-in code is sent to this mobile number. An email is optional: the office can also sign in with a code sent to it.",
   saveRole: "Save role",
   deactivate: "Deactivate",
   reactivate: "Reactivate",

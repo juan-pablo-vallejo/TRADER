@@ -13,6 +13,7 @@ import { randomUUID } from "node:crypto";
 import type { Db, SeedCompany } from "@trader/db";
 
 import { createContext } from "../core/context";
+import { localDirectory } from "../core/identity";
 import { logReporter } from "../core/report";
 import { appRouter } from "../router";
 import type { ApprovalReason } from "../sync/reasons";
@@ -167,6 +168,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         createContext({
           db: opts.app,
           identity: { subject: `dev:${email}`, email, emailVerified: true },
+          // The demo's people exist in its database only: no provider is told of them.
+          directory: localDirectory,
           reporter: logReporter,
           requestId: randomUUID(),
         }),
@@ -363,7 +366,12 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   await step("invite the roster", async () => {
     for (const p of PEOPLE) {
       const a = expectResult(
-        await admin().roster.invite({ email: p.email, name: p.name, role: p.role }),
+        await admin().roster.invite({
+          email: p.email,
+          phone: p.phone,
+          name: p.name,
+          role: p.role,
+        }),
         "invited",
       );
       if (a.result === "invited") userIds.set(p.key, a.user.id);

@@ -26,7 +26,7 @@ export const rosterRouter = router({
   invite: roleProcedure("admin")
     .input(inviteInput)
     .output(inviteOutput)
-    .mutation(({ ctx, input }) => rosterInvite(ctx.tx, ctx.user, input)),
+    .mutation(({ ctx, input }) => rosterInvite(ctx.tx, ctx.user, input, ctx.directory)),
   setRole: roleProcedure("admin")
     .input(setRoleInput)
     .output(changeOutput)

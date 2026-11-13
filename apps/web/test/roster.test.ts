@@ -70,7 +70,11 @@ describe("the roster through the route handler", () => {
       { id: admin.userId, role: "admin" },
     ]);
 
-    const input = { email: `crew-${admin.run}@web.test`, name: "Crew Member" };
+    const input = {
+      email: `crew-${admin.run}@web.test`,
+      phone: "(401) 555-0143",
+      name: "Crew Member",
+    };
     const first = await mutate(POST, "roster.invite", {
       input,
       headers: as(admin.email),
@@ -81,7 +85,7 @@ describe("the roster through the route handler", () => {
       user: { email: input.email, role: "worker", invited: true },
     });
     const second = await mutate(POST, "roster.invite", {
-      input: { ...input, email: input.email.toUpperCase() },
+      input: { ...input, phone: "(401) 555-0144", email: input.email.toUpperCase() },
       headers: as(admin.email),
     });
     expect(second.status).toBe(200);
@@ -118,6 +122,12 @@ describe("the roster through the route handler", () => {
       headers: as(admin.email),
     });
     expect(neither.status).toBe(400);
+    // An email alone is not an invitation: everyone signs in with a number.
+    const emailOnly = await mutate(POST, "roster.invite", {
+      input: { email: `only-${admin.run}@web.test`, name: "Email Only" },
+      headers: as(admin.email),
+    });
+    expect(emailOnly.status).toBe(400);
 
     // The number's own login, with no email at all. The admin's browser cookie rides along
     // and is not bridged over a request that names its own development identity.
@@ -149,7 +159,7 @@ describe("the roster through the route handler", () => {
     const worker = await invitation(owner);
     try {
       const r = await mutate(POST, "roster.invite", {
-        input: { email: `x-${worker.run}@web.test`, name: "X" },
+        input: { phone: "(401) 555-0145", name: "X" },
         headers: as(worker.email),
       });
       expect(r.status).toBe(403);

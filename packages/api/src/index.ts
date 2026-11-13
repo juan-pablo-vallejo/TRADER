@@ -7,10 +7,12 @@ export {
   devIdentityEnabled,
 } from "./core/dev-identity";
 export {
+  localDirectory,
   signInEmailSchema,
   signInPhoneSchema,
   verifiedIdentitySchema,
   type IdentityAdapter,
+  type IdentityDirectory,
   type VerifiedIdentity,
 } from "./core/identity";
 export {

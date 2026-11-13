@@ -23,6 +23,9 @@ export type Persona = {
   key: string;
   name: string;
   email: string;
+  // The sign-in number every invitation carries: +1 401 555 01xx, from the range kept for
+  // fiction, so none is anyone's.
+  phone: string;
   role: Role;
   // Which crew's labor they record; the invitation-only persona records none.
   crew: "a" | "b" | null;
@@ -36,6 +39,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "luis",
     name: "Luis Herrera",
     email: "luis.herrera@demo.invalid",
+    phone: "+14015550101",
     role: "foreman",
     crew: "a",
   },
@@ -43,6 +47,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "marcus",
     name: "Marcus Bell",
     email: "marcus.bell@demo.invalid",
+    phone: "+14015550102",
     role: "foreman",
     crew: "b",
   },
@@ -50,6 +55,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "ana",
     name: "Ana Ruiz",
     email: "ana.ruiz@demo.invalid",
+    phone: "+14015550103",
     role: "worker",
     crew: "a",
   },
@@ -57,6 +63,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "tom",
     name: "Tom Nguyen",
     email: "tom.nguyen@demo.invalid",
+    phone: "+14015550104",
     role: "worker",
     crew: "a",
   },
@@ -64,6 +71,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "priya",
     name: "Priya Shah",
     email: "priya.shah@demo.invalid",
+    phone: "+14015550105",
     role: "worker",
     crew: "a",
   },
@@ -71,6 +79,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "omar",
     name: "Omar Haddad",
     email: "omar.haddad@demo.invalid",
+    phone: "+14015550106",
     role: "worker",
     crew: "b",
   },
@@ -78,6 +87,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "elena",
     name: "Elena Petrov",
     email: "elena.petrov@demo.invalid",
+    phone: "+14015550107",
     role: "worker",
     crew: "b",
   },
@@ -85,6 +95,7 @@ export const PEOPLE: readonly Persona[] = [
     key: "sam",
     name: "Sam Carter",
     email: "sam.carter@demo.invalid",
+    phone: "+14015550108",
     role: "worker",
     crew: null,
   },

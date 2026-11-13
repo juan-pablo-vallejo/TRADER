@@ -6,6 +6,7 @@ import { approvals, users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext, type Tx } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
 import { lockCompanyFieldWrites } from "../../src/labor/timeline";
@@ -46,6 +47,7 @@ const decide = (
 ) =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: app,
       identity: who,
       reporter: quietReporter,

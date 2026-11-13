@@ -10,6 +10,7 @@ import { crewMembers, jobs, workSessionEvents } from "@trader/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
 import { appRouter } from "../../src/router";
@@ -39,6 +40,7 @@ afterAll(async () => {
 const caller = (who: VerifiedIdentity) =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: app,
       identity: who,
       reporter: quietReporter,

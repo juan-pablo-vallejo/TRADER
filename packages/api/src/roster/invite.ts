@@ -1,8 +1,10 @@
 // roster.invite (PRD, Access: invitation-only accounts; a new user starts as a worker, roles
 // are a deliberate roster action). An invitation is a users row with a sign-in address — the
-// mobile number, the email, or both — the name and the role, identity_subject NULL: the first
-// sign-in the provider verified for either address binds it (resolve-user.ts). No message is
-// sent until Clerk's invitation (Release 0.1, R2). Each address is unique per company
+// mobile number, and an email when one is given — the name and the role, identity_subject
+// NULL: the first sign-in the provider verified for either address binds it
+// (resolve-user.ts). The person is then admitted at the identity provider (identity.ts,
+// IdentityDirectory), inside this transaction: if the provider cannot be told, nothing was
+// invited. No message is sent to the person. Each address is unique per company
 // (users.ts), so two unique indexes can refuse the insert and one ON CONFLICT target would
 // cover one of them: the statement names none, so no conflict is ever raised and the
 // transaction is never aborted, and a read then says which address is held. The id is the
@@ -14,7 +16,11 @@ import { z } from "zod";
 
 import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
-import { signInEmailSchema, signInPhoneSchema } from "../core/identity";
+import {
+  signInEmailSchema,
+  signInPhoneSchema,
+  type IdentityDirectory,
+} from "../core/identity";
 import type { AppUser } from "../core/resolve-user";
 import { readRosterUser, rosterUser } from "./list";
 
@@ -33,15 +39,15 @@ const invitedPhone = z
   .pipe(signInPhoneSchema);
 
 // Each address validated as a sign-in address is, since that is what it will be matched
-// against. At least one: a person with neither could never sign in.
-export const inviteInput = z
-  .strictObject({
-    email: signInEmailSchema.optional(),
-    phone: invitedPhone.optional(),
-    name: z.string().trim().min(1).max(120),
-    role: z.enum(userRole.enumValues).default("worker"),
-  })
-  .refine((i) => i.email !== undefined || i.phone !== undefined);
+// against. The number is required of every new invitation: the provider holds no login
+// without one (ARCHITECTURE, invitation at the provider). Rows invited by email alone
+// before that stay as they are; the column's own rule is still one address of the two.
+export const inviteInput = z.strictObject({
+  email: signInEmailSchema.optional(),
+  phone: invitedPhone,
+  name: z.string().trim().min(1).max(120),
+  role: z.enum(userRole.enumValues).default("worker"),
+});
 
 export type InviteInput = z.infer<typeof inviteInput>;
 
@@ -61,9 +67,10 @@ export async function rosterInvite(
   tx: Tx,
   user: AppUser,
   input: InviteInput,
+  directory: IdentityDirectory,
 ): Promise<InviteResult> {
   const email = input.email ?? null;
-  const phone = input.phone ?? null;
+  const phone = input.phone;
   const { rows } = await tx.execute<{ id: string }>(sql`
     INSERT INTO users (company_id, email, sign_in_phone, name, role)
     VALUES (${user.companyId}, ${email}, ${phone}, ${input.name}, ${input.role}::user_role)
@@ -93,5 +100,10 @@ export async function rosterInvite(
   });
   const invited = await readRosterUser(tx, inserted.id);
   if (invited === undefined) throw new Error("the invited row is not visible");
+  // Last, so a refusal above never reaches the provider, and awaited inside the transaction,
+  // so a provider that cannot be told rolls the row and its audit row back. The reverse
+  // order of failure — the provider told, the commit lost — leaves a login that matches no
+  // invitation and is refused; inviting again admits the same addresses and succeeds.
+  await directory.admit({ email, phone });
   return { result: "invited", user: invited };
 }

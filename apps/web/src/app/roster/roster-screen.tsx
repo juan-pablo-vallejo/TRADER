@@ -125,20 +125,20 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
-    // An empty field is an address not given, never an empty address. One is needed, and a
-    // number the server would refuse is said here, with no request made.
+    // An empty email is an address not given, never an empty address. The number is needed
+    // of everyone, and one the server would refuse is said here, with no request made.
     const typedPhone = phone.trim();
     const typedEmail = email.trim();
-    if (typedPhone === "" && typedEmail === "") {
-      setNote({ under: "phone", text: strings.signInAddressNeeded });
+    if (typedPhone === "") {
+      setNote({ under: "phone", text: strings.mobileNumberNeeded });
       return;
     }
-    if (typedPhone !== "" && !looksLikeSignInPhone(typedPhone)) {
+    if (!looksLikeSignInPhone(typedPhone)) {
       setNote({ under: "phone", text: strings.mobileNumberInvalid });
       return;
     }
     invite.mutate({
-      ...(typedPhone !== "" && { phone: typedPhone }),
+      phone: typedPhone,
       ...(typedEmail !== "" && { email: typedEmail }),
       name,
       role,

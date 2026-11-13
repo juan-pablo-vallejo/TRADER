@@ -5,6 +5,7 @@ import { seed } from "@trader/db";
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
 import {
   COSTS,
@@ -61,6 +62,7 @@ afterAll(async () => {
 const admin = () =>
   createCallerFactory(appRouter)(
     createContext({
+      directory: localDirectory,
       db: target.app,
       identity: {
         subject: `dev:${DEMO.adminEmail}`,

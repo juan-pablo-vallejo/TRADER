@@ -3,7 +3,11 @@
 // one call in a batch never shares a transaction, or a failure, with another.
 import type { Db } from "@trader/db";
 
-import { verifiedIdentitySchema, type VerifiedIdentity } from "./identity";
+import {
+  verifiedIdentitySchema,
+  type IdentityDirectory,
+  type VerifiedIdentity,
+} from "./identity";
 import type { ErrorReporter } from "./report";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -12,9 +16,12 @@ export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
 // themselves; it holds no identity and no request state. Required, so a handler cannot forget it.
 // `requestId` is the HTTP request's: made by the handler, never read from the client, shared
 // by every call in a batch. It names a request in an error report and a diagnostic line.
+// `directory` is the identity provider as roster.invite sees it (identity.ts); required for the
+// same reason, so no host can invite a person the provider was never told about.
 export type Context = {
   db: Db;
   identity: VerifiedIdentity | null;
+  directory: IdentityDirectory;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -32,6 +39,7 @@ export type CallerWaits = CallerTimeouts | "inherit";
 export function createContext(opts: {
   db: Db;
   identity: unknown;
+  directory: IdentityDirectory;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -40,6 +48,7 @@ export function createContext(opts: {
   return {
     db: opts.db,
     identity: parsed.success ? parsed.data : null,
+    directory: opts.directory,
     reporter: opts.reporter,
     requestId: opts.requestId,
     ...(opts.waits !== undefined && { waits: opts.waits }),
