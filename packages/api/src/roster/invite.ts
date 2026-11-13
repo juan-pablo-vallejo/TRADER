@@ -13,13 +13,13 @@ import { z } from "zod";
 
 import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
-import { verifiedIdentitySchema } from "../core/identity";
+import { signInEmailSchema } from "../core/identity";
 import type { AppUser } from "../core/resolve-user";
 import { readRosterUser, rosterUser } from "./list";
 
 // The email validated as a sign-in email is, since that is what it will be matched against.
 export const inviteInput = z.strictObject({
-  email: verifiedIdentitySchema.shape.email,
+  email: signInEmailSchema,
   name: z.string().trim().min(1).max(120),
   role: z.enum(userRole.enumValues).default("worker"),
 });

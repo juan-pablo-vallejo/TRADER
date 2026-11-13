@@ -48,6 +48,7 @@ describe("me.get", () => {
       name: "Bound a",
       email: w.a.boundEmail,
       phone: null,
+      signInPhone: null,
     });
   });
 

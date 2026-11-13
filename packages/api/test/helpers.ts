@@ -85,11 +85,27 @@ export const rejectingReporter: ErrorReporter = {
   report: () => Promise.reject(new Error("reporter down")),
 };
 
-export const identity = (subject: string, email: string): VerifiedIdentity => ({
+// A login the provider verified by email; `email` is stated, so a test can read it back.
+export const identity = (
+  subject: string,
+  email: string,
+): VerifiedIdentity & { email: string } => ({
   subject,
   email,
   emailVerified: true,
 });
+
+// A login the provider verified by phone number alone, as a crew member's is.
+export const phoneIdentity = (subject: string, phone: string): VerifiedIdentity => ({
+  subject,
+  phone,
+  phoneVerified: true,
+});
+
+// A sign-in number no other run uses: a number is matched across every company, and the
+// suites commit fixtures side by side. Ten digits after +1, the first never 0 or 1.
+export const testPhone = () =>
+  `+1${String(2_000_000_000 + (crypto.getRandomValues(new Uint32Array(1))[0] ?? 0))}`;
 
 export type World = Awaited<ReturnType<typeof world>>;
 
@@ -233,10 +249,12 @@ const probe = router({
       company: string | null;
       subject: string | null;
       email: string | null;
+      phone: string | null;
       txid: string;
     }>(sql`
       select app_company_id()::text as company, app_identity_subject() as subject,
-        app_identity_email() as email, txid_current()::text as txid
+        app_identity_email() as email, app_identity_phone() as phone,
+        txid_current()::text as txid
     `);
     const visible = await ctx.tx.select({ id: customers.id }).from(customers);
     return {

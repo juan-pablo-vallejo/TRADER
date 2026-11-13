@@ -5,14 +5,16 @@ import { describe, expect, it } from "vitest";
 import {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,
+  DEV_PHONE_HEADER,
   DEV_SUBJECT_HEADER,
   devIdentityEnabled,
 } from "../../src/core/dev-identity";
 
-const headers = (subject?: string, email?: string) => {
+const headers = (subject?: string, email?: string, phone?: string) => {
   const h = new Headers();
   if (subject !== undefined) h.set(DEV_SUBJECT_HEADER, subject);
   if (email !== undefined) h.set(DEV_EMAIL_HEADER, email);
+  if (phone !== undefined) h.set(DEV_PHONE_HEADER, phone);
   return h;
 };
 
@@ -74,9 +76,33 @@ describe("development identity adapter", () => {
       headers(undefined, "dev@co.test"),
       headers("  ", "dev@co.test"),
       headers("dev-sub", "not-an-email"),
+      headers(undefined, undefined, "+14015550100"),
+      headers("dev-sub", undefined, "401-555-0100"),
+      // One bad address spoils the identity, whatever the other is.
+      headers("dev-sub", "dev@co.test", "401-555-0100"),
+      headers("dev-sub", "not-an-email", "+14015550100"),
     ]) {
       expect(await adapter.identify(h)).toBeNull();
     }
+  });
+
+  it("returns a phone header as a verified number, alone or beside the email", async () => {
+    const adapter = createDevIdentityAdapter({
+      NODE_ENV: "test",
+      TRADER_DEV_IDENTITY: "enabled",
+    });
+    expect(await adapter.identify(headers("dev-sub", undefined, "+14015550100"))).toEqual(
+      { subject: "dev-sub", phone: "+14015550100", phoneVerified: true },
+    );
+    expect(
+      await adapter.identify(headers("dev-sub", "dev@co.test", "+14015550100")),
+    ).toEqual({
+      subject: "dev-sub",
+      email: "dev@co.test",
+      emailVerified: true,
+      phone: "+14015550100",
+      phoneVerified: true,
+    });
   });
 });
 

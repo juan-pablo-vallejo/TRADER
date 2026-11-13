@@ -430,6 +430,7 @@ describe("labor.hours", () => {
         name: "w1",
         email: "w1@co.test",
         phone: null,
+        signInPhone: null,
       };
       const record = (type: "started" | "ended", client: string): LaborRecord => ({
         id: uuidv7(),

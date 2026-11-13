@@ -1,5 +1,7 @@
 // TASKS:45: me.update — any active role edits its own name and phone, those two columns only,
 // and nothing else about the row moves; a deactivated or anonymous caller is UNAUTHORIZED.
+import { users } from "@trader/db/schema";
+import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -8,6 +10,7 @@ import {
   member,
   outcome,
   ownerDb,
+  testPhone,
   userRow,
   world,
   type World,
@@ -47,6 +50,7 @@ describe("me.update", () => {
         name: `${role} renamed`,
         email: before!.email,
         phone: "401-555-0100",
+        signInPhone: null,
       });
       const after = await userRow(owner, m.id);
       expect({
@@ -68,11 +72,30 @@ describe("me.update", () => {
       { name: "  ", phone: null },
       { name: "Name", phone: null, email: "other@co.test" },
       { name: "Name", phone: null, role: "admin" },
+      { name: "Name", phone: null, signInPhone: "+14015550123" },
       { name: "Name" },
     ]) {
       expect(await outcome(update(m.who, input as Input))).toBe("BAD_REQUEST");
     }
     expect(await userRow(owner, m.id)).toMatchObject({ role: "worker" });
+  });
+
+  it("cannot change a number that is a binding key", async () => {
+    const m = await member(owner, w, "a", "worker");
+    const signInPhone = testPhone();
+    await owner.update(users).set({ signInPhone }).where(eq(users.id, m.id));
+    // Not in the input at all, and the contact phone is another column.
+    expect(
+      await outcome(
+        update(m.who, { name: "Name", phone: null, signInPhone: testPhone() } as Input),
+      ),
+    ).toBe("BAD_REQUEST");
+    const answered = await update(m.who, { name: "Name", phone: "401-555-0199" });
+    expect(answered).toMatchObject({ phone: "401-555-0199", signInPhone });
+    expect(await userRow(owner, m.id)).toMatchObject({
+      phone: "401-555-0199",
+      sign_in_phone: signInPhone,
+    });
   });
 
   it("never touches another row, even on first sign-in", async () => {

@@ -1,10 +1,11 @@
 // Identity → user row, select-first, on the caller's transaction (ARCHITECTURE invariant 6).
-// Runs with the identity settings set and the tenant unset, so only 0015's two policies
-// apply: the caller sees its own bound row, or unbound invitations to its verified email.
+// Runs with the identity settings set and the tenant unset, so only the identity policies
+// apply (0015, 0038): the caller sees its own bound row, or unbound invitations to its
+// verified email or its verified phone number.
 // First sign-in binds the one invitation; nothing is ever inserted, and nothing but
 // identity_subject is ever written (users_identity_guard refuses anything else).
 import { users } from "@trader/db/schema";
-import { and, DrizzleQueryError, eq, isNull, sql } from "drizzle-orm";
+import { and, DrizzleQueryError, eq, isNull, or, sql } from "drizzle-orm";
 
 import type { Tx } from "./context";
 import type { VerifiedIdentity } from "./identity";
@@ -16,6 +17,7 @@ const columns = {
   name: users.name,
   email: users.email,
   phone: users.phone,
+  signInPhone: users.signInPhone,
   identitySubject: users.identitySubject,
   deactivatedAt: users.deactivatedAt,
 };
@@ -40,6 +42,7 @@ const active = (row: Row): AppUser | null =>
         name: row.name,
         email: row.email,
         phone: row.phone,
+        signInPhone: row.signInPhone,
       }
     : null;
 
@@ -64,18 +67,22 @@ export async function resolveUser(
   if (bound !== undefined) return active(bound);
   if (!opts.bind) return null;
 
-  // 2. First sign-in: unbound invitations to this email, in every company. Anything but
-  //    exactly one fails closed; deactivated invitations count, so ambiguity is judged
-  //    conservatively, and a deactivated one is never bound.
+  // 2. First sign-in: unbound invitations to this email or this number, in every company.
+  //    Anything but exactly one row fails closed — one address invited twice, or the email
+  //    naming one invitation and the number another; deactivated invitations count, so
+  //    ambiguity is judged conservatively, and a deactivated one is never bound.
+  const byEmail =
+    identity.email === undefined
+      ? undefined
+      : sql`lower(${users.email}) = lower(${identity.email})`;
+  const byPhone =
+    identity.phone === undefined ? undefined : eq(users.signInPhone, identity.phone);
+  // No address is no invitation: `or()` of nothing would drop the condition altogether.
+  if (byEmail === undefined && byPhone === undefined) return null;
   const invitations = await tx
     .select(columns)
     .from(users)
-    .where(
-      and(
-        isNull(users.identitySubject),
-        sql`lower(${users.email}) = lower(${identity.email})`,
-      ),
-    );
+    .where(and(isNull(users.identitySubject), or(byEmail, byPhone)));
   const [invitation] = invitations;
   if (invitations.length !== 1 || invitation === undefined) return null;
   if (invitation.deactivatedAt !== null) return null;

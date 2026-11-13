@@ -4,7 +4,7 @@
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { companies, customers } from "@trader/db/schema";
+import { companies, customers, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 
 import {
@@ -20,6 +20,7 @@ import {
   outcome,
   ownerDb,
   rolledBack,
+  testPhone,
   userRow,
   world,
   type World,
@@ -63,7 +64,12 @@ describe("the procedure context", () => {
 
   it("runs with the caller's tenant and no identity setting", async () => {
     const seen = await caller(app, asA()).probe.inside();
-    expect(seen).toMatchObject({ company: w.a.companyId, subject: null, email: null });
+    expect(seen).toMatchObject({
+      company: w.a.companyId,
+      subject: null,
+      email: null,
+      phone: null,
+    });
     expect(seen.customers).toEqual([w.a.customerId]);
   });
 
@@ -76,11 +82,23 @@ describe("settings on a reused connection", () => {
   it("override session values left on the connection, for resolution and the procedure", async () => {
     const single = appDb({ max: 1 });
     try {
-      // Pollute the one physical connection, session-level, with company B and B's login.
+      // Pollute the one physical connection, session-level, with company B and B's login,
+      // and with the number of an invitation in B that the caller must never be shown.
+      const leftPhone = testPhone();
+      const [left] = await owner
+        .insert(users)
+        .values({
+          companyId: w.b.companyId,
+          email: `left-${w.run}@co.test`,
+          name: "Left on the connection",
+          signInPhone: leftPhone,
+        })
+        .returning({ id: users.id });
       await single.execute(sql`
         select set_config('app.company_id', ${w.b.companyId}, false),
           set_config('app.identity_subject', ${w.b.boundSubject}, false),
-          set_config('app.identity_email', ${w.b.inviteEmail}, false)
+          set_config('app.identity_email', ${w.b.inviteEmail}, false),
+          set_config('app.identity_phone', ${leftPhone}, false)
       `);
       const before = [
         await userRow(owner, w.b.boundId),
@@ -91,7 +109,13 @@ describe("settings on a reused connection", () => {
         identity(`sub-new-${w.run}`, w.a.inviteEmail),
       ).probe.inside();
       expect(seen.user.id).toBe(w.a.inviteId);
-      expect(seen).toMatchObject({ company: w.a.companyId, subject: null, email: null });
+      expect(seen).toMatchObject({
+        company: w.a.companyId,
+        subject: null,
+        email: null,
+        phone: null,
+      });
+      expect(await userRow(owner, left!.id)).toMatchObject({ identity_subject: null });
       expect(seen.customers).toEqual([w.a.customerId]);
       expect(await userRow(owner, w.a.inviteId)).toMatchObject({
         identity_subject: `sub-new-${w.run}`,

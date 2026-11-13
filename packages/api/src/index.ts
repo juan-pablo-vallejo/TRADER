@@ -2,10 +2,13 @@ export { createContext, type Context } from "./core/context";
 export {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,
+  DEV_PHONE_HEADER,
   DEV_SUBJECT_HEADER,
   devIdentityEnabled,
 } from "./core/dev-identity";
 export {
+  signInEmailSchema,
+  signInPhoneSchema,
   verifiedIdentitySchema,
   type IdentityAdapter,
   type VerifiedIdentity,
