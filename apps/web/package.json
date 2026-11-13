@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.25",
+    "@sentry/nextjs": "11.12.0",
     "@tanstack/react-query": "^5.106.1",
     "@trader/api": "workspace:*",
     "@trader/db": "workspace:*",

@@ -53,7 +53,8 @@ paid is created and no production migration runs without the owner's approval of
       asserts the role; an owner-run onboarding script for a company, its invoice counter
       and its first admin; a content security policy and transport security; the Sentry
       reporter behind `ErrorReporter`; the migration procedure in `packages/db/README.md`;
-      the restore window read and recorded. Done when the office runs on the staging
+      the restore window read and recorded. Installs `@sentry/nextjs`, consumed by
+      `apps/web`: the reporter and the start-up hook. Done when the office runs on the staging
       deployment as `trader_app`, a forced error reaches Sentry with no PII, and a
       point-in-time restore of staging has been timed
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
