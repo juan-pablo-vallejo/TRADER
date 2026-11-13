@@ -14,7 +14,8 @@ import { currentRates, rate } from "./pay-rates";
 export const rosterUser = z.strictObject({
   id: z.uuid(),
   name: z.string(),
-  email: z.string(),
+  // Null for a person invited by number alone.
+  email: z.string().nullable(),
   phone: z.string().nullable(),
   // The number the person signs in with (users.ts), or null: invited by email alone.
   signInPhone: z.string().nullable(),
@@ -43,7 +44,7 @@ const columns = {
 type Row = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   signInPhone: string | null;
   role: RosterUser["role"];

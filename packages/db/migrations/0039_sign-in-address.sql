@@ -1,0 +1,2 @@
+ALTER TABLE "users" ALTER COLUMN "email" DROP NOT NULL;--> statement-breakpoint
+ALTER TABLE "users" ADD CONSTRAINT "users_sign_in_address_present" CHECK ("users"."email" IS NOT NULL OR "users"."sign_in_phone" IS NOT NULL);

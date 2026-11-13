@@ -17,7 +17,8 @@ const meOutput = z.strictObject({
   companyId: z.uuid(),
   role: z.enum(userRole.enumValues),
   name: z.string(),
-  email: z.string(),
+  // Null for a person invited by number alone; then `signInPhone` is never null.
+  email: z.string().nullable(),
   phone: z.string().nullable(),
   signInPhone: z.string().nullable(),
 });

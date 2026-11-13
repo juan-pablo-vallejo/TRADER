@@ -207,6 +207,23 @@ describe("core tables", () => {
     },
   );
 
+  it("rejects a user with neither an email nor a sign-in number, and accepts either alone", async () => {
+    await rolledBack(db, async (tx) => {
+      const c = one(
+        await tx.insert(companies).values(company).returning({ id: companies.id }),
+      );
+      await tx.insert(users).values([
+        { companyId: c.id, email: "office@co.test", name: "By email" },
+        { companyId: c.id, signInPhone: "+14015550100", name: "By number" },
+        { companyId: c.id, signInPhone: "+14015550101", name: "By number too" },
+      ]);
+      const code = await sqlstate(
+        tx.insert(users).values({ companyId: c.id, name: "No address" }),
+      );
+      expect(code).toBe("23514");
+    });
+  });
+
   it("rejects one sign-in number twice in a company and accepts it in two", async () => {
     await rolledBack(db, async (tx) => {
       const [a, b] = await tx

@@ -83,7 +83,7 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
               className={controls.input}
               type="email"
               readOnly
-              value={me.data.email}
+              value={me.data.email ?? ""}
             />
             <p className={`secondary ${controls.caption}`}>{strings.managedBySignIn}</p>
           </Field>
