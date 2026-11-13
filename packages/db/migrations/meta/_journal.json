@@ -260,6 +260,27 @@
       "when": 1794520364391,
       "tag": "0036_pay-period-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1794527742295,
+      "tag": "0037_sign-in-phone",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1794527848719,
+      "tag": "0038_sign-in-phone-binding",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1794528233081,
+      "tag": "0039_sign-in-address",
+      "breakpoints": true
     }
   ]
 }

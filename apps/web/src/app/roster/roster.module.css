@@ -20,10 +20,26 @@
   display: grid;
   gap: 0 var(--space-3);
 }
+/* A sign-in address, the number or the email. In the narrow row a cell is a run of text, so
+   two addresses are separated as cells are; in the wide table each is a line of its own. */
+.address {
+  overflow-wrap: anywhere;
+}
+.address + .address::before {
+  content: "\00a0· ";
+}
+@container (min-width: 720px) {
+  .address {
+    display: block;
+  }
+  .address + .address::before {
+    content: none;
+  }
+}
 
 @media (min-width: 768px) {
   .inviteGrid {
-    grid-template-columns: 2fr 2fr 1fr;
+    grid-template-columns: 1fr 1fr;
   }
   .editorGrid {
     grid-template-columns: 1fr 1fr;

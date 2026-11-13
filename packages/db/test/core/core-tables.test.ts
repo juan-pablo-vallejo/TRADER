@@ -190,6 +190,63 @@ describe("core tables", () => {
     });
   });
 
+  it.each(["4015550100", "+14015550100x", "+441632960100", "+11015550100", ""])(
+    "rejects a sign-in number that is not a +1 E.164 number (%j)",
+    async (signInPhone) => {
+      await rolledBack(db, async (tx) => {
+        const c = one(
+          await tx.insert(companies).values(company).returning({ id: companies.id }),
+        );
+        const code = await sqlstate(
+          tx
+            .insert(users)
+            .values({ companyId: c.id, email: "ana@co.test", name: "Ana", signInPhone }),
+        );
+        expect(code).toBe("23514");
+      });
+    },
+  );
+
+  it("rejects a user with neither an email nor a sign-in number, and accepts either alone", async () => {
+    await rolledBack(db, async (tx) => {
+      const c = one(
+        await tx.insert(companies).values(company).returning({ id: companies.id }),
+      );
+      await tx.insert(users).values([
+        { companyId: c.id, email: "office@co.test", name: "By email" },
+        { companyId: c.id, signInPhone: "+14015550100", name: "By number" },
+        { companyId: c.id, signInPhone: "+14015550101", name: "By number too" },
+      ]);
+      const code = await sqlstate(
+        tx.insert(users).values({ companyId: c.id, name: "No address" }),
+      );
+      expect(code).toBe("23514");
+    });
+  });
+
+  it("rejects one sign-in number twice in a company and accepts it in two", async () => {
+    await rolledBack(db, async (tx) => {
+      const [a, b] = await tx
+        .insert(companies)
+        .values([company, { ...company, name: "Other Co" }])
+        .returning({ id: companies.id });
+      if (a === undefined || b === undefined) throw new Error("two companies expected");
+      const signInPhone = "+14015550100";
+      await tx.insert(users).values([
+        { companyId: a.id, email: "ana@co.test", name: "Ana", signInPhone },
+        { companyId: b.id, email: "ana@co.test", name: "Ana elsewhere", signInPhone },
+        { companyId: a.id, email: "no-number@co.test", name: "No number" },
+        { companyId: a.id, email: "none-either@co.test", name: "None either" },
+      ]);
+      const code = await sqlstate(
+        tx
+          .insert(users)
+          .values({ companyId: a.id, email: "ben@co.test", name: "Ben", signInPhone }),
+      );
+      expect(code).toBe("23505");
+    });
+  });
+
   it("rejects a crew without a foreman", async () => {
     await rolledBack(db, async (tx) => {
       const c = one(

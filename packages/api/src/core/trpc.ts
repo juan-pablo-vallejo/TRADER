@@ -71,7 +71,8 @@ export async function inCallerTransaction<T>(
       await tx.execute(sql`
         select set_config('app.company_id', '', true),
           set_config('app.identity_subject', '', true),
-          set_config('app.identity_email', '', true)
+          set_config('app.identity_email', '', true),
+          set_config('app.identity_phone', '', true)
       `);
       // Bounded waits before anything can wait: a first sign-in's bind can queue on a users
       // row, and nothing else would cap it.
@@ -85,15 +86,17 @@ export async function inCallerTransaction<T>(
       await assertRuntimeRole(tx);
       await tx.execute(sql`
         select set_config('app.identity_subject', ${identity.subject}, true),
-          set_config('app.identity_email', ${identity.email}, true)
+          set_config('app.identity_email', ${identity.email ?? ""}, true),
+          set_config('app.identity_phone', ${identity.phone ?? ""}, true)
       `);
       const user = await resolveUser(tx, identity, { bind });
       if (user === null) throw unauthorized();
-      // Identity settings off before the tenant goes on: 0015's guard refuses every update
-      // but the bind while either is present.
+      // Identity settings off before the tenant goes on: the guard (0015, 0038) refuses every
+      // update but the bind while any is present.
       await tx.execute(sql`
         select set_config('app.identity_subject', '', true),
           set_config('app.identity_email', '', true),
+          set_config('app.identity_phone', '', true),
           set_config('app.company_id', ${user.companyId}, true)
       `);
       return body(tx, user);

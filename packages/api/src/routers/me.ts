@@ -4,6 +4,8 @@
 // never reaches here). `update` (ARCHITECTURE, own profile) writes the caller's `name` and
 // `phone` and nothing else: email, role, company and identity are not in its input and are
 // never self-written; an email changes through the identity provider's verified flow.
+// `signInPhone` is the number the roster invited (users.ts): read here, written by no one
+// through this router.
 import { userRole, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -15,8 +17,10 @@ const meOutput = z.strictObject({
   companyId: z.uuid(),
   role: z.enum(userRole.enumValues),
   name: z.string(),
-  email: z.string(),
+  // Null for a person invited by number alone; then `signInPhone` is never null.
+  email: z.string().nullable(),
   phone: z.string().nullable(),
+  signInPhone: z.string().nullable(),
 });
 
 // Contact data, typed by hand: trimmed, bounded, an empty phone stored as NULL.
@@ -38,6 +42,7 @@ export const meRouter = router({
     name: ctx.user.name,
     email: ctx.user.email,
     phone: ctx.user.phone,
+    signInPhone: ctx.user.signInPhone,
   })),
   update: protectedProcedure
     .input(updateInput)
@@ -57,6 +62,7 @@ export const meRouter = router({
         name: row.name,
         email: ctx.user.email,
         phone: row.phone,
+        signInPhone: ctx.user.signInPhone,
       };
     }),
 });

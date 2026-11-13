@@ -10,7 +10,7 @@ import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
-import { cents, day, money } from "../format";
+import { cents, day, looksLikeSignInPhone, money, signInPhone } from "../format";
 import { Field } from "../field";
 import { Note } from "../note";
 import {
@@ -93,17 +93,26 @@ const statusOf = (row: Row) =>
 function InviteForm({ onDone }: { onDone: () => void }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<Roles>("worker");
-  const [note, setNote] = useState<string | null>(null);
+  // A note reads under the field it is about.
+  const [note, setNote] = useState<{ under: "phone" | "email"; text: string } | null>(
+    null,
+  );
   const invite = useMutation(
     trpc.roster.invite.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(strings.emailTaken);
+          setNote(
+            answer.code === "phone_taken"
+              ? { under: "phone", text: strings.phoneTaken }
+              : { under: "email", text: strings.emailTaken },
+          );
           return;
         }
+        setPhone("");
         setEmail("");
         setName("");
         setRole("worker");
@@ -116,7 +125,24 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
-    invite.mutate({ email, name, role });
+    // An empty field is an address not given, never an empty address. One is needed, and a
+    // number the server would refuse is said here, with no request made.
+    const typedPhone = phone.trim();
+    const typedEmail = email.trim();
+    if (typedPhone === "" && typedEmail === "") {
+      setNote({ under: "phone", text: strings.signInAddressNeeded });
+      return;
+    }
+    if (typedPhone !== "" && !looksLikeSignInPhone(typedPhone)) {
+      setNote({ under: "phone", text: strings.mobileNumberInvalid });
+      return;
+    }
+    invite.mutate({
+      ...(typedPhone !== "" && { phone: typedPhone }),
+      ...(typedEmail !== "" && { email: typedEmail }),
+      name,
+      role,
+    });
   };
   return (
     <form
@@ -126,18 +152,29 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       onSubmit={submit}
     >
       <div className={styles.inviteGrid}>
+        <Field id="invite-phone" label={strings.mobileNumber}>
+          <input
+            id="invite-phone"
+            autoFocus
+            className={controls.input}
+            type="tel"
+            autoComplete="off"
+            maxLength={32}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <Note text={note?.under === "phone" ? note.text : null} />
+        </Field>
         <Field id="invite-email" label={strings.email}>
           <input
             id="invite-email"
-            autoFocus
             className={controls.input}
             type="email"
             autoComplete="off"
-            required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
-          <Note text={note} />
+          <Note text={note?.under === "email" ? note.text : null} />
         </Field>
         <Field id="invite-name" label={strings.name}>
           <input
@@ -165,6 +202,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           </select>
         </Field>
       </div>
+      <p className={`secondary ${controls.caption}`}>{strings.inviteAddressHint}</p>
       {invite.isError && <Note text={strings.requestFailed} />}
       <button type="submit" className={controls.primary} disabled={invite.isPending}>
         {strings.addToRoster}
@@ -180,7 +218,7 @@ function RosterTable({ rows }: { rows: Rows }) {
       <thead>
         <tr>
           <th scope="col">{strings.name}</th>
-          <th scope="col">{strings.email}</th>
+          <th scope="col">{strings.signInAddress}</th>
           <th scope="col">{strings.role}</th>
           <th scope="col">{strings.status}</th>
           <th scope="col" className={table.number}>
@@ -200,7 +238,14 @@ function RosterTable({ rows }: { rows: Rows }) {
                 <td data-label={strings.name} className="body-strong">
                   {row.name}
                 </td>
-                <td data-label={strings.email}>{row.email}</td>
+                <td data-label={strings.signInAddress}>
+                  {row.signInPhone !== null && (
+                    <span className={styles.address}>{signInPhone(row.signInPhone)}</span>
+                  )}
+                  {row.email !== null && (
+                    <span className={styles.address}>{row.email}</span>
+                  )}
+                </td>
                 <td data-label={strings.role}>{strings.roles[row.role]}</td>
                 <td data-label={strings.status} className={table.status}>
                   {statusOf(row) === strings.invited ? (

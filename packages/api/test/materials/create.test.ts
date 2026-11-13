@@ -492,6 +492,7 @@ describe("material.create — the field-write lock", () => {
       name: "n",
       email: "e@co.test",
       phone: null,
+      signInPhone: null,
     };
     try {
       await holding(

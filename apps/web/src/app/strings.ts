@@ -57,6 +57,13 @@ export const strings = {
   edit: "Edit",
   close: "Close",
   emailTaken: "Someone on this roster already has that email.",
+  phoneTaken: "Someone on this roster already has that mobile number.",
+  mobileNumber: "Mobile number",
+  signInAddress: "Sign-in",
+  signInAddressNeeded: "Enter a mobile number or an email.",
+  mobileNumberInvalid: "Enter a ten-digit United States or Canada number.",
+  inviteAddressHint:
+    "A crew member signs in with a code sent to their mobile number; the office can use an email.",
   saveRole: "Save role",
   deactivate: "Deactivate",
   reactivate: "Reactivate",
@@ -605,6 +612,8 @@ export const strings = {
   // Profile
   contactPhone: "Contact phone",
   managedBySignIn: "Managed by your sign-in provider",
+  signInNumber: "Sign-in number",
+  signInNumberCaption: "Your sign-in code is sent here. The office changes it.",
   save: "Save",
   saved: "Saved.",
 } as const;

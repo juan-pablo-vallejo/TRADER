@@ -11,6 +11,8 @@ import {
   identity,
   outcome,
   ownerDb,
+  phoneIdentity,
+  testPhone,
   userCount,
   userRow,
   waitForBlockedUpdates,
@@ -61,6 +63,7 @@ describe("identity resolution", () => {
       name: "Bound a",
       email: w.a.boundEmail,
       phone: null,
+      signInPhone: null,
     });
     expect(seen.company).toBe(w.a.companyId);
     expect(await userRow(owner, w.a.boundId)).toEqual(before);
@@ -143,6 +146,146 @@ describe("identity resolution", () => {
   });
 });
 
+// An invitation naming a sign-in number, committed by the owner into one of the world's
+// companies and removed by its cleanup.
+async function phoneInvitation(
+  company: "a" | "b",
+  signInPhone: string,
+  opts: { email?: string; deactivated?: boolean } = {},
+) {
+  const [row] = await owner
+    .insert(users)
+    .values({
+      companyId: w[company].companyId,
+      // No email unless the test names one: invited by number alone, as the crew is.
+      ...(opts.email !== undefined && { email: opts.email }),
+      name: `By phone ${company}`,
+      signInPhone,
+      ...(opts.deactivated === true && { deactivatedAt: new Date() }),
+    })
+    .returning({ id: users.id });
+  return row!.id;
+}
+
+describe("identity resolution, by phone number", () => {
+  it("refuses an identity with no address, an unverified number, or one not in E.164", async () => {
+    const phone = testPhone();
+    const id = await phoneInvitation("a", phone);
+    for (const who of [
+      { subject: `sub-new-${w.run}` },
+      { subject: `sub-new-${w.run}`, phone },
+      { subject: `sub-new-${w.run}`, phone, phoneVerified: false },
+      { subject: `sub-new-${w.run}`, phone: phone.slice(2), phoneVerified: true },
+      { subject: `sub-new-${w.run}`, phoneVerified: true },
+      // A good number beside an email that was never verified: no identity at all.
+      { subject: `sub-new-${w.run}`, phone, phoneVerified: true, email: "a@co.test" },
+    ]) {
+      expect(await outcome(inside(who))).toBe("UNAUTHORIZED");
+    }
+    expect(await userRow(owner, id)).toMatchObject({ identity_subject: null });
+  });
+
+  it("binds a phone invitation once, and only to its number", async () => {
+    const phone = testPhone();
+    const id = await phoneInvitation("a", phone);
+    const before = await userRow(owner, id);
+    // Another number reaches nothing.
+    expect(await outcome(inside(phoneIdentity(`sub-other-${w.run}`, testPhone())))).toBe(
+      "UNAUTHORIZED",
+    );
+    expect(await userRow(owner, id)).toEqual(before);
+
+    const seen = await inside(phoneIdentity(`sub-new-${w.run}`, phone));
+    expect(seen.user).toMatchObject({ id, companyId: w.a.companyId, signInPhone: phone });
+    // The procedure runs under the tenant with every identity setting cleared, the number's
+    // too: left set, the guard would refuse each update the caller then makes.
+    expect(seen).toMatchObject({
+      company: w.a.companyId,
+      subject: null,
+      email: null,
+      phone: null,
+    });
+    const after = await userRow(owner, id);
+    expect(after).toEqual({
+      ...before,
+      identity_subject: `sub-new-${w.run}`,
+      updated_at: after!.updated_at,
+    });
+    // Once: a second login presenting the number finds no invitation left to claim.
+    expect(await outcome(inside(phoneIdentity(`sub-second-${w.run}`, phone)))).toBe(
+      "UNAUTHORIZED",
+    );
+    // And the first login resolves by its subject from then on, writing nothing.
+    await inside(phoneIdentity(`sub-new-${w.run}`, phone));
+    expect(await userRow(owner, id)).toEqual(after);
+  });
+
+  it("refuses a number invited in two companies, binding neither", async () => {
+    const phone = testPhone();
+    const ids = [await phoneInvitation("a", phone), await phoneInvitation("b", phone)];
+    const before = await Promise.all(ids.map((id) => userRow(owner, id)));
+    expect(await outcome(inside(phoneIdentity(`sub-new-${w.run}`, phone)))).toBe(
+      "UNAUTHORIZED",
+    );
+    expect(await Promise.all(ids.map((id) => userRow(owner, id)))).toEqual(before);
+  });
+
+  it("refuses a login whose number names one invitation and whose email another", async () => {
+    const phone = testPhone();
+    const id = await phoneInvitation("b", phone);
+    const before = [await userRow(owner, id), await userRow(owner, w.a.inviteId)];
+    const who = {
+      ...identity(`sub-new-${w.run}`, w.a.inviteEmail),
+      ...phoneIdentity(`sub-new-${w.run}`, phone),
+    };
+    expect(await outcome(inside(who))).toBe("UNAUTHORIZED");
+    expect([await userRow(owner, id), await userRow(owner, w.a.inviteId)]).toEqual(
+      before,
+    );
+  });
+
+  it("binds an invitation naming both by either one, and by both together", async () => {
+    const cases = [
+      (email: string, _phone: string, s: string) => identity(s, email),
+      (_email: string, phone: string, s: string) => phoneIdentity(s, phone),
+      (email: string, phone: string, s: string) => ({
+        ...identity(s, email),
+        ...phoneIdentity(s, phone),
+      }),
+    ];
+    for (const [n, who] of cases.entries()) {
+      const phone = testPhone();
+      const email = `both-${n}-${w.run}@co.test`;
+      const id = await phoneInvitation("a", phone, { email });
+      const seen = await inside(who(email, phone, `sub-both-${n}-${w.run}`));
+      expect(seen.user.id).toBe(id);
+    }
+  });
+
+  it("never binds a deactivated phone invitation", async () => {
+    const phone = testPhone();
+    const id = await phoneInvitation("a", phone, { deactivated: true });
+    const before = await userRow(owner, id);
+    expect(await outcome(inside(phoneIdentity(`sub-new-${w.run}`, phone)))).toBe(
+      "UNAUTHORIZED",
+    );
+    expect(await userRow(owner, id)).toEqual(before);
+  });
+
+  it("refuses another subject presenting a bound row's number", async () => {
+    const phone = testPhone();
+    await owner
+      .update(users)
+      .set({ signInPhone: phone })
+      .where(eq(users.id, w.a.boundId));
+    const before = await userRow(owner, w.a.boundId);
+    expect(await outcome(inside(phoneIdentity(`sub-other-${w.run}`, phone)))).toBe(
+      "UNAUTHORIZED",
+    );
+    expect(await userRow(owner, w.a.boundId)).toEqual(before);
+  });
+});
+
 describe("concurrent first sign-in", () => {
   // The owner holds the invitation's row lock until both requests are blocked in their bind
   // UPDATE, so both have already read the invitation as unbound: the race is forced, not hoped
@@ -184,6 +327,18 @@ describe("concurrent first sign-in", () => {
     ]);
     expect(results.sort()).toEqual(["OK", "UNAUTHORIZED"]);
     const bound = (await userRow(owner, w.a.inviteId))!.identity_subject;
+    expect([`sub-one-${w.run}`, `sub-two-${w.run}`]).toContain(bound);
+  });
+
+  it("lets exactly one of two subjects with the same number bind", async () => {
+    const phone = testPhone();
+    const id = await phoneInvitation("a", phone);
+    const results = await race(lock(id), [
+      () => inside(phoneIdentity(`sub-one-${w.run}`, phone)),
+      () => inside(phoneIdentity(`sub-two-${w.run}`, phone)),
+    ]);
+    expect(results.sort()).toEqual(["OK", "UNAUTHORIZED"]);
+    const bound = (await userRow(owner, id))!.identity_subject;
     expect([`sub-one-${w.run}`, `sub-two-${w.run}`]).toContain(bound);
   });
 

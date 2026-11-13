@@ -6,6 +6,20 @@
 // screens.
 import { strings } from "./strings";
 
+// A sign-in number as the server stores it, +1 and ten digits, shown as it is said aloud:
+// "(401) 555-0100". Anything else is shown as it is.
+export function signInPhone(e164: string): string {
+  const m = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164);
+  return m === null ? e164 : `(${m[1]}) ${m[2]}-${m[3]}`;
+}
+
+// Whether what was typed can be a sign-in number, so the form can say so before it asks:
+// ten digits, or eleven starting with 1, however spaced. The server decides (roster.invite).
+export function looksLikeSignInPhone(typed: string): boolean {
+  if (typed.trim().startsWith("+") && !typed.trim().startsWith("+1")) return false;
+  return /^1?[2-9]\d{9}$/.test(typed.replace(/\D/g, ""));
+}
+
 export function money(cents: number, currency: string): string {
   return new Intl.NumberFormat(undefined, {
     style: "currency",

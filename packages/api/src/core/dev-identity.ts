@@ -1,4 +1,5 @@
-// The development identity: trusts two request headers as a verified login, which is exactly
+// The development identity: trusts three request headers — a subject, and an email, a phone
+// number or both — as a verified login, which is exactly
 // why it is gated. Off unless TRADER_DEV_IDENTITY=enabled, and then only under an allowlisted
 // NODE_ENV; every deployed build and runtime is NODE_ENV=production, so a deployment cannot
 // accept a named identity. The check runs per request, never at module load, so `next build`
@@ -13,6 +14,7 @@ import {
 
 export const DEV_SUBJECT_HEADER = "x-trader-dev-subject";
 export const DEV_EMAIL_HEADER = "x-trader-dev-email";
+export const DEV_PHONE_HEADER = "x-trader-dev-phone";
 
 // An allowlist: unset or any other NODE_ENV is not development.
 const DEVELOPMENT_NODE_ENVS = ["development", "test"];
@@ -47,10 +49,13 @@ export function createDevIdentityAdapter(
           `refusing the development identity: TRADER_DEV_IDENTITY is enabled under NODE_ENV=${env.NODE_ENV ?? "(unset)"}`,
         );
       }
+      // A header that is absent is an address not claimed; one that is present must parse.
+      const email = headers.get(DEV_EMAIL_HEADER);
+      const phone = headers.get(DEV_PHONE_HEADER);
       const parsed = verifiedIdentitySchema.safeParse({
         subject: headers.get(DEV_SUBJECT_HEADER),
-        email: headers.get(DEV_EMAIL_HEADER),
-        emailVerified: true,
+        ...(email !== null && { email, emailVerified: true }),
+        ...(phone !== null && { phone, phoneVerified: true }),
       });
       return parsed.success ? parsed.data : null;
     },

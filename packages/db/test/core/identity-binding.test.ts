@@ -1,6 +1,7 @@
-// Stage 3 line 1a: identity binding on users (0015). The request context finds the caller's
-// row before the tenant is known, through two policies keyed on app.identity_subject and
-// app.identity_email, and binds an invitation on first sign-in. The guard trigger makes the
+// Stage 3 line 1a: identity binding on users (0015, and 0038 for the phone number). The
+// request context finds the caller's row before the tenant is known, through policies keyed
+// on app.identity_subject, app.identity_email and app.identity_phone, and binds an invitation
+// on first sign-in. The guard trigger makes the
 // bind change identity_subject and nothing else. Fixtures are written as the owner; every
 // assertion after asApp() runs as trader_app, in raw SQL, with no API code involved.
 import { sql, type SQL } from "drizzle-orm";
@@ -20,6 +21,11 @@ afterAll(async () => {
 
 // Two companies. Each has a bound user and an unbound invitation to the same address, in
 // different case, so the email policy's case-insensitivity and cross-company reach both show.
+// Each also has a second invitation carrying one sign-in number, the same in both companies,
+// and its bound user carries another.
+const PHONE = "+14015550100";
+const BOUND_PHONE = "+14015550111";
+
 async function twoCompanies(tx: Tx) {
   const make = async (name: string, subject: string, inviteEmail: string) => {
     const c = one(
@@ -36,6 +42,7 @@ async function twoCompanies(tx: Tx) {
           email: `${subject}@co.test`,
           name: "Bound",
           identitySubject: subject,
+          signInPhone: BOUND_PHONE,
         })
         .returning({ id: users.id }),
     );
@@ -50,7 +57,23 @@ async function twoCompanies(tx: Tx) {
         })
         .returning({ id: users.id }),
     );
-    return { companyId: c.id, boundId: bound.id, inviteId: invite.id };
+    const byPhone = one(
+      await tx
+        .insert(users)
+        .values({
+          companyId: c.id,
+          email: `by-phone-${subject}@co.test`,
+          name: "Invited by number",
+          signInPhone: PHONE,
+        })
+        .returning({ id: users.id }),
+    );
+    return {
+      companyId: c.id,
+      boundId: bound.id,
+      inviteId: invite.id,
+      phoneInviteId: byPhone.id,
+    };
   };
   return {
     a: await make("Company A", "sub-a", "Invitee@Co.test"),
@@ -58,11 +81,12 @@ async function twoCompanies(tx: Tx) {
   };
 }
 
-// As the request context will: the verified identity in two transaction-local settings.
-async function signIn(tx: Tx, subject = "", email = "") {
+// As the request context will: the verified identity in three transaction-local settings.
+async function signIn(tx: Tx, subject = "", email = "", phone = "") {
   await tx.execute(sql`
     select set_config('app.identity_subject', ${subject}, true),
-      set_config('app.identity_email', ${email}, true)
+      set_config('app.identity_email', ${email}, true),
+      set_config('app.identity_phone', ${phone}, true)
   `);
 }
 
@@ -212,6 +236,103 @@ describe("users identity policies", () => {
   });
 });
 
+describe("users identity policies, by phone number", () => {
+  it("show a number only unbound invitations to it, in every company", async () => {
+    await rolledBack(db, async (tx) => {
+      const { a, b } = await twoCompanies(tx);
+      await asApp(tx);
+      await signIn(tx, "sub-new", "", PHONE);
+      expect(await visibleIds(tx)).toEqual([a.phoneInviteId, b.phoneInviteId].sort());
+    });
+  });
+
+  it("never show a bound row by its number", async () => {
+    await rolledBack(db, async (tx) => {
+      await twoCompanies(tx);
+      await asApp(tx);
+      await signIn(tx, "someone-else", "", BOUND_PHONE);
+      expect(await visibleIds(tx)).toEqual([]);
+    });
+  });
+
+  it("show nothing once the number is cleared to ''", async () => {
+    await rolledBack(db, async (tx) => {
+      await twoCompanies(tx);
+      await asApp(tx);
+      await signIn(tx, "sub-new", "", PHONE);
+      await signIn(tx);
+      expect(await visibleIds(tx)).toEqual([]);
+    });
+  });
+
+  it("let a bind move the invitation from the phone policy to the subject policy", async () => {
+    await rolledBack(db, async (tx) => {
+      const { a } = await twoCompanies(tx);
+      const before = await ownerRow(tx, a.phoneInviteId);
+      await asApp(tx);
+      await signIn(tx, "sub-new", "", PHONE);
+      expect(
+        await rowCount(
+          tx,
+          sql`update users set identity_subject = 'sub-new'
+            where id = ${a.phoneInviteId} and identity_subject is null`,
+        ),
+      ).toBe(1);
+      await signIn(tx, "sub-new");
+      expect(await visibleIds(tx)).toEqual([a.phoneInviteId]);
+      expect(await ownerRow(tx, a.phoneInviteId)).toEqual({
+        ...before,
+        identity_subject: "sub-new",
+      });
+    });
+  });
+
+  it("reach no row when the number does not match", async () => {
+    await rolledBack(db, async (tx) => {
+      const { a } = await twoCompanies(tx);
+      await asApp(tx);
+      await signIn(tx, "sub-new", "", "+14015550177");
+      expect(
+        await rowCount(
+          tx,
+          sql`update users set identity_subject = 'sub-new' where id = ${a.phoneInviteId}`,
+        ),
+      ).toBe(0);
+    });
+  });
+
+  it("refuse binding by number to a subject other than the verified one", async () => {
+    await rolledBack(db, async (tx) => {
+      const { a } = await twoCompanies(tx);
+      await asApp(tx);
+      await signIn(tx, "sub-new", "", PHONE);
+      const error = await refused(
+        tx,
+        sql`update users set identity_subject = 'sub-forged' where id = ${a.phoneInviteId}`,
+      );
+      expect(error.code).toBe("23000");
+      expect(error.message).toBe(BIND_REFUSED);
+    });
+  });
+
+  // The subject setting is always present in a request; the guard does not rely on it.
+  it("refuse any other update while only the number is set (23000)", async () => {
+    await rolledBack(db, async (tx) => {
+      const { a } = await twoCompanies(tx);
+      const before = await ownerRow(tx, a.phoneInviteId);
+      await asApp(tx);
+      await signIn(tx, "", "", PHONE);
+      const error = await refused(
+        tx,
+        sql`update users set role = 'admin' where id = ${a.phoneInviteId}`,
+      );
+      expect(error.code).toBe("23000");
+      expect(error.message).toBe(IDENTITY_UPDATE_REFUSED);
+      expect(await ownerRow(tx, a.phoneInviteId)).toEqual(before);
+    });
+  });
+});
+
 describe("users identity guard", () => {
   // Each column a bind must not change, with a value that differs from the fixture's.
   const smuggled: [string, (other: string) => SQL][] = [
@@ -221,6 +342,7 @@ describe("users identity guard", () => {
     ["email", () => sql`email = 'changed@co.test'`],
     ["name", () => sql`name = 'Changed'`],
     ["phone", () => sql`phone = '555-0199'`],
+    ["sign_in_phone", () => sql`sign_in_phone = '+14015550199'`],
     ["created_at", () => sql`created_at = now() - interval '1 day'`],
     ["id", () => sql`id = uuidv7()`],
   ];

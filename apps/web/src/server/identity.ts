@@ -4,6 +4,7 @@
 import {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,
+  DEV_PHONE_HEADER,
   DEV_SUBJECT_HEADER,
   type IdentityAdapter,
 } from "@trader/api";
@@ -16,16 +17,18 @@ export const devSubjectFor = (email: string) => `dev:${email.trim().toLowerCase(
 
 const devAdapter = createDevIdentityAdapter();
 
-// The browser transport: a page navigation cannot set headers, so the cookie becomes the two
-// development headers before the api adapter sees the request. The adapter and its gates are
-// unchanged, and a request already carrying either header is passed as it is.
+// The browser transport: a page navigation cannot set headers, so the cookie becomes the
+// subject and email development headers before the api adapter sees the request. The adapter
+// and its gates are unchanged, and a request already carrying any development header is
+// passed as it is.
 export const webIdentity: IdentityAdapter = {
   identify(headers) {
     const email = cookieValue(headers.get("cookie"), DEV_EMAIL_COOKIE);
     if (
       email === null ||
       headers.has(DEV_SUBJECT_HEADER) ||
-      headers.has(DEV_EMAIL_HEADER)
+      headers.has(DEV_EMAIL_HEADER) ||
+      headers.has(DEV_PHONE_HEADER)
     ) {
       return devAdapter.identify(headers);
     }

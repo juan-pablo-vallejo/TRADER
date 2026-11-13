@@ -50,6 +50,7 @@ async function clockIn(
     name: "n",
     email: "e@co.test",
     phone: null,
+    signInPhone: null,
   };
   try {
     const answer = await tx.transaction((sp) =>
@@ -144,6 +145,7 @@ describe("a plan authorizes nothing", () => {
             name: "n",
             email: "e@co.test",
             phone: null,
+            signInPhone: null,
           },
           {
             id: uuidv7(),

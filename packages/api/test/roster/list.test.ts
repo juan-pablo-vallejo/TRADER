@@ -50,6 +50,7 @@ describe("roster.list", () => {
       name: "Invite a",
       email: w.a.inviteEmail,
       phone: null,
+      signInPhone: null,
       role: "worker",
       invited: true,
       deactivatedAt: null,

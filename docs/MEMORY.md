@@ -172,7 +172,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   on 2026-11-12 two restarts did not while the browser tab stayed on the looping page, and
   the third did after the tab was sent to `about:blank` first. The same day, later: two
   starts looped on every route; the third did not, after the tab was closed and the route
-  was requested once with `curl` before the browser's first load.
+  was requested once with `curl` before the browser's first load. On 2026-11-12, R1: two
+  Turbopack starts looped with all of that done; `pnpm exec next dev --webpack` did not.
 - A table body built as `rows.map((r) => [<tr key>, <tr key>])` is keyed by position at the
   outer level: when a row moves, React remounts its editor and its state (the result note) is
   gone. Wrap the pair in `<Fragment key={r.id}>`.
@@ -330,6 +331,20 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   (a pay period), pass `closeLabel`.
 - An eslint rule (`react-hooks/refs`) refuses `ref.current` inside a mutation's `onSuccess`
   written in render: move focus from an effect keyed on the state that changed.
+- A sign-in number is matched across every company, and the suites commit fixtures side by
+  side: a committed fixture takes its number from `testPhone()` (api helpers), never a
+  literal. A disposable database or a rolled-back transaction may use one.
+- `roster.invite` inserts with `ON CONFLICT DO NOTHING` and no target, on purpose: the email
+  and the number each have a unique index and one target covers one. The id is the
+  database's own, so nothing else can conflict; a writer that takes a client id must not
+  copy it.
+- To watch a constraint or policy test red, drop the constraint in the local database, run
+  the test, and add it back with the migration's own statement; the journal is untouched.
+- RLS alone already narrows a first sign-in to its invitations: removing the phone arm of
+  `resolveUser`'s WHERE turns one test red, removing the `app.identity_phone` setting four.
+- The browser's development sign-in takes an email only: a person invited by number alone is
+  signed in with `curl` and the three development headers, or through an invitation that
+  names both.
 
 ## Log
 
@@ -808,3 +823,38 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   still unticked.
 - **Next:** owner reviews and merges the branch and works the two owner lines; then track
   line R1, phone identity (plan first: schema, auth).
+
+### 2026-11-12 — Phone identity (Release 0.1, R1)
+
+- **Did:** branch `phone-identity` from `7ba46db`, seven commits. `0037`:
+  `users.sign_in_phone`, E.164 `+1` by CHECK, unique per company. `0038`:
+  `app_identity_phone()`, two more identity policies, the guard counting the phone setting.
+  `0039`: `email` nullable, one sign-in address required. The adapter carries a verified
+  email, a verified number or both; a third development header; `resolveUser` binds on
+  either, exactly one row or nobody; `roster.invite` takes a number, an email or both and
+  answers `phone_taken`; `me.get` and `roster.list` answer `signInPhone`. `/roster` and
+  `/profile`, checked in the browser on `trader_demo` at 390, 768 and 1280 — an invitation
+  by number by keyboard, by both, by neither, a foreign number, `phone_taken`,
+  `email_taken`, the Sign-in column, the profile's read-only number, no sideways scroll, no
+  control under 48 pt; a phone-only caller bound with `curl`, a second login with its
+  number 401. Watched red: both column constraints, the presence check, both policies, the
+  guard's phone rule, the setting set and cleared, the exactly-one rule, the adapter's
+  refinements, the development header, each invite refusal, the normalisation, the stored
+  number, the cookie bridge. No dependency. 1,189 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its seven
+  recommendations), the three rows of that date in ARCHITECTURE and the DESIGN amendments
+  (Profile form; Roster): a column of its own; no path to add or change a sign-in address
+  after the invitation; per-company uniqueness, ambiguity fails closed; no role rule on the
+  address; the browser's development sign-in stays email-only; the Sign-in column; `+1`
+  only. Changed from the plan: the invite form also refuses a malformed number before any
+  request; the demo and seed are untouched, so no demo person has a number. Not done: no
+  browser test in CI, no Spanish office strings, no check at 1024. Not seen in the browser,
+  covered by tests only: a person with a number and no email on `/profile`, the load
+  failure. Not verified, R2's to read on Clerk's pages: that Clerk reports numbers in
+  E.164, and how a session shows a verified number and email to the adapter. Worth knowing:
+  a two-address cell makes a wide roster row two tight lines in 49 pt; a row bound in a
+  local or demo database by a `dev:` subject can never be rebound to a provider's. For the
+  owner: `TASKS.md`, "Resync every other clone", is still unticked; the Stage 6 Neon line
+  says "29-file journal" and the journal now has 40.
+- **Next:** owner reviews and merges the branch; then track line R2, Clerk behind the
+  identity seam (plan first: auth; needs the owner's Clerk application).

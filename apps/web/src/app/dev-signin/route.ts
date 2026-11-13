@@ -3,7 +3,7 @@
 // development adapter is on: switched off, it answers 404 by name (RULES), never 403, and a
 // built app (NODE_ENV=production) is always off. Plain Responses, so the module is callable
 // in tests as Next calls it.
-import { devIdentityEnabled, verifiedIdentitySchema } from "@trader/api";
+import { devIdentityEnabled, signInEmailSchema } from "@trader/api";
 
 import { DEV_EMAIL_COOKIE } from "../../server/identity";
 import { strings } from "../strings";
@@ -35,7 +35,7 @@ export async function POST(req: Request): Promise<Response> {
   if (!devIdentityEnabled(process.env)) return notFound();
   const form = await req.formData();
   if (form.get("intent") === "signout") return redirectHome(req, cookie("", 0));
-  const email = verifiedIdentitySchema.shape.email.safeParse(form.get("email"));
+  const email = signInEmailSchema.safeParse(form.get("email"));
   if (!email.success) return new Response(strings.devSignInBadEmail, { status: 400 });
   return redirectHome(req, cookie(email.data, MAX_AGE));
 }

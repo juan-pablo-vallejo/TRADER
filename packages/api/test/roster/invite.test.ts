@@ -1,6 +1,7 @@
-// TASKS:45: roster.invite — a users row with email, name and role, worker unless named, bound
-// by the first sign-in with that email; a second email per company, whatever its case, is
-// `email_taken` with nothing written and no error; admin only.
+// roster.invite — a users row with a sign-in address (a mobile number, an email, or both),
+// name and role, worker unless named, bound by the first sign-in verified for either address;
+// a second use of an address in the company is `email_taken` or `phone_taken` with nothing
+// written and no error; admin only.
 import type { Db } from "@trader/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
@@ -15,6 +16,8 @@ import {
   identity,
   member,
   outcome,
+  phoneIdentity,
+  testPhone,
   userCount,
   userRow,
   withoutAuditInsert,
@@ -44,6 +47,10 @@ afterAll(async () => {
 
 type Input = Parameters<ReturnType<typeof appCaller>["roster"]["invite"]>[0];
 const invite = (who: unknown, input: Input) => appCaller(app, who).roster.invite(input);
+
+// An E.164 number as an admin might type it.
+const typed = (e164: string) =>
+  `(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`;
 
 describe("roster.invite", () => {
   it("inserts a worker invitation that the first sign-in with that email binds", async () => {
@@ -121,6 +128,122 @@ describe("roster.invite", () => {
         after: { role: "worker" },
       }),
     ]);
+    expect(await auditRows(owner, w.a.companyId)).toEqual([]);
+  });
+
+  it("inserts an invitation by number alone that a sign-in with that number binds", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const phone = testPhone();
+    const answer = await invite(admin.who, { phone: typed(phone), name: "Crew Member" });
+    expect(answer).toMatchObject({
+      result: "invited",
+      user: {
+        email: null,
+        signInPhone: phone,
+        phone: null,
+        role: "worker",
+        invited: true,
+      },
+    });
+    if (answer.result !== "invited") throw new Error("unreachable");
+    expect(await userRow(owner, answer.user.id)).toMatchObject({
+      company_id: w.a.companyId,
+      email: null,
+      sign_in_phone: phone,
+      phone: null,
+      identity_subject: null,
+    });
+    // Another number is no one; the number itself is this row, once.
+    const stranger = phoneIdentity(`sub-stranger-${w.run}`, testPhone());
+    expect(await outcome(appCaller(app, stranger).me.get())).toBe("UNAUTHORIZED");
+    const me = await appCaller(app, phoneIdentity(`sub-crew-${w.run}`, phone)).me.get();
+    expect(me).toMatchObject({ id: answer.user.id, email: null, signInPhone: phone });
+    const second = phoneIdentity(`sub-crew-2-${w.run}`, phone);
+    expect(await outcome(appCaller(app, second).me.get())).toBe("UNAUTHORIZED");
+    // The audit row carries the role and neither address.
+    expect(await auditRows(owner, w.a.companyId)).toEqual([
+      auditRow(w.a.companyId, admin.id, "users.invite", answer.user.id, {
+        after: { role: "worker" },
+      }),
+    ]);
+  });
+
+  it("takes a number and an email together", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const phone = testPhone();
+    const email = `both-${w.run}@co.test`;
+    const answer = await invite(admin.who, { email, phone, name: "Both", role: "admin" });
+    expect(answer).toMatchObject({
+      result: "invited",
+      user: { email, signInPhone: phone, role: "admin" },
+    });
+  });
+
+  it("stores a number in E.164 however it is typed, and answers phone_taken for each other form", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const phone = testPhone();
+    const ten = phone.slice(2);
+    const forms = [
+      `${ten.slice(0, 3)}.${ten.slice(3, 6)}.${ten.slice(6)}`,
+      ten,
+      `1-${ten.slice(0, 3)}-${ten.slice(3, 6)}-${ten.slice(6)}`,
+      `+1 ${typed(phone)}`,
+      phone,
+    ];
+    const first = await invite(admin.who, { phone: forms[0]!, name: "First" });
+    expect(first).toMatchObject({ result: "invited", user: { signInPhone: phone } });
+    const before = await userCount(owner, [w.a.companyId]);
+    for (const form of forms) {
+      expect(await invite(admin.who, { phone: form, name: "Again" })).toEqual({
+        result: "rejected",
+        code: "phone_taken",
+      });
+    }
+    // A new email beside the held number is still the number's refusal; a held email beside
+    // it is named first.
+    expect(
+      await invite(admin.who, { phone, email: `fresh-${w.run}@co.test`, name: "Again" }),
+    ).toEqual({ result: "rejected", code: "phone_taken" });
+    expect(
+      await invite(admin.who, { phone, email: w.a.boundEmail, name: "Again" }),
+    ).toEqual({ result: "rejected", code: "email_taken" });
+    expect(await userCount(owner, [w.a.companyId])).toBe(before);
+    expect(await auditRows(owner, w.a.companyId)).toHaveLength(1);
+  });
+
+  it("invites the same number in another company, and then it binds in neither", async () => {
+    const adminA = await member(owner, w, "a", "admin");
+    const adminB = await member(owner, w, "b", "admin");
+    const phone = testPhone();
+    const a = await invite(adminA.who, { phone, name: "Here" });
+    const b = await invite(adminB.who, { phone, name: "There" });
+    if (a.result !== "invited" || b.result !== "invited") throw new Error("unreachable");
+    expect(await userRow(owner, b.user.id)).toMatchObject({ company_id: w.b.companyId });
+    const who = phoneIdentity(`sub-two-${w.run}`, phone);
+    expect(await outcome(appCaller(app, who).me.get())).toBe("UNAUTHORIZED");
+    for (const id of [a.user.id, b.user.id]) {
+      expect(await userRow(owner, id)).toMatchObject({ identity_subject: null });
+    }
+  });
+
+  it("refuses no address, or a number that is not a United States or Canada one", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const before = await userCount(owner, [w.a.companyId]);
+    for (const input of [
+      { name: "Nobody" },
+      { phone: "", name: "Name" },
+      { phone: "555-0100", name: "Name" },
+      { phone: "+44 1632 960100", name: "Name" },
+      { phone: "+52 55 1234 5678", name: "Name" },
+      // Ten digits, but written with another country's prefix: not read as a +1 number.
+      { phone: "+40 1234 5678", name: "Name" },
+      { phone: "(101) 555-0100", name: "Name" },
+      { phone: "2-401-555-0100", name: "Name" },
+      { email: `x-${w.run}@co.test`, phone: "not a number", name: "Name" },
+    ]) {
+      expect(await outcome(invite(admin.who, input as Input))).toBe("BAD_REQUEST");
+    }
+    expect(await userCount(owner, [w.a.companyId])).toBe(before);
     expect(await auditRows(owner, w.a.companyId)).toEqual([]);
   });
 

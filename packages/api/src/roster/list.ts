@@ -14,8 +14,11 @@ import { currentRates, rate } from "./pay-rates";
 export const rosterUser = z.strictObject({
   id: z.uuid(),
   name: z.string(),
-  email: z.string(),
+  // Null for a person invited by number alone.
+  email: z.string().nullable(),
   phone: z.string().nullable(),
+  // The number the person signs in with (users.ts), or null: invited by email alone.
+  signInPhone: z.string().nullable(),
   role: z.enum(userRole.enumValues),
   invited: z.boolean(),
   deactivatedAt: z.date().nullable(),
@@ -32,6 +35,7 @@ const columns = {
   name: users.name,
   email: users.email,
   phone: users.phone,
+  signInPhone: users.signInPhone,
   role: users.role,
   bound: sql<boolean>`${users.identitySubject} is not null`,
   deactivatedAt: users.deactivatedAt,
@@ -40,8 +44,9 @@ const columns = {
 type Row = {
   id: string;
   name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
+  signInPhone: string | null;
   role: RosterUser["role"];
   bound: boolean;
   deactivatedAt: Date | null;
@@ -52,6 +57,7 @@ const toUser = (row: Row, currentRate: RosterUser["currentRate"]): RosterUser =>
   name: row.name,
   email: row.email,
   phone: row.phone,
+  signInPhone: row.signInPhone,
   role: row.role,
   invited: !row.bound,
   deactivatedAt: row.deactivatedAt,

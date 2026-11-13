@@ -60,6 +60,7 @@ const appUser = (
   name: "n",
   email: "e@co.test",
   phone: null,
+  signInPhone: null,
 });
 
 type Payload = LaborRecord["payload"];
