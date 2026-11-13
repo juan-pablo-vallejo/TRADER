@@ -30,7 +30,7 @@ paid is created and no production migration runs without the owner's approval of
       plugin; Vercel; Neon, read-only; Clerk; Cloudflare; Sentry; Resend. Consumer: reading
       the deployed stack in R3, R9, R10 and the go/no-go line instead of screenshots. No
       connector for either store: none is published by Apple or Google
-- [ ] R1 — Phone identity (plan first: schema, auth). Work: the identity adapter carries a
+- [x] R1 — Phone identity (plan first: schema, auth). Work: the identity adapter carries a
       verified phone number or a verified email; `roster.invite` takes a phone number, an
       email, or both; first sign-in binds on either; an additive migration for the binding
       key; the roster screen. Tests: a phone invitation binds once and only to its number;
