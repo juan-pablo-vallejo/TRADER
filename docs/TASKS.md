@@ -325,7 +325,7 @@ Done when the deployed stack serves a physical phone over the internet, a restor
 passed, and Sentry shows no PII. Every item under "Before the first deployment" in
 ARCHITECTURE.md is a line here.
 
-- [ ] **decide** Neon owner role: checked for `rolbypassrls` on the role itself; if absent, a
+- [x] **decide** Neon owner role: checked for `rolbypassrls` on the role itself; if absent, a
       decision covering the migrator-as-owner, onboarding and `pg_dump` under forced RLS
 - [ ] A sign-in address for every person on the roster (2026-11-12 Release 0.1 sign-in): the
       roster checked with the partner, each crew member's own mobile number and each
@@ -340,10 +340,9 @@ ARCHITECTURE.md is a line here.
 - [ ] An invitation notice to the person (2026-11-12 invitation at the provider: none is
       sent): what it says, and whether it is an email through Resend, after R7. Until then
       the office tells each person to sign in with their number
-- [ ] Neon Launch project; `trader_app` created in SQL and used as the login role;
-      migrations re-baselined before the first run, with a full catalog diff against the
-      journal proving nothing hand-written was lost; the Neon driver behind the seam
-      if the pooled connection needs it
+- [ ] Neon Launch project; `trader_app` created in SQL and used as the login role; the
+      journal replayed as it stands, with a schema diff against a fresh local replay proving
+      nothing hand-written was lost (ARCHITECTURE, 2026-11-12 deployed database path)
 - [ ] Environments: production and preview with separate databases and identity instances;
       the environment validated at start; a readiness check that touches the database and
       asserts the role
@@ -354,7 +353,7 @@ ARCHITECTURE.md is a line here.
       Plan first: the role it runs as, since the application role sees one tenant. Tests: a
       company that writes nothing loses its expired lines; an unexpired line stays. Done
       when no line older than the period survives a day
-- [ ] Migration procedure, written in `packages/db/README.md`: who runs it, in what order
+- [x] Migration procedure, written in `packages/db/README.md`: who runs it, in what order
       against deploys, how a failed migration is rolled forward, the `0021` precondition
 - [ ] Edge protection: rate limits per identity and per address, a request body limit, an
       `Origin` check on state-changing requests, session-cookie attributes, a content

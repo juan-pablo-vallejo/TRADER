@@ -26,7 +26,7 @@ const config: NextConfig = {
   // Baseline response headers for every route of a built app: no MIME sniffing, no framing by
   // another site, and no path or query sent to another origin. Built apps only: a development
   // server is never exposed, and nothing there needs them. Transport security: two years,
-  // subdomains included, not preloaded (ARCHITECTURE, 2026-11-13 policy and transport
+  // subdomains included, not preloaded (ARCHITECTURE, 2026-11-12 policy and transport
   // security); a browser ignores it over plain HTTP, so a local `next start` is unaffected.
   // The content security policy carries a per-request nonce and is set in proxy.ts.
   async headers() {

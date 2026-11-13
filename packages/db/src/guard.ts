@@ -3,8 +3,8 @@
 // trip, run on every call. The API runs it in every protected transaction, before the
 // identity or the tenant is set: a pool's connections are each checked, none is trusted
 // because another passed. Never at module load, so `next build` never connects (RULES).
-// The check is on current_user, so production must log in as trader_app (verified at Stage
-// 6): a SET ROLE could be reset.
+// The check is on current_user, so production must log in as trader_app: a SET ROLE could be
+// reset. assertLoginRole, below, is the check of the login itself.
 import { sql } from "drizzle-orm";
 
 import type { Db } from "./client";
