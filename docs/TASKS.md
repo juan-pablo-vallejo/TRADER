@@ -79,6 +79,15 @@ paid is created and no production migration runs without the owner's approval of
       staging acceptance, then the checks of R9 and R10. Production has none of it. Done
       when a denied command is refused, a prompted one runs against staging, and the
       runbook and a decision row state the rule
+- [ ] Sentry event tidy-up (found by R3's staging event, 2026-11-13; accepted as it is for
+      Release 0.1). Three things reach Sentry that the allow-list in `sentry-event.ts` does
+      not name or cannot help: a `user.geo` Sentry derives from the sending server's
+      address, a `trace` context the SDK adds after `beforeSend`, and `error_names` holding
+      class names the build has shortened (`k>e>DatabaseError`). Work: send
+      `user.ip_address` as null so nothing is inferred, drop the trace context where it is
+      added, and keep the reported class names readable. Tests: the byte-for-byte event
+      tests state the new shape. Done when a forced staging event shows no location, no
+      trace context and real class names
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
