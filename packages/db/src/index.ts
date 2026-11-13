@@ -8,5 +8,5 @@ export {
   type DatabaseDriver,
   type DatabaseEnv,
 } from "./env";
-export { assertRuntimeRole } from "./guard";
+export { assertLoginRole, assertRuntimeRole } from "./guard";
 export { SEED, seed, type SeedCompany, type SeedResult } from "./seed";

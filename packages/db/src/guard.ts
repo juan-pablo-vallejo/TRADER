@@ -50,3 +50,27 @@ export async function assertRuntimeRole(executor: Executor): Promise<void> {
     throw new Error(`refusing to run as ${verdict.rolname}: ${reasons.join("; ")}`);
   }
 }
+
+// The deployed check (TASKS, Release 0.1 R3): the connection logged in as trader_app itself.
+// assertRuntimeRole reads current_user, which a startup option or SET ROLE can make
+// trader_app over a login that bypasses row-level security, and RESET ROLE undoes it; a
+// login role cannot be reset. Local development and the tests reach trader_app by that
+// option over the compose superuser, so this runs only where the server is deployed (the
+// readiness check), followed by everything assertRuntimeRole refuses.
+export const RUNTIME_LOGIN_ROLE = "trader_app";
+
+export async function assertLoginRole(executor: Executor): Promise<void> {
+  const { rows } = await executor.execute<{ login: string; acting: string }>(sql`
+    SELECT session_user::text AS login, current_user::text AS acting
+  `);
+  const who = rows[0];
+  if (who === undefined)
+    throw new Error("refusing to run: the role query returned no row");
+  if (who.login !== RUNTIME_LOGIN_ROLE || who.acting !== RUNTIME_LOGIN_ROLE) {
+    throw new Error(
+      `refusing to run: logged in as ${who.login}, acting as ${who.acting}; ` +
+        `both must be ${RUNTIME_LOGIN_ROLE}`,
+    );
+  }
+  await assertRuntimeRole(executor);
+}
