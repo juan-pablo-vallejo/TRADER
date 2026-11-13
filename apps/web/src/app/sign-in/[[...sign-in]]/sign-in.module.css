@@ -1,0 +1,6 @@
+/* Clerk's form, centred in the main column. Consumed by the sign-in page. */
+.signIn {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-6);
+}

@@ -96,7 +96,7 @@ function rejectEffectOf(item: Item): string {
   return strings.rejectEffect.labor;
 }
 
-export function ApprovalsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function ApprovalsScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   // The cursor each page was asked with; the first has none.
   const [cursors, setCursors] = useState<(string | undefined)[]>([undefined]);
@@ -123,7 +123,7 @@ export function ApprovalsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : first.isError ? (
         <Failure
           error={first.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void first.refetch()}
         />
       ) : (
@@ -162,7 +162,7 @@ export function ApprovalsScreen({ devSignIn }: { devSignIn: boolean }) {
           {cursors.length > 1 && last.isError && (
             <Failure
               error={last.error}
-              devSignIn={devSignIn}
+              signInHref={signInHref}
               onRetry={() => void last.refetch()}
             />
           )}

@@ -56,7 +56,7 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.customer.pathFilter());
 }
 
-export function CustomersScreen({ devSignIn }: { devSignIn: boolean }) {
+export function CustomersScreen({ signInHref }: { signInHref: string }) {
   const list = useCustomers();
   const [adding, setAdding] = useState(false);
   const ready = list.isSuccess;
@@ -79,7 +79,7 @@ export function CustomersScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : list.isError ? (
         <Failure
           error={list.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void list.refetch()}
         />
       ) : (

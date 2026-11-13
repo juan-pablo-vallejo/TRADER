@@ -91,7 +91,7 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.job.pathFilter());
 }
 
-export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function JobsScreen({ signInHref }: { signInHref: string }) {
   const list = useJobs();
   const customers = useCustomers();
   const crews = useCrews();
@@ -118,7 +118,7 @@ export function JobsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : failed !== undefined ? (
         <Failure
           error={failed.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void failed.refetch()}
         />
       ) : (

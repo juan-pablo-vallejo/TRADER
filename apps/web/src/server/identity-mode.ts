@@ -6,14 +6,13 @@
 // sign-in pages.
 import { devIdentityEnabled } from "@trader/api";
 
+import { DEV_SIGN_IN_PATH, SIGN_IN_PATH } from "./sign-in-paths";
+
 export type IdentityMode = "dev" | "clerk";
 
 export const identityMode = (env: Record<string, string | undefined>): IdentityMode =>
   devIdentityEnabled(env) ? "dev" : "clerk";
 
 // Where a person without a session is sent. Each route answers 404 in the other mode.
-export const DEV_SIGN_IN_PATH = "/dev-signin";
-export const SIGN_IN_PATH = "/sign-in";
-
 export const signInPath = (env: Record<string, string | undefined>): string =>
   identityMode(env) === "dev" ? DEV_SIGN_IN_PATH : SIGN_IN_PATH;

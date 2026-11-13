@@ -94,7 +94,7 @@ const byDayThenStart = (a: Row, b: Row) =>
   a.worker.name.localeCompare(b.worker.name) ||
   a.id.localeCompare(b.id);
 
-export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function AssignmentsScreen({ signInHref }: { signInHref: string }) {
   const roster = useRoster();
   const jobs = useJobs();
   const [filter, setFilter] = useState<Filter>(() => ({
@@ -137,7 +137,7 @@ export function AssignmentsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : failed !== undefined ? (
         <Failure
           error={failed.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void failed.refetch()}
         />
       ) : (

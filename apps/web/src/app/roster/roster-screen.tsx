@@ -44,7 +44,7 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.roster.pathFilter());
 }
 
-export function RosterScreen({ devSignIn }: { devSignIn: boolean }) {
+export function RosterScreen({ signInHref }: { signInHref: string }) {
   const list = useRoster();
   const [adding, setAdding] = useState(false);
   return (
@@ -66,7 +66,7 @@ export function RosterScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : list.isError ? (
         <Failure
           error={list.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void list.refetch()}
         />
       ) : (

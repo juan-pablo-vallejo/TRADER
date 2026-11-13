@@ -54,7 +54,7 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.payPeriod.pathFilter());
 }
 
-export function PayPeriodsScreen({ devSignIn }: { devSignIn: boolean }) {
+export function PayPeriodsScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const list = useQuery(trpc.payPeriod.list.queryOptions());
   const [adding, setAdding] = useState(false);
@@ -78,7 +78,7 @@ export function PayPeriodsScreen({ devSignIn }: { devSignIn: boolean }) {
       ) : list.isError ? (
         <Failure
           error={list.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void list.refetch()}
         />
       ) : (
@@ -91,7 +91,7 @@ export function PayPeriodsScreen({ devSignIn }: { devSignIn: boolean }) {
               <p className={`secondary ${styles.explain}`}>
                 {strings.workDatesIn(list.data.timezone)}
               </p>
-              <PeriodsTable calendar={list.data} devSignIn={devSignIn} />
+              <PeriodsTable calendar={list.data} signInHref={signInHref} />
             </>
           )}
         </>
@@ -207,10 +207,10 @@ function OpenForm({ calendar, onDone }: { calendar: Calendar; onDone: () => void
 
 function PeriodsTable({
   calendar,
-  devSignIn,
+  signInHref,
 }: {
   calendar: Calendar;
-  devSignIn: boolean;
+  signInHref: string;
 }) {
   const [shown, setShown] = useState<string | null>(null);
   return (
@@ -252,7 +252,7 @@ function PeriodsTable({
               </tr>
               {open ? (
                 <EditorRow rowId={p.id} colSpan={3}>
-                  <Details period={p} calendar={calendar} devSignIn={devSignIn} />
+                  <Details period={p} calendar={calendar} signInHref={signInHref} />
                 </EditorRow>
               ) : null}
             </Fragment>
@@ -266,11 +266,11 @@ function PeriodsTable({
 function Details({
   period,
   calendar,
-  devSignIn,
+  signInHref,
 }: {
   period: Period;
   calendar: Calendar;
-  devSignIn: boolean;
+  signInHref: string;
 }) {
   const trpc = useTRPC();
   const read = useQuery(trpc.payPeriod.read.queryOptions({ periodId: period.id }));
@@ -282,7 +282,7 @@ function Details({
     return (
       <Failure
         error={read.error}
-        devSignIn={devSignIn}
+        signInHref={signInHref}
         onRetry={() => void read.refetch()}
       />
     );

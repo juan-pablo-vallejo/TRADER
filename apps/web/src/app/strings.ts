@@ -27,6 +27,8 @@ export const strings = {
   // States every screen can be in
   loading: "Loading…",
   signInToContinue: "Sign in to continue.",
+  notOnRoster: "This sign-in is not on a roster. Ask your office.",
+  signInNotSetUp: "Sign-in is not set up on this server.",
   notPermitted: "Not permitted.",
   requestFailed: "That didn't go through. Nothing was saved; try again.",
   loadFailed: "This page didn't load.",

@@ -16,7 +16,7 @@ import { strings } from "../strings";
 import { useTRPC } from "../trpc";
 import styles from "./profile.module.css";
 
-export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
+export function ProfileForm({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const me = useQuery(trpc.me.get.queryOptions());
@@ -50,7 +50,7 @@ export function ProfileForm({ devSignIn }: { devSignIn: boolean }) {
       ) : me.isError ? (
         <Failure
           error={me.error}
-          devSignIn={devSignIn}
+          signInHref={signInHref}
           onRetry={() => void me.refetch()}
         />
       ) : (

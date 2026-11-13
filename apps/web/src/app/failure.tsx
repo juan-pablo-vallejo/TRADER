@@ -1,38 +1,38 @@
 // What a screen shows when its query fails (ARCHITECTURE, office web client): UNAUTHORIZED
 // and FORBIDDEN are states, drawn as the empty state; anything else is the attention banner.
+// A refused caller is offered this server's sign-in (identity-mode.ts) — or, where a Clerk
+// session exists and the API still knows nobody, told so (clerk-session.tsx).
 // Consumed by every office screen.
+import { ClerkRefused } from "./clerk-session";
 import controls from "./controls.module.css";
+import { EmptyState } from "./empty-state";
+import { useClerkOn } from "./providers";
 import { strings } from "./strings";
+
+export { EmptyState };
 
 export const codeOf = (error: unknown): string | undefined =>
   (error as { data?: { code?: string } } | null)?.data?.code;
-
-export function EmptyState({ text, action }: { text: string; action?: React.ReactNode }) {
-  return (
-    <div className={controls.empty}>
-      <p className="body">{text}</p>
-      {action}
-    </div>
-  );
-}
 
 // `onRetry` refetches the query that failed: a failed read changed nothing, so the screen says
 // so and offers the one useful step.
 export function Failure({
   error,
-  devSignIn,
+  signInHref,
   onRetry,
 }: {
   error: unknown;
-  devSignIn: boolean;
+  signInHref: string;
   onRetry?: () => void;
 }) {
+  const clerk = useClerkOn();
   const code = codeOf(error);
   if (code === "UNAUTHORIZED") {
+    if (clerk) return <ClerkRefused />;
     return (
       <EmptyState
         text={strings.signInToContinue}
-        action={devSignIn ? <a href="/dev-signin">{strings.devSignIn}</a> : undefined}
+        action={<a href={signInHref}>{strings.signIn}</a>}
       />
     );
   }
