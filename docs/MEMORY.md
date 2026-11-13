@@ -345,6 +345,29 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The browser's development sign-in takes an email only: a person invited by number alone is
   signed in with `curl` and the three development headers, or through an invitation that
   names both.
+- Clerk reads its two keys from the environment itself. Handed to `clerkMiddleware` as the
+  `secretKey` option, every request is a 500 asking for a third key, `CLERK_ENCRYPTION_KEY`.
+- Clerk's `appearance` takes `colorPrimary` as a literal colour: given `var(--accent)` the
+  form's Continue button draws blank (white on white), though the focus ring takes it.
+- `@clerk/nextjs/server` is Next's server-only code and cannot load in vitest: a module the
+  suites import reaches it by `await import(…)` at the point of use (`server/identity.ts`).
+- The web suite deletes the Clerk variables after loading `.env` (`test/setup.ts`), so it never
+  reaches Clerk whatever the owner's `.env` holds; a test that wants Clerk configured stubs them.
+- `apps/web`'s vitest does not render JSX ("React is not defined"): a page test can assert
+  what a server component throws before its JSX (`notFound()`), not what it draws.
+- `apps/web` has no `zod` of its own; it validates through the schemas `@trader/api` exports
+  (`signInEmailSchema`, `signInPhoneSchema`, `verifiedIdentitySchema`). Adding it is a TASKS line.
+- Clerk's `POST /v1/users`, read on the development instance 2026-11-12: a number alone is
+  accepted and marked verified; an address another user holds is 422
+  `form_identifier_exists` with `meta.param_name`; an email with no number is 422
+  `form_data_missing`; Clerk lower-cases an email and rewrites a typed number to E.164; a
+  user id is `user_` and 27 letters and digits.
+- Clerk's script takes several seconds to draw `/sign-in` on a development instance, longer
+  right after a recompile; a screenshot taken at once shows the shell and an empty column.
+- `next dev` on Clerk needs `TRADER_DEV_IDENTITY` blank in the shell; the development
+  identity and Clerk never run together, and each one's sign-in route is 404 under the other.
+- A `createContext` call names its `directory`: `localDirectory` in every suite and the demo,
+  and a recording one where a test reads what the provider was told (`roster/invite.test.ts`).
 
 ## Log
 
@@ -858,3 +881,40 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   says "29-file journal" and the journal now has 40.
 - **Next:** owner reviews and merges the branch; then track line R2, Clerk behind the
   identity seam (plan first: auth; needs the owner's Clerk application).
+
+### 2026-11-12 — Clerk behind the identity seam (Release 0.1, R2): built, not yet signed in to
+
+- **Did:** the owner created the Clerk application (development instance, Hobby): invite-only,
+  email and SMS codes, a number required, passwords, passkeys, usernames and SSO off, no
+  self-service address change or deletion, 7-day sessions. Branch `clerk-identity-seam` from
+  `f8e0243`, six commits. `IdentityDirectory` in every context and `roster.invite` admitting
+  through it, a number now required; `@clerk/nextjs` 7.9.25 in `apps/web`; the claims adapter,
+  the identity mode, `proxy.ts`, Clerk's provider, `/sign-in`, sign-out and the
+  not-on-a-roster state; the Clerk directory over `POST /v1/users`; `.env.example`, three
+  decision rows, DESIGN, TASKS. No migration, no new procedure. Seen: a build with no Clerk
+  key passes; in the browser at 1280 and 390, `/sign-in` drawing Clerk's form with no
+  sign-up; by `curl` on `next dev`, each mode's sign-in route 404 under the other, `me.get`
+  401 with and without the development headers, `status.get` 200. Watched red: the invite's
+  admission, its order and the required number; the flag rule, the mode rule and the
+  adapter's catch; the sign-in 404; four rules of the directory. 1,213 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its seven
+  recommendations, and "phone required" set by hand in Clerk), the three rows of that date in
+  ARCHITECTURE. Changed from the plan: the directory creates the user by number alone when
+  only the email is already held at Clerk, which the plan had counted as admitted; the
+  proxy passes no key option (Notes); `apps/web` validates without `zod` (Notes); the
+  sign-in page's other two states are not unit-tested (Notes). Not done: **R2 is not
+  ticked** — nobody has signed in through Clerk. The four session claims are not on the
+  instance yet (a probe token carried none), so every Clerk session is 401 until the owner
+  pastes them (`.env.example`); after that, unseen and still owed: a sign-in end to end, the
+  bind to Clerk's user id, an invitation creating a user from the screen, sign-out, the
+  not-on-a-roster state, how the four claims render, a tab asleep past 60 s, the built
+  app's 404 and 401 by `curl`. Not done at all: Spanish office strings, a browser test in
+  CI, a session from the phone (R5). For the owner: PRD Access still says "an office admin
+  is invited by their own email address", and the code now requires a number of everyone —
+  the PRD sentence is the owner's to amend; `/sign-in` is drawn inside the office shell,
+  navigation included, where DESIGN's Brand section speaks of a sign-in screen on its own;
+  Pro is needed before a production instance (SMS, 30-day sessions), not before; `TASKS.md`,
+  "Resync every other clone", is still unticked.
+- **Next:** owner pastes the four claims into Clerk (Sessions, Customize session token) and
+  creates one test admin there; then R2's end-to-end check on a throwaway database, and the
+  tick.
