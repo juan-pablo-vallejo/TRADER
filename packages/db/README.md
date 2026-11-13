@@ -5,9 +5,14 @@ Decisions live in [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (rows of 2026-11
 0.1 R3); this file is the procedure. Local development needs none of it: `pnpm db:up`,
 `pnpm db:migrate`, `pnpm db:seed`.
 
-Every command here is run by the owner, from a terminal on the owner's machine. A connection
-string is typed into that shell and nowhere else: never into `.env`, the repository, a
-deployment's build, CI, or an assistant's session.
+On production every command here is run by the owner, from a terminal on the owner's
+machine, with the connection string typed into that shell and nowhere else. On staging the
+same commands may also be run by Claude Code, through a wrapper on the owner's machine that
+takes the owner's connection string from the macOS Keychain, refuses any host but staging's
+direct endpoint and hands the string to that one command; each use is approved as it is made
+(ARCHITECTURE, 2026-11-13 staging operator access). A connection string is never written
+into `.env`, the repository, a deployment's build or CI, and never shown to an assistant's
+session.
 
 ## Two connections, two roles
 
