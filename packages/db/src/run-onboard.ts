@@ -67,11 +67,19 @@ main().catch((error: unknown) => {
   if (error instanceof Error && error.message.startsWith("refusing to onboard")) {
     console.error(error.message);
   } else {
-    const cause = (error as { cause?: { code?: unknown } } | undefined)?.cause;
-    const name = error instanceof Error ? error.name : "unknown error";
-    console.error(
-      `onboard failed: ${name} ${typeof cause?.code === "string" ? cause.code : ""}`,
+    // A SQLSTATE sits on the cause (Drizzle wraps the driver's error); a failure to connect
+    // carries Node's own code on the error itself (ENOTFOUND, ETIMEDOUT). Either is a short
+    // token, and only a token is printed.
+    const { code, cause } = (error ?? {}) as {
+      code?: unknown;
+      cause?: { code?: unknown };
+    };
+    const token = [cause?.code, code].find(
+      (value): value is string =>
+        typeof value === "string" && /^[A-Z0-9_]{1,40}$/.test(value),
     );
+    const name = error instanceof Error ? error.name : "unknown error";
+    console.error(`onboard failed: ${name} ${token ?? ""}`);
   }
   process.exitCode = 1;
 });
