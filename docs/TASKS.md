@@ -71,6 +71,14 @@ paid is created and no production migration runs without the owner's approval of
       read a secret (plan first: it changes what a session can do). Depends on the Toolbox
       line. Consumer: Claude Code in this repository. Done when a denied tool is refused in
       a new session and a read tool still answers
+- [ ] Staging operator access (plan first: it changes what a session can do). The staging
+      owner's connection string in the macOS Keychain, used through two wrappers kept
+      outside the repository — one runs `onboard` and `psql` against staging as the owner,
+      one makes and deletes test users on Clerk's development instance — and the Vercel
+      CLI, for `vercel redeploy` of a Preview alone; every use is prompted. Consumer: R3's
+      staging acceptance, then the checks of R9 and R10. Production has none of it. Done
+      when a denied command is refused, a prompted one runs against staging, and the
+      runbook and a decision row state the rule
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
