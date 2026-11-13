@@ -17,6 +17,7 @@ export {
 } from "./core/identity";
 export {
   logReporter,
+  reportFailure,
   reportingOnError,
   type ErrorReport,
   type ErrorReporter,
