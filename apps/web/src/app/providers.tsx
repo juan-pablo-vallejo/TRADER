@@ -11,6 +11,7 @@ import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import superjson from "superjson";
 
+import { ClerkSessionReset } from "./clerk-session";
 import { TRPCProvider } from "./trpc";
 
 import type { AppRouter } from "@trader/api";
@@ -57,6 +58,7 @@ export function Providers({ children, clerk }: { children: ReactNode; clerk: boo
     <ClerkOn value={clerk}>
       <QueryClientProvider client={queryClient}>
         <TRPCProvider trpcClient={trpcClient} queryClient={queryClient}>
+          {clerk && <ClerkSessionReset />}
           {children}
         </TRPCProvider>
       </QueryClientProvider>
