@@ -114,6 +114,15 @@ paid is created and no production migration runs without the owner's approval of
       acceptance, then the staging checks of R4 to R10. Done when a Preview of that
       project is deployed and READY, a Production or other-project command is refused,
       and the browser suite's five steps pass on it
+- [ ] Permanent staging branch (by the owner, 2026-11-14). `staging-preview` is made from
+      merged `main` and kept: it holds only commits of `main` and moves by an ordinary
+      fast-forward push after each owner merge (RULES, Git and CI). Work: the branch; its
+      Preview on the staging project; the alias read from Vercel and named by a
+      branch-scoped `CLERK_AUTHORIZED_PARTIES`; the decision row, RULES. Consumer: the
+      staging checks of R4 to R10, which need an origin that outlives a feature branch.
+      Done when the browser suite's five steps pass on that alias, pass again after a
+      redeploy, and pass again after a fast-forward to a newly merged `main`, each run
+      recorded in MEMORY
 - [x] Staging browser suite (takes the place of hand-made browser checks on a deployment).
       Installs `@playwright/test`, consumed by `apps/web/e2e`: one serial flow against a
       protected preview through Vercel's automation bypass — the wall without the bypass
@@ -412,10 +421,11 @@ ARCHITECTURE.md is a line here.
       asserts the role
 - [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs;
       `attachDatabasePool` from `@vercel/functions`; pool size set against Neon's limit
-- [ ] **decide** A stable staging origin, with the domain layout at R9: a pull request's
-      preview answers on its branch's alias, which is gone when the branch is deleted, and
-      `CLERK_AUTHORIZED_PARTIES` names one origin. Done when staging has an origin that
-      outlives a branch and the Preview variables name it
+- [ ] **decide** A staging domain, with the domain layout at R9: until then staging's
+      standing origin is the `staging-preview` branch's alias on `vercel.app` (Release 0.1
+      track, permanent staging branch), which lasts as long as that branch does. Done when
+      the owner has decided whether staging takes a host of its own and, if it does, the
+      Preview variables name it
 - [ ] Daily delete of expired `sync_diagnostics` lines under Vercel Cron, in every company
       (ARCHITECTURE, rejected-record diagnostics: the writer deletes only its own company's).
       Plan first: the role it runs as, since the application role sees one tenant. Tests: a
