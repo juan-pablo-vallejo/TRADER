@@ -403,8 +403,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   deprecated. `sentry-event.ts` switches each `dataCollection` key off by name: a key a later
   version adds is on until it is listed there, and only the allow-list stands behind it.
 - An invalid `TRADER_SYNC_MODE` on a deployment now stops the start, before Sentry is
-  initialised, so it sends nothing. To force a report on staging, point a preview at the
-  owner's connection string: `/api/ready` answers 503 and reports `request ready Error`.
+  initialised, so it sends nothing. To force a report on staging with nothing changed: as
+  `trader_app`, in one transaction, set `app.company_id`, hold the fixture customer's row
+  `FOR UPDATE` for 40 s and roll back, and run the browser suite meanwhile. Its save waits
+  out the 5 s `lock_timeout`, the call answers a 500, and Sentry receives
+  `request customer.update` with `sqlstate 55P03`; the suite is red at "Saved." by design
+  and green on the next run.
+- `neon branches create` prints the new branch's connection string, password included,
+  unless given `--no-secrets`. A branch from a point in time is
+  `--parent <branch>@<timestamp>`; `branches restore` rewrites a branch in place.
+- CI runs on a pull request into `main` and on `main` only: a pull request stacked on
+  another feature branch gets no `check` until its base is `main`.
 - Clerk's publishable key is `pk_test_` or `pk_live_` and base64 of its Frontend API host
   with a closing `$`; the policy's Clerk host is read from it (`csp.ts`), so a changed key
   changes the policy with no other edit.
@@ -1176,3 +1185,28 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   instruction; `TASKS.md`, "Resync every other clone", is still unticked.
 - **Next:** owner reviews and merges the pull requests; then a forced report from this
   project's preview, and the restore drill on the owner's separate word, for R3's tick.
+
+### 2026-11-14 — Sentry proven from the staging project; the restore drill prepared, not run
+
+- **Did:** on `staging-autonomy`, documents only. A forced report from the staging
+  project's Preview, with nothing changed on staging: a rolled-back row lock held as
+  `trader_app` while the suite saved the fixture customer (Notes). Seen: the save refused,
+  one `trader_error` line in the Preview's log, and one new Sentry issue carrying the
+  environment `preview`, the release of the deployed commit, the request id, the path
+  `customer.update` and `sqlstate 55P03` — no message, input, address or person; the same
+  three extras as the open tidy-up line (`user.geo` of the sending server, a `trace`
+  context, shortened class names). The lock read as rolled back and the suite green
+  after. Read: staging's Neon project keeps 7 days of history (it read 6 hours on
+  2026-11-12); pull request #93 has no `check` because its base is not `main` (Notes).
+- **Decided:** nothing. Not done: **R3 is not ticked** — the timed restore is prepared
+  and waits for the owner's word: a branch made from a past instant of staging's default
+  branch, timed from the command to its first answered query, read back against a value
+  the suite rewrote after that instant; the default branch is not rewritten, and the drill
+  branch's deletion is a second approval. `staging-neon` does not yet pass `--no-secrets`
+  on `branches create` (Notes); a corrected wrapper is written for the owner to install,
+  and no branch is created before it is. For the owner: a third Vercel project on this
+  repository, made minutes after the staging one, has no variable, builds every pushed
+  branch and holds a Production deployment of this branch that answers 500 on a public
+  `vercel.app` host; nothing of it was changed.
+- **Next:** owner installs the corrected `staging-neon` and approves the drill; then
+  R3's record and tick. Owner merges #92, then #93 once its `check` has run.
