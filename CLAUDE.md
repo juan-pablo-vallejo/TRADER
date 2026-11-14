@@ -18,7 +18,8 @@ and stop — never edit the document to match the code.
 1. Start from MEMORY.md, then read TASKS.md. Work the named task or the next unchecked one.
 2. Plan first, then wait, for anything touching schema, auth, sync, money or CI.
 3. `pnpm check` before every commit.
-4. One change per commit; imperative subject ≤ 72 characters; no trailers; do not push.
+4. One change per commit; imperative subject ≤ 72 characters; no trailers. Push the feature
+   branch and open or update its pull request; never `main`, never merge.
 5. End by ticking TASKS.md and appending a MEMORY.md entry in its format.
 
 ## Never
@@ -26,6 +27,9 @@ and stop — never edit the document to match the code.
 - Commit a secret, a hostname or a machine address. This repository is public.
 - Add a dependency, tool or version bump without a TASKS.md line naming its consumer.
 - Force-push, delete a branch, rewrite history, or touch `archive/pre-rebuild`.
+- Touch production: its credentials, variables, deployments, data, store releases or
+  permissions are the owner's. Staging is yours within RULES.md, Toolbox; a destructive
+  step there, a fixture's cleanup included, is approved one at a time.
 - Add a document. The set is fixed in RULES.md; extend the owner instead.
 - State a version, price or platform policy from memory. Look it up.
 

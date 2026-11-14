@@ -7,12 +7,19 @@ Decisions live in [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (rows of 2026-11
 
 On production every command here is run by the owner, from a terminal on the owner's
 machine, with the connection string typed into that shell and nowhere else. On staging the
-same commands may also be run by Claude Code, through a wrapper on the owner's machine that
-takes the owner's connection string from the macOS Keychain, refuses any host but staging's
-direct endpoint and hands the string to that one command; each use is approved as it is made
-(ARCHITECTURE, 2026-11-13 staging operator access). A connection string is never written
-into `.env`, the repository, a deployment's build or CI, and never shown to an assistant's
-session.
+same commands are also run by Claude Code, through wrappers on the owner's machine that take
+a connection string from the macOS Keychain, refuse any host but staging's and hand the
+string to one fixed command (ARCHITECTURE, 2026-11-14 staging autonomy; RULES, Toolbox):
+
+| Wrapper command         | Connects as                         | Approval                         |
+| ----------------------- | ----------------------------------- | -------------------------------- |
+| application-role `psql` | `trader_app`, pooled endpoint       | none                             |
+| owner-role `onboard`    | the owner, direct endpoint          | none                             |
+| owner-role `psql`       | the owner, direct endpoint          | each use                         |
+| Neon CLI                | a key scoped to the staging project | restore, reset, delete: each use |
+
+A connection string is never written into `.env`, the repository, a deployment's build or
+CI, and never shown to an assistant's session.
 
 ## Two connections, two roles
 
@@ -148,8 +155,9 @@ is the plan's (ARCHITECTURE, 2026-11-12 Release 0.1 backups).
 3. Check `GET /api/ready` on the deployment, then one office screen. Roles and their
    passwords are stored in the database, so a restore to a time before `trader_app` was
    given its password would undo it: a 503 here after a restore means set it again (above).
-   Whether Neon restores roles with a branch is confirmed by the first drill and written
-   here then.
+   The first drill (2026-11-14, a branch made from a past instant of staging) carried
+   `trader_app` with its login attribute and its grants; a login with its password on the
+   restored state was not tried.
 4. Record the start, the end and what was lost in `docs/MEMORY.md`.
 
 A restore discards every write after the chosen time, in every company. It is the owner's

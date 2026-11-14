@@ -45,7 +45,7 @@ paid is created and no production migration runs without the owner's approval of
       Tests: a request with no
       session is 401; a session whose number or email matches no invitation is refused
       and binds nothing; the development route answers 404 in a production build
-- [ ] R3 — Production path on staging (plan first: CI, auth; takes Stage 6's Neon owner-role
+- [x] R3 — Production path on staging (plan first: CI, auth; takes Stage 6's Neon owner-role
       **decide**, Neon, Environments and Sentry lines, and the security headers of its edge
       line). Work: the owner role's attributes read on Neon and decided; `trader_app` as
       the login role over the pooled endpoint, migrations over the direct one; the
@@ -62,7 +62,7 @@ paid is created and no production migration runs without the owner's approval of
       the 2026-11-12 row "A sign-in number on every new invitation" every invitation requires
       a number and takes an email beside it. Done when PRD Access and its summary sentence
       state the rule the decision row states
-- [ ] Toolbox (documents only; plan first). A "Toolbox" section in RULES with its row in the
+- [x] Toolbox (documents only; plan first). A "Toolbox" section in RULES with its row in the
       home table, and the lines in `CLAUDE.md` that point to it: how a session discovers its
       tools, which tool is preferred for which job, what a vendor tool may read and may
       never write, how a tool is upgraded, and how one is verified before it is relied on.
@@ -71,7 +71,7 @@ paid is created and no production migration runs without the owner's approval of
       read a secret (plan first: it changes what a session can do). Depends on the Toolbox
       line. Consumer: Claude Code in this repository. Done when a denied tool is refused in
       a new session and a read tool still answers
-- [ ] Staging operator access (plan first: it changes what a session can do). The staging
+- [x] Staging operator access (plan first: it changes what a session can do). The staging
       owner's connection string in the macOS Keychain, used through two wrappers kept
       outside the repository — one runs `onboard` and `psql` against staging as the owner,
       one makes and deletes test users on Clerk's development instance — and the Vercel
@@ -88,6 +88,39 @@ paid is created and no production migration runs without the owner's approval of
       added, and keep the reported class names readable. Tests: the byte-for-byte event
       tests state the new shape. Done when a forced staging event shows no location, no
       trace context and real class names
+- [ ] Staging autonomy (plan first: it changes what a session can do; by the owner,
+      2026-11-14). On staging, routine work that destroys nothing is Claude Code's without
+      a prompt: the application role's connection, onboarding, test users, a preview's
+      redeploy and its non-secret variables, the feature branch's push and its pull
+      request. A destructive step, a test fixture's cleanup included, is approved one at a
+      time; production has none of it. Work: the wrappers and rules outside the repository,
+      RULES (Git and CI, Session protocol), `CLAUDE.md`, the database runbook,
+      `.env.example`, the decision rows. Consumer: R3's acceptance, then the staging checks
+      of R4 to R10. Done when an allowed staging command runs unprompted, a destructive one
+      prompts, a production one is refused, and the documents state the rule
+- [ ] Staging tools (by the owner, 2026-11-14), each at a version read from its registry
+      and pointed at staging alone: the Neon CLI, through a key scoped to the staging
+      project (consumer: branch work, then the restore drill); the Clerk CLI and Clerk's
+      MCP server, on the development instance (consumer: reading the instance's settings,
+      test users); the Sentry CLI, with a read token (consumer: reading events from a
+      shell; releases at R9). Done when each answers one read against staging and the
+      Toolbox section names it
+- [x] Staging project (plan first: it changes what a session can do; by the owner,
+      2026-11-14). Staging moves from branch previews of the one Vercel project to a
+      project of its own, previews only. Work: a wrapper outside the repository pinned to
+      that project's ids, for Preview deployments, their logs and their non-secret
+      variables; the browser-suite wrapper takes the URL Vercel reports; the unpinned
+      Vercel rules removed; the decision row and RULES, Toolbox. Consumer: R3's
+      acceptance, then the staging checks of R4 to R10. Done when a Preview of that
+      project is deployed and READY, a Production or other-project command is refused,
+      and the browser suite's five steps pass on it
+- [x] Staging browser suite (takes the place of hand-made browser checks on a deployment).
+      Installs `@playwright/test`, consumed by `apps/web/e2e`: one serial flow against a
+      protected preview through Vercel's automation bypass — the wall without the bypass
+      and readiness with it, an admin's sign-in through Clerk, one fixture customer
+      rewritten and read back, sign-out, a worker refused the office. Run on demand from
+      the owner's machine, never in `pnpm check` or CI; it deletes nothing. Done when the
+      five steps pass on a preview and the run is recorded in MEMORY
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
