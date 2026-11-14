@@ -128,7 +128,7 @@ the owner's machine, outside the repository.
   | Onboard a company on staging                  | the owner-role wrapper's `onboard`                                          |
   | Neon branches and operations                  | the Neon CLI through its wrapper, pinned to the staging project             |
   | Test people at the identity provider          | the Clerk wrapper or CLI, fictional numbers only                            |
-  | Deployments, logs, a preview's variables      | Vercel's connector to read; the Vercel CLI to redeploy and to set           |
+  | Deployments, logs, a preview's variables      | Vercel's connector to read; the staging project's wrapper to deploy and set |
   | Error reports                                 | Sentry's connector, or the Sentry CLI through its read-only wrapper         |
   | A browser on a deployment                     | the staging browser suite (`pnpm e2e:staging`, `apps/web/e2e`)              |
   | A browser on this machine                     | the Playwright connector against `next dev`                                 |
@@ -136,8 +136,8 @@ the owner's machine, outside the repository.
   | Library and vendor documentation              | the vendor's own connector or page, never memory                            |
 
 - **Routine staging work needs no approval**: reads, SQL as `trader_app`, onboarding, a
-  test user, a redeploy, a preview's non-secret variable, a Neon branch created, the
-  browser suite.
+  test user, a Preview deployed or redeployed, its non-secret variable, a Neon branch
+  created, the browser suite.
 - **A destructive step is approved one at a time, on staging too**: DROP, TRUNCATE, a
   DELETE or UPDATE without a key, REVOKE, any SQL as the database's owner, a role or
   password change, a Neon restore, reset or deletion, a variable removed, a test user

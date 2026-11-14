@@ -105,6 +105,15 @@ paid is created and no production migration runs without the owner's approval of
       test users); the Sentry CLI, with a read token (consumer: reading events from a
       shell; releases at R9). Done when each answers one read against staging and the
       Toolbox section names it
+- [ ] Staging project (plan first: it changes what a session can do; by the owner,
+      2026-11-14). Staging moves from branch previews of the one Vercel project to a
+      project of its own, previews only. Work: a wrapper outside the repository pinned to
+      that project's ids, for Preview deployments, their logs and their non-secret
+      variables; the browser-suite wrapper takes the URL Vercel reports; the unpinned
+      Vercel rules removed; the decision row and RULES, Toolbox. Consumer: R3's
+      acceptance, then the staging checks of R4 to R10. Done when a Preview of that
+      project is deployed and READY, a Production or other-project command is refused,
+      and the browser suite's five steps pass on it
 - [ ] Staging browser suite (takes the place of hand-made browser checks on a deployment).
       Installs `@playwright/test`, consumed by `apps/web/e2e`: one serial flow against a
       protected preview through Vercel's automation bypass — the wall without the bypass
