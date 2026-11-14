@@ -28,6 +28,9 @@ async function signIn(page: Page, phone: string): Promise<void> {
   await page.goto("/sign-in");
   const identifier = page.locator('input[name="identifier"]');
   await identifier.waitFor({ state: "visible", timeout: 60_000 });
+  // The form opens on the email address; the number is behind its "Use phone" link.
+  await page.getByRole("link", { name: "Use phone", exact: true }).click();
+  await expect(identifier).toHaveAttribute("type", "tel");
   // The field shows a country code of its own: type the national number.
   await identifier.fill(phone.replace(/^\+1/, ""));
   // Enter straight after the last digit is refused as an invalid identifier; the button a
