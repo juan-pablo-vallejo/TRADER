@@ -62,7 +62,7 @@ paid is created and no production migration runs without the owner's approval of
       the 2026-11-12 row "A sign-in number on every new invitation" every invitation requires
       a number and takes an email beside it. Done when PRD Access and its summary sentence
       state the rule the decision row states
-- [ ] Toolbox (documents only; plan first). A "Toolbox" section in RULES with its row in the
+- [x] Toolbox (documents only; plan first). A "Toolbox" section in RULES with its row in the
       home table, and the lines in `CLAUDE.md` that point to it: how a session discovers its
       tools, which tool is preferred for which job, what a vendor tool may read and may
       never write, how a tool is upgraded, and how one is verified before it is relied on.
@@ -71,7 +71,7 @@ paid is created and no production migration runs without the owner's approval of
       read a secret (plan first: it changes what a session can do). Depends on the Toolbox
       line. Consumer: Claude Code in this repository. Done when a denied tool is refused in
       a new session and a read tool still answers
-- [ ] Staging operator access (plan first: it changes what a session can do). The staging
+- [x] Staging operator access (plan first: it changes what a session can do). The staging
       owner's connection string in the macOS Keychain, used through two wrappers kept
       outside the repository — one runs `onboard` and `psql` against staging as the owner,
       one makes and deletes test users on Clerk's development instance — and the Vercel

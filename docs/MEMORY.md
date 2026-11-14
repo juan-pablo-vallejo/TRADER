@@ -416,6 +416,25 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A mutation check that removes a rollback commits its rows: after watching
   `runOnboarding`'s dry run red, delete the `Onboard Co …` company, its counter and its
   admin from the local database by hand.
+- Staging credentials are Keychain items read by wrappers in `~/.config/trader/` (RULES,
+  Toolbox): call a wrapper by its absolute path so its permission rule matches. A wrapper
+  answering "no Keychain item named …" means the owner has not created that item yet, not
+  that the command is wrong.
+- A permission rule that asks beats one that allows, whatever their order or length: never
+  add a broad "ask" for a wrapper whose narrower forms should run unprompted.
+- A session's safety classifier refuses `git push` while `CLAUDE.md` says not to push, and
+  an explicit allow rule for `git push origin` is what lets it through.
+- Playwright's `extraHTTPHeaders` go to every host a page talks to, Clerk's included. The
+  suite sends Vercel's bypass once, to the preview, with `x-vercel-set-bypass-cookie`, and
+  the browser carries the cookie. A trace or a video would store it: both are off.
+- `staging-e2e` takes a branch name and builds the branch alias itself: a deployment's own
+  hashed URL cannot be told from Production's, and the bypass opens both.
+- pnpm's quarantine does not cover `npm install -g`: read `npm view <pkg> time` and pin a
+  version a day old by hand (Neon CLI 9.4.0, not 9.5.0, on 2026-11-14).
+- The Clerk CLI reads the repository's `.env` keys by itself when run inside it
+  (`clerk whoami` says `keySource: .env`); `clerk deploy`, `clerk env` and
+  `clerk impersonate` are denied by rule. Its telemetry is off (`clerk telemetry status`).
+- `gh run list --commit` wants the full SHA; a short one answers nothing.
 
 ## Log
 
@@ -1045,3 +1064,63 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** owner migrates staging over the direct endpoint, sets `trader_app`'s password
   and Vercel's Preview variables (`packages/db/README.md`); then the staging checks, the
   restore drill, and the tick.
+
+### 2026-11-13 — R3 staging acceptance begun; written on 2026-11-14 from what can still be read
+
+- **Did:** no entry was written that day; this one states only what the repository and
+  the vendors still show. Commits `d0cb6a2` (the release named in the Sentry SDK test, red on
+  CI before it) and `00679b2` to `56f13dc` (the operator-access TASKS line, onboarding
+  printing a connection failure's own code, the runbook through the Keychain wrapper, the
+  decision row, the Sentry tidy-up line). Five Preview variables on Vercel, each scoped to
+  `production-path-staging`. On staging's database: the journal's 40 migrations, one
+  company `R3 Staging Co`, an admin and a worker with fictional numbers, both bound to a
+  Clerk user, one audit row, `trader_app`'s grants in place. Sentry `trader-web`: three
+  events at 22:06 UTC from the preview of `d0cb6a2`, `customer.list` twice and `job.list`
+  once, each `sqlstate 42501` — the forced error. Not readable any more, so not claimed:
+  which browser checks were made and what they showed.
+- **Decided:** by the owner, the row of that date in ARCHITECTURE (staging operator
+  access), since amended by the 2026-11-14 rows.
+- **Next:** the restore drill and R3's record.
+
+### 2026-11-14 — Staging autonomy, tools and the browser suite: built; staging runs wait on four Keychain items
+
+- **Did:** `production-path-staging` pushed (PR #92 at `56f13dc`). Branch
+  `staging-autonomy` from it, nine commits: three TASKS lines; `.gitignore`;
+  `@playwright/test` 1.65.0 with `apps/web/e2e` (configuration and one serial flow) and
+  the `e2e:staging` scripts; three decision rows; RULES (Toolbox, the agent's push and pull
+  request); `CLAUDE.md`; the database runbook; `.env.example`. Outside the repository:
+  wrappers `staging-app`, `staging-e2e`, `staging-neon`, `sentry-read` beside the two of
+  2026-11-13; the permission rules rewritten in three tiers; Neon CLI 9.4.0, Sentry CLI
+  3.8.2 and Clerk CLI 4.1.0 installed; Clerk's MCP server registered. Seen: `pnpm check`
+  green four times (1,295 tests), the suite listed by Playwright and refusing to load
+  without its two values; each wrapper refusing a bad call; `gh pr merge` and
+  `vercel env pull` refused by rule, `vercel whoami` and the application-role wrapper
+  running unprompted. Sentry reassessed, read-only: all three events of `TRADER-WEB-1` and
+  `TRADER-WEB-2` carry a tag list, the release, a request id, `user.geo` (Ashburn, the
+  sending server's city, with every user field null), a `trace` context and
+  `error_names` `k>e>DatabaseError`; nothing about a person, and exactly the three items
+  of the open tidy-up line. Both issues left unresolved.
+- **Decided:** by the owner on 2026-11-14 (plan v2 approved, and eight answers), the three
+  rows of that date in ARCHITECTURE: split by role, with only owner-role SQL and Neon's
+  destructive commands prompting; `.env` kept as the local file, no staging file;
+  previews kept behind Vercel's protection, reached with the automation bypass, no custom
+  domain; the suite run on demand, not in CI; the four tools; this work on its own branch.
+  Changed from the plan: the suite sends the bypass once and keeps its cookie instead of a
+  header on every request (Notes); `staging-e2e` takes a branch name, not a URL; a fourth
+  wrapper, `sentry-read`; `vercel alias` stays denied, since no domain is used; the first
+  push was refused by the session's classifier and went through once the rule was written.
+  Not done: **nothing has run against staging.** The suite has never met Clerk's form or
+  the wall, so its selectors are unproven; the application role's connection, the Neon
+  and Sentry CLIs and Clerk's MCP have answered nothing; no variable was set and no preview
+  redeployed; Playwright's browser is not downloaded; no Maestro flow was run (its devices
+  were listed); `staging-app web-dev` untried. The restore drill was not run and no
+  Sentry issue was changed, by instruction. For the owner, the smallest set: Vercel's
+  automation bypass secret generated and stored as `trader-staging-vercel-bypass`; the
+  pooled `trader_app` string as `trader-staging-app-url`; a Neon key scoped to the staging
+  project as `trader-staging-neon-key`; a Sentry read token as `trader-sentry-token`; the
+  five Preview variables widened to every preview branch; Clerk's MCP sign-in in a new
+  session; the two stray keys in `.env`. EAS is not signed in. `TASKS.md`, "Resync every
+  other clone", is still unticked.
+- **Next:** owner creates the Keychain items; then the browser suite on the
+  `production-path-staging` preview, R3's record, and the restore drill on the owner's
+  separate word.
