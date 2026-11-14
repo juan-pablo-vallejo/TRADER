@@ -462,6 +462,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   redeploy; a Preview Vercel builds from a pushed branch has the branch's alias. An origin
   that must be known before the deployment starts (`CLERK_AUTHORIZED_PARTIES`) is the
   alias, read from Vercel after the first build.
+- A branch pushed at a commit the repository already pushed starts no build on the staging
+  project: `staging-preview`, made at `main`'s own commit, had no deployment minutes later,
+  only `main`'s cancelled Production record of that commit (2026-11-14). Its first Preview
+  comes with its first new commit, the fast-forward after the next merge.
+- `staging-preview`'s alias is a host name, so it is written nowhere in this repository:
+  read it from Vercel's connector (the deployment's aliases) each time it is needed.
 
 ## Log
 
@@ -1249,3 +1255,28 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `restore-drill-20261114` still exists; the third Vercel project still builds every
   push; `TASKS.md`, "Resync every other clone", is still unticked.
 - **Next:** owner merges #93; then track line R4, the field app skeleton.
+
+### 2026-11-14 — Permanent staging branch created; no Preview of it yet, acceptance waits
+
+- **Did:** `staging-preview` pushed at `main`'s commit `856b456` by an ordinary push.
+  Read first: the staging project protected on every deployment, its ignored build step
+  building only Previews, `CLERK_AUTHORIZED_PARTIES` set for `staging-autonomy` alone.
+  Vercel started no build of the new branch (Notes), so nothing after the push could be
+  done: no deployment, no alias, no variable, no browser run. Branch
+  `staging-preview-branch`, documents only: the TASKS line, the Stage 6 decision narrowed
+  to a staging domain, one decision row, RULES (Git and CI; Toolbox). 1,295 tests.
+- **Decided:** by the owner on 2026-11-14, the row of that date in ARCHITECTURE (staging
+  has a permanent branch): fast-forward only, moved by a session, no event-triggered
+  workflow; deletion and force-pushes to be blocked at GitHub by the owner, no pull
+  request required of it. Not done: **the TASKS line is not ticked** — none of its three
+  runs exists. Owed after this branch merges: the fast-forward, the Preview of the new
+  commit confirmed as the staging project's, its alias read from Vercel, the branch-scoped
+  `CLERK_AUTHORIZED_PARTIES`, a redeploy, the suite; a second redeploy and the suite
+  again; then a record of it, which is a later pull request and a second fast-forward.
+  Unproven until then: that a fast-forward push builds, and that a redeploy keeps the
+  alias on this branch. For the owner: the GitHub ruleset for `staging-preview`;
+  `staging-autonomy` and its branch-scoped variable are left, each removal an approval of
+  its own; the drill branch `restore-drill-20261114` is kept; `TASKS.md`, "Resync every
+  other clone", is still unticked.
+- **Next:** owner merges this branch; then the fast-forward of `staging-preview` and the
+  permanent staging line's acceptance. R4 after it, plan first.
