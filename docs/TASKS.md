@@ -45,7 +45,7 @@ paid is created and no production migration runs without the owner's approval of
       Tests: a request with no
       session is 401; a session whose number or email matches no invitation is refused
       and binds nothing; the development route answers 404 in a production build
-- [ ] R3 — Production path on staging (plan first: CI, auth; takes Stage 6's Neon owner-role
+- [x] R3 — Production path on staging (plan first: CI, auth; takes Stage 6's Neon owner-role
       **decide**, Neon, Environments and Sentry lines, and the security headers of its edge
       line). Work: the owner role's attributes read on Neon and decided; `trader_app` as
       the login role over the pooled endpoint, migrations over the direct one; the

@@ -155,8 +155,9 @@ is the plan's (ARCHITECTURE, 2026-11-12 Release 0.1 backups).
 3. Check `GET /api/ready` on the deployment, then one office screen. Roles and their
    passwords are stored in the database, so a restore to a time before `trader_app` was
    given its password would undo it: a 503 here after a restore means set it again (above).
-   Whether Neon restores roles with a branch is confirmed by the first drill and written
-   here then.
+   The first drill (2026-11-14, a branch made from a past instant of staging) carried
+   `trader_app` with its login attribute and its grants; a login with its password on the
+   restored state was not tried.
 4. Record the start, the end and what was lost in `docs/MEMORY.md`.
 
 A restore discards every write after the chosen time, in every company. It is the owner's

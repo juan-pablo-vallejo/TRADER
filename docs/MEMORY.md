@@ -411,7 +411,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   and green on the next run.
 - `neon branches create` prints the new branch's connection string, password included,
   unless given `--no-secrets`. A branch from a point in time is
-  `--parent <branch>@<timestamp>`; `branches restore` rewrites a branch in place.
+  the timestamp alone as `--parent` (the default branch is implied; `<branch>@<timestamp>`
+  is refused as an unknown branch); `branches restore` rewrites a branch in place.
 - CI runs on a pull request into `main` and on `main` only: a pull request stacked on
   another feature branch gets no `check` until its base is `main`.
 - Clerk's publishable key is `pk_test_` or `pk_live_` and base64 of its Frontend API host
@@ -1210,3 +1211,27 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `vercel.app` host; nothing of it was changed.
 - **Next:** owner installs the corrected `staging-neon` and approves the drill; then
   R3's record and tick. Owner merges #92, then #93 once its `check` has run.
+
+### 2026-11-14 — Restore drill timed on staging; R3 ticked
+
+- **Did:** on `staging-autonomy`, documents only. The owner installed the corrected
+  `staging-neon` (it adds `--no-secrets` to every `branches create`; `--secrets` watched
+  refused). The drill, on the owner's word: an instant noted from the database clock
+  (20:26:12 UTC), the suite run after it so the fixture customer's notes changed, then
+  a branch of staging's default branch made from that instant. From the command to the
+  branch's first answered query: 4 s. The drill branch read the notes as they stood
+  before the instant, 40 migrations, two users, one audit row, and `trader_app` with its
+  login attribute and grants; the default branch read the later notes, untouched. R3
+  ticked on its three criteria: the office on the staging deployment as `trader_app`, a
+  forced report in Sentry with nothing of a person, a point-in-time restore timed.
+- **Decided:** by the owner on 2026-11-14 ("proceed", on the recommendation put to him):
+  the drill is a branch from a past instant, not a restore of staging's default branch in
+  place. Not done, and worth knowing: 4 s is the time for a database of one company and
+  one customer and says little about a full one; an in-place restore was not rehearsed,
+  nor a deployment pointed at restored state, nor a login as `trader_app` on it; the
+  drill branch `restore-drill-20261114` and its compute still exist — deleting it is the
+  owner's approval. For the owner: ARCHITECTURE still reads "The restore is not yet
+  rehearsed" under its production-readiness list, the owner's sentence to amend; the
+  third Vercel project and `TASKS.md`, "Resync every other clone", as before.
+- **Next:** owner merges #92, then #93 once its `check` has run; then track line R4, the
+  field app skeleton.
