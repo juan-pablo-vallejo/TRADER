@@ -114,7 +114,7 @@ paid is created and no production migration runs without the owner's approval of
       acceptance, then the staging checks of R4 to R10. Done when a Preview of that
       project is deployed and READY, a Production or other-project command is refused,
       and the browser suite's five steps pass on it
-- [ ] Permanent staging branch (by the owner, 2026-11-14). `staging-preview` is made from
+- [x] Permanent staging branch (by the owner, 2026-11-14). `staging-preview` is made from
       merged `main` and kept: it holds only commits of `main` and moves by an ordinary
       fast-forward push after each owner merge (RULES, Git and CI). Work: the branch; its
       Preview on the staging project; the alias read from Vercel and named by a

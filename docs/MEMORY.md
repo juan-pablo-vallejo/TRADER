@@ -1312,3 +1312,24 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   still unticked.
 - **Next:** owner merges this branch; then the fast-forward, the suite on the Preview it
   builds with no redeploy, and the tick. R4 after it, plan first.
+
+### 2026-11-14 — `staging-preview` green on a fast-forward's own build; the line ticked
+
+- **Did:** after the owner merged #95, `staging-preview` moved from `975027e` to `6a9a149`
+  by the ordinary push in RULES. Seen: Vercel built that commit from the push as a
+  Preview of the staging project, READY in 18 s, its git ref `staging-preview`; the
+  branch's alias on it with nothing asked; the wrapper's `owns` answering for it; 302 on
+  `/api/ready` without the bypass; the suite's five steps green in 17.9 s on the alias,
+  with no redeploy and no variable touched. Branch `staging-preview-tick`: the permanent
+  staging line ticked on its three runs (2026-11-14: on the alias, after a redeploy,
+  after a fast-forward), and this entry. 1,295 tests.
+- **Decided:** by the owner on 2026-11-14: the evidence is sufficient for the tick, and a
+  routine fast-forward gets no pull request of its own — its run is recorded in the next
+  session entry that has other work to carry. Not done, the owner's: the GitHub ruleset
+  for `staging-preview` (deletion and force-pushes blocked, no pull request required);
+  the removals, each an approval of its own — `staging-autonomy` and its branch-scoped
+  variable, the merged branches `staging-preview-branch`, `staging-preview-acceptance`
+  and this one; the drill branch `restore-drill-20261114` is kept; `TASKS.md`, "Resync
+  every other clone", is still unticked.
+- **Next:** owner merges this branch; then the fast-forward and the suite, unrecorded
+  unless red. Then track line R4, the field app skeleton, plan first.
