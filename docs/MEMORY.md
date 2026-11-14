@@ -427,8 +427,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Playwright's `extraHTTPHeaders` go to every host a page talks to, Clerk's included. The
   suite sends Vercel's bypass once, to the preview, with `x-vercel-set-bypass-cookie`, and
   the browser carries the cookie. A trace or a video would store it: both are off.
-- `staging-e2e` takes a branch name and builds the branch alias itself: a deployment's own
-  hashed URL cannot be told from Production's, and the bypass opens both.
+- `staging-e2e` takes the URL Vercel reported and asks `staging-vercel owns` before it
+  reads the bypass: staging's project builds previews only, so no URL of it is
+  Production's. Run it on the branch alias, which is what `CLERK_AUTHORIZED_PARTIES`
+  names; a hashed URL passes the wall and then fails Clerk's origin check.
+- Clerk's sign-in form opens on the email address when both are enabled; the number is
+  behind its "Use phone" link, and typing a number into the email field stops at the
+  browser's own format check with no request made.
+- The unpinned `vercel` commands are no longer allowed: every Vercel command goes through
+  `staging-vercel`, by its absolute path. Its `inspect --json` is the CLI's own shape and
+  carries no alias; read a deployment's aliases through Vercel's connector.
 - pnpm's quarantine does not cover `npm install -g`: read `npm view <pkg> time` and pin a
   version a day old by hand (Neon CLI 9.4.0, not 9.5.0, on 2026-11-14).
 - The Clerk CLI reads the repository's `.env` keys by itself when run inside it
@@ -1132,3 +1140,39 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** owner creates the Keychain items; then the browser suite on the
   `production-path-staging` preview, R3's record, and the restore drill on the owner's
   separate word.
+
+### 2026-11-14 — Staging moved to a Vercel project of its own; the browser suite green on it
+
+- **Did:** on `staging-autonomy`, four commits. The owner created a second Vercel project
+  for staging (Node 24.x, rooted at `apps/web`, protected on every deployment, previews
+  only), its bypass secret, four Preview variables and the Keychain items. Outside the
+  repository, installed by the owner from files this session wrote: `staging-vercel`,
+  pinned to that project's ids and checking them with Vercel before every command, and
+  `staging-e2e` taking a deployment URL; the nine unpinned Vercel rules removed. Watched
+  refusing: `deploy --prod`, a URL of the other project, a secret variable's name, the
+  suite on the other project's host. Seen: the project's first record assigned to
+  Production and cancelled unbuilt by its ignored build step; a CLI Preview READY with no
+  alias; the pushed branch's Preview READY on the branch alias;
+  `CLERK_AUTHORIZED_PARTIES` set for the branch to that origin and the redeploy taking the
+  alias; 302 without the bypass. The suite red once at Clerk's email field, then all five
+  steps green in 15 s on the alias. After it: one customer in the staging database with
+  the run's stamp, no runtime error on the project, no new Sentry issue. Each credential
+  answered a known read with no value shown. One `pnpm check` red on the
+  `material.create` race (Notes), green on the rerun. 1,295 tests.
+- **Decided:** by the owner on 2026-11-14, the row of that date in ARCHITECTURE: staging's
+  own project, and its Preview deployments Claude Code's without asking each time.
+  Changed from the plan: the first Preview came from the pushed branch, since the CLI
+  refuses a Preview as a project's first deployment; the suite runs on the branch alias,
+  not on a CLI deployment's URL; the wrapper also takes `env update` and `project`; the
+  session's classifier refused the wrapper's install and the permission edit, so the
+  owner ran both. Not done: **R3 is not ticked.** Of its three criteria: the office runs
+  on the staging deployment as `trader_app` — seen, readiness 200 behind the wall and the
+  flow green; a forced error reaching Sentry — seen on 2026-11-13 from the earlier
+  project's preview, not forced again from this one, so this project's DSN is unproven;
+  the timed restore — not run. Not seen: a `staging-vercel env rm` prompting, the
+  wrapper's `logs --deployment`, the suite at any other branch. For the owner: the
+  earlier project still builds a preview of every pushed branch and still holds the five
+  staging-wired Preview variables for `production-path-staging`, left untouched by
+  instruction; `TASKS.md`, "Resync every other clone", is still unticked.
+- **Next:** owner reviews and merges the pull requests; then a forced report from this
+  project's preview, and the restore drill on the owner's separate word, for R3's tick.
