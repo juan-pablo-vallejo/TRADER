@@ -21,7 +21,8 @@
     "db:generate": "pnpm --filter @trader/db generate",
     "db:migrate": "pnpm --filter @trader/db migrate",
     "db:seed": "pnpm --filter @trader/db seed",
-    "demo": "pnpm --filter @trader/api demo"
+    "demo": "pnpm --filter @trader/api demo",
+    "e2e:staging": "pnpm --filter @trader/web e2e:staging"
   },
   "prettier": {
     "semi": true,

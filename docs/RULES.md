@@ -18,6 +18,7 @@ is wrong.
 | Scope, users, features, business rules, pilot and V1 definitions   | `docs/PRD.md`                         |
 | Stack, invariants, sync protocol, domain, folder tree, decisions   | `docs/ARCHITECTURE.md`                |
 | Principles, coding standards, placement, git, CI, session protocol | `docs/RULES.md`                       |
+| Tools, what each may touch, what counts as destructive             | `docs/RULES.md`, Toolbox              |
 | Palette, typography, spacing, components, UI localization          | `docs/DESIGN.md`                      |
 | Stages, tasks, done-criteria, what is checked off                  | `docs/TASKS.md`                       |
 | Session log, context, gotchas, where the archive is                | `docs/MEMORY.md`                      |
@@ -94,14 +95,60 @@ is wrong.
 
 - `main` is protected: pull request plus the required check `check`, the literal job name in
   `.github/workflows/ci.yml`. Branch per TASKS line, pull request, `check` green, then
-  `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused.
+  `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused. The agent
+  pushes its feature branch and opens and updates that branch's pull request; the merge is
+  Juan Pablo's.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
 - One workflow, one job: install, typecheck, lint, format check, build, migrate, test. Every
   run on `main` completes; only a superseded pull-request run is cancelled.
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
-- Branches other than `main` are short-lived and deleted on merge. Force-push and branch
-  deletion are human actions in a terminal, never agent actions.
+- Branches other than `main` are short-lived and deleted on merge. A merge into `main`, a
+  force-push and a branch's deletion are human actions in a terminal, never agent actions.
+
+## Toolbox
+
+What a session works with beyond the repository, and where each tool stops. The decision is
+ARCHITECTURE's (2026-11-14, staging autonomy); the permission rules and the wrappers live on
+the owner's machine, outside the repository.
+
+- **Three environments.** Local: the compose database and `.env`. Staging: a Neon project
+  of its own, Clerk's development instance, Vercel previews. Production: the owner's alone.
+  A session holds no production credential and runs no production command, read or write.
+- **A credential is used, never read.** Each staging secret is an item in the owner's
+  macOS Keychain, handed to one fixed command by a wrapper that refuses any other target. A
+  session never prints one, never writes one to a file, and never reads `.env` or the
+  Keychain itself.
+- **Which tool for which job.**
+
+  | Job                                           | Tool                                                                        |
+  | --------------------------------------------- | --------------------------------------------------------------------------- |
+  | Read staging's data and schema                | Neon's connector (read-only), or `psql` as `trader_app` through its wrapper |
+  | Write staging's data as the application would | the deployment itself, or `psql` as `trader_app`                            |
+  | Onboard a company on staging                  | the owner-role wrapper's `onboard`                                          |
+  | Neon branches and operations                  | the Neon CLI through its wrapper, pinned to the staging project             |
+  | Test people at the identity provider          | the Clerk wrapper or CLI, fictional numbers only                            |
+  | Deployments, logs, a preview's variables      | Vercel's connector to read; the Vercel CLI to redeploy and to set           |
+  | Error reports                                 | Sentry's connector, or the Sentry CLI through its read-only wrapper         |
+  | A browser on a deployment                     | the staging browser suite (`pnpm e2e:staging`, `apps/web/e2e`)              |
+  | A browser on this machine                     | the Playwright connector against `next dev`                                 |
+  | The phone app                                 | Maestro and its connector, on a simulator or an emulator                    |
+  | Library and vendor documentation              | the vendor's own connector or page, never memory                            |
+
+- **Routine staging work needs no approval**: reads, SQL as `trader_app`, onboarding, a
+  test user, a redeploy, a preview's non-secret variable, a Neon branch created, the
+  browser suite.
+- **A destructive step is approved one at a time, on staging too**: DROP, TRUNCATE, a
+  DELETE or UPDATE without a key, REVOKE, any SQL as the database's owner, a role or
+  password change, a Neon restore, reset or deletion, a variable removed, a test user
+  deleted, and any cleanup of a fixture, synthetic ones included.
+- **A tool is verified before it is relied on**: its version is read from its registry, at
+  least a day old; its first use is a read whose answer is already known; a rule that
+  should refuse is watched refusing. A tool registered while a session is open answers
+  only in the next one.
+- **Browser flows live in `apps/web/e2e/`**, apart from `test/`: they need a deployment and
+  a secret, so `pnpm check` and CI never run them. A flow sends the bypass to the preview's
+  own host alone, records no trace, and deletes nothing.
 
 ## Session protocol (Claude Code)
 
@@ -111,6 +158,7 @@ is wrong.
 3. Make the change; run `pnpm check` (typecheck, lint, format check, tests). Per-commit green
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
-4. Commit per the rules above. Do not push.
+4. Commit per the rules above. Push the feature branch and open or update its pull request;
+   never push to `main`, never merge.
 5. End by ticking the task in TASKS.md and appending an entry to MEMORY.md in its format. Never
    edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.
