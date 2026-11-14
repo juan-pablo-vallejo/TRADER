@@ -465,7 +465,12 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A branch pushed at a commit the repository already pushed starts no build on the staging
   project: `staging-preview`, made at `main`'s own commit, had no deployment minutes later,
   only `main`'s cancelled Production record of that commit (2026-11-14). Its first Preview
-  comes with its first new commit, the fast-forward after the next merge.
+  comes with its first new commit, the fast-forward after the next merge (seen: the
+  push of `975027e` was READY in 39 s).
+- A branch's first Preview is built before its branch-scoped `CLERK_AUTHORIZED_PARTIES`
+  can exist, since the alias is read from that build: set the variable, then
+  `staging-vercel redeploy` it. A redeploy of a Preview Vercel built from a branch keeps
+  the branch's alias and moves it to the new deployment (seen twice on `staging-preview`).
 - `staging-preview`'s alias is a host name, so it is written nowhere in this repository:
   read it from Vercel's connector (the deployment's aliases) each time it is needed.
 
@@ -1280,3 +1285,30 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   other clone", is still unticked.
 - **Next:** owner merges this branch; then the fast-forward of `staging-preview` and the
   permanent staging line's acceptance. R4 after it, plan first.
+
+### 2026-11-14 — `staging-preview` fast-forwarded, authorized and green twice; not ticked
+
+- **Did:** after the owner merged #94, `staging-preview` moved from `856b456` to `975027e`
+  by the ordinary push in RULES. Seen: Vercel built that commit as a Preview of the
+  staging project, READY in 39 s, its git ref `staging-preview`; the wrapper's `owns`
+  answered for it; its one alias read from Vercel's connector; `CLERK_AUTHORIZED_PARTIES`
+  added for the branch with that origin; a redeploy READY in 44 s with the alias moved to
+  it; the suite's five steps green in 17.9 s on the alias. Then a second redeploy, READY
+  in 43 s, the same alias on it, and the suite green again in 17.2 s. Around both runs:
+  302 on `/api/ready` without the bypass, the project's protection still on every
+  deployment, no runtime error on the project in the hour, no new Sentry issue (the
+  three listed are of 2026-11-13 and of the forced report at 20:18 UTC). Branch
+  `staging-preview-acceptance`, this file only. 1,295 tests.
+- **Decided:** nothing. Not done: **the permanent staging line is not ticked.** Its third
+  run, the suite on what a fast-forward builds, has been seen only through a redeploy:
+  the build the push made had no authorized origin yet and was never run against. With
+  the variable now in place, the next fast-forward is the first to show it unaided. Not
+  seen: the suite red and then recovered on this alias; a session finding the branch
+  behind at its start. Nothing was removed: `staging-autonomy`, its branch-scoped
+  variable, the merged branch `staging-preview-branch` and the drill branch
+  `restore-drill-20261114` all stand. For the owner: the GitHub ruleset for
+  `staging-preview` (deletion and force-pushes blocked, no pull request required); each
+  removal above is an approval of its own; `TASKS.md`, "Resync every other clone", is
+  still unticked.
+- **Next:** owner merges this branch; then the fast-forward, the suite on the Preview it
+  builds with no redeploy, and the tick. R4 after it, plan first.
