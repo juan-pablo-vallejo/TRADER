@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import { assertRuntimeRole } from "../../src/guard";
+import { assertLoginRole, assertRuntimeRole } from "../../src/guard";
 import { asApp, rolledBack } from "../helpers";
 
 let db: Db;
@@ -48,6 +48,47 @@ describe("assertRuntimeRole", () => {
     await rolledBack(db, async (tx) => {
       await asApp(tx);
       await expect(assertRuntimeRole(tx)).resolves.toBeUndefined();
+    });
+  });
+});
+
+// SET LOCAL SESSION AUTHORIZATION changes session_user as a login does, and ends with the
+// transaction; SET LOCAL ROLE (asApp) changes current_user alone.
+describe("assertLoginRole", () => {
+  it("refuses trader_app reached by SET ROLE over another login, and names both", async () => {
+    const { rows } = await db.execute<{ me: string }>(sql`select session_user as me`);
+    await rolledBack(db, async (tx) => {
+      await asApp(tx);
+      await expect(assertLoginRole(tx)).rejects.toThrow(
+        `refusing to run: logged in as ${rows[0]!.me}, acting as trader_app`,
+      );
+    });
+  });
+
+  it("refuses a login that is not trader_app, though it bypasses nothing", async () => {
+    await rolledBack(db, async (tx) => {
+      await tx.execute(sql`create role trader_login_probe nologin`);
+      await tx.execute(sql`set local session authorization trader_login_probe`);
+      await expect(assertLoginRole(tx)).rejects.toThrow(
+        "refusing to run: logged in as trader_login_probe, acting as trader_login_probe",
+      );
+    });
+  });
+
+  it("refuses trader_app as the login when a tenant table is not forced", async () => {
+    await rolledBack(db, async (tx) => {
+      await tx.execute(sql`alter table jobs no force row level security`);
+      await tx.execute(sql`set local session authorization trader_app`);
+      await expect(assertLoginRole(tx)).rejects.toThrow(
+        "refusing to run as trader_app: tables without forced RLS: jobs",
+      );
+    });
+  });
+
+  it("passes when the login is trader_app on the migrated schema", async () => {
+    await rolledBack(db, async (tx) => {
+      await tx.execute(sql`set local session authorization trader_app`);
+      await expect(assertLoginRole(tx)).resolves.toBeUndefined();
     });
   });
 });

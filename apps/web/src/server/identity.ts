@@ -6,7 +6,6 @@ import {
   DEV_EMAIL_HEADER,
   DEV_PHONE_HEADER,
   DEV_SUBJECT_HEADER,
-  logReporter,
   reportFailure,
   type IdentityAdapter,
 } from "@trader/api";
@@ -14,6 +13,7 @@ import {
 import { clerkEnv } from "./clerk-env";
 import { createClerkIdentityAdapter } from "./clerk-identity";
 import { identityMode } from "./identity-mode";
+import { webReporter } from "./reporter";
 
 // The cookie POST /dev-signin sets. It carries the email only: the subject is derived, never
 // typed, because the first sign-in binds `identity_subject` for good (0015's guard), and a
@@ -50,7 +50,7 @@ const devBridge: IdentityAdapter = {
 const clerkAdapter = createClerkIdentityAdapter({
   readSession: async () => (await import("@clerk/nextjs/server")).auth(),
   onError: (error) =>
-    reportFailure(logReporter, error, { source: "request", path: null, type: undefined }),
+    reportFailure(webReporter, error, { source: "request", path: null, type: undefined }),
 });
 
 // The mode is read per request, never at module load (RULES: guards fail closed at request

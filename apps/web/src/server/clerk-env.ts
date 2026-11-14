@@ -23,16 +23,31 @@ const isOrigin = (value: string): boolean => {
   }
 };
 
-// Both keys and a well-formed origin list, or null: one key without the other, or an origin
-// that is not one, is no configuration.
-export function clerkEnv(env: Record<string, string | undefined>): ClerkEnv | null {
-  const publishableKey = env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "";
-  const secretKey = env.CLERK_SECRET_KEY ?? "";
-  if (!PUBLISHABLE_KEY.test(publishableKey) || !SECRET_KEY.test(secretKey)) return null;
-  const authorizedParties = (env.CLERK_AUTHORIZED_PARTIES ?? "")
+const parties = (env: Record<string, string | undefined>): string[] =>
+  (env.CLERK_AUTHORIZED_PARTIES ?? "")
     .split(",")
     .map((o) => o.trim())
     .filter((o) => o !== "");
-  if (!authorizedParties.every(isOrigin)) return null;
-  return { publishableKey, secretKey, authorizedParties };
+
+// The Clerk variables that are missing or malformed, by name and never by value: what the
+// deployment's environment check prints (deploy-env.ts).
+export function clerkEnvFaults(env: Record<string, string | undefined>): string[] {
+  return [
+    ...(PUBLISHABLE_KEY.test(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "")
+      ? []
+      : ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"]),
+    ...(SECRET_KEY.test(env.CLERK_SECRET_KEY ?? "") ? [] : ["CLERK_SECRET_KEY"]),
+    ...(parties(env).every(isOrigin) ? [] : ["CLERK_AUTHORIZED_PARTIES"]),
+  ];
+}
+
+// Both keys and a well-formed origin list, or null: one key without the other, or an origin
+// that is not one, is no configuration.
+export function clerkEnv(env: Record<string, string | undefined>): ClerkEnv | null {
+  if (clerkEnvFaults(env).length > 0) return null;
+  return {
+    publishableKey: env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "",
+    secretKey: env.CLERK_SECRET_KEY ?? "",
+    authorizedParties: parties(env),
+  };
 }

@@ -2,12 +2,7 @@
 // database and `no-store`; a protected call without an identity is 401; a failing call
 // reaches the reporter once; a signed-in call runs under trader_app against the real pool.
 import { companies, users } from "@trader/db/schema";
-import {
-  DEV_EMAIL_HEADER,
-  DEV_SUBJECT_HEADER,
-  localDirectory,
-  logReporter,
-} from "@trader/api";
+import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER, localDirectory } from "@trader/api";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -152,9 +147,5 @@ describe("the route handler", () => {
       .from(companies)
       .where(eq(companies.id, fixture.companyId));
     expect(company).toBeDefined();
-  });
-
-  it("wires the stderr reporter in route.ts", () => {
-    expect(logReporter).toBeDefined();
   });
 });

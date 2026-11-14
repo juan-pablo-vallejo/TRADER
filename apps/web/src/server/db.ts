@@ -15,8 +15,9 @@ export function getDb(env: Record<string, string | undefined> = process.env): Db
     // every protected transaction (api trpc.ts; db guard.ts). So under development and test,
     // every connection the pool opens starts its session as trader_app through the startup
     // parameter `role`, as the api suite does (its helpers' appDb). Production logs in as
-    // trader_app and the pool passes no options (verified at Stage 6): a SET ROLE could be
-    // reset, a login role cannot.
+    // trader_app and the pool passes no options: a SET ROLE could be reset, a login role
+    // cannot, and the pooled endpoint accepts no startup option. The readiness check holds a
+    // deployment to that login (ready.ts).
     if (env.NODE_ENV === "development" || env.NODE_ENV === "test") {
       db.$client.options.options = "-c role=trader_app";
     }

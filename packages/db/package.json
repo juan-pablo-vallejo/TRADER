@@ -11,6 +11,7 @@
     "generate": "drizzle-kit generate",
     "migrate": "drizzle-kit migrate",
     "seed": "tsx src/run-seed.ts",
+    "onboard": "tsx src/run-onboard.ts",
     "test": "vitest run"
   },
   "devDependencies": {

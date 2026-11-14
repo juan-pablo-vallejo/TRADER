@@ -10,10 +10,7 @@
 // moves the counter, and only restores the admin's role.
 import { sql } from "drizzle-orm";
 
-import type { Db } from "./client";
-
-// A client or a transaction, as in guard.ts.
-type Executor = Pick<Db, "execute">;
+import { assertBypassingRole, type Executor } from "./owner";
 
 // What one bootstrap writes: the company, its counter and its first admin. The development
 // seed below is the default; the demo fixture (api demo/) hands in its own, so the three raw
@@ -49,19 +46,7 @@ export async function seed(
   executor: Executor,
   company: SeedCompany = SEED,
 ): Promise<SeedResult> {
-  const { rows: roles } = await executor.execute<{ me: string; bypasses: boolean }>(sql`
-    SELECT rolname AS me, rolsuper OR rolbypassrls AS bypasses
-    FROM pg_roles WHERE rolname = current_user
-  `);
-  const role = roles[0];
-  if (role === undefined) {
-    throw new Error("refusing to seed: current_user has no pg_roles row");
-  }
-  if (!role.bypasses) {
-    throw new Error(
-      `refusing to seed as ${role.me}: the role has neither rolsuper nor rolbypassrls`,
-    );
-  }
+  const currentUser = await assertBypassingRole(executor, "seed");
 
   await executor.execute(sql`
     INSERT INTO companies (id, name, timezone)
@@ -95,5 +80,5 @@ export async function seed(
   `);
   const count = counts[0];
   if (count === undefined) throw new Error("seed: the count query returned no row");
-  return { currentUser: role.me, ...count };
+  return { currentUser, ...count };
 }

@@ -61,6 +61,16 @@ function minimumBuild(value: string | undefined): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
+// The kill-switch variables that do not parse, by name, in CONFIG_VARS order. Also read at
+// start by the deployment's environment check (apps/web, deploy-env.ts), which refuses to
+// start on any; a running server that meets one answers `paused` below.
+export function invalidConfigVars(env: Record<string, string | undefined>): ConfigVar[] {
+  return [
+    ...(mode(env.TRADER_SYNC_MODE) === null ? (["TRADER_SYNC_MODE"] as const) : []),
+    ...PLATFORMS.map((p) => MIN_BUILD[p]).filter((v) => minimumBuild(env[v]) === null),
+  ];
+}
+
 // The most restrictive of the configured mode, the build's and the protocol's verdicts. An
 // invalid variable in any of the three is `paused`, never `normal`: a pause loses nothing, and a
 // mistyped `paused` must not ship as normal. `invalid` names the variables, never their values.
@@ -69,14 +79,12 @@ export function serviceStatus(
   client: StatusClient,
   protocols: ProtocolRange,
 ): { state: ServiceState; invalid: ConfigVar[] } {
-  const invalid: ConfigVar[] = [];
+  const invalid = invalidConfigVars(env);
   const configured = mode(env.TRADER_SYNC_MODE);
-  if (configured === null) invalid.push("TRADER_SYNC_MODE");
   const minimums: Partial<Record<Platform, number>> = {};
   for (const p of PLATFORMS) {
     const m = minimumBuild(env[MIN_BUILD[p]]);
-    if (m === null) invalid.push(MIN_BUILD[p]);
-    else minimums[p] = m;
+    if (m !== null) minimums[p] = m;
   }
   const verdicts: ServiceState[] = [configured ?? "paused"];
   if (invalid.length > 0) verdicts.push("paused");
