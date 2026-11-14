@@ -414,7 +414,8 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the timestamp alone as `--parent` (the default branch is implied; `<branch>@<timestamp>`
   is refused as an unknown branch); `branches restore` rewrites a branch in place.
 - CI runs on a pull request into `main` and on `main` only: a pull request stacked on
-  another feature branch gets no `check` until its base is `main`.
+  another feature branch gets no `check` until its base is `main`. Retargeting it to
+  `main` starts no run either (seen on #93: "waiting for status"); the next push does.
 - Clerk's publishable key is `pk_test_` or `pk_live_` and base64 of its Frontend API host
   with a closing `$`; the policy's Clerk host is read from it (`csp.ts`), so a changed key
   changes the policy with no other edit.
@@ -1235,3 +1236,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   third Vercel project and `TASKS.md`, "Resync every other clone", as before.
 - **Next:** owner merges #92, then #93 once its `check` has run; then track line R4, the
   field app skeleton.
+
+### 2026-11-14 — The drill written into ARCHITECTURE; #93 on `main` with its `check`
+
+- **Did:** on `staging-autonomy`, documents only, after the owner merged #92 and #93
+  retargeted to `main`. ARCHITECTURE: the readiness list states the rehearsal as an
+  isolated recovery timed at 4 s and names what was not rehearsed, with a decision row
+  for the drill's form. The pull request's description rewritten to what was verified.
+  The required `check` had no run after the retarget; the next push started one (Notes).
+- **Decided:** by the owner on 2026-11-14, the row of that date in ARCHITECTURE (the
+  restore drill is an isolated recovery). Not done: the drill branch
+  `restore-drill-20261114` still exists; the third Vercel project still builds every
+  push; `TASKS.md`, "Resync every other clone", is still unticked.
+- **Next:** owner merges #93; then track line R4, the field app skeleton.
