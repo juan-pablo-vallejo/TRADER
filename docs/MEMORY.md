@@ -240,7 +240,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A built app (`next start`) cannot be browsed locally: under `NODE_ENV=production` the pool
   keeps the compose superuser and the development identity is refused, so every call is a
   500 by design. Browser checks use `next dev`; a stale `next start` holding port 3000 moves
-  `next dev` to 3001.
+  `next dev` to 3001. Since R3 it also refuses to start without its whole environment: for a
+  header or `/sign-in` check, give the shell a placeholder `DATABASE_URL` (a Postgres URL
+  nothing listens on), a placeholder `SENTRY_DSN`, `CLERK_AUTHORIZED_PARTIES` as the local
+  origin and `TRADER_DEV_IDENTITY` blank; `/api/ready` then answers 503, as it should.
 - A new audited action is a member of `AuditEntry` (`core/audit.ts`), a line in the inventory
   test's `WRITERS` and in the demo's `EXPECTED_AUDIT`, and a decision row; the compiler and
   the two tests fail until all three agree.
@@ -382,6 +385,37 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Clerk's form stuck once on its code step, "needs_first_factor not supported yet", with the
   sign-in in fact made (2026-11-12, one of six sign-ins, straight after a hot reload of
   edited files; not reproduced over the same steps). Reloading the page showed the office.
+- Next compiles `instrumentation.ts` for the edge runtime too. A dynamic import there is
+  followed unless it sits inside `if (process.env.NEXT_RUNTIME === "nodejs") { … }`; an early
+  `return` on the opposite test is not enough, and the build warns of `node:crypto` in the
+  Edge Runtime from deep inside `packages/api`. Everything it does lives in `server/start.ts`.
+- `register()` does not run during `next build` (seen: a build with nothing set passes, and
+  `next start` on the same build answers 500 to everything with the variables named).
+- `pnpm --filter <pkg> add` relinks that package alone. `@sentry/nextjs` brought
+  `@opentelemetry/api`, an optional peer of `drizzle-orm`, which re-keyed `drizzle-orm` for
+  every importer: `tsc` saw two copies ("separate declarations of a private property") until
+  a root `pnpm install`. After adding any package, install at the root.
+- Sentry's SDK takes an event's type from `error.name`, not the class: a subclass that sets
+  no `name` is reported as `Error`. It adds `sdk` to an event after `beforeSend`. At start it
+  warns unless `enableRuntimeChannelInjection` is `false`, and warns of `beforeSendTransaction`
+  under its default trace lifecycle: neither option is needed with tracing off.
+- Sentry 11 collects headers, cookies, bodies and the user by default; `sendDefaultPii` is
+  deprecated. `sentry-event.ts` switches each `dataCollection` key off by name: a key a later
+  version adds is on until it is listed there, and only the allow-list stands behind it.
+- An invalid `TRADER_SYNC_MODE` on a deployment now stops the start, before Sentry is
+  initialised, so it sends nothing. To force a report on staging, point a preview at the
+  owner's connection string: `/api/ready` answers 503 and reports `request ready Error`.
+- Clerk's publishable key is `pk_test_` or `pk_live_` and base64 of its Frontend API host
+  with a closing `$`; the policy's Clerk host is read from it (`csp.ts`), so a changed key
+  changes the policy with no other edit.
+- Clerk's script posts usage to a host of its own from a development instance; the policy
+  refuses it, so the provider is given `telemetry={false}`. Its server notice still prints.
+- Neon's pooled endpoint takes no startup `options`, no `SET` and no session advisory lock;
+  the direct one does. Neon's console leaves a sample table, `playing_with_neon`, in a new
+  database when its first sample query is run: drop it before the first migration.
+- A mutation check that removes a rollback commits its rows: after watching
+  `runOnboarding`'s dry run red, delete the `Onboard Co …` company, its counter and its
+  admin from the local database by hand.
 
 ## Log
 
@@ -957,3 +991,57 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   user of the owner's own, `+1 201 555 0000`, is still on the development instance.
 - **Next:** owner reviews and merges the branch; then track line R3, the production path
   on staging (plan first: CI, auth).
+
+### 2026-11-12 — Production path on staging (Release 0.1, R3): built, staging begun, not ticked
+
+- **Did:** branch `production-path-staging` from `c8e7209`, seven commits. `assertLoginRole`
+  beside the runtime guard. `pnpm --filter @trader/db onboard`, a dry run unless `--apply`.
+  The environment checked at start (`deploy-env.ts`, `instrumentation.ts`, `start.ts`).
+  `GET /api/ready`. The content security policy per request in `proxy.ts` and transport
+  security in `next.config.ts`. `@sentry/nextjs` 11.12.0 in `apps/web` behind
+  `ErrorReporter`, server only, every outgoing event rebuilt from an allow-list.
+  `packages/db/README.md`; six decision rows; `.env.example`. No migration, no procedure, no
+  CI change. Seen locally on a built app: a build with nothing set passes and the same
+  build refuses to start, naming `DATABASE_URL`, `CLERK_AUTHORIZED_PARTIES`, `SENTRY_DSN`;
+  with placeholders, the four baseline headers and the policy on `/sign-in`, all 18 scripts
+  carrying the request's nonce, Clerk's form drawn in a browser with one refusal in the
+  console, its telemetry, since switched off; `/api/ready` 503 against no database, reported.
+  Watched red: both login comparisons and the guard behind them; onboarding's bypass
+  refusal, both duplicate refusals, the name's case and spacing, input validation, the
+  stated counters, the rollback; each start-up requirement and both runtime checks;
+  readiness's login check, its report and its status; the policy's host check, closing mark,
+  `'strict-dynamic'` and nonce length; the allow-list, an exception's message, the message
+  rule, the tag list, the integrations and collection switches, the reporter's address check
+  and its deferral. 1,295 tests.
+- **Decided:** by the owner on 2026-11-12 (the plan approved as written, its nine
+  recommendations, and three answers: `@sentry/nextjs`, staging in a Neon project of its
+  own, the journal replayed as it stands), the six rows of that date in ARCHITECTURE.
+  Changed from the plan: the forced error for Sentry is a failed readiness check, not an
+  invalid `TRADER_SYNC_MODE`, which now stops the start (Notes); Clerk's client telemetry is
+  off; the start-up work is in `start.ts` (Notes); readiness sets no statement timeout, the
+  pool's 5 s connection timeout standing alone; the policy leaves out
+  `upgrade-insecure-requests`, which transport security covers. Staging, by the owner that
+  evening: a Neon project on Postgres 18.7 in `aws-us-east-1`, its owner read as
+  `rolbypassrls` and `rolcreaterole` true and not a superuser, its sample table dropped; a
+  Sentry organization and project; a Vercel project rooted at `apps/web` on Hobby, whose
+  first build of `main` passed in 55 s with no variable set; the vendors' Neon, Vercel and
+  Sentry plugins in Claude Code. Not done: **R3 is not ticked.** Staging is not migrated,
+  `trader_app` has no password, no Preview variable is set, nothing has signed in on a
+  deployment, no report has reached Sentry, no restore has been timed and the window is not
+  recorded (the project read 6 hours of history on the free plan). Unseen and owed on the
+  deployment: Sentry receiving anything at all — the SDK was run only against a recording
+  transport — and `after()` holding a function open for it; `onRequestError` on a real
+  error; the policy under a signed-in office, Clerk's challenge frame and its image host;
+  HSTS as Vercel serves it; the pool behind PgBouncer; `assertLoginRole` on a real login,
+  which no test can make. Not done at all: a browser SDK, source maps, rate limits, the
+  `Origin` check, the per-transaction `session_user` check, `attachDatabasePool`. For the
+  owner: Vercel's terms keep Hobby to non-commercial use, and the restore drill needs a
+  Neon plan with instant restore — both are approvals at their step; once this merges, the
+  Production deployment refuses to start until R9 sets its variables, by design; the Vercel
+  plugin sends its vendor a daily ping and the names of its own skills unless
+  `VERCEL_PLUGIN_TELEMETRY=off`; PRD Access still says an admin is invited by email, and the
+  onboarding script, like `roster.invite`, requires a number — the PRD sentence is the
+  owner's to amend; `TASKS.md`, "Resync every other clone", is still unticked.
+- **Next:** owner migrates staging over the direct endpoint, sets `trader_app`'s password
+  and Vercel's Preview variables (`packages/db/README.md`); then the staging checks, the
+  restore drill, and the tick.

@@ -1,8 +1,10 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
 import { clerkEnv } from "../server/clerk-env";
+import { NONCE_HEADER } from "../server/csp";
 import { identityMode } from "../server/identity-mode";
 import { SIGN_IN_PATH } from "../server/sign-in-paths";
 import { Header } from "./header";
@@ -23,7 +25,10 @@ export const metadata: Metadata = {
 // build inlined. Every page is dynamic, so this is read per request too.
 export const dynamic = "force-dynamic";
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // The request's nonce (proxy.ts), for the script Clerk's provider adds; absent on a
+  // development server, which sets no policy.
+  const nonce = (await headers()).get(NONCE_HEADER) ?? undefined;
   const env = identityMode(process.env) === "clerk" ? clerkEnv(process.env) : null;
   const office = (
     <Providers clerk={env !== null}>
@@ -42,6 +47,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         ) : (
           <ClerkProvider
             publishableKey={env.publishableKey}
+            nonce={nonce}
+            // Clerk's SDK reports usage to a host of its own from a development instance;
+            // the policy admits no such host, and nothing here needs it sent.
+            telemetry={false}
             signInUrl={SIGN_IN_PATH}
             signInFallbackRedirectUrl="/"
             afterSignOutUrl={SIGN_IN_PATH}

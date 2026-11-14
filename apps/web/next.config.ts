@@ -25,8 +25,10 @@ const config: NextConfig = {
   poweredByHeader: false,
   // Baseline response headers for every route of a built app: no MIME sniffing, no framing by
   // another site, and no path or query sent to another origin. Built apps only: a development
-  // server is never exposed, and nothing there needs them. A content security policy and
-  // transport security are set with the deployment (TASKS, Stage 6), where they can be tested.
+  // server is never exposed, and nothing there needs them. Transport security: two years,
+  // subdomains included, not preloaded (ARCHITECTURE, 2026-11-12 policy and transport
+  // security); a browser ignores it over plain HTTP, so a local `next start` is unaffected.
+  // The content security policy carries a per-request nonce and is set in proxy.ts.
   async headers() {
     if (process.env.NODE_ENV !== "production") return [];
     return [
@@ -36,6 +38,10 @@ const config: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
         ],
       },
     ];

@@ -24,7 +24,12 @@ export {
 } from "./core/report";
 export type { AppUser } from "./core/resolve-user";
 export { appRouter, type AppRouter } from "./router";
-export { STATES, type ServiceState, type StatusClient } from "./core/status";
+export {
+  invalidConfigVars,
+  STATES,
+  type ServiceState,
+  type StatusClient,
+} from "./core/status";
 export {
   createCallerFactory,
   protectedProcedure,

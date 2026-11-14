@@ -53,9 +53,41 @@ paid is created and no production migration runs without the owner's approval of
       asserts the role; an owner-run onboarding script for a company, its invoice counter
       and its first admin; a content security policy and transport security; the Sentry
       reporter behind `ErrorReporter`; the migration procedure in `packages/db/README.md`;
-      the restore window read and recorded. Done when the office runs on the staging
+      the restore window read and recorded. Installs `@sentry/nextjs`, consumed by
+      `apps/web`: the reporter and the start-up hook. Done when the office runs on the staging
       deployment as `trader_app`, a forced error reaches Sentry with no PII, and a
       point-in-time restore of staging has been timed
+- [ ] PRD Access brought into line with the sign-in decisions (documents only; the wording
+      is the owner's). PRD says an office admin is invited by their own email address; since
+      the 2026-11-12 row "A sign-in number on every new invitation" every invitation requires
+      a number and takes an email beside it. Done when PRD Access and its summary sentence
+      state the rule the decision row states
+- [ ] Toolbox (documents only; plan first). A "Toolbox" section in RULES with its row in the
+      home table, and the lines in `CLAUDE.md` that point to it: how a session discovers its
+      tools, which tool is preferred for which job, what a vendor tool may read and may
+      never write, how a tool is upgraded, and how one is verified before it is relied on.
+      Consumer: every session that reads the deployed stack. No new document
+- [ ] `.claude/settings.json` committed with a deny list for the vendor tools that write or
+      read a secret (plan first: it changes what a session can do). Depends on the Toolbox
+      line. Consumer: Claude Code in this repository. Done when a denied tool is refused in
+      a new session and a read tool still answers
+- [ ] Staging operator access (plan first: it changes what a session can do). The staging
+      owner's connection string in the macOS Keychain, used through two wrappers kept
+      outside the repository — one runs `onboard` and `psql` against staging as the owner,
+      one makes and deletes test users on Clerk's development instance — and the Vercel
+      CLI, for `vercel redeploy` of a Preview alone; every use is prompted. Consumer: R3's
+      staging acceptance, then the checks of R9 and R10. Production has none of it. Done
+      when a denied command is refused, a prompted one runs against staging, and the
+      runbook and a decision row state the rule
+- [ ] Sentry event tidy-up (found by R3's staging event, 2026-11-13; accepted as it is for
+      Release 0.1). Three things reach Sentry that the allow-list in `sentry-event.ts` does
+      not name or cannot help: a `user.geo` Sentry derives from the sending server's
+      address, a `trace` context the SDK adds after `beforeSend`, and `error_names` holding
+      class names the build has shortened (`k>e>DatabaseError`). Work: send
+      `user.ip_address` as null so nothing is inferred, drop the trace context where it is
+      added, and keep the reported class names readable. Tests: the byte-for-byte event
+      tests state the new shape. Done when a forced staging event shows no location, no
+      trace context and real class names
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
@@ -324,7 +356,7 @@ Done when the deployed stack serves a physical phone over the internet, a restor
 passed, and Sentry shows no PII. Every item under "Before the first deployment" in
 ARCHITECTURE.md is a line here.
 
-- [ ] **decide** Neon owner role: checked for `rolbypassrls` on the role itself; if absent, a
+- [x] **decide** Neon owner role: checked for `rolbypassrls` on the role itself; if absent, a
       decision covering the migrator-as-owner, onboarding and `pg_dump` under forced RLS
 - [ ] A sign-in address for every person on the roster (2026-11-12 Release 0.1 sign-in): the
       roster checked with the partner, each crew member's own mobile number and each
@@ -339,21 +371,24 @@ ARCHITECTURE.md is a line here.
 - [ ] An invitation notice to the person (2026-11-12 invitation at the provider: none is
       sent): what it says, and whether it is an email through Resend, after R7. Until then
       the office tells each person to sign in with their number
-- [ ] Neon Launch project; `trader_app` created in SQL and used as the login role;
-      migrations re-baselined before the first run, with a full catalog diff against the
-      journal proving nothing hand-written was lost; the Neon driver behind the seam
-      if the pooled connection needs it
+- [ ] Neon Launch project; `trader_app` created in SQL and used as the login role; the
+      journal replayed as it stands, with a schema diff against a fresh local replay proving
+      nothing hand-written was lost (ARCHITECTURE, 2026-11-12 deployed database path)
 - [ ] Environments: production and preview with separate databases and identity instances;
       the environment validated at start; a readiness check that touches the database and
       asserts the role
 - [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs;
       `attachDatabasePool` from `@vercel/functions`; pool size set against Neon's limit
+- [ ] **decide** A stable staging origin, with the domain layout at R9: a pull request's
+      preview answers on its branch's alias, which is gone when the branch is deleted, and
+      `CLERK_AUTHORIZED_PARTIES` names one origin. Done when staging has an origin that
+      outlives a branch and the Preview variables name it
 - [ ] Daily delete of expired `sync_diagnostics` lines under Vercel Cron, in every company
       (ARCHITECTURE, rejected-record diagnostics: the writer deletes only its own company's).
       Plan first: the role it runs as, since the application role sees one tenant. Tests: a
       company that writes nothing loses its expired lines; an unexpired line stays. Done
       when no line older than the period survives a day
-- [ ] Migration procedure, written in `packages/db/README.md`: who runs it, in what order
+- [x] Migration procedure, written in `packages/db/README.md`: who runs it, in what order
       against deploys, how a failed migration is rolled forward, the `0021` precondition
 - [ ] Edge protection: rate limits per identity and per address, a request body limit, an
       `Origin` check on state-changing requests, session-cookie attributes, a content

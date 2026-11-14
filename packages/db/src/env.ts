@@ -9,8 +9,10 @@ import { z } from "zod";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 5432;
 
-// `pg` is the only driver until Neon's first consumer (Stage 6) extends the enum; any other
-// value is a validation error, not a stub that fails later.
+// `pg` is the only driver, deployed as well: Neon's pooled endpoint is plain Postgres over
+// TCP on the Node runtime (ARCHITECTURE, 2026-11-12 deployed database path). The seam stays
+// for a runtime that cannot open a socket; any other value is a validation error, not a
+// stub that fails later.
 const driverSchema = z.object({ DATABASE_DRIVER: z.enum(["pg"]).default("pg") });
 const urlSchema = z.object({ DATABASE_URL: z.string().min(1) });
 // Connections one server instance may hold. pg's own default, stated so it is a decision: a
