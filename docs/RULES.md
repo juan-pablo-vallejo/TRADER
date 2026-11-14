@@ -103,8 +103,17 @@ is wrong.
 - One workflow, one job: install, typecheck, lint, format check, build, migrate, test. Every
   run on `main` completes; only a superseded pull-request run is cancelled.
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
-- Branches other than `main` are short-lived and deleted on merge. A merge into `main`, a
-  force-push and a branch's deletion are human actions in a terminal, never agent actions.
+- Branches other than `main` and `staging-preview` are short-lived and deleted on merge. A
+  merge into `main`, a force-push and a branch's deletion are human actions in a terminal,
+  never agent actions.
+- `staging-preview` is staging's permanent branch. It holds only commits of `main`; nothing
+  is committed to it, merged into it or opened as a pull request from it. A session that
+  finds `origin/main` ahead of it moves it with
+  `git fetch origin main && git push origin origin/main:refs/heads/staging-preview`, an
+  ordinary push that the remote refuses unless it is a fast-forward, then waits for the
+  staging project's Preview of that commit and runs the browser suite on the branch's
+  alias. Nothing else moves it: a merge made while no session is open leaves it behind
+  until the next one.
 
 ## Toolbox
 
@@ -149,6 +158,11 @@ the owner's machine, outside the repository.
 - **Browser flows live in `apps/web/e2e/`**, apart from `test/`: they need a deployment and
   a secret, so `pnpm check` and CI never run them. A flow sends the bypass to the preview's
   own host alone, records no trace, and deletes nothing.
+- **Staging's standing deployment is `staging-preview`'s Preview.** The suite runs on that
+  branch's alias, read from Vercel's connector and never worked out from the branch name:
+  `staging-e2e https://<alias>`. A feature branch's preview is run against only when its
+  change must be seen before the merge, after a branch-scoped `CLERK_AUTHORIZED_PARTIES`
+  names its own alias.
 
 ## Session protocol (Claude Code)
 
