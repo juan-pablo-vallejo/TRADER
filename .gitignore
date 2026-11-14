@@ -18,3 +18,10 @@ node_modules/
 .next/
 next-env.d.ts
 *.tsbuildinfo
+
+# Vercel CLI project link (`vercel link`): ids of the owner's account, local to a machine.
+.vercel
+
+# Playwright output of the staging browser suite (apps/web/e2e).
+test-results/
+playwright-report/
