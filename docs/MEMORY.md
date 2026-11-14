@@ -435,6 +435,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   (`clerk whoami` says `keySource: .env`); `clerk deploy`, `clerk env` and
   `clerk impersonate` are denied by rule. Its telemetry is off (`clerk telemetry status`).
 - `gh run list --commit` wants the full SHA; a short one answers nothing.
+- A Vercel project's first deployment is Production's, whatever is asked: the CLI refuses a
+  Preview outright, and a pushed branch's first build is assigned to Production, which the
+  staging project's ignored build step then cancels. After that one cancelled record,
+  Previews deploy.
+- A Preview made by the CLI has no alias, only its own hashed URL, which changes on every
+  redeploy; a Preview Vercel builds from a pushed branch has the branch's alias. An origin
+  that must be known before the deployment starts (`CLERK_AUTHORIZED_PARTIES`) is the
+  alias, read from Vercel after the first build.
 
 ## Log
 
