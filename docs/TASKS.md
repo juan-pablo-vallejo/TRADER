@@ -206,7 +206,7 @@ paid is created and no production migration runs without the owner's approval of
       the company's enforcement setting and `diagnostic.list`. Tests: gate inventory
       unchanged or one admin line added; no procedure it calls writes; a worker and a
       foreman are refused; nothing of another company is answered
-- [ ] Payroll-hours CSV in Release 0.1 (2026-11-15 scope row): takes Stage 4's line as it
+- [x] Payroll-hours CSV in Release 0.1 (2026-11-15 scope row): takes Stage 4's line as it
       is written there
 - [ ] Edge protection for a public host (takes, of Stage 6's edge line, the rate limits, the
       body limit and the `Origin` check). Work: limits per identity and per address on the
@@ -413,7 +413,7 @@ jobs, assignments, approvals, a closeout, close, export.
       repair; each of those appears as one adjustment, in one period, once — closing two
       further periods adds nothing; a correction that lowers hours is a negative adjustment;
       two admins closing at once leave one close
-- [ ] Payroll-hours CSV of a closed period's approved hours and adjustments (V1-D18): its own
+- [x] Payroll-hours CSV of a closed period's approved hours and adjustments (V1-D18): its own
       file, no pay calculation; columns decided in the plan. Test: the file's totals equal
       the reconciliation view's
 - [ ] Full data export

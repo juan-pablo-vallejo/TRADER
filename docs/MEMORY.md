@@ -1675,3 +1675,29 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   at 40 migrations** of 43 and waits for the owner to install the wrapper's migrate
   command. S6 is built and not ticked: a screen-reader pass and about 24 people are owed.
 - **Next:** the payroll-hours CSV, then D01.
+
+### 2026-11-15 — Payroll-hours CSV
+
+- **Did:** branch `payroll-hours-csv` from `a01-overview-navigation`. `payPeriod.export`,
+  admin-gated, with its gate line; `core/csv.ts`; the button in a closed period's details.
+  The file is `payPeriod.read`'s figures for a closed period: a header, one row for each
+  employee, job and work date of the period's own hours, then one for each adjustment with
+  its original date and its sign; ids beside the names. Tests: the file inside the
+  existing byte-identity test, so a later approval, correction, repair and rate leave it
+  the same bytes; its totals equal the read's for two closed periods; an open period is
+  `not_closed`; the text itself (quoting, a name that looks like a formula, signed hours).
+  Seen in the browser on `trader_demo`: the closed week's file saved, 34 rows and 272.00
+  hours, the screen's own figures; the open week offers no file. Watched red, by
+  mutation: the open period's refusal, the adjustment rows, the formula guard, the
+  quoting. 1,430 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: the
+  columns; hours as decimals with two places; a typed cell that begins like a formula is
+  led by an apostrophe; no file for an open period; the button in the period's details
+  until the export screen exists (DESIGN, Export panel). Not done: no pay, rate or
+  overtime column, by rule; not opened in a spreadsheet or a payroll product; checked at
+  1280 only.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `a01-overview-navigation`
+  (#106) and this one, stacked, CI green on the first seven; **staging's database is
+  still at 40 migrations** of 43, waiting for the owner to install the wrapper's migrate
+  command. S6 built and not ticked (screen reader, about 24 people).
+- **Next:** D01, the developer console; then R6, invoices.
