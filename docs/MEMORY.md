@@ -1333,3 +1333,36 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   every other clone", is still unticked.
 - **Next:** owner merges this branch; then the fast-forward and the suite, unrecorded
   unless red. Then track line R4, the field app skeleton, plan first.
+
+### 2026-11-14 — Staging closed out: ruleset, last sync, old authorization and branches gone
+
+- **Did:** read, and one approved removal; branch `staging-closure-record`, this file only.
+  The owner made a GitHub ruleset for `staging-preview` — active, that branch alone, rules
+  `deletion` and `non_fast_forward`, no bypass actor — and merged #96. `staging-preview`
+  then moved from `6a9a149` to `733afd3` by the ordinary push, accepted under the
+  ruleset; Vercel built it from the push as a Preview of the staging project, READY in
+  15 s, the branch's alias on it; the suite's five steps green in 18.2 s with no redeploy.
+  On the owner's word for that one item, `staging-vercel env rm` removed
+  `CLERK_AUTHORIZED_PARTIES` scoped to `staging-autonomy`: read after it, the
+  `staging-preview` value and the four Preview-wide variables stood, the deployment was
+  the same one, and the suite was green in 14.1 s. The owner deleted the remote branches
+  `staging-autonomy`, `staging-preview-branch`, `staging-preview-acceptance` and
+  `staging-preview-tick`. Last read: `main` and `staging-preview` both at `733afd3` and
+  the only remote branches; the suite green in 14.0 s; 302 without the bypass; no runtime
+  error on the project and no Sentry issue later than the forced report of 20:18 UTC;
+  Neon's `restore-drill-20261114` still there. Each staging tool answered one read: the
+  Neon CLI (branches), the Sentry CLI (issues), the Clerk CLI and Clerk's MCP server
+  (who it acts as; the development instance). 1,295 tests.
+- **Decided:** nothing new. Production, as far as it was observed: the staging project
+  protects every deployment and builds Previews only, and on #94 to #96 the other
+  project's status read "Canceled by Ignored Build Step"; that project's own settings,
+  variables and deployments were not read, by rule. Not ticked, and why: "Staging
+  autonomy" — a destructive command prompting is the owner's to have seen (`env rm` is
+  in the rules' ask list and ran once approved; a session cannot see its own prompt);
+  "Staging tools" — every tool answered, but the Toolbox names no job for Clerk's MCP
+  server, whose grant includes managing applications and users, and naming one changes
+  what a session may do: a plan of its own; "Resync every other clone" — no other clone
+  was inspected; `~/work/TRADER` is absent from this Mac. For the owner: local branches
+  of the merged work remain in this clone.
+- **Next:** owner merges this branch; then the routine fast-forward and the suite. Then
+  track line R4, the field app skeleton, plan first.
