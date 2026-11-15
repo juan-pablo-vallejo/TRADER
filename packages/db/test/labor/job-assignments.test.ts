@@ -321,9 +321,11 @@ describe("job_assignments, the punch lock", () => {
   it("refuses TRUNCATE while any shift is locked", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
-      // The whole cascade set first, never waiting (helpers.ts, lockExclusive).
-      await lockExclusive(tx, ["job_assignments", "shift_overrides"]);
       await lockedShift(tx, refs);
+      // The whole cascade set, never waiting (helpers.ts, lockExclusive), and nothing but
+      // the TRUNCATE after it: a statement that waited while holding these would stall the
+      // suites that write shifts.
+      await lockExclusive(tx, ["job_assignments", "shift_overrides"]);
       expect(await raised(tx, sql`truncate job_assignments cascade`)).toEqual({
         code: "23000",
         constraint: "job_assignments_locked",

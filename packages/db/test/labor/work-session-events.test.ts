@@ -61,12 +61,18 @@ describe("work_session_events", () => {
   it("rejects TRUNCATE, which bypasses row triggers", async () => {
     // CASCADE, because approvals references this table and Postgres refuses a plain
     // TRUNCATE of a referenced table (0A000) before any trigger runs; with CASCADE the
-    // statement reaches the guard. Both tables held first, without waiting: a waiting
-    // TRUNCATE closed a cycle with another suite's approval insert (40P01; helpers.ts,
-    // lockExclusive).
+    // statement reaches the guard. The whole cascade set held first, without waiting: a
+    // waiting TRUNCATE closed a cycle with another suite's approval insert (40P01; helpers.ts,
+    // lockExclusive). job_assignments names the event that locked a shift, and
+    // shift_overrides names job_assignments, so both are in the set (migration 0040).
     await rolledBack(db, async (tx) => {
       await tx.insert(workSessionEvents).values(started(await fixture(tx)));
-      await lockExclusive(tx, ["work_session_events", "approvals"]);
+      await lockExclusive(tx, [
+        "work_session_events",
+        "approvals",
+        "job_assignments",
+        "shift_overrides",
+      ]);
       const error = await pgError(
         tx.transaction((sp) => sp.execute(sql`truncate work_session_events cascade`)),
       );
