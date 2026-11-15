@@ -130,7 +130,7 @@ paid is created and no production migration runs without the owner's approval of
       rewritten and read back, sign-out, a worker refused the office. Run on demand from
       the owner's machine, never in `pnpm check` or CI; it deletes nothing. Done when the
       five steps pass on a preview and the run is recorded in MEMORY
-- [ ] S0 — Documents: the weekly schedule decisions (documents only; by the owner,
+- [x] S0 — Documents: the weekly schedule decisions (documents only; by the owner,
       2026-11-15). The decision rows of that date in ARCHITECTURE with its Office
       authority, Audit trail and pull-extension passages; PRD, Weekly schedule; DESIGN;
       lines S1 to S9. Each S line is planned and approved on its own, one line to a
