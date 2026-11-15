@@ -323,6 +323,20 @@
       "when": 1794780971463,
       "tag": "0045_invoice-payment-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794781852367,
+      "tag": "0046_rate-limit-windows",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794781852892,
+      "tag": "0047_rate-limit-grants",
+      "breakpoints": true
     }
   ]
 }

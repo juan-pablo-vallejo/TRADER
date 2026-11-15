@@ -32,7 +32,7 @@ import {
 } from "../src/app/ledger/repair-set";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
-import { disposableDb, invitation, type TrpcResult } from "./helpers";
+import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
 
 type Out = inferRouterOutputs<AppRouter>;
 
@@ -113,7 +113,7 @@ async function call<T = unknown>(
       mutation
         ? {
             method: "POST",
-            headers: { ...headers, "content-type": "application/json" },
+            headers: { ...headers, ...jsonBody(wire) },
             body: wire,
           }
         : { headers },

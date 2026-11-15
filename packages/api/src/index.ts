@@ -38,3 +38,9 @@ export {
   router,
   syncProcedure,
 } from "./core/trpc";
+export {
+  hitRateLimit,
+  rateKey,
+  type RateLimit,
+  type RateVerdict,
+} from "./core/rate-limit";
