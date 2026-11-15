@@ -17,7 +17,7 @@ const groups = [
     links: [
       ["/jobs", strings.jobs],
       ["/customers", strings.customers],
-      ["/assignments", strings.assignments],
+      ["/schedule", strings.scheduleNav],
       ["/closeout", strings.closeout],
       ["/materials", strings.materials],
       ["/approvals", strings.approvals],

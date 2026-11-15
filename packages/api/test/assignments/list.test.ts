@@ -328,6 +328,7 @@ describe("assignment.week", () => {
         weekStart: "2026-11-16",
       });
       expect(week.weekStart).toBe("2026-11-16");
+      expect(week.timezone).toBe("America/New_York");
       expect(week.days).toEqual([
         "2026-11-16",
         "2026-11-17",
@@ -352,6 +353,7 @@ describe("assignment.week", () => {
         eligible: [{ start: "15:30", end: "17:00" }],
       });
       expect(seen.get(sunday)).toMatchObject({
+        copyId: null,
         locked: false,
         eligible: [{ start: "08:00", end: "12:00" }],
       });
@@ -363,6 +365,9 @@ describe("assignment.week", () => {
           holderId: morning,
           yieldingId: late,
           reason: "Covering the afternoon",
+          // Written as a fixture, with no history: its author and its own stamp.
+          by: expect.stringContaining("admin"),
+          at: expect.any(Date),
         },
       ]);
     });

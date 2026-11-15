@@ -18,6 +18,123 @@ export const strings = {
   jobs: "Jobs",
   crews: "Crews",
   assignments: "Assignments",
+  scheduleNav: "Schedule",
+  // The Weekly Schedule screen (DESIGN, Weekly Schedule): a shift is a "Shift", a job a
+  // "Jobsite". One namespace, so its many words cannot collide with the flat keys above.
+  schedule: {
+    title: "Weekly Schedule",
+    explain:
+      "Planned shifts only. Hours worked, corrections and approvals are on the Labor screens.",
+    previousWeek: "Previous week",
+    nextWeek: "Next week",
+    // The two steps as their buttons read; the names above are what a screen reader hears.
+    previous: "Previous",
+    next: "Next",
+    thisWeek: "This week",
+    weekOf: (from: string, to: string) => `${from} – ${to}`,
+    view: "View",
+    byEmployee: "By employee",
+    byJobsite: "By jobsite",
+    employee: "Employee",
+    jobsite: "Jobsite",
+    allEmployees: "All employees",
+    showEmployee: "Show",
+    day: "Day",
+    addShift: "Add shift",
+    addShiftFor: (name: string, day: string) => `Add a shift for ${name} on ${day}`,
+    copyLastWeek: "Copy last week",
+    noShifts: "No shifts this week.",
+    noShiftsDay: "No shift",
+    people: (n: number) => (n === 1 ? "1 person" : `${n} people`),
+    locked: "Locked",
+    lockedExplain:
+      "Someone has clocked in on this shift, so its jobsite, day and hours cannot change.",
+    correctInLabor: "Correct attendance in Labor",
+    undecided: "Overlaps another shift; nothing decided",
+    clockInDuring: (hours: string) => `Clock in ${hours}`,
+    shiftOf: (name: string) => `Shift — ${name}`,
+    openShift: (name: string, jobsite: string, hours: string, day: string) =>
+      `${name}, ${jobsite}, ${hours}, ${day}`,
+    days: "Days",
+    start: "Start",
+    end: "End",
+    save: "Save shift",
+    add: "Add shift",
+    addShifts: (n: number) => (n === 1 ? "Add 1 shift" : `Add ${n} shifts`),
+    remove: "Remove shift",
+    removeEffect: (name: string, jobsite: string, day: string) =>
+      `${name} will no longer be scheduled at ${jobsite} on ${day}. Recorded hours do not change.`,
+    removed: "Shift removed.",
+    saved: "Shift saved.",
+    added: (n: number) => (n === 1 ? "1 shift added." : `${n} shifts added.`),
+    alreadyThere: (n: number) =>
+      n === 1 ? " 1 was already there." : ` ${n} were already there.`,
+    notAdded: (day: string, why: string) => `${day}: not added. ${why}`,
+    pickDay: "Choose at least one day.",
+    endAfterStart: "The end must be after the start.",
+    overlap: (other: string, hours: string) => `Overlaps ${other} during ${hours}.`,
+    overrideAsAdmin: "Override as admin",
+    whoHolds: (hours: string) => `Which shift is clocked in on during ${hours}?`,
+    thisShift: "This shift",
+    otherShift: (other: string) => other,
+    reason: "Reason for the override",
+    reasonRequired: "A reason is required.",
+    dayPreview: "Clock-in through the day",
+    previewLine: (hours: string, jobsite: string) => `${hours} ${jobsite}`,
+    cannotSave: "This cannot be saved:",
+    decidedBy: (who: string, when: string) => `Decided by ${who}, ${when}`,
+    holds: (holder: string, hours: string) => `${holder} holds ${hours}.`,
+    changeDecision: "Change decision",
+    saveDecision: "Save decision",
+    decisionSaved: "Decision saved.",
+    overlapsHeading: "Overlaps",
+    issue: {
+      duplicate: "That shift already exists.",
+      undecided: (a: string, b: string, hours: string) =>
+        `${a} and ${b} overlap during ${hours} and nothing says which one holds that time.`,
+      circle: (hours: string) =>
+        `Three shifts would each give way to another in a circle during ${hours}, so nobody could clock in then. Change one of the decisions.`,
+      noTime: (shift: string) => `${shift} would have no time of its own to clock in on.`,
+      notOverlapping: "Those two shifts do not overlap, so there is nothing to decide.",
+      changed: "The schedule changed meanwhile. Close this and try again.",
+    },
+    refused: {
+      authorization: (shift: string) =>
+        `Someone has already clocked in on ${shift}, and this would change what allowed it.`,
+      locked:
+        "Someone has clocked in on this shift, so it cannot change. Correct attendance in Labor.",
+      stale: "This shift changed meanwhile. Close this and try again.",
+      userInactive: "That employee is deactivated.",
+      jobArchived: "That jobsite is archived.",
+    },
+    copyTitle: "Copy last week",
+    copyExplain: (from: string, to: string) =>
+      `Copies the shifts of the week of ${from} to the week of ${to}. Overrides are never copied.`,
+    copyCreate: (n: number) => (n === 1 ? "Create 1 shift" : `Create ${n} shifts`),
+    copyNothing: "There is nothing to create.",
+    copyLeftOut: (n: number) =>
+      n === 1 ? "1 shift is left out" : `${n} shifts are left out`,
+    copyWillCreate: (n: number) =>
+      n === 1 ? "1 shift will be created" : `${n} shifts will be created`,
+    copyDone: (n: number) => (n === 1 ? "Created 1 shift." : `Created ${n} shifts.`),
+    copyStale:
+      "The schedule changed since this was shown. This is the copy as it would be now.",
+    copyFailed: "Nothing was created. You can try the same copy again.",
+    undoCopy: (n: number) =>
+      n === 1 ? "Undo copy of 1 shift" : `Undo copy of ${n} shifts`,
+    undoEffect: (n: number) =>
+      `${n === 1 ? "The 1 shift" : `All ${n} shifts`} this copy created will be removed, including any changed since.`,
+    undoLocked: (n: number) =>
+      `A copy of ${n === 1 ? "1 shift" : `${n} shifts`} cannot be undone: someone has clocked in on one of them.`,
+    undone: (n: number) => (n === 1 ? "Removed 1 shift." : `Removed ${n} shifts.`),
+    leftOut: {
+      user_inactive: "deactivated employee",
+      job_archived: "archived jobsite",
+      duplicate: "already there",
+      overlap: "would overlap",
+      authorization: "someone has already clocked in that day",
+    },
+  },
   closeout: "Closeout",
   approvals: "Approvals",
   profile: "Profile",

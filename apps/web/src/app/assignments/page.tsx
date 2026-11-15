@@ -1,10 +1,9 @@
-import { AssignmentsScreen } from "./assignments-screen";
-import { signInPath } from "../../server/identity-mode";
+import { redirect } from "next/navigation";
 
-// Assignments (TASKS, Stage 4: dated worker-job assignments): a dynamic server page rendering
-// one client component, which calls the API through the route handler like the phone does.
+// The Weekly Schedule took this screen's place (TASKS S6): an address kept in a bookmark or
+// a note still opens the schedule.
 export const dynamic = "force-dynamic";
 
-export default function AssignmentsPage() {
-  return <AssignmentsScreen signInHref={signInPath(process.env)} />;
+export default function AssignmentsPage(): never {
+  redirect("/schedule");
 }
