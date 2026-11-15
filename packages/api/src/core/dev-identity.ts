@@ -4,6 +4,7 @@
 // NODE_ENV; every deployed build and runtime is NODE_ENV=production, so a deployment cannot
 // accept a named identity. The check runs per request, never at module load, so `next build`
 // never fails (RULES). Pure over the env record it is handed, like db/src/env.ts.
+import { DEV_EMAIL_HEADER, DEV_PHONE_HEADER, DEV_SUBJECT_HEADER } from "../contract/dev";
 import { z } from "zod";
 
 import {
@@ -12,9 +13,9 @@ import {
   type VerifiedIdentity,
 } from "./identity";
 
-export const DEV_SUBJECT_HEADER = "x-trader-dev-subject";
-export const DEV_EMAIL_HEADER = "x-trader-dev-email";
-export const DEV_PHONE_HEADER = "x-trader-dev-phone";
+// The header names live in the client-safe contract: the phone's development sign-in sends
+// them (contract/dev.ts).
+export { DEV_EMAIL_HEADER, DEV_PHONE_HEADER, DEV_SUBJECT_HEADER };
 
 // An allowlist: unset or any other NODE_ENV is not development.
 const DEVELOPMENT_NODE_ENVS = ["development", "test"];
