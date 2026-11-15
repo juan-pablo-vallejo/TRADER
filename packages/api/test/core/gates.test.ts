@@ -79,6 +79,7 @@ const EXPECTED: Record<string, Gate> = {
   "me.get": "protected",
   "me.update": "protected",
   "payPeriod.close": ADMIN,
+  "payPeriod.export": ADMIN,
   "payPeriod.list": ADMIN,
   "payPeriod.open": ADMIN,
   "payPeriod.read": ADMIN,

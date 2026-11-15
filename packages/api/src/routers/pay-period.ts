@@ -2,6 +2,7 @@
 // period's hours, adjustments and what is unresolved (read.ts), and the close (close.ts).
 // Admin only, at the gate: payroll is the office's, and no device calls these.
 import { closeInput, closeOutput, closePeriod } from "../pay-periods/close";
+import { exportInput, exportOutput, exportPeriod } from "../pay-periods/export";
 import {
   listOutput,
   listPeriods,
@@ -20,6 +21,10 @@ export const payPeriodRouter = router({
     .input(closeInput)
     .output(closeOutput)
     .mutation(({ ctx, input }) => closePeriod(ctx.tx, ctx.user, input)),
+  export: roleProcedure("admin")
+    .input(exportInput)
+    .output(exportOutput)
+    .query(({ ctx, input }) => exportPeriod(ctx.tx, ctx.user, input)),
   list: roleProcedure("admin")
     .output(listOutput)
     .query(({ ctx }) => listPeriods(ctx.tx, ctx.user)),

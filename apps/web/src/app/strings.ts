@@ -517,6 +517,12 @@ export const strings = {
   periodDates: "Dates",
   saveDates: "Save dates",
   periodHours: "Hours",
+  // The payroll-hours file of a closed period (DESIGN, Export panel).
+  payrollCsv: "Payroll hours (CSV)",
+  payrollCsvExplain:
+    "One row for each employee, job and work date of this period's approved hours, then each adjustment it carries. Hours only: no rates and no pay.",
+  payrollCsvSaved: (file: string) => `Saved ${file}.`,
+  payrollCsvNotClosed: "Close the period first: its hours can still change.",
   periodApprovedSoFar: (hours: string) => `${hours} h approved so far.`,
   periodExported: (hours: string) => `${hours} h closed as this period's hours.`,
   periodAdjustments: (n: number, hours: string) =>
