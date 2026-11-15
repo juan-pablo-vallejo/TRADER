@@ -526,6 +526,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A schedule check by hand writes shifts, overrides and history: do it in `trader_demo`
   and `pnpm demo --reset` after. A locked shift there is made as the owner (an event row
   and the two lock columns); nothing in the demo clocks in under enforcement.
+- A mutation run restores each file from a copy; after one, run `pnpm lint` and read
+  `git diff` of the files it touched before going on. Once a restore did not hold and a
+  check was gone from `invoices/draft.ts`; lint caught it only because the line's two
+  names went unused. Keep the copies in the scratchpad, never `/tmp`.
+- An issued invoice can never be deleted: check `/invoices` by hand only in `trader_demo`
+  and `pnpm demo --reset` after; tests issue only in a rolled-back transaction or a
+  `disposableDb()`.
+- A draft editor keyed on anything a save changes is remounted by its own save and drops
+  the note that said so: key it on the invoice's id alone.
 
 ## Log
 
@@ -1724,3 +1733,33 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   S6 built and not ticked (screen reader, about 24 people). Done of the plan: steps 0 to 6. Open: R6 and R7 (invoices, payments, PDF, email, invoice CSV), the edge line and the
   public staging host, R4, R5 with S7 and S8, enforcement on staging, the device builds.
 - **Next:** R6, invoices: drafting and issue.
+
+### 2026-11-15 — Invoices: draft, issue, void (R6)
+
+- **Did:** branch `r6-invoices` from `d01-developer-console`. `0043`: the issue transition
+  changes nothing but the issue and is never also a void. `invoices/`: `invoice.create`,
+  `save`, `remove`, `suggest`, `issue`, `void`, `list`, `read`, admin-gated, with their
+  gate lines. `/invoices` and `/invoices/<id>`, Invoices in the navigation. Seen on real
+  commits: fifty drafts issued at once take 1042 to 1091, none twice and none skipped;
+  one invoice issued five times at once takes one number. Seen in the browser on
+  `trader_demo` at 1280: a draft started for a jobsite, a labor day drawn as a line with
+  its hours and no price, the save refused until a price is typed, amounts and totals as
+  typed, saved, issued as Invoice 1 after its question, no field left, voided, the list;
+  no sideways scroll at 390 or 768. Watched red: the 0043 guard, by restoring 0010's
+  function; eleven rules by mutation. 1,454 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. A
+  draft's lines are replaced whole by each save; a line's amount is quantity times price,
+  half-up to the cent, in integers, as the database's check computes it; a suggestion is
+  words and a quantity and never a price; labor is offered one line a work date, every
+  worker's approved hours together; an issue sent again answers its number; a void gives
+  no number back; no audit row. Not done: payments, the PDF, email and the CSV (R7);
+  credit memos (Stage 7); the currency is USD on the screen, though the API takes any;
+  no browser test in CI; no Spanish office strings; the screens were not checked at 1024
+  and their controls were not measured.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `d01-developer-console` (#108)
+  and this one, stacked; **staging's database is still at 40 migrations** of 44, waiting
+  for the owner to install the wrapper's migrate command. S6 built and not ticked. Done
+  of the plan: steps 0 to 6 and R6. Open: R7, the edge line and the public staging host,
+  R4, R5 with S7 and S8, enforcement on staging, the device builds.
+- **Next:** R7, payments, the PDF, email and the invoice CSV (needs the owner's Resend
+  domain and key, and one approved test recipient).

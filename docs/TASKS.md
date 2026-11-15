@@ -245,7 +245,7 @@ paid is created and no production migration runs without the owner's approval of
       switch on for staging alone; the browser suite; both physical phones; refusals and
       error reports read after. Done when the owner's approval to turn it on in
       production is recorded in MEMORY, or withheld; production's setting is the owner's
-- [ ] R6 — Invoices (plan first: money; takes Stage 7's drafting and issue lines, less
+- [x] R6 — Invoices (plan first: money; takes Stage 7's drafting and issue lines, less
       credit memos). Work: draft, lines priced by the admin, tax, issue with gap-free
       numbering continuing the partner's series, void; the office screens. Tests as those
       two lines state them
