@@ -543,6 +543,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `invoice_payments` is append-only and references `invoices` and `users`: a payment
   recorded by hand can never be removed. Check payments only in `trader_demo`, then
   `pnpm demo --reset`.
+- The API's rate limit counts by address only where the platform set one
+  (`x-vercel-forwarded-for`, then `x-forwarded-for`): `next dev` and the suites send none,
+  so nothing local is counted by address and no run can limit the next. A test of the
+  address limit sends the header itself, with an address no other run uses.
+- A test that calls the real route with an address commits a row to `rate_limit_windows`:
+  delete it by its key at the end.
+- A `Request` built in a test has no `content-length`, and the route answers 411 to a
+  state-changing request without one: build a test's POST with `jsonBody(body)`
+  (`apps/web/test/helpers.ts`), as `mutate` does. Run the whole `pnpm check` after a change
+  to the route, not the files it seemed to touch.
 
 ## Log
 
@@ -1801,3 +1811,34 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   with S7 and S8, enforcement on staging, the device builds.
 - **Next:** the edge line (rate limits, body limit, `Origin` check), which needs nothing
   from the owner; then R4.
+
+### 2026-11-15 — Edge protection for a public host
+
+- **Did:** branch `edge-protection` from `r7-payments-csv`. `0046`, `0047`:
+  `rate_limit_windows`, a hash and a count, not tenant data. `core/rate-limit.ts`: a
+  fixed window counted in one statement on the database's clock. `server/edge.ts` in
+  front of the route: a body over one mebibyte 413, of unstated length 411; a
+  state-changing request from another site's `Origin` 403; 600 requests a minute an
+  address, 300 a signed-in identity, each 429 with `Retry-After`; a limiter that fails
+  refuses nobody and is reported. Read on Vercel's pages that day: `x-forwarded-for` is
+  the client's address and is overwritten by the platform; Deployment Protection
+  Exceptions and WAF rate limiting are on every plan, the first a dashboard action with a
+  typed confirmation. Seen on `next dev`: a foreign-origin POST 403, an oversized one 413,
+  a shift added and removed from the browser. Watched red, by mutation: twelve rules.
+  The first full check was red on 29 web tests whose hand-built POSTs stated no length
+  (Notes); 1,486 tests after.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: the
+  limit lives in the application and Postgres, not in the platform's firewall, so it is in
+  the repository and tested; the key is hashed; nothing is counted by address where the
+  platform set none; the limiter fails open. Not done: the limits were not seen on a
+  deployment (the public host is next, and needs the owner); no limit on the pages
+  themselves, only on the API route; the per-region caveat does not apply since one
+  database counts; session-cookie attributes are Clerk's and were not examined.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r7-payments-csv` (#110) and
+  this one, stacked, CI green on the first eleven; **staging's database is still at 40
+  migrations** of 48. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); add the `release-0.1` alias under
+  Deployment Protection Exceptions (the phones); Resend's domain, key and one test
+  recipient (the PDF's email); `eas login` (device builds). S6 built and not ticked; R7
+  half built.
+- **Next:** R4, the field app skeleton.

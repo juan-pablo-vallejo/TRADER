@@ -210,7 +210,7 @@ paid is created and no production migration runs without the owner's approval of
       nothing written
 - [x] Payroll-hours CSV in Release 0.1 (2026-11-15 scope row): takes Stage 4's line as it
       is written there
-- [ ] Edge protection for a public host (takes, of Stage 6's edge line, the rate limits, the
+- [x] Edge protection for a public host (takes, of Stage 6's edge line, the rate limits, the
       body limit and the `Origin` check). Work: limits per identity and per address on the
       API route, their store chosen on the vendor's page; tests of each locally. Done when
       a burst answers 429 on a Preview and an ordinary session never does
