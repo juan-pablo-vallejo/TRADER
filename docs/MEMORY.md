@@ -535,6 +535,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `disposableDb()`.
 - A draft editor keyed on anything a save changes is remounted by its own save and drops
   the note that said so: key it on the invoice's id alone.
+- Never ask `error instanceof DrizzleQueryError` to recognise a database refusal: the web
+  build holds a second copy of drizzle-orm, the check is false there, and a refusal the
+  database named becomes a 500 on the deployed route while every suite is green. Read it
+  with `pgFailure` (`core/pg-error.ts`). Found in the browser, never by a test: a refusal
+  that reaches the user must be seen through the route once.
+- `invoice_payments` is append-only and references `invoices` and `users`: a payment
+  recorded by hand can never be removed. Check payments only in `trader_demo`, then
+  `pnpm demo --reset`.
 
 ## Log
 
@@ -1763,3 +1771,33 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   R4, R5 with S7 and S8, enforcement on staging, the device builds.
 - **Next:** R7, payments, the PDF, email and the invoice CSV (needs the owner's Resend
   domain and key, and one approved test recipient).
+
+### 2026-11-15 — Payments, what is owed and the invoice CSV (R7, first half)
+
+- **Did:** branch `r7-payments-csv` from `r6-invoices`. `0044`, `0045`: `invoice_payments`,
+  append-only, with its guards. `invoice.recordPayment`, `reversePayment`, `exportCsv`
+  with their gate lines; the reads answer `paidCents`, `owedCents` and the payments; a
+  void is refused while a payment stands; `overview.get` counts invoices still owed.
+  `core/pg-error.ts`. The invoice screens: payments, owed, the CSV button. Seen in the
+  browser on `trader_demo` at 1280: an overpayment refused in words, a part payment, a
+  void refused while it stands, paid in full with the form gone, a reversal leaving both
+  rows and the amount owed again, the list's Owed column, the file saved, the Overview's
+  count; no sideways scroll at 390. Watched red: every 0045 guard in the database; ten
+  rules by mutation. 1,472 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. No
+  overpayment: the payments that stand never total more than the invoice. A payment is
+  never edited or removed; a second row reverses it and neither counts. An invoice with a
+  standing payment is not voided. The CSV's columns. **Found and fixed, beyond this
+  line:** a database refusal recognised by `instanceof` was a 500 through the web route
+  (Notes) — the overpayment here, the missing number series of R6 (#109), and the
+  first-sign-in bind conflict in `resolve-user.ts`, which is identity code and was changed
+  only in how it reads the same error. Not done: the PDF and its email, which need the
+  owner's Resend domain, key and one approved test recipient; credit memos; a payment's
+  date is not checked against the issue date; not checked at 768 or 1024.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r6-invoices` (#109) and this
+  one, stacked; **staging's database is still at 40 migrations** of 46, waiting for the
+  owner to install the wrapper's migrate command. S6 built and not ticked; R7 half built.
+  Open after this: the PDF and email, the edge line and the public staging host, R4, R5
+  with S7 and S8, enforcement on staging, the device builds.
+- **Next:** the edge line (rate limits, body limit, `Origin` check), which needs nothing
+  from the owner; then R4.
