@@ -23,7 +23,14 @@ const webOnly = nextVitals
   );
 
 export default tseslint.config(
-  globalIgnores(["**/.next/**", "**/next-env.d.ts"]),
+  globalIgnores([
+    "**/.next/**",
+    "**/next-env.d.ts",
+    "apps/mobile/.expo/**",
+    "apps/mobile/ios/**",
+    "apps/mobile/android/**",
+    "apps/mobile/expo-env.d.ts",
+  ]),
   js.configs.recommended,
   ...tseslint.configs.recommended,
   ...webOnly,
@@ -57,6 +64,34 @@ export default tseslint.config(
       "@typescript-eslint/no-floating-promises": "error",
       "@typescript-eslint/no-misused-promises": "error",
       "@typescript-eslint/await-thenable": "error",
+    },
+  },
+  {
+    // The phone bundles what it imports as a value. Of the server it may import values
+    // from `@trader/api/contract` and `@trader/api/eligibility` alone — zod and pure rules;
+    // everything else of `@trader/api` is a type to it, and the database package is
+    // nothing to it at all (TASKS R4; ARCHITECTURE, folder tree).
+    files: ["apps/mobile/**/*.{ts,tsx}"],
+    rules: {
+      "@typescript-eslint/no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@trader/api",
+              message:
+                "A value import would bundle the server into the app: `import type`, or import from @trader/api/contract.",
+              allowTypeImports: true,
+            },
+          ],
+          patterns: [
+            {
+              group: ["@trader/db", "@trader/db/*"],
+              message: "The phone never imports the database package.",
+            },
+          ],
+        },
+      ],
     },
   },
   prettier,

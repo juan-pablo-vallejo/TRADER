@@ -1,0 +1,21 @@
+# The native projects are generated from app.json (`expo prebuild`, run by `expo run:*`):
+# never edited by hand and never committed.
+/ios
+/android
+
+node_modules/
+.expo/
+dist/
+expo-env.d.ts
+*.tsbuildinfo
+.metro-health-check*
+.DS_Store
+
+# Signing material and local environment files never enter the repository.
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+.env*.local

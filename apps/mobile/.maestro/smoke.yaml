@@ -1,0 +1,44 @@
+# The field app's smoke flow (TASKS R4): the development build launches, the demo foreman
+# signs in with the development identity, and the jobsites the server answers are on screen.
+# Every selector is a testID: the visible words are in two languages. Run on the iOS
+# simulator and the Android emulator against `next dev` serving the demo database; never in
+# CI. Nothing here writes. Run it with `run.sh`, which says how the app is launched.
+appId: app.jpteq.trader
+---
+# A development build opens on its launcher and must be handed the bundler, as `expo run`
+# does; the three switches are the ones it passes itself (no first-launch sheet, no floating
+# button, no reopening of the last project). On iOS the flow does it. On Android Maestro's
+# openLink cuts the link at its first `&`, so `run.sh` opens it through adb and passes
+# LAUNCH=adb.
+- runFlow:
+    when:
+      true: ${LAUNCH == "maestro"}
+    commands:
+      - launchApp:
+          clearState: true
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-email"
+    timeout: 120000
+- tapOn:
+    id: "sign-in-email"
+- inputText: "luis.herrera@demo.invalid"
+- tapOn:
+    id: "sign-in-submit"
+- extendedWaitUntil:
+    visible:
+      id: "job-list"
+    timeout: 30000
+- assertVisible:
+    id: "job-row-0"
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "settings-name"
+- tapOn:
+    id: "language-es"
+- tapOn:
+    id: "tab-today"
+- assertVisible:
+    id: "job-list"

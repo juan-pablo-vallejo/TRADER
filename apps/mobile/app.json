@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "TRADER",
+    "slug": "trader",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "trader",
+    "userInterfaceStyle": "light",
+    "icon": "../../assets/brand/icon.png",
+    "ios": {
+      "bundleIdentifier": "app.jpteq.trader",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "app.jpteq.trader",
+      "adaptiveIcon": {
+        "foregroundImage": "../../assets/brand/icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-localization",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "../../assets/brand/logo.png",
+          "imageWidth": 200
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

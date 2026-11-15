@@ -1,0 +1,92 @@
+// Sign-in. This build has the development identity alone, and only when it was built for
+// development and asked for it (config.ts): an email, which the server either knows on a
+// roster or does not. Any other build says that sign-in is not part of it yet, in words;
+// the provider's SMS code takes this screen's place in TASKS R5.
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { StyleSheet, Text, TextInput } from "react-native";
+
+import { createApi, devHeaders } from "../api";
+import { apiUrl, devIdentity } from "../config";
+import { useStrings } from "../i18n";
+import { useSession } from "../session";
+import { color, size, space, type } from "../theme";
+import { Button, Screen, text } from "../ui/controls";
+
+export default function SignIn() {
+  const { t } = useStrings();
+  const { signIn } = useSession();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+
+  if (!devIdentity || apiUrl === null) {
+    return (
+      <Screen testID="sign-in-unavailable">
+        <Text style={text.title}>{t.signIn.title}</Text>
+        <Text style={text.body}>{t.signIn.unavailable}</Text>
+      </Screen>
+    );
+  }
+  const url = apiUrl;
+  const submit = async () => {
+    const address = email.trim().toLowerCase();
+    if (address === "") return;
+    setBusy(true);
+    setNote(null);
+    try {
+      const me = await createApi(url, () => devHeaders(address)).me.get.query();
+      signIn({ email: address, me: { id: me.id, name: me.name, role: me.role } });
+      router.replace("/today");
+    } catch (error) {
+      const code = (error as { data?: { code?: string } } | null)?.data?.code;
+      setNote(code === "UNAUTHORIZED" ? t.signIn.notOnRoster : t.signIn.failed);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Screen testID="sign-in">
+      <Text style={text.title}>{t.signIn.title}</Text>
+      <Text style={text.secondary}>{t.signIn.developmentOnly}</Text>
+      <Text style={text.label}>{t.signIn.email}</Text>
+      <TextInput
+        testID="sign-in-email"
+        accessibilityLabel={t.signIn.email}
+        style={styles.input}
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        autoCorrect={false}
+        keyboardType="email-address"
+        returnKeyType="go"
+        onSubmitEditing={() => void submit()}
+      />
+      <Button
+        testID="sign-in-submit"
+        label={busy ? t.loading : t.signIn.submit}
+        disabled={busy}
+        onPress={() => void submit()}
+      />
+      {note !== null && (
+        <Text testID="sign-in-note" style={text.attention} accessibilityRole="alert">
+          {note}
+        </Text>
+      )}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  input: {
+    minHeight: size.target,
+    paddingHorizontal: space[3],
+    borderRadius: size.radiusCard,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: color.border,
+    backgroundColor: color.surface,
+    color: color.ink,
+    fontSize: type.body.fontSize,
+  },
+});
