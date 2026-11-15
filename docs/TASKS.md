@@ -242,6 +242,12 @@ paid is created and no production migration runs without the owner's approval of
       physical Android phone signs in by SMS code, clocks in on an assigned job, switches
       jobs and clocks out across an airplane-mode gap, and the office shows the hours once,
       per job
+      Installs, in `apps/mobile`, at the versions `expo install` chooses for SDK 58:
+      `expo-sqlite`, consumed by the device store and outbox, with `drizzle-orm` at the
+      workspace's own range over it; `expo-crypto`, by the UUIDv7 minter's random bytes;
+      `expo-location`, by the foreground location stamp; `expo-secure-store` and
+      `@clerk/expo` (registry read 2026-11-15: 4.16.1), by the SMS-code sign-in and its
+      token cache, with whatever peer Clerk's Expo page requires, named here when read.
 - [ ] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
       S4; it takes none of R5's lines and adds to its clock and pull. Work: the caller's
       own shifts and their eligible hours in the pull; under enforcement the clock offers
