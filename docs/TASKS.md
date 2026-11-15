@@ -222,6 +222,16 @@ paid is created and no production migration runs without the owner's approval of
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
       emulator; the i18n layer with English and Spanish catalogs; one Maestro smoke flow.
+      Installs, in `apps/mobile`, at the versions Expo SDK 58's template and `expo install`
+      choose (registry read 2026-11-15: `expo` 58.0.25, `react-native` 0.88.1): `expo`,
+      `react`, `react-native` and what the default template brings with them
+      (`expo-router`, `expo-constants`, `expo-linking`, `expo-status-bar`,
+      `react-native-safe-area-context`, `react-native-screens`, `react-native-gesture-handler`,
+      `react-native-reanimated`), consumed by the app's shell and navigation;
+      `expo-dev-client`, by the development build; `expo-localization`, by the i18n
+      layer's first choice of language; `@trpc/client` 11.23.0, `superjson` and `zod`, by
+      the API client and the contract; `@types/react` and `typescript`, by typecheck. No
+      i18n library: the catalogs are two typed objects.
       Done when the flow signs in as the demo foreman and reads the job list on both
 - [ ] R5 — Field app, time tracking (plan first: sync; takes Stage 5's pull extension,
       sign-in, outbox, offline evidence, clock, job list and history, sync states and own
