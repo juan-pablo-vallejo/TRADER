@@ -473,6 +473,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the branch's alias and moves it to the new deployment (seen twice on `staging-preview`).
 - `staging-preview`'s alias is a host name, so it is written nowhere in this repository:
   read it from Vercel's connector (the deployment's aliases) each time it is needed.
+- `has_table_privilege` answers false for a table on which a role holds only column grants:
+  the grant matrix lists `companies` as SELECT alone, and its UPDATE columns have a test of
+  their own (0041). A new `companies` column the application must write needs its own grant.
+- A BEFORE trigger answers before a foreign key too: a trigger that looks its parents up must
+  look inside the row's own company, or it judges another tenant's row the key would refuse.
+- A shift locked by a clock-in can never be deleted, and its event never is: a test that
+  locks a shift runs in a rolled-back transaction or a `disposableDb()`.
+- `0040` was reordered by hand: drizzle-kit emitted the foreign keys to
+  `job_assignments (company_id, id)` before that unique existed. Read a generated file for
+  the order of a key and what references it.
+- `companies.schedule_enforced` is written by the database's owner alone; on staging that is
+  owner-role SQL with a key, through its wrapper. No procedure writes it.
 
 ## Log
 
@@ -1451,3 +1463,26 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   public host's exemption, Clerk SMS to a real number on the development instance,
   Maestro offline on iOS and ad hoc provisioning are each unverified until their step.
 - **Next:** S2, the schedule schema, on a branch from this one.
+
+### 2026-11-15 — Schedule schema (S2)
+
+- **Did:** branch `s2-schedule-schema` from `r01-mandate`. `0040`, `0041`: the exact-shift
+  key, the punch lock and its guards, `copy_id`, `shift_overrides`,
+  `shift_override_history`, `companies.schedule_enforced` under a column grant.
+  `assignment.create` and `update` name the new key; three API tests restated under it.
+  Watched red, each by removing it in the local database and restoring it with the
+  migration's own statement: the exact-shift key, the mutation, insert and truncate
+  triggers, the lock pair check, the override trigger, pair key, both checks and its
+  foreign key, the history's three append-only triggers and two checks, both policies, the
+  switch's grant and the history's. Counted first: staging holds no `job_assignments` row.
+- **Decided:** in this line's plan, as the 2026-11-15 autonomous-execution row allows; the
+  as-built row of that date in ARCHITECTURE: a history table of its own; the switch as a
+  per-company column only the owner writes; the lock as two columns on the shift. Not
+  done, and S3's and S4's: overlap, override need and "what authorized a start" are judged
+  by no database guard; no writer takes an override or writes history yet; nothing sets a
+  lock. Worth knowing: until S3 an office create of one job twice in a day at other times
+  succeeds, overlapping or not.
+- **Release 0.1 state:** branches `r01-mandate` (#100) and `s2-schedule-schema`, stacked;
+  staging's database still at 40 migrations and its Preview at `1c94b64`; `release-0.1`
+  is made from this branch next, then staging is migrated to 42. Blockers: none.
+- **Next:** S3, the validated shift writers and the week read.

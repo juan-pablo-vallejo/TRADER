@@ -146,7 +146,7 @@ paid is created and no production migration runs without the owner's approval of
       included and end excluded; shifts that touch; an early start at 15 minutes and at
       16, and beside a shift already eligible; every accepted day has exactly one eligible
       shift at every covered minute
-- [ ] S2 — Schedule schema (plan first: schema). Depends on S1. Work: several shifts for
+- [x] S2 — Schedule schema (plan first: schema). Depends on S1. Work: several shifts for
       one person, job and day, an exact duplicate refused; the punch lock; overlap
       overrides with their reason; their append-only history; the mark of a copied week.
       The plan decides the tables, the history's store and what becomes of the natural
