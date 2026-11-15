@@ -195,11 +195,12 @@ paid is created and no production migration runs without the owner's approval of
       1024 and 1280 with about 24 people, no control under its target, no sideways page
       scroll, a refused circular choice said in words, a locked shift read-only, and one
       pass with a screen reader
-- [ ] A01 — Overview and the office navigation (DESIGN, Layout; Overview). Depends on S6
-      for Schedule and R6 for Invoices, each destination appearing with its screen. Work:
-      the navigation regrouped under the 2026-11-15 names, routes unchanged; `/overview`,
-      which `/` opens. Tests: every count equals its screen's own read; a failed read says
-      so and hides nothing else; a worker and a foreman are refused
+- [x] A01 — Overview and the office navigation (DESIGN, Layout; Overview). Work: the
+      navigation regrouped under the 2026-11-15 names, routes unchanged, Invoices and
+      Developer appearing with their screens (R6, D01); `overview.get`, one admin read of
+      four counts; `/overview`, which `/` opens. Tests: each count against the rows that
+      make it and against its own screen's read — the queue, the week, the hours; nothing
+      of another company; the gate line. One read, so a failure is the whole screen's
 - [ ] D01 — Developer console (DESIGN, Developer console). Work: `/developer`, admin-gated
       and read-only, over `status.get`, readiness, the deployment's commit and environment,
       the company's enforcement setting and `diagnostic.list`. Tests: gate inventory

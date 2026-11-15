@@ -1652,3 +1652,26 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the owner to install the wrapper's migrate command; the schedule screen will fail on
   that Preview until then.
 - **Next:** A01, the navigation's groups and the Overview; then the payroll CSV and D01.
+
+### 2026-11-15 — Overview and the office navigation (A01)
+
+- **Did:** branch `a01-overview-navigation` from `s6-weekly-schedule-screen`.
+  `overview.get`, admin-gated, with its gate line: approvals waiting, sessions with no
+  clock-out, refused entries inside their 30 days, shifts in the company's week.
+  `/overview`, which `/` now opens; the navigation regrouped to Overview, Jobsites,
+  Schedule, Labor, Employees, routes unchanged. Checked in the browser on `trader_demo`
+  at 1280 and 390: `/` opening the Overview with 13 to approve and 20 shifts, the demo's
+  own figures, each line a link 72 pt or taller, the groups as named, no sideways scroll.
+  Watched red, by mutation: pending only, the retention, both ends of the week, the
+  Monday, the open-session figure. 1,424 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. One
+  read, not four: the queue is paged and the refused-entry read asks for a person and a
+  day, so neither can be counted from the browser. "Sessions with no clock-out" is the
+  labor derivation's own figure, which leaves a session still waiting for approval among
+  the approvals. Not done: Invoices and Developer are not in the navigation until their
+  screens exist; invoices still owed is not counted until R6; not checked at 768 or 1024.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `s6-weekly-schedule-screen`
+  (#105) and this one, stacked, CI green on the first six; **staging's database is still
+  at 40 migrations** of 43 and waits for the owner to install the wrapper's migrate
+  command. S6 is built and not ticked: a screen-reader pass and about 24 people are owed.
+- **Next:** the payroll-hours CSV, then D01.
