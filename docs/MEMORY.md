@@ -509,6 +509,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - A mutation that turns no test red is a finding, not a nuisance: in S5 it showed two
   checks another check already made (removed) and a fingerprint half nothing tested (a test
   added). Read the "failed: 0" lines of a mutation run first.
+- A foreign key added to a table widens the TRUNCATE … CASCADE set of everything it
+  references: `job_assignments.locked_by_event_id` put `job_assignments` and
+  `shift_overrides` into `work_session_events`' set, and its TRUNCATE test deadlocked
+  (40P01) on CI only, where the suites interleave differently — green locally five times.
+  After adding a foreign key, widen every `lockExclusive` list that names the referenced
+  table. A TRUNCATE test writes its fixtures first and runs nothing but the TRUNCATE once
+  it holds its locks.
 
 ## Log
 
@@ -1584,7 +1591,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   what it covers, the resend answer, the day locks, each reason for leaving a shift out,
   the copy's mark, the day carried from one copied shift to the next, undo's lock refusal
   and its history. 1,410 tests; the first full run was red once on the `updated_at`
-  flake of `materials/cost.test.ts` (Notes), green on the rerun.
+  flake of `materials/cost.test.ts` (Notes), green on the rerun. Then red on CI: a deadlock
+  in the db suite between S2's new foreign key and an older TRUNCATE test (Notes), which
+  S2's own CI runs had not hit; fixed here in a commit of its own.
 - **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
   source is the week before the one named. A shift is left out for a deactivated person,
   an archived job, the same shift already there, an overlap, or a clock-in's leave it
