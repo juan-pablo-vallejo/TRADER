@@ -201,11 +201,13 @@ paid is created and no production migration runs without the owner's approval of
       four counts; `/overview`, which `/` opens. Tests: each count against the rows that
       make it and against its own screen's read — the queue, the week, the hours; nothing
       of another company; the gate line. One read, so a failure is the whole screen's
-- [ ] D01 — Developer console (DESIGN, Developer console). Work: `/developer`, admin-gated
-      and read-only, over `status.get`, readiness, the deployment's commit and environment,
-      the company's enforcement setting and `diagnostic.list`. Tests: gate inventory
-      unchanged or one admin line added; no procedure it calls writes; a worker and a
-      foreman are refused; nothing of another company is answered
+- [x] D01 — Developer console (DESIGN, Developer console). Work: `developer.get`, one
+      admin read — the sync mode, minimum builds and protocol as the service reads them,
+      the company's enforcement setting, the database role, the newest refused entries —
+      and `/developer`, read-only, with the deployment's commit, environment and readiness
+      beside it. Tests: the gate line; the caller's own lines newest first and none past
+      their retention; nothing of another company, its enforcement setting included;
+      nothing written
 - [x] Payroll-hours CSV in Release 0.1 (2026-11-15 scope row): takes Stage 4's line as it
       is written there
 - [ ] Edge protection for a public host (takes, of Stage 6's edge line, the rate limits, the

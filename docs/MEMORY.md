@@ -1701,3 +1701,26 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   still at 40 migrations** of 43, waiting for the owner to install the wrapper's migrate
   command. S6 built and not ticked (screen reader, about 24 people).
 - **Next:** D01, the developer console; then R6, invoices.
+
+### 2026-11-15 — Developer console (D01)
+
+- **Did:** branch `d01-developer-console` from `payroll-hours-csv`. `developer.get`,
+  admin-gated, with its gate line; `configuredStatus` beside `serviceStatus`;
+  `/developer`, last in the navigation: commit, environment, the readiness check's
+  status, field sync, minimum builds, protocol, schedule enforcement, the database role,
+  refused entries in 30 days and in 24 hours, and the twenty newest lines. Seen in the
+  browser on `trader_demo` at 1280 and 390: the eleven facts, readiness Ready, the role
+  `trader_app`, no control on the page, no sideways scroll. 1,433 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  commit and environment are read by the server page from the platform's own variables,
+  which are not secrets; readiness is the public check's status and nothing of its body;
+  no migration count, since the application role cannot read the migrator's journal. Not
+  done: no write of any kind, by rule — the sync mode, the minimum builds and the
+  enforcement switch are still changed where they live; nothing with a refused entry was
+  seen in the browser (the demo has none); not checked at 768 or 1024.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `payroll-hours-csv` (#107) and
+  this one, stacked, CI green on all eight; **staging's database is still at 40
+  migrations** of 43, waiting for the owner to install the wrapper's migrate command.
+  S6 built and not ticked (screen reader, about 24 people). Done of the plan: steps 0 to 6. Open: R6 and R7 (invoices, payments, PDF, email, invoice CSV), the edge line and the
+  public staging host, R4, R5 with S7 and S8, enforcement on staging, the device builds.
+- **Next:** R6, invoices: drafting and issue.
