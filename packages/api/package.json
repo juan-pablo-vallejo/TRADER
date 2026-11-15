@@ -4,6 +4,7 @@
   "private": true,
   "exports": {
     ".": "./src/index.ts",
+    "./contract": "./src/contract/index.ts",
     "./eligibility": "./src/assignments/eligibility.ts"
   },
   "scripts": {

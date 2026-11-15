@@ -15,7 +15,6 @@ import {
   users,
 } from "@trader/db/schema";
 import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
-import { z } from "zod";
 
 import type { Tx } from "../core/context";
 import { replay } from "../labor/fold";
@@ -23,95 +22,13 @@ import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
 import { effectiveMaterial } from "../materials/effective";
 import type { AppUser } from "../core/resolve-user";
-import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
+import type { PullOutput } from "../contract/pull";
 
 // ARCHITECTURE, sync.pull: today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
 export const WINDOW_DAYS = 14;
 
-export const pullInput = z.strictObject({
-  protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
-});
-
-const approvalState = z.enum(["none", "pending", "approved", "rejected"]);
-const facts = z.strictObject({
-  description: z.string(),
-  quantity: z.string(),
-  unit: z.string(),
-});
-
-export const pullOutput = z.strictObject({
-  serverNow: z.date(),
-  me: z.strictObject({
-    id: z.uuid(),
-    role: z.enum(["admin", "foreman", "worker"]),
-    name: z.string(),
-  }),
-  company: z.strictObject({ name: z.string(), timezone: z.string() }),
-  // Whether a clock-in is judged by the weekly schedule (sync/schedule.ts). The phone shows
-  // what follows from it; the server alone decides.
-  scheduleEnforced: z.boolean(),
-  // What the caller may start on or log against (sync/scope.ts): no place, customer or cost.
-  jobs: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      name: z.string(),
-      address: z.string().nullable(),
-      status: z.enum(["open", "complete", "archived"]),
-    }),
-  ),
-  // Crews the caller leads, with their active members by id and name: what recording crew
-  // labor offline needs, and nothing more. A worker gets none.
-  ledCrews: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      name: z.string(),
-      members: z.array(z.strictObject({ id: z.uuid(), name: z.string() })),
-    }),
-  ),
-  sessions: z.array(
-    z.strictObject({
-      rootEventId: z.uuid(),
-      jobId: z.uuid(),
-      workDate: z.iso.date(),
-      startedAt: z.date(),
-      endedAt: z.date().nullable(),
-      state: z.enum(["working", "paused", "ended"]),
-      workedMs: z.number().int(),
-      breakMs: z.number().int(),
-      voided: z.boolean(),
-    }),
-  ),
-  // The caller's own events of those sessions, whoever recorded them. No location.
-  events: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      type: z.enum(["started", "paused", "resumed", "ended", "voided"]),
-      jobId: z.uuid(),
-      clientTimestamp: z.date(),
-      serverTimestamp: z.date(),
-      clockSkewed: z.boolean(),
-      correctsEventId: z.uuid().nullable(),
-      voidsEventId: z.uuid().nullable(),
-      approval: approvalState,
-    }),
-  ),
-  // The caller's own receipts in the window: as logged, and as in effect with approved
-  // corrections. No cost, no corrector.
-  materials: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      jobId: z.uuid(),
-      loggedAt: z.date(),
-      original: facts,
-      effective: facts.extend({ voided: z.boolean() }),
-      correctionPending: z.boolean(),
-      approval: approvalState,
-    }),
-  ),
-});
-
-export type PullOutput = z.infer<typeof pullOutput>;
+export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
 
 const stateOf = (decision: "approved" | "rejected" | null | undefined) =>
   decision === undefined ? "none" : decision === null ? "pending" : decision;

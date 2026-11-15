@@ -6,57 +6,24 @@
 // is an admin, whose own labor needs no approval (V1-D10 as amended). Answers `accepted` or
 // `duplicate` with an acknowledgement of fixed facts only, or `rejected` with a code, writing nothing. Anything thrown is the loop's: the
 // record is omitted and retried. Consumed by sync/push.ts.
-import {
-  approvalReason,
-  approvals,
-  attestationLevel,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { approvals, workSessionEvents } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
-import { z } from "zod";
+import { type z } from "zod";
 
 import { closedOn } from "../closeout/day";
 import type { Tx } from "../core/context";
-import { instant } from "../core/instant";
 import { replay, type LaborEvent, type Replay, type Session } from "../labor/fold";
 import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
 import type { AppUser } from "../core/resolve-user";
+import type { LaborPayload, laborAck } from "../contract/labor";
 import { judgeEventTime, laborReasons, type ApprovalReason, type Skew } from "./reasons";
 import { judgeStart, lockShift, scheduleEnforced } from "./schedule";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
-// Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
-// receipt stamp, a skew or an approval: those are the server's. No corrections or voids from a
-// device: the office writes those (labor.repair; ARCHITECTURE, 2026-11-04, office-only
-// repair sets).
-export const laborPayloadV1 = z.strictObject({
-  workerId: z.uuid(),
-  jobId: z.uuid(),
-  type: z.enum(["started", "paused", "resumed", "ended"]),
-  clientTimestamp: instant,
-  attestationLevel: z.enum(attestationLevel.enumValues),
-  location: z
-    .strictObject({
-      lat: z.number().min(-90).max(90),
-      lng: z.number().min(-180).max(180),
-      accuracyM: z.number().nonnegative().nullable(),
-    })
-    .nullable(),
-  timeSetByUser: z.boolean(),
-  capturedOffline: z.boolean(),
-});
-
-export type LaborPayload = z.infer<typeof laborPayloadV1>;
+export { laborAck, laborPayloadV1, type LaborPayload } from "../contract/labor";
 
 export type LaborRecord = { id: string; schemaVersion: number; payload: LaborPayload };
-
-export const laborAck = z.strictObject({
-  id: z.uuid(),
-  serverTimestamp: z.date(),
-  clockSkewed: z.boolean(),
-  reasons: z.array(z.enum(approvalReason.enumValues)),
-});
 
 export type LaborRejection =
   | RejectionCode
