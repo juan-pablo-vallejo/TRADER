@@ -83,6 +83,7 @@ const ordered = (flags: Partial<Record<ApprovalReason, boolean>>): ApprovalReaso
       "location",
       "clock_skewed",
       "after_closeout",
+      "unscheduled",
     ] as const
   ).filter((r) => flags[r] === true);
 
@@ -97,6 +98,9 @@ export function laborReasons(e: {
   job: JobPlace;
   clockSkewed: boolean;
   afterCloseout: boolean;
+  // A start the schedule did not admit, stored for review (sync/schedule.ts). Push alone
+  // says so: an office repair is never judged by the schedule.
+  unscheduled?: boolean;
 }): ApprovalReason[] {
   return ordered({
     offline: e.capturedOffline,
@@ -105,6 +109,7 @@ export function laborReasons(e: {
     location: e.type !== "voided" && locationFlagged(e.type, e.stamp, e.job),
     clock_skewed: e.clockSkewed,
     after_closeout: e.afterCloseout,
+    unscheduled: e.unscheduled === true,
   });
 }
 

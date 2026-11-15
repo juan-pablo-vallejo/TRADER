@@ -48,6 +48,9 @@ export const pullOutput = z.strictObject({
     name: z.string(),
   }),
   company: z.strictObject({ name: z.string(), timezone: z.string() }),
+  // Whether a clock-in is judged by the weekly schedule (sync/schedule.ts). The phone shows
+  // what follows from it; the server alone decides.
+  scheduleEnforced: z.boolean(),
   // What the caller may start on or log against (sync/scope.ts): no place, customer or cost.
   jobs: z.array(
     z.strictObject({
@@ -123,7 +126,11 @@ function daysBefore(date: string, days: number): string {
 export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   const serverNow = new Date();
   const [company] = await tx
-    .select({ name: companies.name, timezone: companies.timezone })
+    .select({
+      name: companies.name,
+      timezone: companies.timezone,
+      scheduleEnforced: companies.scheduleEnforced,
+    })
     .from(companies)
     .where(eq(companies.id, user.companyId));
   if (company === undefined) throw new Error("the caller's company is not visible");
@@ -275,7 +282,8 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   return {
     serverNow,
     me: { id: user.id, role: user.role, name: user.name },
-    company,
+    company: { name: company.name, timezone: company.timezone },
+    scheduleEnforced: company.scheduleEnforced,
     jobs: jobRows,
     ledCrews,
     sessions: kept.map((s) => ({

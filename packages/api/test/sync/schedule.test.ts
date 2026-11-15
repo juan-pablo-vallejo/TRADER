@@ -1,0 +1,531 @@
+// TASKS S4: a clock-in judged by the weekly schedule, behind the enforcement switch
+// (sync/schedule.ts, sync/labor.ts; ARCHITECTURE, 2026-11-15). Rolled-back transactions: the
+// fixtures are the owner's, the pushes trader_app's under the day's tenant. `judgeStart` is
+// asked at fixed instants, since the schedule's own answer needs no clock. A push is judged
+// against the database's clock as well (MEMORY: an online capture more than five minutes old
+// is `clock_skewed`), so a push at a fixed past instant is sent as captured offline, and a
+// push captured online is timed now. The two commit orders of an edit against a start are
+// schedule-commit.test.ts's; the rules themselves eligibility.test.ts's.
+import {
+  approvals,
+  companies,
+  jobAssignments,
+  shiftOverrides,
+  workSessionEvents,
+} from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
+
+import type { Tx } from "../../src/core/context";
+import type { AppUser } from "../../src/core/resolve-user";
+import { pushLaborEvent } from "../../src/sync/labor";
+import { measureSkew } from "../../src/sync/reasons";
+import { judgeStart, scheduleEnforced } from "../../src/sync/schedule";
+import {
+  appCallerIn,
+  asTenant,
+  boundIn,
+  type CrewDay,
+  crewDayIn,
+  ownerDb,
+  rolledBack,
+  uuidv7,
+} from "../helpers";
+
+const owner = ownerDb();
+afterAll(async () => {
+  await owner.$client.end();
+});
+
+// A Monday in the past, in New York's winter: UTC-5, so 07:00 there is 12:00Z.
+const DAY = "2026-11-09";
+const at = (wall: string, day = DAY) => new Date(`${day}T${wall}:00-05:00`);
+
+const asOwner = (tx: Tx) => tx.execute(sql`reset role`);
+
+async function enforce(tx: Tx, d: CrewDay, on = true) {
+  await asOwner(tx);
+  await tx
+    .update(companies)
+    .set({ scheduleEnforced: on })
+    .where(eq(companies.id, d.companyId));
+}
+
+// A shift written as the owner: these tests are about what push reads, not how the office
+// writes (assignment.test.ts).
+async function shift(
+  tx: Tx,
+  d: CrewDay,
+  userId: string,
+  jobId: string,
+  expectedStart: string,
+  expectedEnd: string,
+  workDate = DAY,
+) {
+  await asOwner(tx);
+  const [row] = await tx
+    .insert(jobAssignments)
+    .values({
+      companyId: d.companyId,
+      userId,
+      jobId,
+      workDate,
+      expectedStart,
+      expectedEnd,
+    })
+    .returning({ id: jobAssignments.id });
+  return row!.id;
+}
+
+async function holds(tx: Tx, d: CrewDay, holderId: string, yieldingId: string) {
+  await tx.insert(shiftOverrides).values({
+    companyId: d.companyId,
+    holderId,
+    yieldingId,
+    reason: "Covering",
+    createdBy: d.foremanId,
+  });
+}
+
+const who = (d: CrewDay, id: string, role: AppUser["role"]): AppUser => ({
+  id,
+  companyId: d.companyId,
+  role,
+  name: "n",
+  email: "e@co.test",
+  phone: null,
+  signInPhone: null,
+});
+
+type Sent = {
+  type?: "started" | "paused" | "resumed" | "ended";
+  when?: Date;
+  offline?: boolean;
+  id?: string;
+};
+
+// One labor event pushed by `caller` for `workerId` on `jobId`: its result, or its code when
+// refused. Captured offline at a fixed instant unless told otherwise.
+async function push(
+  tx: Tx,
+  d: CrewDay,
+  caller: AppUser,
+  workerId: string,
+  jobId: string,
+  o: Sent = {},
+) {
+  await asTenant(tx, d.companyId);
+  const now = new Date();
+  const id = o.id ?? uuidv7();
+  const answer = await tx.transaction((sp) =>
+    pushLaborEvent(
+      sp,
+      caller,
+      {
+        id,
+        schemaVersion: 1,
+        payload: {
+          workerId,
+          jobId,
+          type: o.type ?? "started",
+          clientTimestamp: o.when ?? at("07:10"),
+          attestationLevel: "biometric",
+          location: null,
+          timeSetByUser: false,
+          capturedOffline: o.offline ?? true,
+        },
+      },
+      measureSkew(now, now),
+    ),
+  );
+  return {
+    id,
+    result: answer.result === "rejected" ? answer.code : answer.result,
+    reasons: answer.result === "rejected" ? [] : answer.ack.reasons,
+  };
+}
+
+const lockOf = async (tx: Tx, shiftId: string) => {
+  await asOwner(tx);
+  const [row] = await tx
+    .select({ lockedByEventId: jobAssignments.lockedByEventId })
+    .from(jobAssignments)
+    .where(eq(jobAssignments.id, shiftId));
+  return row!.lockedByEventId;
+};
+
+const eventsOf = async (tx: Tx, d: CrewDay) => {
+  await asOwner(tx);
+  return tx.$count(workSessionEvents, eq(workSessionEvents.companyId, d.companyId));
+};
+
+describe("judgeStart", () => {
+  const judged = async (tx: Tx, d: CrewDay, jobId: string, when: Date) => {
+    await asTenant(tx, d.companyId);
+    return judgeStart(tx, d.w1, jobId, when);
+  };
+
+  it("admits the shift's own job from its first minute to the one before its end", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const id = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      const yes = { admitted: true, shiftId: id };
+      const no = { admitted: false };
+      expect(await judged(tx, d, d.J, at("07:00"))).toEqual(yes);
+      expect(await judged(tx, d, d.J, at("15:29"))).toEqual(yes);
+      // The end is excluded; the seconds of a recorded time are dropped, never rounded up.
+      expect(await judged(tx, d, d.J, at("15:30"))).toEqual(no);
+      expect(await judged(tx, d, d.J, new Date("2026-11-09T15:29:59-05:00"))).toEqual(
+        yes,
+      );
+      // Another job at an admitted minute, and the shift's job on another day.
+      expect(await judged(tx, d, d.K, at("09:00"))).toEqual(no);
+      expect(await judged(tx, d, d.J, at("09:00", "2026-11-10"))).toEqual(no);
+    });
+  });
+
+  it("admits a start up to fifteen minutes early, and only when no shift holds that minute", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const morning = await shift(tx, d, d.w1, d.J, "07:00", "11:00");
+      const late = await shift(tx, d, d.w1, d.K, "11:10", "15:00");
+      expect(await judged(tx, d, d.J, at("06:45"))).toEqual({
+        admitted: true,
+        shiftId: morning,
+      });
+      expect(await judged(tx, d, d.J, at("06:44"))).toEqual({ admitted: false });
+      // 10:50: twenty minutes before the next shift, and the morning one still holds it.
+      expect(await judged(tx, d, d.K, at("10:55"))).toEqual({ admitted: false });
+      expect(await judged(tx, d, d.J, at("10:55"))).toEqual({
+        admitted: true,
+        shiftId: morning,
+      });
+      // The gap between them: early for the next, too late for the first.
+      expect(await judged(tx, d, d.K, at("11:05"))).toEqual({
+        admitted: true,
+        shiftId: late,
+      });
+      expect(await judged(tx, d, d.J, at("11:05"))).toEqual({ admitted: false });
+    });
+  });
+
+  it("admits only the holder's job through the time an override decided", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const morning = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      const late = await shift(tx, d, d.w1, d.K, "12:00", "17:00");
+      // Undecided, the day does not resolve: nothing is admitted on it at all.
+      expect(await judged(tx, d, d.J, at("08:00"))).toEqual({ admitted: false });
+      await asOwner(tx);
+      await holds(tx, d, morning, late);
+      expect(await judged(tx, d, d.J, at("13:00"))).toEqual({
+        admitted: true,
+        shiftId: morning,
+      });
+      expect(await judged(tx, d, d.K, at("13:00"))).toEqual({ admitted: false });
+      expect(await judged(tx, d, d.K, at("15:30"))).toEqual({
+        admitted: true,
+        shiftId: late,
+      });
+    });
+  });
+
+  it("reads the wall clock on the days the clocks change", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      // 2026-11-01, New York: 01:30 happens twice. A shift over it is eligible both times.
+      const back = await shift(tx, d, d.w1, d.J, "01:00", "02:00", "2026-11-01");
+      for (const instant of ["2026-11-01T05:30:00Z", "2026-11-01T06:30:00Z"]) {
+        expect(await judged(tx, d, d.J, new Date(instant))).toEqual({
+          admitted: true,
+          shiftId: back,
+        });
+      }
+      expect(await judged(tx, d, d.J, new Date("2026-11-01T07:00:00Z"))).toEqual({
+        admitted: false,
+      });
+      // 2026-03-08: 02:00 to 03:00 does not occur. The minute after 01:59 is 03:00, which
+      // is the shift's excluded end.
+      await shift(tx, d, d.w1, d.J, "02:00", "03:00", "2026-03-08");
+      expect(await judged(tx, d, d.J, new Date("2026-03-08T07:00:00Z"))).toEqual({
+        admitted: false,
+      });
+    });
+  });
+
+  it("never looks past the day's end at the next day's shifts", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const evening = await shift(tx, d, d.w1, d.J, "22:00", "23:59");
+      await shift(tx, d, d.w1, d.J, "00:00", "08:00", "2026-11-10");
+      expect(await judged(tx, d, d.J, at("23:58"))).toEqual({
+        admitted: true,
+        shiftId: evening,
+      });
+      // 23:59 is the evening shift's excluded end, and one minute before tomorrow's.
+      expect(await judged(tx, d, d.J, at("23:59"))).toEqual({ admitted: false });
+    });
+  });
+});
+
+describe("sync.push with schedule enforcement off", () => {
+  it("is the crew's as before: a shift admits nobody and its absence refuses nobody", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const onK = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
+      await asTenant(tx, d.companyId);
+      expect(await scheduleEnforced(tx)).toBe(false);
+      const worker = who(d, d.w1, "worker");
+      // K has no crew: the shift there changes nothing. J is the crew's: no shift is needed.
+      expect((await push(tx, d, worker, d.w1, d.K)).result).toBe("not_permitted");
+      expect((await push(tx, d, worker, d.w1, d.J)).result).toBe("accepted");
+      expect(await lockOf(tx, onK)).toBeNull();
+    });
+  });
+});
+
+describe("sync.push with schedule enforcement on", () => {
+  it("admits a worker on their shift's job, crew or no crew, and locks the shift", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      // K is on no crew, and w1 is in none that has it.
+      const id = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
+      await enforce(tx, d);
+      const start = await push(tx, d, who(d, d.w1, "worker"), d.w1, d.K);
+      // No location stamp came with it: a reason for the office, never a refusal.
+      expect(start).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location"],
+      });
+      expect(await lockOf(tx, id)).toBe(start.id);
+      // The same record again changes nothing, lock included.
+      const again = await push(tx, d, who(d, d.w1, "worker"), d.w1, d.K, {
+        id: start.id,
+      });
+      expect(again.result).toBe("duplicate");
+      expect(await eventsOf(tx, d)).toBe(1);
+      // The office can no longer change or remove what admitted it.
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await asTenant(tx, d.companyId);
+      const office = appCallerIn(tx, admin.who).assignment;
+      expect(
+        await office.update({
+          assignmentId: id,
+          workDate: DAY,
+          expectedStart: "08:00",
+          expectedEnd: "15:30",
+        }),
+      ).toEqual({ result: "rejected", code: "locked" });
+      expect(await office.remove({ assignmentId: id })).toEqual({
+        result: "rejected",
+        code: "locked",
+      });
+      // Nor take the minute it was admitted at for another shift.
+      const over = uuidv7();
+      expect(
+        await office.create({
+          userId: d.w1,
+          jobId: d.J,
+          expectedStart: "07:00",
+          expectedEnd: "08:00",
+          days: [
+            {
+              id: over,
+              workDate: DAY,
+              decisions: [
+                { overrideId: uuidv7(), otherId: id, holder: "this", reason: "Swap" },
+              ],
+            },
+          ],
+        }),
+      ).toMatchObject({
+        days: [{ result: "rejected", code: "authorization", shiftId: id }],
+      });
+    });
+  });
+
+  it("locks a shift once: a second start on it leaves the first lock", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const id = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      await enforce(tx, d);
+      const worker = who(d, d.w1, "worker");
+      const first = await push(tx, d, worker, d.w1, d.J);
+      await push(tx, d, worker, d.w1, d.J, { type: "ended", when: at("09:00") });
+      const second = await push(tx, d, worker, d.w1, d.J, { when: at("10:00") });
+      expect(second.result).toBe("accepted");
+      expect(await lockOf(tx, id)).toBe(first.id);
+    });
+  });
+
+  it("refuses a start captured with a connection that no shift admits, and writes nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await enforce(tx, d);
+      const worker = who(d, d.w1, "worker");
+      const now = { offline: false, when: new Date(Date.now() - 1000) };
+      // No shift at all — though J is their own crew's job.
+      expect((await push(tx, d, worker, d.w1, d.J, now)).result).toBe("not_scheduled");
+      // A shift through the whole of today and tomorrow, on the other job.
+      await asTenant(tx, d.companyId);
+      const { rows } = await tx.execute<{ today: string; tomorrow: string }>(sql`
+        select to_char(now() at time zone 'America/New_York', 'YYYY-MM-DD') as today,
+          to_char((now() + interval '1 day') at time zone 'America/New_York',
+            'YYYY-MM-DD') as tomorrow
+      `);
+      for (const day of [rows[0]!.today, rows[0]!.tomorrow]) {
+        await shift(tx, d, d.w1, d.K, "00:00", "23:59", day);
+      }
+      expect((await push(tx, d, worker, d.w1, d.J, now)).result).toBe("not_scheduled");
+      expect(await eventsOf(tx, d)).toBe(0);
+    });
+  });
+
+  it("stores a start captured offline that the schedule does not admit, for the office to decide", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      // The phone's copy said J at 07:00; the office has since moved the day to K.
+      const id = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
+      await enforce(tx, d);
+      const worker = who(d, d.w1, "worker");
+      const start = await push(tx, d, worker, d.w1, d.J);
+      expect(start).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location", "unscheduled"],
+      });
+      // Stored under its own id at its recorded time, waiting; it locks nothing.
+      await asOwner(tx);
+      const [event] = await tx
+        .select({
+          clientTimestamp: workSessionEvents.clientTimestamp,
+          jobId: workSessionEvents.jobId,
+        })
+        .from(workSessionEvents)
+        .where(eq(workSessionEvents.id, start.id));
+      expect(event).toEqual({ clientTimestamp: at("07:10"), jobId: d.J });
+      const [approval] = await tx
+        .select({ decision: approvals.decision, reasons: approvals.reasons })
+        .from(approvals)
+        .where(eq(approvals.eventId, start.id));
+      expect(approval).toEqual({
+        decision: null,
+        reasons: ["offline", "location", "unscheduled"],
+      });
+      expect(await lockOf(tx, id)).toBeNull();
+      // Being stored, what follows it is judged against it and accepted — and never by the
+      // schedule: a pause, a resume and an end outside every shift.
+      for (const [type, wall] of [
+        ["paused", "11:00"],
+        ["resumed", "11:30"],
+        ["ended", "18:00"],
+      ] as const) {
+        expect(
+          (await push(tx, d, worker, d.w1, d.J, { type, when: at(wall) })).result,
+        ).toBe("accepted");
+      }
+      // A resend adds nothing.
+      expect((await push(tx, d, worker, d.w1, d.J, { id: start.id })).result).toBe(
+        "duplicate",
+      );
+      expect(await eventsOf(tx, d)).toBe(4);
+    });
+  });
+
+  it("asks no shift of an admin's own start", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      await enforce(tx, d);
+      const start = await push(tx, d, who(d, admin.id, "admin"), admin.id, d.K, {
+        offline: false,
+        when: new Date(Date.now() - 1000),
+      });
+      // No shift, no crew, no approval: an admin's own labor (V1-D10 as amended).
+      expect(start).toMatchObject({ result: "accepted", reasons: [] });
+    });
+  });
+
+  it("asks a foreman's start for a crew member for that member's shift and the crew's authority", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const foreman = who(d, d.foremanId, "foreman");
+      const onJ = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      // w2 has a shift on K, which is no crew's: the foreman leads nobody there.
+      await shift(tx, d, d.w2, d.K, "07:00", "15:30");
+      await enforce(tx, d);
+      const now = { offline: false, when: new Date(Date.now() - 1000) };
+      // With the member's shift: admitted, and the member's shift locked.
+      const start = await push(tx, d, foreman, d.w1, d.J);
+      expect(start.result).toBe("accepted");
+      expect(await lockOf(tx, onJ)).toBe(start.id);
+      // A member with no shift on J: the crew's authority is not enough.
+      expect((await push(tx, d, foreman, d.w2, d.J, now)).result).toBe("not_scheduled");
+      // A shift where the foreman has no authority is not enough either.
+      expect((await push(tx, d, foreman, d.w2, d.K)).result).toBe("not_permitted");
+      // The foreman's own start is their own shift's, like anyone's.
+      expect((await push(tx, d, foreman, d.foremanId, d.J, now)).result).toBe(
+        "not_scheduled",
+      );
+    });
+  });
+
+  it("refuses rather than stores an unscheduled offline start for an admin worker", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      // w1 becomes an admin and stays in the foreman's crew: a foreman's start for them.
+      await asOwner(tx);
+      await tx.execute(sql`update users set role = 'admin' where id = ${d.w1}`);
+      await enforce(tx, d);
+      // An admin's labor takes no approval, so there would be nothing for it to wait on.
+      expect((await push(tx, d, who(d, d.foremanId, "foreman"), d.w1, d.J)).result).toBe(
+        "not_scheduled",
+      );
+      expect(await eventsOf(tx, d)).toBe(0);
+    });
+  });
+
+  it("still refuses an archived job, a future time and a second open session by their own names", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      await shift(tx, d, d.w1, d.K, "16:00", "20:00");
+      await enforce(tx, d);
+      const worker = who(d, d.w1, "worker");
+      expect(
+        (
+          await push(tx, d, worker, d.w1, d.J, {
+            offline: false,
+            when: new Date(Date.now() + 3_600_000),
+          })
+        ).result,
+      ).toBe("time_in_future");
+      expect((await push(tx, d, worker, d.w1, d.J)).result).toBe("accepted");
+      // A second start while the first session is open: validation's answer, before the
+      // schedule is asked.
+      expect((await push(tx, d, worker, d.w1, d.K, { when: at("16:05") })).result).toBe(
+        "session_already_open",
+      );
+      await asOwner(tx);
+      await tx.execute(sql`update jobs set status = 'archived' where id = ${d.K}`);
+      await push(tx, d, worker, d.w1, d.J, { type: "ended", when: at("15:00") });
+      expect((await push(tx, d, worker, d.w1, d.K, { when: at("16:05") })).result).toBe(
+        "not_permitted",
+      );
+    });
+  });
+});
+
+describe("sync.pull", () => {
+  it("says whether the schedule is enforced", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const worker = await boundIn(tx, d.companyId, "worker");
+      await asTenant(tx, d.companyId);
+      const pull = () => appCallerIn(tx, worker.who).sync.pull({ protocolVersion: 1 });
+      expect((await pull()).scheduleEnforced).toBe(false);
+      await enforce(tx, d);
+      await asTenant(tx, d.companyId);
+      expect((await pull()).scheduleEnforced).toBe(true);
+    });
+  });
+});

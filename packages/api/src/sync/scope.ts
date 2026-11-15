@@ -129,17 +129,24 @@ export function mayStartOn(scope: PushScope, user: { id: string }): boolean {
   );
 }
 
+// `enforced` is the company's schedule enforcement, read by the caller for a `started` alone
+// (sync/schedule.ts). Under it a worker's or a foreman's own start needs no crew: their
+// eligible shift decides, and sync/labor.ts asks that next. An admin's own start, a foreman's
+// authority over a crew member, and every other type are as they are without it.
 export function mayRecordLabor(
   scope: PushScope | null,
   user: AppUser,
   workerId: string,
   type: "started" | "paused" | "resumed" | "ended",
+  enforced = false,
 ): boolean {
   if (scope === null) return false;
   if (workerId === user.id) {
     // Pause, resume and end are held to their session's job by validation (job_id_mismatch):
     // a reassignment or an archival never strands an open session.
-    return type !== "started" || mayStartOn(scope, user);
+    if (type !== "started") return true;
+    if (enforced && scope.role !== "admin") return !scope.jobArchived;
+    return mayStartOn(scope, user);
   }
   // Crew labor: the foreman of the job's active crew, for a current active member, every type.
   return (

@@ -305,6 +305,7 @@ export const strings = {
     location: "location",
     clock_skewed: "clock skew",
     after_closeout: "after closeout",
+    unscheduled: "not on the schedule",
   },
   approvedByDefault: "Approved by default",
   approvalWaiting: "Waiting",

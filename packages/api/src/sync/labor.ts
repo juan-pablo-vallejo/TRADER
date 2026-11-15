@@ -23,6 +23,7 @@ import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
 import type { AppUser } from "../core/resolve-user";
 import { judgeEventTime, laborReasons, type ApprovalReason, type Skew } from "./reasons";
+import { judgeStart, lockShift, scheduleEnforced } from "./schedule";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
 // Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
@@ -63,7 +64,10 @@ export type LaborRejection =
   | "not_permitted"
   // Timed later than its receipt by more than the tolerance. Nothing is written; the record
   // stays on the device under its id and the office recovers the hours (labor.repair).
-  | "time_in_future";
+  | "time_in_future"
+  // Under schedule enforcement: a start, captured with a connection, that no shift of the
+  // worker's admits on that job at that minute. Nothing is written; they ask the office.
+  | "not_scheduled";
 
 export type LaborResult =
   | { result: "accepted" | "duplicate"; ack: z.infer<typeof laborAck> }
@@ -148,9 +152,14 @@ export async function pushLaborEvent(
     return answerFor(tx, prior, user, r);
   }
 
-  // 2. Authority, from rows locked now (sync/scope.ts).
+  // 2. Authority, from rows locked now (sync/scope.ts). Whether the schedule decides a start
+  // is the company's setting, read here; with it off nothing reads a shift.
+  const enforced = p.type === "started" && (await scheduleEnforced(tx));
   const scope = await lockPushScope(tx, user, p.jobId, p.workerId);
-  if (!mayRecordLabor(scope, user, p.workerId, p.type)) return rejected("not_permitted");
+  if (!mayRecordLabor(scope, user, p.workerId, p.type, enforced))
+    return rejected("not_permitted");
+  // An admin's own start needs no shift (2026-11-15, schedule authority).
+  const scheduled = enforced && !(p.workerId === user.id && scope!.role === "admin");
 
   // 3. The worker's ledger, with no other labor writer for them and no closeout in flight.
   const timeline = await loadWorkerTimeline(tx, p.workerId);
@@ -200,6 +209,22 @@ export async function pushLaborEvent(
   if (verdict.verdict === "rejected")
     return rejected(verdict.code, verdict.conflictingEventId);
 
+  // 6b. The schedule, for a start it decides, under the worker's day lock: after validation,
+  // so a start that is no start at all is named as that. Admitted, it will lock its shift.
+  // Not admitted and captured offline, it is stored under its own id at its recorded time
+  // for the office to approve, reject or repair: it counts toward nothing until then, and
+  // being stored, the pause, resume and end behind it are judged against it and not refused
+  // in a chain. Not for an admin worker, whose labor takes no approval and so could not
+  // wait for one. Any other start the schedule does not admit is refused and writes nothing.
+  let admittedOn: string | null = null;
+  let unscheduled = false;
+  if (scheduled) {
+    const start = await judgeStart(tx, p.workerId, p.jobId, p.clientTimestamp);
+    if (start.admitted) admittedOn = start.shiftId;
+    else if (p.capturedOffline && !scope!.workerAdmin) unscheduled = true;
+    else return rejected("not_scheduled");
+  }
+
   // 7. The approval facts, the closeout among them judged in each closeout's stored zone.
   const reasons: ApprovalReason[] = laborReasons({
     type: p.type,
@@ -213,6 +238,7 @@ export async function pushLaborEvent(
       tx,
       sessionOfEvent(replay([...timeline.events, candidate]), candidate),
     ),
+    unscheduled,
   });
 
   // 8. No conflict target: the primary key ends here. Nothing comes back when a concurrent
@@ -261,6 +287,10 @@ export async function pushLaborEvent(
       .insert(approvals)
       .values({ companyId: user.companyId, eventId: r.id, reasons });
   }
+
+  // 10. The punch lock: the shift this start was admitted on keeps its job, day and times
+  // from here, in the same transaction as the event that locked it.
+  if (admittedOn !== null) await lockShift(tx, admittedOn, r.id);
   return ack(tx, "accepted", inserted);
 }
 
