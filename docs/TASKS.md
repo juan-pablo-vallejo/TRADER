@@ -135,7 +135,7 @@ paid is created and no production migration runs without the owner's approval of
       authority, Audit trail and pull-extension passages; PRD, Weekly schedule; DESIGN;
       lines S1 to S9. Each S line is planned and approved on its own, one line to a
       session, and none of S1 to S8 turns schedule enforcement on
-- [ ] S1 — Schedule eligibility rules as a pure module in `packages/api` (no schema, no
+- [x] S1 — Schedule eligibility rules as a pure module in `packages/api` (no schema, no
       procedure). Depends on S0. Work: for one person's shifts and overrides on one day,
       the one eligible shift at every scheduled moment, the early-arrival rule, and the
       refusals — an overlap with no decision, a circular or ambiguous precedence, a shift

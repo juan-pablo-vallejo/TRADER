@@ -1393,3 +1393,34 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   whether Release 0.1's go/no-go requires enforcement on is not said anywhere.
 - **Next:** owner reviews the branch; then track line S1, the eligibility rules as a pure
   module, plan first.
+
+### 2026-11-15 — Schedule eligibility rules as a pure module (S1)
+
+- **Did:** after the owner merged #98, `staging-preview` was moved to `8ca877d` by the
+  ordinary push (read: both remote branches at that commit; by the owner's report, its
+  Preview built and the suite green). Branch `s1-schedule-eligibility` from `8ca877d`, four
+  commits. `assignments/eligibility.ts`, pure: `resolveDay` (one person's shifts and
+  overrides on a day, to the one eligible shift at every covered minute or the issues that
+  refuse it) and `admitStart` (scheduled, early within 15 minutes, or none). Tests with no
+  database: every order of two and of three overlapping shifts, the boundary minutes,
+  touching shifts, each refusal, and every accepted day held to one eligible shift at every
+  minute — over every day of up to three shifts on six cuts, every fully decided day of
+  four, and 400 generated days from fixed seeds, each also checked against the rules
+  written a second way. Watched red: the overlap test, the excluded end, the missing
+  decision, the conflict, the winner, the starved shift, the circle, the issue order, each
+  structural check, 15 against 16, scheduled before early. No migration, no procedure, no
+  dependency. 1,341 tests.
+- **Decided:** by the owner on 2026-11-15 (the plan approved, its six recommendations): no
+  property-testing library; a leftover override refused; every issue of the failing stage
+  answered; seconds dropped by the caller; the file's name; the decision row of that date.
+  Changed from the plan, found by the exhaustive test: the plan held that a circle always
+  leaves time uncovered, and it does not — a fourth shift can hold all the time the three
+  share. A circle is refused there too, so it is a check of its own before the stretches,
+  and `circular_precedence` names three shifts and the time they share, not an uncovered
+  stretch. Issues of one kind are ordered by time, then ids. Not done: nothing consumes the
+  module; no zone conversion, switch, lock or procedure (S3, S4); the branch is not pushed.
+  For the owner: the masked circle could instead be admitted, since every minute has one
+  eligible shift — say so before S3 if that is the rule wanted; the prototype's own
+  three-shift fixture was not read, so the half-hour test uses times of its own; local
+  branches of merged work and a stale `origin/a03-schedule-documents` ref remain.
+- **Next:** owner reviews the branch; then track line S2, the schedule schema, plan first.
