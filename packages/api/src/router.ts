@@ -3,6 +3,7 @@ import { assignmentRouter } from "./routers/assignment";
 import { closeoutRouter } from "./routers/closeout";
 import { crewRouter } from "./routers/crew";
 import { customerRouter } from "./routers/customer";
+import { developerRouter } from "./routers/developer";
 import { diagnosticRouter } from "./routers/diagnostic";
 import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
@@ -21,6 +22,7 @@ export const appRouter = router({
   closeout: closeoutRouter,
   crew: crewRouter,
   customer: customerRouter,
+  developer: developerRouter,
   diagnostic: diagnosticRouter,
   job: jobRouter,
   labor: laborRouter,

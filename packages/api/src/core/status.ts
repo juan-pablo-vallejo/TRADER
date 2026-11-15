@@ -64,6 +64,22 @@ function minimumBuild(value: string | undefined): number | null {
 // The kill-switch variables that do not parse, by name, in CONFIG_VARS order. Also read at
 // start by the deployment's environment check (apps/web, deploy-env.ts), which refuses to
 // start on any; a running server that meets one answers `paused` below.
+// What is configured, read as `serviceStatus` reads it, for the office's own look at it
+// (developer/get.ts): the mode — null when the variable holds something else, which the
+// service treats as paused — and each platform's minimum build, null when unreadable.
+export function configuredStatus(env: Record<string, string | undefined>): {
+  mode: ServiceState | null;
+  minimumBuilds: Record<Platform, number | null>;
+} {
+  return {
+    mode: mode(env.TRADER_SYNC_MODE),
+    minimumBuilds: {
+      ios: minimumBuild(env[MIN_BUILD.ios]),
+      android: minimumBuild(env[MIN_BUILD.android]),
+    },
+  };
+}
+
 export function invalidConfigVars(env: Record<string, string | undefined>): ConfigVar[] {
   return [
     ...(mode(env.TRADER_SYNC_MODE) === null ? (["TRADER_SYNC_MODE"] as const) : []),

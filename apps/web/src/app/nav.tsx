@@ -37,6 +37,8 @@ const groups: { label: string | null; links: (readonly [string, string])[] }[] =
     ],
   },
   { label: strings.navEmployees, links: [["/roster", strings.roster]] },
+  // Last, apart.
+  { label: null, links: [["/developer", strings.developer.nav]] },
 ];
 
 export function Nav() {
