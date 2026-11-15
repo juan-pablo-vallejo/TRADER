@@ -506,6 +506,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   longer than a push's 2 s `lock_timeout`.
 - To turn enforcement on for a company in a test, update `companies.schedule_enforced` as
   the owner; `trader_app` is refused (42501).
+- A mutation that turns no test red is a finding, not a nuisance: in S5 it showed two
+  checks another check already made (removed) and a fingerprint half nothing tested (a test
+  added). Read the "failed: 0" lines of a mutation run first.
 
 ## Log
 
@@ -1568,3 +1571,30 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   — the owner-role wrapper has no migrate command, and a version that adds one waits for
   the owner to install it; until then the schedule endpoints fail on that Preview.
 - **Next:** S5, Copy Last Week.
+
+### 2026-11-15 — Copy Last Week (S5)
+
+- **Did:** branch `s5-copy-last-week` from `s4-clock-in-eligibility`. `assignments/copy.ts`:
+  `assignment.copyPreview`, `copyConfirm`, `copyUndo`, with their gate lines; `day.ts`
+  gained a loader for a range of days and one lock order for several people's days. No
+  migration: the mark is S2's `copy_id`. Seen on real commits: two admins confirming one
+  preview leave one copy and the other is answered the plan as it now stands; one
+  confirmation sent twice at once is `copied` and `duplicate`; a statement made to fail on
+  its third row writes nothing. Watched red, by mutation: the fingerprint compared and
+  what it covers, the resend answer, the day locks, each reason for leaving a shift out,
+  the copy's mark, the day carried from one copied shift to the next, undo's lock refusal
+  and its history. 1,410 tests; the first full run was red once on the `updated_at`
+  flake of `materials/cost.test.ts` (Notes), green on the rerun.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  source is the week before the one named. A shift is left out for a deactivated person,
+  an archived job, the same shift already there, an overlap, or a clock-in's leave it
+  would take; of two that overlapped last week the earlier is copied. The fingerprint
+  covers what is created and what is left out with its reason. A copy is known by the
+  browser's id for it. Undo removes shifts edited since the copy too, with the history of
+  any decision made on them. Not done: no screen (S6); undo's `stale` answer has no test;
+  a copy of a week of about thirty people was not timed.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `s4-clock-in-eligibility`
+  (#103) and this one, stacked, CI green on the first four; `release-0.1` moves here
+  next. **Staging's database is still at 40 migrations** and waits for the owner to
+  install the wrapper's migrate command; the journal is now 43.
+- **Next:** S6, the Weekly Schedule screen, with A01's navigation.

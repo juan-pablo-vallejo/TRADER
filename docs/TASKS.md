@@ -180,7 +180,7 @@ paid is created and no production migration runs without the owner's approval of
       locked shift's authorization refused; an edit and a start on one person's day in
       both orders, committed; a stored offline start counts toward nothing until decided
       and its later events are accepted. Rollback: the switch off and a new deployment
-- [ ] S5 — Copy Last Week (plan first: schema, if S2 left the copy's mark open). Depends on
+- [x] S5 — Copy Last Week (plan first: schema, if S2 left the copy's mark open). Depends on
       S3. Work: preview, confirm, one transaction, a resend that creates nothing twice,
       undo. No override is copied: a shift that would overlap is listed and left out.
       Tests: what is confirmed is what was previewed, or nothing is written and the new
