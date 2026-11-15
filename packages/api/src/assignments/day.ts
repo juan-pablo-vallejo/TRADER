@@ -50,22 +50,61 @@ export type Day = {
 // Exclusive, to the end of the transaction, in day order. Keyed on the person, whose id is
 // unique across companies, under a prefix of its own.
 export async function lockPersonDays(tx: Tx, userId: string, workDates: string[]) {
-  for (const day of [...new Set(workDates)].sort()) {
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(hashtextextended(${`shift-day:${userId}:${day}`}, 0))`,
-    );
+  await lockDays(
+    tx,
+    workDates.map((workDate) => ({ userId, workDate })),
+  );
+}
+
+// The same lock for several people at once, in one order for every caller — by person, then
+// by day — so two calls over the same days never wait on each other.
+export async function lockDays(tx: Tx, days: { userId: string; workDate: string }[]) {
+  const keys = [
+    ...new Set(days.map((d) => `shift-day:${d.userId}:${d.workDate}`)),
+  ].sort();
+  for (const key of keys) {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${key}, 0))`);
   }
 }
 
-export async function loadDay(tx: Tx, userId: string, workDate: string): Promise<Day> {
+const dayKey = (userId: string, workDate: string) => `${userId} ${workDate}`;
+
+// Every scheduled day in a range of dates, by person and day; `userIds` narrows it. A day
+// with no shift is absent: `dayOf` answers an empty one.
+export async function loadDays(
+  tx: Tx,
+  from: string,
+  to: string,
+  userIds?: string[],
+): Promise<Map<string, Day>> {
+  const people =
+    userIds === undefined
+      ? sql``
+      : sql`and a.user_id in (${sql.join(
+          userIds.map((id) => sql`${id}`),
+          sql`, `,
+        )})`;
+  const days = new Map<string, Day>();
+  if (userIds !== undefined && userIds.length === 0) return days;
+  const at = (userId: string, workDate: string) => {
+    const key = dayKey(userId, workDate);
+    let day = days.get(key);
+    if (day === undefined) {
+      day = { userId, workDate, shifts: [], overrides: [] };
+      days.set(key, day);
+    }
+    return day;
+  };
   const shifts = await tx.execute<{
     id: string;
+    user_id: string;
+    work_date: string;
     job_id: string;
     start: string;
     end: string;
     locked_start: string | null;
   }>(sql`
-    select a.id, a.job_id,
+    select a.id, a.user_id, a.work_date::text as work_date, a.job_id,
       to_char(a.expected_start, 'HH24:MI') as start,
       to_char(a.expected_end, 'HH24:MI') as "end",
       case when a.locked_at is null then null
@@ -73,38 +112,49 @@ export async function loadDay(tx: Tx, userId: string, workDate: string): Promise
     from job_assignments a
     join companies c on c.id = a.company_id
     left join work_session_events e on e.id = a.locked_by_event_id
-    where a.user_id = ${userId} and a.work_date = ${workDate}
+    where a.work_date between ${from} and ${to} ${people}
     order by a.id
   `);
-  const overrides = await tx.execute<{
-    id: string;
-    holder_id: string;
-    yielding_id: string;
-    reason: string;
-  }>(sql`
-    select o.id, o.holder_id, o.yielding_id, o.reason
-    from shift_overrides o
-    join job_assignments a on a.id = o.holder_id
-    where a.user_id = ${userId} and a.work_date = ${workDate}
-    order by o.id
-  `);
-  return {
-    userId,
-    workDate,
-    shifts: shifts.rows.map((r) => ({
+  for (const r of shifts.rows) {
+    at(r.user_id, r.work_date).shifts.push({
       id: r.id,
       jobId: r.job_id,
       start: r.start,
       end: r.end,
       lockedStart: r.locked_start,
-    })),
-    overrides: overrides.rows.map((r) => ({
+    });
+  }
+  const overrides = await tx.execute<{
+    id: string;
+    user_id: string;
+    work_date: string;
+    holder_id: string;
+    yielding_id: string;
+    reason: string;
+  }>(sql`
+    select o.id, a.user_id, a.work_date::text as work_date, o.holder_id, o.yielding_id,
+      o.reason
+    from shift_overrides o
+    join job_assignments a on a.id = o.holder_id
+    where a.work_date between ${from} and ${to} ${people}
+    order by o.id
+  `);
+  for (const r of overrides.rows) {
+    at(r.user_id, r.work_date).overrides.push({
       id: r.id,
       holderId: r.holder_id,
       yieldingId: r.yielding_id,
       reason: r.reason,
-    })),
-  };
+    });
+  }
+  return days;
+}
+
+export const dayOf = (days: Map<string, Day>, userId: string, workDate: string): Day =>
+  days.get(dayKey(userId, workDate)) ?? { userId, workDate, shifts: [], overrides: [] };
+
+export async function loadDay(tx: Tx, userId: string, workDate: string): Promise<Day> {
+  return dayOf(await loadDays(tx, workDate, workDate, [userId]), userId, workDate);
 }
 
 export type DayRefusal =

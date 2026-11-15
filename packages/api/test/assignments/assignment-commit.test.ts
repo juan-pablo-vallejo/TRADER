@@ -337,3 +337,106 @@ describe("assignment.update and remove re-read the caller", () => {
     });
   }
 });
+
+describe("Copy Last Week on real commits", () => {
+  const LAST = ["2026-11-02", "2026-11-03", "2026-11-04"];
+  const THIS = "2026-11-09";
+
+  // Last week: w1 on J, Monday to Wednesday.
+  async function lastWeek() {
+    const d = await world();
+    await plan(d.admin.who).create({
+      userId: d.w1,
+      jobId: d.J,
+      days: LAST.map((workDate) => ({ id: uuidv7(), workDate })),
+      ...HOURS,
+    });
+    return d;
+  }
+
+  const thisWeek = async (companyId: string) =>
+    (await plansOf(companyId)).filter((r) => r.workDate >= THIS);
+
+  it("two admins confirming the same preview leave one copy; the other is answered the plan as it now is", async () => {
+    const d = await lastWeek();
+    const preview = await plan(d.admin.who).copyPreview({ weekStart: THIS });
+    expect(preview.create).toHaveLength(3);
+    const confirm = () => ({
+      copyId: uuidv7(),
+      weekStart: THIS,
+      fingerprint: preview.fingerprint,
+    });
+    let calls!: Promise<Awaited<ReturnType<ReturnType<typeof plan>["copyConfirm"]>>[]>;
+    await D.owner.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
+      calls = Promise.all([
+        plan(d.admin.who).copyConfirm(confirm()),
+        plan(d.second.who).copyConfirm(confirm()),
+      ]);
+      await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
+    });
+    const answers = await calls;
+    expect(answers.map((a) => a.result).sort()).toEqual(["copied", "stale"]);
+    const stale = answers.find((a) => a.result === "stale");
+    expect(stale?.result === "stale" && stale.preview.create).toEqual([]);
+    expect(
+      stale?.result === "stale" && stale.preview.leftOut.map((o) => o.reason),
+    ).toEqual(["duplicate", "duplicate", "duplicate"]);
+    expect(await thisWeek(d.companyId)).toHaveLength(3);
+  });
+
+  it("the same confirmation sent twice at once leaves one copy: `copied` and `duplicate`", async () => {
+    const d = await lastWeek();
+    const preview = await plan(d.admin.who).copyPreview({ weekStart: THIS });
+    const confirm = {
+      copyId: uuidv7(),
+      weekStart: THIS,
+      fingerprint: preview.fingerprint,
+    };
+    let calls!: Promise<Awaited<ReturnType<ReturnType<typeof plan>["copyConfirm"]>>[]>;
+    await D.owner.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
+      calls = Promise.all([
+        plan(d.admin.who).copyConfirm(confirm),
+        plan(d.admin.who).copyConfirm(confirm),
+      ]);
+      await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
+    });
+    expect((await calls).map((a) => a.result).sort()).toEqual(["copied", "duplicate"]);
+    expect(await thisWeek(d.companyId)).toHaveLength(3);
+  });
+
+  it("a failure part-way writes nothing", async () => {
+    const d = await lastWeek();
+    const preview = await plan(d.admin.who).copyPreview({ weekStart: THIS });
+    // The third row of the one statement fails, on a guard made for this test alone.
+    await D.owner.execute(sql`
+      create function fail_copy_test() returns trigger language plpgsql as $$
+      begin
+        if new.work_date = '2026-11-11' and new.copy_id is not null then
+          raise exception 'made to fail';
+        end if;
+        return new;
+      end $$
+    `);
+    await D.owner.execute(sql`
+      create trigger fail_copy_test before insert on job_assignments
+      for each row execute function fail_copy_test()
+    `);
+    try {
+      expect(
+        await outcome(
+          plan(d.admin.who).copyConfirm({
+            copyId: uuidv7(),
+            weekStart: THIS,
+            fingerprint: preview.fingerprint,
+          }),
+        ),
+      ).toBe("INTERNAL_SERVER_ERROR");
+    } finally {
+      await D.owner.execute(sql`drop trigger fail_copy_test on job_assignments`);
+      await D.owner.execute(sql`drop function fail_copy_test()`);
+    }
+    expect(await thisWeek(d.companyId)).toEqual([]);
+  });
+});

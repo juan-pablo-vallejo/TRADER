@@ -3,6 +3,17 @@
 // may name is judged inside each writer; none of them reads crew membership. `mine` admits
 // any active user and takes no person: it answers with the caller's own shifts.
 import {
+  confirmCopy,
+  copyConfirmInput,
+  copyConfirmOutput,
+  copyPreview,
+  copyPreviewInput,
+  copyUndoInput,
+  copyUndoOutput,
+  previewCopy,
+  undoCopy,
+} from "../assignments/copy";
+import {
   listAssignments,
   listInput,
   listOutput,
@@ -58,4 +69,16 @@ export const assignmentRouter = router({
     .input(decideInput)
     .output(decideOutput)
     .mutation(({ ctx, input }) => decideOverride(ctx.tx, ctx.user, input)),
+  copyPreview: roleProcedure("admin")
+    .input(copyPreviewInput)
+    .output(copyPreview)
+    .query(({ ctx, input }) => previewCopy(ctx.tx, input)),
+  copyConfirm: roleProcedure("admin")
+    .input(copyConfirmInput)
+    .output(copyConfirmOutput)
+    .mutation(({ ctx, input }) => confirmCopy(ctx.tx, ctx.user, input)),
+  copyUndo: roleProcedure("admin")
+    .input(copyUndoInput)
+    .output(copyUndoOutput)
+    .mutation(({ ctx, input }) => undoCopy(ctx.tx, ctx.user, input)),
 });
