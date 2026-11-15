@@ -1424,3 +1424,30 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   three-shift fixture was not read, so the half-hour test uses times of its own; local
   branches of merged work and a stale `origin/a03-schedule-documents` ref remain.
 - **Next:** owner reviews the branch; then track line S2, the schedule schema, plan first.
+
+### 2026-11-15 — Release 0.1 mandate: one plan for the track, written into the documents
+
+- **Did:** an audit at `1c94b64` (`main`, `staging-preview` and staging's Preview all at
+  it, CI green; staging's database at 40 migrations with no `job_assignments` row; no
+  `apps/mobile`, no contract export, no invoice procedure, no payments table, no rate
+  limit; `eas whoami` not signed in; the schedule prototype's file not on this Mac). Then
+  branch `r01-mandate`, documents only: seven decision rows of 2026-11-15, PRD, DESIGN,
+  RULES, `CLAUDE.md`, and five new track lines in TASKS. No code. 1,341 tests.
+- **Decided:** by the owner on 2026-11-15 (the mandate and four answers), the rows of that
+  date: the track worked without per-line approval; the payroll CSV and a plain invoice
+  CSV in the release; an Overview and a Developer console with no new role; the
+  navigation's names; enforcement on staging by a session after its gates; the
+  `release-0.1` integration branch; one public staging host for the phones if the plan
+  allows it at no cost. Order agreed: S2, S3, S4, S5, S6 with A01, payroll CSV and D01,
+  R6 and R7, the edge line and the public host, R4, R5 with S7 and S8, staging
+  enforcement and the integrated run, the device builds. Not done: everything after the
+  documents. The owner's, each asked for at its step: `eas login` and the Expo project
+  (R4), Resend's domain, key and one test recipient (R7), Clerk's native API on the
+  development instance (R5), Apple sign-in and device registration for an ad hoc build.
+- **Release 0.1 state** (kept current in the newest entry; a new session resumes here):
+  branch `r01-mandate` from `1c94b64`; `release-0.1` not yet made; staging's Preview is
+  `staging-preview`'s at `1c94b64`; last green: `pnpm check` on this branch; blockers:
+  none; risks: the schedule screen is built from DESIGN's text, not the prototype; the
+  public host's exemption, Clerk SMS to a real number on the development instance,
+  Maestro offline on iOS and ad hoc provisioning are each unverified until their step.
+- **Next:** S2, the schedule schema, on a branch from this one.
