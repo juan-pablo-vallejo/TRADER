@@ -36,6 +36,7 @@ const groups: { label: string | null; links: (readonly [string, string])[] }[] =
       ["/refusals", strings.refusals],
     ],
   },
+  { label: null, links: [["/invoices", strings.invoices.nav]] },
   { label: strings.navEmployees, links: [["/roster", strings.roster]] },
   // Last, apart.
   { label: null, links: [["/developer", strings.developer.nav]] },

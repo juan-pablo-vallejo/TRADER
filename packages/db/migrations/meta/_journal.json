@@ -302,6 +302,13 @@
       "when": 1794772320887,
       "tag": "0042_approval-reason-unscheduled",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794776088622,
+      "tag": "0043_invoice-issue-frozen",
+      "breakpoints": true
     }
   ]
 }

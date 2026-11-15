@@ -1,0 +1,84 @@
+/* The invoice screens (DESIGN, Invoice line): the list's sentence, and one invoice — its
+   lines as rows of fields while a draft, as a plain table once issued — with its totals. */
+.explain {
+  margin: 0 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.back a {
+  display: inline-block;
+  min-height: var(--target);
+  line-height: var(--target);
+}
+.meta {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-secondary);
+}
+.section {
+  margin-top: var(--space-6);
+}
+.section h2 {
+  margin: 0 0 var(--space-3);
+}
+.line {
+  display: grid;
+  gap: 0 var(--space-3);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+}
+.lineFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+.totals {
+  max-width: 24rem;
+  margin: var(--space-4) 0;
+  font-variant-numeric: tabular-nums;
+}
+.totals div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-1) 0;
+}
+.totals .grand {
+  border-top: var(--hairline) solid var(--border);
+  padding-top: var(--space-2);
+}
+.offers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-width: 44rem;
+}
+.offers li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: var(--hairline) solid var(--border);
+}
+.reference {
+  margin-top: var(--space-4);
+  color: var(--ink-secondary);
+}
+.danger {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: var(--hairline) solid var(--border);
+}
+@media (min-width: 768px) {
+  .line {
+    grid-template-columns: 3fr 1fr 1fr 1fr;
+  }
+  .lineFoot {
+    grid-column: 1 / -1;
+  }
+}

@@ -1,0 +1,244 @@
+// invoice.list, invoice.read and invoice.suggest (PRD, Invoicing and exports; DESIGN, Invoice
+// line). Plain reads under RLS. An invoice's state is derived, never stored: a draft has no
+// number, an issued one has, a void one has a void stamp. Totals are sums of the stored
+// line amounts and the stored tax, added here and never rounded again.
+//
+// `suggest` offers what a draft's lines may be drawn from — the job's approved hours, one
+// line a work date, and its receipts that count — as words and quantities only. It carries
+// no price, no pay rate and no receipt cost: what the customer is charged is entered by the
+// admin on every line (V1-D14). The hours are the one labor derivation's figures (jobs/
+// cost.ts): a day's quantity is the sum of that day's rounded figures, added and never
+// rounded again. Consumed by routers/invoice.ts.
+import { customers, invoiceLineItems, invoices, jobs, users } from "@trader/db/schema";
+import { asc, desc, eq, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+import { z } from "zod";
+
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
+import { forbidden } from "../core/trpc";
+import { jobCost } from "../jobs/cost";
+import { listMaterials } from "../materials/list";
+import { hoursQuantity, totals } from "./lines";
+
+const named = z.strictObject({ id: z.uuid(), name: z.string() });
+const state = z.enum(["draft", "issued", "void"]);
+const amounts = {
+  subtotalCents: z.number().int(),
+  taxCents: z.number().int(),
+  totalCents: z.number().int(),
+};
+const header = {
+  id: z.uuid(),
+  state,
+  // Null until issued.
+  number: z.number().int().nullable(),
+  customer: named,
+  job: named,
+  currency: z.string(),
+  createdAt: z.date(),
+  issuedAt: z.date().nullable(),
+  voidedAt: z.date().nullable(),
+  ...amounts,
+};
+
+export const LIST_LIMIT = 500;
+export const listOutput = z.array(z.strictObject(header));
+
+export const readInput = z.strictObject({ invoiceId: z.uuid() });
+export const readOutput = z.strictObject({
+  ...header,
+  issuedBy: z.string().nullable(),
+  voidedBy: z.string().nullable(),
+  lines: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      description: z.string(),
+      quantity: z.string(),
+      unit: z.string().nullable(),
+      unitPriceCents: z.number().int(),
+      amountCents: z.number().int(),
+      materialId: z.uuid().nullable(),
+    }),
+  ),
+});
+
+export const suggestInput = readInput;
+export const suggestOutput = z.strictObject({
+  // The zone the work dates were judged in.
+  timezone: z.string(),
+  labor: z.array(
+    z.strictObject({
+      workDate: z.iso.date(),
+      // Approved hours on the job that day, every worker's together.
+      hundredths: z.number().int().positive(),
+      quantity: z.string(),
+    }),
+  ),
+  materials: z.array(
+    z.strictObject({
+      materialId: z.uuid(),
+      description: z.string(),
+      quantity: z.string(),
+      unit: z.string(),
+    }),
+  ),
+});
+
+const stateOf = (i: { number: number | null; voidedAt: Date | null }) =>
+  i.voidedAt !== null
+    ? ("void" as const)
+    : i.number !== null
+      ? ("issued" as const)
+      : ("draft" as const);
+
+const columns = {
+  id: invoices.id,
+  number: invoices.number,
+  currency: invoices.currency,
+  taxCents: invoices.taxCents,
+  createdAt: invoices.createdAt,
+  issuedAt: invoices.issuedAt,
+  voidedAt: invoices.voidedAt,
+  customerId: customers.id,
+  customerName: customers.name,
+  jobId: jobs.id,
+  jobName: jobs.name,
+};
+
+type Row = {
+  id: string;
+  number: number | null;
+  currency: string;
+  taxCents: number;
+  createdAt: Date;
+  issuedAt: Date | null;
+  voidedAt: Date | null;
+  customerId: string;
+  customerName: string;
+  jobId: string;
+  jobName: string;
+};
+
+const headerOf = (r: Row, subtotalCents: number) => ({
+  id: r.id,
+  state: stateOf(r),
+  number: r.number,
+  customer: { id: r.customerId, name: r.customerName },
+  job: { id: r.jobId, name: r.jobName },
+  currency: r.currency,
+  createdAt: r.createdAt,
+  issuedAt: r.issuedAt,
+  voidedAt: r.voidedAt,
+  subtotalCents,
+  taxCents: r.taxCents,
+  totalCents: subtotalCents + r.taxCents,
+});
+
+// Newest first: drafts by when they were made, issued invoices by their number.
+export async function listInvoices(tx: Tx): Promise<z.infer<typeof listOutput>> {
+  const rows = await tx
+    .select({
+      ...columns,
+      subtotalCents: sql<number>`coalesce((
+        select sum(l.amount_cents) from invoice_line_items l where l.invoice_id = ${invoices.id}
+      ), 0)::int`,
+    })
+    .from(invoices)
+    .innerJoin(customers, eq(customers.id, invoices.customerId))
+    .innerJoin(jobs, eq(jobs.id, invoices.jobId))
+    .orderBy(
+      sql`${invoices.number} desc nulls first`,
+      desc(invoices.createdAt),
+      desc(invoices.id),
+    )
+    .limit(LIST_LIMIT);
+  return rows.map((r) => headerOf(r, r.subtotalCents));
+}
+
+export async function readInvoice(
+  tx: Tx,
+  input: z.infer<typeof readInput>,
+): Promise<z.infer<typeof readOutput>> {
+  const issuer = alias(users, "issuer");
+  const voider = alias(users, "voider");
+  const [row] = await tx
+    .select({ ...columns, issuedBy: issuer.name, voidedBy: voider.name })
+    .from(invoices)
+    .innerJoin(customers, eq(customers.id, invoices.customerId))
+    .innerJoin(jobs, eq(jobs.id, invoices.jobId))
+    .leftJoin(issuer, eq(issuer.id, invoices.issuedByUserId))
+    .leftJoin(voider, eq(voider.id, invoices.voidedByUserId))
+    .where(eq(invoices.id, input.invoiceId));
+  // Missing, or another tenant's and so invisible: one answer.
+  if (row === undefined) throw forbidden();
+  const lines = await tx
+    .select({
+      id: invoiceLineItems.id,
+      description: invoiceLineItems.description,
+      quantity: invoiceLineItems.quantity,
+      unit: invoiceLineItems.unit,
+      unitPriceCents: invoiceLineItems.unitPriceCents,
+      amountCents: invoiceLineItems.amountCents,
+      materialId: invoiceLineItems.materialId,
+    })
+    .from(invoiceLineItems)
+    .where(eq(invoiceLineItems.invoiceId, row.id))
+    .orderBy(asc(invoiceLineItems.position), asc(invoiceLineItems.id));
+  return {
+    ...headerOf(row, totals(lines, row.taxCents).subtotalCents),
+    issuedBy: row.issuedBy,
+    voidedBy: row.voidedBy,
+    lines,
+  };
+}
+
+export async function suggestLines(
+  tx: Tx,
+  user: AppUser,
+  input: z.infer<typeof suggestInput>,
+): Promise<z.infer<typeof suggestOutput>> {
+  const [invoice] = await tx
+    .select({ jobId: invoices.jobId })
+    .from(invoices)
+    .where(eq(invoices.id, input.invoiceId));
+  if (invoice === undefined) throw forbidden();
+  const cost = await jobCost(tx, user, { jobId: invoice.jobId });
+  const byDay = new Map<string, number>();
+  for (const line of cost.labor.lines) {
+    byDay.set(line.workDate, (byDay.get(line.workDate) ?? 0) + line.hundredths);
+  }
+  const receipts = [];
+  let after: string | undefined;
+  // Every receipt of the job, a page at a time: the list is bounded per page, not in all.
+  do {
+    const page = await listMaterials(tx, user, {
+      jobId: invoice.jobId,
+      show: "all",
+      limit: 100,
+      after,
+    });
+    receipts.push(...page.items);
+    after = page.next ?? undefined;
+  } while (after !== undefined);
+  return {
+    timezone: cost.timezone,
+    labor: [...byDay]
+      .filter(([, hundredths]) => hundredths > 0)
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([workDate, hundredths]) => ({
+        workDate,
+        hundredths,
+        quantity: hoursQuantity(hundredths),
+      })),
+    materials: receipts
+      // What counts: approved or needing no approval, and not voided.
+      .filter((r) => r.accounting === "eligible")
+      .map((r) => ({
+        materialId: r.id,
+        description: r.effective.description,
+        quantity: r.effective.quantity,
+        unit: r.effective.unit,
+      })),
+  };
+}
