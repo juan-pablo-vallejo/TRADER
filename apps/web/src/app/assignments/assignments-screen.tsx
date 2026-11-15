@@ -26,6 +26,7 @@ import {
   EditorSection,
   RowToggle,
 } from "../row-editor";
+import { uuidv7 } from "../closeout/uuidv7";
 import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
@@ -85,7 +86,10 @@ const reason = (code: string): string =>
   ({
     user_inactive: strings.userInactive,
     job_archived: strings.jobArchived,
-    already_planned: strings.alreadyPlanned,
+    schedule: strings.scheduleConflict,
+    authorization: strings.scheduleAuthorization,
+    locked: strings.shiftLocked,
+    stale: strings.shiftStale,
   })[code] ?? strings.requestFailed;
 
 const byDayThenStart = (a: Row, b: Row) =>
@@ -260,13 +264,24 @@ function PlanForm({
           setNote(reason(answer.code));
           return;
         }
-        if (answer.result === "unchanged") {
-          setNothingNew(true);
-          setNote(strings.alreadyPlannedAll);
+        const count = (result: string) =>
+          answer.days.filter((d) => d.result === result).length;
+        const refused = answer.days.find((d) => d.result === "rejected");
+        if (count("created") === 0) {
+          if (refused === undefined) {
+            setNothingNew(true);
+            setNote(strings.alreadyPlannedAll);
+          } else {
+            setNote(reason(refused.code));
+          }
           return;
         }
         await refresh();
-        onDone(strings.plannedDays(answer.created, answer.existing), from);
+        onDone(
+          strings.plannedDays(count("created"), count("duplicate")) +
+            (refused === undefined ? "" : strings.daysRefused(count("rejected"))),
+          from,
+        );
       },
       onError: () => setNote(strings.requestFailed),
     }),
@@ -288,7 +303,8 @@ function PlanForm({
     create.mutate({
       userId,
       jobId,
-      workDates: days,
+      // An id per day, the browser's (api assignments/write.ts).
+      days: days.map((workDate) => ({ id: uuidv7(), workDate })),
       expectedStart: start,
       expectedEnd: end,
     });
@@ -544,7 +560,11 @@ function Editor({
   );
   const remove = useMutation(
     trpc.assignment.remove.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (answer) => {
+        if (answer.result === "rejected") {
+          setRemoveNote(reason(answer.code));
+          return;
+        }
         await refresh();
         onRemoved();
       },

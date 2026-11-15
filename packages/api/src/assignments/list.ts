@@ -26,6 +26,7 @@ import {
   jobAssignments,
   jobs,
   jobStatus,
+  shiftOverrides,
   users,
 } from "@trader/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
@@ -35,6 +36,7 @@ import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { mayStartOn } from "../sync/scope";
+import { resolveDay } from "./eligibility";
 import { toWallTime, wallTime, workDay } from "./write";
 
 // The longest range one read covers: any month.
@@ -205,6 +207,97 @@ export async function listAssignments(
             : ("crew" as const),
     };
   });
+}
+
+// The office's week: Monday to Sunday (ARCHITECTURE, 2026-11-15 shift rules), every shift
+// with the hours it is the one to clock in on, whether a clock-in has locked it, and the
+// overlap overrides among them. `eligible` is null for a day that does not resolve — none can
+// be written since the validated writers, so it marks rows older than them.
+const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
+
+export const weekInput = z.strictObject({
+  weekStart: workDay.refine(isMonday, { message: "A week starts on a Monday." }),
+});
+
+const shiftRow = listOutput.element.extend({
+  locked: z.boolean(),
+  eligible: z.array(z.strictObject({ start: wallTime, end: wallTime })).nullable(),
+});
+
+export const weekOutput = z.strictObject({
+  weekStart: z.iso.date(),
+  // The seven days, Monday first.
+  days: z.array(z.iso.date()).length(7),
+  shifts: z.array(shiftRow),
+  overrides: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      holderId: z.uuid(),
+      yieldingId: z.uuid(),
+      reason: z.string(),
+    }),
+  ),
+});
+
+const dayAfter = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+export async function weekAssignments(
+  tx: Tx,
+  input: z.infer<typeof weekInput>,
+): Promise<z.infer<typeof weekOutput>> {
+  const days = Array.from({ length: 7 }, (_, n) => dayAfter(input.weekStart, n));
+  const from = days[0]!;
+  const to = days[6]!;
+  const rows = await listAssignments(tx, { from, to });
+  const locks = await tx
+    .select({ id: jobAssignments.id, lockedAt: jobAssignments.lockedAt })
+    .from(jobAssignments)
+    .where(and(gte(jobAssignments.workDate, from), lte(jobAssignments.workDate, to)));
+  const locked = new Set(locks.filter((l) => l.lockedAt !== null).map((l) => l.id));
+  const overrides = await tx
+    .select({
+      id: shiftOverrides.id,
+      holderId: shiftOverrides.holderId,
+      yieldingId: shiftOverrides.yieldingId,
+      reason: shiftOverrides.reason,
+    })
+    .from(shiftOverrides)
+    .innerJoin(jobAssignments, eq(jobAssignments.id, shiftOverrides.holderId))
+    .where(and(gte(jobAssignments.workDate, from), lte(jobAssignments.workDate, to)))
+    .orderBy(asc(shiftOverrides.id));
+
+  // One person's day at a time.
+  const byDay = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const key = `${row.worker.id} ${row.workDate}`;
+    byDay.set(key, [...(byDay.get(key) ?? []), row]);
+  }
+  const eligible = new Map<string, { start: string; end: string }[]>();
+  for (const dayRows of byDay.values()) {
+    const ids = new Set(dayRows.map((r) => r.id));
+    const resolved = resolveDay(
+      dayRows.map((r) => ({
+        id: r.id,
+        jobId: r.job.id,
+        start: r.expectedStart,
+        end: r.expectedEnd,
+      })),
+      overrides.filter((o) => ids.has(o.holderId)),
+    );
+    if (resolved.result !== "resolved") continue;
+    for (const s of resolved.shifts) eligible.set(s.shiftId, s.windows);
+  }
+  return {
+    weekStart: input.weekStart,
+    days,
+    shifts: rows.map((r) => ({
+      ...r,
+      locked: locked.has(r.id),
+      eligible: eligible.get(r.id) ?? null,
+    })),
+    overrides,
+  };
 }
 
 export async function ownAssignments(

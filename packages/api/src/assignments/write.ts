@@ -1,27 +1,35 @@
-// assignment.create, update and remove (PRD, Jobs and location; ARCHITECTURE, Office
-// authority: dated assignments, V1-D07). A dated assignment plans a person's day — a job, a
-// calendar day and an expected start and end — and is planning only: these writers touch
-// job_assignments and nothing else. They never read or write crew membership, so an admin may
-// plan any active person of the company on any job of the company that is not archived,
-// whatever their crews and whatever their role; whether that person could clock in there is
-// the read's to report (list.ts), never a reason to refuse.
+// assignment.create, update, remove and decide: the weekly schedule's writers (PRD, Weekly
+// schedule; ARCHITECTURE, 2026-11-15 shift rules; TASKS S3). A shift is one person on one job
+// on one day between two times. These writers touch job_assignments, shift_overrides and
+// shift_override_history and nothing else: they never read or write crew membership, so an
+// admin may schedule any active person of the company on any job of the company that is not
+// archived, whatever their crews and whatever their role.
+//
+// Every write is judged over the person's whole day before anything is written (day.ts,
+// judgeDay): two shifts that overlap need an admin's decision — which one holds the shared
+// time, and why — and a day that would not resolve, or that would change what admitted a
+// clock-in already made, is refused with its reasons and writes nothing. A shift a clock-in
+// has locked is not changed or removed here at all.
 //
 // The day and the times are kept as written (schema, job-assignments.ts): no instant, no
-// duration, no comparison with today. A plan lies within its day, so the end is after the
+// duration, no comparison with today. A shift lies within its day, so the end is after the
 // start.
+//
+// Ids are the browser's (UUIDv7): a `create` sent again finds its shift and answers
+// `duplicate`, writing nothing; the same id with other contents is `id_conflict`.
 //
 // Lock order (ARCHITECTURE, Concurrency): `create` takes the job FOR SHARE, then the caller
 // and the person FOR SHARE in id order — what a push takes, so it never waits on one, and an
-// archival or a deactivation committed while it waited is seen. `update` and `remove` re-read
-// the caller, then take the plan's own row, which is last in the order and taken by nothing
-// else. No field-write lock and no worker lock: a plan is not labor.
+// archival or a deactivation committed while it waited is seen. `update`, `remove` and
+// `decide` re-read the caller. All of them then take the day's lock (day.ts), in day order
+// where there are two, and only then a shift's or an override's row. No field-write lock and
+// no worker lock: a shift is not labor.
 //
-// `create` is one statement over a set of days with ON CONFLICT DO NOTHING on the plan's
-// natural key: a day already planned for that person and job is left exactly as it is and
-// counted, so a retry after a lost response answers `unchanged` and writes nothing. Consumed
-// by routers/assignment.ts.
-import { jobAssignments, jobs } from "@trader/db/schema";
-import { DrizzleQueryError, eq } from "drizzle-orm";
+// An override's creation, change and removal each leave a history entry in the same
+// transaction — also when it goes because its shifts no longer overlap, or because one of
+// them is removed. Consumed by routers/assignment.ts.
+import { jobAssignments, jobs, shiftOverrides } from "@trader/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
@@ -29,6 +37,18 @@ import { lockActiveSelf } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { lockUsersShare } from "../crews/lock";
+import {
+  type Day,
+  type DayOverride,
+  type DayShift,
+  judgeDay,
+  loadDay,
+  lockPersonDays,
+  overlaps,
+  recordOverrideHistory,
+  refusalSchema,
+  refused,
+} from "./day";
 
 // The days one `create` may plan: two working weeks.
 export const MAX_DAYS = 14;
@@ -52,19 +72,38 @@ const END_AFTER_START = {
   path: ["expectedEnd"],
 };
 
+// An admin's decision about the overlap between the shift being written and another shift of
+// the same person and day: which of the two holds the time they share, and why.
+export const decision = z.strictObject({
+  overrideId: z.uuid(),
+  otherId: z.uuid(),
+  holder: z.enum(["this", "other"]),
+  reason: z.string().trim().min(1).max(500),
+});
+const decisions = z
+  .array(decision)
+  .max(10)
+  .refine((d) => new Set(d.map((x) => x.otherId)).size === d.length, {
+    message: "One decision per shift.",
+  })
+  .default([]);
+
 export const createInput = z
   .strictObject({
     userId: z.uuid(),
     jobId: z.uuid(),
-    workDates: z
-      .array(workDay)
-      .min(1)
-      .max(MAX_DAYS)
-      .refine((days) => new Set(days).size === days.length, {
-        message: "A day is named once.",
-      }),
     expectedStart: wallTime,
     expectedEnd: wallTime,
+    days: z
+      .array(z.strictObject({ id: z.uuid(), workDate: workDay, decisions }))
+      .min(1)
+      .max(MAX_DAYS)
+      .refine((days) => new Set(days.map((d) => d.workDate)).size === days.length, {
+        message: "A day is named once.",
+      })
+      .refine((days) => new Set(days.map((d) => d.id)).size === days.length, {
+        message: "A shift id is used once.",
+      }),
   })
   .refine(endsAfterStart, END_AFTER_START);
 
@@ -74,45 +113,134 @@ export const updateInput = z
     workDate: workDay,
     expectedStart: wallTime,
     expectedEnd: wallTime,
+    decisions,
   })
   .refine(endsAfterStart, END_AFTER_START);
 
 export const removeInput = z.strictObject({ assignmentId: z.uuid() });
 
+export const decideInput = z.strictObject({
+  overrideId: z.uuid(),
+  holderId: z.uuid(),
+  reason: z.string().trim().min(1).max(500),
+});
+
 export type CreateInput = z.infer<typeof createInput>;
 export type UpdateInput = z.infer<typeof updateInput>;
 export type RemoveInput = z.infer<typeof removeInput>;
+export type DecideInput = z.infer<typeof decideInput>;
+
+const dayKey = { id: z.uuid(), workDate: z.iso.date() };
 
 export const createOutput = z.discriminatedUnion("result", [
-  // `created` days were planned now; `existing` were already planned and are untouched.
+  // One answer per day asked for, in day order. A refused day writes nothing and leaves the
+  // other days as they are answered.
   z.strictObject({
-    result: z.literal("created"),
-    created: z.number().int().positive(),
-    existing: z.number().int().nonnegative(),
+    result: z.literal("planned"),
+    days: z.array(
+      z.union([
+        z.strictObject({ ...dayKey, result: z.literal("created") }),
+        // This id is already this shift: a resend. Nothing is written.
+        z.strictObject({ ...dayKey, result: z.literal("duplicate") }),
+        z.strictObject({
+          ...dayKey,
+          result: z.literal("rejected"),
+          code: z.literal("id_conflict"),
+        }),
+        ...refusalSchema.map((r) => r.extend(dayKey)),
+      ]),
+    ),
   }),
-  // Every day was already planned for this person on this job. Nothing is written.
-  z.strictObject({ result: z.literal("unchanged") }),
   z.strictObject({
     result: z.literal("rejected"),
     code: z.enum(["user_inactive", "job_archived"]),
   }),
 ]);
 
-export const updateOutput = z.discriminatedUnion("result", [
-  z.strictObject({ result: z.literal("updated") }),
-  z.strictObject({ result: z.literal("unchanged") }),
-  // The person is already planned on this job on the day asked for.
-  z.strictObject({ result: z.literal("rejected"), code: z.literal("already_planned") }),
+// `locked`: a clock-in was admitted on this shift; attendance is corrected in the labor
+// ledger. `stale`: the shift moved to another day while this call waited; read it again.
+const lockedOrStale = z.strictObject({
+  result: z.literal("rejected"),
+  code: z.enum(["locked", "stale"]),
+});
+
+export const updateOutput = z.union([
+  z.strictObject({ result: z.enum(["updated", "unchanged"]) }),
+  lockedOrStale,
+  ...refusalSchema,
 ]);
 
-export const removeOutput = z.strictObject({ result: z.enum(["removed", "unchanged"]) });
+export const removeOutput = z.union([
+  z.strictObject({ result: z.enum(["removed", "unchanged"]) }),
+  lockedOrStale,
+  ...refusalSchema,
+]);
 
-// The exact shift — person, day, job and both times (migration 0040). Until the validated
-// writers (TASKS S3) it is the only thing a create or a change is refused for.
-const NATURAL_KEY = "job_assignments_exact_shift_unique";
+export const decideOutput = z.union([
+  z.strictObject({ result: z.enum(["updated", "unchanged"]) }),
+  ...refusalSchema,
+]);
 
 // Postgres writes a `time` back with seconds.
 export const toWallTime = (stored: string) => stored.slice(0, 5);
+
+const byId = (shifts: DayShift[]) => new Map(shifts.map((s) => [s.id, s]));
+
+type Decision = z.infer<typeof decision>;
+
+const overrideOf = (shiftId: string, d: Decision): DayOverride => ({
+  id: d.overrideId,
+  holderId: d.holder === "this" ? shiftId : d.otherId,
+  yieldingId: d.holder === "this" ? d.otherId : shiftId,
+  reason: d.reason,
+});
+
+async function insertOverrides(
+  tx: Tx,
+  user: AppUser,
+  day: Pick<Day, "userId" | "workDate">,
+  created: DayOverride[],
+  shifts: ReadonlyMap<string, DayShift>,
+) {
+  if (created.length === 0) return;
+  const inserted = await tx
+    .insert(shiftOverrides)
+    .values(
+      created.map((o) => ({
+        id: o.id,
+        companyId: user.companyId,
+        holderId: o.holderId,
+        yieldingId: o.yieldingId,
+        reason: o.reason,
+        createdBy: user.id,
+      })),
+    )
+    // The id is named: an override id already taken is refused, any other violation raised.
+    .onConflictDoNothing({ target: shiftOverrides.id })
+    .returning({ id: shiftOverrides.id });
+  if (inserted.length !== created.length) throw forbidden();
+  for (const o of created)
+    await recordOverrideHistory(tx, user, "created", day, o, shifts);
+}
+
+// Removed with their history, as the shifts stood before the write.
+async function removeOverrides(
+  tx: Tx,
+  user: AppUser,
+  day: Pick<Day, "userId" | "workDate">,
+  removed: DayOverride[],
+  before: ReadonlyMap<string, DayShift>,
+) {
+  if (removed.length === 0) return;
+  for (const o of removed)
+    await recordOverrideHistory(tx, user, "removed", day, o, before);
+  await tx.delete(shiftOverrides).where(
+    inArray(
+      shiftOverrides.id,
+      removed.map((o) => o.id),
+    ),
+  );
+}
 
 export async function createAssignments(
   tx: Tx,
@@ -130,93 +258,229 @@ export async function createAssignments(
   if (person.deactivatedAt !== null) return { result: "rejected", code: "user_inactive" };
   if (job.status === "archived") return { result: "rejected", code: "job_archived" };
 
-  const created = await tx
-    .insert(jobAssignments)
-    .values(
-      // In day order whatever order they were named in: two calls planning the same days
-      // then meet the same key first, and one waits instead of each holding what the other
-      // wants (40P01).
-      [...input.workDates].sort().map((workDate) => ({
+  const asked = [...input.days].sort((a, b) => (a.workDate < b.workDate ? -1 : 1));
+  await lockPersonDays(
+    tx,
+    person.id,
+    asked.map((d) => d.workDate),
+  );
+
+  const days: Extract<z.infer<typeof createOutput>, { result: "planned" }>["days"] = [];
+  for (const { id, workDate, decisions: decided } of asked) {
+    const key = { id, workDate };
+    const [existing] = await tx
+      .select({
+        userId: jobAssignments.userId,
+        jobId: jobAssignments.jobId,
+        workDate: jobAssignments.workDate,
+        expectedStart: jobAssignments.expectedStart,
+        expectedEnd: jobAssignments.expectedEnd,
+      })
+      .from(jobAssignments)
+      .where(eq(jobAssignments.id, id));
+    if (existing !== undefined) {
+      const same =
+        existing.userId === person.id &&
+        existing.jobId === job.id &&
+        existing.workDate === workDate &&
+        toWallTime(existing.expectedStart) === input.expectedStart &&
+        toWallTime(existing.expectedEnd) === input.expectedEnd;
+      days.push(
+        same
+          ? { ...key, result: "duplicate" }
+          : { ...key, result: "rejected", code: "id_conflict" },
+      );
+      continue;
+    }
+
+    const day = await loadDay(tx, person.id, workDate);
+    const shift: DayShift = {
+      id,
+      jobId: job.id,
+      start: input.expectedStart,
+      end: input.expectedEnd,
+      lockedStart: null,
+    };
+    const created = decided.map((d) => overrideOf(id, d));
+    const after = {
+      shifts: [...day.shifts, shift],
+      overrides: [...day.overrides, ...created],
+    };
+    const judged = judgeDay(after);
+    if (!judged.ok) {
+      days.push({ ...key, ...refused(judged.refusal) });
+      continue;
+    }
+    const inserted = await tx
+      .insert(jobAssignments)
+      .values({
+        id,
         companyId: user.companyId,
         userId: person.id,
         jobId: job.id,
         workDate,
         expectedStart: input.expectedStart,
         expectedEnd: input.expectedEnd,
-      })),
-    )
-    // The natural key is named: any other violation is a defect and must be raised.
-    .onConflictDoNothing({
-      target: [
-        jobAssignments.userId,
-        jobAssignments.workDate,
-        jobAssignments.jobId,
-        jobAssignments.expectedStart,
-        jobAssignments.expectedEnd,
-      ],
-    })
-    .returning({ id: jobAssignments.id });
-  if (created.length === 0) return { result: "unchanged" };
-  return {
-    result: "created",
-    created: created.length,
-    existing: input.workDates.length - created.length,
-  };
+      })
+      // The id is named: taken by a row this tenant cannot see, it is refused; the exact
+      // shift was judged above, and any other violation is a defect and must be raised.
+      .onConflictDoNothing({ target: jobAssignments.id })
+      .returning({ id: jobAssignments.id });
+    if (inserted.length === 0) {
+      days.push({ ...key, result: "rejected", code: "id_conflict" });
+      continue;
+    }
+    await insertOverrides(tx, user, day, created, byId(after.shifts));
+    days.push({ ...key, result: "created" });
+  }
+  return { result: "planned", days };
 }
 
-// The day and the times only: the person and the job of a plan never change, so moving a plan
-// to another job is a removal and a new plan. Allowed whatever has become of the job or the
-// person since: it grants nothing, and the read shows what stands in the way.
+// The caller re-read, the shift read, its days locked, and the shift read again under its row
+// lock. `gone` is a shift that is not there — never made, removed meanwhile, or another
+// tenant's and so invisible.
+async function lockShift(tx: Tx, user: AppUser, assignmentId: string, alsoDay?: string) {
+  await lockActiveSelf(tx, user, "admin");
+  const read = () =>
+    tx
+      .select({
+        id: jobAssignments.id,
+        userId: jobAssignments.userId,
+        jobId: jobAssignments.jobId,
+        workDate: jobAssignments.workDate,
+        expectedStart: jobAssignments.expectedStart,
+        expectedEnd: jobAssignments.expectedEnd,
+        lockedAt: jobAssignments.lockedAt,
+      })
+      .from(jobAssignments)
+      .where(eq(jobAssignments.id, assignmentId));
+  const [seen] = await read();
+  if (seen === undefined) return { state: "gone" as const };
+  await lockPersonDays(
+    tx,
+    seen.userId,
+    alsoDay === undefined ? [seen.workDate] : [seen.workDate, alsoDay],
+  );
+  const [row] = await read().for("no key update");
+  if (row === undefined) return { state: "gone" as const };
+  // Moved to a day whose lock this call does not hold.
+  if (row.workDate !== seen.workDate) return { state: "stale" as const };
+  return { state: "held" as const, row };
+}
+
+// The day and the times only: the person and the job of a shift never change, so moving a
+// shift to another job is a removal and a new shift. Allowed whatever has become of the job
+// or the person since: it grants nothing, and the read shows what stands in the way.
 export async function updateAssignment(
   tx: Tx,
   user: AppUser,
   input: UpdateInput,
 ): Promise<z.infer<typeof updateOutput>> {
-  await lockActiveSelf(tx, user, "admin");
-  const [row] = await tx
-    .select({
-      id: jobAssignments.id,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      expectedEnd: jobAssignments.expectedEnd,
-    })
-    .from(jobAssignments)
-    .where(eq(jobAssignments.id, input.assignmentId))
-    .for("no key update");
+  const held = await lockShift(tx, user, input.assignmentId, input.workDate);
   // Missing, removed meanwhile, or another tenant's: one answer.
-  if (row === undefined) throw forbidden();
+  if (held.state === "gone") throw forbidden();
+  if (held.state === "stale") return { result: "rejected", code: "stale" };
+  const { row } = held;
+  const moved = row.workDate !== input.workDate;
   if (
-    row.workDate === input.workDate &&
+    !moved &&
     toWallTime(row.expectedStart) === input.expectedStart &&
-    toWallTime(row.expectedEnd) === input.expectedEnd
+    toWallTime(row.expectedEnd) === input.expectedEnd &&
+    input.decisions.length === 0
   ) {
     return { result: "unchanged" };
   }
-  try {
-    // A savepoint: a plan already on that day for the same person and job is an answer, and
-    // must not abort the caller's transaction.
-    await tx.transaction((sp) =>
-      sp
-        .update(jobAssignments)
-        .set({
-          workDate: input.workDate,
-          expectedStart: input.expectedStart,
-          expectedEnd: input.expectedEnd,
-        })
-        .where(eq(jobAssignments.id, row.id)),
-    );
-  } catch (error) {
-    const cause = error instanceof DrizzleQueryError ? error.cause : undefined;
-    const pg = cause as { code?: string; constraint?: string } | undefined;
-    if (pg?.code === "23505" && pg.constraint === NATURAL_KEY) {
-      return { result: "rejected", code: "already_planned" };
+  if (row.lockedAt !== null) return { result: "rejected", code: "locked" };
+
+  const from = await loadDay(tx, row.userId, row.workDate);
+  const before = byId(from.shifts);
+  const shift: DayShift = {
+    id: row.id,
+    jobId: row.jobId,
+    start: input.expectedStart,
+    end: input.expectedEnd,
+    lockedStart: null,
+  };
+  const mine = from.overrides.filter(
+    (o) => o.holderId === row.id || o.yieldingId === row.id,
+  );
+  const others = from.overrides.filter((o) => !mine.includes(o));
+  const decidedFor = new Map(input.decisions.map((d) => [d.otherId, d]));
+
+  let removed: DayOverride[];
+  const changed: DayOverride[] = [];
+  let created: DayOverride[];
+  let to: Day;
+  let afterTo: { shifts: DayShift[]; overrides: DayOverride[] };
+
+  if (moved) {
+    // Every override of the shift goes with the day it was decided on.
+    removed = mine;
+    const afterFrom = {
+      shifts: from.shifts.filter((s) => s.id !== row.id),
+      overrides: others,
+    };
+    const left = judgeDay(afterFrom);
+    if (!left.ok) return refused(left.refusal);
+    to = await loadDay(tx, row.userId, input.workDate);
+    created = input.decisions.map((d) => overrideOf(row.id, d));
+    afterTo = {
+      shifts: [...to.shifts, shift],
+      overrides: [...to.overrides, ...created],
+    };
+  } else {
+    to = from;
+    const kept: DayOverride[] = [];
+    removed = [];
+    for (const o of mine) {
+      const otherId = o.holderId === row.id ? o.yieldingId : o.holderId;
+      const other = before.get(otherId)!;
+      // The two no longer overlap: nothing is left to decide.
+      if (!overlaps(shift, other)) {
+        removed.push(o);
+        continue;
+      }
+      const d = decidedFor.get(otherId);
+      if (d === undefined) {
+        kept.push(o);
+        continue;
+      }
+      decidedFor.delete(otherId);
+      const next = { ...overrideOf(row.id, d), id: o.id };
+      if (next.holderId === o.holderId && next.reason === o.reason) kept.push(o);
+      else changed.push(next);
     }
-    throw error;
+    created = [...decidedFor.values()].map((d) => overrideOf(row.id, d));
+    afterTo = {
+      shifts: from.shifts.map((s) => (s.id === row.id ? shift : s)),
+      overrides: [...others, ...kept, ...changed, ...created],
+    };
   }
+  const judged = judgeDay(afterTo);
+  if (!judged.ok) return refused(judged.refusal);
+
+  await removeOverrides(tx, user, from, removed, before);
+  await tx
+    .update(jobAssignments)
+    .set({
+      workDate: input.workDate,
+      expectedStart: input.expectedStart,
+      expectedEnd: input.expectedEnd,
+    })
+    .where(eq(jobAssignments.id, row.id));
+  const now = byId(afterTo.shifts);
+  for (const o of changed) {
+    await tx
+      .update(shiftOverrides)
+      .set({ holderId: o.holderId, yieldingId: o.yieldingId, reason: o.reason })
+      .where(eq(shiftOverrides.id, o.id));
+    await recordOverrideHistory(tx, user, "changed", to, o, now);
+  }
+  await insertOverrides(tx, user, to, created, now);
   return { result: "updated" };
 }
 
-// A plan that is not there — never made, already removed, or another tenant's and so
+// A shift that is not there — never made, already removed, or another tenant's and so
 // invisible — is `unchanged`: a retry is harmless and the answer says nothing of other
 // companies.
 export async function removeAssignment(
@@ -224,10 +488,72 @@ export async function removeAssignment(
   user: AppUser,
   input: RemoveInput,
 ): Promise<z.infer<typeof removeOutput>> {
+  const held = await lockShift(tx, user, input.assignmentId);
+  if (held.state === "gone") return { result: "unchanged" };
+  if (held.state === "stale") return { result: "rejected", code: "stale" };
+  const { row } = held;
+  if (row.lockedAt !== null) return { result: "rejected", code: "locked" };
+
+  const day = await loadDay(tx, row.userId, row.workDate);
+  const mine = day.overrides.filter(
+    (o) => o.holderId === row.id || o.yieldingId === row.id,
+  );
+  const judged = judgeDay({
+    shifts: day.shifts.filter((s) => s.id !== row.id),
+    overrides: day.overrides.filter((o) => !mine.includes(o)),
+  });
+  if (!judged.ok) return refused(judged.refusal);
+
+  await removeOverrides(tx, user, day, mine, byId(day.shifts));
+  await tx.delete(jobAssignments).where(eq(jobAssignments.id, row.id));
+  return { result: "removed" };
+}
+
+// Which shift holds an overlap already decided, or why: the one change an override takes.
+// It is removed only with the overlap itself — by a shift's change or removal — never alone,
+// since two shifts that overlap are never left undecided.
+export async function decideOverride(
+  tx: Tx,
+  user: AppUser,
+  input: DecideInput,
+): Promise<z.infer<typeof decideOutput>> {
   await lockActiveSelf(tx, user, "admin");
-  const removed = await tx
-    .delete(jobAssignments)
-    .where(eq(jobAssignments.id, input.assignmentId))
-    .returning({ id: jobAssignments.id });
-  return { result: removed.length === 0 ? "unchanged" : "removed" };
+  const read = () =>
+    tx
+      .select({ userId: jobAssignments.userId, workDate: jobAssignments.workDate })
+      .from(shiftOverrides)
+      .innerJoin(jobAssignments, eq(jobAssignments.id, shiftOverrides.holderId))
+      .where(eq(shiftOverrides.id, input.overrideId));
+  const [seen] = await read();
+  // Missing, removed meanwhile, or another tenant's: one answer.
+  if (seen === undefined) throw forbidden();
+  await lockPersonDays(tx, seen.userId, [seen.workDate]);
+  const day = await loadDay(tx, seen.userId, seen.workDate);
+  const current = day.overrides.find((o) => o.id === input.overrideId);
+  if (current === undefined) throw forbidden();
+  // The holder is one of the override's own two shifts.
+  if (input.holderId !== current.holderId && input.holderId !== current.yieldingId) {
+    throw forbidden();
+  }
+  if (input.holderId === current.holderId && input.reason === current.reason) {
+    return { result: "unchanged" };
+  }
+  const next: DayOverride = {
+    id: current.id,
+    holderId: input.holderId,
+    yieldingId:
+      input.holderId === current.holderId ? current.yieldingId : current.holderId,
+    reason: input.reason,
+  };
+  const judged = judgeDay({
+    shifts: day.shifts,
+    overrides: day.overrides.map((o) => (o.id === next.id ? next : o)),
+  });
+  if (!judged.ok) return refused(judged.refusal);
+  await tx
+    .update(shiftOverrides)
+    .set({ holderId: next.holderId, yieldingId: next.yieldingId, reason: next.reason })
+    .where(eq(shiftOverrides.id, next.id));
+  await recordOverrideHistory(tx, user, "changed", day, next, byId(day.shifts));
+  return { result: "updated" };
 }

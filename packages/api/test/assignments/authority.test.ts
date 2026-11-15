@@ -94,7 +94,7 @@ async function office(tx: Tx) {
     return appCallerIn(tx, admin.who).assignment.create({
       userId,
       jobId,
-      workDates: ["2026-11-16"],
+      days: [{ id: uuidv7(), workDate: "2026-11-16" }],
       ...HOURS,
     });
   };
@@ -107,7 +107,10 @@ describe("a plan authorizes nothing", () => {
       const { day, plan } = await office(tx);
       // K is on no crew: w1 could not clock in there before …
       expect(await clockIn(tx, day, day.w1, "worker", day.K)).toBe("not_permitted");
-      expect(await plan(day.w1, day.K)).toMatchObject({ result: "created" });
+      expect(await plan(day.w1, day.K)).toMatchObject({
+        result: "planned",
+        days: [{ result: "created" }],
+      });
       // … and cannot after, though the office planned them there.
       expect(await clockIn(tx, day, day.w1, "worker", day.K)).toBe("not_permitted");
       await asOwner(tx);

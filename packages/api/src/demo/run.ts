@@ -722,16 +722,21 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         await admin().assignment.create({
           userId: userIds.get(p.who)!,
           jobId: jobIds.get(p.job)!,
-          workDates: p.days.map((d) => week[d]!),
+          // Ids from the run's seed, so a second run finds its own shifts.
+          days: p.days.map((d) => ({
+            id: idAt(new Date(`${week[d]!}T00:00:00Z`)),
+            workDate: week[d]!,
+          })),
           expectedStart: p.start,
           expectedEnd: p.end,
         }),
-        "created",
+        "planned",
       );
-      if (a.result !== "created") return;
-      if (a.existing !== 0)
-        fail(`${p.who} on ${p.job}: ${a.existing} days already planned`);
-      summary.assignments += a.created;
+      if (a.result !== "planned") return;
+      const refusedDay = a.days.find((d) => d.result === "rejected");
+      if (refusedDay !== undefined)
+        fail(`${p.who} on ${p.job}, ${refusedDay.workDate}: ${refusedDay.code}`);
+      summary.assignments += a.days.filter((d) => d.result === "created").length;
     }
   });
 

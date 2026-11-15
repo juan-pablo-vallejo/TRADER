@@ -222,6 +222,14 @@ export const strings = {
   throughAfterFrom: "The last day cannot be before the first.",
   tooManyDays: "Plan at most 14 days at a time.",
   alreadyPlanned: "They are already planned on this job that day.",
+  daysRefused: (n: number) =>
+    n === 1 ? " 1 day was refused." : ` ${n} days were refused.`,
+  scheduleConflict: "That repeats or overlaps another shift of theirs that day.",
+  scheduleAuthorization:
+    "They have already clocked in that day on a shift this would change.",
+  shiftLocked:
+    "They have clocked in on this shift, so it cannot change. Correct attendance in the labor ledger.",
+  shiftStale: "This shift changed meanwhile. Reload and try again.",
   jobArchived: "That job is archived.",
   planGone:
     "This plan is no longer there, or you can no longer change it. Nothing was saved.",

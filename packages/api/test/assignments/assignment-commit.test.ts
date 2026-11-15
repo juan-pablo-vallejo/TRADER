@@ -1,9 +1,9 @@
-// TASKS, dated worker-job assignments (V1-D07): the writers against each other and against
+// TASKS S3, the weekly schedule's writers: the writers against each other and against
 // the office's other writers, on real commits. In a disposable database (helpers.ts): two
 // connections must see the same rows, and the lock-wait probe reads every backend of its
 // database. Each test holds a row from the owner's transaction, lets the calls queue on it,
 // and releases them by committing.
-import { jobAssignments } from "@trader/db/schema";
+import { jobAssignments, shiftOverrideHistory } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -18,6 +18,7 @@ import {
   disposableDb,
   outcome,
   quietReporter,
+  uuidv7,
   REQUEST_ID,
   waitForLockWait,
 } from "../helpers";
@@ -72,28 +73,109 @@ async function planned(d: Awaited<ReturnType<typeof world>>) {
   await plan(d.admin.who).create({
     userId: d.w1,
     jobId: d.J,
-    workDates: [DAY],
+    days: [{ id: uuidv7(), workDate: DAY }],
     ...HOURS,
   });
   return (await plansOf(d.companyId))[0]!.id;
 }
 
 describe("two admins at once", () => {
-  it("planning the same shift leaves one plan: `created` and `unchanged`", async () => {
+  it("scheduling the same shift leaves one: the day's lock makes the second see the first", async () => {
     const d = await world();
-    const input = { userId: d.w1, jobId: d.J, workDates: [DAY], ...HOURS };
-    let calls!: Promise<{ result: string }[]>;
+    // Two browsers, so two ids for the one shift.
+    const input = () => ({
+      userId: d.w1,
+      jobId: d.J,
+      days: [{ id: uuidv7(), workDate: DAY }],
+      ...HOURS,
+    });
+    let calls!: Promise<Awaited<ReturnType<ReturnType<typeof plan>["create"]>>[]>;
     await D.owner.transaction(async (tx) => {
       // The worker's row held: both calls take the job FOR SHARE, then queue here together.
       await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
       calls = Promise.all([
-        plan(d.admin.who).create(input),
-        plan(d.second.who).create(input),
+        plan(d.admin.who).create(input()),
+        plan(d.second.who).create(input()),
       ]);
       await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
     });
-    expect((await calls).map((a) => a.result).sort()).toEqual(["created", "unchanged"]);
+    const answers = (await calls).map((a) => (a.result === "planned" ? a.days[0]! : a));
+    expect(answers.map((a) => a.result).sort()).toEqual(["created", "rejected"]);
+    expect(answers.find((a) => a.result === "rejected")).toMatchObject({
+      code: "schedule",
+      issues: [{ code: "duplicate_shift" }],
+    });
     expect(await plansOf(d.companyId)).toHaveLength(1);
+  });
+
+  it("scheduling overlapping shifts on one person's day leaves one, the other undecided", async () => {
+    const d = await world();
+    const at = (jobId: string, expectedStart: string, expectedEnd: string) => ({
+      userId: d.w1,
+      jobId,
+      days: [{ id: uuidv7(), workDate: DAY }],
+      expectedStart,
+      expectedEnd,
+    });
+    let calls!: Promise<Awaited<ReturnType<ReturnType<typeof plan>["create"]>>[]>;
+    await D.owner.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
+      calls = Promise.all([
+        plan(d.admin.who).create(at(d.J, "07:00", "15:30")),
+        plan(d.second.who).create(at(d.K, "12:00", "17:00")),
+      ]);
+      await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
+    });
+    const answers = (await calls).map((a) => (a.result === "planned" ? a.days[0]! : a));
+    expect(answers.map((a) => a.result).sort()).toEqual(["created", "rejected"]);
+    expect(answers.find((a) => a.result === "rejected")).toMatchObject({
+      code: "schedule",
+      issues: [{ code: "missing_decision", start: "12:00", end: "15:30" }],
+    });
+    expect(await plansOf(d.companyId)).toHaveLength(1);
+  });
+
+  it("a call that fails after its writes leaves no shift and no history", async () => {
+    const d = await world();
+    const first = { id: uuidv7(), workDate: DAY };
+    await plan(d.admin.who).create({ userId: d.w1, jobId: d.J, days: [first], ...HOURS });
+    const overrideId = uuidv7();
+    const late = (workDate: string) => ({
+      id: uuidv7(),
+      workDate,
+      decisions: [
+        { overrideId, otherId: first.id, holder: "other" as const, reason: "Covering" },
+      ],
+    });
+    const call = (days: ReturnType<typeof late>[]) =>
+      plan(d.admin.who).create({
+        userId: d.w1,
+        jobId: d.K,
+        expectedStart: "12:00",
+        expectedEnd: "17:00",
+        days,
+      });
+    await call([late(DAY)]);
+    const history = () =>
+      D.owner
+        .select({ action: shiftOverrideHistory.action })
+        .from(shiftOverrideHistory)
+        .where(eq(shiftOverrideHistory.companyId, d.companyId));
+    expect(await history()).toEqual([{ action: "created" }]);
+    // The override id taken: the second day's shift is written, then its override is refused,
+    // and the whole call is undone — the first day of it included.
+    const other = { id: uuidv7(), workDate: "2026-11-17" };
+    await plan(d.admin.who).create({ userId: d.w1, jobId: d.J, days: [other], ...HOURS });
+    const before = await plansOf(d.companyId);
+    const failing = late("2026-11-17");
+    failing.decisions[0]!.otherId = other.id;
+    expect(
+      await outcome(
+        call([{ id: uuidv7(), workDate: "2026-11-23", decisions: [] } as never, failing]),
+      ),
+    ).toBe("FORBIDDEN");
+    expect(await plansOf(d.companyId)).toEqual(before);
+    expect(await history()).toEqual([{ action: "created" }]);
   });
 
   it("editing one plan is serialized by its row, and the later edit stands", async () => {
@@ -144,7 +226,7 @@ describe("assignment.create against the office's other writers", () => {
       call = plan(d.admin.who).create({
         userId: d.w1,
         jobId: d.J,
-        workDates: [DAY],
+        days: [{ id: uuidv7(), workDate: DAY }],
         ...HOURS,
       });
       await waitForLockWait(D.owner, '%from "users"%for share%');
@@ -162,7 +244,7 @@ describe("assignment.create against the office's other writers", () => {
       call = plan(d.admin.who).create({
         userId: d.w1,
         jobId: d.J,
-        workDates: [DAY],
+        days: [{ id: uuidv7(), workDate: DAY }],
         ...HOURS,
       });
       await waitForLockWait(D.owner, '%from "jobs"%for share%');
@@ -181,7 +263,7 @@ describe("assignment.create against the office's other writers", () => {
         plan(d.admin.who).create({
           userId: d.w1,
           jobId: d.J,
-          workDates: [DAY],
+          days: [{ id: uuidv7(), workDate: DAY }],
           ...HOURS,
         }),
       );
@@ -198,16 +280,23 @@ describe("assignment.create against the office's other writers", () => {
     const d = await world();
     const days = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"];
     const input = { userId: d.w1, jobId: d.J, ...HOURS };
-    let calls!: Promise<{ result: string }[]>;
+    const each = (dates: string[]) =>
+      dates.map((workDate) => ({ id: uuidv7(), workDate }));
+    let calls!: Promise<Awaited<ReturnType<ReturnType<typeof plan>["create"]>>[]>;
     await D.owner.transaction(async (tx) => {
       await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
       calls = Promise.all([
-        plan(d.admin.who).create({ ...input, workDates: days }),
-        plan(d.second.who).create({ ...input, workDates: [...days].reverse() }),
+        plan(d.admin.who).create({ ...input, days: each(days) }),
+        plan(d.second.who).create({ ...input, days: each([...days].reverse()) }),
       ]);
       await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
     });
-    expect((await calls).map((a) => a.result).sort()).toEqual(["created", "unchanged"]);
+    // Day locks are taken in day order whatever order the days were named in: one call has
+    // every day, the other finds each already there.
+    const results = (await calls).map((a) =>
+      a.result === "planned" ? [...new Set(a.days.map((x) => x.result))] : [a.result],
+    );
+    expect(results.sort()).toEqual([["created"], ["rejected"]]);
     expect(await plansOf(d.companyId)).toHaveLength(5);
   });
 });

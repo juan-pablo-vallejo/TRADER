@@ -41,6 +41,8 @@ const EXPECTED: Record<string, Gate> = {
   "assignment.create": ADMIN,
   "assignment.update": ADMIN,
   "assignment.remove": ADMIN,
+  "assignment.decide": ADMIN,
+  "assignment.week": ADMIN,
   "closeout.review": ["foreman", "admin"],
   "closeout.submit": "protected",
   "crew.list": ADMIN,

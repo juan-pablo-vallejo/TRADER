@@ -2,8 +2,8 @@
 // inclusive range of days as written, with its filters — and assignment.mine — the caller's
 // own plans and nothing of anyone else's. Rolled-back transactions throughout. The clock-in
 // flag against a real push is authority.test.ts's.
-import { jobAssignments, jobs } from "@trader/db/schema";
-import { eq } from "drizzle-orm";
+import { jobAssignments, jobs, shiftOverrides } from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
@@ -12,6 +12,7 @@ import {
   becomeApp,
   boundIn,
   crewDayIn,
+  eventIn,
   outcome,
   ownerDb,
   rolledBack,
@@ -268,6 +269,117 @@ describe("assignment.mine", () => {
           }),
         ),
       ).toBe("BAD_REQUEST");
+    });
+  });
+});
+
+describe("assignment.week", () => {
+  it("answers Monday to Sunday, each shift with the hours it is the one to clock in on", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { day, other, admin, ana, ben, stranger, put } = await office(tx);
+      const c = day.companyId;
+      const row = async (
+        userId: string,
+        jobId: string,
+        workDate: string,
+        expectedStart: string,
+        expectedEnd: string,
+      ) =>
+        (
+          await put(c, userId, jobId, workDate, { expectedStart, expectedEnd }).returning(
+            {
+              id: jobAssignments.id,
+            },
+          )
+        )[0]!.id;
+      const morning = await row(ana.id, day.J, "2026-11-16", "07:00", "15:30");
+      const late = await row(ana.id, day.K, "2026-11-16", "12:00", "17:00");
+      const [decided] = await tx
+        .insert(shiftOverrides)
+        .values({
+          companyId: c,
+          holderId: morning,
+          yieldingId: late,
+          reason: "Covering the afternoon",
+          createdBy: admin.id,
+        })
+        .returning({ id: shiftOverrides.id });
+      const sunday = await row(ben.id, day.J, "2026-11-22", "08:00", "12:00");
+      // Outside the week on both sides, and another company's inside it.
+      await row(ben.id, day.J, "2026-11-15", "08:00", "12:00");
+      await row(ben.id, day.J, "2026-11-23", "08:00", "12:00");
+      await put(other.companyId, stranger.id, other.J, "2026-11-16");
+      // Two rows older than the validated writers: overlapping, nothing decided.
+      const loose = await row(ben.id, day.J, "2026-11-18", "07:00", "12:00");
+      const looser = await row(ben.id, day.K, "2026-11-18", "10:00", "14:00");
+      // Ana clocked in on the morning shift at 07:10 in New York.
+      const eventId = await eventIn(tx, day, {
+        worker: ana.id,
+        job: day.J,
+        type: "started",
+        client: "2026-11-16T12:10:00Z",
+      });
+      await tx.execute(sql`
+        update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+        where id = ${morning}
+      `);
+      await becomeApp(tx);
+      const week = await appCallerIn(tx, admin.who).assignment.week({
+        weekStart: "2026-11-16",
+      });
+      expect(week.weekStart).toBe("2026-11-16");
+      expect(week.days).toEqual([
+        "2026-11-16",
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-20",
+        "2026-11-21",
+        "2026-11-22",
+      ]);
+      const seen = new Map(week.shifts.map((s) => [s.id, s]));
+      expect([...seen.keys()].sort()).toEqual(
+        [morning, late, sunday, loose, looser].sort(),
+      );
+      expect(seen.get(morning)).toMatchObject({
+        locked: true,
+        eligible: [{ start: "07:00", end: "15:30" }],
+        worker: { id: ana.id },
+        job: { id: day.J },
+      });
+      expect(seen.get(late)).toMatchObject({
+        locked: false,
+        eligible: [{ start: "15:30", end: "17:00" }],
+      });
+      expect(seen.get(sunday)).toMatchObject({
+        locked: false,
+        eligible: [{ start: "08:00", end: "12:00" }],
+      });
+      expect(seen.get(loose)?.eligible).toBeNull();
+      expect(seen.get(looser)?.eligible).toBeNull();
+      expect(week.overrides).toEqual([
+        {
+          id: decided!.id,
+          holderId: morning,
+          yieldingId: late,
+          reason: "Covering the afternoon",
+        },
+      ]);
+    });
+  });
+
+  it("refuses a week that does not start on a Monday, and a malformed day", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { admin } = await office(tx);
+      await becomeApp(tx);
+      const week = appCallerIn(tx, admin.who).assignment.week;
+      for (const weekStart of ["2026-11-15", "2026-11-17", "2026-11-22", "11/16/2026"]) {
+        expect([weekStart, await outcome(week({ weekStart }))]).toEqual([
+          weekStart,
+          "BAD_REQUEST",
+        ]);
+      }
+      expect((await week({ weekStart: "2026-11-16" })).shifts).toEqual([]);
     });
   });
 });
