@@ -29,16 +29,16 @@ with no signal.
 5. The contractor can leave with their data: invoice exports for QuickBooks Online and QuickBooks
    Desktop, a payroll-hours export, and a full export.
 
-Non-goals for V1: payment processing, estimates and quotes, scheduling beyond assignments, a customer
+Non-goals for V1: payment processing, estimates and quotes, scheduling beyond the weekly schedule, a customer
 portal, a marketplace, an AI estimator, and anything that requires a second contractor to exist.
 
 ## Target users
 
-| User           | Device                     | Connectivity | What they do in TRADER                                                                                                                                                                                 |
-| -------------- | -------------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own recorded hours, materials and assignments, edit own name and phone                                                                        |
-| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs, the crew's current state when online, and the day closeout                                                                                      |
-| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, assignments, approvals, any worker's hours and their repair, material costs and missing material entries, job cost, closeouts, pay periods, payroll export, invoices, exports |
+| User           | Device                     | Connectivity | What they do in TRADER                                                                                                                                                                                         |
+| -------------- | -------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Worker         | Own phone (iOS or Android) | Unreliable   | Clock in/out, switch jobs, log materials and photos, see own recorded hours, materials and schedule, edit own name and phone                                                                                   |
+| Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs, the crew's current state when online, and the day closeout                                                                                              |
+| Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, the weekly schedule, approvals, any worker's hours and their repair, material costs and missing material entries, job cost, closeouts, pay periods, payroll export, invoices, exports |
 
 Everyone is a user with their own login — a crew member's on their own phone number, an office
 admin's on their own email address; nobody shares an account.
@@ -112,23 +112,61 @@ each entry with every reason it is there.
 - A reconciliation view lists, for a pay period, every worker's approved hours by day and job,
   everything still unresolved, and every adjustment the period carries from earlier ones.
 - Role changes, activations and deactivations, invitations, pay rates, repairs and approval
-  decisions record who made them, when, and what changed. Nothing else is audited in V1.
+  decisions record who made them, when, and what changed; so does an override of
+  overlapping shifts, with its reason (Weekly schedule). Nothing else is audited in V1.
 
 ### Jobs and location
 
-- Jobs belong to a customer and are assigned to a crew; a crew has a foreman. A worker's jobs are
-  those of every crew they belong to, switched freely during a day. A dated assignment with an
+- Jobs belong to a customer and are assigned to a crew; a crew has a foreman.
+- Until schedule enforcement is turned on (Weekly schedule): a worker's jobs are those of
+  every crew they belong to, switched freely during a day. A dated assignment with an
   expected start and end plans a worker's day; it never authorizes work or becomes hours. An
-  admin may schedule any worker on any of the company's jobs: the assignment adds nobody to a
-  crew and opens no one's records, and the office is shown when the worker could not clock in
-  on that job as things stand.
+  admin may schedule any active worker on any of the company's jobs that is not archived: the
+  assignment adds nobody to a crew and opens no one's records, and the office is shown when
+  the worker could not clock in on that job as things stand.
 - Location is a foreground stamp at clock-in, clock-out and job switch, plus Smart Clock-In;
   never tracking, sampling, history or a map. Missing or out-of-radius: approval, never a block.
+
+### Weekly schedule
+
+- Only an admin makes the schedule. A shift is one employee at one jobsite on one day, with a
+  start and an end on that same day; no shift runs past midnight. A week is Monday to Sunday.
+  The office adds a shift for several days at once and adjusts each day on its own.
+- The schedule shows what is planned and nothing else. Recorded labor — hours, corrections,
+  approvals — stays on the labor screens, and a shift is never hours, pay or cost.
+- An employee may have several shifts in a day, at one jobsite or at several. The same shift
+  twice is refused. Two shifts that overlap are refused unless an admin overrides the overlap,
+  gives a reason, and says which shift holds the shared time. Each override, each change to
+  one and each removal is kept: who, when and why.
+- Through every scheduled hour of an employee's day exactly one jobsite is the one to clock
+  in on — never two, never none. A choice that would leave a gap, go in a circle, or leave a
+  shift with no time of its own is refused when the office tries to save it.
+- Schedule enforcement is turned on by the owner, as a step of its own, after the phones have
+  been checked. Once it is on:
+  - the shift decides where an employee clocks in. The employee does not choose or change
+    the jobsite, and crew membership is not needed. With no shift, they ask the office;
+  - an employee may clock in up to 15 minutes before the next shift of that day when no
+    other shift is theirs at that moment, and at any time during the shift. After its end
+    they ask the office. Arriving early changes nothing about how hours are counted;
+  - an admin's own clock-in needs no shift. A foreman clocking in a crew member needs that
+    member's shift and the authority the foreman already has;
+  - a clock-in made offline that the schedule no longer allows when it arrives, because the
+    office changed the schedule meanwhile, is kept as the employee recorded it and waits for
+    an admin, who approves, rejects or repairs it. It counts toward nothing until then, and
+    it is never counted twice.
+- Once an employee has clocked in on a shift, its jobsite and times are locked, and nothing
+  else in the schedule may change what allowed that clock-in. A mistake in attendance is
+  corrected on the labor screens.
+- Copy Last Week shows what it will create and what it will leave out before anything is
+  saved; the office confirms; every shift is created or none is, and sending it again creates
+  nothing twice. It copies no override: an overlap is decided afresh. Undo removes the whole
+  copy, or nothing once an employee has clocked in on any shift of it.
 
 ### Smart Clock-In
 
 - Pilot: on app open, one foreground reading may suggest a job; the worker confirms the normal
-  clock-in. Never automatic or background; permission optional; manual selection always remains.
+  clock-in. Never automatic or background; permission optional; the worker always clocks in
+  by hand, on a job they pick or, under schedule enforcement, at the scheduled jobsite.
 - Arrival reminders follow the pilot, in V1. An admin makes an employee eligible; it runs once
   they read an in-app background-location disclosure, activate it and grant the phone's
   permission, which no admin setting overrides. Manual clock-in always remains.
@@ -209,10 +247,11 @@ starts as a worker; roles are a deliberate roster action.
 
 - Release 0.1 — the first production release, for the design partner: sign-in; assigned
   jobs, clock in/out and job switch with offline capture and the location stamp, in English
-  and Spanish; own hours; the office web on phone and desktop with dated assignments,
+  and Spanish; own hours; the office web on phone and desktop with the weekly schedule,
   approvals, repairs, admin closeout and pay periods; invoices created, issued, sent as a
   PDF by email, and their payments recorded. Distributed through the App Store and Google
-  Play, published under the owner's own developer accounts.
+  Play, published under the owner's own developer accounts. Clock-in follows the schedule
+  only once the owner has approved turning enforcement on.
 - The crew starts all at once, and only after Release 0.1's go/no-go line in
   [TASKS.md](TASKS.md) is recorded as passed; a smaller first group is not a required step.
 - The pilot continues on Release 0.1 while the rest of V1 is built: the job suggestion,

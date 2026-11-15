@@ -10,8 +10,8 @@ exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not 
 
 Done when the go/no-go line is recorded as passed and D Sierra Painting's crew is on the
 store builds (ARCHITECTURE, the 2026-11-12 Release 0.1 rows). Lines are ordered by
-dependency; R4 to R5 and R6 to R7 may run beside each other, and the owner's lines beside
-R1. Each line is planned and approved on its own, and names the packages it installs in
+dependency; R4 to R5 and R6 to R7 may run beside each other, S1 to S6 beside R4, and the
+owner's lines beside R1. Each line is planned and approved on its own, and names the packages it installs in
 that plan, here, before they are installed. A line that takes a stage's line ticks it there.
 Staging and production are separate databases and identity instances throughout; nothing
 paid is created and no production migration runs without the owner's approval of that step.
@@ -130,6 +130,70 @@ paid is created and no production migration runs without the owner's approval of
       rewritten and read back, sign-out, a worker refused the office. Run on demand from
       the owner's machine, never in `pnpm check` or CI; it deletes nothing. Done when the
       five steps pass on a preview and the run is recorded in MEMORY
+- [x] S0 — Documents: the weekly schedule decisions (documents only; by the owner,
+      2026-11-15). The decision rows of that date in ARCHITECTURE with its Office
+      authority, Audit trail and pull-extension passages; PRD, Weekly schedule; DESIGN;
+      lines S1 to S9. Each S line is planned and approved on its own, one line to a
+      session, and none of S1 to S8 turns schedule enforcement on
+- [ ] S1 — Schedule eligibility rules as a pure module in `packages/api` (no schema, no
+      procedure). Depends on S0. Work: for one person's shifts and overrides on one day,
+      the one eligible shift at every scheduled moment, the early-arrival rule, and the
+      refusals — an overlap with no decision, a circular or ambiguous precedence, a shift
+      left with no eligible time. Consumer: S3's writers, S4's push, every schedule read.
+      Tests: every order of two and of three overlapping shifts; the circular three-shift
+      case refused with the time it would leave uncovered; each boundary minute, start
+      included and end excluded; shifts that touch; an early start at 15 minutes and at
+      16, and beside a shift already eligible; every accepted day has exactly one eligible
+      shift at every covered minute
+- [ ] S2 — Schedule schema (plan first: schema). Depends on S1. Work: several shifts for
+      one person, job and day, an exact duplicate refused; the punch lock; overlap
+      overrides with their reason; their append-only history; the mark of a copied week.
+      The plan decides the tables, the history's store and what becomes of the natural
+      key `assignment.create` relies on, and counts `job_assignments` in every environment
+      before a migration runs there. Tests: an invariant test per guard, each watched red;
+      tenant isolation; the application role's grants
+- [ ] S3 — Validated shift writers and the week read (plan first: schema, sync). Depends
+      on S2. Work: `assignment.*` create, change and remove under S1's rules, ids made by
+      the browser, overrides and their history written with them, a Monday-to-Sunday read
+      with each shift's eligible hours; the demo. Of the V1-D07 line's built behaviour it
+      retires one row per person, job and day and "overlapping times not judged". Tests:
+      an exact duplicate; one job twice in a day; an overlap refused without a decision; a
+      blank reason; a shift left no eligible time, on create and on change; a shift across
+      midnight; a week that does not start on Monday; another company's ids FORBIDDEN; a
+      worker and a foreman refused; two admins on one person's day at once; a resend
+      answers `duplicate`; every override write leaves its history entry and a
+      rolled-back one leaves none
+- [ ] S4 — Clock-in eligibility and the punch lock, behind the enforcement switch (plan
+      first: schema, sync, CI). Depends on S3. Work: the server-controlled switch, off by
+      default; with it on, a `started` judged by the schedule as the 2026-11-15 rows
+      state, the shift locked by the start it admits, a start captured offline that the
+      schedule no longer admits stored for review; whether enforcement is on, in the
+      pull. Of the V1-D07 line's tests it retires "changes no push answer", with the
+      switch on only. Tests: with the switch off, every existing test unchanged and a push
+      that never reads the schedule; with it on — the eligible job, another job, no shift,
+      each boundary minute, the early window, an override's holder, an admin's own start,
+      a foreman's start for a member with and without that member's shift, a worker
+      outside the job's crew admitted by their shift, the days the clocks change, a start
+      near midnight; pause, resume and end never judged; a locked shift's change and
+      removal refused by the procedure and by the database; a write that would alter a
+      locked shift's authorization refused; an edit and a start on one person's day in
+      both orders, committed; a stored offline start counts toward nothing until decided
+      and its later events are accepted. Rollback: the switch off and a new deployment
+- [ ] S5 — Copy Last Week (plan first: schema, if S2 left the copy's mark open). Depends on
+      S3. Work: preview, confirm, one transaction, a resend that creates nothing twice,
+      undo. No override is copied: a shift that would overlap is listed and left out.
+      Tests: what is confirmed is what was previewed, or nothing is written and the new
+      preview is answered; a deactivated person, an archived job, a duplicate and an
+      overlap each left out and listed; a failure part-way writes nothing; two admins
+      copying at once; undo removes every copied shift, or none when one is locked
+- [ ] S6 — Weekly Schedule office screen (DESIGN, Weekly Schedule; replaces
+      `/assignments`). Depends on S3 and S5. Work: the screen on the reviewed prototype's
+      fourth revision with DESIGN's refinements; the detailed interaction of the drawer
+      overlay and of employee navigation on a phone, decided in this line's plan. Done
+      when an admin plans, overrides, copies and undoes a week by keyboard at 390, 768,
+      1024 and 1280 with about 24 people, no control under its target, no sideways page
+      scroll, a refused circular choice said in words, a locked shift read-only, and one
+      pass with a screen reader
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
@@ -142,6 +206,21 @@ paid is created and no production migration runs without the owner's approval of
       physical Android phone signs in by SMS code, clocks in on an assigned job, switches
       jobs and clocks out across an airplane-mode gap, and the office shows the hours once,
       per job
+- [ ] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
+      S4; it takes none of R5's lines and adds to its clock and pull. Work: the caller's
+      own shifts and their eligible hours in the pull; under enforcement the clock offers
+      the eligible jobsite alone, or says to ask the office; a start the server stored for
+      review or refused, shown as what it is; English and Spanish; a `testID` on every
+      control. Tests: Maestro flows on the iOS simulator and the Android emulator; a
+      worker receives no other person's shift
+- [ ] S8 — The worker's own week, and a schedule gone stale (DESIGN, Own history). Depends
+      on S7. Work: the caller's shifts for the week, read-only, from the last pull, with
+      how old that pull is; a schedule the office changed while the phone was offline.
+      Done on a physical iPhone and a physical Android phone across an airplane-mode gap
+- [ ] S9 — Schedule enforcement, rollout acceptance. Depends on S4 and S6 to S8. The
+      switch on for staging alone; the browser suite; both physical phones; refusals and
+      error reports read after. Done when the owner's approval to turn it on in
+      production is recorded in MEMORY, or withheld; production's setting is the owner's
 - [ ] R6 — Invoices (plan first: money; takes Stage 7's drafting and issue lines, less
       credit memos). Work: draft, lines priced by the admin, tax, issue with gap-free
       numbering continuing the partner's series, void; the office screens. Tests as those

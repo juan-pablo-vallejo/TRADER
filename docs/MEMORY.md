@@ -1366,3 +1366,30 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   of the merged work remain in this clone.
 - **Next:** owner merges this branch; then the routine fast-forward and the suite. Then
   track line R4, the field app skeleton, plan first.
+
+### 2026-11-15 — Weekly schedule decisions written into the documents (S0)
+
+- **Did:** a read-only assessment at `d05d655` (the prototype's files, the assignment and
+  push code, the five documents), then branch `a03-schedule-documents`, documents only:
+  nine decision rows of 2026-11-15 and the Office authority, Audit trail and pull passages
+  in ARCHITECTURE; PRD, Weekly schedule; DESIGN's `compact` style and six component rows;
+  track lines S0 to S9. No code, no migration, no dependency. Read of the prototype's
+  fourth revision, kept outside the repository: 47 of its 48 checks pass and the one
+  failure is the circular three-shift choice, which its pairwise rule leaves with half an
+  hour nobody may clock in on; it is one HTML file that simulates every rule, and its
+  punch lock is two sentences of text. 1,295 tests.
+- **Decided:** by the owner on 2026-11-15, the rows of that date: a shift authorizes a
+  clock-in under an enforcement switch that is off by default; exactly one eligible shift
+  at every scheduled moment; 15 minutes early; the lock by a punch; the override history;
+  a start captured offline stored for review; Copy Last Week; the words Schedule, Shift
+  and Jobsite. Left to each line's plan and not decided: how eligibility is computed, the
+  tables, the history's store, the locks, where the switch lives, how the server tells a
+  start the schedule changed under from any other unscheduled one, and the interaction of
+  the drawer overlay and of employee navigation on a phone. Not done: nothing is built, so
+  `/assignments`, push and the built tests are as they were; 28 of the prototype's 49
+  screenshots were not looked at; staging's `job_assignments` rows were not counted; the
+  branch is not pushed. Worth knowing: there is still no `apps/mobile`, so S7 and S8 wait
+  on R4 and R5; the V1-D07 line stays ticked and S3 and S4 name what they retire of it;
+  whether Release 0.1's go/no-go requires enforcement on is not said anywhere.
+- **Next:** owner reviews the branch; then track line S1, the eligibility rules as a pure
+  module, plan first.
