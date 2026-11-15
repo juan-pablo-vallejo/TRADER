@@ -553,6 +553,25 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   state-changing request without one: build a test's POST with `jsonBody(body)`
   (`apps/web/test/helpers.ts`), as `mutate` does. Run the whole `pnpm check` after a change
   to the route, not the files it seemed to touch.
+- The development client opens on its launcher sheet, not the app: a flow opens
+  `exp+trader://expo-development-client/?url=<Metro's URL, encoded>` with
+  `&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1`
+  after it. Maestro's `openLink` cuts an Android link at the first `&`, so
+  `apps/mobile/.maestro/run.sh` starts the Android app with `adb` and the flow's own
+  launch step runs on iOS only. An `env` block in a flow file beats `-e` on the command
+  line: the flow has none.
+- Metro started with `CI=1` does not watch files and served a stale bundle after an edit:
+  start it plainly for a flow run, with `--clear` when in doubt.
+- `apps/mobile/ios` and `android` are prebuild output, 1.4 GB and 1.3 GB, ignored by git,
+  eslint and prettier each in its own file: a new generated folder there turns
+  `pnpm format:check` red (seen: 173 files) until `.prettierignore` names it.
+- The Android emulator reaches the Mac's `next dev` and Metro through
+  `adb reverse tcp:3000` and `tcp:8081` (`run.sh` sets both); the smoke flow needs
+  `next dev --webpack` on `trader_demo_e2e` with `TRADER_DEV_IDENTITY=enabled` and Metro
+  with `EXPO_PUBLIC_DEV_IDENTITY=enabled`. With the API stopped it is red at `job-list`.
+- `apps/mobile` pins `react` 19.3.0, the version React Native 0.88.1 asks for, while
+  `apps/web` has its own: the two never share a React, and a package both import must not
+  bring one.
 
 ## Log
 
@@ -1842,3 +1861,34 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   recipient (the PDF's email); `eas login` (device builds). S6 built and not ticked; R7
   half built.
 - **Next:** R4, the field app skeleton.
+
+### 2026-11-15 — Field app skeleton (R4)
+
+- **Did:** branch `r4-field-app-skeleton` from `edge-protection`. `@trader/api/contract`
+  (zod alone, pinned to the schema's enums and held pure by tests), the development
+  headers' names moved into it, and a lint rule on `apps/mobile`. The Expo app
+  `app.jpteq.trader`: SDK 58 with a development client, the theme, the brand icons, two
+  typed catalogs, the development sign-in, Today with the caller's jobs from `sync.pull`,
+  Settings with the name and the language. Built and run as a development build on
+  iPhone 17 Pro (iOS 26.2) and on `Medium_Phone_API_36.1`: the smoke flow signs in as the
+  demo foreman, reads the job list, opens Settings, switches to Spanish and returns, every
+  step by `testID`, green on both; red at `job-list` with the API stopped. `pnpm check`,
+  `pnpm build` and a frozen install green with the app in the workspace. 1,496 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  TASKS line now names the packages as installed: `expo-splash-screen` and `vitest` added,
+  gesture-handler, reanimated and a `zod` of the app's own not taken. Not done: no
+  `eas.json` and no release or preview build, so the development sign-in being off outside
+  a development bundle is `__DEV__`'s word, unseen; Clerk, the device store, the outbox
+  and the clock (R5); the language choice does not outlast the app's run; layouts were
+  not measured with the Spanish strings; CI does not run the flow, only the app's
+  typecheck, lint and five tests. Watched red: the flow with the API stopped; the lint
+  rule on a value import of `@trader/api` and on `@trader/db`. Stage 5's Expo, development sign-in and i18n lines are left unticked for those
+  reasons; its contract line is ticked.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `edge-protection` (#111) and this
+  one, stacked, CI green on all twelve before it; `release-0.1` moves here next.
+  **Staging's database is still at 40 migrations** of 48: nothing since S2 has been seen
+  on staging. Owner actions open, each blocking only its own step: install the wrapper's
+  migrate command; the `release-0.1` alias under Deployment Protection Exceptions;
+  Resend's domain, key and one test recipient; Clerk's native API on the development
+  instance (R5); `eas login` (device builds). S6 built and not ticked; R7 half built.
+- **Next:** R5, the field app's sign-in, store, outbox and clock, with S7 and S8.

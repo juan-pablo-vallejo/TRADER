@@ -218,21 +218,23 @@ paid is created and no production migration runs without the owner's approval of
       when the host serves `release-0.1` with no bypass, a call without a session is 401,
       another company's rows are refused, a worker is refused the office, a burst is 429,
       and every other Preview still answers 302; or the exemption is reported unavailable
-- [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
+- [x] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
       emulator; the i18n layer with English and Spanish catalogs; one Maestro smoke flow.
       Installs, in `apps/mobile`, at the versions Expo SDK 58's template and `expo install`
       choose (registry read 2026-11-15: `expo` 58.0.25, `react-native` 0.88.1): `expo`,
-      `react`, `react-native` and what the default template brings with them
-      (`expo-router`, `expo-constants`, `expo-linking`, `expo-status-bar`,
-      `react-native-safe-area-context`, `react-native-screens`, `react-native-gesture-handler`,
-      `react-native-reanimated`), consumed by the app's shell and navigation;
+      `react`, `react-native`, `expo-router`, `expo-constants`, `expo-linking`,
+      `expo-status-bar`, `expo-splash-screen`, `react-native-safe-area-context` and
+      `react-native-screens`, consumed by the app's shell and navigation;
       `expo-dev-client`, by the development build; `expo-localization`, by the i18n
-      layer's first choice of language; `@trpc/client` 11.23.0, `superjson` and `zod`, by
-      the API client and the contract; `@types/react` and `typescript`, by typecheck. No
-      i18n library: the catalogs are two typed objects.
+      layer's first choice of language; `@trpc/client` 11.23.0 and `superjson`, by the
+      API client; `@types/react` and `typescript`, by typecheck; `vitest`, by the
+      catalog tests. `zod` reaches the app only through `@trader/api/contract`. No i18n
+      library: the catalogs are two typed objects. No `eas.json` yet: it is the device
+      builds' line, which needs the Expo project.
       Done when the flow signs in as the demo foreman and reads the job list on both
+      platforms.
 - [ ] R5 — Field app, time tracking (plan first: sync; takes Stage 5's pull extension,
       sign-in, outbox, offline evidence, clock, job list and history, sync states and own
       profile lines, less biometrics, the job suggestion and pause/resume if the plan
@@ -443,7 +445,7 @@ jobs, assignments, approvals, a closeout, close, export.
 Done when a worker tracks a real day across airplane-mode gaps on a physical phone and the
 office sees correct, deduplicated hours per job. May overlap Stage 6.
 
-- [ ] Client-safe contract: the sync, status and rejection-code schemas in
+- [x] Client-safe contract: the sync, status and rejection-code schemas in
       `packages/api/src/contract/`, importing only zod, exported as `@trader/api/contract`;
       database enums restated there and pinned to the schema by a test; lint forbids any
       other value import from `@trader/api` in `apps/mobile`
