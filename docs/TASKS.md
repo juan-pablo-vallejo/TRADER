@@ -153,7 +153,7 @@ paid is created and no production migration runs without the owner's approval of
       key `assignment.create` relies on, and counts `job_assignments` in every environment
       before a migration runs there. Tests: an invariant test per guard, each watched red;
       tenant isolation; the application role's grants
-- [ ] S3 — Validated shift writers and the week read (plan first: schema, sync). Depends
+- [x] S3 — Validated shift writers and the week read (plan first: schema, sync). Depends
       on S2. Work: `assignment.*` create, change and remove under S1's rules, ids made by
       the browser, overrides and their history written with them, a Monday-to-Sunday read
       with each shift's eligible hours; the demo. Of the V1-D07 line's built behaviour it

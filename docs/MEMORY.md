@@ -485,6 +485,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the order of a key and what references it.
 - `companies.schedule_enforced` is written by the database's owner alone; on staging that is
   owner-role SQL with a key, through its wrapper. No procedure writes it.
+- Two calls started at once on one rolled-back transaction share its one connection, and the
+  second's rejection is unhandled before it is awaited: vitest reports "Unhandled Rejection"
+  with every test green. In a loop over calls, hold thunks and call each in turn; read a
+  run's "Unhandled" line, not only its counts.
+- A schedule write is judged over the person's whole day under that day's advisory lock
+  (`assignments/day.ts`): a test of two writers on one day needs real commits, and a writer
+  of `job_assignments` or `shift_overrides` that skips `lockPersonDays` breaks the rule
+  silently — the database holds none of it.
+- `assignment.create` answers per day inside `{ result: "planned", days }`; a refused day
+  is not a failed call. Count `created` among the days, never trust the outer result.
 
 ## Log
 
@@ -1486,3 +1496,32 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   staging's database still at 40 migrations and its Preview at `1c94b64`; `release-0.1`
   is made from this branch next, then staging is migrated to 42. Blockers: none.
 - **Next:** S3, the validated shift writers and the week read.
+
+### 2026-11-15 — Validated shift writers and the week read (S3)
+
+- **Did:** branch `s3-shift-writers` from `s2-schedule-schema`. `assignments/day.ts`: the
+  person-day lock, the day's load, `judgeDay`, the history writer, the issues on the wire.
+  `write.ts` rewritten: `assignment.create` with the browser's ids and a decision per
+  overlap, answered day by day; `update`, `remove`; `assignment.decide`; each override
+  write with its history entry. `assignment.week`, Monday to Sunday, with each shift's
+  eligible hours, its lock and the week's overrides. Gate lines for both new procedures.
+  The demo's plan step and the old `/assignments` screen moved to the new shapes. Watched
+  red, by mutation: the authorization check, the schedule check, the day lock, the history
+  write, both locked answers, the resend answer, the override dropped with its overlap,
+  the holder inside the pair, the Monday rule, the week's eligible hours, a taken override
+  id. 1,376 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. What is
+  compared for "what authorized that start": after any write to a day, a start at the
+  minute each locked shift's clock-in was recorded must still be admitted on that same
+  shift. An override is never removed alone, only with its overlap. No `audit_log` row:
+  the history table is the record. Not done: nothing sets a lock yet (S4), so the locked
+  and authorization answers are reached only by fixtures; no copy (S5); the old screen
+  shows a refusal in one sentence and offers no decision (S6 replaces it); the old screen
+  was not opened in a browser after the change. Worth knowing: `assignment.list` and
+  `mine` are unchanged; a day written before these writers that does not resolve reads
+  `eligible: null` in the week and refuses every further write to that day until its
+  overlap is decided.
+- **Release 0.1 state:** branches `r01-mandate` (#100), `s2-schedule-schema` (#101),
+  `s3-shift-writers`, stacked; `release-0.1` moves to this branch next and gets its first
+  Preview; staging's database then goes from 40 to 42 migrations. Blockers: none.
+- **Next:** S4, clock-in eligibility and the punch lock behind the switch.
