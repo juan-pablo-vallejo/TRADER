@@ -107,7 +107,9 @@ export const updateOutput = z.discriminatedUnion("result", [
 
 export const removeOutput = z.strictObject({ result: z.enum(["removed", "unchanged"]) });
 
-const NATURAL_KEY = "job_assignments_user_id_work_date_job_id_unique";
+// The exact shift — person, day, job and both times (migration 0040). Until the validated
+// writers (TASKS S3) it is the only thing a create or a change is refused for.
+const NATURAL_KEY = "job_assignments_exact_shift_unique";
 
 // Postgres writes a `time` back with seconds.
 export const toWallTime = (stored: string) => stored.slice(0, 5);
@@ -145,7 +147,13 @@ export async function createAssignments(
     )
     // The natural key is named: any other violation is a defect and must be raised.
     .onConflictDoNothing({
-      target: [jobAssignments.userId, jobAssignments.workDate, jobAssignments.jobId],
+      target: [
+        jobAssignments.userId,
+        jobAssignments.workDate,
+        jobAssignments.jobId,
+        jobAssignments.expectedStart,
+        jobAssignments.expectedEnd,
+      ],
     })
     .returning({ id: jobAssignments.id });
   if (created.length === 0) return { result: "unchanged" };

@@ -281,6 +281,20 @@
       "when": 1794528233081,
       "tag": "0039_sign-in-address",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794770598205,
+      "tag": "0040_schedule-shifts",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794770633306,
+      "tag": "0041_schedule-guards",
+      "breakpoints": true
     }
   ]
 }

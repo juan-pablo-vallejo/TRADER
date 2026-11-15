@@ -25,6 +25,8 @@ import {
   payPeriods,
   payRates,
   photos,
+  shiftOverrideHistory,
+  shiftOverrides,
   syncDiagnostics,
   workSessionEvents,
 } from "../../src/schema";
@@ -43,7 +45,7 @@ import {
   type Tx,
 } from "../helpers";
 
-// The tables that carry company_id, as 0014, 0017, 0020, 0029, 0031 and 0035 list them; companies is checked on its own id.
+// The tables that carry company_id, as 0014, 0017, 0020, 0029, 0031, 0035 and 0041 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -65,6 +67,8 @@ const TENANT_TABLES = [
   "pay_periods",
   "pay_rates",
   "photos",
+  "shift_override_history",
+  "shift_overrides",
   "sync_diagnostics",
   "users",
   "work_session_events",
@@ -223,13 +227,46 @@ async function everything(tx: Tx, name: string) {
     outcome: "rejected",
     code: "not_permitted",
   });
-  await tx.insert(jobAssignments).values({
+  const shift = (expectedStart: string, expectedEnd: string) => ({
     companyId: refs.companyId,
     userId: refs.workerId,
     jobId: refs.jobId,
     workDate: "2026-11-16",
-    expectedStart: "07:00",
-    expectedEnd: "15:30",
+    expectedStart,
+    expectedEnd,
+  });
+  const [holder, yielding] = await tx
+    .insert(jobAssignments)
+    .values([shift("07:00", "15:30"), shift("12:00", "17:00")])
+    .returning({ id: jobAssignments.id });
+  const override = one(
+    await tx
+      .insert(shiftOverrides)
+      .values({
+        companyId: refs.companyId,
+        holderId: holder!.id,
+        yieldingId: yielding!.id,
+        reason: "Covering the afternoon",
+        createdBy: refs.adminId,
+      })
+      .returning({ id: shiftOverrides.id }),
+  );
+  await tx.insert(shiftOverrideHistory).values({
+    companyId: refs.companyId,
+    overrideId: override.id,
+    action: "created",
+    actorUserId: refs.adminId,
+    reason: "Covering the afternoon",
+    userId: refs.workerId,
+    workDate: "2026-11-16",
+    holderShiftId: holder!.id,
+    holderJobId: refs.jobId,
+    holderStart: "07:00",
+    holderEnd: "15:30",
+    yieldingShiftId: yielding!.id,
+    yieldingJobId: refs.jobId,
+    yieldingStart: "12:00",
+    yieldingEnd: "17:00",
   });
   return refs;
 }

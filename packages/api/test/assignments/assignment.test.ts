@@ -116,23 +116,14 @@ describe("assignment.create", () => {
       };
       await plan.create(first);
       expect(await plan.create(first)).toEqual({ result: "unchanged" });
-      // The whole week at other times: the three planned days keep theirs.
-      expect(
-        await plan.create({
-          ...first,
-          workDates: WEEK,
-          expectedStart: "09:00",
-          expectedEnd: "12:00",
-        }),
-      ).toEqual({ result: "created", created: 2, existing: 3 });
-      const rows = await plansOf(tx, day.companyId);
-      expect(rows.map((r) => r.expectedStart)).toEqual([
-        "07:00:00",
-        "07:00:00",
-        "07:00:00",
-        "09:00:00",
-        "09:00:00",
-      ]);
+      // The whole week at the same times: the three days already planned are the same
+      // shift again and are left alone (migration 0040: only the exact shift is refused).
+      expect(await plan.create({ ...first, workDates: WEEK })).toEqual({
+        result: "created",
+        created: 2,
+        existing: 3,
+      });
+      expect(await plansOf(tx, day.companyId)).toHaveLength(5);
     });
   });
 
@@ -218,7 +209,7 @@ describe("assignment.update", () => {
     });
   });
 
-  it("refuses a day the person is already planned on that job, and keeps both plans", async () => {
+  it("refuses a change that would make the same shift twice, and keeps both plans", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       await plan.create({
@@ -232,8 +223,7 @@ describe("assignment.update", () => {
         await plan.update({
           assignmentId: before[0]!.id,
           workDate: "2026-11-17",
-          expectedStart: "09:00",
-          expectedEnd: "10:00",
+          ...HOURS,
         }),
       ).toEqual({ result: "rejected", code: "already_planned" });
       // The refusal left the transaction usable and both rows as they were.

@@ -79,7 +79,7 @@ async function planned(d: Awaited<ReturnType<typeof world>>) {
 }
 
 describe("two admins at once", () => {
-  it("planning the same person, job and day leaves one plan: `created` and `unchanged`", async () => {
+  it("planning the same shift leaves one plan: `created` and `unchanged`", async () => {
     const d = await world();
     const input = { userId: d.w1, jobId: d.J, workDates: [DAY], ...HOURS };
     let calls!: Promise<{ result: string }[]>;
@@ -88,7 +88,7 @@ describe("two admins at once", () => {
       await tx.execute(sql`select 1 from users where id = ${d.w1} for update`);
       calls = Promise.all([
         plan(d.admin.who).create(input),
-        plan(d.second.who).create({ ...input, expectedStart: "09:00" }),
+        plan(d.second.who).create(input),
       ]);
       await waitForLockWait(D.owner, '%from "users"%for share%', { n: 2 });
     });

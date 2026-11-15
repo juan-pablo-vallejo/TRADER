@@ -6,6 +6,7 @@ import {
   index,
   pgTable,
   time,
+  timestamp,
   unique,
   uuid,
 } from "drizzle-orm/pg-core";
@@ -14,6 +15,7 @@ import { companies } from "./companies";
 import { jobs } from "./jobs";
 import { createdAt, id, updatedAt } from "./shared";
 import { users } from "./users";
+import { workSessionEvents } from "./work-session-events";
 
 // A dated plan: this person is expected on this job, on this day, between these times
 // (PRD, Jobs and location; ARCHITECTURE, Office authority: dated assignments, V1-D07). It is
@@ -31,7 +33,15 @@ import { users } from "./users";
 // kept and shown as written.
 //
 // Unlike a fact table a plan is edited and removed: updated_at, an UPDATE and a DELETE grant
-// (migration 0031), and no append-only guard. Nothing references a row.
+// (migration 0031), and no append-only guard — until a clock-in is admitted on it.
+//
+// The weekly schedule (ARCHITECTURE, 2026-11-15 rows; TASKS S2) makes a row a shift. A person
+// may have several in a day, on one job or several; only the exact duplicate is refused here,
+// and whether two overlap is the writers' question (api assignments/eligibility.ts), answered
+// with shift_overrides. locked_at and locked_by_event_id are the punch lock: set once, by the
+// push that admits a `started` on the shift, to that event; from then the row's day, times
+// and job never change and it is never removed (migration 0041's guard). copy_id marks the
+// rows one Copy Last Week created, so the copy is undone whole.
 export const jobAssignments = pgTable(
   "job_assignments",
   {
@@ -44,6 +54,9 @@ export const jobAssignments = pgTable(
     workDate: date("work_date", { mode: "string" }).notNull(),
     expectedStart: time("expected_start").notNull(),
     expectedEnd: time("expected_end").notNull(),
+    copyId: uuid("copy_id"),
+    lockedAt: timestamp("locked_at", { withTimezone: true }),
+    lockedByEventId: uuid("locked_by_event_id"),
     createdAt,
     updatedAt,
   },
@@ -59,12 +72,28 @@ export const jobAssignments = pgTable(
       columns: [t.companyId, t.jobId],
       foreignColumns: [jobs.companyId, jobs.id],
     }),
-    // One plan per person, job and day; several jobs in a day are several rows. Leading with
-    // the person and the day, it is also the index of a person's own read.
-    unique("job_assignments_user_id_work_date_job_id_unique").on(
+    // The target of shift_overrides' composite keys: an override names shifts of its company.
+    unique("job_assignments_company_id_id_unique").on(t.companyId, t.id),
+    // The event that locked the shift belongs to the row's company (invariant 4).
+    foreignKey({
+      name: "job_assignments_company_id_locked_by_event_id_fk",
+      columns: [t.companyId, t.lockedByEventId],
+      foreignColumns: [workSessionEvents.companyId, workSessionEvents.id],
+    }),
+    // The same shift twice is refused; the same job twice in a day at other times is two
+    // shifts. Leading with the person and the day, it is also the index of a person's day.
+    unique("job_assignments_exact_shift_unique").on(
       t.userId,
       t.workDate,
       t.jobId,
+      t.expectedStart,
+      t.expectedEnd,
+    ),
+    // One Copy Last Week's rows, for its resend and its undo.
+    index("job_assignments_company_id_copy_id_idx").on(t.companyId, t.copyId),
+    check(
+      "job_assignments_lock_complete",
+      sql`(${t.lockedAt} IS NULL) = (${t.lockedByEventId} IS NULL)`,
     ),
     // The office read: a company's plans over a range of days.
     index("job_assignments_company_id_work_date_idx").on(t.companyId, t.workDate),
