@@ -12,6 +12,7 @@ import {
   saveInvoice,
   saveOutput,
 } from "../invoices/draft";
+import { exportInvoices, exportOutput } from "../invoices/export";
 import {
   issueInput,
   issueInvoice,
@@ -20,6 +21,14 @@ import {
   voidInvoice,
   voidOutput,
 } from "../invoices/issue";
+import {
+  recordInput,
+  recordOutput,
+  recordPayment,
+  reverseInput,
+  reverseOutput,
+  reversePayment,
+} from "../invoices/payments";
 import {
   listInvoices,
   listOutput,
@@ -63,4 +72,15 @@ export const invoiceRouter = router({
     .input(voidInput)
     .output(voidOutput)
     .mutation(({ ctx, input }) => voidInvoice(ctx.tx, ctx.user, input)),
+  recordPayment: admin
+    .input(recordInput)
+    .output(recordOutput)
+    .mutation(({ ctx, input }) => recordPayment(ctx.tx, ctx.user, input)),
+  reversePayment: admin
+    .input(reverseInput)
+    .output(reverseOutput)
+    .mutation(({ ctx, input }) => reversePayment(ctx.tx, ctx.user, input)),
+  exportCsv: admin
+    .output(exportOutput)
+    .query(({ ctx }) => exportInvoices(ctx.tx, ctx.user)),
 });

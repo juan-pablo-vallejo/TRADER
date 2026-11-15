@@ -9,7 +9,14 @@
 // admin on every line (V1-D14). The hours are the one labor derivation's figures (jobs/
 // cost.ts): a day's quantity is the sum of that day's rounded figures, added and never
 // rounded again. Consumed by routers/invoice.ts.
-import { customers, invoiceLineItems, invoices, jobs, users } from "@trader/db/schema";
+import {
+  customers,
+  invoiceLineItems,
+  invoicePayments,
+  invoices,
+  jobs,
+  users,
+} from "@trader/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -27,6 +34,10 @@ const amounts = {
   subtotalCents: z.number().int(),
   taxCents: z.number().int(),
   totalCents: z.number().int(),
+  // Of the payments that stand: neither reversed nor a reversal. Derived, never stored.
+  paidCents: z.number().int(),
+  // The total less what is paid; zero for a draft and for a void invoice, which owe nothing.
+  owedCents: z.number().int(),
 };
 const header = {
   id: z.uuid(),
@@ -59,6 +70,22 @@ export const readOutput = z.strictObject({
       unitPriceCents: z.number().int(),
       amountCents: z.number().int(),
       materialId: z.uuid().nullable(),
+    }),
+  ),
+  // Every recorded payment and reversal, oldest first.
+  payments: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      amountCents: z.number().int(),
+      paidOn: z.iso.date(),
+      method: z.string(),
+      note: z.string().nullable(),
+      recordedBy: z.string(),
+      recordedAt: z.date(),
+      // The payment this row reverses, when it is a reversal.
+      reversesPaymentId: z.uuid().nullable(),
+      // Whether a later row reversed this payment.
+      reversed: z.boolean(),
     }),
   ),
 });
@@ -120,7 +147,18 @@ type Row = {
   jobName: string;
 };
 
-const headerOf = (r: Row, subtotalCents: number) => ({
+// What is owed: only an issued invoice that is not void owes anything.
+const owed = (r: Row, totalCents: number, paidCents: number) =>
+  r.number === null || r.voidedAt !== null ? 0 : totalCents - paidCents;
+
+// The sum of an invoice's payments that stand.
+const PAID = sql<number>`coalesce((
+  select sum(p.amount_cents) from invoice_payments p
+  where p.invoice_id = ${invoices.id} and p.reverses_payment_id is null
+    and not exists (select 1 from invoice_payments r where r.reverses_payment_id = p.id)
+), 0)::int`;
+
+const headerOf = (r: Row, subtotalCents: number, paidCents: number) => ({
   id: r.id,
   state: stateOf(r),
   number: r.number,
@@ -133,6 +171,8 @@ const headerOf = (r: Row, subtotalCents: number) => ({
   subtotalCents,
   taxCents: r.taxCents,
   totalCents: subtotalCents + r.taxCents,
+  paidCents,
+  owedCents: owed(r, subtotalCents + r.taxCents, paidCents),
 });
 
 // Newest first: drafts by when they were made, issued invoices by their number.
@@ -143,6 +183,7 @@ export async function listInvoices(tx: Tx): Promise<z.infer<typeof listOutput>> 
       subtotalCents: sql<number>`coalesce((
         select sum(l.amount_cents) from invoice_line_items l where l.invoice_id = ${invoices.id}
       ), 0)::int`,
+      paidCents: PAID,
     })
     .from(invoices)
     .innerJoin(customers, eq(customers.id, invoices.customerId))
@@ -153,7 +194,7 @@ export async function listInvoices(tx: Tx): Promise<z.infer<typeof listOutput>> 
       desc(invoices.id),
     )
     .limit(LIST_LIMIT);
-  return rows.map((r) => headerOf(r, r.subtotalCents));
+  return rows.map((r) => headerOf(r, r.subtotalCents, r.paidCents));
 }
 
 export async function readInvoice(
@@ -163,7 +204,7 @@ export async function readInvoice(
   const issuer = alias(users, "issuer");
   const voider = alias(users, "voider");
   const [row] = await tx
-    .select({ ...columns, issuedBy: issuer.name, voidedBy: voider.name })
+    .select({ ...columns, issuedBy: issuer.name, voidedBy: voider.name, paidCents: PAID })
     .from(invoices)
     .innerJoin(customers, eq(customers.id, invoices.customerId))
     .innerJoin(jobs, eq(jobs.id, invoices.jobId))
@@ -185,11 +226,28 @@ export async function readInvoice(
     .from(invoiceLineItems)
     .where(eq(invoiceLineItems.invoiceId, row.id))
     .orderBy(asc(invoiceLineItems.position), asc(invoiceLineItems.id));
+  const recorded = await tx
+    .select({
+      id: invoicePayments.id,
+      amountCents: invoicePayments.amountCents,
+      paidOn: invoicePayments.paidOn,
+      method: invoicePayments.method,
+      note: invoicePayments.note,
+      recordedBy: users.name,
+      recordedAt: invoicePayments.createdAt,
+      reversesPaymentId: invoicePayments.reversesPaymentId,
+    })
+    .from(invoicePayments)
+    .innerJoin(users, eq(users.id, invoicePayments.recordedByUserId))
+    .where(eq(invoicePayments.invoiceId, row.id))
+    .orderBy(asc(invoicePayments.createdAt), asc(invoicePayments.id));
+  const reversedIds = new Set(recorded.map((p) => p.reversesPaymentId));
   return {
-    ...headerOf(row, totals(lines, row.taxCents).subtotalCents),
+    ...headerOf(row, totals(lines, row.taxCents).subtotalCents, row.paidCents),
     issuedBy: row.issuedBy,
     voidedBy: row.voidedBy,
     lines,
+    payments: recorded.map((p) => ({ ...p, reversed: reversedIds.has(p.id) })),
   };
 }
 

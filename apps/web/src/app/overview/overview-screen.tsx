@@ -55,6 +55,7 @@ export function OverviewScreen({ signInHref }: { signInHref: string }) {
       help: s.refusalsHelp,
     },
     { href: "/schedule", label: s.shifts, count: o.shiftsThisWeek },
+    { href: "/invoices", label: s.invoicesOwed, count: o.invoicesOwed },
   ];
   return (
     <>

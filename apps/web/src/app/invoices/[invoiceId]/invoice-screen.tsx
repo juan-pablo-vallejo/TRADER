@@ -408,6 +408,198 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   );
 }
 
+// Today as the browser's calendar day: where the "Paid on" field starts, and no rule.
+function today(): string {
+  const now = new Date();
+  const two = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
+}
+
+const METHODS = ["check", "cash", "card", "bank_transfer", "other"] as const;
+
+// What the customer has paid, as the office recorded it (PRD, Invoicing and exports): what
+// is owed, every payment and reversal, and — while the invoice is issued and something is
+// owed — the form that records one. A payment is reversed, never edited or removed.
+function Payments({ invoice }: { invoice: Invoice }) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const refresh = () => queryClient.invalidateQueries(trpc.invoice.pathFilter());
+  const [id, setId] = useState(() => uuidv7());
+  const [paid, setPaid] = useState("");
+  const [paidOn, setPaidOn] = useState(today);
+  const [method, setMethod] = useState<(typeof METHODS)[number]>("check");
+  const [memo, setMemo] = useState("");
+  const [note, setNote] = useState<string | null>(null);
+  const [tone, setTone] = useState<"saved" | "error">("error");
+  const fail = (text: string) => {
+    setTone("error");
+    setNote(text);
+  };
+  const record = useMutation(
+    trpc.invoice.recordPayment.mutationOptions({
+      onSuccess: async (answer) => {
+        if (answer.result === "rejected") {
+          fail(
+            answer.code === "overpaid"
+              ? s.overpaid(money(invoice.owedCents, invoice.currency))
+              : strings.requestFailed,
+          );
+          return;
+        }
+        // The next payment is a new record, under an id of its own.
+        setId(uuidv7());
+        setPaid("");
+        setMemo("");
+        setTone("saved");
+        setNote(s.recorded);
+        await refresh();
+      },
+      onError: () => fail(strings.requestFailed),
+    }),
+  );
+  const reverse = useMutation(
+    trpc.invoice.reversePayment.mutationOptions({
+      onSuccess: async () => {
+        setNote(null);
+        await refresh();
+      },
+      onError: () => fail(strings.requestFailed),
+    }),
+  );
+  const open = invoice.state === "issued";
+  return (
+    <section className={styles.section} aria-label={s.payments}>
+      <h2 className="heading">{s.payments}</h2>
+      {open && (
+        <p className="body-strong">
+          {invoice.owedCents === 0
+            ? s.paidInFull
+            : `${s.owed}: ${money(invoice.owedCents, invoice.currency)}`}
+          {invoice.paidCents > 0 &&
+            invoice.owedCents > 0 &&
+            ` · ${s.paid}: ${money(invoice.paidCents, invoice.currency)}`}
+        </p>
+      )}
+      {invoice.payments.length === 0 ? (
+        <p className="body">{s.noPayments}</p>
+      ) : (
+        <ul className={styles.offers}>
+          {invoice.payments.map((p) => {
+            const amountText = money(p.amountCents, invoice.currency);
+            return (
+              <li key={p.id}>
+                <span className="body">
+                  {s.paymentLine(
+                    amountText,
+                    weekDay(p.paidOn),
+                    s.methods[p.method as keyof typeof s.methods] ?? p.method,
+                  )}
+                  {p.note !== null && ` · ${p.note}`}
+                  <span className={`secondary ${styles.payMeta}`}>
+                    {p.reversesPaymentId !== null
+                      ? s.reversalMark
+                      : p.reversed
+                        ? s.reversedMark
+                        : s.recordedBy(p.recordedBy)}
+                  </span>
+                </span>
+                {open && p.reversesPaymentId === null && !p.reversed && (
+                  <DestructiveAction
+                    quiet
+                    label={s.reverseOf(amountText)}
+                    effect={s.reverseEffect(amountText)}
+                    disabled={reverse.isPending}
+                    onConfirm={() =>
+                      reverse.mutate({ id: uuidv7(), paymentId: p.id, note: null })
+                    }
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {open && invoice.owedCents > 0 && (
+        <form
+          className={`${controls.card} ${styles.payForm}`}
+          aria-label={s.recordPayment}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setNote(null);
+            const amountCents = cents(paid);
+            if (amountCents === null || amountCents === 0) return fail(s.badAmount);
+            record.mutate({
+              id,
+              invoiceId: invoice.id,
+              amountCents,
+              paidOn,
+              method,
+              note: memo.trim() === "" ? null : memo.trim(),
+            });
+          }}
+        >
+          <h3 className="body-strong">{s.recordPayment}</h3>
+          <p className={`secondary ${styles.explain}`}>{s.recordExplain}</p>
+          <div className={styles.payFields}>
+            <Field id="pay-amount" label={s.paymentAmount}>
+              <input
+                id="pay-amount"
+                className={controls.input}
+                inputMode="decimal"
+                value={paid}
+                onChange={(e) => setPaid(e.target.value)}
+              />
+            </Field>
+            <Field id="pay-day" label={s.paymentDay}>
+              <input
+                id="pay-day"
+                className={controls.input}
+                type="date"
+                required
+                value={paidOn}
+                onChange={(e) => setPaidOn(e.target.value)}
+              />
+            </Field>
+            <Field id="pay-method" label={s.paymentMethod}>
+              <select
+                id="pay-method"
+                className={controls.select}
+                value={method}
+                onChange={(e) => setMethod(e.target.value as (typeof METHODS)[number])}
+              >
+                {METHODS.map((m) => (
+                  <option key={m} value={m}>
+                    {s.methods[m]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field id="pay-note" label={s.paymentNote}>
+              <input
+                id="pay-note"
+                className={controls.input}
+                maxLength={500}
+                value={memo}
+                onChange={(e) => setMemo(e.target.value)}
+              />
+            </Field>
+          </div>
+          <div className={controls.actions}>
+            <button
+              type="submit"
+              className={controls.primary}
+              disabled={record.isPending}
+            >
+              {s.record}
+            </button>
+          </div>
+          <Note text={note} tone={tone} />
+        </form>
+      )}
+    </section>
+  );
+}
+
 function Issued({ invoice }: { invoice: Invoice }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -416,7 +608,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
     trpc.invoice.void.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(strings.requestFailed);
+          setNote(answer.code === "has_payments" ? s.hasPayments : strings.requestFailed);
           return;
         }
         await queryClient.invalidateQueries(trpc.invoice.pathFilter());
@@ -465,6 +657,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
           currency={invoice.currency}
         />
       </section>
+      <Payments invoice={invoice} />
       {invoice.state === "issued" && invoice.number !== null && (
         <div className={styles.danger}>
           <DestructiveAction

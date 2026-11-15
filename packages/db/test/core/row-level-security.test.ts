@@ -17,6 +17,7 @@ import {
   dayCloseouts,
   dayCloseoutWorkers,
   invoiceLineItems,
+  invoicePayments,
   invoices,
   jobAssignments,
   materialCorrections,
@@ -45,7 +46,7 @@ import {
   type Tx,
 } from "../helpers";
 
-// The tables that carry company_id, as 0014, 0017, 0020, 0029, 0031, 0035 and 0041 list them; companies is checked on its own id.
+// The tables that carry company_id, as 0014, 0017, 0020, 0029, 0031, 0035, 0041 and 0045 list them; companies is checked on its own id.
 const TENANT_TABLES = [
   "approvals",
   "audit_log",
@@ -58,6 +59,7 @@ const TENANT_TABLES = [
   "day_closeouts",
   "invoice_counters",
   "invoice_line_items",
+  "invoice_payments",
   "invoices",
   "job_assignments",
   "jobs",
@@ -212,6 +214,16 @@ async function everything(tx: Tx, name: string) {
   const { invoiceId } = await draftInvoice(tx, refs);
   await issue(tx, refs, invoiceId);
   await tx.insert(creditMemos).values(memo(refs, invoiceId));
+  await tx.insert(invoicePayments).values({
+    id: uuidv7(),
+    companyId: refs.companyId,
+    invoiceId,
+    currency: "USD",
+    amountCents: 100,
+    paidOn: "2026-11-02",
+    method: "check",
+    recordedByUserId: refs.adminId,
+  });
   await tx.insert(auditLog).values({
     companyId: refs.companyId,
     action: "companies.export",

@@ -9,11 +9,12 @@
 // Lock order: the caller re-read, the invoice's row FOR UPDATE, then — inside the database's
 // trigger — the counter's row. Consumed by routers/invoice.ts.
 import { invoiceLineItems, invoices } from "@trader/db/schema";
-import { DrizzleQueryError, eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
 import { lockActiveSelf } from "../core/locks";
+import { pgFailure } from "../core/pg-error";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { lockInvoice } from "./draft";
@@ -35,7 +36,11 @@ export const issueOutput = z.discriminatedUnion("result", [
 export const voidInput = z.strictObject({ invoiceId: z.uuid() });
 export const voidOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.enum(["voided", "duplicate"]) }),
-  z.strictObject({ result: z.literal("rejected"), code: z.literal("not_issued") }),
+  z.strictObject({
+    result: z.literal("rejected"),
+    // `has_payments`: a payment still stands against it; reverse it first.
+    code: z.enum(["not_issued", "has_payments"]),
+  }),
 ]);
 
 export async function issueInvoice(
@@ -65,11 +70,7 @@ export async function issueInvoice(
     if (issued?.number == null) throw new Error("an issued invoice has a number");
     return { result: "issued", number: issued.number };
   } catch (error) {
-    const cause = error instanceof DrizzleQueryError ? error.cause : undefined;
-    if (
-      (cause as { constraint?: string } | undefined)?.constraint ===
-      "invoices_counter_missing"
-    ) {
+    if (pgFailure(error).constraint === "invoices_counter_missing") {
       return { result: "rejected", code: "no_number_series" };
     }
     throw error;
@@ -86,6 +87,14 @@ export async function voidInvoice(
   if (invoice === undefined) throw forbidden();
   if (invoice.issuedAt === null) return { result: "rejected", code: "not_issued" };
   if (invoice.voidedAt !== null) return { result: "duplicate" };
+  // Under the invoice's row lock, which a payment's insert takes too (0045): a payment and
+  // a void of one invoice are judged one after the other.
+  const { rows } = await tx.execute<{ standing: number }>(sql`
+    select count(*)::int as standing from invoice_payments p
+    where p.invoice_id = ${invoice.id} and p.reverses_payment_id is null
+      and not exists (select 1 from invoice_payments r where r.reverses_payment_id = p.id)
+  `);
+  if ((rows[0]?.standing ?? 0) > 0) return { result: "rejected", code: "has_payments" };
   await tx
     .update(invoices)
     .set({ voidedAt: new Date(), voidedByUserId: user.id })

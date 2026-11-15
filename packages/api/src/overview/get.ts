@@ -1,7 +1,8 @@
 // overview.get: what waits for the office today, as counts (PRD, Office review and job cost;
 // DESIGN, Overview; ARCHITECTURE, 2026-11-15, office overview). It only counts what the
 // office's own screens read — the approval queue, the labor derivation's open sessions, the
-// refused-entry lines inside their retention, the week's shifts — under the caller's tenant
+// refused-entry lines inside their retention, the week's shifts, the invoices still owed —
+// under the caller's tenant
 // and nothing else: no figure of money or hours, no other company, no write, no lock.
 //
 // Open sessions come from the one labor derivation (labor/day-hours.ts), folded over every
@@ -35,6 +36,8 @@ export const overviewOutput = z.strictObject({
   // Lines the office can still read: inside the retention period.
   refusedEntries: count,
   shiftsThisWeek: count,
+  // Issued invoices, not void, with something still owed.
+  invoicesOwed: count,
 });
 
 const dayAfter = (day: string, n: number) =>
@@ -61,6 +64,17 @@ export async function overview(
       lte(jobAssignments.workDate, dayAfter(weekStart, 6)),
     ),
   );
+  const owed = await tx.execute<{ n: number }>(sql`
+    select count(*)::int as n from invoices i
+    where i.number is not null and i.voided_at is null
+      and i.tax_cents
+        + coalesce((select sum(l.amount_cents) from invoice_line_items l
+            where l.invoice_id = i.id), 0)
+        > coalesce((select sum(p.amount_cents) from invoice_payments p
+            where p.invoice_id = i.id and p.reverses_payment_id is null
+              and not exists (select 1 from invoice_payments r
+                where r.reverses_payment_id = p.id)), 0)
+  `);
   const workers = await tx
     .selectDistinct({ id: workSessionEvents.workerId })
     .from(workSessionEvents);
@@ -79,5 +93,6 @@ export async function overview(
     openSessions,
     refusedEntries,
     shiftsThisWeek,
+    invoicesOwed: owed.rows[0]?.n ?? 0,
   };
 }

@@ -74,7 +74,22 @@
   padding-top: var(--space-4);
   border-top: var(--hairline) solid var(--border);
 }
+.payMeta {
+  display: block;
+  color: var(--ink-secondary);
+}
+.payForm {
+  max-width: 44rem;
+  margin-top: var(--space-4);
+}
+.payFields {
+  display: grid;
+  gap: 0 var(--space-3);
+}
 @media (min-width: 768px) {
+  .payFields {
+    grid-template-columns: 1fr 1fr;
+  }
   .line {
     grid-template-columns: 3fr 1fr 1fr 1fr;
   }

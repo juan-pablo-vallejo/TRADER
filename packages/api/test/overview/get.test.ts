@@ -79,6 +79,7 @@ describe("overview.get", () => {
         openSessions: 0,
         refusedEntries: 0,
         shiftsThisWeek: 0,
+        invoicesOwed: 0,
       });
     });
   });

@@ -208,6 +208,44 @@ export const strings = {
       `Invoice ${n} will be marked void. It keeps its number and its lines, and it cannot be issued again.`,
     voided: "Invoice voided.",
     isIssued: "This invoice is issued and can no longer be changed.",
+    owed: "Owed",
+    paid: "Paid",
+    paidInFull: "Paid in full",
+    payments: "Payments",
+    noPayments: "No payment recorded yet.",
+    paymentLine: (amount: string, day: string, method: string) =>
+      `${amount} · ${day} · ${method}`,
+    recordedBy: (who: string) => `Recorded by ${who}`,
+    reversedMark: "Reversed",
+    reversalMark: "Reversal",
+    methods: {
+      check: "Check",
+      cash: "Cash",
+      card: "Card",
+      bank_transfer: "Bank transfer",
+      other: "Other",
+    },
+    recordPayment: "Record a payment",
+    recordExplain:
+      "A note of money the customer paid. TRADER takes no payment and moves no money.",
+    paymentAmount: "Amount",
+    paymentDay: "Paid on",
+    paymentMethod: "Method",
+    paymentNote: "Note (optional)",
+    record: "Record payment",
+    recorded: "Payment recorded.",
+    badAmount: "Enter the amount paid, above zero.",
+    overpaid: (owed: string) => `That is more than the ${owed} still owed.`,
+    reverse: "Reverse",
+    reverseOf: (amount: string) => `Reverse the payment of ${amount}`,
+    reverseEffect: (amount: string) =>
+      `The payment of ${amount} will be marked reversed and will no longer count. Both entries stay on the invoice.`,
+    hasPayments:
+      "A payment still stands against this invoice. Reverse it before voiding.",
+    csv: "Issued invoices (CSV)",
+    csvExplain:
+      "One row for each issued invoice: number, date, customer, jobsite, totals, paid and owed. A plain list, not a QuickBooks import.",
+    csvSaved: (file: string) => `Saved ${file}.`,
   },
   // The developer console (DESIGN, Developer console): read-only, name and value.
   developer: {
@@ -259,6 +297,7 @@ export const strings = {
     refusals: "Refused entries in the last 30 days",
     refusalsHelp: "Find one by employee and day.",
     shifts: "Shifts this week",
+    invoicesOwed: "Invoices still owed",
     open: (label: string, n: number) => `${label}: ${n}`,
   },
 

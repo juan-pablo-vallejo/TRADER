@@ -5,9 +5,10 @@
 // First sign-in binds the one invitation; nothing is ever inserted, and nothing but
 // identity_subject is ever written (users_identity_guard refuses anything else).
 import { users } from "@trader/db/schema";
-import { and, DrizzleQueryError, eq, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 
 import type { Tx } from "./context";
+import { pgFailure } from "./pg-error";
 import type { VerifiedIdentity } from "./identity";
 
 const columns = {
@@ -103,9 +104,8 @@ export async function resolveUser(
       )
       .returning(columns);
   } catch (error) {
-    const cause = error instanceof DrizzleQueryError ? error.cause : undefined;
-    const pg = cause as { code?: string; constraint?: string } | undefined;
-    if (pg?.code === "23505" && pg.constraint === IDENTITY_SUBJECT_UNIQUE) {
+    const pg = pgFailure(error);
+    if (pg.code === "23505" && pg.constraint === IDENTITY_SUBJECT_UNIQUE) {
       throw new BindConflict("identity subject already bound", { cause: error });
     }
     throw error;

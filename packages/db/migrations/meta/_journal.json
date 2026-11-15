@@ -309,6 +309,20 @@
       "when": 1794776088622,
       "tag": "0043_invoice-issue-frozen",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794780970941,
+      "tag": "0044_invoice-payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794780971463,
+      "tag": "0045_invoice-payment-guards",
+      "breakpoints": true
     }
   ]
 }
