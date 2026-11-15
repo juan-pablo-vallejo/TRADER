@@ -164,7 +164,7 @@ paid is created and no production migration runs without the owner's approval of
       worker and a foreman refused; two admins on one person's day at once; a resend
       answers `duplicate`; every override write leaves its history entry and a
       rolled-back one leaves none
-- [ ] S4 — Clock-in eligibility and the punch lock, behind the enforcement switch (plan
+- [x] S4 — Clock-in eligibility and the punch lock, behind the enforcement switch (plan
       first: schema, sync, CI). Depends on S3. Work: the server-controlled switch, off by
       default; with it on, a `started` judged by the schedule as the 2026-11-15 rows
       state, the shift locked by the start it admits, a start captured offline that the

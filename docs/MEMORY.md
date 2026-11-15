@@ -495,6 +495,17 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   silently — the database holds none of it.
 - `assignment.create` answers per day inside `{ result: "planned", days }`; a refused day
   is not a failed call. Count `created` among the days, never trust the outer result.
+- A push at a fixed past instant must be `capturedOffline: true` (the clock rule above), and
+  under schedule enforcement an offline start the schedule does not admit is stored, not
+  refused: a test of `not_scheduled` pushes online, timed now, with no shift that could
+  admit it at any minute. `judgeStart` itself takes any instant and is tested directly.
+- A push with no location stamp carries `location` among its reasons: a schedule test's
+  admitted offline start answers `["offline", "location"]`.
+- `waitForLockWait` matches the statement's text as sent, with `$1` for a parameter: a
+  pattern naming a parameter's value never matches, and the probe gives up after 5 s —
+  longer than a push's 2 s `lock_timeout`.
+- To turn enforcement on for a company in a test, update `companies.schedule_enforced` as
+  the owner; `trader_app` is refused (42501).
 
 ## Log
 
@@ -1525,3 +1536,35 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `s3-shift-writers`, stacked; `release-0.1` moves to this branch next and gets its first
   Preview; staging's database then goes from 40 to 42 migrations. Blockers: none.
 - **Next:** S4, clock-in eligibility and the punch lock behind the switch.
+
+### 2026-11-15 — Clock-in eligibility and the punch lock, behind the switch (S4)
+
+- **Did:** branch `s4-clock-in-eligibility` from `s3-shift-writers`. `0042`: the approval
+  reason `unscheduled`. `sync/schedule.ts`: the switch read, `judgeStart` under the
+  person's day lock, the lock write. `sync.push`: with the switch on, a `started` judged
+  by the schedule after validation, the shift locked in the event's transaction, an
+  offline start the schedule does not admit stored pending with `unscheduled`, an online
+  one refused `not_scheduled`. `sync.pull` answers `scheduleEnforced`. Seen on real
+  commits: with the switch off a push completes while `job_assignments` is locked against
+  every reader; an edit committed first leaves the start stored for review; a start
+  committed first leaves the edit `locked`. Watched red, by mutation: fourteen rules
+  (enforcement, crew not required, the archived job, the admin's exemption, the stored
+  start, the admin worker, the lock, the lock once, the shift's job, the day lock, the
+  schedule unread when off, the pull flag, the reason, the refusal's name). 1,395 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  server tells the two cases apart by the record's own `captured_offline`: an offline
+  start the schedule does not admit is stored for review whatever changed, and one
+  captured with a connection is refused. The reason is `unscheduled`, the refusal
+  `not_scheduled`. An unscheduled offline start for an admin worker is refused, since an
+  admin's labor takes no approval to wait on. An archived job refuses a start under
+  enforcement as without it. Not done: `assignment.list`'s `mayClockIn` still answers by
+  crew under enforcement (S6 decides what the screen says); a lock stays when the admin
+  later rejects the start that set it; the new tag was not seen in a browser; the phone
+  (S7). The switch is off everywhere.
+- **Release 0.1 state:** branches `r01-mandate` (#100), `s2-schedule-schema` (#101),
+  `s3-shift-writers` (#102), `s4-clock-in-eligibility`, stacked, CI green on the first
+  three; `release-0.1` has a Preview on the staging project with its own authorized
+  origin, the browser suite green on it; **staging's database is still at 40 migrations**
+  — the owner-role wrapper has no migrate command, and a version that adds one waits for
+  the owner to install it; until then the schedule endpoints fail on that Preview.
+- **Next:** S5, Copy Last Week.
