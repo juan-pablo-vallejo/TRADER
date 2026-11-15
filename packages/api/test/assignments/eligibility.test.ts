@@ -3,6 +3,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  admitStart,
+  EARLY_MINUTES,
   resolveDay,
   type DayResolution,
   type Override,
@@ -754,5 +756,159 @@ describe("resolveDay", () => {
       expect(seen.resolved).toBeGreaterThan(40);
       expect(seen.rejected).toBeGreaterThan(40);
     });
+  });
+});
+
+describe("admitStart", () => {
+  const morning = shift(A, "08:00", "10:00");
+  const day = (shifts: Shift[], overrides: Override[] = []) =>
+    resolved(resolveDay(shifts, overrides));
+
+  it("admits a start during a shift, from its first minute to its last", () => {
+    const one = day([morning]);
+    const scheduled = { result: "scheduled", shiftId: A, jobId: J };
+    expect(admitStart(one, "08:00")).toEqual(scheduled);
+    expect(admitStart(one, "09:59")).toEqual(scheduled);
+    expect(admitStart(one, "10:00")).toEqual({ result: "none" });
+  });
+
+  it("admits a start 15 minutes before a shift and refuses one at 16", () => {
+    const one = day([morning]);
+    expect(EARLY_MINUTES).toBe(15);
+    expect(admitStart(one, "07:44")).toEqual({ result: "none" });
+    expect(admitStart(one, "07:45")).toEqual({
+      result: "early",
+      shiftId: A,
+      jobId: J,
+      minutesEarly: 15,
+    });
+    expect(admitStart(one, "07:59")).toEqual({
+      result: "early",
+      shiftId: A,
+      jobId: J,
+      minutesEarly: 1,
+    });
+  });
+
+  it("admits nothing after the day's last shift, or on a day with none", () => {
+    expect(admitStart(day([morning]), "10:01")).toEqual({ result: "none" });
+    expect(admitStart(day([morning]), "23:59")).toEqual({ result: "none" });
+    expect(admitStart(day([]), "08:00")).toEqual({ result: "none" });
+  });
+
+  it("keeps a start on the eligible shift while the next one is within 15 minutes", () => {
+    const two = day([morning, shift(B, "10:10", "12:00", K)]);
+    // 09:58 is 12 minutes before B and inside A: A, and never B.
+    expect(admitStart(two, "09:58")).toEqual({
+      result: "scheduled",
+      shiftId: A,
+      jobId: J,
+    });
+    // In the gap nothing is eligible, so the next shift's early window applies.
+    expect(admitStart(two, "10:05")).toEqual({
+      result: "early",
+      shiftId: B,
+      jobId: K,
+      minutesEarly: 5,
+    });
+    // Touching shifts leave no gap: the later one is simply eligible from its start.
+    const touching = day([morning, shift(B, "10:00", "12:00", K)]);
+    expect(admitStart(touching, "09:59")).toEqual({
+      result: "scheduled",
+      shiftId: A,
+      jobId: J,
+    });
+    expect(admitStart(touching, "10:00")).toEqual({
+      result: "scheduled",
+      shiftId: B,
+      jobId: K,
+    });
+  });
+
+  it("admits an early start on the shift that becomes eligible, not the one that yields", () => {
+    // Both begin at 08:00 and B holds: before 08:00 the jobsite to arrive at is B's.
+    const both = day(
+      [shift(A, "08:00", "12:00"), shift(B, "08:00", "10:00", K)],
+      [over(B, A)],
+    );
+    expect(admitStart(both, "07:50")).toEqual({
+      result: "early",
+      shiftId: B,
+      jobId: K,
+      minutesEarly: 10,
+    });
+    // A becomes eligible at 10:00, with B eligible until then: no early window for A.
+    expect(admitStart(both, "09:50")).toEqual({
+      result: "scheduled",
+      shiftId: B,
+      jobId: K,
+    });
+  });
+
+  it("counts from a shift's eligible time, not from a start another shift holds", () => {
+    // B starts at 09:00 under A, which holds until 10:00; A ends, and B is eligible at once.
+    const held = day(
+      [shift(A, "08:00", "10:00"), shift(B, "09:00", "12:00", K)],
+      [over(A, B)],
+    );
+    expect(admitStart(held, "08:50")).toEqual({
+      result: "scheduled",
+      shiftId: A,
+      jobId: J,
+    });
+    expect(admitStart(held, "07:50")).toEqual({
+      result: "early",
+      shiftId: A,
+      jobId: J,
+      minutesEarly: 10,
+    });
+  });
+
+  it("stays inside the day at both ends", () => {
+    const edges = day([shift(A, "00:10", "01:00"), shift(B, "23:00", "23:59", K)]);
+    expect(admitStart(edges, "00:00")).toEqual({
+      result: "early",
+      shiftId: A,
+      jobId: J,
+      minutesEarly: 10,
+    });
+    // 23:59 is the day's last minute and B has ended: tomorrow's shifts are not this day's.
+    expect(admitStart(edges, "23:58")).toEqual({
+      result: "scheduled",
+      shiftId: B,
+      jobId: K,
+    });
+    expect(admitStart(edges, "23:59")).toEqual({ result: "none" });
+  });
+
+  it("admits at most one shift at every minute of a day, and never during another's time", () => {
+    const shifts = [
+      shift(A, "06:00", "09:00"),
+      shift(B, "08:00", "11:00", K),
+      shift(C, "11:10", "13:00"),
+      shift(D, "13:20", "15:00", K),
+    ];
+    const full = day(shifts, [over(B, A)]);
+    for (let m = 0; m < 24 * 60; m++) {
+      const admitted = admitStart(full, time(m));
+      const eligible = eligibleAt(full, m);
+      if (eligible.length === 1) {
+        expect(admitted).toMatchObject({ result: "scheduled", shiftId: eligible[0] });
+      } else {
+        expect(admitted.result).not.toBe("scheduled");
+      }
+      if (admitted.result === "early") {
+        expect(admitted.minutesEarly).toBeGreaterThanOrEqual(1);
+        expect(admitted.minutesEarly).toBeLessThanOrEqual(15);
+        expect(eligibleAt(full, m + admitted.minutesEarly)).toEqual([admitted.shiftId]);
+      }
+    }
+    // 13:00 to 13:20 is a 20-minute gap: its first five minutes admit nobody.
+    expect(admitStart(full, "13:04")).toEqual({ result: "none" });
+    expect(admitStart(full, "13:05")).toMatchObject({ result: "early", shiftId: D });
+  });
+
+  it("throws on a time that is not HH:MM", () => {
+    expect(() => admitStart(day([morning]), "07:45:30")).toThrow(/HH:MM/);
   });
 });

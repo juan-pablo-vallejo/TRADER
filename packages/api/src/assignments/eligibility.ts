@@ -21,6 +21,12 @@
 // loses nothing because every bound here is a whole minute. The repeated hour of a clock
 // change is therefore eligible through both passes and the skipped hour never occurs.
 //
+// A start is admitted by the shift eligible at its minute, and by nothing else while one
+// is. At a minute no shift is eligible, it is admitted on the shift that becomes eligible
+// next that day when that is at most 15 minutes away (`admitStart`). That is leave to start
+// and nothing more: it gives back no time, so the session begins when the start was
+// recorded, and it never looks past the day's end at the next day's shifts.
+//
 // The answer does not depend on the order of the shifts or of the overrides.
 // Consumed by: nothing yet (TASKS S3's writers, S4's push, the schedule reads).
 
@@ -308,4 +314,29 @@ export function resolveDay(
       windows: windows.get(s.id) ?? [],
     })),
   };
+}
+
+// How long before the next eligible shift a start is admitted.
+export const EARLY_MINUTES = 15;
+
+export type StartAdmission =
+  // A shift is eligible at that minute.
+  | { result: "scheduled"; shiftId: string; jobId: string }
+  // None is, and this one becomes eligible next, `minutesEarly` from now: 1 to 15.
+  | { result: "early"; shiftId: string; jobId: string; minutesEarly: number }
+  | { result: "none" };
+
+// Whether a start at `at`, HH:MM on the day that was resolved, is admitted, and on which
+// shift. The seconds of the recorded time are dropped by the caller, never rounded up.
+export function admitStart(day: ResolvedDay, at: string): StartAdmission {
+  const minute = toMinutes(at);
+  // In time order: the first stretch that has not ended is the one `at` is in, or the next.
+  const segment = day.timeline.find((s) => toMinutes(s.end) > minute);
+  if (segment === undefined) return { result: "none" };
+  const { shiftId, jobId } = segment;
+  const minutesEarly = toMinutes(segment.start) - minute;
+  if (minutesEarly <= 0) return { result: "scheduled", shiftId, jobId };
+  if (minutesEarly <= EARLY_MINUTES)
+    return { result: "early", shiftId, jobId, minutesEarly };
+  return { result: "none" };
 }
