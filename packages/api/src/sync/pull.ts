@@ -16,6 +16,8 @@ import {
 } from "@trader/db/schema";
 import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
 
+import { loadDays } from "../assignments/day";
+import { resolveDay } from "../assignments/eligibility";
 import type { Tx } from "../core/context";
 import { replay } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
@@ -32,6 +34,10 @@ export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
 
 const stateOf = (decision: "approved" | "rejected" | null | undefined) =>
   decision === undefined ? "none" : decision === null ? "pending" : decision;
+
+// The caller's shifts are read from the Monday of the current week for this many days: this
+// week whole, and the next, so Sunday evening already shows Monday.
+export const SHIFT_DAYS = 14;
 
 // YYYY-MM-DD minus `days`, on the calendar (no zone: a date is a date).
 function daysBefore(date: string, days: number): string {
@@ -196,11 +202,59 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     receiptApprovals.map((a) => [a.materialId, a.decision]),
   );
 
+  // The caller's own shifts and the hours each is the eligible one, a day at a time.
+  const today = workDate(serverNow, company.timezone);
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+  const monday = daysBefore(today, (weekday + 6) % 7);
+  const ownDays = await loadDays(tx, monday, daysBefore(monday, 1 - SHIFT_DAYS), [
+    user.id,
+  ]);
+  const shiftJobIds = [
+    ...new Set([...ownDays.values()].flatMap((d) => d.shifts.map((s) => s.jobId))),
+  ];
+  const shiftJobs =
+    shiftJobIds.length === 0
+      ? []
+      : await tx
+          .select({ id: jobs.id, name: jobs.name, address: jobs.address })
+          .from(jobs)
+          .where(inArray(jobs.id, shiftJobIds));
+  const shiftJob = new Map(shiftJobs.map((j) => [j.id, j]));
+  const shifts = [...ownDays.values()]
+    .flatMap((day) => {
+      const resolved = resolveDay(day.shifts, day.overrides);
+      const windows = new Map(
+        resolved.result === "resolved"
+          ? resolved.shifts.map((s) => [s.shiftId, s.windows] as const)
+          : [],
+      );
+      return day.shifts.map((s) => {
+        const job = shiftJob.get(s.jobId);
+        if (job === undefined) throw new Error("a shift's job is not visible");
+        return {
+          id: s.id,
+          workDate: day.workDate,
+          start: s.start,
+          end: s.end,
+          job,
+          eligible: resolved.result === "resolved" ? (windows.get(s.id) ?? []) : null,
+          locked: s.lockedStart !== null,
+        };
+      });
+    })
+    .sort(
+      (a, b) =>
+        a.workDate.localeCompare(b.workDate) ||
+        a.start.localeCompare(b.start) ||
+        a.id.localeCompare(b.id),
+    );
+
   return {
     serverNow,
     me: { id: user.id, role: user.role, name: user.name },
     company: { name: company.name, timezone: company.timezone },
     scheduleEnforced: company.scheduleEnforced,
+    shifts,
     jobs: jobRows,
     ledCrews,
     sessions: kept.map((s) => ({

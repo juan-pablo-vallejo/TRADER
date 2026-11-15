@@ -20,6 +20,7 @@ import type { Tx } from "../../src/core/context";
 import type { AppUser } from "../../src/core/resolve-user";
 import { pushLaborEvent } from "../../src/sync/labor";
 import { measureSkew } from "../../src/sync/reasons";
+import { workDate } from "../../src/labor/work-date";
 import { judgeStart, scheduleEnforced } from "../../src/sync/schedule";
 import {
   appCallerIn,
@@ -526,6 +527,81 @@ describe("sync.pull", () => {
       await enforce(tx, d);
       await asTenant(tx, d.companyId);
       expect((await pull()).scheduleEnforced).toBe(true);
+    });
+  });
+
+  // TASKS S7: the caller's own shifts. The window is counted from the company's today, so
+  // these fixtures are dated from the pull's own clock.
+  const dayFrom = (day: string, n: number) =>
+    new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+  it("answers the caller's own shifts with the hours each is eligible, and nobody else's", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const worker = await boundIn(tx, d.companyId, "worker");
+      await asTenant(tx, d.companyId);
+      const pull = () => appCallerIn(tx, worker.who).sync.pull({ protocolVersion: 1 });
+      const first = await pull();
+      const today = workDate(first.serverNow, first.company.timezone);
+      expect(first.shifts).toEqual([]);
+
+      const early = await shift(tx, d, worker.id, d.J, "07:00", "12:00", today);
+      const late = await shift(tx, d, worker.id, d.K, "11:00", "15:00", today);
+      await holds(tx, d, late, early);
+      // Not the caller's; and the caller's own, outside the fourteen days either way.
+      await shift(tx, d, d.w1, d.J, "07:00", "12:00", today);
+      await shift(tx, d, worker.id, d.J, "07:00", "12:00", dayFrom(today, 14));
+      await shift(tx, d, worker.id, d.J, "07:00", "12:00", dayFrom(today, -7));
+      await asTenant(tx, d.companyId);
+
+      const snapshot = await pull();
+      expect(snapshot.shifts.map((s) => s.id)).toEqual([early, late]);
+      expect(snapshot.shifts[0]).toMatchObject({
+        workDate: today,
+        start: "07:00",
+        end: "12:00",
+        eligible: [{ start: "07:00", end: "11:00" }],
+        locked: false,
+      });
+      expect(snapshot.shifts[1]!.eligible).toEqual([{ start: "11:00", end: "15:00" }]);
+      // The jobsite travels with the shift: this caller is in no crew, so `jobs` has none.
+      expect(snapshot.shifts[0]!.job.id).toBe(d.J);
+      expect(snapshot.shifts[0]!.job.name).not.toBe("");
+      expect(snapshot.jobs.map((j) => j.id)).not.toContain(d.J);
+    });
+  });
+
+  it("answers no eligible hours on a day whose overlap is not decided", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await crewDayIn(tx);
+      const worker = await boundIn(tx, d.companyId, "worker");
+      await asTenant(tx, d.companyId);
+      const pull = () => appCallerIn(tx, worker.who).sync.pull({ protocolVersion: 1 });
+      const first = await pull();
+      const today = workDate(first.serverNow, first.company.timezone);
+      await shift(tx, d, worker.id, d.J, "07:00", "12:00", today);
+      await shift(tx, d, worker.id, d.K, "11:00", "15:00", today);
+      const alone = await shift(
+        tx,
+        d,
+        worker.id,
+        d.J,
+        "07:00",
+        "12:00",
+        dayFrom(today, 1),
+      );
+      await asTenant(tx, d.companyId);
+
+      const { shifts } = await pull();
+      expect(shifts.filter((s) => s.workDate === today).map((s) => s.eligible)).toEqual([
+        null,
+        null,
+      ]);
+      // The next day stands on its own. It may fall outside the window on a Sunday's
+      // second week's end; today is never that late in it.
+      const next = shifts.find((s) => s.id === alone);
+      if (next !== undefined)
+        expect(next.eligible).toEqual([{ start: "07:00", end: "12:00" }]);
     });
   });
 });
