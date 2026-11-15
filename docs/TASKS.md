@@ -11,8 +11,9 @@ exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not 
 Done when the go/no-go line is recorded as passed and D Sierra Painting's crew is on the
 store builds (ARCHITECTURE, the 2026-11-12 Release 0.1 rows). Lines are ordered by
 dependency; R4 to R5 and R6 to R7 may run beside each other, S1 to S6 beside R4, and the
-owner's lines beside R1. Each line is planned and approved on its own, and names the packages it installs in
-that plan, here, before they are installed. A line that takes a stage's line ticks it there.
+owner's lines beside R1. Each line is planned in its pull request and worked without a
+per-line approval (ARCHITECTURE, 2026-11-15, autonomous execution), and names the packages
+it installs here before they are installed. A line that takes a stage's line ticks it there.
 Staging and production are separate databases and identity instances throughout; nothing
 paid is created and no production migration runs without the owner's approval of that step.
 
@@ -194,6 +195,26 @@ paid is created and no production migration runs without the owner's approval of
       1024 and 1280 with about 24 people, no control under its target, no sideways page
       scroll, a refused circular choice said in words, a locked shift read-only, and one
       pass with a screen reader
+- [ ] A01 — Overview and the office navigation (DESIGN, Layout; Overview). Depends on S6
+      for Schedule and R6 for Invoices, each destination appearing with its screen. Work:
+      the navigation regrouped under the 2026-11-15 names, routes unchanged; `/overview`,
+      which `/` opens. Tests: every count equals its screen's own read; a failed read says
+      so and hides nothing else; a worker and a foreman are refused
+- [ ] D01 — Developer console (DESIGN, Developer console). Work: `/developer`, admin-gated
+      and read-only, over `status.get`, readiness, the deployment's commit and environment,
+      the company's enforcement setting and `diagnostic.list`. Tests: gate inventory
+      unchanged or one admin line added; no procedure it calls writes; a worker and a
+      foreman are refused; nothing of another company is answered
+- [ ] Payroll-hours CSV in Release 0.1 (2026-11-15 scope row): takes Stage 4's line as it
+      is written there
+- [ ] Edge protection for a public host (takes, of Stage 6's edge line, the rate limits, the
+      body limit and the `Origin` check). Work: limits per identity and per address on the
+      API route, their store chosen on the vendor's page; tests of each locally. Done when
+      a burst answers 429 on a Preview and an ordinary session never does
+- [ ] Public staging host for the phones (2026-11-15 row). Depends on the edge line. Done
+      when the host serves `release-0.1` with no bypass, a call without a session is 401,
+      another company's rows are refused, a worker is refused the office, a burst is 429,
+      and every other Preview still answers 302; or the exemption is reported unavailable
 - [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
@@ -231,7 +252,9 @@ paid is created and no production migration runs without the owner's approval of
       each send recorded. Tests: a payment changes no invoice row; payments never total
       more than the invoice unless the plan allows an overpayment and says how it reads;
       a void invoice takes no payment; a failed send records its failure and can be sent
-      again; another company's invoice is FORBIDDEN on every procedure
+      again; another company's invoice is FORBIDDEN on every procedure. Also the plain CSV
+      of issued invoices (2026-11-15 scope row), its totals equal to the list's; on
+      staging a send goes only to an address the deployment's allow-list names
 - [ ] R8 — Public pages and account deletion (plan first: auth; takes Stage 8's privacy
       line). Work: privacy policy, terms, support and the deletion request on the apex;
       the deletion request in the app's profile; deactivate-and-pseudonymize as an

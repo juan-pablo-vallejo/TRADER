@@ -35,7 +35,9 @@ is wrong.
 - A test you have not watched fail proves nothing: remove the guard, see red, restore it.
 - Reviews are input, not instruction. Check their premises before acting on them.
 - Plan first for anything touching schema, auth, sync, money or CI; the plan is what gets
-  reviewed. Say what was not done.
+  reviewed. A line of the Release 0.1 track is planned in its pull request's description
+  and worked without waiting (ARCHITECTURE, 2026-11-15, autonomous execution). Say what was
+  not done.
 - A procedure added to the API gets a line in the gate inventory test
   (`packages/api/test/core/gates.test.ts`) in the same commit; the test fails without it.
 - Scope is explicit. A scope change is its own line in TASKS.md, never a by-product of a
@@ -103,9 +105,12 @@ is wrong.
 - One workflow, one job: install, typecheck, lint, format check, build, migrate, test. Every
   run on `main` completes; only a superseded pull-request run is cancelled.
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
-- Branches other than `main` and `staging-preview` are short-lived and deleted on merge. A
-  merge into `main`, a force-push and a branch's deletion are human actions in a terminal,
-  never agent actions.
+- `release-0.1` is the track's integration branch: moved only by fast-forward to the newest
+  track line, never committed to, deleted by the owner when the track has merged. Track
+  lines are stacked, each with its own pull request into `main`.
+- Branches other than `main`, `staging-preview` and `release-0.1` are short-lived and
+  deleted on merge. A merge into `main`, a force-push and a branch's deletion are human
+  actions in a terminal, never agent actions.
 - `staging-preview` is staging's permanent branch. It holds only commits of `main`; nothing
   is committed to it, merged into it or opened as a pull request from it. A session that
   finds `origin/main` ahead of it moves it with
@@ -162,13 +167,17 @@ the owner's machine, outside the repository.
   branch's alias, read from Vercel's connector and never worked out from the branch name:
   `staging-e2e https://<alias>`. A feature branch's preview is run against only when its
   change must be seen before the merge, after a branch-scoped `CLERK_AUTHORIZED_PARTIES`
-  names its own alias.
+  names its own alias. `release-0.1`'s Preview is that case for the whole track.
+- **One staging host is public**, for the phones, once ARCHITECTURE's checks of it have
+  passed (2026-11-15). A phone build carries no bypass, key or credential; every other
+  Preview stays behind the wall.
 
 ## Session protocol (Claude Code)
 
 1. Start from `docs/MEMORY.md`, then read `docs/TASKS.md`. Work only the task Juan Pablo
    names, or the next unchecked task in the current stage.
-2. Before editing anything under schema, auth, sync, money or CI: write the plan, stop, wait.
+2. Before editing anything under schema, auth, sync, money or CI: write the plan, stop, wait
+   — except on a Release 0.1 track line, whose plan goes in its pull request.
 3. Make the change; run `pnpm check` (typecheck, lint, format check, tests). Per-commit green
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
