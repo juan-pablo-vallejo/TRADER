@@ -516,6 +516,16 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   After adding a foreign key, widen every `lockExclusive` list that names the referenced
   table. A TRUNCATE test writes its fixtures first and runs nothing but the TRUNCATE once
   it holds its locks.
+- A modal `<dialog>` opened with `showModal()` in an effect must not be closed in that
+  effect's cleanup: React mounts effects twice in development, the cleanup's `close()`
+  fires `close`, and the drawer reports a dismissal nobody made. Unmounting is enough.
+- An eslint rule (`react-hooks/refs`) refuses reading `ref.current` during render: an id
+  minted once for a form is `useState(() => uuidv7())`, not `useRef(uuidv7())`.
+- The browser imports the schedule's pure rules from `@trader/api/eligibility`; a value
+  import from `@trader/api` itself in a client component would bundle the server.
+- A schedule check by hand writes shifts, overrides and history: do it in `trader_demo`
+  and `pnpm demo --reset` after. A locked shift there is made as the owner (an event row
+  and the two lock columns); nothing in the demo clocks in under enforcement.
 
 ## Log
 
@@ -1607,3 +1617,38 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   next. **Staging's database is still at 40 migrations** and waits for the owner to
   install the wrapper's migrate command; the journal is now 43.
 - **Next:** S6, the Weekly Schedule screen, with A01's navigation.
+
+### 2026-11-15 — Weekly Schedule screen (S6): built and checked in the browser; not ticked
+
+- **Did:** branch `s6-weekly-schedule-screen` from `s5-copy-last-week`. `/schedule` under
+  the name "Schedule", `/assignments` redirecting to it and the old screen removed:
+  `schedule-view.ts` (pure, 12 tests), the grid, the drawer, the shift forms with overlap
+  decisions and the day shown before a save, the Copy Last Week dialog with undo.
+  `assignment.week` also answers the company's zone, each shift's copy, and who decided
+  each override and when; `@trader/api/eligibility` exported for the browser. Checked in
+  the browser on `trader_demo` at 390, 768, 1024 and 1280: a shift added from a cell; an
+  overlap blocked with its hours, overridden with a reason, the day previewed, saved, and
+  its card reading "Clock in 15:30–17:00"; the decision read back with who and when, then
+  turned round; a third shift whose two choices close a circle refused in words with the
+  save disabled; Escape closing the drawer and focus returning to the button that opened
+  it; a locked shift read-only with its link to Labor; next week copied (20 created, 2
+  left out with their reasons), copied again (nothing to create), undone (20 removed);
+  by jobsite with its people counted; one day at a time and one employee when narrow; no
+  sideways scroll with a drawer open or closed; no control under 48 pt narrow or 44 wide;
+  the day headings held at the top on scroll when wide; no console error. 1,422 tests.
+- **Decided:** in this line's plan, the DESIGN amendment (Weekly Schedule, as built): the
+  drawer is a native modal dialog; narrow is one day from seven day buttons, with an
+  employee filter at every width. **Not ticked**, and why: its done-criterion asks for one
+  pass with a screen reader and about 24 people, and neither was done — the demo has nine
+  people and no screen reader was run. Also not done: the prototype's fourth revision was
+  not at hand, so the screen follows DESIGN's rows and is not reconciled with it; no
+  browser test in CI; no Spanish office strings; `mayClockIn` and `blockedBy` are not
+  shown (they answer by crew, which enforcement retires); a shift moves only within the
+  week on screen; the write refusals `stale` and `authorization` were not seen in the
+  browser, only in tests.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `s5-copy-last-week` (#104) and
+  this one, stacked, CI green on the first five; `release-0.1` moves here next.
+  **Staging's database is still at 40 migrations** — the journal is 43 — and waits for
+  the owner to install the wrapper's migrate command; the schedule screen will fail on
+  that Preview until then.
+- **Next:** A01, the navigation's groups and the Overview; then the payroll CSV and D01.
