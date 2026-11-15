@@ -10,6 +10,7 @@ import { materialRouter } from "./routers/material";
 import { meRouter } from "./routers/me";
 import { payPeriodRouter } from "./routers/pay-period";
 import { rosterRouter } from "./routers/roster";
+import { overviewRouter } from "./routers/overview";
 import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
 import { router } from "./core/trpc";
@@ -27,6 +28,7 @@ export const appRouter = router({
   me: meRouter,
   payPeriod: payPeriodRouter,
   roster: rosterRouter,
+  overview: overviewRouter,
   status: statusRouter,
   sync: syncRouter,
 });

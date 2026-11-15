@@ -138,8 +138,24 @@ export const strings = {
   closeout: "Closeout",
   approvals: "Approvals",
   profile: "Profile",
-  work: "Work",
-  people: "People",
+  // The navigation's groups (ARCHITECTURE, 2026-11-15, office navigation names).
+  navJobsites: "Jobsites",
+  navLabor: "Labor",
+  navEmployees: "Employees",
+  // The Overview (DESIGN, Overview): what waits today, each count a link to its screen.
+  overview: {
+    title: "Overview",
+    explain: (day: string, zone: string) =>
+      `What waits for the office today, ${day} (${zone}).`,
+    approvals: "Entries to approve",
+    openSessions: "Sessions with no clock-out yet",
+    openSessionsHelp:
+      "A session still waiting for approval is among the entries to approve.",
+    refusals: "Refused entries in the last 30 days",
+    refusalsHelp: "Find one by employee and day.",
+    shifts: "Shifts this week",
+    open: (label: string, n: number) => `${label}: ${n}`,
+  },
 
   // States every screen can be in
   loading: "Loading…",
