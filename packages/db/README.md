@@ -19,7 +19,10 @@ string to one fixed command (ARCHITECTURE, 2026-11-14 staging autonomy; RULES, T
 | Neon CLI                | a key scoped to the staging project | restore, reset, delete: each use |
 
 A connection string is never written into `.env`, the repository, a deployment's build or
-CI, and never shown to an assistant's session.
+the `check` job, and never shown to an assistant's session. Staging's two migrator strings
+— its default branch's and the rehearsal branch's, each the direct endpoint as the owner —
+are also secrets of the GitHub environment `staging`, which only the promotion workflow on
+`main` can read (ARCHITECTURE, 2026-11-16, staging credentials). Production's is in neither.
 
 ## Two connections, two roles
 
@@ -67,8 +70,36 @@ DATABASE_URL='<direct endpoint, owner>' pnpm db:migrate
   `work_session_events` and `materials`, so it runs only where both are empty — every new
   database. Before migrating any database that predates `0021`, count both; rows there need
   an authorized back-fill migration, never a delete.
-- A deployment never migrates: not in its build, not at start. CI migrates only its own
-  service container.
+- A deployment never migrates: not in its build, not at start. The `check` job migrates
+  only its own service container.
+
+### Staging: the promotion workflow
+
+Staging is migrated by `.github/workflows/promote-staging.yml` and by nothing else
+(ARCHITECTURE, 2026-11-16, staging promotion and migration gate). After a merge into `main`
+whose `check` passed it reads both databases' applied migrations against the commit's
+journal, applies the pending ones to the rehearsal branch, and holds that branch to the
+journal exactly and to the schema of a fresh replay (`src/promotion/fingerprint.ts`: the
+catalog as sorted lines, no owner, no data). Only then, and only when every pending
+migration is past the owner's gate (`OWNER_GATED_THROUGH`, `src/promotion/plan.ts`) and the
+reading flags none of them (`src/promotion/reading.ts`), it runs the same command against
+staging, checks staging the same way, and moves `staging-preview`.
+
+Anything else stops before staging changes, and the run's summary names the pending
+migrations, their flags and the dispatch that would apply them. That dispatch is the
+owner's, from the Actions page or a terminal:
+
+```sh
+gh workflow run promote-staging.yml --ref main -f mode=rehearse-only
+gh workflow run promote-staging.yml --ref main -f mode=promote -f authorize_through=<last pending tag>
+```
+
+The first never migrates staging. The second is refused unless the repository's owner
+started it and the tag is exactly the last pending migration's. A flag is a reason to read
+the migration, not a verdict: an `ALTER TYPE … ADD VALUE`, a dropped constraint and a
+`REVOKE` are all flagged. The rehearsal branch is never reset by the workflow; a branch
+that no longer stands between staging and the journal stops the run, and its reset is
+approved one at a time.
 
 After migrating, confirm what the journal made:
 

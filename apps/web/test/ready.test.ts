@@ -38,7 +38,7 @@ describe("/api/ready", () => {
     expect(await answer(await GET())).toEqual({
       status: 200,
       cache: "no-store",
-      body: '{"ready":true}',
+      body: '{"ready":true,"commit":null}',
     });
   });
 
@@ -63,7 +63,7 @@ describe("/api/ready", () => {
     expect(await answer(await handler())).toEqual({
       status: 503,
       cache: "no-store",
-      body: '{"ready":false}',
+      body: '{"ready":false,"commit":null}',
     });
     expect(events).toEqual([
       {
@@ -94,8 +94,46 @@ describe("/api/ready", () => {
     expect(await answer(await handler())).toEqual({
       status: 503,
       cache: "no-store",
-      body: '{"ready":false}',
+      body: '{"ready":false,"commit":null}',
     });
     expect(events).toHaveLength(1);
+  });
+
+  it("names the commit it was built from, and only a full commit id", async () => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const bodyWith = async (value: string | undefined) => {
+      const { reporter } = recordingReporter();
+      const handler = createReadyHandler({
+        getDb: () => loggedInAsApp,
+        reporter,
+        env: { NODE_ENV: "production", VERCEL_GIT_COMMIT_SHA: value },
+      });
+      return (await answer(await handler())).body;
+    };
+    expect(await bodyWith(sha)).toBe(`{"ready":true,"commit":"${sha}"}`);
+    for (const other of [
+      undefined,
+      "",
+      "abc123",
+      sha.toUpperCase(),
+      `${sha}0`,
+      `${sha}\n`,
+    ]) {
+      expect(await bodyWith(other)).toBe('{"ready":true,"commit":null}');
+    }
+  });
+
+  it("names the commit when it is not ready too", async () => {
+    const sha = "0123456789abcdef0123456789abcdef01234567";
+    const { reporter } = recordingReporter();
+    const handler = createReadyHandler({
+      getDb: () => unusableDb,
+      reporter,
+      env: { NODE_ENV: "production", VERCEL_GIT_COMMIT_SHA: sha },
+    });
+    expect(await answer(await handler())).toMatchObject({
+      status: 503,
+      body: `{"ready":false,"commit":"${sha}"}`,
+    });
   });
 });

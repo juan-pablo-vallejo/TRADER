@@ -1,0 +1,300 @@
+name: Promote staging
+
+# Staging's promotion (ARCHITECTURE, 2026-11-16, staging promotion and migration gate;
+# RULES, Git and CI). After a merge into `main` whose `check` passed, this carries that
+# commit to staging: migrations rehearsed on the kept Neon branch, staging migrated,
+# `staging-preview` fast-forwarded, the deployment awaited, the browser suite run.
+# It holds staging's secrets, so it runs only code already on `main`: it is started by CI's
+# completion on `main` or by a dispatch on `main`, never by a pull request's event, and
+# GitHub reads this file from the default branch for both.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "rehearse-only never migrates staging; promote does, when the plan allows it"
+        type: choice
+        options: [rehearse-only, promote]
+        default: rehearse-only
+      authorize_through:
+        description: "Owner only, with promote: the tag of the last pending migration this run may apply to staging (for example 0049_invoice-send-guards)"
+        type: string
+        default: ""
+
+# Nothing by default; each job states what its token may do.
+permissions: {}
+
+# One promotion at a time, never cancelled part-way. GitHub keeps only the newest waiting
+# run of a group, so a commit overtaken while it waits is skipped in favour of its successor.
+concurrency:
+  group: staging-promotion
+  cancel-in-progress: false
+
+env:
+  # The commit CI passed, or `main`'s head for a dispatch.
+  SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+jobs:
+  database:
+    # CI's push run on `main` in this repository, passed; or a dispatch on `main`.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    environment: staging
+    permissions:
+      contents: read
+      checks: read
+    outputs:
+      proceed: ${{ steps.done.outputs.proceed }}
+      already: ${{ steps.preflight.outputs.already }}
+
+    # The replay: the same journal on an empty database of the same major, which the
+    # rehearsal branch and staging are then compared with.
+    env:
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: trader
+      POSTGRES_DB: trader
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Preflight — the commit is on main and staging-preview can fast-forward to it
+        id: preflight
+        run: |
+          set -euo pipefail
+          echo "STAGE=before-staging-change" >> "$GITHUB_ENV"
+          git fetch --no-tags origin \
+            +refs/heads/main:refs/remotes/origin/main \
+            +refs/heads/staging-preview:refs/remotes/origin/staging-preview
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::$SHA is not a commit of main"; exit 1
+          fi
+          if git merge-base --is-ancestor "$SHA" origin/staging-preview; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+          elif git merge-base --is-ancestor origin/staging-preview "$SHA"; then
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::staging-preview cannot fast-forward to $SHA"; exit 1
+          fi
+          echo "### Promotion of \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preflight — a dispatched commit passed check
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          passed=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs?check_name=check" \
+            --jq '[.check_runs[] | select(.conclusion == "success")] | length')
+          if [ "$passed" -lt 1 ]; then
+            echo "::error::check has not passed on $SHA"; exit 1
+          fi
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Plan — what is pending, what to rehearse, whether staging may be migrated
+        id: plan
+        env:
+          STAGING_MIGRATOR_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
+          REHEARSAL_MIGRATOR_URL: ${{ secrets.REHEARSAL_MIGRATOR_URL }}
+          PROMOTION_EVENT: ${{ github.event_name }}
+          PROMOTION_MODE: ${{ inputs.mode }}
+          PROMOTION_AUTHORIZE_THROUGH: ${{ inputs.authorize_through }}
+          PROMOTION_BY_OWNER: ${{ github.actor == github.repository_owner && github.triggering_actor == github.repository_owner }}
+        run: pnpm --filter @trader/db exec tsx src/run-promotion.ts state
+
+      - name: Replay the journal on an empty database
+        run: |
+          set -euo pipefail
+          pnpm db:migrate
+          pnpm --filter @trader/db exec tsx src/run-promotion.ts fingerprint > "$RUNNER_TEMP/replay.txt"
+          test -s "$RUNNER_TEMP/replay.txt"
+
+      - name: Rehearse the pending migrations on the rehearsal branch
+        if: steps.plan.outputs.rehearse == 'true'
+        env:
+          DATABASE_URL: ${{ secrets.REHEARSAL_MIGRATOR_URL }}
+        run: pnpm db:migrate
+
+      - name: Verify the rehearsal — the journal exactly, and the replay's schema
+        if: steps.plan.outputs.pending != '0'
+        env:
+          REHEARSAL_MIGRATOR_URL: ${{ secrets.REHEARSAL_MIGRATOR_URL }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @trader/db exec tsx src/run-promotion.ts expect-current REHEARSAL_MIGRATOR_URL
+          pnpm --filter @trader/db exec tsx src/run-promotion.ts fingerprint REHEARSAL_MIGRATOR_URL > "$RUNNER_TEMP/rehearsal.txt"
+          diff "$RUNNER_TEMP/replay.txt" "$RUNNER_TEMP/rehearsal.txt"
+          echo "- rehearsal: the journal applied, schema equal to a fresh replay ($(wc -l < "$RUNNER_TEMP/replay.txt") lines)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Stop — staging's migration is withheld
+        if: steps.plan.outputs.migrate == 'withheld'
+        env:
+          WITHHELD: ${{ steps.plan.outputs.withheld }}
+          LAST: ${{ steps.plan.outputs.last_pending }}
+        run: |
+          set -euo pipefail
+          {
+            echo "- **stopped before staging changed** ($WITHHELD)"
+            echo "- staging is migrated only by the owner's dispatch of this workflow: mode \`promote\`, authorize_through \`$LAST\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+          # A rehearsal that was asked for and passed is a green run; a promotion that
+          # could not finish is not.
+          [ "$WITHHELD" = "rehearse_only" ]
+
+      - name: Migrate staging
+        if: steps.plan.outputs.migrate == 'automatic' || steps.plan.outputs.migrate == 'authorized'
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
+        run: |
+          set -euo pipefail
+          # One transaction: a failure here leaves staging as it was.
+          pnpm db:migrate
+          echo "STAGE=migrated-not-deployed" >> "$GITHUB_ENV"
+
+      - name: Verify staging — the journal exactly, and the replay's schema
+        if: steps.plan.outputs.migrate != 'withheld'
+        env:
+          STAGING_MIGRATOR_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
+        run: |
+          set -euo pipefail
+          pnpm --filter @trader/db exec tsx src/run-promotion.ts expect-current STAGING_MIGRATOR_URL
+          pnpm --filter @trader/db exec tsx src/run-promotion.ts fingerprint STAGING_MIGRATOR_URL > "$RUNNER_TEMP/staging.txt"
+          diff "$RUNNER_TEMP/replay.txt" "$RUNNER_TEMP/staging.txt"
+          echo "- staging: the journal applied, schema equal to a fresh replay" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Done
+        id: done
+        if: steps.plan.outputs.migrate != 'withheld'
+        run: echo "proceed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Report a failure by where it happened
+        if: failure()
+        run: |
+          echo "- **failed: ${STAGE:-before-staging-change}**" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: database
+    if: needs.database.outputs.proceed == 'true'
+    runs-on: ubuntu-24.04
+    environment: staging
+    permissions:
+      contents: write
+    steps:
+      # With the deploy key when the owner has made one; with the job's token otherwise.
+      # The token may not move a branch across a change to a workflow file, and a push it
+      # makes may not start the staging project's build: the key has neither limit.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SHA }}
+          fetch-depth: 0
+          ssh-key: ${{ secrets.STAGING_DEPLOY_KEY }}
+
+      - name: Fast-forward staging-preview
+        env:
+          ALREADY: ${{ needs.database.outputs.already }}
+        run: |
+          set -euo pipefail
+          if [ "$ALREADY" = "true" ]; then
+            echo "- staging-preview already holds \`$SHA\`: nothing pushed" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # An ordinary push: git and the branch's ruleset both refuse anything but a
+          # fast-forward.
+          git push origin "$SHA:refs/heads/staging-preview"
+          echo "- staging-preview fast-forwarded to \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report a failure by where it happened
+        if: failure()
+        run: |
+          echo "- **failed: migrated-not-deployed** (staging's database is at this commit's journal; the branch did not move)" >> "$GITHUB_STEP_SUMMARY"
+
+  verify:
+    needs: [database, deploy]
+    runs-on: ubuntu-24.04
+    environment: staging
+    permissions:
+      contents: read
+    env:
+      STAGING_URL: ${{ vars.STAGING_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      - name: Wait until staging's host serves this commit and is ready
+        run: |
+          set -euo pipefail
+          echo "STAGE=migrated-not-deployed" >> "$GITHUB_ENV"
+          case "$STAGING_URL" in https://*) ;; *) echo "::error::the STAGING_URL variable is not set"; exit 1 ;; esac
+          for attempt in $(seq 1 90); do
+            body=$(curl -sS --max-time 10 "$STAGING_URL/api/ready" || true)
+            commit=$(printf '%s' "$body" | jq -r '.commit // empty' 2>/dev/null || true)
+            ready=$(printf '%s' "$body" | jq -r '.ready // empty' 2>/dev/null || true)
+            if [ "$commit" = "$SHA" ] && [ "$ready" = "true" ]; then
+              echo "- deployed revision: \`$commit\`, ready" >> "$GITHUB_STEP_SUMMARY"
+              echo "STAGE=deployed-failing" >> "$GITHUB_ENV"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::staging's host did not serve $SHA within 15 minutes (last answered: commit '${commit:-none}', ready '${ready:-none}')"
+          exit 1
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @trader/web exec playwright install --with-deps chromium
+
+      # No trace, no video and no uploaded artifact: this log and its artifacts are public,
+      # and any of them could hold a signed-in session.
+      - name: Browser suite on staging's host
+        env:
+          E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
+          E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
+          E2E_EXPECT_COMMIT: ${{ env.SHA }}
+          E2E_OUTPUT_DIR: ${{ runner.temp }}/e2e
+        run: |
+          set -euo pipefail
+          pnpm e2e:staging
+          echo "- browser suite: passed" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Report a failure by where it happened
+        if: failure()
+        run: |
+          echo "- **failed: ${STAGE:-migrated-not-deployed}**" >> "$GITHUB_STEP_SUMMARY"
