@@ -2164,3 +2164,22 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   promotion, which needs the owner's `staging` environment and its two secrets.
 - **Next:** owner merges #117 and this branch and creates the `staging` environment; then
   P1, the promotion workflow, plan first in its pull request.
+
+### 2026-11-16 — P1's migration gate simplified by the owner; documents only
+
+- **Did:** after the owner merged #117 and #118 (`main` at `2b41dbc`), branch
+  `p1-policy-update`, documents only: one decision row and TASKS' P1 and owner lines.
+  1,575 tests.
+- **Decided:** by the owner on 2026-11-16, the row of that date (migration gate without a
+  second environment): two GitHub environments, `staging` and `production`; a merge's
+  promotion migrates only what the reading passes and the rehearsal verified; anything
+  else, and the whole backlog `0040` to `0049`, waits for the owner's own dispatch
+  naming the last migration it authorizes. Worth knowing: a session's `gh` signs in as
+  the owner, so the workflow cannot tell the two apart — a session never runs
+  `gh workflow run` on the promotion, and a deny rule for it in the owner's settings is
+  what makes that more than a promise. Not done: nothing is built; staging is still at
+  40 migrations of 50, serving `1c94b64`.
+- **Release 0.1 state:** `main` at `2b41dbc`; staging unchanged. P1 needs the owner's
+  `staging` environment with its two migrator secrets before its rehearse-only run.
+- **Next:** owner merges this branch; then P1, plan first in its pull request, ending at
+  the rehearsal's report for the owner.

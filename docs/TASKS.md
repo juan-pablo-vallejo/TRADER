@@ -345,10 +345,19 @@ every gate, and a candidate missing a platform reads as not native-verified.
       GitHub's deployment record; the deployed commit in `/api/ready`'s answer; every
       action in every workflow pinned by commit. Tools on the runner, none in the
       workspace: the PostgreSQL 18 client, consumed by the schema comparison. Tests: the
-      migration reading, red on a planted DROP; the readiness answer. Done when a
-      rehearse-only run is green, staging stands at the journal's count with its host
-      serving `main`'s commit and the suite green, a run for a commit already promoted
-      changes nothing, and a flagged migration waits for the owner
+      migration reading, red on a planted DROP; the readiness answer. A promotion
+      started by a merge migrates only when every pending migration is past the owner's
+      gate (`0049`, the backlog of 2026-11-16) and the reading flags none of them;
+      otherwise it rehearses, reports and stops before staging changes, and the
+      migration runs only on a dispatch by the repository's owner that names the last
+      pending migration it authorizes. No GitHub environment beyond `staging` is used
+      for it. The backlog, `0040` to `0049`, is rehearsed and its results and risks put
+      to the owner first; a session never makes that dispatch. Done when a rehearse-only
+      run is green and its report is with the owner; then, on the owner's dispatch,
+      staging stands at the journal's count with its host serving `main`'s commit and
+      the suite green; a run for a commit already promoted changes nothing; a merge
+      carrying a flagged migration stops before staging changes; and a dispatch naming
+      any other migration is refused
 - [ ] P2 — The browser suite on every promotion, and the readiness report. Depends on P1.
       Work: fixtures ensured through the real procedures, with Clerk test numbers alone —
       a customer, jobs, a crew, a foreman, a worker; one flow each for the schedule, an
@@ -382,15 +391,16 @@ every gate, and a candidate missing a platform reads as not native-verified.
       checklist for physical phones, "not performed" by default. Done when a candidate's
       report names every gate and one with a platform missing reads not native-verified
 - [ ] Owner — each when its line reaches it: merge #117 and each line's pull request;
-      the GitHub environments `staging`, `staging-flagged-migration` and `mobile-preview`
-      with their secrets and variables, fork pull requests held for approval, secret
+      the GitHub environments `staging` and, at P6, `production`, and no other, with
+      their secrets and variables (the Expo token is `staging`'s), fork pull requests held for approval, secret
       scanning with push protection, a read-only default token; a compute on the
       rehearsal branch; the DNS wrapper installed; the Resend subdomain, its
       sending-only key, and `RESEND_API_KEY` on the Preview; the Expo token, the first
       iOS ad hoc credentials and device, the first Android keystore and its fingerprint
       at Clerk; the launchd agent and its statuses-only token; `production`, its
       ruleset, and the production project's settings. Each a separate approval:
-      `release-0.1` and its scoped variable deleted, `restore-drill-20261114` deleted
+      `release-0.1` and its scoped variable deleted, `restore-drill-20261114` deleted; and before any
+      release, the owner's own test of staging after the automated checks
 
 ## Stage 0 — Repo rebuild
 
