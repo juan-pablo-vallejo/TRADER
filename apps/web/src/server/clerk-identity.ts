@@ -54,6 +54,18 @@ export function identityFromClaims(
   return identity.success ? identity.data : null;
 }
 
+// The second half of the origin rule (clerk-env.ts, partiesFor). Clerk has already held a
+// cookie's token to the list, so a token that names no origin here came in the
+// `Authorization` header: a native client's, which no browser can be made to send across
+// sites. A token that does name one is held to the list wherever it came from, so a
+// browser's token for another origin gains nothing by being moved into the header. An
+// empty list is a machine with no deployment's check (deploy-env.ts requires one).
+export function admitsParty(sessionClaims: unknown, listed: readonly string[]): boolean {
+  const azp = claim(sessionClaims, "azp");
+  if (azp === undefined || azp === null) return true;
+  return listed.length === 0 || (typeof azp === "string" && listed.includes(azp));
+}
+
 // What Clerk's `auth()` answers, as far as this file reads it.
 export type ClerkSession = { userId: string | null; sessionClaims: unknown };
 
@@ -64,12 +76,15 @@ export type ClerkSession = { userId: string | null; sessionClaims: unknown };
 // identity, still answers.
 export function createClerkIdentityAdapter(deps: {
   readSession: () => Promise<ClerkSession>;
+  // The deployment's authorized origins, read per request.
+  parties: () => readonly string[];
   onError: (error: unknown) => void;
 }): IdentityAdapter {
   return {
     async identify() {
       try {
         const session = await deps.readSession();
+        if (!admitsParty(session.sessionClaims, deps.parties())) return null;
         return identityFromClaims(session.userId, session.sessionClaims);
       } catch (error) {
         deps.onError(error);

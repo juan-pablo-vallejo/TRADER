@@ -29,6 +29,24 @@ const parties = (env: Record<string, string | undefined>): string[] =>
     .map((o) => o.trim())
     .filter((o) => o !== "");
 
+// The token Clerk would take from an `Authorization` header, read as Clerk's own code reads
+// it (`@clerk/backend`, parseAuthorizationHeader): `Bearer <token>`, or a bare token.
+const headerToken = (authorization: string | null): boolean => {
+  if (authorization === null || authorization === "") return false;
+  const [scheme, token] = authorization.split(" ", 2);
+  return token === undefined || token === "" || scheme === "Bearer";
+};
+
+// The origins Clerk is told to hold one request's token to. A browser's session is a cookie
+// and names the origin it was issued to (`azp`); Clerk refuses it unless that origin is
+// listed. The phone's token comes in the `Authorization` header and names no origin at all
+// — a native client has none — and Clerk, given a list, refuses a token without one
+// (`@clerk/backend` 3.27.0, assertAuthorizedPartiesClaim; seen 2026-11-16: a phone's pull
+// 401 with the list set, 200 with it blank). So a header token is verified with no list
+// here, and `admitsParty` (clerk-identity.ts) then holds any origin it does name to the list.
+export const partiesFor = (authorization: string | null, listed: string[]): string[] =>
+  headerToken(authorization) ? [] : listed;
+
 // The Clerk variables that are missing or malformed, by name and never by value: what the
 // deployment's environment check prints (deploy-env.ts).
 export function clerkEnvFaults(env: Record<string, string | undefined>): string[] {

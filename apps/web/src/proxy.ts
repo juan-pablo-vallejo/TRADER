@@ -13,7 +13,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
-import { clerkEnv } from "./server/clerk-env";
+import { clerkEnv, partiesFor } from "./server/clerk-env";
 import {
   clerkFrontendApi,
   contentSecurityPolicy,
@@ -44,10 +44,12 @@ export default function proxy(request: NextRequest, event: NextFetchEvent) {
   if (identityMode(process.env) !== "clerk" || env === null) return pass(request, null);
   // Clerk reads its two keys from the environment itself: handed over as options here, the
   // secret key would have to be encrypted on its way to `auth()` under a third key.
+  // The origins a session token may name as its issuer's party: a token minted for another
+  // origin of the same domain is refused (Clerk, `authorizedParties`). A token in the
+  // `Authorization` header, the phone's, is verified without the list (clerk-env.ts).
+  const listed = partiesFor(request.headers.get("authorization"), env.authorizedParties);
   return clerkMiddleware(() => pass(request, env.publishableKey), {
-    // The origins a session token may name as its issuer's party: a token minted for
-    // another origin of the same domain is refused (Clerk, `authorizedParties`).
-    ...(env.authorizedParties.length > 0 && { authorizedParties: env.authorizedParties }),
+    ...(listed.length > 0 && { authorizedParties: listed }),
   })(request, event);
 }
 

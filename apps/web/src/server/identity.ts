@@ -49,6 +49,7 @@ const devBridge: IdentityAdapter = {
 // cannot load outside a Next request, where the suites import this file.
 const clerkAdapter = createClerkIdentityAdapter({
   readSession: async () => (await import("@clerk/nextjs/server")).auth(),
+  parties: () => clerkEnv(process.env)?.authorizedParties ?? [],
   onError: (error) =>
     reportFailure(webReporter, error, { source: "request", path: null, type: undefined }),
 });
