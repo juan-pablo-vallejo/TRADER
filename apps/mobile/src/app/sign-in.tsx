@@ -1,17 +1,18 @@
-// Sign-in. This build has the development identity alone, and only when it was built for
-// development and asked for it (config.ts): an email, which the server either knows on a
-// roster or does not. Any other build says that sign-in is not part of it yet, in words;
-// the provider's SMS code takes this screen's place in TASKS R5.
+// Sign-in. A build with the identity provider's key signs in by a code sent to the phone
+// (ui/phone-sign-in.tsx). A development build that asked for it has the development
+// identity instead (config.ts): an email, which the server either knows on a roster or
+// does not. A build with neither says so in words.
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, TextInput } from "react-native";
 
 import { createApi, devHeaders } from "../api";
-import { apiUrl, devIdentity } from "../config";
+import { apiUrl, clerkKey, devIdentity } from "../config";
 import { useStrings } from "../i18n";
 import { useSession } from "../session";
 import { color, size, space, type } from "../theme";
 import { Button, Screen, text } from "../ui/controls";
+import { PhoneSignIn } from "../ui/phone-sign-in";
 
 export default function SignIn() {
   const { t } = useStrings();
@@ -21,6 +22,7 @@ export default function SignIn() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
+  if (clerkKey !== null && apiUrl !== null) return <PhoneSignIn apiUrl={apiUrl} />;
   if (!devIdentity || apiUrl === null) {
     return (
       <Screen testID="sign-in-unavailable">

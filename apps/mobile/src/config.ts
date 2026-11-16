@@ -21,6 +21,13 @@ export const apiUrl: string | null =
 export const devIdentity: boolean =
   __DEV__ && process.env.EXPO_PUBLIC_DEV_IDENTITY === "enabled";
 
+// The identity provider's publishable key (ARCHITECTURE, identity adapter): public by name
+// and by nature, and set per build, never written in this repository — it carries the
+// provider's own host. A build with the development identity on does not use it.
+const clerk = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+export const clerkKey: string | null =
+  !devIdentity && clerk !== undefined && clerk !== "" ? clerk : null;
+
 // This build's number, sent with `status.get` so the service can hold a build too old to
 // sync (ARCHITECTURE, kill switch). The store builds' numbers are EAS's to assign (TASKS,
 // device builds); until then every build is 1.

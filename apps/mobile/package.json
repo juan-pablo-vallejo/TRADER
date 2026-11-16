@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@clerk/expo": "^4.16.1",
     "@trader/api": "workspace:*",
     "@trpc/client": "11.23.0",
     "drizzle-orm": "^0.45.4",
@@ -28,6 +29,7 @@
     "expo-sqlite": "~58.0.17",
     "expo-status-bar": "~58.0.5",
     "react": "19.3.0",
+    "react-dom": "19.3.0",
     "react-native": "0.88.1",
     "react-native-safe-area-context": "~5.11.1",
     "react-native-screens": "~4.30.1",

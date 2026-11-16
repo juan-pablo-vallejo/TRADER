@@ -9,6 +9,13 @@ export type Catalog = {
   signIn: {
     title: string;
     email: string;
+    phone: string;
+    sendCode: string;
+    codeSent: string;
+    code: string;
+    changeNumber: string;
+    badPhone: string;
+    badCode: string;
     submit: string;
     failed: string;
     notOnRoster: string;

@@ -14,7 +14,10 @@ export const devHeaders = (email: string): Record<string, string> => ({
   [DEV_EMAIL_HEADER]: email,
 });
 
-export function createApi(url: string, headers: () => Record<string, string>) {
+export function createApi(
+  url: string,
+  headers: () => Record<string, string> | Promise<Record<string, string>>,
+) {
   return createTRPCClient<AppRouter>({
     links: [httpBatchLink({ url: `${url}/api/trpc`, transformer: superjson, headers })],
   });
