@@ -42,6 +42,7 @@ const GRANTS: Record<string, Privilege[]> = {
   // A plan, not a fact (0031): the office edits and removes it.
   job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   invoice_payments: ["SELECT", "INSERT"],
+  invoice_sends: ["SELECT", "INSERT"],
   // Not tenant data: a hash and a count (0047).
   rate_limit_windows: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   shift_overrides: ["SELECT", "INSERT", "UPDATE", "DELETE"],

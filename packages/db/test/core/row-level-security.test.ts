@@ -18,6 +18,7 @@ import {
   dayCloseoutWorkers,
   invoiceLineItems,
   invoicePayments,
+  invoiceSends,
   invoices,
   jobAssignments,
   materialCorrections,
@@ -60,6 +61,7 @@ const TENANT_TABLES = [
   "invoice_counters",
   "invoice_line_items",
   "invoice_payments",
+  "invoice_sends",
   "invoices",
   "job_assignments",
   "jobs",
@@ -223,6 +225,14 @@ async function everything(tx: Tx, name: string) {
     paidOn: "2026-11-02",
     method: "check",
     recordedByUserId: refs.adminId,
+  });
+  await tx.insert(invoiceSends).values({
+    id: uuidv7(),
+    companyId: refs.companyId,
+    invoiceId,
+    recipient: "billing@customer.test",
+    outcome: "sent",
+    sentByUserId: refs.adminId,
   });
   await tx.insert(auditLog).values({
     companyId: refs.companyId,

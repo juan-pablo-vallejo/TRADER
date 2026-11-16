@@ -337,6 +337,20 @@
       "when": 1794781852892,
       "tag": "0047_rate-limit-grants",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794794138868,
+      "tag": "0048_invoice-sends",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1794794139391,
+      "tag": "0049_invoice-send-guards",
+      "breakpoints": true
     }
   ]
 }
