@@ -609,6 +609,9 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `test/memory-store.ts`. The device store itself is covered by the flows alone.
 - The catalog test fails an entry that reads the same in both languages: a string with no
   words of its own (`start–end`, `job: hours`) is written in the screen, not the catalog.
+- Playwright loads a spec and what it imports as CommonJS here (`apps/web` states no module
+  type): `import.meta` or a top-level await in such a file is "No tests found". Node itself
+  runs the same `.ts` file as a module, with a warning.
 - A `TMPDIR` as long as the session scratchpad breaks `tsx` (its socket path is too long,
   `listen EINVAL`): never export it for a command that runs `pnpm demo`.
 - `@clerk/expo` brings `@clerk/react`, which requires `react-dom`; left to pnpm it resolves
@@ -2253,8 +2256,12 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   the suite's defaults in `staging.spec.ts` are staging's fixture accounts, and the host
   is public: anyone could sign in as staging's admin. Today they cannot — the deployed
   commit still checks the old origin list, so every session on the public host is a 401
-  (seen) — and the first promotion opens it. Put to the owner: test mode off on the
-  development instance, automation signing in with Clerk sign-in tokens.
+  (seen) — and the first promotion opens it. Built for it, with the owner's key in the
+  `staging` environment: the suite signs in by single-use Clerk tickets (the row of this
+  date), seen on staging's alias with tickets made through the Clerk CLI — five steps
+  green, a made-up ticket and a spent one refused; ten more mutations watched red. Not
+  seen: the workflow's own ticket step, which first runs in the promotion. Test mode is
+  still on and is the owner's to turn off; the phone app has no ticket path.
 - **Release 0.1 state:** `main` at `900dadc`; staging at 40 migrations of 50, serving
   `1c94b64`. Order from here: the owner sets the two endpoint ids and merges this branch;
   the merge's own run rehearses and prints the code; the owner dispatches `promote` with

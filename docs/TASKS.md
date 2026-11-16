@@ -356,7 +356,9 @@ every gate, and a candidate missing a platform reads as not native-verified.
       migrations' contents, the rehearsal branch already at the journal; each migrator
       string is held to its stated endpoint; `drizzle-kit` refuses a deployed database
       without a stated purpose; the development identity is refused on one
-      (ARCHITECTURE, 2026-11-16, promotion safeguards). No GitHub environment beyond `staging` is used
+      (ARCHITECTURE, 2026-11-16, promotion safeguards); the browser suite signs in with
+      single-use Clerk tickets made in a step of their own (2026-11-16, staging sign-in
+      by ticket). No GitHub environment beyond `staging` is used
       for it. The backlog, `0040` to `0049`, is rehearsed and its results and risks put
       to the owner first; a session never makes that dispatch. Done when a rehearse-only
       run is green and its report is with the owner; then, on the owner's dispatch,

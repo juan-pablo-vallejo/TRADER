@@ -142,7 +142,7 @@ the owner's machine, outside the repository.
   macOS Keychain, handed to one fixed command by a wrapper that refuses any other target. A
   session never prints one, never writes one to a file, and never reads `.env` or the
   Keychain itself. The workflows' copies — staging's migrator connection strings, an Expo
-  token — are secrets of GitHub environments restricted to `main`, created by the owner;
+  token, the Clerk development instance's key for the suite's sign-in tickets — are secrets of GitHub environments restricted to `main`, created by the owner;
   nothing of production, no vendor's account-wide key, no DNS token and no signing
   credential is stored there.
 - **Which tool for which job.**
