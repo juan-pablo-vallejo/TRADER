@@ -343,9 +343,11 @@ every gate, and a candidate missing a platform reads as not native-verified.
       change and a NOT NULL column without a default; the rehearsal and its schema
       comparison against a fresh replay; the migration; the fast-forward; the wait on
       GitHub's deployment record; the deployed commit in `/api/ready`'s answer; every
-      action in every workflow pinned by commit. Tools on the runner, none in the
-      workspace: the PostgreSQL 18 client, consumed by the schema comparison. Tests: the
-      migration reading, red on a planted DROP; the readiness answer. A promotion
+      action in every workflow pinned by commit; the browser suite on staging's public
+      host with no bypass. No tool and no package is installed: the schema comparison
+      reads the catalog through `pg`, which `packages/db` already has. Tests: the
+      migration reading, red on a planted DROP; the plan, for every way it can be asked;
+      the readiness answer. A promotion
       started by a merge migrates only when every pending migration is past the owner's
       gate (`0049`, the backlog of 2026-11-16) and the reading flags none of them;
       otherwise it rehearses, reports and stops before staging changes, and the
@@ -361,8 +363,8 @@ every gate, and a candidate missing a platform reads as not native-verified.
 - [ ] P2 — The browser suite on every promotion, and the readiness report. Depends on P1.
       Work: fixtures ensured through the real procedures, with Clerk test numbers alone —
       a customer, jobs, a crew, a foreman, a worker; one flow each for the schedule, an
-      invoice issued and paid, and the payroll CSV; the automation bypass optional on the
-      public host, the wall checked on the alias from the Mac; `readiness.json`, the
+      invoice issued and paid, and the payroll CSV; the wall checked on the alias from
+      the Mac; `readiness.json`, the
       `staging` status on the commit, an issue opened on red and closed on green. Done
       when a planted red flow reports "deployed and failing" and the next green closes it
 - [ ] P3 — Staging mail (takes R7's open half). Depends on the owner's Resend domain and
@@ -392,7 +394,9 @@ every gate, and a candidate missing a platform reads as not native-verified.
       report names every gate and one with a platform missing reads not native-verified
 - [ ] Owner — each when its line reaches it: merge #117 and each line's pull request;
       the GitHub environments `staging` and, at P6, `production`, and no other, with
-      their secrets and variables (the Expo token is `staging`'s), fork pull requests held for approval, secret
+      their secrets and variables (`STAGING_MIGRATOR_URL`, `REHEARSAL_MIGRATOR_URL`, a
+      write deploy key as `STAGING_DEPLOY_KEY`, later the Expo token; the variables
+      `STAGING_URL` and the suite's two test numbers), fork pull requests held for approval, secret
       scanning with push protection, a read-only default token; a compute on the
       rehearsal branch; the DNS wrapper installed; the Resend subdomain, its
       sending-only key, and `RESEND_API_KEY` on the Preview; the Expo token, the first

@@ -646,6 +646,18 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Never register this Mac as a self-hosted Actions runner: the repository is public, and a
   pull request's workflow would run beside the Keychain. The Mac polls (ARCHITECTURE,
   2026-11-16, native tests).
+- To run a `packages/db` script against the local database without a session reading
+  `.env`: `DATABASE_URL= node --env-file=../../.env --import tsx src/<script>.ts` from the
+  package's directory. `NODE_OPTIONS` refuses `--env-file`.
+- `btree_gist` (0004) puts about two hundred functions of its own into `public`: a catalog
+  listing meant to describe the journal leaves out what an extension owns
+  (`pg_depend.deptype = 'e'`), or it compares server builds.
+- The promotion workflow cannot be tried from a branch: its environment admits `main`
+  alone, and GitHub reads a `workflow_run` workflow from the default branch. A change to
+  it is proven by its first run after the merge; say so in its pull request.
+- The migration reading flags by text and widely (`reading.ts`): a trigger's `BEFORE
+TRUNCATE`, a quoted word and a function's body are not flags, a dropped constraint, a
+  REVOKE and an enum value are. A flag sends the migration to the owner; it is not a fault.
 
 ## Log
 
@@ -2183,3 +2195,37 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `staging` environment with its two migrator secrets before its rehearse-only run.
 - **Next:** owner merges this branch; then P1, plan first in its pull request, ending at
   the rehearsal's report for the owner.
+
+### 2026-11-16 — Staging promotion built (P1); nothing run, the backlog still withheld
+
+- **Did:** branch `p1-staging-promotion` from `p1-policy-update` (#119, open), six
+  commits. `promote-staging.yml`: database, deploy, verify. In `packages/db`:
+  `promotion/reading.ts`, `plan.ts`, `journal.ts`, `fingerprint.ts` and
+  `run-promotion.ts`. `/api/ready` answers the deployed commit. The browser suite runs on
+  the public host with no bypass, and holds the host to an expected commit. Every action
+  pinned by commit. The runbook's promotion section. Watched red, by mutation, twelve
+  rules: the DROP rule, a function's body read, quoted words read, the owner's gate, the
+  flags, any tag authorizing, the owner not required, a rehearsal migrating, the journal
+  prefix, a rehearsal behind staging, any string as a commit, the gate's number. The
+  reading over the whole journal flags eight of fifty; of the backlog, `0040` (a dropped
+  unique constraint, replaced by the exact-shift key), `0041` (REVOKE of the
+  application's UPDATE on `companies`, then column grants) and `0042` (an enum value
+  added). 1,623 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-16. Changed from the
+  plan: the schema is compared through the catalog, not `pg_dump`, so no client is
+  installed; the deployment is awaited by asking the host which commit it serves, not
+  through GitHub's deployment records; a deploy key is used for the push when the owner
+  has made one, since the job's own token may not move a branch across a workflow
+  file's change; the suite's public-host mode came forward from P2. Not done, and why P1
+  is not ticked: **the workflow has never run.** Unseen: the environment's secrets
+  reaching it, the rehearsal branch accepting the owner's direct connection, the
+  catalog lines equal between Neon and a replay, the push starting Vercel's build, the
+  host naming a commit, the suite on the public host. Not built: the readiness artifact,
+  the commit status and the issue (P2); a check that no workflow names production.
+- **Release 0.1 state:** `main` at `2b41dbc`; #119 and this branch open, stacked.
+  Staging: 40 migrations of 50, serving `1c94b64`, its origin list updated and not yet
+  deployed. Order from here: the owner merges both and makes the `staging` environment;
+  a rehearse-only dispatch; its report read; then the owner's own dispatch,
+  `mode=promote`, `authorize_through=0049_invoice-send-guards`. A session makes neither
+  the second dispatch nor any dispatch that names a migration.
+- **Next:** the rehearse-only run and its report to the owner; then P2.
