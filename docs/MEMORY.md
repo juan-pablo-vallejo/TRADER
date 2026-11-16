@@ -416,6 +416,19 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - CI runs on a pull request into `main` and on `main` only: a pull request stacked on
   another feature branch gets no `check` until its base is `main`. Retargeting it to
   `main` starts no run either (seen on #93: "waiting for status"); the next push does.
+- A native client's Clerk token carries no `azp`, and Clerk refuses such a token once
+  `authorizedParties` is set: a phone check against a local API proves nothing about a
+  deployment unless `CLERK_AUTHORIZED_PARTIES` is set in that shell (`partiesFor`,
+  `admitsParty`).
+- The phone sends no call while Clerk is loading or cannot mint a token (`token.ts`): a
+  call with no header is a 401, which the app reads as "sign in again".
+- To sign in on the phone through Clerk locally: `pnpm demo --db trader_demo_<name>`, give
+  the unbound demo worker (Sam Carter, on no crew) a Clerk test number that a development
+  user already holds, `next dev --webpack` with `TRADER_DEV_IDENTITY` blank, Metro with
+  `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` and no development identity. The demo's other people
+  are bound to `dev:` subjects and can never sign in through Clerk.
+- `eas` run from the repository's root finds no project and leaves an `app.json` there:
+  run it from `apps/mobile`.
 - Clerk's publishable key is `pk_test_` or `pk_live_` and base64 of its Frontend API host
   with a closing `$`; the policy's Clerk host is read from it (`csp.ts`), so a changed key
   changes the policy with no other edit.
@@ -2084,3 +2097,34 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** every remaining line of the track now starts with an owner action above.
   Without one: S6's screen-reader pass cannot be done by a session; the 24-person check of
   the schedule can, on a larger demo.
+
+### 2026-11-16 — Staging sign-in read; the phone's Clerk sign-in seen, two faults fixed
+
+- **Did:** read-only, staging as it stands: the owner's custom staging host is attached to
+  `staging-preview` and answers with no bypass (`/api/ready` 200, a call with no session
+  401, `/dev-signin` 404); it serves `1c94b64`, 49 commits behind `main` (`3abacb2`, #100
+  to #116 merged), on a database at 40 migrations of 50. One company, `R3 Staging Co`; an
+  admin and a worker, each a fictional Clerk test number, each bound to its Clerk user;
+  one fixture customer; no email on either. The branch's `CLERK_AUTHORIZED_PARTIES` was
+  last written on 2026-11-14, before the host existed. Clerk's native API is on, with the
+  iOS and Android applications registered; `eas whoami` answers and the Expo project
+  exists (its id is uncommitted in `apps/mobile/app.json`), with no variable, no build and
+  no Apple team. Then branch `r5-phone-token` from `3abacb2`, two commits: on the iOS
+  simulator against a throwaway demo database, a sign-in by code through Clerk, the bind,
+  `me.get` and `sync.pull` 200 — and 401 once the API's origin list was set, and a false
+  "sign in again" on a relaunch. Both fixed (the decision row of this date; `token.ts`),
+  each rule watched red, then seen: three relaunches and a clock-in and clock-out stored
+  with the list set. 1,575 tests.
+- **Decided:** in this line's plan, the row of 2026-11-16 in ARCHITECTURE. Not done:
+  nothing on staging was changed. Not seen: the fix on a deployment, Android, a browser
+  session under the new proxy (tests only; the staging suite covers it once deployed), a
+  sign-out, a relaunch offline, a location on the Clerk run. R5 stays unticked.
+- **Release 0.1 state:** `main` at `3abacb2`; this branch's pull request open. To make the
+  staging host usable, in order: the database migrated 40 to 50 (the owner-role wrapper
+  still has no migrate command); the custom host's origin added to `staging-preview`'s
+  `CLERK_AUTHORIZED_PARTIES`; `staging-preview` fast-forwarded and the browser suite run.
+  For the phones after that: jobs, a crew and a foreman on staging's roster; the device
+  builds' line in TASKS with `eas.json`, the API's address and the publishable key as EAS
+  variables; an Apple team on the Expo account and the test iPhone registered.
+- **Next:** owner merges this branch and migrates staging; then the three staging steps
+  above, and the device builds' line, plan first in its pull request.
