@@ -214,8 +214,10 @@ paid is created and no production migration runs without the owner's approval of
       body limit and the `Origin` check). Work: limits per identity and per address on the
       API route, their store chosen on the vendor's page; tests of each locally. Done when
       a burst answers 429 on a Preview and an ordinary session never does
-- [ ] Public staging host for the phones (2026-11-15 row). Depends on the edge line. Done
-      when the host serves `release-0.1` with no bypass, a call without a session is 401,
+- [ ] Public staging host for the phones (2026-11-15 row; 2026-11-16, it serves
+      `staging-preview`). Depends on the edge line. Seen on 2026-11-16 at the commit of
+      2026-11-15's merge: readiness 200 with no bypass. Done
+      when the host serves `staging-preview` with no bypass, a call without a session is 401,
       another company's rows are refused, a worker is refused the office, a burst is 429,
       and every other Preview still answers 302; or the exemption is reported unavailable
 - [x] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
@@ -319,6 +321,76 @@ paid is created and no production migration runs without the owner's approval of
       partner's admin has signed the acceptance checklist
 
 Left where they are until this track is done: every other open line of Stages 4 to 10.
+
+## Automation — promotion, tests and release gates
+
+Permanent, and not Release 0.1's alone: what carries every later merge to staging and every
+later release to its gate (ARCHITECTURE, the 2026-11-16 rows). Lines are ordered by
+dependency, each planned in its pull request and worked without a per-line approval. It runs
+beside the Release 0.1 track and gives that track's staging and device lines their evidence.
+Nothing here is paid, touches production, or stores a production value. Done when two
+merges in a row reach staging with no session open, a release candidate's report names
+every gate, and a candidate missing a platform reads as not native-verified.
+
+- [x] P0 — Documents and reconciliation: the 2026-11-16 decision rows; RULES (Git and CI,
+      Toolbox); this section; the Expo project's id and owner in `apps/mobile/app.json`;
+      the staging host's origin added to `staging-preview`'s `CLERK_AUTHORIZED_PARTIES`.
+      Documents and configuration only
+- [ ] P1 — Staging promotion (plan first: CI, and it changes what moves staging). Work:
+      `.github/workflows/promote-staging.yml`, started by a passed `check` on `main` or
+      by hand in a rehearse-only mode; the preflight; a reading of pending migrations
+      that flags a DROP, a TRUNCATE, a DELETE or UPDATE without a key, a REVOKE, a role
+      change and a NOT NULL column without a default; the rehearsal and its schema
+      comparison against a fresh replay; the migration; the fast-forward; the wait on
+      GitHub's deployment record; the deployed commit in `/api/ready`'s answer; every
+      action in every workflow pinned by commit. Tools on the runner, none in the
+      workspace: the PostgreSQL 18 client, consumed by the schema comparison. Tests: the
+      migration reading, red on a planted DROP; the readiness answer. Done when a
+      rehearse-only run is green, staging stands at the journal's count with its host
+      serving `main`'s commit and the suite green, a run for a commit already promoted
+      changes nothing, and a flagged migration waits for the owner
+- [ ] P2 — The browser suite on every promotion, and the readiness report. Depends on P1.
+      Work: fixtures ensured through the real procedures, with Clerk test numbers alone —
+      a customer, jobs, a crew, a foreman, a worker; one flow each for the schedule, an
+      invoice issued and paid, and the payroll CSV; the automation bypass optional on the
+      public host, the wall checked on the alias from the Mac; `readiness.json`, the
+      `staging` status on the commit, an issue opened on red and closed on green. Done
+      when a planted red flow reports "deployed and failing" and the next green closes it
+- [ ] P3 — Staging mail (takes R7's open half). Depends on the owner's Resend domain and
+      key. Work: the DNS wrapper, watched refusing a name it does not own; the
+      subdomain's records; `MAIL_FROM` and `INVOICE_EMAIL_ALLOWLIST` on the Preview; one
+      tagged flow that sends an invoice to Resend's test inbox, run weekly and for a
+      candidate. Done when the domain reads verified, that send is recorded as sent, and
+      the owner has seen one message arrive
+- [ ] P4 — Preview builds (takes the device builds' line; plan first: CI). Depends on the
+      owner's Expo token and first credentials. Work: `eas.json` with development,
+      preview, preview-simulator and production profiles; the build number from EAS in
+      place of the constant in `config.ts`; the API's address as a preview variable; a
+      workflow that builds a candidate or a named commit and skips an unchanged native
+      fingerprint; a Maestro sign-in part for Clerk's test number. Tools on the runner:
+      `eas-cli`, at a version read from its registry, consumed by that workflow. The
+      production profile is never run by automation. Done when one commit has an APK and
+      a simulator build and the smoke flow signs in to staging on both
+- [ ] P5 — Native runner on the Mac. Depends on P4 for the staging smoke, on nothing for
+      the local suite. Work: a runner script around `suite.sh` with a report per platform;
+      a launchd agent the owner installs; statuses `native/ios`, `native/android` and a
+      heartbeat; the watchdog workflow. Done when a night's run posts both platforms, and
+      with the agent stopped the watchdog says the runner is offline
+- [ ] P6 — Release gate. Depends on P2 and P5. Work: RULES' rule for `production` (Git
+      and CI); `release-readiness.yml` on a
+      candidate tag; the production-tree check; the dependency audit; the manual
+      checklist for physical phones, "not performed" by default. Done when a candidate's
+      report names every gate and one with a platform missing reads not native-verified
+- [ ] Owner — each when its line reaches it: merge #117 and each line's pull request;
+      the GitHub environments `staging`, `staging-flagged-migration` and `mobile-preview`
+      with their secrets and variables, fork pull requests held for approval, secret
+      scanning with push protection, a read-only default token; a compute on the
+      rehearsal branch; the DNS wrapper installed; the Resend subdomain, its
+      sending-only key, and `RESEND_API_KEY` on the Preview; the Expo token, the first
+      iOS ad hoc credentials and device, the first Android keystore and its fingerprint
+      at Clerk; the launchd agent and its statuses-only token; `production`, its
+      ruleset, and the production project's settings. Each a separate approval:
+      `release-0.1` and its scoped variable deleted, `restore-drill-20261114` deleted
 
 ## Stage 0 — Repo rebuild
 
@@ -562,7 +634,8 @@ ARCHITECTURE.md is a line here.
       asserts the role
 - [ ] Vercel Pro project on `jpteq.app` with the domain layout; Vercel Cron for daily jobs;
       `attachDatabasePool` from `@vercel/functions`; pool size set against Neon's limit
-- [ ] **decide** A staging domain, with the domain layout at R9: until then staging's
+- [x] **decide** A staging domain (decided 2026-11-16: a host of its own, attached to
+      `staging-preview`): until then staging's
       standing origin is the `staging-preview` branch's alias on `vercel.app` (Release 0.1
       track, permanent staging branch), which lasts as long as that branch does. Done when
       the owner has decided whether staging takes a host of its own and, if it does, the
