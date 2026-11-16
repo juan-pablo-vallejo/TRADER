@@ -248,7 +248,13 @@ paid is created and no production migration runs without the owner's approval of
       `expo-location`, by the foreground location stamp; `expo-secure-store` and
       `@clerk/expo` (registry read 2026-11-15: 4.16.1), by the SMS-code sign-in and its
       token cache, with whatever peer Clerk's Expo page requires, named here when read.
-- [ ] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
+      Built so far (2026-11-15), on the development sign-in: the device store and outbox,
+      the sync cycle and its states, offline evidence, the location stamp, the clock with
+      breaks and a job switch, own hours, both languages, and the flow suite green on the
+      iOS simulator and the Android emulator. Still open: the SMS-code sign-in
+      (`@clerk/expo` is not installed yet; it needs the development instance's native API
+      and its publishable key), own profile, and the done-criterion on two physical phones.
+- [x] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
       S4; it takes none of R5's lines and adds to its clock and pull. Work: the caller's
       own shifts and their eligible hours in the pull; under enforcement the clock offers
       the eligible jobsite alone, or says to ask the office; a start the server stored for
@@ -483,7 +489,7 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
       measured with the Spanish strings
 - [ ] Sign-in on the device: the identity provider's Expo SDK, token storage in the secure
       store, the token on every API call; capture never waits on a session
-- [ ] `expo-sqlite` store through Drizzle; outbox; sync cycle with coalesced triggers and
+- [x] `expo-sqlite` store through Drizzle; outbox; sync cycle with coalesced triggers and
       reclamation; `ended` before `started` on a job switch; a rejected record kept, shown as
       needing attention, never retried. Tests: a duplicate send and a dropped response leave
       one row on the server and one settled record on the phone; a record omitted from a
@@ -499,7 +505,7 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
 - [ ] Job list, own history and own assignments (V1-D11; DESIGN, Own history), status pills
       and sync banner; a wrong-clock warning when a push reports skew; a `time_in_future`
       refusal shown as needing attention with what to do
-- [ ] Sync states on the device (V1-D21): a fresh `status.get` before each cycle; under
+- [x] Sync states on the device (V1-D21): a fresh `status.get` before each cycle; under
       `read_only`, `paused`, `update_required` or the server's restricted answer the outbox,
       ids and records are kept and nothing is marked rejected or failed; sync resumes on
       `normal`. Tests: each state entered mid-backlog and left again delivers every record

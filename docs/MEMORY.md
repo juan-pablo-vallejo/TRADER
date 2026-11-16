@@ -572,6 +572,32 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - `apps/mobile` pins `react` 19.3.0, the version React Native 0.88.1 asks for, while
   `apps/web` has its own: the two never share a React, and a package both import must not
   bring one.
+- `expo run:ios` and `run:android` prebuild only when `ios/` or `android/` is missing: after
+  a plugin is added to `app.json`, run `pnpm exec expo prebuild --no-install` first, or the
+  native project lacks it (seen: no location usage description, a fatal on the first read).
+- Maestro's `launchApp` grants every permission unless told, and on iOS the location takes
+  `inuse` or `never`, not `allow`. The simulator and `pm grant` both keep a permission
+  across a cleared app: `run.sh` sets it per run, and `parts/location.yaml` answers the
+  system's sheet by its words, the one selector that is not a `testID`.
+- The Android emulator has no network location and hands a GPS fix only to an app already
+  asking: balanced accuracy answers "Current location is unavailable" there, high accuracy
+  works, and `run.sh` keeps sending `geo fix` while a flow runs.
+- `lsof -ti :3000` lists clients of the port too: with `adb reverse` in place that is the
+  emulator, and killing the list shuts it down. Kill listeners: `-sTCP:LISTEN`.
+- A tap must read the outbox before the snapshot (`sync/provider.tsx`): a cycle writes its
+  snapshot and then prunes the records it shows, so the other order can see neither the
+  record nor its session and capture nothing (seen once in the suite: a switch not made).
+- `apps/mobile/.maestro/suite.sh` rebuilds `trader_demo_e2e`, starts and stops `next dev`
+  itself and needs port 3000 free and Metro running; about ten minutes a device, 135
+  seconds of it a wait for the reachability reading to go stale.
+- `apps/mobile` tests cannot load a module that imports `expo-sqlite` or any native module:
+  what is tested lives in files with nothing native beneath them (`sync/engine.ts`,
+  `sync/clock.ts`, `ids.ts`, `i18n/preferred.ts`), and the store has an in-memory twin in
+  `test/memory-store.ts`. The device store itself is covered by the flows alone.
+- The catalog test fails an entry that reads the same in both languages: a string with no
+  words of its own (`start–end`, `job: hours`) is written in the screen, not the catalog.
+- A `TMPDIR` as long as the session scratchpad breaks `tsx` (its socket path is too long,
+  `listen EINVAL`): never export it for a command that runs `pnpm demo`.
 
 ## Log
 
@@ -1892,3 +1918,49 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   Resend's domain, key and one test recipient; Clerk's native API on the development
   instance (R5); `eas login` (device builds). S6 built and not ticked; R7 half built.
 - **Next:** R5, the field app's sign-in, store, outbox and clock, with S7 and S8.
+
+### 2026-11-15 — The phone's clock, outbox and schedule (R5 without its sign-in, S7, S8's screen)
+
+- **Did:** branch `r5-field-time-tracking` from `r4-field-app-skeleton`. `sync.pull` answers
+  the caller's own shifts and eligible hours. In `apps/mobile`: the device store (Drizzle
+  on expo-sqlite), the sync cycle, the clock's rules, a UUIDv7 minter, the location stamp;
+  Today (clock in, break, switch, clock out; under the schedule the eligible shift alone
+  or "ask the office"), Schedule (own shifts, how old the pull is, own hours), Settings;
+  the session and the language kept across launches; English and Spanish. Thirty-eight
+  unit tests of the cycle, the clock and the minter with a stand-in server that loses a
+  response, stops part-way, refuses a record and changes state. The flow suite
+  (`.maestro/suite.sh`), green on iPhone 17 Pro (iOS 26.2) and on `Medium_Phone_API_36.1`,
+  each write read back from the server's tables: six events of a clock-in, switch, break
+  and clock-out, once each and in order, with a location; two captured with the API
+  stopped, the app closed and reopened between them, delivered once and not again on a
+  second send; a refused location permission sending none; under enforcement a start
+  locking its shift, a second person offered nothing and shown nobody's shifts, a start
+  refused `not_scheduled` with its line for the office, and a start captured after 135
+  seconds offline on a shift the office had removed, stored pending as `unscheduled` and
+  said so on the phone. Watched red: four mutations of the pull, twenty-five of the
+  cycle, the clock and the minter.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: two
+  minutes for the reachability reading and for a location in hand; 60 seconds between
+  cycles; high accuracy; breaks kept in; the shift window of the pull. Found by the
+  flows, not by a test: a tap that read the snapshot before the outbox could capture
+  nothing mid-cycle (Notes); balanced accuracy gives no location on the emulator. Not
+  done: **R5 is not ticked** — no SMS-code sign-in on the phone (`@clerk/expo` not
+  installed; the owner's native-API switch and publishable key first), no own profile,
+  no physical phone; **S8 is not ticked** for the same phones. Also not done: no
+  biometric attestation; the device store's own SQL has no unit test, only the flows; no
+  flow for `paused`, `read_only`, `update_required`, a wrong clock or a foreman's crew;
+  hours worked offline are not added to "worked today" until they are pulled back; the
+  iOS permission sentence is English only; layouts were not measured in Spanish; no
+  screen-reader pass; pull's job coordinates, customer name and reasons (Stage 5, pull
+  extension) are not built; `eas.json` and the preview builds.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r4-field-app-skeleton` (#112)
+  and this one, stacked, CI green on all thirteen before it; `release-0.1` moves here
+  next. **Staging's database is still at 40 migrations** of 48: nothing since S2 has
+  been seen on staging. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key as an EAS variable (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key and one test recipient (the invoice email). S6 built and
+  not ticked; R7 half built; R5 and S8 as above.
+- **Next:** the phone's SMS-code sign-in behind the session seam, as far as it can be
+  built before the owner's two Clerk items; then `eas.json` and the preview profile.
