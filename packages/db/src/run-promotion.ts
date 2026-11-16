@@ -3,7 +3,8 @@
 // counts, migration tags and flags — never a connection, a host or a row. Like the
 // migrator and run-onboard.ts it is meant for a deployed database, so it does not call
 // assertLocalDatabase, and it reads no .env.
-//   state                  the plan: what is pending, what to rehearse, whether to migrate
+//   state                  the plan: what is pending, what to rehearse, whether to migrate;
+//                          first, each string held to the endpoint stated for it
 //   expect-current <VAR>   exit 1 unless the database at $VAR holds the journal exactly
 //   fingerprint [<VAR>]    the schema's lines; with no VAR, the local POSTGRES_* database
 import { appendFileSync } from "node:fs";
@@ -11,9 +12,15 @@ import { appendFileSync } from "node:fs";
 import { Client } from "pg";
 
 import { databaseConnection } from "./env";
+import { endpointFaults } from "./promotion/endpoints";
 import { schemaFingerprint } from "./promotion/fingerprint";
 import { readJournal } from "./promotion/journal";
-import { planPromotion, type PromotionRequest } from "./promotion/plan";
+import {
+  approvalCode,
+  isCommit,
+  planPromotion,
+  type PromotionRequest,
+} from "./promotion/plan";
 
 // cwd-relative on purpose, as drizzle.config.ts is: every `pnpm --filter @trader/db`
 // script runs in packages/db.
@@ -80,14 +87,41 @@ const summary = (markdown: string) => {
 };
 
 async function state() {
+  const commit = process.env.PROMOTION_COMMIT ?? "";
+  if (!isCommit(commit))
+    throw new Error("refusing to run: PROMOTION_COMMIT is not a commit");
+  // Before any connection: each string is on the endpoint the owner stated for it.
+  const faults = endpointFaults({
+    stagingUrl: urlFrom("STAGING_MIGRATOR_URL"),
+    rehearsalUrl: urlFrom("REHEARSAL_MIGRATOR_URL"),
+    stagingEndpoint: process.env.STAGING_ENDPOINT_ID ?? "",
+    rehearsalEndpoint: process.env.REHEARSAL_ENDPOINT_ID ?? "",
+  });
+  if (faults.length > 0) {
+    summary(
+      [
+        `### Migrations`,
+        `- **stopped before any database was reached:** ${faults.map((f) => `\`${f}\``).join(", ")}`,
+      ].join("\n"),
+    );
+    process.exitCode = 1;
+    return;
+  }
   const journal = readJournal(MIGRATIONS);
   const [staging, rehearsal] = [
     await applied("STAGING_MIGRATOR_URL"),
     await applied("REHEARSAL_MIGRATOR_URL"),
   ];
-  const plan = planPromotion({ journal, staging, rehearsal, request: requestFromEnv() });
+  const plan = planPromotion({
+    journal,
+    staging,
+    rehearsal,
+    commit,
+    request: requestFromEnv(),
+  });
   const head = [
     `### Migrations`,
+    `- commit: \`${commit}\``,
     `- journal: ${journal.length}; staging: ${staging.length}; rehearsal branch: ${rehearsal.length}`,
   ];
   if (!plan.ok) {
@@ -98,7 +132,8 @@ async function state() {
     return;
   }
   const rows = plan.pending.map(
-    (entry) => `| \`${entry.tag}\` | ${entry.flags.join(", ") || "none"} |`,
+    (entry) =>
+      `| \`${entry.tag}\` | \`${entry.hash}\` | ${entry.flags.join(", ") || "none"} |`,
   );
   summary(
     [
@@ -106,7 +141,9 @@ async function state() {
       `- to rehearse: ${plan.toRehearse.length}; pending on staging: ${plan.pending.length}`,
       `- staging migration: **${plan.migrate}**` +
         (plan.withheld.length > 0 ? ` (${plan.withheld.join(", ")})` : ""),
-      ...(rows.length > 0 ? ["", "| pending | flags |", "| --- | --- |", ...rows] : []),
+      ...(rows.length > 0
+        ? ["", "| pending | content (sha256) | flags |", "| --- | --- | --- |", ...rows]
+        : []),
     ].join("\n"),
   );
   output({
@@ -114,7 +151,9 @@ async function state() {
     rehearse: String(plan.toRehearse.length > 0),
     migrate: plan.migrate,
     withheld: plan.withheld.join(","),
-    last_pending: plan.pending.at(-1)?.tag ?? "",
+    // What the owner's dispatch must carry for this commit and this pending set. The
+    // workflow prints it only once the rehearsal branch is verified.
+    approval_code: approvalCode(commit, plan.pending) ?? "",
   });
 }
 

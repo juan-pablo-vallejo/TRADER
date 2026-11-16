@@ -3,7 +3,13 @@
 // applied migrations and is told what to rehearse and whether staging may be migrated.
 // A promotion a merge started migrates by itself only what the reading passes and only
 // past the owner's gate; anything else waits for a dispatch by the repository's owner that
-// names the last pending migration. Consumed by run-promotion.ts.
+// carries the approval code a rehearsal's report printed: the last pending migration's tag
+// and a digest of the commit and of every pending migration's tag and content hash. So an
+// approval holds for one commit and one set of files, and for nothing read since. An
+// authorized run never rehearses: the rehearsal branch must already hold the journal, from
+// an earlier run whose report the owner read. Consumed by run-promotion.ts.
+import { createHash } from "node:crypto";
+
 import type { MigrationFlag } from "./reading";
 
 export type JournalEntry = {
@@ -28,10 +34,13 @@ export type PromotionProblem =
   | "rehearsal_not_of_this_journal"
   // The rehearsal branch is behind staging: it no longer stands where staging does.
   | "rehearsal_behind_staging"
-  // A dispatch named a migration other than the last one pending, or named one with
-  // nothing to authorize, or was not the owner's.
+  // A dispatch carried a code other than this commit's and this pending set's, or one
+  // with nothing to authorize, or was not the owner's.
   | "authorization_mismatch"
-  | "authorization_not_by_owner";
+  | "authorization_not_by_owner"
+  // An authorized dispatch found migrations the rehearsal branch has not applied: there is
+  // no earlier rehearsal of this journal to have approved.
+  | "authorization_without_rehearsal";
 
 export type Withheld = "rehearse_only" | "owner_gate" | "flagged";
 
@@ -51,6 +60,19 @@ export type PromotionPlan =
 // the owner's dispatch, whatever the reading says.
 export const OWNER_GATED_THROUGH = 49;
 
+export const isCommit = (value: string) => /^[0-9a-f]{40}$/.test(value);
+
+// The code an owner's dispatch must carry to migrate `pending` at `commit`. Twenty hex
+// digits of the digest: it is a binding, not a secret — the gate is who dispatches.
+export function approvalCode(commit: string, pending: JournalEntry[]): string | null {
+  const last = pending.at(-1);
+  if (last === undefined || !isCommit(commit)) return null;
+  const digest = createHash("sha256")
+    .update([commit, ...pending.map((entry) => `${entry.tag} ${entry.hash}`)].join("\n"))
+    .digest("hex");
+  return `${last.tag}.${digest.slice(0, 20)}`;
+}
+
 const isPrefix = (applied: string[], journal: JournalEntry[]) =>
   applied.length <= journal.length &&
   applied.every((hash, i) => journal[i]?.hash === hash);
@@ -59,10 +81,12 @@ export function planPromotion(input: {
   journal: JournalEntry[];
   staging: string[];
   rehearsal: string[];
+  // The commit being promoted, forty hex digits.
+  commit: string;
   request: PromotionRequest;
   gatedThrough?: number;
 }): PromotionPlan {
-  const { journal, staging, rehearsal, request } = input;
+  const { journal, staging, rehearsal, commit, request } = input;
   const gatedThrough = input.gatedThrough ?? OWNER_GATED_THROUGH;
   if (!isPrefix(staging, journal)) {
     return { ok: false, problem: "staging_not_of_this_journal" };
@@ -75,18 +99,21 @@ export function planPromotion(input: {
   }
   const pending = journal.slice(staging.length);
   const toRehearse = journal.slice(rehearsal.length);
-  const last = pending.at(-1);
   const named = request.kind === "dispatch" ? request.authorizeThrough : null;
   if (named !== null) {
     if (request.kind !== "dispatch" || request.mode !== "promote") {
       return { ok: false, problem: "authorization_mismatch" };
     }
     if (!request.byOwner) return { ok: false, problem: "authorization_not_by_owner" };
-    if (last === undefined || last.tag !== named) {
+    const code = approvalCode(commit, pending);
+    if (code === null || code !== named) {
       return { ok: false, problem: "authorization_mismatch" };
     }
+    if (toRehearse.length > 0) {
+      return { ok: false, problem: "authorization_without_rehearsal" };
+    }
   }
-  if (last === undefined) {
+  if (pending.length === 0) {
     return { ok: true, pending, toRehearse, migrate: "none", withheld: [] };
   }
   if (request.kind === "dispatch" && request.mode === "rehearse-only") {
