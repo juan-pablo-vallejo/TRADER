@@ -286,6 +286,10 @@ paid is created and no production migration runs without the owner's approval of
       again; another company's invoice is FORBIDDEN on every procedure. Also the plain CSV
       of issued invoices (2026-11-15 scope row), its totals equal to the list's; on
       staging a send goes only to an address the deployment's allow-list names
+      Installs `pdf-lib` in `packages/api` (registry read 2026-11-15: 1.17.1, pure
+      JavaScript with its standard fonts inside, so it needs no file at run time under
+      Next's bundling), consumed by `invoices/pdf.ts`. The email goes to Resend's HTTP API
+      with `fetch`: no mail package.
 - [ ] R8 — Public pages and account deletion (plan first: auth; takes Stage 8's privacy
       line). Work: privacy policy, terms, support and the deletion request on the apex;
       the deletion request in the app's profile; deactivate-and-pseudonymize as an
