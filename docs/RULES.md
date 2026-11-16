@@ -131,9 +131,13 @@ What a session works with beyond the repository, and where each tool stops. The 
 ARCHITECTURE's (2026-11-14, staging autonomy); the permission rules and the wrappers live on
 the owner's machine, outside the repository.
 
-- **Three environments.** Local: the compose database and `.env`. Staging: a Neon project
-  of its own, Clerk's development instance, Vercel previews. Production: the owner's alone.
-  A session holds no production credential and runs no production command, read or write.
+- **Three environments.** Local, for tests alone: the compose database and `.env`, where
+  the suites, the seed, the demo and the local flows run. Development and staging, one
+  shared database: a Neon project of its own, Clerk's development instance, Vercel
+  previews, and the office app on this machine through its wrapper (ARCHITECTURE,
+  2026-11-16, shared database); the development identity is never used there, and only the
+  promotion workflow migrates it. Production: the owner's alone. A session holds no
+  production credential and runs no production command, read or write.
 - **A credential is used, never read.** Each staging secret is an item in the owner's
   macOS Keychain, handed to one fixed command by a wrapper that refuses any other target. A
   session never prints one, never writes one to a file, and never reads `.env` or the

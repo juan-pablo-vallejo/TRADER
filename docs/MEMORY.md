@@ -2229,3 +2229,30 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   `mode=promote`, `authorize_through=0049_invoice-send-guards`. A session makes neither
   the second dispatch nor any dispatch that names a migration.
 - **Next:** the rehearse-only run and its report to the owner; then P2.
+
+### 2026-11-16 — Staging mail's DNS and variables; promotion safeguards built, nothing run
+
+- **Did:** P3, outside the repository: the DNS wrapper (`list`, `plan`, `apply`; four fixed
+  records, no name taken, watched refusing one), installed by the owner; the four Resend
+  records created under the staging mail subdomain and read back on four resolvers, the
+  apex's records untouched; the domain verified by the owner; `MAIL_FROM` and
+  `INVOICE_EMAIL_ALLOWLIST` (one address, the owner's) on staging's Preview beside the
+  owner's `RESEND_API_KEY`. Read: the allow-list is already the whole of who staging can
+  mail, and the request carries one recipient and no other recipient field. Then branch
+  `p1-safeguards` from `900dadc`: the approval code, the endpoint pins, the migrate
+  purpose, the development identity refused on a deployed database, `STAGING_URL` read as
+  a secret; two decision rows, RULES' environments, the runbook. Watched red: thirteen
+  mutations, each against a green baseline.
+- **Decided:** by the owner on 2026-11-16, the two rows of that date (shared database;
+  promotion safeguards). Not done: **nothing has run.** The promotion after #120 failed
+  at its plan step before the environment's secrets existed; no rehearsal, no migration,
+  no email. The fixture tenants are a TASKS line, not built. Worth knowing: the suite's
+  two default numbers in `staging.spec.ts` are staging's real fixture accounts, the
+  repository is public and so is staging's host, so anyone may sign in to staging as its
+  admin with Clerk's test code; staging holds fictional rows and mails only the
+  allow-list, and moving the numbers to secrets is the owner's to decide.
+- **Release 0.1 state:** `main` at `900dadc`; staging at 40 migrations of 50, serving
+  `1c94b64`. Order from here: the owner sets the two endpoint ids and merges this branch;
+  the merge's own run rehearses and prints the code; the owner dispatches `promote` with
+  it; then one invoice email to the allow-listed address.
+- **Next:** the rehearsal's report to the owner; after the promotion, P3's send.
