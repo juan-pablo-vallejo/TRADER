@@ -97,3 +97,13 @@
     grid-column: 1 / -1;
   }
 }
+
+/* Each send on a line of its own; the address may be long and wraps anywhere. */
+.sends {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-wrap: anywhere;
+}

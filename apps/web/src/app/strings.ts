@@ -205,6 +205,26 @@ export const strings = {
     removed: "Draft deleted.",
     voidIt: "Void invoice",
     pdf: "Save as PDF",
+    sendHeading: "Email to the customer",
+    sendExplain:
+      "Sends this invoice as a PDF. Each send is kept here, whether it went or not.",
+    sendTo: "Send to",
+    send: "Send invoice",
+    sendSent: "Sent.",
+    sendFailed: "That send did not go. You can send it again.",
+    noSends: "Not sent yet.",
+    sentTo: (to: string, by: string, at: string) => `Sent to ${to} by ${by}, ${at}`,
+    failedTo: (to: string, by: string, at: string) =>
+      `Not sent to ${to} (tried by ${by}, ${at})`,
+    sendFailures: {
+      mail_not_configured: "Email is not set up for this office yet. Nothing was sent.",
+      recipient_not_allowed:
+        "This system may not send to that address. Nothing was sent.",
+      provider_refused:
+        "The mail service refused the message. Check the address and send again.",
+      provider_unreachable:
+        "The mail service could not be reached. Send it again in a moment.",
+    },
     pdfSaved: (filename: string) => `Saved ${filename}.`,
     voidEffect: (n: number) =>
       `Invoice ${n} will be marked void. It keeps its number and its lines, and it cannot be issued again.`,

@@ -11,6 +11,7 @@ import { invalidConfigVars } from "@trader/api";
 import { parseDatabaseEnv } from "@trader/db";
 
 import { clerkEnvFaults } from "./clerk-env";
+import { mailEnvFaults } from "./mailer";
 
 type Env = Record<string, string | undefined>;
 
@@ -71,6 +72,8 @@ export function deployEnvFaults(env: Env): string[] {
     ...(blank(env.TRADER_DEV_IDENTITY) ? [] : ["TRADER_DEV_IDENTITY"]),
     ...invalidConfigVars(env),
     ...(sentryDsn(env) === null ? ["SENTRY_DSN"] : []),
+    // Optional as a pair: blank, invoices are not emailed. One without the other is refused.
+    ...mailEnvFaults(env),
   ];
 }
 

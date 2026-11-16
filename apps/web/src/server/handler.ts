@@ -12,6 +12,7 @@ import {
   type ErrorReporter,
   type IdentityAdapter,
   type IdentityDirectory,
+  type Mailer,
 } from "@trader/api";
 import type { Db } from "@trader/db";
 import { TRPCError } from "@trpc/server";
@@ -32,6 +33,8 @@ export type HandlerDependencies = {
   getDb: () => Db;
   identity: IdentityAdapter;
   directory: IdentityDirectory;
+  // The mail service for invoice.send (mailer.ts). Absent, every send fails closed.
+  mailer?: Mailer;
   reporter: ErrorReporter;
   // What stands in front of the route (edge.ts). Absent, nothing is limited: a test of
   // something else hands the handler no limiter.
@@ -68,6 +71,7 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           db: deps.getDb(),
           identity,
           directory: deps.directory,
+          ...(deps.mailer !== undefined && { mailer: deps.mailer }),
           reporter: deps.reporter,
           requestId,
         });

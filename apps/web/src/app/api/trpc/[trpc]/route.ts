@@ -8,6 +8,7 @@ import { webDirectory } from "../../../../server/directory";
 import { originsFrom } from "../../../../server/edge";
 import { createTrpcHandler } from "../../../../server/handler";
 import { webIdentity } from "../../../../server/identity";
+import { webMailer } from "../../../../server/mailer";
 import { webReporter } from "../../../../server/reporter";
 
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ const handler = createTrpcHandler({
   getDb,
   identity: webIdentity,
   directory: webDirectory,
+  mailer: webMailer,
   reporter: webReporter,
   edge: {
     limiter: (rule, value) => hitRateLimit(getDb(), rule, value),

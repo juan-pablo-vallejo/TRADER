@@ -650,6 +650,93 @@ function PdfFile({ invoiceId }: { invoiceId: string }) {
   );
 }
 
+// The page sent to the customer by email, and every time it was. A send that failed is
+// listed as failed with why, and can be sent again; nothing is sent for a void invoice. The
+// address offered is the customer's on file, and the admin may type another.
+function Sends({ invoice }: { invoice: Invoice }) {
+  const trpc = useTRPC();
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const queryClient = useQueryClient();
+  const [to, setTo] = useState(invoice.customerEmail ?? "");
+  const [id, setId] = useState(() => uuidv7());
+  const [note, setNote] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const send = useMutation(
+    trpc.invoice.send.mutationOptions({
+      onSuccess: async (answer) => {
+        // The next press is a new send; a retry of this one kept its id until answered.
+        setId(uuidv7());
+        const went =
+          answer.result === "sent" ||
+          (answer.result === "duplicate" && answer.outcome === "sent");
+        setSent(went);
+        setNote(
+          went
+            ? s.sendSent
+            : answer.result === "failed"
+              ? s.sendFailures[answer.failure]
+              : answer.result === "duplicate"
+                ? s.sendFailed
+                : strings.requestFailed,
+        );
+        await queryClient.invalidateQueries(trpc.invoice.pathFilter());
+      },
+      onError: () => {
+        setSent(false);
+        setNote(strings.requestFailed);
+      },
+    }),
+  );
+  return (
+    <section className={styles.section} aria-label={s.sendHeading}>
+      <h2 className="heading">{s.sendHeading}</h2>
+      {invoice.sends.length === 0 ? (
+        <p className="secondary">{s.noSends}</p>
+      ) : (
+        <ul className={styles.sends}>
+          {invoice.sends.map((x) => (
+            <li key={x.id} className="body">
+              {x.outcome === "sent"
+                ? s.sentTo(x.recipient, x.sentBy, stamp(x.sentAt, zone))
+                : s.failedTo(x.recipient, x.sentBy, stamp(x.sentAt, zone))}
+            </li>
+          ))}
+        </ul>
+      )}
+      {invoice.state === "issued" && (
+        <form
+          className={`${controls.card} ${styles.payForm}`}
+          onSubmit={(e) => {
+            e.preventDefault();
+            setNote(null);
+            send.mutate({ id, invoiceId: invoice.id, to });
+          }}
+        >
+          <p className={`secondary ${styles.explain}`}>{s.sendExplain}</p>
+          <Field id="send-to" label={s.sendTo}>
+            <input
+              id="send-to"
+              className={controls.input}
+              type="email"
+              required
+              maxLength={254}
+              autoComplete="off"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+            />
+          </Field>
+          <div className={controls.actions}>
+            <button type="submit" className={controls.primary} disabled={send.isPending}>
+              {send.isPending ? strings.loading : s.send}
+            </button>
+          </div>
+          <Note text={note} tone={sent ? "saved" : undefined} />
+        </form>
+      )}
+    </section>
+  );
+}
+
 function Issued({ invoice }: { invoice: Invoice }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -709,6 +796,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
       </section>
       <Payments invoice={invoice} />
       <PdfFile invoiceId={invoice.id} />
+      <Sends invoice={invoice} />
       {invoice.state === "issued" && invoice.number !== null && (
         <div className={styles.danger}>
           <DestructiveAction
