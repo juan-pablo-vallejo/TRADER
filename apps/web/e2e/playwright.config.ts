@@ -1,19 +1,16 @@
 // The staging browser suite's configuration (RULES, Toolbox; ARCHITECTURE, 2026-11-14 staging
-// browser suite). It runs against one protected preview, on demand, from a machine that
-// holds Vercel's automation bypass secret; it is never part of `pnpm check` or CI. Both
-// values come from the environment of the one command that runs it and are never read from
-// a file. Consumed by the `e2e:staging` script.
+// browser suite and 2026-11-16 staging promotion). It runs against one deployment of the
+// staging project: staging's public host, from the promotion workflow after each
+// deployment, with no secret; or a protected preview, from a machine that holds Vercel's
+// automation bypass secret. It is never part of `pnpm check` or the `check` job. Its values
+// come from the environment of the one command that runs it and are never read from a
+// file. Consumed by the `e2e:staging` script.
 import { defineConfig, devices } from "@playwright/test";
 
 const stagingUrl = process.env.STAGING_URL ?? "";
 if (!/^https:\/\/[a-z0-9.-]+$/.test(stagingUrl)) {
   throw new Error(
     "STAGING_URL must be the preview's origin: https, a host, nothing after it",
-  );
-}
-if ((process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "") === "") {
-  throw new Error(
-    "VERCEL_AUTOMATION_BYPASS_SECRET is required to reach a protected preview",
   );
 }
 
@@ -26,6 +23,7 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
+  // CI's log is public: the list, and nothing that could hold a session.
   reporter: "list",
   timeout: 120_000,
   expect: { timeout: 20_000 },

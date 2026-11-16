@@ -1,12 +1,18 @@
-// The staging acceptance flow, in a real browser against a protected preview: the wall, an
+// The staging acceptance flow, in a real browser against a deployment of the staging
+// project. With the automation bypass in the environment it is a protected preview and the
+// wall is checked first; without it, it is staging's public host, which must answer with
+// no bypass at all. Then an
 // admin's sign-in through Clerk, one fixture customer rewritten and read back, sign-out, and
 // a worker refused the office. Identities are Clerk's fictional numbers (code 424242, nothing
 // is sent) and must already be on the staging roster. The flow writes one customer row and
 // rewrites it on every run; it deletes nothing (RULES, Toolbox: cleanup is destructive).
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-const ADMIN_PHONE = process.env.E2E_ADMIN_PHONE ?? "+14015550100";
-const WORKER_PHONE = process.env.E2E_WORKER_PHONE ?? "+14015550101";
+// A variable that is set and blank, as an unset one arrives from a workflow, is unset.
+const orDefault = (value: string | undefined, fallback: string) =>
+  value === undefined || value === "" ? fallback : value;
+const ADMIN_PHONE = orDefault(process.env.E2E_ADMIN_PHONE, "+14015550100");
+const WORKER_PHONE = orDefault(process.env.E2E_WORKER_PHONE, "+14015550101");
 const CLERK_TEST_CODE = "424242";
 const FIXTURE_CUSTOMER = "E2E Customer";
 const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
@@ -14,6 +20,7 @@ const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
 // The bypass is sent once, to the preview alone, and answered with a cookie the browser then
 // carries. A header on every request would hand the secret to Clerk's hosts as well.
 async function passTheWall(context: BrowserContext): Promise<void> {
+  if (BYPASS === "") return;
   const ready = await context.request.get("/api/ready", {
     headers: {
       "x-vercel-protection-bypass": BYPASS,
@@ -52,15 +59,25 @@ async function signOut(page: Page): Promise<void> {
 
 test.describe.configure({ mode: "serial" });
 
-test("the preview is behind Vercel's wall, and ready behind it", async ({
+test("the deployment answers as its kind should: walled, or public and ready", async ({
   playwright,
   context,
   baseURL,
 }) => {
   const outsider = await playwright.request.newContext({ baseURL });
-  const refused = await outsider.get("/api/ready", { maxRedirects: 0 });
-  expect([401, 302, 303, 307], "no bypass, no entry").toContain(refused.status());
+  const answered = await outsider.get("/api/ready", { maxRedirects: 0 });
   await outsider.dispose();
+  if (BYPASS === "") {
+    // Staging's public host: ready with nothing sent, and serving the commit the caller
+    // expects when it names one.
+    expect(answered.status(), "the public host, no bypass").toBe(200);
+    const expected = process.env.E2E_EXPECT_COMMIT ?? "";
+    if (expected !== "") {
+      expect(((await answered.json()) as { commit: unknown }).commit).toBe(expected);
+    }
+    return;
+  }
+  expect([401, 302, 303, 307], "no bypass, no entry").toContain(answered.status());
   await passTheWall(context);
 });
 
