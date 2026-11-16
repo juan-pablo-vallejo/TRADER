@@ -263,6 +263,57 @@ function PeriodsTable({
   );
 }
 
+// The payroll-hours file of a closed period (DESIGN, Export panel: its own named button, what
+// the file holds beneath it). Asked for when pressed, never cached: the server builds it from
+// the lines the close stored (api pay-periods/export.ts), and the browser saves it as it came.
+function PayrollFile({ periodId }: { periodId: string }) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    setNote(null);
+    setSaved(false);
+    try {
+      const file = await queryClient.fetchQuery(
+        trpc.payPeriod.export.queryOptions({ periodId }, { staleTime: 0, gcTime: 0 }),
+      );
+      if (file.result === "rejected") {
+        setNote(strings.payrollCsvNotClosed);
+        return;
+      }
+      const url = URL.createObjectURL(new Blob([file.csv], { type: "text/csv" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      setSaved(true);
+      setNote(strings.payrollCsvSaved(file.filename));
+    } catch {
+      setNote(strings.requestFailed);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={styles.export}>
+      <button
+        type="button"
+        className={controls.secondary}
+        disabled={busy}
+        onClick={() => void save()}
+      >
+        {strings.payrollCsv}
+      </button>
+      <p className="secondary">{strings.payrollCsvExplain}</p>
+      <Note text={note} tone={saved ? "saved" : undefined} />
+    </div>
+  );
+}
+
 function Details({
   period,
   calendar,
@@ -327,6 +378,7 @@ function Details({
             </p>
           )}
         </div>
+        {period.closed !== null && <PayrollFile periodId={period.id} />}
         <p className={styles.links}>
           <Link href={`/reconciliation?period=${period.id}`}>
             {strings.openInReconciliation}

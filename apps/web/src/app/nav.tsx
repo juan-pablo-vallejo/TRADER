@@ -11,30 +11,36 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import styles from "./nav.module.css";
 import { strings } from "./strings";
 
-const groups = [
+// A group with no label is a destination that stands on its own. Routes keep their names;
+// only the grouping and the group labels are the navigation's (ARCHITECTURE, 2026-11-15).
+const groups: { label: string | null; links: (readonly [string, string])[] }[] = [
+  { label: null, links: [["/overview", strings.overview.title]] },
   {
-    label: strings.work,
+    label: strings.navJobsites,
     links: [
       ["/jobs", strings.jobs],
       ["/customers", strings.customers],
-      ["/assignments", strings.assignments],
+      ["/crews", strings.crews],
       ["/closeout", strings.closeout],
       ["/materials", strings.materials],
-      ["/approvals", strings.approvals],
     ],
   },
+  { label: null, links: [["/schedule", strings.scheduleNav]] },
   {
-    label: strings.people,
+    label: strings.navLabor,
     links: [
-      ["/roster", strings.roster],
-      ["/crews", strings.crews],
+      ["/approvals", strings.approvals],
       ["/ledger", strings.ledger],
       ["/reconciliation", strings.reconciliation],
       ["/pay-periods", strings.payPeriods],
       ["/refusals", strings.refusals],
     ],
   },
-] as const;
+  { label: null, links: [["/invoices", strings.invoices.nav]] },
+  { label: strings.navEmployees, links: [["/roster", strings.roster]] },
+  // Last, apart.
+  { label: null, links: [["/developer", strings.developer.nav]] },
+];
 
 export function Nav() {
   const path = usePathname();
@@ -60,10 +66,12 @@ export function Nav() {
       </button>
       <div id="office-nav" className={`${styles.groups} ${open ? styles.open : ""}`}>
         {groups.map((group) => (
-          <section key={group.label} aria-label={group.label}>
-            <p className={`label ${styles.group}`} aria-hidden="true">
-              {group.label}
-            </p>
+          <section key={group.links[0]![0]} aria-label={group.label ?? undefined}>
+            {group.label !== null && (
+              <p className={`label ${styles.group}`} aria-hidden="true">
+                {group.label}
+              </p>
+            )}
             <ul className={styles.list}>
               {group.links.map(([href, label]) => {
                 // A screen beneath a destination (a job's page under Jobs) keeps it marked.

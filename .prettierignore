@@ -6,3 +6,9 @@ packages/db/migrations/
 
 # Next.js build output.
 .next/
+
+# Expo's generated native projects and types (`expo prebuild`, `expo start`).
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.expo/
+apps/mobile/expo-env.d.ts

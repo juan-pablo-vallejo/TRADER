@@ -111,6 +111,12 @@ each entry with every reason it is there.
   materials, shown per job with what is still pending or unpriced beside it, never folded in.
 - A reconciliation view lists, for a pay period, every worker's approved hours by day and job,
   everything still unresolved, and every adjustment the period carries from earlier ones.
+- The office opens on an overview of what waits for a decision — entries to approve, open
+  sessions, refused entries, the week's shifts, invoices still owed — each a count that
+  leads to its screen. It shows nothing those screens do not.
+- A developer console lets an admin read how the deployment stands: the sync state, the
+  minimum app builds, readiness, whether schedule enforcement is on, recent refusals. It
+  changes nothing, is no separate role, and reads nothing of another company.
 - Role changes, activations and deactivations, invitations, pay rates, repairs and approval
   decisions record who made them, when, and what changed; so does an override of
   overlapping shifts, with its reason (Weekly schedule). Nothing else is audited in V1.
@@ -213,8 +219,9 @@ the jobs of a crew they lead.
 - PDF rendered on demand, and sent to the customer by email from TRADER when the admin
   chooses; the invoice shows when it was sent and to whom.
 - Exports, each its own file from the same issued invoices or approved hours: invoices for
-  QuickBooks Online (CSV), invoices for QuickBooks Desktop (IIF), and payroll hours (CSV); and
-  the full data export. The two QuickBooks editions do not take the same file, and which one
+  QuickBooks Online (CSV), invoices for QuickBooks Desktop (IIF), and payroll hours (CSV); a
+  plain list of issued invoices (CSV), which is no accounting package's format; and the full
+  data export. The two QuickBooks editions do not take the same file, and which one
   the design partner runs is not yet confirmed, so both ship.
 - TRADER does not run payroll and does not synchronize with an accounting package. Where an
   edition cannot import something — some tax setups, credit memos — TRADER gives the office the
@@ -248,15 +255,15 @@ starts as a worker; roles are a deliberate roster action.
 - Release 0.1 — the first production release, for the design partner: sign-in; assigned
   jobs, clock in/out and job switch with offline capture and the location stamp, in English
   and Spanish; own hours; the office web on phone and desktop with the weekly schedule,
-  approvals, repairs, admin closeout and pay periods; invoices created, issued, sent as a
-  PDF by email, and their payments recorded. Distributed through the App Store and Google
+  approvals, repairs, admin closeout and pay periods with the payroll-hours export; invoices
+  created, issued, sent as a PDF by email, listed as a plain CSV, and their payments
+  recorded; the overview and the developer console. Distributed through the App Store and Google
   Play, published under the owner's own developer accounts. Clock-in follows the schedule
   only once the owner has approved turning enforcement on.
 - The crew starts all at once, and only after Release 0.1's go/no-go line in
   [TASKS.md](TASKS.md) is recorded as passed; a smaller first group is not a required step.
 - The pilot continues on Release 0.1 while the rest of V1 is built: the job suggestion,
-  biometric confirmation, materials and photos, the foreman's closeout on the phone, the
-  payroll export, and invoices exported for both QuickBooks editions (no discount feature).
+  biometric confirmation, materials and photos, the foreman's closeout on the phone, and invoices exported for both QuickBooks editions (no discount feature).
   The pilot is unpaid.
 - V1 complete — the billing trigger — requires every V1 feature above, production distribution
   on the App Store and Google Play (US storefronts), and a partner-signed acceptance checklist.

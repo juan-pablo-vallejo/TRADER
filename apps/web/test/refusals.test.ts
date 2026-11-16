@@ -10,7 +10,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
-import { invitation, mutate, ownerDb, query } from "./helpers";
+import { invitation, mutate, ownerDb, query, jsonBody } from "./helpers";
 
 const owner = ownerDb();
 let admin: Awaited<ReturnType<typeof invitation>>;
@@ -96,7 +96,7 @@ describe("refused entries through the route handler", () => {
       POST(
         new Request(`http://test${ENDPOINT}/sync.push`, {
           method: "POST",
-          headers: { ...headers, "content-type": "application/json" },
+          headers: { ...headers, ...jsonBody("{ not json") },
           body: "{ not json",
         }),
       );

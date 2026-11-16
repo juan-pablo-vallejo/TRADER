@@ -51,7 +51,7 @@ describe("assignments through the route handler", () => {
         input: {
           userId: worker.userId,
           jobId: crypto.randomUUID(),
-          workDates: ["2026-11-16"],
+          days: [{ id: crypto.randomUUID(), workDate: "2026-11-16" }],
           expectedStart: "07:00",
           expectedEnd: "15:30",
         },
@@ -83,11 +83,12 @@ describe("assignments through the route handler", () => {
       })
       .returning({ id: jobs.id });
     const days = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"];
+    const sent = days.map((workDate) => ({ id: crypto.randomUUID(), workDate }));
     const created = await mutate(POST, "assignment.create", {
       input: {
         userId: painter!.id,
         jobId: job!.id,
-        workDates: days,
+        days: sent,
         expectedStart: "07:00",
         expectedEnd: "15:30",
       },
@@ -95,9 +96,8 @@ describe("assignments through the route handler", () => {
     });
     expect(created.status).toBe(200);
     expect(created.body.result?.data.json).toEqual({
-      result: "created",
-      created: 5,
-      existing: 0,
+      result: "planned",
+      days: sent.map((d) => ({ ...d, result: "created" })),
     });
 
     const list = await query(GET, "assignment.list", {

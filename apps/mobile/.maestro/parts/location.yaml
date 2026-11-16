@@ -1,0 +1,19 @@
+# Answers the system's own location sheet when it is on screen, as ${LOCATION} says: the one
+# place a flow selects by words, since the sheet is the system's and has no testID of ours.
+# The simulator and the emulator are set to English.
+appId: app.jpteq.trader
+---
+- runFlow:
+    when:
+      visible: "Allow While Using App|While using the app"
+    commands:
+      - runFlow:
+          when:
+            true: ${LOCATION == "allow"}
+          commands:
+            - tapOn: "Allow While Using App|While using the app"
+      - runFlow:
+          when:
+            true: ${LOCATION != "allow"}
+          commands:
+            - tapOn: "Don.t Allow|Don.t allow"

@@ -1,0 +1,52 @@
+# Launches the development build with nothing kept from a run before and signs in as
+# ${EMAIL} with the development identity. A development build opens on its launcher and
+# must be handed the bundler, as `expo run` does; the three switches are the ones it passes
+# itself (no first-launch sheet, no floating button, no reopening of the last project). On
+# iOS the flow does it. On Android Maestro's openLink cuts the link at its first `&`, so
+# `run.sh` clears the app and opens the link through adb, and passes LAUNCH=adb.
+appId: app.jpteq.trader
+---
+- runFlow:
+    when:
+      true: ${LAUNCH == "maestro"}
+    commands:
+      # Maestro grants everything on launch unless told: the location is this run's own.
+      - launchApp:
+          clearState: true
+          permissions:
+            location: ${IOS_LOCATION}
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
+- runFlow:
+    file: location.yaml
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-email|tab-settings"
+    timeout: 120000
+# A session that outlived the reset is signed out first: every run starts from sign-in.
+- runFlow:
+    when:
+      visible:
+        id: "tab-settings"
+    commands:
+      - runFlow:
+          file: location.yaml
+      - tapOn:
+          id: "tab-settings"
+      - scrollUntilVisible:
+          element:
+            id: "sign-out"
+      - tapOn:
+          id: "sign-out"
+- tapOn:
+    id: "sign-in-email"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "sign-in-submit"
+- runFlow:
+    file: location.yaml
+- extendedWaitUntil:
+    visible:
+      id: "clock-off"
+    timeout: 30000
+- runFlow:
+    file: location.yaml

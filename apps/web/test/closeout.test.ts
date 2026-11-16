@@ -22,7 +22,7 @@ import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
 import { uuidv7 } from "../src/app/closeout/uuidv7";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
-import { disposableDb, invitation, type TrpcResult } from "./helpers";
+import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
 
 // A database of its own: a closeout is append-only and references its company, its job and
 // its submitter, so no fixture here could be deleted again.
@@ -85,7 +85,7 @@ async function call(
       mutation
         ? {
             method: "POST",
-            headers: { ...headers, "content-type": "application/json" },
+            headers: { ...headers, ...jsonBody(wire) },
             body: wire,
           }
         : { headers },

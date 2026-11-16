@@ -1,0 +1,24 @@
+# The person refuses the location permission: the clock works all the same, and the entries
+# are sent with no location for the office to see.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- tapOn:
+    id: "job-row-0"
+- tapOn:
+    id: "clock-in"
+- assertVisible:
+    id: "clock-working"
+- tapOn:
+    id: "clock-out"
+- assertVisible:
+    id: "clock-off"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000

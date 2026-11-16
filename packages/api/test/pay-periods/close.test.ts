@@ -131,6 +131,8 @@ async function frozen(tx: Tx, who: unknown, periodId: string) {
     period: read.period,
     approved: read.approved,
     adjustments: read.adjustments,
+    // The payroll-hours file (export.ts): the same bytes whatever happens afterwards.
+    export: await api(tx, who).export({ periodId }),
   });
 }
 
@@ -523,6 +525,42 @@ describe("after a close", () => {
       const read = await api(tx, admin.who).read({ periodId: second });
       expect(figures(read.adjustments.lines)).toEqual(expected);
       expect(read.adjustments.lines).toEqual(preview.adjustments.lines);
+
+      // The payroll-hours files of both closed periods: every figure once, with its sign
+      // and its original work date, and their totals the read's own.
+      const files = [];
+      for (const periodId of [first, second]) {
+        const file = await api(tx, admin.who).export({ periodId });
+        if (file.result !== "exported") throw new Error("a closed period has a file");
+        const screen = await api(tx, admin.who).read({ periodId });
+        const rows = file.csv
+          .trimEnd()
+          .split("\r\n")
+          .slice(1)
+          .map((r) => r.split(","));
+        const total = (kind: string) =>
+          rows
+            .filter((r) => r[2] === kind)
+            .reduce((n, r) => n + Math.round(Number(r[8]) * 100), 0);
+        expect(total("hours")).toBe(screen.approved.total);
+        expect(total("adjustment")).toBe(screen.adjustments.total);
+        expect(file.approvedHundredths).toBe(screen.approved.total);
+        expect(file.adjustmentHundredths).toBe(screen.adjustments.total);
+        files.push(rows.map((r) => `${r[2]} ${r[7]} ${r[4]} ${r[8]}`).sort());
+      }
+      expect(files).toEqual([
+        [`hours 2026-10-05 ${d.w1} 4.00`],
+        [
+          `adjustment 2026-10-05 ${d.w1} -0.50`,
+          `adjustment 2026-10-05 ${d.w2} 8.00`,
+          `adjustment 2026-10-06 ${d.w1} 2.00`,
+        ].sort(),
+      ]);
+      // An open period has no file: its hours can still change.
+      expect(await api(tx, admin.who).export({ periodId: third })).toEqual({
+        result: "rejected",
+        code: "not_closed",
+      });
 
       // Two further closes add nothing, and move nothing already stored.
       for (const periodId of [third, fourth]) {

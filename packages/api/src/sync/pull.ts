@@ -15,103 +15,29 @@ import {
   users,
 } from "@trader/db/schema";
 import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
-import { z } from "zod";
 
+import { loadDays } from "../assignments/day";
+import { resolveDay } from "../assignments/eligibility";
 import type { Tx } from "../core/context";
 import { replay } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
 import { effectiveMaterial } from "../materials/effective";
 import type { AppUser } from "../core/resolve-user";
-import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
+import type { PullOutput } from "../contract/pull";
 
 // ARCHITECTURE, sync.pull: today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
 export const WINDOW_DAYS = 14;
 
-export const pullInput = z.strictObject({
-  protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
-});
-
-const approvalState = z.enum(["none", "pending", "approved", "rejected"]);
-const facts = z.strictObject({
-  description: z.string(),
-  quantity: z.string(),
-  unit: z.string(),
-});
-
-export const pullOutput = z.strictObject({
-  serverNow: z.date(),
-  me: z.strictObject({
-    id: z.uuid(),
-    role: z.enum(["admin", "foreman", "worker"]),
-    name: z.string(),
-  }),
-  company: z.strictObject({ name: z.string(), timezone: z.string() }),
-  // What the caller may start on or log against (sync/scope.ts): no place, customer or cost.
-  jobs: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      name: z.string(),
-      address: z.string().nullable(),
-      status: z.enum(["open", "complete", "archived"]),
-    }),
-  ),
-  // Crews the caller leads, with their active members by id and name: what recording crew
-  // labor offline needs, and nothing more. A worker gets none.
-  ledCrews: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      name: z.string(),
-      members: z.array(z.strictObject({ id: z.uuid(), name: z.string() })),
-    }),
-  ),
-  sessions: z.array(
-    z.strictObject({
-      rootEventId: z.uuid(),
-      jobId: z.uuid(),
-      workDate: z.iso.date(),
-      startedAt: z.date(),
-      endedAt: z.date().nullable(),
-      state: z.enum(["working", "paused", "ended"]),
-      workedMs: z.number().int(),
-      breakMs: z.number().int(),
-      voided: z.boolean(),
-    }),
-  ),
-  // The caller's own events of those sessions, whoever recorded them. No location.
-  events: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      type: z.enum(["started", "paused", "resumed", "ended", "voided"]),
-      jobId: z.uuid(),
-      clientTimestamp: z.date(),
-      serverTimestamp: z.date(),
-      clockSkewed: z.boolean(),
-      correctsEventId: z.uuid().nullable(),
-      voidsEventId: z.uuid().nullable(),
-      approval: approvalState,
-    }),
-  ),
-  // The caller's own receipts in the window: as logged, and as in effect with approved
-  // corrections. No cost, no corrector.
-  materials: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      jobId: z.uuid(),
-      loggedAt: z.date(),
-      original: facts,
-      effective: facts.extend({ voided: z.boolean() }),
-      correctionPending: z.boolean(),
-      approval: approvalState,
-    }),
-  ),
-});
-
-export type PullOutput = z.infer<typeof pullOutput>;
+export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
 
 const stateOf = (decision: "approved" | "rejected" | null | undefined) =>
   decision === undefined ? "none" : decision === null ? "pending" : decision;
+
+// The caller's shifts are read from the Monday of the current week for this many days: this
+// week whole, and the next, so Sunday evening already shows Monday.
+export const SHIFT_DAYS = 14;
 
 // YYYY-MM-DD minus `days`, on the calendar (no zone: a date is a date).
 function daysBefore(date: string, days: number): string {
@@ -123,7 +49,11 @@ function daysBefore(date: string, days: number): string {
 export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   const serverNow = new Date();
   const [company] = await tx
-    .select({ name: companies.name, timezone: companies.timezone })
+    .select({
+      name: companies.name,
+      timezone: companies.timezone,
+      scheduleEnforced: companies.scheduleEnforced,
+    })
     .from(companies)
     .where(eq(companies.id, user.companyId));
   if (company === undefined) throw new Error("the caller's company is not visible");
@@ -272,10 +202,59 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     receiptApprovals.map((a) => [a.materialId, a.decision]),
   );
 
+  // The caller's own shifts and the hours each is the eligible one, a day at a time.
+  const today = workDate(serverNow, company.timezone);
+  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
+  const monday = daysBefore(today, (weekday + 6) % 7);
+  const ownDays = await loadDays(tx, monday, daysBefore(monday, 1 - SHIFT_DAYS), [
+    user.id,
+  ]);
+  const shiftJobIds = [
+    ...new Set([...ownDays.values()].flatMap((d) => d.shifts.map((s) => s.jobId))),
+  ];
+  const shiftJobs =
+    shiftJobIds.length === 0
+      ? []
+      : await tx
+          .select({ id: jobs.id, name: jobs.name, address: jobs.address })
+          .from(jobs)
+          .where(inArray(jobs.id, shiftJobIds));
+  const shiftJob = new Map(shiftJobs.map((j) => [j.id, j]));
+  const shifts = [...ownDays.values()]
+    .flatMap((day) => {
+      const resolved = resolveDay(day.shifts, day.overrides);
+      const windows = new Map(
+        resolved.result === "resolved"
+          ? resolved.shifts.map((s) => [s.shiftId, s.windows] as const)
+          : [],
+      );
+      return day.shifts.map((s) => {
+        const job = shiftJob.get(s.jobId);
+        if (job === undefined) throw new Error("a shift's job is not visible");
+        return {
+          id: s.id,
+          workDate: day.workDate,
+          start: s.start,
+          end: s.end,
+          job,
+          eligible: resolved.result === "resolved" ? (windows.get(s.id) ?? []) : null,
+          locked: s.lockedStart !== null,
+        };
+      });
+    })
+    .sort(
+      (a, b) =>
+        a.workDate.localeCompare(b.workDate) ||
+        a.start.localeCompare(b.start) ||
+        a.id.localeCompare(b.id),
+    );
+
   return {
     serverNow,
     me: { id: user.id, role: user.role, name: user.name },
-    company,
+    company: { name: company.name, timezone: company.timezone },
+    scheduleEnforced: company.scheduleEnforced,
+    shifts,
     jobs: jobRows,
     ledCrews,
     sessions: kept.map((s) => ({

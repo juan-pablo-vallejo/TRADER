@@ -11,8 +11,9 @@ exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not 
 Done when the go/no-go line is recorded as passed and D Sierra Painting's crew is on the
 store builds (ARCHITECTURE, the 2026-11-12 Release 0.1 rows). Lines are ordered by
 dependency; R4 to R5 and R6 to R7 may run beside each other, S1 to S6 beside R4, and the
-owner's lines beside R1. Each line is planned and approved on its own, and names the packages it installs in
-that plan, here, before they are installed. A line that takes a stage's line ticks it there.
+owner's lines beside R1. Each line is planned in its pull request and worked without a
+per-line approval (ARCHITECTURE, 2026-11-15, autonomous execution), and names the packages
+it installs here before they are installed. A line that takes a stage's line ticks it there.
 Staging and production are separate databases and identity instances throughout; nothing
 paid is created and no production migration runs without the owner's approval of that step.
 
@@ -145,14 +146,14 @@ paid is created and no production migration runs without the owner's approval of
       included and end excluded; shifts that touch; an early start at 15 minutes and at
       16, and beside a shift already eligible; every accepted day has exactly one eligible
       shift at every covered minute
-- [ ] S2 — Schedule schema (plan first: schema). Depends on S1. Work: several shifts for
+- [x] S2 — Schedule schema (plan first: schema). Depends on S1. Work: several shifts for
       one person, job and day, an exact duplicate refused; the punch lock; overlap
       overrides with their reason; their append-only history; the mark of a copied week.
       The plan decides the tables, the history's store and what becomes of the natural
       key `assignment.create` relies on, and counts `job_assignments` in every environment
       before a migration runs there. Tests: an invariant test per guard, each watched red;
       tenant isolation; the application role's grants
-- [ ] S3 — Validated shift writers and the week read (plan first: schema, sync). Depends
+- [x] S3 — Validated shift writers and the week read (plan first: schema, sync). Depends
       on S2. Work: `assignment.*` create, change and remove under S1's rules, ids made by
       the browser, overrides and their history written with them, a Monday-to-Sunday read
       with each shift's eligible hours; the demo. Of the V1-D07 line's built behaviour it
@@ -163,7 +164,7 @@ paid is created and no production migration runs without the owner's approval of
       worker and a foreman refused; two admins on one person's day at once; a resend
       answers `duplicate`; every override write leaves its history entry and a
       rolled-back one leaves none
-- [ ] S4 — Clock-in eligibility and the punch lock, behind the enforcement switch (plan
+- [x] S4 — Clock-in eligibility and the punch lock, behind the enforcement switch (plan
       first: schema, sync, CI). Depends on S3. Work: the server-controlled switch, off by
       default; with it on, a `started` judged by the schedule as the 2026-11-15 rows
       state, the shift locked by the start it admits, a start captured offline that the
@@ -179,7 +180,7 @@ paid is created and no production migration runs without the owner's approval of
       locked shift's authorization refused; an edit and a start on one person's day in
       both orders, committed; a stored offline start counts toward nothing until decided
       and its later events are accepted. Rollback: the switch off and a new deployment
-- [ ] S5 — Copy Last Week (plan first: schema, if S2 left the copy's mark open). Depends on
+- [x] S5 — Copy Last Week (plan first: schema, if S2 left the copy's mark open). Depends on
       S3. Work: preview, confirm, one transaction, a resend that creates nothing twice,
       undo. No override is copied: a shift that would overlap is listed and left out.
       Tests: what is confirmed is what was previewed, or nothing is written and the new
@@ -194,11 +195,46 @@ paid is created and no production migration runs without the owner's approval of
       1024 and 1280 with about 24 people, no control under its target, no sideways page
       scroll, a refused circular choice said in words, a locked shift read-only, and one
       pass with a screen reader
-- [ ] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
+- [x] A01 — Overview and the office navigation (DESIGN, Layout; Overview). Work: the
+      navigation regrouped under the 2026-11-15 names, routes unchanged, Invoices and
+      Developer appearing with their screens (R6, D01); `overview.get`, one admin read of
+      four counts; `/overview`, which `/` opens. Tests: each count against the rows that
+      make it and against its own screen's read — the queue, the week, the hours; nothing
+      of another company; the gate line. One read, so a failure is the whole screen's
+- [x] D01 — Developer console (DESIGN, Developer console). Work: `developer.get`, one
+      admin read — the sync mode, minimum builds and protocol as the service reads them,
+      the company's enforcement setting, the database role, the newest refused entries —
+      and `/developer`, read-only, with the deployment's commit, environment and readiness
+      beside it. Tests: the gate line; the caller's own lines newest first and none past
+      their retention; nothing of another company, its enforcement setting included;
+      nothing written
+- [x] Payroll-hours CSV in Release 0.1 (2026-11-15 scope row): takes Stage 4's line as it
+      is written there
+- [x] Edge protection for a public host (takes, of Stage 6's edge line, the rate limits, the
+      body limit and the `Origin` check). Work: limits per identity and per address on the
+      API route, their store chosen on the vendor's page; tests of each locally. Done when
+      a burst answers 429 on a Preview and an ordinary session never does
+- [ ] Public staging host for the phones (2026-11-15 row). Depends on the edge line. Done
+      when the host serves `release-0.1` with no bypass, a call without a session is 401,
+      another company's rows are refused, a worker is refused the office, a burst is 429,
+      and every other Preview still answers 302; or the exemption is reported unavailable
+- [x] R4 — Field app skeleton (takes Stage 5's client-safe contract, Expo and development
       sign-in lines). Work: `@trader/api/contract`; the Expo app `app.jpteq.trader` with
       the theme and brand assets; a development build on the iOS simulator and the Android
       emulator; the i18n layer with English and Spanish catalogs; one Maestro smoke flow.
+      Installs, in `apps/mobile`, at the versions Expo SDK 58's template and `expo install`
+      choose (registry read 2026-11-15: `expo` 58.0.25, `react-native` 0.88.1): `expo`,
+      `react`, `react-native`, `expo-router`, `expo-constants`, `expo-linking`,
+      `expo-status-bar`, `expo-splash-screen`, `react-native-safe-area-context` and
+      `react-native-screens`, consumed by the app's shell and navigation;
+      `expo-dev-client`, by the development build; `expo-localization`, by the i18n
+      layer's first choice of language; `@trpc/client` 11.23.0 and `superjson`, by the
+      API client; `@types/react` and `typescript`, by typecheck; `vitest`, by the
+      catalog tests. `zod` reaches the app only through `@trader/api/contract`. No i18n
+      library: the catalogs are two typed objects. No `eas.json` yet: it is the device
+      builds' line, which needs the Expo project.
       Done when the flow signs in as the demo foreman and reads the job list on both
+      platforms.
 - [ ] R5 — Field app, time tracking (plan first: sync; takes Stage 5's pull extension,
       sign-in, outbox, offline evidence, clock, job list and history, sync states and own
       profile lines, less biometrics, the job suggestion and pause/resume if the plan
@@ -206,7 +242,22 @@ paid is created and no production migration runs without the owner's approval of
       physical Android phone signs in by SMS code, clocks in on an assigned job, switches
       jobs and clocks out across an airplane-mode gap, and the office shows the hours once,
       per job
-- [ ] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
+      Installs, in `apps/mobile`, at the versions `expo install` chooses for SDK 58:
+      `expo-sqlite`, consumed by the device store and outbox, with `drizzle-orm` at the
+      workspace's own range over it; `expo-crypto`, by the UUIDv7 minter's random bytes;
+      `expo-location`, by the foreground location stamp; `expo-secure-store` and
+      `@clerk/expo` (registry read 2026-11-15: 4.16.1), by the SMS-code sign-in and its
+      token cache; `react-dom` at the app's own React version, consumed by `@clerk/react`
+      inside it, which requires one and otherwise resolves the office's.
+      Built so far (2026-11-15), on the development sign-in: the device store and outbox,
+      the sync cycle and its states, offline evidence, the location stamp, the clock with
+      breaks and a job switch, own hours, both languages, and the flow suite green on the
+      iOS simulator and the Android emulator; the SMS-code sign-in screen and the
+      provider's token on every call, written and typechecked against `@clerk/expo` but
+      never run against Clerk. Still open: that sign-in seen working (it needs the
+      development instance's native API and its publishable key in the build), own
+      profile, and the done-criterion on two physical phones.
+- [x] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
       S4; it takes none of R5's lines and adds to its clock and pull. Work: the caller's
       own shifts and their eligible hours in the pull; under enforcement the clock offers
       the eligible jobsite alone, or says to ask the office; a start the server stored for
@@ -221,17 +272,27 @@ paid is created and no production migration runs without the owner's approval of
       switch on for staging alone; the browser suite; both physical phones; refusals and
       error reports read after. Done when the owner's approval to turn it on in
       production is recorded in MEMORY, or withheld; production's setting is the owner's
-- [ ] R6 — Invoices (plan first: money; takes Stage 7's drafting and issue lines, less
+- [x] R6 — Invoices (plan first: money; takes Stage 7's drafting and issue lines, less
       credit memos). Work: draft, lines priced by the admin, tax, issue with gap-free
       numbering continuing the partner's series, void; the office screens. Tests as those
       two lines state them
 - [ ] R7 — Invoice PDF, payments and delivery (plan first: schema, money; takes Stage 7's
-      PDF line). Depends on R6 and the Resend domain. Work: the PDF from the issued
+      PDF line). Built so far (2026-11-15): recorded payments with reversal, what is owed,
+      the void rule, the plain CSV of issued invoices, the PDF made on demand with its
+      button on the invoice page, and its email through a mailer seam with each send
+      recorded and the allow-list; still open: one send seen arriving, which needs the
+      Resend domain, key and an approved recipient on staging. Depends on R6 and the Resend domain. Work: the PDF from the issued
       snapshot; recorded payments and the derived amount owed; the PDF sent by email with
       each send recorded. Tests: a payment changes no invoice row; payments never total
       more than the invoice unless the plan allows an overpayment and says how it reads;
       a void invoice takes no payment; a failed send records its failure and can be sent
-      again; another company's invoice is FORBIDDEN on every procedure
+      again; another company's invoice is FORBIDDEN on every procedure. Also the plain CSV
+      of issued invoices (2026-11-15 scope row), its totals equal to the list's; on
+      staging a send goes only to an address the deployment's allow-list names
+      Installs `pdf-lib` in `packages/api` (registry read 2026-11-15: 1.17.1, pure
+      JavaScript with its standard fonts inside, so it needs no file at run time under
+      Next's bundling), consumed by `invoices/pdf.ts`. The email goes to Resend's HTTP API
+      with `fetch`: no mail package.
 - [ ] R8 — Public pages and account deletion (plan first: auth; takes Stage 8's privacy
       line). Work: privacy policy, terms, support and the deletion request on the apex;
       the deletion request in the app's profile; deactivate-and-pseudonymize as an
@@ -389,7 +450,7 @@ jobs, assignments, approvals, a closeout, close, export.
       repair; each of those appears as one adjustment, in one period, once — closing two
       further periods adds nothing; a correction that lowers hours is a negative adjustment;
       two admins closing at once leave one close
-- [ ] Payroll-hours CSV of a closed period's approved hours and adjustments (V1-D18): its own
+- [x] Payroll-hours CSV of a closed period's approved hours and adjustments (V1-D18): its own
       file, no pay calculation; columns decided in the plan. Test: the file's totals equal
       the reconciliation view's
 - [ ] Full data export
@@ -406,7 +467,7 @@ jobs, assignments, approvals, a closeout, close, export.
 Done when a worker tracks a real day across airplane-mode gaps on a physical phone and the
 office sees correct, deduplicated hours per job. May overlap Stage 6.
 
-- [ ] Client-safe contract: the sync, status and rejection-code schemas in
+- [x] Client-safe contract: the sync, status and rejection-code schemas in
       `packages/api/src/contract/`, importing only zod, exported as `@trader/api/contract`;
       database enums restated there and pinned to the schema by a test; lint forbids any
       other value import from `@trader/api` in `apps/mobile`
@@ -438,7 +499,7 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
       measured with the Spanish strings
 - [ ] Sign-in on the device: the identity provider's Expo SDK, token storage in the secure
       store, the token on every API call; capture never waits on a session
-- [ ] `expo-sqlite` store through Drizzle; outbox; sync cycle with coalesced triggers and
+- [x] `expo-sqlite` store through Drizzle; outbox; sync cycle with coalesced triggers and
       reclamation; `ended` before `started` on a job switch; a rejected record kept, shown as
       needing attention, never retried. Tests: a duplicate send and a dropped response leave
       one row on the server and one settled record on the phone; a record omitted from a
@@ -454,7 +515,7 @@ office sees correct, deduplicated hours per job. May overlap Stage 6.
 - [ ] Job list, own history and own assignments (V1-D11; DESIGN, Own history), status pills
       and sync banner; a wrong-clock warning when a push reports skew; a `time_in_future`
       refusal shown as needing attention with what to do
-- [ ] Sync states on the device (V1-D21): a fresh `status.get` before each cycle; under
+- [x] Sync states on the device (V1-D21): a fresh `status.get` before each cycle; under
       `read_only`, `paused`, `update_required` or the server's restricted answer the outbox,
       ids and records are kept and nothing is marked rejected or failed; sync resumes on
       `normal`. Tests: each state entered mid-backlog and left again delivers every record

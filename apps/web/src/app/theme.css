@@ -92,6 +92,12 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+/* Shift card names on the office schedule only; never crew text (DESIGN, Typography). */
+.compact {
+  font-size: 14px;
+  line-height: 17px;
+  font-weight: 600;
+}
 
 /* Text for a screen reader only: a column header whose cells explain themselves. */
 .visually-hidden {

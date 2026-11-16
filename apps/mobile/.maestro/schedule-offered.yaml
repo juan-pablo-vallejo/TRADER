@@ -1,0 +1,12 @@
+# Under the weekly schedule, a person signs in while they have a shift: it is offered.
+# suite.sh then changes the schedule behind the phone's back.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- assertVisible:
+    id: "offer-eligible"

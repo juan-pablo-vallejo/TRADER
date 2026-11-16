@@ -34,3 +34,12 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+/* The payroll-hours file: its button, then what the file holds. */
+.export {
+  margin-top: var(--space-3);
+}
+.export p {
+  margin: var(--space-2) 0 0;
+  color: var(--ink-secondary);
+  max-width: 40rem;
+}

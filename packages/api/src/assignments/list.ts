@@ -21,6 +21,7 @@
 // bounded. Plain reads under RLS. Consumed by routers/assignment.ts; `ownAssignments` is also
 // what the pull extension reads (TASKS, Stage 5).
 import {
+  companies,
   crewMembers,
   crews,
   jobAssignments,
@@ -28,13 +29,14 @@ import {
   jobStatus,
   users,
 } from "@trader/db/schema";
-import { and, asc, eq, gte, lte } from "drizzle-orm";
+import { and, asc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { mayStartOn } from "../sync/scope";
+import { resolveDay } from "./eligibility";
 import { toWallTime, wallTime, workDay } from "./write";
 
 // The longest range one read covers: any month.
@@ -205,6 +207,131 @@ export async function listAssignments(
             : ("crew" as const),
     };
   });
+}
+
+// The office's week: Monday to Sunday (ARCHITECTURE, 2026-11-15 shift rules), every shift
+// with the hours it is the one to clock in on, whether a clock-in has locked it, and the
+// overlap overrides among them. `eligible` is null for a day that does not resolve — none can
+// be written since the validated writers, so it marks rows older than them.
+const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
+
+export const weekInput = z.strictObject({
+  weekStart: workDay.refine(isMonday, { message: "A week starts on a Monday." }),
+});
+
+const shiftRow = listOutput.element.extend({
+  locked: z.boolean(),
+  // The Copy Last Week that made it, for that copy's undo; null for a shift made by hand.
+  copyId: z.uuid().nullable(),
+  eligible: z.array(z.strictObject({ start: wallTime, end: wallTime })).nullable(),
+});
+
+export const weekOutput = z.strictObject({
+  weekStart: z.iso.date(),
+  // The company's zone: the days and hours are its wall clock's, and stamps are read in it.
+  timezone: z.string(),
+  // The seven days, Monday first.
+  days: z.array(z.iso.date()).length(7),
+  shifts: z.array(shiftRow),
+  overrides: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      holderId: z.uuid(),
+      yieldingId: z.uuid(),
+      reason: z.string(),
+      // Who decided it as it stands — made it, or last changed it — and when.
+      by: z.string(),
+      at: z.date(),
+    }),
+  ),
+});
+
+const dayAfter = (day: string, n: number) =>
+  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+
+export async function weekAssignments(
+  tx: Tx,
+  input: z.infer<typeof weekInput>,
+): Promise<z.infer<typeof weekOutput>> {
+  const days = Array.from({ length: 7 }, (_, n) => dayAfter(input.weekStart, n));
+  const from = days[0]!;
+  const to = days[6]!;
+  const rows = await listAssignments(tx, { from, to });
+  const marks = await tx
+    .select({
+      id: jobAssignments.id,
+      lockedAt: jobAssignments.lockedAt,
+      copyId: jobAssignments.copyId,
+    })
+    .from(jobAssignments)
+    .where(and(gte(jobAssignments.workDate, from), lte(jobAssignments.workDate, to)));
+  const markOf = new Map(marks.map((m) => [m.id, m]));
+  // Each override with the newest entry of its history: the write that left it as it is.
+  const decided = await tx.execute<{
+    id: string;
+    holder_id: string;
+    yielding_id: string;
+    reason: string;
+    by: string;
+    at: Date;
+  }>(sql`
+    select o.id, o.holder_id, o.yielding_id, o.reason,
+      coalesce(h.name, c.name) as by, coalesce(h.created_at, o.updated_at) as at
+    from shift_overrides o
+    join job_assignments a on a.id = o.holder_id
+    join users c on c.id = o.created_by
+    left join lateral (
+      select u.name, e.created_at from shift_override_history e
+      join users u on u.id = e.actor_user_id
+      where e.override_id = o.id order by e.created_at desc, e.id desc limit 1
+    ) h on true
+    where a.work_date between ${from} and ${to}
+    order by o.id
+  `);
+  const overrides = decided.rows.map((o) => ({
+    id: o.id,
+    holderId: o.holder_id,
+    yieldingId: o.yielding_id,
+    reason: o.reason,
+    by: o.by,
+    at: new Date(o.at),
+  }));
+
+  // One person's day at a time.
+  const byDay = new Map<string, typeof rows>();
+  for (const row of rows) {
+    const key = `${row.worker.id} ${row.workDate}`;
+    byDay.set(key, [...(byDay.get(key) ?? []), row]);
+  }
+  const eligible = new Map<string, { start: string; end: string }[]>();
+  for (const dayRows of byDay.values()) {
+    const ids = new Set(dayRows.map((r) => r.id));
+    const resolved = resolveDay(
+      dayRows.map((r) => ({
+        id: r.id,
+        jobId: r.job.id,
+        start: r.expectedStart,
+        end: r.expectedEnd,
+      })),
+      overrides.filter((o) => ids.has(o.holderId)),
+    );
+    if (resolved.result !== "resolved") continue;
+    for (const s of resolved.shifts) eligible.set(s.shiftId, s.windows);
+  }
+  const [company] = await tx.select({ timezone: companies.timezone }).from(companies);
+  if (company === undefined) throw new Error("the caller's company is not visible");
+  return {
+    weekStart: input.weekStart,
+    timezone: company.timezone,
+    days,
+    shifts: rows.map((r) => ({
+      ...r,
+      locked: markOf.get(r.id)?.lockedAt != null,
+      copyId: markOf.get(r.id)?.copyId ?? null,
+      eligible: eligible.get(r.id) ?? null,
+    })),
+    overrides,
+  };
 }
 
 export async function ownAssignments(

@@ -1,0 +1,15 @@
+# The office removed the shift a moment ago and this phone, connected, has not pulled since:
+# it still offers the shift. The start is sent at once, the server refuses it, and the
+# phone shows the refusal and is off the clock.
+appId: app.jpteq.trader
+---
+- assertVisible:
+    id: "offer-eligible"
+- tapOn:
+    id: "clock-in"
+- extendedWaitUntil:
+    visible:
+      id: "entry-refused-0"
+    timeout: 60000
+- assertVisible:
+    id: "clock-off"

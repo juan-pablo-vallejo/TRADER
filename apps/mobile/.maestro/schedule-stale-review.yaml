@@ -1,0 +1,24 @@
+# The connection is back: the server stored the start for the office to review, and the
+# phone says so beside it. The person is still on the clock.
+appId: app.jpteq.trader
+---
+- tapOn:
+    id: "tab-settings"
+- tapOn:
+    id: "sync-now"
+- tapOn:
+    id: "tab-today"
+# A tap that lands while the tab bar redraws is lost: ask again if Today is not up.
+- runFlow:
+    when:
+      notVisible:
+        id: "clock-working|clock-paused|clock-off"
+    commands:
+      - tapOn:
+          id: "tab-today"
+- extendedWaitUntil:
+    visible:
+      id: "entry-review-0"
+    timeout: 60000
+- assertVisible:
+    id: "clock-working"

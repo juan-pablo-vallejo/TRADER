@@ -8,6 +8,7 @@ import {
   type IdentityDirectory,
   type VerifiedIdentity,
 } from "./identity";
+import { type Mailer, unconfiguredMailer } from "./mailer";
 import type { ErrorReporter } from "./report";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -22,6 +23,9 @@ export type Context = {
   db: Db;
   identity: VerifiedIdentity | null;
   directory: IdentityDirectory;
+  // The mail service as invoice.send sees it (mailer.ts). A host that names none gets one
+  // that sends nothing and says so.
+  mailer: Mailer;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -40,6 +44,7 @@ export function createContext(opts: {
   db: Db;
   identity: unknown;
   directory: IdentityDirectory;
+  mailer?: Mailer;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -49,6 +54,7 @@ export function createContext(opts: {
     db: opts.db,
     identity: parsed.success ? parsed.data : null,
     directory: opts.directory,
+    mailer: opts.mailer ?? unconfiguredMailer,
     reporter: opts.reporter,
     requestId: opts.requestId,
     ...(opts.waits !== undefined && { waits: opts.waits }),

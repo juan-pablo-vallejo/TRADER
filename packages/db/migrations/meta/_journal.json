@@ -281,6 +281,76 @@
       "when": 1794528233081,
       "tag": "0039_sign-in-address",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1794770598205,
+      "tag": "0040_schedule-shifts",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1794770633306,
+      "tag": "0041_schedule-guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1794772320887,
+      "tag": "0042_approval-reason-unscheduled",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1794776088622,
+      "tag": "0043_invoice-issue-frozen",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1794780970941,
+      "tag": "0044_invoice-payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1794780971463,
+      "tag": "0045_invoice-payment-guards",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1794781852367,
+      "tag": "0046_rate-limit-windows",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1794781852892,
+      "tag": "0047_rate-limit-grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1794794138868,
+      "tag": "0048_invoice-sends",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1794794139391,
+      "tag": "0049_invoice-send-guards",
+      "breakpoints": true
     }
   ]
 }

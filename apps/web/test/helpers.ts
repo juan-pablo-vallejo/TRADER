@@ -61,6 +61,14 @@ export async function query(
   return { status: response.status, headers: response.headers, body };
 }
 
+// The headers a JSON body arrives with. A real client's request states its length, and the
+// route refuses one that does not (server/edge.ts); a `Request` built in a test has no
+// `content-length` of its own.
+export const jsonBody = (body: string): Record<string, string> => ({
+  "content-type": "application/json",
+  "content-length": String(Buffer.byteLength(body)),
+});
+
 // One mutation through a handler, unbatched, as a client sends it: POST with the input in
 // superjson's envelope as the body.
 export async function mutate(
@@ -68,15 +76,16 @@ export async function mutate(
   path: string,
   opts: { input?: unknown; headers?: Record<string, string> } = {},
 ) {
+  const body = JSON.stringify({ json: opts.input ?? null });
   const response = await handler(
     new Request(`http://test${ENDPOINT}/${path}`, {
       method: "POST",
-      headers: { ...opts.headers, "content-type": "application/json" },
-      body: JSON.stringify({ json: opts.input ?? null }),
+      headers: { ...opts.headers, ...jsonBody(body) },
+      body,
     }),
   );
-  const body = (await response.json()) as TrpcResult;
-  return { status: response.status, headers: response.headers, body };
+  const answer = (await response.json()) as TrpcResult;
+  return { status: response.status, headers: response.headers, body: answer };
 }
 
 export type TrpcResult = {

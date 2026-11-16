@@ -3,7 +3,11 @@ packages:
   - "packages/*"
 # esbuild ships a platform-specific native binary and needs its postinstall to run.
 # vitest depends on it. Denying this breaks the test runner.
+# browser-tabs-lock and core-js arrive with @clerk/expo; their postinstall scripts only print
+# a message (read 2026-11-15), so they are denied by name and build nothing.
 allowBuilds:
+  browser-tabs-lock: false
+  core-js: false
   esbuild: true
 # RULES:68; explicit, so the quarantine is strict (pnpm.io/settings).
 minimumReleaseAge: 1440

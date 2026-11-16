@@ -22,7 +22,7 @@ import {
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
-import { disposableDb, invitation, type TrpcResult } from "./helpers";
+import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
 
 // A database of its own: a closed period can never be deleted, and it references its company
 // and its closer.
@@ -70,7 +70,7 @@ async function call(
       mutation
         ? {
             method: "POST",
-            headers: { ...headers, "content-type": "application/json" },
+            headers: { ...headers, ...jsonBody(wire) },
             body: wire,
           }
         : { headers },

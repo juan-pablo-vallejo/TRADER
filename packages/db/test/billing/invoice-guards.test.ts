@@ -140,6 +140,36 @@ describe("issue", () => {
     });
   });
 
+  it("refuses an issue that changes anything else, or that is also a void (0043)", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await billing(tx);
+      const { invoiceId } = await draftInvoice(tx, refs);
+      const now = new Date();
+      for (const also of [
+        { taxCents: 500 },
+        { currency: "CAD" },
+        { voidedAt: now, voidedByUserId: refs.adminId },
+      ]) {
+        const error = (await pgError(
+          tx.transaction((sp: Tx) =>
+            sp
+              .update(invoices)
+              .set({ issuedAt: now, issuedByUserId: refs.adminId, ...also })
+              .where(eq(invoices.id, invoiceId)),
+          ),
+        )) as { code?: string; constraint?: string };
+        expect([also, error.code, error.constraint]).toEqual([
+          also,
+          "23000",
+          "invoices_issue_alone",
+        ]);
+      }
+      // Nothing was issued, no number was spent, and the draft still issues on its own.
+      expect(await counter(tx, refs.companyId)).toMatchObject({ invoice: 1042 });
+      expect((await issue(tx, refs, invoiceId)).number).toBe(1042);
+    });
+  });
+
   it("refuses to issue an invoice with no lines", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await billing(tx);

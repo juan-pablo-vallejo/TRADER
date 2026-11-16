@@ -473,6 +473,157 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   the branch's alias and moves it to the new deployment (seen twice on `staging-preview`).
 - `staging-preview`'s alias is a host name, so it is written nowhere in this repository:
   read it from Vercel's connector (the deployment's aliases) each time it is needed.
+- `has_table_privilege` answers false for a table on which a role holds only column grants:
+  the grant matrix lists `companies` as SELECT alone, and its UPDATE columns have a test of
+  their own (0041). A new `companies` column the application must write needs its own grant.
+- A BEFORE trigger answers before a foreign key too: a trigger that looks its parents up must
+  look inside the row's own company, or it judges another tenant's row the key would refuse.
+- A shift locked by a clock-in can never be deleted, and its event never is: a test that
+  locks a shift runs in a rolled-back transaction or a `disposableDb()`.
+- `0040` was reordered by hand: drizzle-kit emitted the foreign keys to
+  `job_assignments (company_id, id)` before that unique existed. Read a generated file for
+  the order of a key and what references it.
+- `companies.schedule_enforced` is written by the database's owner alone; on staging that is
+  owner-role SQL with a key, through its wrapper. No procedure writes it.
+- Two calls started at once on one rolled-back transaction share its one connection, and the
+  second's rejection is unhandled before it is awaited: vitest reports "Unhandled Rejection"
+  with every test green. In a loop over calls, hold thunks and call each in turn; read a
+  run's "Unhandled" line, not only its counts.
+- A schedule write is judged over the person's whole day under that day's advisory lock
+  (`assignments/day.ts`): a test of two writers on one day needs real commits, and a writer
+  of `job_assignments` or `shift_overrides` that skips `lockPersonDays` breaks the rule
+  silently — the database holds none of it.
+- `assignment.create` answers per day inside `{ result: "planned", days }`; a refused day
+  is not a failed call. Count `created` among the days, never trust the outer result.
+- A push at a fixed past instant must be `capturedOffline: true` (the clock rule above), and
+  under schedule enforcement an offline start the schedule does not admit is stored, not
+  refused: a test of `not_scheduled` pushes online, timed now, with no shift that could
+  admit it at any minute. `judgeStart` itself takes any instant and is tested directly.
+- A push with no location stamp carries `location` among its reasons: a schedule test's
+  admitted offline start answers `["offline", "location"]`.
+- `waitForLockWait` matches the statement's text as sent, with `$1` for a parameter: a
+  pattern naming a parameter's value never matches, and the probe gives up after 5 s —
+  longer than a push's 2 s `lock_timeout`.
+- To turn enforcement on for a company in a test, update `companies.schedule_enforced` as
+  the owner; `trader_app` is refused (42501).
+- A mutation that turns no test red is a finding, not a nuisance: in S5 it showed two
+  checks another check already made (removed) and a fingerprint half nothing tested (a test
+  added). Read the "failed: 0" lines of a mutation run first.
+- A foreign key added to a table widens the TRUNCATE … CASCADE set of everything it
+  references: `job_assignments.locked_by_event_id` put `job_assignments` and
+  `shift_overrides` into `work_session_events`' set, and its TRUNCATE test deadlocked
+  (40P01) on CI only, where the suites interleave differently — green locally five times.
+  After adding a foreign key, widen every `lockExclusive` list that names the referenced
+  table. A TRUNCATE test writes its fixtures first and runs nothing but the TRUNCATE once
+  it holds its locks.
+- A modal `<dialog>` opened with `showModal()` in an effect must not be closed in that
+  effect's cleanup: React mounts effects twice in development, the cleanup's `close()`
+  fires `close`, and the drawer reports a dismissal nobody made. Unmounting is enough.
+- An eslint rule (`react-hooks/refs`) refuses reading `ref.current` during render: an id
+  minted once for a form is `useState(() => uuidv7())`, not `useRef(uuidv7())`.
+- The browser imports the schedule's pure rules from `@trader/api/eligibility`; a value
+  import from `@trader/api` itself in a client component would bundle the server.
+- A schedule check by hand writes shifts, overrides and history: do it in `trader_demo`
+  and `pnpm demo --reset` after. A locked shift there is made as the owner (an event row
+  and the two lock columns); nothing in the demo clocks in under enforcement.
+- A mutation run restores each file from a copy; after one, run `pnpm lint` and read
+  `git diff` of the files it touched before going on. Once a restore did not hold and a
+  check was gone from `invoices/draft.ts`; lint caught it only because the line's two
+  names went unused. Keep the copies in the scratchpad, never `/tmp`.
+- An issued invoice can never be deleted: check `/invoices` by hand only in `trader_demo`
+  and `pnpm demo --reset` after; tests issue only in a rolled-back transaction or a
+  `disposableDb()`.
+- A draft editor keyed on anything a save changes is remounted by its own save and drops
+  the note that said so: key it on the invoice's id alone.
+- Never ask `error instanceof DrizzleQueryError` to recognise a database refusal: the web
+  build holds a second copy of drizzle-orm, the check is false there, and a refusal the
+  database named becomes a 500 on the deployed route while every suite is green. Read it
+  with `pgFailure` (`core/pg-error.ts`). Found in the browser, never by a test: a refusal
+  that reaches the user must be seen through the route once.
+- `invoice_payments` is append-only and references `invoices` and `users`: a payment
+  recorded by hand can never be removed. Check payments only in `trader_demo`, then
+  `pnpm demo --reset`.
+- The API's rate limit counts by address only where the platform set one
+  (`x-vercel-forwarded-for`, then `x-forwarded-for`): `next dev` and the suites send none,
+  so nothing local is counted by address and no run can limit the next. A test of the
+  address limit sends the header itself, with an address no other run uses.
+- A test that calls the real route with an address commits a row to `rate_limit_windows`:
+  delete it by its key at the end.
+- A `Request` built in a test has no `content-length`, and the route answers 411 to a
+  state-changing request without one: build a test's POST with `jsonBody(body)`
+  (`apps/web/test/helpers.ts`), as `mutate` does. Run the whole `pnpm check` after a change
+  to the route, not the files it seemed to touch.
+- The development client opens on its launcher sheet, not the app: a flow opens
+  `exp+trader://expo-development-client/?url=<Metro's URL, encoded>` with
+  `&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1`
+  after it. Maestro's `openLink` cuts an Android link at the first `&`, so
+  `apps/mobile/.maestro/run.sh` starts the Android app with `adb` and the flow's own
+  launch step runs on iOS only. An `env` block in a flow file beats `-e` on the command
+  line: the flow has none.
+- Metro started with `CI=1` does not watch files and served a stale bundle after an edit:
+  start it plainly for a flow run, with `--clear` when in doubt.
+- `apps/mobile/ios` and `android` are prebuild output, 1.4 GB and 1.3 GB, ignored by git,
+  eslint and prettier each in its own file: a new generated folder there turns
+  `pnpm format:check` red (seen: 173 files) until `.prettierignore` names it.
+- The Android emulator reaches the Mac's `next dev` and Metro through
+  `adb reverse tcp:3000` and `tcp:8081` (`run.sh` sets both); the smoke flow needs
+  `next dev --webpack` on `trader_demo_e2e` with `TRADER_DEV_IDENTITY=enabled` and Metro
+  with `EXPO_PUBLIC_DEV_IDENTITY=enabled`. With the API stopped it is red at `job-list`.
+- `apps/mobile` pins `react` 19.3.0, the version React Native 0.88.1 asks for, while
+  `apps/web` has its own: the two never share a React, and a package both import must not
+  bring one.
+- `expo run:ios` and `run:android` prebuild only when `ios/` or `android/` is missing: after
+  a plugin is added to `app.json`, run `pnpm exec expo prebuild --no-install` first, or the
+  native project lacks it (seen: no location usage description, a fatal on the first read).
+- Maestro's `launchApp` grants every permission unless told, and on iOS the location takes
+  `inuse` or `never`, not `allow`. The simulator and `pm grant` both keep a permission
+  across a cleared app: `run.sh` sets it per run, and `parts/location.yaml` answers the
+  system's sheet by its words, the one selector that is not a `testID`.
+- The Android emulator has no network location and hands a GPS fix only to an app already
+  asking: balanced accuracy answers "Current location is unavailable" there, high accuracy
+  works, and `run.sh` keeps sending `geo fix` while a flow runs.
+- `lsof -ti :3000` lists clients of the port too: with `adb reverse` in place that is the
+  emulator, and killing the list shuts it down. Kill listeners: `-sTCP:LISTEN`.
+- A tap must read the outbox before the snapshot (`sync/provider.tsx`): a cycle writes its
+  snapshot and then prunes the records it shows, so the other order can see neither the
+  record nor its session and capture nothing (seen once in the suite: a switch not made).
+- `apps/mobile/.maestro/suite.sh` rebuilds `trader_demo_e2e`, starts and stops `next dev`
+  itself and needs port 3000 free and Metro running; about ten minutes a device, 135
+  seconds of it a wait for the reachability reading to go stale.
+- `apps/mobile` tests cannot load a module that imports `expo-sqlite` or any native module:
+  what is tested lives in files with nothing native beneath them (`sync/engine.ts`,
+  `sync/clock.ts`, `ids.ts`, `i18n/preferred.ts`), and the store has an in-memory twin in
+  `test/memory-store.ts`. The device store itself is covered by the flows alone.
+- The catalog test fails an entry that reads the same in both languages: a string with no
+  words of its own (`start–end`, `job: hours`) is written in the screen, not the catalog.
+- A `TMPDIR` as long as the session scratchpad breaks `tsx` (its socket path is too long,
+  `listen EINVAL`): never export it for a command that runs `pnpm demo`.
+- `@clerk/expo` brings `@clerk/react`, which requires `react-dom`; left to pnpm it resolves
+  the office's (19.3.1) beside the phone's React (19.3.0) and the bundle stops at
+  "Incompatible React versions". `apps/mobile` pins `react-dom` to its own React. It also
+  brings two install scripts that only print (`core-js`, `browser-tabs-lock`): unlisted,
+  `pnpm install --frozen-lockfile` exits 1, so `pnpm-workspace.yaml` denies both by name.
+- `expo install` rewrites `pnpm-workspace.yaml` with a placeholder for a package whose
+  install script it will not run: read the file's diff after any `expo install`.
+- The flow suite leaves `trader_demo_e2e` with schedule enforcement on: a single flow run
+  by hand after it sees no job list. Start from `suite.sh`, which rebuilds the database.
+- `pdf-lib` deflates a page's content and writes each string as hex: a test reads the page
+  by inflating every `stream` and decoding `<…> Tj` (`test/invoices/pdf.test.ts`, `drawn`).
+  It stamps a new document with the clock unless both dates are set: a same-bytes test
+  must move the clock between its two renders, or it passes inside one second.
+- A test value that equals another on the same page proves nothing about either: the PDF
+  test's line amount once equalled its subtotal, and swapping price for amount stayed green.
+- Invoice quantities are stored with three decimal places (`8.000`): whatever shows one to
+  a person trims it (`quantityText`).
+- `invoice_sends` is append-only and references `invoices`, `users` and `companies`: a
+  send made by hand, a failed one included, can never be removed. Check the invoice page's
+  email section only in `trader_demo`, then `pnpm demo --reset`. With no `RESEND_API_KEY`
+  in the shell it fails closed and still writes its row.
+- `invoice.send` holds the invoice's row while the mailer is asked (up to 8 s): a void or a
+  payment of that invoice waits behind it, and gives up at its own 5 s `lock_timeout`.
+- Outside production `mailerFor` sends only to `INVOICE_EMAIL_ALLOWLIST`: on staging a send
+  to anyone else answers `recipient_not_allowed` and is recorded as failed. That is the
+  rule working, not the service failing.
 
 ## Log
 
@@ -1424,3 +1575,512 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   three-shift fixture was not read, so the half-hour test uses times of its own; local
   branches of merged work and a stale `origin/a03-schedule-documents` ref remain.
 - **Next:** owner reviews the branch; then track line S2, the schedule schema, plan first.
+
+### 2026-11-15 — Release 0.1 mandate: one plan for the track, written into the documents
+
+- **Did:** an audit at `1c94b64` (`main`, `staging-preview` and staging's Preview all at
+  it, CI green; staging's database at 40 migrations with no `job_assignments` row; no
+  `apps/mobile`, no contract export, no invoice procedure, no payments table, no rate
+  limit; `eas whoami` not signed in; the schedule prototype's file not on this Mac). Then
+  branch `r01-mandate`, documents only: seven decision rows of 2026-11-15, PRD, DESIGN,
+  RULES, `CLAUDE.md`, and five new track lines in TASKS. No code. 1,341 tests.
+- **Decided:** by the owner on 2026-11-15 (the mandate and four answers), the rows of that
+  date: the track worked without per-line approval; the payroll CSV and a plain invoice
+  CSV in the release; an Overview and a Developer console with no new role; the
+  navigation's names; enforcement on staging by a session after its gates; the
+  `release-0.1` integration branch; one public staging host for the phones if the plan
+  allows it at no cost. Order agreed: S2, S3, S4, S5, S6 with A01, payroll CSV and D01,
+  R6 and R7, the edge line and the public host, R4, R5 with S7 and S8, staging
+  enforcement and the integrated run, the device builds. Not done: everything after the
+  documents. The owner's, each asked for at its step: `eas login` and the Expo project
+  (R4), Resend's domain, key and one test recipient (R7), Clerk's native API on the
+  development instance (R5), Apple sign-in and device registration for an ad hoc build.
+- **Release 0.1 state** (kept current in the newest entry; a new session resumes here):
+  branch `r01-mandate` from `1c94b64`; `release-0.1` not yet made; staging's Preview is
+  `staging-preview`'s at `1c94b64`; last green: `pnpm check` on this branch; blockers:
+  none; risks: the schedule screen is built from DESIGN's text, not the prototype; the
+  public host's exemption, Clerk SMS to a real number on the development instance,
+  Maestro offline on iOS and ad hoc provisioning are each unverified until their step.
+- **Next:** S2, the schedule schema, on a branch from this one.
+
+### 2026-11-15 — Schedule schema (S2)
+
+- **Did:** branch `s2-schedule-schema` from `r01-mandate`. `0040`, `0041`: the exact-shift
+  key, the punch lock and its guards, `copy_id`, `shift_overrides`,
+  `shift_override_history`, `companies.schedule_enforced` under a column grant.
+  `assignment.create` and `update` name the new key; three API tests restated under it.
+  Watched red, each by removing it in the local database and restoring it with the
+  migration's own statement: the exact-shift key, the mutation, insert and truncate
+  triggers, the lock pair check, the override trigger, pair key, both checks and its
+  foreign key, the history's three append-only triggers and two checks, both policies, the
+  switch's grant and the history's. Counted first: staging holds no `job_assignments` row.
+- **Decided:** in this line's plan, as the 2026-11-15 autonomous-execution row allows; the
+  as-built row of that date in ARCHITECTURE: a history table of its own; the switch as a
+  per-company column only the owner writes; the lock as two columns on the shift. Not
+  done, and S3's and S4's: overlap, override need and "what authorized a start" are judged
+  by no database guard; no writer takes an override or writes history yet; nothing sets a
+  lock. Worth knowing: until S3 an office create of one job twice in a day at other times
+  succeeds, overlapping or not.
+- **Release 0.1 state:** branches `r01-mandate` (#100) and `s2-schedule-schema`, stacked;
+  staging's database still at 40 migrations and its Preview at `1c94b64`; `release-0.1`
+  is made from this branch next, then staging is migrated to 42. Blockers: none.
+- **Next:** S3, the validated shift writers and the week read.
+
+### 2026-11-15 — Validated shift writers and the week read (S3)
+
+- **Did:** branch `s3-shift-writers` from `s2-schedule-schema`. `assignments/day.ts`: the
+  person-day lock, the day's load, `judgeDay`, the history writer, the issues on the wire.
+  `write.ts` rewritten: `assignment.create` with the browser's ids and a decision per
+  overlap, answered day by day; `update`, `remove`; `assignment.decide`; each override
+  write with its history entry. `assignment.week`, Monday to Sunday, with each shift's
+  eligible hours, its lock and the week's overrides. Gate lines for both new procedures.
+  The demo's plan step and the old `/assignments` screen moved to the new shapes. Watched
+  red, by mutation: the authorization check, the schedule check, the day lock, the history
+  write, both locked answers, the resend answer, the override dropped with its overlap,
+  the holder inside the pair, the Monday rule, the week's eligible hours, a taken override
+  id. 1,376 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. What is
+  compared for "what authorized that start": after any write to a day, a start at the
+  minute each locked shift's clock-in was recorded must still be admitted on that same
+  shift. An override is never removed alone, only with its overlap. No `audit_log` row:
+  the history table is the record. Not done: nothing sets a lock yet (S4), so the locked
+  and authorization answers are reached only by fixtures; no copy (S5); the old screen
+  shows a refusal in one sentence and offers no decision (S6 replaces it); the old screen
+  was not opened in a browser after the change. Worth knowing: `assignment.list` and
+  `mine` are unchanged; a day written before these writers that does not resolve reads
+  `eligible: null` in the week and refuses every further write to that day until its
+  overlap is decided.
+- **Release 0.1 state:** branches `r01-mandate` (#100), `s2-schedule-schema` (#101),
+  `s3-shift-writers`, stacked; `release-0.1` moves to this branch next and gets its first
+  Preview; staging's database then goes from 40 to 42 migrations. Blockers: none.
+- **Next:** S4, clock-in eligibility and the punch lock behind the switch.
+
+### 2026-11-15 — Clock-in eligibility and the punch lock, behind the switch (S4)
+
+- **Did:** branch `s4-clock-in-eligibility` from `s3-shift-writers`. `0042`: the approval
+  reason `unscheduled`. `sync/schedule.ts`: the switch read, `judgeStart` under the
+  person's day lock, the lock write. `sync.push`: with the switch on, a `started` judged
+  by the schedule after validation, the shift locked in the event's transaction, an
+  offline start the schedule does not admit stored pending with `unscheduled`, an online
+  one refused `not_scheduled`. `sync.pull` answers `scheduleEnforced`. Seen on real
+  commits: with the switch off a push completes while `job_assignments` is locked against
+  every reader; an edit committed first leaves the start stored for review; a start
+  committed first leaves the edit `locked`. Watched red, by mutation: fourteen rules
+  (enforcement, crew not required, the archived job, the admin's exemption, the stored
+  start, the admin worker, the lock, the lock once, the shift's job, the day lock, the
+  schedule unread when off, the pull flag, the reason, the refusal's name). 1,395 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  server tells the two cases apart by the record's own `captured_offline`: an offline
+  start the schedule does not admit is stored for review whatever changed, and one
+  captured with a connection is refused. The reason is `unscheduled`, the refusal
+  `not_scheduled`. An unscheduled offline start for an admin worker is refused, since an
+  admin's labor takes no approval to wait on. An archived job refuses a start under
+  enforcement as without it. Not done: `assignment.list`'s `mayClockIn` still answers by
+  crew under enforcement (S6 decides what the screen says); a lock stays when the admin
+  later rejects the start that set it; the new tag was not seen in a browser; the phone
+  (S7). The switch is off everywhere.
+- **Release 0.1 state:** branches `r01-mandate` (#100), `s2-schedule-schema` (#101),
+  `s3-shift-writers` (#102), `s4-clock-in-eligibility`, stacked, CI green on the first
+  three; `release-0.1` has a Preview on the staging project with its own authorized
+  origin, the browser suite green on it; **staging's database is still at 40 migrations**
+  — the owner-role wrapper has no migrate command, and a version that adds one waits for
+  the owner to install it; until then the schedule endpoints fail on that Preview.
+- **Next:** S5, Copy Last Week.
+
+### 2026-11-15 — Copy Last Week (S5)
+
+- **Did:** branch `s5-copy-last-week` from `s4-clock-in-eligibility`. `assignments/copy.ts`:
+  `assignment.copyPreview`, `copyConfirm`, `copyUndo`, with their gate lines; `day.ts`
+  gained a loader for a range of days and one lock order for several people's days. No
+  migration: the mark is S2's `copy_id`. Seen on real commits: two admins confirming one
+  preview leave one copy and the other is answered the plan as it now stands; one
+  confirmation sent twice at once is `copied` and `duplicate`; a statement made to fail on
+  its third row writes nothing. Watched red, by mutation: the fingerprint compared and
+  what it covers, the resend answer, the day locks, each reason for leaving a shift out,
+  the copy's mark, the day carried from one copied shift to the next, undo's lock refusal
+  and its history. 1,410 tests; the first full run was red once on the `updated_at`
+  flake of `materials/cost.test.ts` (Notes), green on the rerun. Then red on CI: a deadlock
+  in the db suite between S2's new foreign key and an older TRUNCATE test (Notes), which
+  S2's own CI runs had not hit; fixed here in a commit of its own.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  source is the week before the one named. A shift is left out for a deactivated person,
+  an archived job, the same shift already there, an overlap, or a clock-in's leave it
+  would take; of two that overlapped last week the earlier is copied. The fingerprint
+  covers what is created and what is left out with its reason. A copy is known by the
+  browser's id for it. Undo removes shifts edited since the copy too, with the history of
+  any decision made on them. Not done: no screen (S6); undo's `stale` answer has no test;
+  a copy of a week of about thirty people was not timed.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `s4-clock-in-eligibility`
+  (#103) and this one, stacked, CI green on the first four; `release-0.1` moves here
+  next. **Staging's database is still at 40 migrations** and waits for the owner to
+  install the wrapper's migrate command; the journal is now 43.
+- **Next:** S6, the Weekly Schedule screen, with A01's navigation.
+
+### 2026-11-15 — Weekly Schedule screen (S6): built and checked in the browser; not ticked
+
+- **Did:** branch `s6-weekly-schedule-screen` from `s5-copy-last-week`. `/schedule` under
+  the name "Schedule", `/assignments` redirecting to it and the old screen removed:
+  `schedule-view.ts` (pure, 12 tests), the grid, the drawer, the shift forms with overlap
+  decisions and the day shown before a save, the Copy Last Week dialog with undo.
+  `assignment.week` also answers the company's zone, each shift's copy, and who decided
+  each override and when; `@trader/api/eligibility` exported for the browser. Checked in
+  the browser on `trader_demo` at 390, 768, 1024 and 1280: a shift added from a cell; an
+  overlap blocked with its hours, overridden with a reason, the day previewed, saved, and
+  its card reading "Clock in 15:30–17:00"; the decision read back with who and when, then
+  turned round; a third shift whose two choices close a circle refused in words with the
+  save disabled; Escape closing the drawer and focus returning to the button that opened
+  it; a locked shift read-only with its link to Labor; next week copied (20 created, 2
+  left out with their reasons), copied again (nothing to create), undone (20 removed);
+  by jobsite with its people counted; one day at a time and one employee when narrow; no
+  sideways scroll with a drawer open or closed; no control under 48 pt narrow or 44 wide;
+  the day headings held at the top on scroll when wide; no console error. 1,422 tests.
+- **Decided:** in this line's plan, the DESIGN amendment (Weekly Schedule, as built): the
+  drawer is a native modal dialog; narrow is one day from seven day buttons, with an
+  employee filter at every width. **Not ticked**, and why: its done-criterion asks for one
+  pass with a screen reader and about 24 people, and neither was done — the demo has nine
+  people and no screen reader was run. Also not done: the prototype's fourth revision was
+  not at hand, so the screen follows DESIGN's rows and is not reconciled with it; no
+  browser test in CI; no Spanish office strings; `mayClockIn` and `blockedBy` are not
+  shown (they answer by crew, which enforcement retires); a shift moves only within the
+  week on screen; the write refusals `stale` and `authorization` were not seen in the
+  browser, only in tests.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `s5-copy-last-week` (#104) and
+  this one, stacked, CI green on the first five; `release-0.1` moves here next.
+  **Staging's database is still at 40 migrations** — the journal is 43 — and waits for
+  the owner to install the wrapper's migrate command; the schedule screen will fail on
+  that Preview until then.
+- **Next:** A01, the navigation's groups and the Overview; then the payroll CSV and D01.
+
+### 2026-11-15 — Overview and the office navigation (A01)
+
+- **Did:** branch `a01-overview-navigation` from `s6-weekly-schedule-screen`.
+  `overview.get`, admin-gated, with its gate line: approvals waiting, sessions with no
+  clock-out, refused entries inside their 30 days, shifts in the company's week.
+  `/overview`, which `/` now opens; the navigation regrouped to Overview, Jobsites,
+  Schedule, Labor, Employees, routes unchanged. Checked in the browser on `trader_demo`
+  at 1280 and 390: `/` opening the Overview with 13 to approve and 20 shifts, the demo's
+  own figures, each line a link 72 pt or taller, the groups as named, no sideways scroll.
+  Watched red, by mutation: pending only, the retention, both ends of the week, the
+  Monday, the open-session figure. 1,424 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. One
+  read, not four: the queue is paged and the refused-entry read asks for a person and a
+  day, so neither can be counted from the browser. "Sessions with no clock-out" is the
+  labor derivation's own figure, which leaves a session still waiting for approval among
+  the approvals. Not done: Invoices and Developer are not in the navigation until their
+  screens exist; invoices still owed is not counted until R6; not checked at 768 or 1024.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `s6-weekly-schedule-screen`
+  (#105) and this one, stacked, CI green on the first six; **staging's database is still
+  at 40 migrations** of 43 and waits for the owner to install the wrapper's migrate
+  command. S6 is built and not ticked: a screen-reader pass and about 24 people are owed.
+- **Next:** the payroll-hours CSV, then D01.
+
+### 2026-11-15 — Payroll-hours CSV
+
+- **Did:** branch `payroll-hours-csv` from `a01-overview-navigation`. `payPeriod.export`,
+  admin-gated, with its gate line; `core/csv.ts`; the button in a closed period's details.
+  The file is `payPeriod.read`'s figures for a closed period: a header, one row for each
+  employee, job and work date of the period's own hours, then one for each adjustment with
+  its original date and its sign; ids beside the names. Tests: the file inside the
+  existing byte-identity test, so a later approval, correction, repair and rate leave it
+  the same bytes; its totals equal the read's for two closed periods; an open period is
+  `not_closed`; the text itself (quoting, a name that looks like a formula, signed hours).
+  Seen in the browser on `trader_demo`: the closed week's file saved, 34 rows and 272.00
+  hours, the screen's own figures; the open week offers no file. Watched red, by
+  mutation: the open period's refusal, the adjustment rows, the formula guard, the
+  quoting. 1,430 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: the
+  columns; hours as decimals with two places; a typed cell that begins like a formula is
+  led by an apostrophe; no file for an open period; the button in the period's details
+  until the export screen exists (DESIGN, Export panel). Not done: no pay, rate or
+  overtime column, by rule; not opened in a spreadsheet or a payroll product; checked at
+  1280 only.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `a01-overview-navigation`
+  (#106) and this one, stacked, CI green on the first seven; **staging's database is
+  still at 40 migrations** of 43, waiting for the owner to install the wrapper's migrate
+  command. S6 built and not ticked (screen reader, about 24 people).
+- **Next:** D01, the developer console; then R6, invoices.
+
+### 2026-11-15 — Developer console (D01)
+
+- **Did:** branch `d01-developer-console` from `payroll-hours-csv`. `developer.get`,
+  admin-gated, with its gate line; `configuredStatus` beside `serviceStatus`;
+  `/developer`, last in the navigation: commit, environment, the readiness check's
+  status, field sync, minimum builds, protocol, schedule enforcement, the database role,
+  refused entries in 30 days and in 24 hours, and the twenty newest lines. Seen in the
+  browser on `trader_demo` at 1280 and 390: the eleven facts, readiness Ready, the role
+  `trader_app`, no control on the page, no sideways scroll. 1,433 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  commit and environment are read by the server page from the platform's own variables,
+  which are not secrets; readiness is the public check's status and nothing of its body;
+  no migration count, since the application role cannot read the migrator's journal. Not
+  done: no write of any kind, by rule — the sync mode, the minimum builds and the
+  enforcement switch are still changed where they live; nothing with a refused entry was
+  seen in the browser (the demo has none); not checked at 768 or 1024.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `payroll-hours-csv` (#107) and
+  this one, stacked, CI green on all eight; **staging's database is still at 40
+  migrations** of 43, waiting for the owner to install the wrapper's migrate command.
+  S6 built and not ticked (screen reader, about 24 people). Done of the plan: steps 0 to 6. Open: R6 and R7 (invoices, payments, PDF, email, invoice CSV), the edge line and the
+  public staging host, R4, R5 with S7 and S8, enforcement on staging, the device builds.
+- **Next:** R6, invoices: drafting and issue.
+
+### 2026-11-15 — Invoices: draft, issue, void (R6)
+
+- **Did:** branch `r6-invoices` from `d01-developer-console`. `0043`: the issue transition
+  changes nothing but the issue and is never also a void. `invoices/`: `invoice.create`,
+  `save`, `remove`, `suggest`, `issue`, `void`, `list`, `read`, admin-gated, with their
+  gate lines. `/invoices` and `/invoices/<id>`, Invoices in the navigation. Seen on real
+  commits: fifty drafts issued at once take 1042 to 1091, none twice and none skipped;
+  one invoice issued five times at once takes one number. Seen in the browser on
+  `trader_demo` at 1280: a draft started for a jobsite, a labor day drawn as a line with
+  its hours and no price, the save refused until a price is typed, amounts and totals as
+  typed, saved, issued as Invoice 1 after its question, no field left, voided, the list;
+  no sideways scroll at 390 or 768. Watched red: the 0043 guard, by restoring 0010's
+  function; eleven rules by mutation. 1,454 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. A
+  draft's lines are replaced whole by each save; a line's amount is quantity times price,
+  half-up to the cent, in integers, as the database's check computes it; a suggestion is
+  words and a quantity and never a price; labor is offered one line a work date, every
+  worker's approved hours together; an issue sent again answers its number; a void gives
+  no number back; no audit row. Not done: payments, the PDF, email and the CSV (R7);
+  credit memos (Stage 7); the currency is USD on the screen, though the API takes any;
+  no browser test in CI; no Spanish office strings; the screens were not checked at 1024
+  and their controls were not measured.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `d01-developer-console` (#108)
+  and this one, stacked; **staging's database is still at 40 migrations** of 44, waiting
+  for the owner to install the wrapper's migrate command. S6 built and not ticked. Done
+  of the plan: steps 0 to 6 and R6. Open: R7, the edge line and the public staging host,
+  R4, R5 with S7 and S8, enforcement on staging, the device builds.
+- **Next:** R7, payments, the PDF, email and the invoice CSV (needs the owner's Resend
+  domain and key, and one approved test recipient).
+
+### 2026-11-15 — Payments, what is owed and the invoice CSV (R7, first half)
+
+- **Did:** branch `r7-payments-csv` from `r6-invoices`. `0044`, `0045`: `invoice_payments`,
+  append-only, with its guards. `invoice.recordPayment`, `reversePayment`, `exportCsv`
+  with their gate lines; the reads answer `paidCents`, `owedCents` and the payments; a
+  void is refused while a payment stands; `overview.get` counts invoices still owed.
+  `core/pg-error.ts`. The invoice screens: payments, owed, the CSV button. Seen in the
+  browser on `trader_demo` at 1280: an overpayment refused in words, a part payment, a
+  void refused while it stands, paid in full with the form gone, a reversal leaving both
+  rows and the amount owed again, the list's Owed column, the file saved, the Overview's
+  count; no sideways scroll at 390. Watched red: every 0045 guard in the database; ten
+  rules by mutation. 1,472 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. No
+  overpayment: the payments that stand never total more than the invoice. A payment is
+  never edited or removed; a second row reverses it and neither counts. An invoice with a
+  standing payment is not voided. The CSV's columns. **Found and fixed, beyond this
+  line:** a database refusal recognised by `instanceof` was a 500 through the web route
+  (Notes) — the overpayment here, the missing number series of R6 (#109), and the
+  first-sign-in bind conflict in `resolve-user.ts`, which is identity code and was changed
+  only in how it reads the same error. Not done: the PDF and its email, which need the
+  owner's Resend domain, key and one approved test recipient; credit memos; a payment's
+  date is not checked against the issue date; not checked at 768 or 1024.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r6-invoices` (#109) and this
+  one, stacked; **staging's database is still at 40 migrations** of 46, waiting for the
+  owner to install the wrapper's migrate command. S6 built and not ticked; R7 half built.
+  Open after this: the PDF and email, the edge line and the public staging host, R4, R5
+  with S7 and S8, enforcement on staging, the device builds.
+- **Next:** the edge line (rate limits, body limit, `Origin` check), which needs nothing
+  from the owner; then R4.
+
+### 2026-11-15 — Edge protection for a public host
+
+- **Did:** branch `edge-protection` from `r7-payments-csv`. `0046`, `0047`:
+  `rate_limit_windows`, a hash and a count, not tenant data. `core/rate-limit.ts`: a
+  fixed window counted in one statement on the database's clock. `server/edge.ts` in
+  front of the route: a body over one mebibyte 413, of unstated length 411; a
+  state-changing request from another site's `Origin` 403; 600 requests a minute an
+  address, 300 a signed-in identity, each 429 with `Retry-After`; a limiter that fails
+  refuses nobody and is reported. Read on Vercel's pages that day: `x-forwarded-for` is
+  the client's address and is overwritten by the platform; Deployment Protection
+  Exceptions and WAF rate limiting are on every plan, the first a dashboard action with a
+  typed confirmation. Seen on `next dev`: a foreign-origin POST 403, an oversized one 413,
+  a shift added and removed from the browser. Watched red, by mutation: twelve rules.
+  The first full check was red on 29 web tests whose hand-built POSTs stated no length
+  (Notes); 1,486 tests after.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: the
+  limit lives in the application and Postgres, not in the platform's firewall, so it is in
+  the repository and tested; the key is hashed; nothing is counted by address where the
+  platform set none; the limiter fails open. Not done: the limits were not seen on a
+  deployment (the public host is next, and needs the owner); no limit on the pages
+  themselves, only on the API route; the per-region caveat does not apply since one
+  database counts; session-cookie attributes are Clerk's and were not examined.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r7-payments-csv` (#110) and
+  this one, stacked, CI green on the first eleven; **staging's database is still at 40
+  migrations** of 48. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); add the `release-0.1` alias under
+  Deployment Protection Exceptions (the phones); Resend's domain, key and one test
+  recipient (the PDF's email); `eas login` (device builds). S6 built and not ticked; R7
+  half built.
+- **Next:** R4, the field app skeleton.
+
+### 2026-11-15 — Field app skeleton (R4)
+
+- **Did:** branch `r4-field-app-skeleton` from `edge-protection`. `@trader/api/contract`
+  (zod alone, pinned to the schema's enums and held pure by tests), the development
+  headers' names moved into it, and a lint rule on `apps/mobile`. The Expo app
+  `app.jpteq.trader`: SDK 58 with a development client, the theme, the brand icons, two
+  typed catalogs, the development sign-in, Today with the caller's jobs from `sync.pull`,
+  Settings with the name and the language. Built and run as a development build on
+  iPhone 17 Pro (iOS 26.2) and on `Medium_Phone_API_36.1`: the smoke flow signs in as the
+  demo foreman, reads the job list, opens Settings, switches to Spanish and returns, every
+  step by `testID`, green on both; red at `job-list` with the API stopped. `pnpm check`,
+  `pnpm build` and a frozen install green with the app in the workspace. 1,496 tests.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. The
+  TASKS line now names the packages as installed: `expo-splash-screen` and `vitest` added,
+  gesture-handler, reanimated and a `zod` of the app's own not taken. Not done: no
+  `eas.json` and no release or preview build, so the development sign-in being off outside
+  a development bundle is `__DEV__`'s word, unseen; Clerk, the device store, the outbox
+  and the clock (R5); the language choice does not outlast the app's run; layouts were
+  not measured with the Spanish strings; CI does not run the flow, only the app's
+  typecheck, lint and five tests. Watched red: the flow with the API stopped; the lint
+  rule on a value import of `@trader/api` and on `@trader/db`. Stage 5's Expo, development sign-in and i18n lines are left unticked for those
+  reasons; its contract line is ticked.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `edge-protection` (#111) and this
+  one, stacked, CI green on all twelve before it; `release-0.1` moves here next.
+  **Staging's database is still at 40 migrations** of 48: nothing since S2 has been seen
+  on staging. Owner actions open, each blocking only its own step: install the wrapper's
+  migrate command; the `release-0.1` alias under Deployment Protection Exceptions;
+  Resend's domain, key and one test recipient; Clerk's native API on the development
+  instance (R5); `eas login` (device builds). S6 built and not ticked; R7 half built.
+- **Next:** R5, the field app's sign-in, store, outbox and clock, with S7 and S8.
+
+### 2026-11-15 — The phone's clock, outbox and schedule (R5 without its sign-in, S7, S8's screen)
+
+- **Did:** branch `r5-field-time-tracking` from `r4-field-app-skeleton`. `sync.pull` answers
+  the caller's own shifts and eligible hours. In `apps/mobile`: the device store (Drizzle
+  on expo-sqlite), the sync cycle, the clock's rules, a UUIDv7 minter, the location stamp;
+  Today (clock in, break, switch, clock out; under the schedule the eligible shift alone
+  or "ask the office"), Schedule (own shifts, how old the pull is, own hours), Settings;
+  the session and the language kept across launches; English and Spanish. Thirty-eight
+  unit tests of the cycle, the clock and the minter with a stand-in server that loses a
+  response, stops part-way, refuses a record and changes state. The flow suite
+  (`.maestro/suite.sh`), green on iPhone 17 Pro (iOS 26.2) and on `Medium_Phone_API_36.1`,
+  each write read back from the server's tables: six events of a clock-in, switch, break
+  and clock-out, once each and in order, with a location; two captured with the API
+  stopped, the app closed and reopened between them, delivered once and not again on a
+  second send; a refused location permission sending none; under enforcement a start
+  locking its shift, a second person offered nothing and shown nobody's shifts, a start
+  refused `not_scheduled` with its line for the office, and a start captured after 135
+  seconds offline on a shift the office had removed, stored pending as `unscheduled` and
+  said so on the phone. Watched red: four mutations of the pull, twenty-five of the
+  cycle, the clock and the minter.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: two
+  minutes for the reachability reading and for a location in hand; 60 seconds between
+  cycles; high accuracy; breaks kept in; the shift window of the pull. Found by the
+  flows, not by a test: a tap that read the snapshot before the outbox could capture
+  nothing mid-cycle (Notes); balanced accuracy gives no location on the emulator. Not
+  done: **R5 is not ticked** — no SMS-code sign-in on the phone (`@clerk/expo` not
+  installed; the owner's native-API switch and publishable key first), no own profile,
+  no physical phone; **S8 is not ticked** for the same phones. Also not done: no
+  biometric attestation; the device store's own SQL has no unit test, only the flows; no
+  flow for `paused`, `read_only`, `update_required`, a wrong clock or a foreman's crew;
+  hours worked offline are not added to "worked today" until they are pulled back; the
+  iOS permission sentence is English only; layouts were not measured in Spanish; no
+  screen-reader pass; pull's job coordinates, customer name and reasons (Stage 5, pull
+  extension) are not built; `eas.json` and the preview builds.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r4-field-app-skeleton` (#112)
+  and this one, stacked, CI green on all thirteen before it; `release-0.1` moves here
+  next. **Staging's database is still at 40 migrations** of 48: nothing since S2 has
+  been seen on staging. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key as an EAS variable (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key and one test recipient (the invoice email). S6 built and
+  not ticked; R7 half built; R5 and S8 as above.
+- **Next:** the phone's SMS-code sign-in behind the session seam, as far as it can be
+  built before the owner's two Clerk items; then `eas.json` and the preview profile.
+
+### 2026-11-15 — The phone's SMS-code sign-in: written, typechecked, never run against Clerk
+
+- **Did:** branch `r5-phone-sign-in` from `r5-field-time-tracking`. `@clerk/expo` 4.16.1
+  and `react-dom` in `apps/mobile`; the provider around the app when a build carries its
+  key; a phone sign-in screen (number, code, then `me.get`); the provider's token as a
+  bearer header on every call; sign-out of both; the number parser with tests; both
+  catalogs. Seen: typecheck against Clerk's own types; 40 unit tests; with the package in
+  the bundle and no key set, the whole flow suite green on the iOS simulator through the
+  development identity, and on the Android emulator a sign-in and a first sync.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. Not
+  done, and the reason R5 stays unticked: **nobody has signed in through Clerk on a
+  phone.** Unseen: Clerk's hooks behaving as its page says; a code arriving; the server's
+  adapter accepting a phone's bearer token (its `CLERK_AUTHORIZED_PARTIES` check and the
+  four session claims on a native session); the session surviving a restart with no
+  network; a sign-out offline. No flow can cover it until a development build carries the
+  key. The Android suite was not rerun whole on this branch.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r5-field-time-tracking` (#113)
+  and this one, stacked; `release-0.1` moves here next. **Staging's database is still at
+  40 migrations** of 48. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key given to the build (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key and one test recipient (the invoice email). S6 built and
+  not ticked; R7 half built; R5 and S8 open on the sign-in and the physical phones.
+- **Next:** with the owner's Clerk items, the sign-in end to end on both devices; with
+  `eas login`, `eas.json` and the preview builds; with the wrapper, staging migrated and
+  the browser suite. Without any of them: the invoice PDF behind a mailer seam.
+
+### 2026-11-15 — Invoice PDF on demand (R7, the PDF)
+
+- **Did:** branch `r7-invoice-pdf-email` from `r5-phone-sign-in`. `pdf-lib` 1.17.1 in
+  `packages/api`; `invoices/pdf.ts` (a pure renderer and `invoice.pdf`, admin-gated, with
+  its gate line); "Save as PDF" on an issued or void invoice's page. Seen in the browser
+  on `trader_demo` at 1280 and 390: an invoice issued, the button pressed, `invoice-1.pdf`
+  saved, the note shown, no sideways scroll, the button 48 pt; the file opened as an image
+  and read. Found by looking, not by a test: a long description ran into the quantity,
+  and quantities showed `8.000`; both fixed and pinned. Watched red: eleven mutations of
+  the renderer, two of them only after their tests were made stronger (Notes). `pnpm demo
+--reset` after the check.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: made
+  on demand and never stored; the invoice's own stored figures; dated with the issue;
+  the customer's details as they stand now; `?` for what the font cannot draw. Not done:
+  **the email and `invoice_sends`**, so R7 stays unticked — the Resend adapter needs the
+  owner's domain, key and one approved recipient to be seen sending, and the table is a
+  migration of its own; no logo on the page; English only; not opened in Acrobat or a
+  printer's preview; not checked at 768 or 1024; payments are not listed on the page,
+  only their total.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r5-phone-sign-in` (#114) and
+  this one, stacked; `release-0.1` moves here next. **Staging's database is still at 40
+  migrations** of 48. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key given to the build (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key and one test recipient (the invoice email). S6 built and
+  not ticked; R7 open on the email; R5 and S8 open on the sign-in and the physical phones.
+- **Next:** the invoice email behind a mailer seam with its recorded sends and the
+  staging allow-list; then whichever owner item arrives first.
+
+### 2026-11-15 — Invoice email and recorded sends (R7): built, no message seen arriving
+
+- **Did:** branch `r7-invoice-email` from `r7-invoice-pdf-email`. `0048`, `0049`:
+  `invoice_sends` with its guards. `core/mailer.ts`, the mailer in the context;
+  `invoice.send` with its gate line; `invoice.read` answers the sends and the customer's
+  address; the Resend adapter, its three variables and the deployment check in `apps/web`;
+  the email section on the invoice page. Seen in the browser on `trader_demo` at 1280 and
+  390 with no mail service set: no section on a draft, the customer's address offered, a
+  non-address stopped by the browser, a send failing closed in words and listed as not
+  sent, a second attempt listed too, no form on a void invoice with its history kept, no
+  sideways scroll, the button 48 pt wide and 56 narrow. Watched red: all thirteen guards of
+  the table, each removed in the local database and restored; fifteen mutations of
+  `invoice.send` and the seam; eleven of the adapter and its environment rules.
+  `pnpm demo --reset` after the check.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: a
+  fourth seam; no mail package; the allow-list as the whole of who may be sent to outside
+  production; the row lock held across the send; failures as codes. Not done, and why R7
+  stays unticked: **no message has left this system.** Resend's request is written from
+  its page and tested against a stand-in; unseen are the key accepted, the sender's
+  domain verified, the PDF opening from a real inbox, and the idempotency key honoured.
+  Also not done: the email's words are English and plain; no reply-to; no bounce or
+  delivery state after acceptance; a `duplicate` of a failed send says only that it
+  failed; staging has neither the migration nor the variables.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r7-invoice-pdf-email` (#115)
+  and this one, stacked; `release-0.1` moves here next. **Staging's database is still at
+  40 migrations** of 50. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key given to the build (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key, sender and one approved recipient as staging variables
+  (one send seen). S6 built and not ticked; R7 open on that one send; R5 and S8 open on
+  the sign-in and the physical phones.
+- **Next:** every remaining line of the track now starts with an owner action above.
+  Without one: S6's screen-reader pass cannot be done by a session; the 24-person check of
+  the schedule can, on a larger demo.

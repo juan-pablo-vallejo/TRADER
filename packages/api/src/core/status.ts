@@ -3,12 +3,18 @@
 // dev-identity.ts; read per request, never at module load (RULES). Advisory: push and pull do
 // not read it. No state stops capture or touches a record (PRD, Sync and offline). Consumed by
 // routers/status.ts.
-import { z } from "zod";
+import type { z } from "zod";
 
-// In order of restriction. `read_only`: pull only. `paused`: no sync. `update_required`: this
-// build holds sync until it is updated; its outbox is pushed by the updated build.
-export const STATES = ["normal", "read_only", "paused", "update_required"] as const;
-export type ServiceState = (typeof STATES)[number];
+import {
+  PLATFORMS,
+  type ServiceState,
+  STATES,
+  statusInput,
+  statusOutput,
+} from "../contract/status";
+
+export { PLATFORMS, type ServiceState, STATES, statusInput, statusOutput };
+
 const RANK: Record<ServiceState, number> = {
   normal: 0,
   read_only: 1,
@@ -16,7 +22,6 @@ const RANK: Record<ServiceState, number> = {
   update_required: 3,
 };
 
-export const PLATFORMS = ["ios", "android"] as const;
 type Platform = (typeof PLATFORMS)[number];
 
 export const CONFIG_VARS = [
@@ -33,16 +38,6 @@ const MIN_BUILD: Record<Platform, ConfigVar> = {
 // Not strict: a later build that sends one more field must still be answered. `build` is the
 // native build number, a positive integer increasing within its platform; `z.int()` is bounded
 // to safe integers.
-export const statusInput = z.object({
-  protocolVersion: z.int().min(1),
-  platform: z.enum(PLATFORMS),
-  build: z.int().min(1),
-});
-export const statusOutput = z.strictObject({
-  version: z.literal(1),
-  state: z.enum(STATES),
-});
-
 export type StatusClient = z.infer<typeof statusInput>;
 export type ProtocolRange = { min: number; max: number };
 
@@ -64,6 +59,22 @@ function minimumBuild(value: string | undefined): number | null {
 // The kill-switch variables that do not parse, by name, in CONFIG_VARS order. Also read at
 // start by the deployment's environment check (apps/web, deploy-env.ts), which refuses to
 // start on any; a running server that meets one answers `paused` below.
+// What is configured, read as `serviceStatus` reads it, for the office's own look at it
+// (developer/get.ts): the mode — null when the variable holds something else, which the
+// service treats as paused — and each platform's minimum build, null when unreadable.
+export function configuredStatus(env: Record<string, string | undefined>): {
+  mode: ServiceState | null;
+  minimumBuilds: Record<Platform, number | null>;
+} {
+  return {
+    mode: mode(env.TRADER_SYNC_MODE),
+    minimumBuilds: {
+      ios: minimumBuild(env[MIN_BUILD.ios]),
+      android: minimumBuild(env[MIN_BUILD.android]),
+    },
+  };
+}
+
 export function invalidConfigVars(env: Record<string, string | undefined>): ConfigVar[] {
   return [
     ...(mode(env.TRADER_SYNC_MODE) === null ? (["TRADER_SYNC_MODE"] as const) : []),

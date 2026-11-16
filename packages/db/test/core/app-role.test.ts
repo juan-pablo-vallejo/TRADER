@@ -13,7 +13,8 @@ const PRIVILEGES: Privilege[] = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCA
 // What 0013 grants, table by table, and 0017 for the closeout tables. Every table in public
 // must appear here: a table added without stated grants fails the matrix test.
 const GRANTS: Record<string, Privilege[]> = {
-  companies: ["SELECT", "UPDATE"],
+  // UPDATE is held on three columns only, never on the table (0041): its own test, below.
+  companies: ["SELECT"],
   invoice_counters: ["SELECT", "UPDATE"],
   users: ["SELECT", "INSERT", "UPDATE"],
   crews: ["SELECT", "INSERT", "UPDATE"],
@@ -40,6 +41,12 @@ const GRANTS: Record<string, Privilege[]> = {
   sync_diagnostics: ["SELECT", "INSERT", "DELETE"],
   // A plan, not a fact (0031): the office edits and removes it.
   job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+  invoice_payments: ["SELECT", "INSERT"],
+  invoice_sends: ["SELECT", "INSERT"],
+  // Not tenant data: a hash and a count (0047).
+  rate_limit_windows: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+  shift_overrides: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+  shift_override_history: ["SELECT", "INSERT"],
   // What a close exported (0035): added by the closing transaction, never edited or removed.
   pay_period_lines: ["SELECT", "INSERT"],
 };
@@ -93,6 +100,41 @@ describe("trader_app", () => {
           expect(held, `${tablename} ${privilege}`).toBe(granted!.includes(privilege));
         }
       }
+    });
+  });
+
+  it("may update a company's name and zone and never its enforcement switch (42501)", async () => {
+    await rolledBack(db, async (tx) => {
+      const { rows } = await tx.execute<{ column_name: string }>(sql`
+        select column_name from information_schema.column_privileges
+        where grantee = 'trader_app' and table_schema = 'public'
+          and table_name = 'companies' and privilege_type = 'UPDATE'
+        order by column_name
+      `);
+      expect(rows.map((r) => r.column_name)).toEqual(["name", "timezone", "updated_at"]);
+      const company = one(
+        (
+          await tx.execute<{ id: string }>(sql`
+            insert into companies (name, timezone) values ('Switch Co', 'America/New_York')
+            returning id
+          `)
+        ).rows,
+      ).id;
+      await asApp(tx, company);
+      const renamed = await tx.execute(sql`update companies set name = 'Switch Co 2'`);
+      expect(renamed.rowCount).toBe(1);
+      expect(
+        await sqlstate(
+          tx.transaction((sp: Tx) =>
+            sp.execute(sql`update companies set schedule_enforced = true`),
+          ),
+        ),
+      ).toBe("42501");
+      await tx.execute(sql`reset role`);
+      const after = await tx.execute<{ schedule_enforced: boolean }>(
+        sql`select schedule_enforced from companies where id = ${company}`,
+      );
+      expect(after.rows).toEqual([{ schedule_enforced: false }]);
     });
   });
 

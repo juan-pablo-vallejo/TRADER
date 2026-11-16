@@ -41,6 +41,7 @@ import {
 } from "../src/core/report";
 import type { AppUser } from "../src/core/resolve-user";
 import type { ApprovalReason } from "../src/sync/reasons";
+import type { Mailer } from "../src/core/mailer";
 import { appRouter } from "../src/router";
 import {
   createCallerFactory,
@@ -550,10 +551,11 @@ export async function materialIn(
 }
 
 // The application's own router, called inside a rolled-back transaction.
-export const appCallerIn = (tx: Tx, who: unknown) =>
+export const appCallerIn = (tx: Tx, who: unknown, mailer?: Mailer) =>
   createCallerFactory(appRouter)(
     createContext({
       directory: localDirectory,
+      ...(mailer !== undefined && { mailer }),
       db: txAsDb(tx),
       identity: who,
       reporter: quietReporter,

@@ -44,8 +44,10 @@ export const attestationLevel = pgEnum("attestation_level", [
 // time_set_by_user; `location` is a missing or out-of-radius stamp; `clock_skewed` is the push's
 // verdict on the device clock or on an event's time against its receipt (ARCHITECTURE, Sync
 // protocol); `after_closeout` is arrival after the day's accepted
-// closeout. `after_closeout` arrived by ADD VALUE, so no CHECK, DEFAULT or index predicate may
-// name it (see workSessionEventType above); plpgsql may.
+// closeout; `unscheduled` is a clock-in captured offline that the weekly schedule did not admit
+// when it arrived (ARCHITECTURE, 2026-11-15; api sync/schedule.ts), stored for the office to
+// decide. `after_closeout` and `unscheduled` arrived by ADD VALUE, so no CHECK, DEFAULT or
+// index predicate may name either (see workSessionEventType above); plpgsql may.
 export const approvalReason = pgEnum("approval_reason", [
   "offline",
   "corrected",
@@ -53,6 +55,7 @@ export const approvalReason = pgEnum("approval_reason", [
   "location",
   "clock_skewed",
   "after_closeout",
+  "unscheduled",
 ]);
 
 // The office's answer. No `pending`: that is a NULL decision, derived (invariant 7). A

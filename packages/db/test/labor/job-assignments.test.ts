@@ -2,12 +2,29 @@
 // the migrated container. Rolled-back transactions throughout; see helpers.ts. The catalog
 // side — FORCE, the policy, the grant matrix — is row-level-security.test.ts's and
 // app-role.test.ts's.
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, type SQL } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import { customers, jobAssignments, jobs } from "../../src/schema";
-import { asApp, fixture, one, pgError, rolledBack, sqlstate, type Tx } from "../helpers";
+import {
+  customers,
+  jobAssignments,
+  jobs,
+  shiftOverrides,
+  users,
+  workSessionEvents,
+} from "../../src/schema";
+import {
+  asApp,
+  fixture,
+  lockExclusive,
+  one,
+  pgError,
+  rolledBack,
+  sqlstate,
+  started,
+  type Tx,
+} from "../helpers";
 
 type Refs = Awaited<ReturnType<typeof fixture>>;
 
@@ -26,6 +43,33 @@ const plan = (
 
 const failed = (tx: Tx, row: typeof jobAssignments.$inferInsert) =>
   pgError(tx.transaction((sp: Tx) => sp.insert(jobAssignments).values(row)));
+
+// A statement the schedule's guards refuse: its SQLSTATE and the constraint it names.
+async function raised(tx: Tx, statement: SQL) {
+  const error = (await pgError(tx.transaction((sp: Tx) => sp.execute(statement)))) as {
+    code?: string;
+    constraint?: string;
+  };
+  return { code: error.code, constraint: error.constraint };
+}
+
+async function insertShift(tx: Tx, row: typeof jobAssignments.$inferInsert) {
+  return one(
+    await tx.insert(jobAssignments).values(row).returning({ id: jobAssignments.id }),
+  ).id;
+}
+
+// A clock-in of the fixture's worker on its job, and the shift locked by it.
+async function lockedShift(tx: Tx, refs: Refs) {
+  const shift = await insertShift(tx, plan(refs));
+  const event = started(refs);
+  await tx.insert(workSessionEvents).values(event);
+  await tx.execute(sql`
+    update job_assignments set locked_at = now(), locked_by_event_id = ${event.id}
+    where id = ${shift}
+  `);
+  return { shift, eventId: event.id };
+}
 
 async function secondJob(tx: Tx, refs: Refs) {
   const customer = one(
@@ -89,17 +133,18 @@ describe("job_assignments", () => {
     });
   });
 
-  it("keeps one plan per person, job and day, and any number of jobs in a day", async () => {
+  it("refuses the same shift twice and keeps one job twice in a day at other times", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       await tx.insert(jobAssignments).values(plan(refs));
-      const again = await failed(
-        tx,
-        plan(refs, { expectedStart: "09:00", expectedEnd: "10:00" }),
-      );
+      const again = await failed(tx, plan(refs));
       expect(again.code).toBe("23505");
-      expect(again.message).toContain("job_assignments_user_id_work_date_job_id_unique");
-      // Another job the same day, at overlapping times; the same job another day.
+      expect(again.message).toContain("job_assignments_exact_shift_unique");
+      // The same job later that day, another job at overlapping times, the same shift on
+      // another day: each is a shift of its own. Whether two overlap is the writers' question.
+      await tx
+        .insert(jobAssignments)
+        .values(plan(refs, { expectedStart: "16:00", expectedEnd: "18:00" }));
       await tx
         .insert(jobAssignments)
         .values(plan(refs, { jobId: await secondJob(tx, refs) }));
@@ -108,7 +153,20 @@ describe("job_assignments", () => {
         .select({ id: jobAssignments.id })
         .from(jobAssignments)
         .where(eq(jobAssignments.companyId, refs.companyId));
-      expect(rows).toHaveLength(3);
+      expect(rows).toHaveLength(4);
+    });
+  });
+
+  it("never changes a shift's person or job", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const shift = await insertShift(tx, plan(refs));
+      const job = await secondJob(tx, refs);
+      const moved = await raised(
+        tx,
+        sql`update job_assignments set job_id = ${job} where id = ${shift}`,
+      );
+      expect(moved).toEqual({ code: "23000", constraint: "job_assignments_identity" });
     });
   });
 
@@ -153,6 +211,155 @@ describe("job_assignments", () => {
         sql`select expected_end::text from job_assignments where company_id = ${b.companyId}`,
       );
       expect(rows).toEqual([{ expected_end: "15:30:00" }]);
+    });
+  });
+});
+
+describe("job_assignments, the punch lock", () => {
+  it("creates a shift unlocked and keeps the two lock columns together", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const event = started(refs);
+      await tx.insert(workSessionEvents).values(event);
+      const born = (await failed(
+        tx,
+        plan(refs, { lockedAt: new Date(), lockedByEventId: event.id }),
+      )) as { code?: string; constraint?: string };
+      expect(born.code).toBe("23000");
+      expect(born.constraint).toBe("job_assignments_created_unlocked");
+      const shift = await insertShift(tx, plan(refs));
+      const half = await raised(
+        tx,
+        // The event without the instant: the trigger answers first for the other half.
+        sql`update job_assignments set locked_by_event_id = ${event.id} where id = ${shift}`,
+      );
+      expect(half).toEqual({
+        code: "23514",
+        constraint: "job_assignments_lock_complete",
+      });
+    });
+  });
+
+  it("is locked only by a clock-in of its own person on its own job", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const shift = await insertShift(tx, plan(refs));
+      const lock = (eventId: string) =>
+        sql`update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+            where id = ${shift}`;
+      const refused = { code: "23000", constraint: "job_assignments_lock_event" };
+
+      // Another person's clock-in on the same job.
+      const other = one(
+        await tx
+          .insert(users)
+          .values({ companyId: refs.companyId, email: "o@co.test", name: "Other" })
+          .returning({ id: users.id }),
+      );
+      const theirs = { ...started(refs), workerId: other.id, initiatorUserId: other.id };
+      await tx.insert(workSessionEvents).values(theirs);
+      expect(await raised(tx, lock(theirs.id))).toEqual(refused);
+
+      // The person's own clock-in on another job.
+      const elsewhere = { ...started(refs), jobId: await secondJob(tx, refs) };
+      await tx.insert(workSessionEvents).values(elsewhere);
+      expect(await raised(tx, lock(elsewhere.id))).toEqual(refused);
+
+      // The person's own clock-in on this job, and then its end: only the start locks.
+      const mine = started(refs);
+      await tx.insert(workSessionEvents).values(mine);
+      const end = {
+        ...started(refs),
+        type: "ended" as const,
+        clientTimestamp: new Date(Date.now() + 1000),
+      };
+      await tx.insert(workSessionEvents).values(end);
+      expect(await raised(tx, lock(end.id))).toEqual(refused);
+      const locked = await tx.execute(lock(mine.id));
+      expect(locked.rowCount).toBe(1);
+    });
+  });
+
+  it("keeps a locked shift's day, times and lock, and never removes it", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const { shift } = await lockedShift(tx, refs);
+      const again = started(refs);
+      await tx.insert(workSessionEvents).values(again);
+      const refused = { code: "23000", constraint: "job_assignments_locked" };
+      for (const statement of [
+        sql`update job_assignments set work_date = '2026-11-17' where id = ${shift}`,
+        sql`update job_assignments set expected_start = '06:00' where id = ${shift}`,
+        sql`update job_assignments set expected_end = '16:00' where id = ${shift}`,
+        sql`update job_assignments set locked_at = null, locked_by_event_id = null
+            where id = ${shift}`,
+        sql`update job_assignments set locked_by_event_id = ${again.id} where id = ${shift}`,
+        sql`update job_assignments set locked_at = locked_at + interval '1 second'
+            where id = ${shift}`,
+        sql`delete from job_assignments where id = ${shift}`,
+      ]) {
+        expect(await raised(tx, statement)).toEqual(refused);
+      }
+      // What the lock does not cover may still be written.
+      const touched = await tx.execute(
+        sql`update job_assignments set updated_at = now() where id = ${shift}`,
+      );
+      expect(touched.rowCount).toBe(1);
+      // An unlocked neighbour is edited and removed as before.
+      const free = await insertShift(
+        tx,
+        plan(refs, { expectedStart: "16:00", expectedEnd: "18:00" }),
+      );
+      await tx.execute(
+        sql`update job_assignments set expected_end = '19:00' where id = ${free}`,
+      );
+      const gone = await tx.execute(sql`delete from job_assignments where id = ${free}`);
+      expect(gone.rowCount).toBe(1);
+    });
+  });
+
+  it("refuses TRUNCATE while any shift is locked", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      await lockedShift(tx, refs);
+      // The whole cascade set, never waiting (helpers.ts, lockExclusive), and nothing but
+      // the TRUNCATE after it: a statement that waited while holding these would stall the
+      // suites that write shifts.
+      await lockExclusive(tx, ["job_assignments", "shift_overrides"]);
+      expect(await raised(tx, sql`truncate job_assignments cascade`)).toEqual({
+        code: "23000",
+        constraint: "job_assignments_locked",
+      });
+    });
+  });
+
+  it("keeps the day of a shift an override names, and lets its times change", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const holder = await insertShift(tx, plan(refs));
+      const yielding = await insertShift(
+        tx,
+        plan(refs, { expectedStart: "12:00", expectedEnd: "17:00" }),
+      );
+      await tx.insert(shiftOverrides).values({
+        companyId: refs.companyId,
+        holderId: holder,
+        yieldingId: yielding,
+        reason: "Covering the afternoon",
+        createdBy: refs.workerId,
+      });
+      for (const id of [holder, yielding]) {
+        expect(
+          await raised(
+            tx,
+            sql`update job_assignments set work_date = '2026-11-17' where id = ${id}`,
+          ),
+        ).toEqual({ code: "23000", constraint: "job_assignments_override_day" });
+      }
+      const edited = await tx.execute(
+        sql`update job_assignments set expected_end = '18:00' where id = ${yielding}`,
+      );
+      expect(edited.rowCount).toBe(1);
     });
   });
 });
