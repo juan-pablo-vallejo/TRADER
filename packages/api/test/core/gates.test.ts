@@ -53,6 +53,7 @@ const EXPECTED: Record<string, Gate> = {
   "invoice.reversePayment": ADMIN,
   "invoice.issue": ADMIN,
   "invoice.list": ADMIN,
+  "invoice.pdf": ADMIN,
   "invoice.read": ADMIN,
   "invoice.remove": ADMIN,
   "invoice.save": ADMIN,

@@ -13,6 +13,7 @@ import {
   saveOutput,
 } from "../invoices/draft";
 import { exportInvoices, exportOutput } from "../invoices/export";
+import { invoicePdf, pdfInput, pdfOutput } from "../invoices/pdf";
 import {
   issueInput,
   issueInvoice,
@@ -80,6 +81,10 @@ export const invoiceRouter = router({
     .input(reverseInput)
     .output(reverseOutput)
     .mutation(({ ctx, input }) => reversePayment(ctx.tx, ctx.user, input)),
+  pdf: admin
+    .input(pdfInput)
+    .output(pdfOutput)
+    .query(({ ctx, input }) => invoicePdf(ctx.tx, input)),
   exportCsv: admin
     .output(exportOutput)
     .query(({ ctx }) => exportInvoices(ctx.tx, ctx.user)),

@@ -434,6 +434,31 @@ describe("invoice.void", () => {
   });
 });
 
+describe("invoice.pdf", () => {
+  it("renders an issued invoice, the same bytes each time; a draft has none", async () => {
+    await rolledBack(owner, async (tx) => {
+      const o = await office(tx);
+      const invoiceId = await draft(o, [line(), line({ description: "Primer" })], 1234);
+      expect(await o.bill.pdf({ invoiceId })).toEqual({
+        result: "rejected",
+        reason: "not_issued",
+      });
+      await o.bill.issue({ invoiceId });
+      const first = await o.bill.pdf({ invoiceId });
+      if (first.result !== "rendered") throw new Error("not rendered");
+      expect(first.filename).toBe("invoice-1042.pdf");
+      const bytes = Buffer.from(first.pdf, "base64");
+      expect(bytes.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+      expect(await o.bill.pdf({ invoiceId })).toEqual(first);
+      // A void invoice still has its page.
+      await o.bill.void({ invoiceId });
+      const voided = await o.bill.pdf({ invoiceId });
+      expect(voided.result).toBe("rendered");
+      expect(voided).not.toEqual(first);
+    });
+  });
+});
+
 describe("invoice.remove", () => {
   it("removes a draft and its lines; again, or for one that never was, it is `unchanged`", async () => {
     await rolledBack(owner, async (tx) => {
@@ -457,6 +482,7 @@ describe("another company's invoice", () => {
       for (const call of [
         () => o.bill.read({ invoiceId }),
         () => o.bill.suggest({ invoiceId }),
+        () => o.bill.pdf({ invoiceId }),
         () => o.bill.save({ invoiceId, taxCents: 0, lines: [line()] }),
         () => o.bill.issue({ invoiceId }),
         () => o.bill.void({ invoiceId }),
