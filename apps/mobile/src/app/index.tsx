@@ -5,5 +5,7 @@ import { useSession } from "../session";
 
 export default function Index() {
   const { session } = useSession();
+  // The store is still being read: nothing is drawn for that moment.
+  if (session === undefined) return null;
   return <Redirect href={session === null ? "/sign-in" : "/today"} />;
 }

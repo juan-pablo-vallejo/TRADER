@@ -20,3 +20,8 @@ export const apiUrl: string | null =
 // false in every release build, so the branch — and the screen behind it — is not there.
 export const devIdentity: boolean =
   __DEV__ && process.env.EXPO_PUBLIC_DEV_IDENTITY === "enabled";
+
+// This build's number, sent with `status.get` so the service can hold a build too old to
+// sync (ARCHITECTURE, kill switch). The store builds' numbers are EAS's to assign (TASKS,
+// device builds); until then every build is 1.
+export const BUILD = 1;

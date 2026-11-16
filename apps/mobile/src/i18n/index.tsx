@@ -1,35 +1,48 @@
 // The i18n layer (RULES; DESIGN, Localization): the language the phone is set to when it is
 // English or Spanish, English otherwise, and whatever the person then chooses in Settings.
-// The choice lives in memory in this build; the device's store keeps it once there is one
-// (TASKS R5). Screens read `useStrings()` and never hold a string of their own.
+// The choice is kept in the device's store, so it is still made the next time the app
+// opens. Screens read `useStrings()` and never hold a string of their own.
 import { getLocales } from "expo-localization";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { deviceStore } from "../store/device";
 
 import { type Catalog, type Language, LANGUAGES } from "./catalog";
 import { en } from "./en";
+import { preferred } from "./preferred";
 import { es } from "./es";
 
 const CATALOGS: Record<Language, Catalog> = { en, es };
-
-// The first of the phone's languages that is one of ours.
-export function preferred(codes: readonly (string | null)[]): Language {
-  for (const code of codes) {
-    const match = LANGUAGES.find((l) => l === code);
-    if (match !== undefined) return match;
-  }
-  return "en";
-}
+const KEY = "language";
 
 type Value = { language: Language; setLanguage: (l: Language) => void; t: Catalog };
 const Strings = createContext<Value | null>(null);
 
 export function StringsProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>(() =>
+  const [language, setChosen] = useState<Language>(() =>
     preferred(getLocales().map((l) => l.languageCode)),
   );
+  useEffect(() => {
+    void deviceStore.read(KEY).then((kept) => {
+      const match = LANGUAGES.find((l) => l === kept);
+      if (match !== undefined) setChosen(match);
+    });
+  }, []);
+  const setLanguage = useCallback((next: Language) => {
+    setChosen(next);
+    void deviceStore.write(KEY, next);
+  }, []);
   const value = useMemo(
     () => ({ language, setLanguage, t: CATALOGS[language] }),
-    [language],
+    [language, setLanguage],
   );
   return <Strings.Provider value={value}>{children}</Strings.Provider>;
 }

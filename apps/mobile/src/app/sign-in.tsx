@@ -36,8 +36,9 @@ export default function SignIn() {
     setBusy(true);
     setNote(null);
     try {
-      const me = await createApi(url, () => devHeaders(address)).me.get.query();
-      signIn({ email: address, me: { id: me.id, name: me.name, role: me.role } });
+      // Asked once, to know the server knows this person; who they are comes with the pull.
+      await createApi(url, () => devHeaders(address)).me.get.query();
+      await signIn({ kind: "dev", email: address });
       router.replace("/today");
     } catch (error) {
       const code = (error as { data?: { code?: string } } | null)?.data?.code;

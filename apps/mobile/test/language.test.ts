@@ -1,11 +1,8 @@
 // Which language the app opens in: the first of the phone's languages that is one of ours,
-// English when none is. The module that reads the phone itself needs a device; its choice
-// is a pure function of what the phone reported.
-import { describe, expect, it, vi } from "vitest";
+// English when none is: a pure function of what the phone reported.
+import { describe, expect, it } from "vitest";
 
-vi.mock("expo-localization", () => ({ getLocales: () => [] }));
-
-const { preferred } = await import("../src/i18n");
+import { preferred } from "../src/i18n/preferred";
 
 describe("preferred", () => {
   it("takes the first of the phone's languages that the app has", () => {

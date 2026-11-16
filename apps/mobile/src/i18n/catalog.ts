@@ -16,12 +16,80 @@ export type Catalog = {
     unavailable: string;
     developmentOnly: string;
   };
-  tabs: { today: string; settings: string };
+  tabs: { today: string; week: string; settings: string };
   today: {
     title: string;
     jobs: string;
     noJobs: string;
-    loadFailed: string;
+    // Nothing has been pulled on this phone yet and the server cannot be reached.
+    firstLoad: string;
+    off: string;
+    working: (job: string, since: string) => string;
+    paused: (job: string) => string;
+    clockIn: string;
+    clockInAt: (job: string) => string;
+    clockOut: string;
+    pause: string;
+    resume: string;
+    switchTo: (job: string) => string;
+    hoursToday: (hours: string) => string;
+    // Under the weekly schedule.
+    shiftNow: (job: string, start: string, end: string) => string;
+    shiftLater: (job: string, start: string) => string;
+    noMoreShifts: string;
+    noShift: string;
+    undecided: string;
+    attention: string;
+  };
+  entry: {
+    types: { started: string; paused: string; resumed: string; ended: string };
+    unsent: string;
+    // The server stored it and the office has to approve it before it counts.
+    review: string;
+    reviewUnscheduled: string;
+    reviewClock: string;
+    refused: string;
+    refusals: {
+      not_scheduled: string;
+      time_in_future: string;
+      session_already_open: string;
+      no_open_session: string;
+      not_permitted: string;
+      other: (code: string) => string;
+    };
+  };
+  sync: {
+    upToDate: string;
+    unsent: (count: number) => string;
+    offline: string;
+    working: string;
+    paused: string;
+    readOnly: string;
+    updateRequired: string;
+    signInAgain: string;
+    wrongClock: string;
+    now: string;
+  };
+  week: {
+    title: string;
+    updated: (age: string) => string;
+    never: string;
+    stale: string;
+    refresh: string;
+    empty: string;
+    today: string;
+    clockInFrom: (start: string, end: string) => string;
+    undecided: string;
+    hours: string;
+    noHours: string;
+    open: string;
+    waiting: string;
+  };
+  age: {
+    justNow: string;
+    minutes: (n: number) => string;
+    hours: (n: number) => string;
+    days: (n: number) => string;
   };
   settings: {
     title: string;
@@ -30,6 +98,7 @@ export type Catalog = {
     english: string;
     spanish: string;
     signOut: string;
+    unsentKept: (count: number) => string;
   };
 };
 

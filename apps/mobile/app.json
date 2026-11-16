@@ -28,6 +28,17 @@
           "image": "../../assets/brand/logo.png",
           "imageWidth": 200
         }
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "TRADER records where you are when you clock in or out, so the office can see it was at the jobsite.",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": false,
+          "isAndroidForegroundServiceEnabled": false
+        }
       ]
     ],
     "experiments": {
