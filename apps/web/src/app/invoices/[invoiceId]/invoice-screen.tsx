@@ -600,6 +600,56 @@ function Payments({ invoice }: { invoice: Invoice }) {
   );
 }
 
+// The invoice as a PDF, made by the server when asked and saved by the browser: the page
+// the customer is sent. Offered for an issued invoice and a void one; a draft has none.
+function PdfFile({ invoiceId }: { invoiceId: string }) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    setNote(null);
+    setSaved(false);
+    try {
+      const file = await queryClient.fetchQuery(
+        trpc.invoice.pdf.queryOptions({ invoiceId }, { staleTime: 0, gcTime: 0 }),
+      );
+      if (file.result !== "rendered") {
+        setNote(strings.requestFailed);
+        return;
+      }
+      const bytes = Uint8Array.from(atob(file.pdf), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      setSaved(true);
+      setNote(s.pdfSaved(file.filename));
+    } catch {
+      setNote(strings.requestFailed);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className={styles.section} aria-label={s.pdf}>
+      <button
+        type="button"
+        className={controls.secondary}
+        disabled={busy}
+        onClick={() => void save()}
+      >
+        {busy ? strings.loading : s.pdf}
+      </button>
+      <Note text={note} tone={saved ? "saved" : undefined} />
+    </section>
+  );
+}
+
 function Issued({ invoice }: { invoice: Invoice }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -658,6 +708,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
         />
       </section>
       <Payments invoice={invoice} />
+      <PdfFile invoiceId={invoice.id} />
       {invoice.state === "issued" && invoice.number !== null && (
         <div className={styles.danger}>
           <DestructiveAction

@@ -204,6 +204,8 @@ export const strings = {
       "This draft and its lines will be deleted. It has no number, so none is lost.",
     removed: "Draft deleted.",
     voidIt: "Void invoice",
+    pdf: "Save as PDF",
+    pdfSaved: (filename: string) => `Saved ${filename}.`,
     voidEffect: (n: number) =>
       `Invoice ${n} will be marked void. It keeps its number and its lines, and it cannot be issued again.`,
     voided: "Invoice voided.",
