@@ -57,6 +57,7 @@ const EXPECTED: Record<string, Gate> = {
   "invoice.read": ADMIN,
   "invoice.remove": ADMIN,
   "invoice.save": ADMIN,
+  "invoice.send": ADMIN,
   "invoice.suggest": ADMIN,
   "invoice.void": ADMIN,
   "overview.get": ADMIN,

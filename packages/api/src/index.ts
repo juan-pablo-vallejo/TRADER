@@ -44,3 +44,10 @@ export {
   type RateLimit,
   type RateVerdict,
 } from "./core/rate-limit";
+export {
+  type Mail,
+  type Mailer,
+  type MailResult,
+  restrictedTo,
+  unconfiguredMailer,
+} from "./core/mailer";

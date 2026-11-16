@@ -13,6 +13,7 @@ import {
   customers,
   invoiceLineItems,
   invoicePayments,
+  invoiceSends,
   invoices,
   jobs,
   users,
@@ -70,6 +71,20 @@ export const readOutput = z.strictObject({
       unitPriceCents: z.number().int(),
       amountCents: z.number().int(),
       materialId: z.uuid().nullable(),
+    }),
+  ),
+  // The customer's address on file, offered as where to send the page; the admin may type
+  // another.
+  customerEmail: z.string().nullable(),
+  // Every time the page was sent or failed to be, oldest first.
+  sends: z.array(
+    z.strictObject({
+      id: z.uuid(),
+      recipient: z.string(),
+      outcome: z.enum(["sent", "failed"]),
+      failure: z.string().nullable(),
+      sentBy: z.string(),
+      sentAt: z.date(),
     }),
   ),
   // Every recorded payment and reversal, oldest first.
@@ -241,12 +256,35 @@ export async function readInvoice(
     .innerJoin(users, eq(users.id, invoicePayments.recordedByUserId))
     .where(eq(invoicePayments.invoiceId, row.id))
     .orderBy(asc(invoicePayments.createdAt), asc(invoicePayments.id));
+  const sender = alias(users, "sender");
+  const sends = await tx
+    .select({
+      id: invoiceSends.id,
+      recipient: invoiceSends.recipient,
+      outcome: invoiceSends.outcome,
+      failure: invoiceSends.failure,
+      sentBy: sender.name,
+      sentAt: invoiceSends.createdAt,
+    })
+    .from(invoiceSends)
+    .innerJoin(sender, eq(sender.id, invoiceSends.sentByUserId))
+    .where(eq(invoiceSends.invoiceId, row.id))
+    .orderBy(asc(invoiceSends.createdAt), asc(invoiceSends.id));
+  const [contact] = await tx
+    .select({ email: customers.email })
+    .from(customers)
+    .where(eq(customers.id, row.customerId));
   const reversedIds = new Set(recorded.map((p) => p.reversesPaymentId));
   return {
     ...headerOf(row, totals(lines, row.taxCents).subtotalCents, row.paidCents),
     issuedBy: row.issuedBy,
     voidedBy: row.voidedBy,
     lines,
+    customerEmail: contact?.email ?? null,
+    sends: sends.map((x) => ({
+      ...x,
+      outcome: x.outcome === "sent" ? "sent" : "failed",
+    })),
     payments: recorded.map((p) => ({ ...p, reversed: reversedIds.has(p.id) })),
   };
 }

@@ -44,7 +44,7 @@ afterAll(async () => {
 const asA = () => identity(w.a.boundSubject, w.a.boundEmail);
 
 describe("the procedure context", () => {
-  it("holds tx, user, the reporter and the directory: the pool and the identity are gone at runtime", async () => {
+  it("holds tx, user, the reporter, the directory and the mailer: the pool and the identity are gone at runtime", async () => {
     const seen = await caller(app, asA()).probe.inside();
     expect(seen.dbIsUndefined).toBe(true);
     expect(seen.identityIsUndefined).toBe(true);
@@ -53,10 +53,13 @@ describe("the procedure context", () => {
     // `requestId` is the HTTP request's (context.ts): random, and nobody's.
     // `directory` is the identity provider as roster.invite tells it of a person
     // (identity.ts): it reaches no database and reads nothing back.
+    // `mailer` is the mail service as invoice.send hands it a message (mailer.ts): it
+    // reaches no database either, and answers only whether the message went.
     expect(seen.keys).toEqual([
       "db",
       "directory",
       "identity",
+      "mailer",
       "reporter",
       "requestId",
       "tx",

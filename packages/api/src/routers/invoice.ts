@@ -40,6 +40,7 @@ import {
   suggestLines,
   suggestOutput,
 } from "../invoices/read";
+import { sendInput, sendInvoice, sendOutput } from "../invoices/send";
 
 const admin = roleProcedure("admin");
 
@@ -85,6 +86,10 @@ export const invoiceRouter = router({
     .input(pdfInput)
     .output(pdfOutput)
     .query(({ ctx, input }) => invoicePdf(ctx.tx, input)),
+  send: admin
+    .input(sendInput)
+    .output(sendOutput)
+    .mutation(({ ctx, input }) => sendInvoice(ctx.tx, ctx.user, input, ctx.mailer)),
   exportCsv: admin
     .output(exportOutput)
     .query(({ ctx }) => exportInvoices(ctx.tx, ctx.user)),
