@@ -290,6 +290,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @trader/web exec playwright install --with-deps chromium
 
+      # Clerk's fixed test code is public, so the suite signs in with single-use tickets
+      # (apps/web/e2e/tickets.ts). The development instance's key reaches this one step,
+      # which runs that one file with `node` and nothing a package installed; the tickets
+      # are masked and live ten minutes.
+      - name: Sign-in tickets for the suite's two people
+        env:
+          CLERK_STAGING_SECRET_KEY: ${{ secrets.CLERK_STAGING_SECRET_KEY }}
+          E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
+          E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
+        run: node apps/web/e2e/tickets.ts
+
       # No trace, no video and no uploaded artifact: this log and its artifacts are public,
       # and any of them could hold a signed-in session.
       - name: Browser suite on staging's host
