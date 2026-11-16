@@ -102,8 +102,13 @@ is wrong.
   Juan Pablo's.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
-- One workflow, one job: install, typecheck, lint, format check, build, migrate, test. Every
-  run on `main` completes; only a superseded pull-request run is cancelled.
+- CI is one workflow with one job, `check`: install, typecheck, lint, format check, build,
+  migrate, test. Every run on `main` completes; only a superseded pull-request run is
+  cancelled. It holds no secret.
+- Other workflows stand beside CI and never change it. One that holds a secret runs only
+  code already on `main`, from a GitHub environment restricted to `main`, never on a pull
+  request's event; its token's permissions are stated per job and its actions are pinned by
+  commit (ARCHITECTURE, 2026-11-16, staging credentials).
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
 - `release-0.1` is the track's integration branch: moved only by fast-forward to the newest
   track line, never committed to, deleted by the owner when the track has merged. Track
@@ -112,13 +117,13 @@ is wrong.
   deleted on merge. A merge into `main`, a force-push and a branch's deletion are human
   actions in a terminal, never agent actions.
 - `staging-preview` is staging's permanent branch. It holds only commits of `main`; nothing
-  is committed to it, merged into it or opened as a pull request from it. A session that
-  finds `origin/main` ahead of it moves it with
-  `git fetch origin main && git push origin origin/main:refs/heads/staging-preview`, an
-  ordinary push that the remote refuses unless it is a fast-forward, then waits for the
-  staging project's Preview of that commit and runs the browser suite on the branch's
-  alias. Nothing else moves it: a merge made while no session is open leaves it behind
-  until the next one.
+  is committed to it, merged into it or opened as a pull request from it. It moves by an
+  ordinary push, which the remote refuses unless it is a fast-forward, to a commit of
+  `main` whose `check` passed, and only after staging's database is at that commit's
+  journal: by the promotion workflow after each merge (ARCHITECTURE, 2026-11-16, staging
+  promotion). Until that workflow has promoted once (TASKS, Automation), a session moves
+  it with `git fetch origin main && git push origin origin/main:refs/heads/staging-preview`
+  under the same two conditions, then runs the browser suite.
 
 ## Toolbox
 
@@ -132,7 +137,10 @@ the owner's machine, outside the repository.
 - **A credential is used, never read.** Each staging secret is an item in the owner's
   macOS Keychain, handed to one fixed command by a wrapper that refuses any other target. A
   session never prints one, never writes one to a file, and never reads `.env` or the
-  Keychain itself.
+  Keychain itself. The workflows' copies — staging's migrator connection strings, an Expo
+  token — are secrets of GitHub environments restricted to `main`, created by the owner;
+  nothing of production, no vendor's account-wide key, no DNS token and no signing
+  credential is stored there.
 - **Which tool for which job.**
 
   | Job                                           | Tool                                                                        |
@@ -140,6 +148,8 @@ the owner's machine, outside the repository.
   | Read staging's data and schema                | Neon's connector (read-only), or `psql` as `trader_app` through its wrapper |
   | Write staging's data as the application would | the deployment itself, or `psql` as `trader_app`                            |
   | Onboard a company on staging                  | the owner-role wrapper's `onboard`                                          |
+  | Migrate staging, move `staging-preview`       | the promotion workflow, never a session's shell                             |
+  | Staging's DNS records                         | the DNS wrapper, pinned to the record names it may write                    |
   | Neon branches and operations                  | the Neon CLI through its wrapper, pinned to the staging project             |
   | Test people at the identity provider          | the Clerk wrapper or CLI, fictional numbers only                            |
   | Deployments, logs, a preview's variables      | Vercel's connector to read; the staging project's wrapper to deploy and set |
@@ -161,8 +171,9 @@ the owner's machine, outside the repository.
   should refuse is watched refusing. A tool registered while a session is open answers
   only in the next one.
 - **Browser flows live in `apps/web/e2e/`**, apart from `test/`: they need a deployment and
-  a secret, so `pnpm check` and CI never run them. A flow sends the bypass to the preview's
-  own host alone, records no trace, and deletes nothing.
+  a secret, so `pnpm check` and the `check` job never run them; the promotion workflow
+  runs them on staging's public host after each deployment of `staging-preview`. A flow
+  sends the bypass to the preview's own host alone, records no trace, and deletes nothing.
 - **Staging's standing deployment is `staging-preview`'s Preview.** The suite runs on that
   branch's alias, read from Vercel's connector and never worked out from the branch name:
   `staging-e2e https://<alias>`. A feature branch's preview is run against only when its

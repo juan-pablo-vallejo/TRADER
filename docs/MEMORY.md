@@ -637,6 +637,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - Outside production `mailerFor` sends only to `INVOICE_EMAIL_ALLOWLIST`: on staging a send
   to anyone else answers `recipient_not_allowed` and is recorded as failed. That is the
   rule working, not the service failing.
+- A Vercel variable changed for `staging-preview` waits for that branch's next deployment:
+  a session's redeploy of it may be refused by the session's classifier, and the promotion
+  that follows a merge is what carries it.
+- An event made with a workflow's own `GITHUB_TOKEN` starts no other workflow (read on
+  GitHub's page, 2026-11-16); whether Vercel builds a branch pushed with it is unproven
+  until P1's first promotion.
+- Never register this Mac as a self-hosted Actions runner: the repository is public, and a
+  pull request's workflow would run beside the Keychain. The Mac polls (ARCHITECTURE,
+  2026-11-16, native tests).
 
 ## Log
 
@@ -2128,3 +2137,30 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   variables; an Apple team on the Expo account and the test iPhone registered.
 - **Next:** owner merges this branch and migrates staging; then the three staging steps
   above, and the device builds' line, plan first in its pull request.
+
+### 2026-11-16 — Permanent automation planned; decisions written, P0 done
+
+- **Did:** read, then documents and one staging variable; branch `automation-foundation`
+  from `r5-phone-token` (#117, still open), two commits. Read on 2026-11-16: `main` at
+  `3abacb2`, `staging-preview` 49 commits behind at `1c94b64`; staging's database and the
+  kept rehearsal branch both at 40 migrations of 50, with no labor event and no receipt;
+  the staging host attached to `staging-preview`, exempt from the wall, readiness 200;
+  GitHub with no secret, variable or environment; Clerk's Android application with no
+  fingerprint; the Expo project with no build; no Resend record in DNS. Written: nine
+  decision rows of this date, RULES (Git and CI, Toolbox), TASKS' Automation section with
+  P0 to P6 and the owner's line, Stage 6's staging-domain decision ticked. Committed: the
+  Expo project's id and owner in `app.json`, as `eas init` left them. Set: the staging
+  host's origin beside the alias in `staging-preview`'s `CLERK_AUTHORIZED_PARTIES`.
+  1,575 tests.
+- **Decided:** by the owner on 2026-11-16 (the plan approved, and the decisions pasted
+  before it), the rows of that date. Not done: the variable is not deployed — the
+  redeploy was refused to the session, so the office on the staging host still checks
+  the old list until the first promotion; RULES has no `production` rule yet (the edit
+  was refused to the session; it is P6's now); nothing is built — no workflow, no
+  environment, no build, no DNS record. Not read: `eas env:list`, the tools' versions,
+  the DNS token's Keychain item.
+- **Release 0.1 state:** `main` at `3abacb2`; #117 open and green; this branch stacked on
+  it. Staging: 40 migrations of 50, serving `1c94b64`. Next to move it is P1's first
+  promotion, which needs the owner's `staging` environment and its two secrets.
+- **Next:** owner merges #117 and this branch and creates the `staging` environment; then
+  P1, the promotion workflow, plan first in its pull request.
