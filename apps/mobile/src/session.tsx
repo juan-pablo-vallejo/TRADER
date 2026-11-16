@@ -23,6 +23,7 @@ import { devHeaders } from "./api";
 import { clerkKey, devIdentity } from "./config";
 import { deviceStore } from "./store/device";
 import { SNAPSHOT_KEY } from "./sync/engine";
+import { bearerFrom } from "./token";
 
 export type Session = { kind: "dev"; email: string } | { kind: "clerk" };
 
@@ -45,14 +46,13 @@ export async function headersFor(
   return clerkKey === null ? {} : bearer();
 }
 
-// The provider's token for this moment, as the header the server's adapter reads.
-export async function bearer(): Promise<Record<string, string>> {
-  try {
-    const token = await getClerkInstance().session?.getToken();
-    return typeof token === "string" ? { Authorization: `Bearer ${token}` } : {};
-  } catch {
-    return {};
-  }
+// The provider's token for this moment, as the header the server's adapter reads; a call
+// is not made at all while the provider is still loading or cannot mint one (token.ts).
+export function bearer(): Promise<Record<string, string>> {
+  return bearerFrom(() => {
+    const clerk = getClerkInstance();
+    return { loaded: clerk.loaded, session: clerk.session };
+  });
 }
 
 // A kept session means something only to a build that has its kind of identity.
