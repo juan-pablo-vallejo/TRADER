@@ -247,13 +247,16 @@ paid is created and no production migration runs without the owner's approval of
       workspace's own range over it; `expo-crypto`, by the UUIDv7 minter's random bytes;
       `expo-location`, by the foreground location stamp; `expo-secure-store` and
       `@clerk/expo` (registry read 2026-11-15: 4.16.1), by the SMS-code sign-in and its
-      token cache, with whatever peer Clerk's Expo page requires, named here when read.
+      token cache; `react-dom` at the app's own React version, consumed by `@clerk/react`
+      inside it, which requires one and otherwise resolves the office's.
       Built so far (2026-11-15), on the development sign-in: the device store and outbox,
       the sync cycle and its states, offline evidence, the location stamp, the clock with
       breaks and a job switch, own hours, both languages, and the flow suite green on the
-      iOS simulator and the Android emulator. Still open: the SMS-code sign-in
-      (`@clerk/expo` is not installed yet; it needs the development instance's native API
-      and its publishable key), own profile, and the done-criterion on two physical phones.
+      iOS simulator and the Android emulator; the SMS-code sign-in screen and the
+      provider's token on every call, written and typechecked against `@clerk/expo` but
+      never run against Clerk. Still open: that sign-in seen working (it needs the
+      development instance's native API and its publishable key in the build), own
+      profile, and the done-criterion on two physical phones.
 - [x] S7 — Scheduled shift on the phone's clock (plan first: sync). Depends on R4, R5 and
       S4; it takes none of R5's lines and adds to its clock and pull. Work: the caller's
       own shifts and their eligible hours in the pull; under enforcement the clock offers

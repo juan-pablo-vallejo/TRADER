@@ -598,6 +598,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   words of its own (`start–end`, `job: hours`) is written in the screen, not the catalog.
 - A `TMPDIR` as long as the session scratchpad breaks `tsx` (its socket path is too long,
   `listen EINVAL`): never export it for a command that runs `pnpm demo`.
+- `@clerk/expo` brings `@clerk/react`, which requires `react-dom`; left to pnpm it resolves
+  the office's (19.3.1) beside the phone's React (19.3.0) and the bundle stops at
+  "Incompatible React versions". `apps/mobile` pins `react-dom` to its own React. It also
+  brings two install scripts that only print (`core-js`, `browser-tabs-lock`): unlisted,
+  `pnpm install --frozen-lockfile` exits 1, so `pnpm-workspace.yaml` denies both by name.
+- `expo install` rewrites `pnpm-workspace.yaml` with a placeholder for a package whose
+  install script it will not run: read the file's diff after any `expo install`.
+- The flow suite leaves `trader_demo_e2e` with schedule enforcement on: a single flow run
+  by hand after it sees no job list. Start from `suite.sh`, which rebuilds the database.
 
 ## Log
 
@@ -1964,3 +1973,31 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   not ticked; R7 half built; R5 and S8 as above.
 - **Next:** the phone's SMS-code sign-in behind the session seam, as far as it can be
   built before the owner's two Clerk items; then `eas.json` and the preview profile.
+
+### 2026-11-15 — The phone's SMS-code sign-in: written, typechecked, never run against Clerk
+
+- **Did:** branch `r5-phone-sign-in` from `r5-field-time-tracking`. `@clerk/expo` 4.16.1
+  and `react-dom` in `apps/mobile`; the provider around the app when a build carries its
+  key; a phone sign-in screen (number, code, then `me.get`); the provider's token as a
+  bearer header on every call; sign-out of both; the number parser with tests; both
+  catalogs. Seen: typecheck against Clerk's own types; 40 unit tests; with the package in
+  the bundle and no key set, the whole flow suite green on the iOS simulator through the
+  development identity, and on the Android emulator a sign-in and a first sync.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE. Not
+  done, and the reason R5 stays unticked: **nobody has signed in through Clerk on a
+  phone.** Unseen: Clerk's hooks behaving as its page says; a code arriving; the server's
+  adapter accepting a phone's bearer token (its `CLERK_AUTHORIZED_PARTIES` check and the
+  four session claims on a native session); the session surviving a restart with no
+  network; a sign-out offline. No flow can cover it until a development build carries the
+  key. The Android suite was not rerun whole on this branch.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r5-field-time-tracking` (#113)
+  and this one, stacked; `release-0.1` moves here next. **Staging's database is still at
+  40 migrations** of 48. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key given to the build (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key and one test recipient (the invoice email). S6 built and
+  not ticked; R7 half built; R5 and S8 open on the sign-in and the physical phones.
+- **Next:** with the owner's Clerk items, the sign-in end to end on both devices; with
+  `eas login`, `eas.json` and the preview builds; with the wrapper, staging migrated and
+  the browser suite. Without any of them: the invoice PDF behind a mailer seam.
