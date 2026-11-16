@@ -5,9 +5,13 @@
 // no superuser, no BYPASSRLS, every tenant table forced. Development and the tests reach
 // trader_app by a startup option over the compose superuser (db.ts), so there it is the
 // runtime guard alone.
-// The answer is a boolean and nothing else: the route is public, and why a deployment is
-// not ready belongs in the error report, not in a response anyone can read. Each probe is
-// one cheap query; rate limits are the edge's (TASKS, Stage 6).
+// The answer is a boolean and the commit the deployment was built from, and nothing else:
+// the route is public, and why a deployment is not ready belongs in the error report, not
+// in a response anyone can read. The commit is the platform's own variable, a public
+// repository's public fact; staging's promotion reads it to know which revision is serving
+// (ARCHITECTURE, 2026-11-16, staging promotion). Anything that is not a full commit id is
+// answered as null. Each probe is one cheap query; rate limits are the edge's (TASKS,
+// Stage 6).
 // Dependencies are passed in, as in handler.ts; the route wires the real ones.
 import { randomUUID } from "node:crypto";
 
@@ -18,6 +22,11 @@ export type ReadyDependencies = {
   getDb: () => Db;
   reporter: ErrorReporter;
   env: Record<string, string | undefined>;
+};
+
+const commitOf = (env: Record<string, string | undefined>): string | null => {
+  const sha = env.VERCEL_GIT_COMMIT_SHA ?? "";
+  return /^[0-9a-f]{40}$/.test(sha) ? sha : null;
 };
 
 export function createReadyHandler(deps: ReadyDependencies) {
@@ -38,7 +47,7 @@ export function createReadyHandler(deps: ReadyDependencies) {
       });
     }
     return Response.json(
-      { ready },
+      { ready, commit: commitOf(deps.env) },
       { status: ready ? 200 : 503, headers: { "cache-control": "no-store" } },
     );
   };
