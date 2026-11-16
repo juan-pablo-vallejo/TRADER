@@ -365,12 +365,19 @@ every gate, and a candidate missing a platform reads as not native-verified.
       carrying a flagged migration stops before staging changes; and a dispatch with
       any other code, or with no earlier rehearsal, is refused
 - [ ] Fixture tenants on the shared database (ARCHITECTURE, 2026-11-16, shared
-      database). Depends on P1's first promotion. Work: `R3 Staging Co` and its two
-      test numbers are the browser suite's and nothing else's; one company onboarded for
-      the phone flows and one for development by hand, through the owner-role wrapper's
-      `onboard`, each with a block of Clerk test numbers no other company uses. Done when
-      the three companies exist, each signs in with its own numbers, and none reads
-      another's rows
+      database). The code is ready: the browser flow holds its admin to
+      `E2E_COMPANY_ID` before its first write and its worker to the same company
+      (seen green on staging's alias, and red on a wrong id with nothing written). The
+      onboarding depends on P1's first promotion: `onboard` and the roster's invitation
+      run `main`'s code, which needs the journal's schema. Work then: `R3 Staging Co`
+      stays the browser suite's and nothing else's; one company for the phone flows and
+      one for development by hand, through the owner-role wrapper's `onboard` and the
+      office's own invitations, each with identities no other company holds — fictional
+      numbers ending `0100`–`0109` for the browser suite, `0110`–`0119` for the phone
+      flows, `0120`–`0129` for development by hand. Nothing is deleted and no destructive
+      test runs there. Done when the three companies exist, each signs in as its own
+      people, and a read as `trader_app` under each company's setting counts no row of
+      the other two
 - [ ] P2 — The browser suite on every promotion, and the readiness report. Depends on P1.
       Work: fixtures ensured through the real procedures, with Clerk test numbers alone —
       a customer, jobs, a crew, a foreman, a worker; one flow each for the schedule, an

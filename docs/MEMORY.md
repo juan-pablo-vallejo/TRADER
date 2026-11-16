@@ -2246,11 +2246,15 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
 - **Decided:** by the owner on 2026-11-16, the two rows of that date (shared database;
   promotion safeguards). Not done: **nothing has run.** The promotion after #120 failed
   at its plan step before the environment's secrets existed; no rehearsal, no migration,
-  no email. The fixture tenants are a TASKS line, not built. Worth knowing: the suite's
-  two default numbers in `staging.spec.ts` are staging's real fixture accounts, the
-  repository is public and so is staging's host, so anyone may sign in to staging as its
-  admin with Clerk's test code; staging holds fictional rows and mails only the
-  allow-list, and moving the numbers to secrets is the owner's to decide.
+  no email. The fixture tenants' companies are not onboarded (TASKS); the browser flow's
+  tenant guard is built and was seen on staging's alias, green with the suite's company
+  id and red on a wrong one before any write. Worth knowing: on a Clerk development
+  instance every fictional number signs in with the one test code (read on Clerk's page),
+  the suite's defaults in `staging.spec.ts` are staging's fixture accounts, and the host
+  is public: anyone could sign in as staging's admin. Today they cannot — the deployed
+  commit still checks the old origin list, so every session on the public host is a 401
+  (seen) — and the first promotion opens it. Put to the owner: test mode off on the
+  development instance, automation signing in with Clerk sign-in tokens.
 - **Release 0.1 state:** `main` at `900dadc`; staging at 40 migrations of 50, serving
   `1c94b64`. Order from here: the owner sets the two endpoint ids and merges this branch;
   the merge's own run rehearses and prints the code; the owner dispatches `promote` with
