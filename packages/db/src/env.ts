@@ -105,3 +105,24 @@ export function assertLocalDatabase(
     );
   }
 }
+
+// Who may migrate a deployed database. `drizzle-kit` reads DATABASE_URL from the shell or
+// from .env, and the same string that runs the office app against the shared database would
+// migrate it: so a set DATABASE_URL is refused unless the caller says which of the two
+// sanctioned migrators it is — the promotion workflow, or the owner following the runbook
+// (packages/db/README.md). The local compose database and CI's container, reached through
+// POSTGRES_*, need no purpose. Consumed by drizzle.config.ts.
+export const MIGRATE_PURPOSES = ["promotion", "owner"] as const;
+
+export function assertMigrationPurpose(env: Record<string, string | undefined>): void {
+  if ((env.DATABASE_URL ?? "") === "") return;
+  const purpose = env.TRADER_MIGRATE_PURPOSE ?? "";
+  if (!(MIGRATE_PURPOSES as readonly string[]).includes(purpose)) {
+    throw new Error(
+      "refusing to run drizzle-kit: DATABASE_URL is set and TRADER_MIGRATE_PURPOSE is not " +
+        `one of ${MIGRATE_PURPOSES.join(", ")}. A deployed database is migrated by the ` +
+        "promotion workflow, or by the owner from the runbook; blank DATABASE_URL for the " +
+        "local database.",
+    );
+  }
+}
