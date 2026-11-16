@@ -6,6 +6,9 @@
 // a worker refused the office. Identities are Clerk's fictional numbers (code 424242, nothing
 // is sent) and must already be on the staging roster. The flow writes one customer row and
 // rewrites it on every run; it deletes nothing (RULES, Toolbox: cleanup is destructive).
+// The database is shared with development and with the phone flows, each in a company of
+// its own (ARCHITECTURE, 2026-11-16, shared database): before it writes anything the flow
+// holds its admin to the browser suite's company, and its worker to the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 // A variable that is set and blank, as an unset one arrives from a workflow, is unset.
@@ -13,6 +16,10 @@ const orDefault = (value: string | undefined, fallback: string) =>
   value === undefined || value === "" ? fallback : value;
 const ADMIN_PHONE = orDefault(process.env.E2E_ADMIN_PHONE, "+14015550100");
 const WORKER_PHONE = orDefault(process.env.E2E_WORKER_PHONE, "+14015550101");
+// The browser suite's own company, by id. Set, an identity of any other tenant stops the
+// flow before its first write; unset (a preview with a database of its own), the two
+// identities must still share one company.
+const COMPANY_ID = orDefault(process.env.E2E_COMPANY_ID, "");
 const CLERK_TEST_CODE = "424242";
 const FIXTURE_CUSTOMER = "E2E Customer";
 const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
@@ -52,6 +59,17 @@ async function signIn(page: Page, phone: string): Promise<void> {
   });
 }
 
+// The signed-in caller's company, as the API itself answers it.
+async function companyOf(context: BrowserContext): Promise<string> {
+  const me = await context.request.get("/api/trpc/me.get");
+  expect(me.status(), "the caller's own profile").toBe(200);
+  const found = /"companyId":"([0-9a-f-]{36})"/.exec(await me.text());
+  expect(found, "a company in the caller's profile").not.toBeNull();
+  return found![1]!;
+}
+
+let adminCompany = "";
+
 async function signOut(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Sign out", exact: true }).first().click();
   await page.waitForURL(/\/sign-in/, { timeout: 30_000 });
@@ -88,6 +106,12 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
   await passTheWall(context);
   await signIn(page, ADMIN_PHONE);
 
+  // Before any write: this admin is the browser suite's tenant and nobody else's.
+  adminCompany = await companyOf(context);
+  if (COMPANY_ID !== "") {
+    expect(adminCompany, "the admin's company is the browser suite's").toBe(COMPANY_ID);
+  }
+
   await page.goto("/roster");
   await expect(page.getByRole("table")).toBeVisible();
 
@@ -122,6 +146,9 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
 test("a worker signs in and is refused the office", async ({ context, page }) => {
   await passTheWall(context);
   await signIn(page, WORKER_PHONE);
+  expect(await companyOf(context), "the worker's company is the admin's").toBe(
+    adminCompany,
+  );
 
   await page.goto("/customers");
   await expect(page.getByText("Not permitted.")).toBeVisible();
