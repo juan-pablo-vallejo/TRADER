@@ -14,8 +14,9 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { GET as routeGET } from "../src/app/api/trpc/[trpc]/route";
 import { GET as devSignInGET, POST as devSignInPOST } from "../src/app/dev-signin/route";
-import { clerkEnv } from "../src/server/clerk-env";
+import { clerkEnv, partiesFor } from "../src/server/clerk-env";
 import {
+  admitsParty,
   createClerkIdentityAdapter,
   identityFromClaims,
   type ClerkSession,
@@ -60,10 +61,19 @@ const session = (userId: string | null, sessionClaims: unknown): ClerkSession =>
 });
 
 // The route handler on Clerk's adapter, the session a fake.
-const handlerFor = (read: () => Promise<ClerkSession>, onError = () => {}) =>
+const OFFICE = "https://office.example";
+const handlerFor = (
+  read: () => Promise<ClerkSession>,
+  onError = () => {},
+  parties: readonly string[] = [OFFICE],
+) =>
   createTrpcHandler({
     getDb,
-    identity: createClerkIdentityAdapter({ readSession: read, onError }),
+    identity: createClerkIdentityAdapter({
+      readSession: read,
+      parties: () => parties,
+      onError,
+    }),
     directory: localDirectory,
     reporter: quietReporter,
   });
@@ -205,6 +215,21 @@ describe("the Clerk adapter behind the route handler", () => {
     expect(await subjectOf(fixture.userId)).toBe(USER);
   });
 
+  it("holds a token that names an origin to the deployment's list, and admits one that names none", async () => {
+    const claims = { phone_number: phone, phone_number_verified: true };
+    const as = (azp: unknown) =>
+      handlerFor(() => Promise.resolve(session(USER, { ...claims, azp })));
+    // A browser's token for another origin, moved into a header: refused, binding nothing.
+    expect((await query(as("https://other.example"), "me.get")).status).toBe(401);
+    expect((await query(as(""), "me.get")).status).toBe(401);
+    expect((await query(as(7), "me.get")).status).toBe(401);
+    expect(await subjectOf(fixture.userId)).toBeNull();
+    // The phone's token names none (a native client has no origin); the office's names ours.
+    expect((await query(as(undefined), "me.get")).status).toBe(200);
+    expect((await query(as(OFFICE), "me.get")).status).toBe(200);
+    expect(await subjectOf(fixture.userId)).toBe(USER);
+  });
+
   it("answers no identity, reported once, when the session cannot be read", async () => {
     const errors: unknown[] = [];
     const handler = handlerFor(
@@ -300,5 +325,27 @@ describe("clerkEnv", () => {
     for (const bad of ["office.example", "https://office.example/path", "*"]) {
       expect(clerkEnv({ ...keys, CLERK_AUTHORIZED_PARTIES: bad })).toBeNull();
     }
+  });
+});
+
+describe("the origin rule", () => {
+  const listed = ["https://office.example"];
+
+  it("gives Clerk the list for a cookie's token and none for a header's", () => {
+    expect(partiesFor(null, listed)).toEqual(listed);
+    expect(partiesFor("", listed)).toEqual(listed);
+    // Clerk takes no token from another scheme and falls back to the cookie: so does this.
+    expect(partiesFor("Basic abc", listed)).toEqual(listed);
+    expect(partiesFor("Bearer abc.def.ghi", listed)).toEqual([]);
+    // A bare token is one to Clerk too.
+    expect(partiesFor("abc.def.ghi", listed)).toEqual([]);
+  });
+
+  it("admits no origin named outside the list, and any where no list is kept", () => {
+    expect(admitsParty({ azp: "https://office.example" }, listed)).toBe(true);
+    expect(admitsParty({ azp: "https://other.example" }, listed)).toBe(false);
+    expect(admitsParty({}, listed)).toBe(true);
+    expect(admitsParty({ azp: null }, listed)).toBe(true);
+    expect(admitsParty({ azp: "https://other.example" }, [])).toBe(true);
   });
 });
