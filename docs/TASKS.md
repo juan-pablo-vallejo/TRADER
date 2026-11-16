@@ -278,8 +278,10 @@ paid is created and no production migration runs without the owner's approval of
       two lines state them
 - [ ] R7 — Invoice PDF, payments and delivery (plan first: schema, money; takes Stage 7's
       PDF line). Built so far (2026-11-15): recorded payments with reversal, what is owed,
-      the void rule, the plain CSV of issued invoices, and the PDF made on demand with its
-      button on the invoice page; still open: its email, with each send recorded. Depends on R6 and the Resend domain. Work: the PDF from the issued
+      the void rule, the plain CSV of issued invoices, the PDF made on demand with its
+      button on the invoice page, and its email through a mailer seam with each send
+      recorded and the allow-list; still open: one send seen arriving, which needs the
+      Resend domain, key and an approved recipient on staging. Depends on R6 and the Resend domain. Work: the PDF from the issued
       snapshot; recorded payments and the derived amount owed; the PDF sent by email with
       each send recorded. Tests: a payment changes no invoice row; payments never total
       more than the invoice unless the plan allows an overpayment and says how it reads;

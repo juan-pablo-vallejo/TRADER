@@ -615,6 +615,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   test's line amount once equalled its subtotal, and swapping price for amount stayed green.
 - Invoice quantities are stored with three decimal places (`8.000`): whatever shows one to
   a person trims it (`quantityText`).
+- `invoice_sends` is append-only and references `invoices`, `users` and `companies`: a
+  send made by hand, a failed one included, can never be removed. Check the invoice page's
+  email section only in `trader_demo`, then `pnpm demo --reset`. With no `RESEND_API_KEY`
+  in the shell it fails closed and still writes its row.
+- `invoice.send` holds the invoice's row while the mailer is asked (up to 8 s): a void or a
+  payment of that invoice waits behind it, and gives up at its own 5 s `lock_timeout`.
+- Outside production `mailerFor` sends only to `INVOICE_EMAIL_ALLOWLIST`: on staging a send
+  to anyone else answers `recipient_not_allowed` and is recorded as failed. That is the
+  rule working, not the service failing.
 
 ## Log
 
@@ -2039,3 +2048,39 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   not ticked; R7 open on the email; R5 and S8 open on the sign-in and the physical phones.
 - **Next:** the invoice email behind a mailer seam with its recorded sends and the
   staging allow-list; then whichever owner item arrives first.
+
+### 2026-11-15 — Invoice email and recorded sends (R7): built, no message seen arriving
+
+- **Did:** branch `r7-invoice-email` from `r7-invoice-pdf-email`. `0048`, `0049`:
+  `invoice_sends` with its guards. `core/mailer.ts`, the mailer in the context;
+  `invoice.send` with its gate line; `invoice.read` answers the sends and the customer's
+  address; the Resend adapter, its three variables and the deployment check in `apps/web`;
+  the email section on the invoice page. Seen in the browser on `trader_demo` at 1280 and
+  390 with no mail service set: no section on a draft, the customer's address offered, a
+  non-address stopped by the browser, a send failing closed in words and listed as not
+  sent, a second attempt listed too, no form on a void invoice with its history kept, no
+  sideways scroll, the button 48 pt wide and 56 narrow. Watched red: all thirteen guards of
+  the table, each removed in the local database and restored; fifteen mutations of
+  `invoice.send` and the seam; eleven of the adapter and its environment rules.
+  `pnpm demo --reset` after the check.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: a
+  fourth seam; no mail package; the allow-list as the whole of who may be sent to outside
+  production; the row lock held across the send; failures as codes. Not done, and why R7
+  stays unticked: **no message has left this system.** Resend's request is written from
+  its page and tested against a stand-in; unseen are the key accepted, the sender's
+  domain verified, the PDF opening from a real inbox, and the idempotency key honoured.
+  Also not done: the email's words are English and plain; no reply-to; no bounce or
+  delivery state after acceptance; a `duplicate` of a failed send says only that it
+  failed; staging has neither the migration nor the variables.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r7-invoice-pdf-email` (#115)
+  and this one, stacked; `release-0.1` moves here next. **Staging's database is still at
+  40 migrations** of 50. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key given to the build (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key, sender and one approved recipient as staging variables
+  (one send seen). S6 built and not ticked; R7 open on that one send; R5 and S8 open on
+  the sign-in and the physical phones.
+- **Next:** every remaining line of the track now starts with an owner action above.
+  Without one: S6's screen-reader pass cannot be done by a session; the 24-person check of
+  the schedule can, on a larger demo.
