@@ -84,8 +84,11 @@ describe("invoice_sends", () => {
         constraint: "invoice_sends_invoice_issued",
       });
       await issue(tx, refs, draft);
+      // After the issue by the invoice's own stamp: the issue was timed by this process's
+      // clock, and the database's `now()` may read earlier than it.
       await tx.execute(sql`
-        update invoices set voided_at = now(), voided_by_user_id = ${refs.adminId}
+        update invoices set voided_at = issued_at + interval '1 second',
+          voided_by_user_id = ${refs.adminId}
         where id = ${draft}
       `);
       expect(await refused(tx, send(refs, draft))).toEqual({
