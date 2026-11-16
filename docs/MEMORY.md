@@ -607,6 +607,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   install script it will not run: read the file's diff after any `expo install`.
 - The flow suite leaves `trader_demo_e2e` with schedule enforcement on: a single flow run
   by hand after it sees no job list. Start from `suite.sh`, which rebuilds the database.
+- `pdf-lib` deflates a page's content and writes each string as hex: a test reads the page
+  by inflating every `stream` and decoding `<…> Tj` (`test/invoices/pdf.test.ts`, `drawn`).
+  It stamps a new document with the clock unless both dates are set: a same-bytes test
+  must move the clock between its two renders, or it passes inside one second.
+- A test value that equals another on the same page proves nothing about either: the PDF
+  test's line amount once equalled its subtotal, and swapping price for amount stayed green.
+- Invoice quantities are stored with three decimal places (`8.000`): whatever shows one to
+  a person trims it (`quantityText`).
 
 ## Log
 
@@ -2001,3 +2009,33 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - **Next:** with the owner's Clerk items, the sign-in end to end on both devices; with
   `eas login`, `eas.json` and the preview builds; with the wrapper, staging migrated and
   the browser suite. Without any of them: the invoice PDF behind a mailer seam.
+
+### 2026-11-15 — Invoice PDF on demand (R7, the PDF)
+
+- **Did:** branch `r7-invoice-pdf-email` from `r5-phone-sign-in`. `pdf-lib` 1.17.1 in
+  `packages/api`; `invoices/pdf.ts` (a pure renderer and `invoice.pdf`, admin-gated, with
+  its gate line); "Save as PDF" on an issued or void invoice's page. Seen in the browser
+  on `trader_demo` at 1280 and 390: an invoice issued, the button pressed, `invoice-1.pdf`
+  saved, the note shown, no sideways scroll, the button 48 pt; the file opened as an image
+  and read. Found by looking, not by a test: a long description ran into the quantity,
+  and quantities showed `8.000`; both fixed and pinned. Watched red: eleven mutations of
+  the renderer, two of them only after their tests were made stronger (Notes). `pnpm demo
+--reset` after the check.
+- **Decided:** in this line's plan; the as-built row of 2026-11-15 in ARCHITECTURE: made
+  on demand and never stored; the invoice's own stored figures; dated with the issue;
+  the customer's details as they stand now; `?` for what the font cannot draw. Not done:
+  **the email and `invoice_sends`**, so R7 stays unticked — the Resend adapter needs the
+  owner's domain, key and one approved recipient to be seen sending, and the table is a
+  migration of its own; no logo on the page; English only; not opened in Acrobat or a
+  printer's preview; not checked at 768 or 1024; payments are not listed on the page,
+  only their total.
+- **Release 0.1 state:** branches `r01-mandate` (#100) to `r5-phone-sign-in` (#114) and
+  this one, stacked; `release-0.1` moves here next. **Staging's database is still at 40
+  migrations** of 48. Owner actions open, each blocking only its own step: install the
+  wrapper's migrate command (every staging check); Clerk's native API on the development
+  instance and its publishable key given to the build (the phone's sign-in); `eas login`
+  (device builds); the `release-0.1` alias under Deployment Protection Exceptions (the
+  phones); Resend's domain, key and one test recipient (the invoice email). S6 built and
+  not ticked; R7 open on the email; R5 and S8 open on the sign-in and the physical phones.
+- **Next:** the invoice email behind a mailer seam with its recorded sends and the
+  staging allow-list; then whichever owner item arrives first.
