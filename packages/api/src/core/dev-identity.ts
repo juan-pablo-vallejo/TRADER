@@ -2,7 +2,9 @@
 // number or both — as a verified login, which is exactly
 // why it is gated. Off unless TRADER_DEV_IDENTITY=enabled, and then only under an allowlisted
 // NODE_ENV; every deployed build and runtime is NODE_ENV=production, so a deployment cannot
-// accept a named identity. The check runs per request, never at module load, so `next build`
+// accept a named identity. Nor is it trusted where DATABASE_URL is set: that is a deployed
+// database — the one development shares with staging — and a `dev:` sign-in would bind a
+// roster row there for good (ARCHITECTURE, 2026-11-16, shared database). The check runs per request, never at module load, so `next build`
 // never fails (RULES). Pure over the env record it is handed, like db/src/env.ts.
 import { DEV_EMAIL_HEADER, DEV_PHONE_HEADER, DEV_SUBJECT_HEADER } from "../contract/dev";
 import { z } from "zod";
@@ -32,11 +34,20 @@ const flagSchema = z.object({
 // Never throws, so a wrongly enabled deployment hides its routes while the adapter refuses.
 export function devIdentityEnabled(env: Record<string, string | undefined>): boolean {
   const flag = flagSchema.safeParse(env);
-  return flag.success && flag.data.TRADER_DEV_IDENTITY && isDevelopmentNodeEnv(env);
+  return (
+    flag.success &&
+    flag.data.TRADER_DEV_IDENTITY &&
+    isDevelopmentNodeEnv(env) &&
+    !onDeployedDatabase(env)
+  );
 }
 
 const isDevelopmentNodeEnv = (env: Record<string, string | undefined>) =>
   DEVELOPMENT_NODE_ENVS.includes(env.NODE_ENV ?? "");
+
+// The deployed shape of the database environment (db/src/env.ts): blank means local.
+const onDeployedDatabase = (env: Record<string, string | undefined>) =>
+  (env.DATABASE_URL ?? "") !== "";
 
 export function createDevIdentityAdapter(
   env: Record<string, string | undefined> = process.env,
@@ -48,6 +59,11 @@ export function createDevIdentityAdapter(
       if (!isDevelopmentNodeEnv(env)) {
         throw new Error(
           `refusing the development identity: TRADER_DEV_IDENTITY is enabled under NODE_ENV=${env.NODE_ENV ?? "(unset)"}`,
+        );
+      }
+      if (onDeployedDatabase(env)) {
+        throw new Error(
+          "refusing the development identity: TRADER_DEV_IDENTITY is enabled while DATABASE_URL is set",
         );
       }
       // A header that is absent is an address not claimed; one that is present must parse.
