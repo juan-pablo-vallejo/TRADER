@@ -1,0 +1,16 @@
+# The office removed the shift while this phone had no connection, and the phone has been
+# offline long enough that its entries say so. The phone still offers the shift it last
+# knew of; the start is captured and waits on the phone.
+appId: app.jpteq.trader
+---
+- assertVisible:
+    id: "offer-eligible"
+- tapOn:
+    id: "clock-in"
+- assertVisible:
+    id: "clock-working"
+# Below the jobsites on a short screen.
+- scrollUntilVisible:
+    element:
+      id: "entry-unsent-0"
+    direction: DOWN

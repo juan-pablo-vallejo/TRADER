@@ -1,0 +1,46 @@
+# With the API unreachable (suite.sh has stopped it): the app is already signed in from the
+# flow before. A clock-in and a clock-out are captured, the clock follows them, and the
+# banner says they are saved on the phone. Nothing is lost by closing the app in between.
+appId: app.jpteq.trader
+---
+- tapOn:
+    id: "job-row-0"
+- tapOn:
+    id: "clock-in"
+- assertVisible:
+    id: "clock-working"
+# Below the jobsites on a short screen.
+- scrollUntilVisible:
+    element:
+      id: "entry-unsent-0"
+    direction: DOWN
+- stopApp
+- launchApp:
+    stopApp: false
+- runFlow:
+    when:
+      true: ${LAUNCH == "maestro"}
+    commands:
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
+# On Android only the link's first part survives Maestro's openLink, which is enough for a
+# build that has been opened once already.
+- runFlow:
+    when:
+      true: ${LAUNCH == "adb"}
+    commands:
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081"
+- extendedWaitUntil:
+    visible:
+      id: "clock-working"
+    timeout: 120000
+- tapOn:
+    id: "clock-out"
+- assertVisible:
+    id: "clock-off"
+- assertVisible:
+    id: "sync-pending"
+# Below the jobsites on a short screen.
+- scrollUntilVisible:
+    element:
+      id: "entry-unsent-1"
+    direction: DOWN

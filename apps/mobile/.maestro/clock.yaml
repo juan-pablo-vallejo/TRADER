@@ -1,0 +1,50 @@
+# The clock, with a connection (TASKS R5): clock in on a jobsite, switch to another, take a
+# break, clock out, and everything sent. `suite.sh` then reads the server: six events, once
+# each, two sessions.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- tapOn:
+    id: "job-row-0"
+- tapOn:
+    id: "clock-in"
+- assertVisible:
+    id: "clock-working"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- tapOn:
+    id: "job-row-1"
+- tapOn:
+    id: "clock-switch"
+- assertVisible:
+    id: "clock-working"
+- tapOn:
+    id: "clock-pause"
+- assertVisible:
+    id: "clock-paused"
+- tapOn:
+    id: "clock-resume"
+- assertVisible:
+    id: "clock-working"
+- tapOn:
+    id: "clock-out"
+- assertVisible:
+    id: "clock-off"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+# The other tabs draw with what was just recorded.
+- tapOn:
+    id: "tab-week"
+- assertVisible:
+    id: "hours-row-0"
+- tapOn:
+    id: "tab-today"

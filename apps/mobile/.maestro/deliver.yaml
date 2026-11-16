@@ -1,0 +1,21 @@
+# The API is back (suite.sh has started it): one request to send, and everything is sent.
+appId: app.jpteq.trader
+---
+- tapOn:
+    id: "tab-settings"
+- tapOn:
+    id: "sync-now"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 60000
+- tapOn:
+    id: "tab-today"
+# A tap that lands while the tab bar redraws is lost: ask again if Today is not up.
+- runFlow:
+    when:
+      notVisible:
+        id: "clock-working|clock-paused|clock-off"
+    commands:
+      - tapOn:
+          id: "tab-today"

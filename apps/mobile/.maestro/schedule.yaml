@@ -1,0 +1,34 @@
+# Under the weekly schedule (TASKS S7), a person with a shift now: the clock offers that
+# jobsite alone, the start is taken, and the shift is on their schedule tab.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- assertVisible:
+    id: "offer-eligible"
+- assertNotVisible:
+    id: "job-list"
+- tapOn:
+    id: "clock-in"
+- assertVisible:
+    id: "clock-working"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- tapOn:
+    id: "tab-week"
+- assertVisible:
+    id: "week-shift-0-0"
+- assertVisible:
+    id: "week-age"
+- tapOn:
+    id: "tab-today"
+- tapOn:
+    id: "clock-out"
+- assertVisible:
+    id: "clock-off"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
