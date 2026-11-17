@@ -14,6 +14,7 @@
 // holds its admin to the browser suite's company, and its worker to the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
+import { askReadiness } from "./readiness";
 import { missingSettings } from "./tickets";
 
 // A variable that is set and blank, as an unset one arrives from a workflow, is unset.
@@ -152,20 +153,19 @@ test("the deployment answers as its kind should: walled, or public and ready", a
   context,
   baseURL,
 }) => {
-  const outsider = await playwright.request.newContext({ baseURL });
-  const answered = await outsider.get("/api/ready", { maxRedirects: 0 });
-  await outsider.dispose();
+  expect(baseURL, "the deployment's origin").toBeTruthy();
+  const answered = await askReadiness(playwright.request, baseURL!);
   if (BYPASS === "") {
     // Staging's public host: ready with nothing sent, and serving the commit the caller
     // expects when it names one.
-    expect(answered.status(), "the public host, no bypass").toBe(200);
+    expect(answered.status, "the public host, no bypass").toBe(200);
     const expected = process.env.E2E_EXPECT_COMMIT ?? "";
     if (expected !== "") {
-      expect(((await answered.json()) as { commit: unknown }).commit).toBe(expected);
+      expect(answered.commit, "the commit the host says it serves").toBe(expected);
     }
     return;
   }
-  expect([401, 302, 303, 307], "no bypass, no entry").toContain(answered.status());
+  expect([401, 302, 303, 307], "no bypass, no entry").toContain(answered.status);
   await passTheWall(context);
 });
 
