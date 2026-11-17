@@ -6,6 +6,25 @@ approves, exports payroll, and invoices from the same record.
 
 In build, pre-pilot. Where it stands → [docs/TASKS.md](docs/TASKS.md).
 
+## How it fits together
+
+One TypeScript monorepo. The phone app captures events offline into a local outbox and syncs
+them; the office app reviews, approves, closes pay periods and invoices; both talk to one tRPC
+API, served by the web app's route handler, over one Postgres database with row-level
+security per company.
+
+| Path           | Holds                                                                      |
+| -------------- | -------------------------------------------------------------------------- |
+| `apps/web`     | The office web app (Next.js) and the API's HTTP host; `e2e/` browser flows |
+| `apps/mobile`  | The field app (React Native, Expo): clock, schedule, outbox; `.maestro/`   |
+| `packages/api` | The tRPC API: `core/` request plumbing, one folder per domain, `routers/`  |
+| `packages/db`  | Drizzle schema, migrations, seed, staging promotion, invariant tests       |
+| `assets/brand` | The mark and the icon                                                      |
+| `docs`         | The six documents below                                                    |
+
+Stack, invariants, the sync protocol, environments and every decision →
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Run it locally
 
 Needs Node 24, pnpm and Docker. Nothing here touches a deployed service.
@@ -27,17 +46,38 @@ development sign-in on, then sign in at `/dev-signin` as `office@demo.invalid`:
 POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled pnpm --filter @trader/web dev
 ```
 
-## Layout
+The field app needs Xcode or Android Studio and runs as a development build, never Expo Go:
 
-| Path           | Holds                                                                     |
-| -------------- | ------------------------------------------------------------------------- |
-| `apps/web`     | The office web app (Next.js) and the API's HTTP host                      |
-| `packages/api` | The tRPC API: `core/` request plumbing, one folder per domain, `routers/` |
-| `packages/db`  | Drizzle schema, migrations, seed and the database invariant tests         |
-| `assets/brand` | The mark and the icon                                                     |
-| `docs`         | The six documents below                                                   |
+```sh
+pnpm --filter @trader/mobile ios        # or: android
+apps/mobile/.maestro/suite.sh           # the device flows, against a local API
+```
 
-The field app (`apps/mobile`) is not built yet; it is Stage 5 of [docs/TASKS.md](docs/TASKS.md).
+## Commands
+
+| Command                         | Does                                                                |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `pnpm check`                    | Typecheck, lint, format check and every test; run before a commit   |
+| `pnpm test`                     | Tests alone; they need the local database and refuse a deployed one |
+| `pnpm format` · `pnpm lint:fix` | Rewrite formatting; apply lint fixes                                |
+| `pnpm build`                    | Build every package and the web app                                 |
+| `pnpm db:generate`              | A new migration from a schema change                                |
+| `pnpm demo --reset`             | Rebuild the demo database after a migration or a manual check       |
+| `pnpm e2e:staging`              | The browser flows against a staging deployment                      |
+
+One test file: `pnpm exec vitest run <file>` from its package's directory.
+
+## Configuration
+
+[.env.example](.env.example) is the whole contract: every variable, with a safe placeholder
+and what reads it. Local work needs only the database password. Deployed values live with
+their platforms and are never committed.
+
+## Contributing
+
+One change per branch and pull request into `main`; the `check` job must pass; the owner
+merges. A merge is migrated and deployed to staging and verified there by a workflow. Commit
+and review rules → [docs/RULES.md](docs/RULES.md).
 
 ## Documentation
 
