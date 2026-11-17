@@ -658,6 +658,10 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The promotion workflow cannot be tried from a branch: its environment admits `main`
   alone, and GitHub reads a `workflow_run` workflow from the default branch. A change to
   it is proven by its first run after the merge; say so in its pull request.
+- The browser suite has no default company or number: a run not given `E2E_COMPANY_ID`,
+  `E2E_ADMIN_PHONE` and `E2E_WORKER_PHONE` stops at "refusing to run" before a test loads.
+  The promotion reads them as variables of the `staging` environment (`vars.`), not
+  secrets; a run from this machine needs all three in its environment too.
 - The migration reading flags by text and widely (`reading.ts`): a trigger's `BEFORE
 TRUNCATE`, a quoted word and a function's body are not flags, a dropped constraint, a
   REVOKE and an enum value are. A flag sends the migration to the owner; it is not a fault.
@@ -2267,3 +2271,29 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   the merge's own run rehearses and prints the code; the owner dispatches `promote` with
   it; then one invoice email to the allow-listed address.
 - **Next:** the rehearsal's report to the owner; after the promotion, P3's send.
+
+### 2026-11-17 — Gate #3 read; the browser suite made to refuse a run it was not told
+
+- **Did:** read-only, twice: the promotion's sign-in path (the key in the `staging`
+  environment alone, tickets by `POST /v1/sign_in_tokens` and the `ticket` strategy, no
+  trace or artifact), and staging itself — one company, `R3 Staging Co`, its admin and
+  worker on the suite's two fictional numbers, each bound, one customer, nothing else; 40
+  migrations, equal by hash to the journal's first forty; the rehearsal branch at 50.
+  Found: the three `E2E_*` values had been made as secrets where the workflow reads
+  variables, so they arrived blank; the owner made them variables. Then branch
+  `e2e-fail-closed` from `9108276`: the defaults removed, `missingSettings` in
+  `tickets.ts`, the ticket step and the spec both refusing. Watched red: the spec's
+  refusal, the ticket step's, a blank counted as set, a name dropped from the list — the
+  last turned nothing red until the list was pinned by name.
+- **Decided:** by the owner on 2026-11-17: no default for the suite's company or its two
+  people. Not done: no workflow change, so with the company alone unset the two tickets
+  are still made before the suite refuses, and expire unused; the fallback to Clerk's
+  test code when no ticket is given is kept. Not seen: the refusal in the workflow, and
+  the verify job at all, which has never run. The `staging-e2e` wrapper passes none of
+  the three, so a session's own run refuses until it does: the owner's file.
+- **Release 0.1 state:** `main` at `9108276`; staging at 40 of 50, serving `1c94b64`. This
+  branch's merge starts a promotion that verifies the rehearsal and stops at the owner's
+  gate, red by design, with nothing migrated; its report prints the code for the new
+  commit, and a code printed for `9108276` no longer holds.
+- **Next:** owner merges this branch, reads that run's report and dispatches `promote`
+  with its code; then the verify job's first log.
