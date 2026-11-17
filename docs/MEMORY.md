@@ -2343,3 +2343,27 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   merge and runs all five tests with fresh tickets.
 - **Next:** merge this branch on a green `check`; read that promotion's verify log; then
   O0's tick and O3.
+
+### 2026-11-17 — Staging promoted end to end; all five browser tests green; O0 ticked
+
+- **Did:** read after the owner merged #126 (`main` at `0eec8b9`): CI green; promotion
+  44049053024 green in all three jobs with nothing pending and nothing migrated;
+  `staging-preview` and the staging host at `0eec8b9`; staging at 50 of 50. The verify job
+  made two tickets and ran five tests green in 16.6 s: readiness and the commit, a
+  made-up ticket refused, the admin held to `E2E_COMPANY_ID` and rewriting the fixture
+  customer, the spent ticket refused, the worker refused the office. The log holds no
+  ticket and no key; no artifact exists. Read back from the database: one company, two
+  users, one customer, its notes carrying the run's stamp. Branch `o0-record`, documents
+  only: O0 ticked.
+- **Decided:** nothing new. Not done: the committed `.claude/settings.json` and the
+  owner's local file both still deny `gh pr merge` and every `gh workflow run`, against
+  the 2026-11-17 policy in RULES; a session's edit of its own rules was refused, rightly,
+  so the change is the owner's to make. No session has merged yet. P1 is not ticked: a
+  run for a commit already promoted, a merge carrying a flagged migration and a dispatch
+  with a wrong code are each unseen. Clerk's test mode being off rests on the owner's
+  word.
+- **Release 0.1 state:** `main` at `0eec8b9`, staging serving it at the journal, the
+  suite green. Still on GitHub: `overhaul-reliability` and `release-0.1`, each deletion
+  the owner's.
+- **Next:** O3, staging from `main` by the deploy hook (plan first: CI); it needs the
+  owner's deploy hook as a secret of the `staging` environment.

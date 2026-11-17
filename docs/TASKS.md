@@ -13,7 +13,7 @@ is one pull request, planned in its description. Its decisions (two permanent br
 staging deployed from `main` by a deploy hook, no native runner for now) are written into
 ARCHITECTURE by the batch that enacts them. Phone scope stays the PRD's.
 
-- [ ] O0 — The migration backlog `0040` to `0049` applied by the owner's dispatch before
+- [x] O0 — The migration backlog `0040` to `0049` applied by the owner's dispatch before
       anything else merges, with Clerk's test mode off and the suite's three `E2E_*`
       variables set first. Done when staging is at the journal, the host names `main`'s
       commit and the browser suite is green there
