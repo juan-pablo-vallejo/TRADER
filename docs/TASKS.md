@@ -366,6 +366,10 @@ every gate, and a candidate missing a platform reads as not native-verified.
       the suite green; a run for a commit already promoted changes nothing; a merge
       carrying a flagged migration stops before staging changes; and a dispatch with
       any other code, or with no earlier rehearsal, is refused
+- [x] The browser suite refuses to run untold (ARCHITECTURE, 2026-11-16, shared
+      database): `E2E_COMPANY_ID`, `E2E_ADMIN_PHONE` and `E2E_WORKER_PHONE` have no
+      default; with one unset the ticket step makes no ticket and the suite loads no
+      test. Done when each is watched refusing in `e2e-tickets.test.ts`
 - [ ] Fixture tenants on the shared database (ARCHITECTURE, 2026-11-16, shared
       database). The code is ready: the browser flow holds its admin to
       `E2E_COMPANY_ID` before its first write and its worker to the same company

@@ -14,13 +14,19 @@
 // holds its admin to the browser suite's company, and its worker to the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
-import { DEFAULT_ADMIN_PHONE, DEFAULT_WORKER_PHONE } from "./tickets";
+import { missingSettings } from "./tickets";
 
 // A variable that is set and blank, as an unset one arrives from a workflow, is unset.
 const orDefault = (value: string | undefined, fallback: string) =>
   value === undefined || value === "" ? fallback : value;
-const ADMIN_PHONE = orDefault(process.env.E2E_ADMIN_PHONE, DEFAULT_ADMIN_PHONE);
-const WORKER_PHONE = orDefault(process.env.E2E_WORKER_PHONE, DEFAULT_WORKER_PHONE);
+// The suite's company and its two people are stated, every run: with one unset no test
+// is loaded, so nothing signs in and nothing is written.
+const unset = missingSettings(process.env);
+if (unset.length > 0) {
+  throw new Error(`refusing to run: ${unset.join(", ")} not set`);
+}
+const ADMIN_PHONE = (process.env.E2E_ADMIN_PHONE ?? "").trim();
+const WORKER_PHONE = (process.env.E2E_WORKER_PHONE ?? "").trim();
 const ADMIN_TICKET = orDefault(process.env.E2E_ADMIN_TICKET, "");
 const WORKER_TICKET = orDefault(process.env.E2E_WORKER_TICKET, "");
 // Both or neither, as tickets.ts makes them: one alone would hide a broken ticket path
@@ -31,10 +37,9 @@ if ((ADMIN_TICKET === "") !== (WORKER_TICKET === "")) {
   );
 }
 const BY_TICKET = ADMIN_TICKET !== "";
-// The browser suite's own company, by id. Set, an identity of any other tenant stops the
-// flow before its first write; unset (a preview with a database of its own), the two
-// identities must still share one company.
-const COMPANY_ID = orDefault(process.env.E2E_COMPANY_ID, "");
+// The browser suite's own company, by id: an identity of any other tenant stops the flow
+// before its first write.
+const COMPANY_ID = (process.env.E2E_COMPANY_ID ?? "").trim();
 const CLERK_TEST_CODE = "424242";
 const FIXTURE_CUSTOMER = "E2E Customer";
 const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
@@ -184,9 +189,7 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
 
   // Before any write: this admin is the browser suite's tenant and nobody else's.
   adminCompany = await companyOf(context);
-  if (COMPANY_ID !== "") {
-    expect(adminCompany, "the admin's company is the browser suite's").toBe(COMPANY_ID);
-  }
+  expect(adminCompany, "the admin's company is the browser suite's").toBe(COMPANY_ID);
 
   await page.goto("/roster");
   await expect(page.getByRole("table")).toBeVisible();

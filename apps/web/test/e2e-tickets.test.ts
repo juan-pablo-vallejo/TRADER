@@ -1,5 +1,6 @@
 // The staging suite's sign-in tickets (e2e/tickets.ts) and where the key that makes them
 // may be named (RULES, Git and CI: a workflow that holds a secret). No Clerk, no network.
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -7,12 +8,21 @@ import { describe, expect, it } from "vitest";
 
 import {
   CLERK_API,
-  DEFAULT_ADMIN_PHONE,
-  DEFAULT_WORKER_PHONE,
   mintForWorkflow,
   mintTicket,
+  missingSettings,
+  SUITE_SETTINGS,
   TICKET_SECONDS,
 } from "../e2e/tickets";
+
+// Two of Clerk's fictional numbers and a company's id, as a run would be given them.
+const ADMIN_PHONE = "+14015550100";
+const WORKER_PHONE = "+14015550101";
+const SETTINGS = {
+  E2E_COMPANY_ID: "01900000-0000-7000-8000-000000000001",
+  E2E_ADMIN_PHONE: ADMIN_PHONE,
+  E2E_WORKER_PHONE: WORKER_PHONE,
+};
 
 const KEY = "sk_test_abcDEF123";
 const TICKET = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1c2VyXzEifQ.c2lnbmF0dXJl";
@@ -36,10 +46,8 @@ function clerk(users: unknown, token: unknown = { token: TICKET }) {
 
 describe("mintTicket", () => {
   it("asks Clerk for the one holder of the number, then for a short single ticket", async () => {
-    const { calls, send } = clerk([user("user_admin1", DEFAULT_ADMIN_PHONE)]);
-    expect(
-      await mintTicket({ secretKey: KEY, fetch: send }, DEFAULT_ADMIN_PHONE),
-    ).toEqual({
+    const { calls, send } = clerk([user("user_admin1", ADMIN_PHONE)]);
+    expect(await mintTicket({ secretKey: KEY, fetch: send }, ADMIN_PHONE)).toEqual({
       ok: true,
       ticket: TICKET,
     });
@@ -65,9 +73,9 @@ describe("mintTicket", () => {
 
   it("asks nothing with no key, a production key, or a number that could be a person's", async () => {
     const cases = [
-      ["", DEFAULT_ADMIN_PHONE, "key_not_set"],
-      ["sk_live_abcDEF123", DEFAULT_ADMIN_PHONE, "key_not_of_a_development_instance"],
-      ["pk_test_abcDEF123", DEFAULT_ADMIN_PHONE, "key_not_of_a_development_instance"],
+      ["", ADMIN_PHONE, "key_not_set"],
+      ["sk_live_abcDEF123", ADMIN_PHONE, "key_not_of_a_development_instance"],
+      ["pk_test_abcDEF123", ADMIN_PHONE, "key_not_of_a_development_instance"],
       [KEY, "+14015551234", "number_not_fictional"],
       [KEY, "+14015550200", "number_not_fictional"],
       [KEY, "4015550100", "number_not_fictional"],
@@ -86,22 +94,17 @@ describe("mintTicket", () => {
     const cases = [
       [[], "user_not_found"],
       // A filter Clerk ignored: somebody else comes back, and is not taken.
-      [[user("user_other1", DEFAULT_WORKER_PHONE)], "user_not_found"],
-      [
-        [user("user_a1", DEFAULT_ADMIN_PHONE), user("user_b2", DEFAULT_ADMIN_PHONE)],
-        "user_ambiguous",
-      ],
+      [[user("user_other1", WORKER_PHONE)], "user_not_found"],
+      [[user("user_a1", ADMIN_PHONE), user("user_b2", ADMIN_PHONE)], "user_ambiguous"],
       [{ data: [] }, "answer_unreadable"],
       [
-        [{ id: "org_1", phone_numbers: [{ phone_number: DEFAULT_ADMIN_PHONE }] }],
+        [{ id: "org_1", phone_numbers: [{ phone_number: ADMIN_PHONE }] }],
         "answer_unreadable",
       ],
     ] as const;
     for (const [users, failure] of cases) {
       const { calls, send } = clerk(users);
-      expect(
-        await mintTicket({ secretKey: KEY, fetch: send }, DEFAULT_ADMIN_PHONE),
-      ).toEqual({
+      expect(await mintTicket({ secretKey: KEY, fetch: send }, ADMIN_PHONE)).toEqual({
         ok: false,
         failure,
       });
@@ -113,15 +116,13 @@ describe("mintTicket", () => {
     const refused = (() =>
       Promise.resolve(json({ errors: [] }, 401))) as unknown as typeof fetch;
     const down = (() => Promise.reject(new Error("no route"))) as unknown as typeof fetch;
-    const noToken = clerk([user("user_admin1", DEFAULT_ADMIN_PHONE)], { token: 7 }).send;
+    const noToken = clerk([user("user_admin1", ADMIN_PHONE)], { token: 7 }).send;
     for (const [send, failure] of [
       [refused, "clerk_refused"],
       [down, "clerk_unreachable"],
       [noToken, "answer_unreadable"],
     ] as const) {
-      expect(
-        await mintTicket({ secretKey: KEY, fetch: send }, DEFAULT_ADMIN_PHONE),
-      ).toEqual({
+      expect(await mintTicket({ secretKey: KEY, fetch: send }, ADMIN_PHONE)).toEqual({
         ok: false,
         failure,
       });
@@ -130,21 +131,22 @@ describe("mintTicket", () => {
 });
 
 describe("mintForWorkflow", () => {
-  const run = async (env: Record<string, string>, users: unknown) => {
+  // The two numbers are given unless a test takes one away.
+  const run = async (given: Record<string, string>, users: unknown) => {
     const written: string[] = [];
     const said: string[] = [];
-    const { send } = clerk(users);
-    const exit = await mintForWorkflow(env, {
-      fetch: send,
-      write: (line) => written.push(line),
-      say: (line) => said.push(line),
-    });
-    return { exit, written, said };
+    const { calls, send } = clerk(users);
+    const exit = await mintForWorkflow(
+      { E2E_ADMIN_PHONE: ADMIN_PHONE, E2E_WORKER_PHONE: WORKER_PHONE, ...given },
+      {
+        fetch: send,
+        write: (line) => written.push(line),
+        say: (line) => said.push(line),
+      },
+    );
+    return { exit, written, said, calls };
   };
-  const both = [
-    user("user_admin1", DEFAULT_ADMIN_PHONE),
-    user("user_worker1", DEFAULT_WORKER_PHONE),
-  ];
+  const both = [user("user_admin1", ADMIN_PHONE), user("user_worker1", WORKER_PHONE)];
 
   it("writes both tickets to the environment file and masks each before anything else", async () => {
     const { exit, written, said } = await run(
@@ -175,6 +177,77 @@ describe("mintForWorkflow", () => {
     );
     expect(said.join("\n")).not.toContain(KEY);
   });
+
+  it("makes no ticket and asks Clerk nothing when a number is not given", async () => {
+    for (const name of ["E2E_ADMIN_PHONE", "E2E_WORKER_PHONE"]) {
+      const { exit, written, said, calls } = await run(
+        { CLERK_STAGING_SECRET_KEY: KEY, [name]: "" },
+        both,
+      );
+      expect(exit).toBe(1);
+      expect(calls).toEqual([]);
+      expect(written).toEqual([]);
+      expect(said).toEqual([`sign-in tickets not made: ${name} not set`]);
+    }
+  });
+});
+
+// The suite's company and its two people have no default: a run that is not told all three
+// must stop, never go on without the tenant check or as people nobody named.
+describe("the suite's required settings", () => {
+  it("names every setting left unset or blank, and none when all are given", () => {
+    // The three, by name: a name dropped from the list is a check dropped from every run.
+    expect([...SUITE_SETTINGS]).toEqual([
+      "E2E_COMPANY_ID",
+      "E2E_ADMIN_PHONE",
+      "E2E_WORKER_PHONE",
+    ]);
+    expect(missingSettings(SETTINGS)).toEqual([]);
+    expect(missingSettings({})).toEqual([...SUITE_SETTINGS]);
+    for (const name of SUITE_SETTINGS) {
+      expect(missingSettings({ ...SETTINGS, [name]: "" })).toEqual([name]);
+      expect(missingSettings({ ...SETTINGS, [name]: "  " })).toEqual([name]);
+      expect(missingSettings({ ...SETTINGS, [name]: undefined })).toEqual([name]);
+    }
+  });
+
+  // The suite itself, loaded by Playwright as a run loads it, with no browser started:
+  // listing its tests is what fails when the file refuses to load.
+  const list = (given: Record<string, string>) =>
+    spawnSync(
+      "pnpm",
+      ["exec", "playwright", "test", "-c", "e2e/playwright.config.ts", "--list"],
+      {
+        cwd: join(__dirname, ".."),
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          STAGING_URL: "https://staging.invalid",
+          E2E_ADMIN_TICKET: "",
+          E2E_WORKER_TICKET: "",
+          ...given,
+        },
+      },
+    );
+
+  it("loads its five tests when told its company and both people", () => {
+    const listed = list(SETTINGS);
+    expect(listed.stdout).toContain("Total: 5 tests in 1 file");
+    expect(listed.status).toBe(0);
+  }, 60_000);
+
+  it.each(SUITE_SETTINGS)(
+    "loads no test and exits red without %s",
+    (name) => {
+      const listed = list({ ...SETTINGS, [name]: "" });
+      expect(listed.status).not.toBe(0);
+      expect(`${listed.stdout}${listed.stderr}`).toContain(
+        `refusing to run: ${name} not set`,
+      );
+      expect(listed.stdout).toContain("Total: 0 tests");
+    },
+    60_000,
+  );
 });
 
 // The key is a secret of the `staging` environment, which admits `main` alone. These hold
