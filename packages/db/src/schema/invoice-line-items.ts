@@ -43,9 +43,9 @@ export const invoiceLineItems = pgTable(
     unit: text("unit"),
     unitPriceCents: integer("unit_price_cents").notNull(),
     amountCents: integer("amount_cents").notNull(),
-    // Provenance for the unbilled-materials view (Stage 8), kept for drill-down and never
+    // Provenance for the unbilled-materials view (Stage 7), kept for drill-down and never
     // re-read to recompute a total. Same-company by the composite key; same-job is an API
-    // rule (Stage 8), not a constraint.
+    // rule (Stage 7), not a constraint.
     materialId: uuid("material_id"),
     createdAt,
     updatedAt,
@@ -64,7 +64,7 @@ export const invoiceLineItems = pgTable(
       columns: [t.companyId, t.materialId],
       foreignColumns: [materials.companyId, materials.id],
     }),
-    // An invoice's lines in order (Stage 8); which materials are already billed.
+    // An invoice's lines in order (Stage 7); which materials are already billed.
     index("invoice_line_items_invoice_id_position_idx").on(t.invoiceId, t.position),
     index("invoice_line_items_material_id_idx").on(t.materialId),
     check("invoice_line_items_position_nonnegative", sql`${t.position} >= 0`),

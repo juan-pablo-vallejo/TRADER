@@ -55,7 +55,7 @@ export async function seed(
   `);
   // Inserted once and never updated: a re-run must not rewind a series that has issued
   // numbers. Both series start at 1 until onboarding sets where the partner's series
-  // continues (Stage 8), before the first issue.
+  // continues (Stage 7), before the first issue.
   await executor.execute(sql`
     INSERT INTO invoice_counters (company_id, next_invoice_number, next_credit_memo_number)
     VALUES (${company.companyId}, 1, 1)

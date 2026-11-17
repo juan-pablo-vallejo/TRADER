@@ -57,7 +57,7 @@ export const creditMemos = pgTable(
       columns: [t.companyId, t.issuedByUserId],
       foreignColumns: [users.companyId, users.id],
     }),
-    // An invoice's credits (Stage 8).
+    // An invoice's credits (Stage 7).
     index("credit_memos_invoice_id_idx").on(t.invoiceId),
     check("credit_memos_number_positive", sql`${t.number} > 0`),
     check("credit_memos_amount_cents_positive", sql`${t.amountCents} > 0`),
