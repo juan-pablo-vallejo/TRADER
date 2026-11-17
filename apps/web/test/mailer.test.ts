@@ -140,7 +140,11 @@ describe("the mail environment", () => {
 
   it("sends nothing with no service, whatever the environment", async () => {
     const { calls, send } = recorder(accepted);
-    for (const env of [{}, { VERCEL_ENV: "production" }, { VERCEL_ENV: "preview" }]) {
+    for (const env of [
+      {},
+      { TRADER_ENVIRONMENT: "production" },
+      { VERCEL_ENV: "preview" },
+    ]) {
       expect(await mailerFor(env, send).send(MAIL)).toEqual({
         ok: false,
         failure: "mail_not_configured",
@@ -150,7 +154,15 @@ describe("the mail environment", () => {
   });
 
   it("sends to nobody outside production unless the allow-list names them", async () => {
-    for (const where of [{}, { VERCEL_ENV: "preview" }, { VERCEL_ENV: "development" }]) {
+    // Staging is the staging project's Production deployment: Vercel's own name for the
+    // environment says nothing about whose customers a message would reach.
+    for (const where of [
+      {},
+      { VERCEL_ENV: "preview" },
+      { VERCEL_ENV: "production" },
+      { VERCEL_ENV: "production", TRADER_ENVIRONMENT: "staging" },
+      { VERCEL_ENV: "production", TRADER_ENVIRONMENT: "Production" },
+    ]) {
       const { calls, send } = recorder(accepted);
       expect(await mailerFor({ ...SERVICE, ...where }, send).send(MAIL)).toEqual({
         ok: false,
@@ -169,7 +181,7 @@ describe("the mail environment", () => {
 
   it("sends to anyone in production with no list, and only to the list when there is one", async () => {
     const { calls, send } = recorder(accepted);
-    const production = { ...SERVICE, VERCEL_ENV: "production" };
+    const production = { ...SERVICE, TRADER_ENVIRONMENT: "production" };
     expect((await mailerFor(production, send).send(MAIL)).ok).toBe(true);
     expect(
       await mailerFor(

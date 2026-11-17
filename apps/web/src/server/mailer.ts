@@ -14,6 +14,7 @@
 // is one message. Its answer's `id` is kept; nothing else of an answer is read, and a
 // refusal's body is never kept or reported — it may quote the address.
 import { type Mail, type Mailer, restrictedTo, unconfiguredMailer } from "@trader/api";
+import { traderEnvironment } from "./environment";
 
 type Env = Record<string, string | undefined>;
 
@@ -99,7 +100,9 @@ export function mailerFor(env: Env, send: typeof fetch): Mailer {
   if (service === null) return unconfiguredMailer;
   const mailer = createResendMailer({ ...service, fetch: send });
   const allowed = allowList(env);
-  return env.VERCEL_ENV === "production" && allowed.length === 0
+  // TRADER's own production, never Vercel's: staging is its project's Production
+  // deployment, and there the list stays the whole of who may be sent to.
+  return traderEnvironment(env) === "production" && allowed.length === 0
     ? mailer
     : restrictedTo(allowed, mailer);
 }
