@@ -142,10 +142,6 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   report only through `reportFailure`.
 - A Vercel env change reaches only a new deployment, and a rollback restores the old one's env:
   re-check `status.get` after any deploy or rollback.
-- Comments written before the Stage 7/8 swap say `Stage 8` for invoicing, now Stage 7:
-  `seed.ts:59`, `invoices.ts:77,112`, `invoice-line-items.ts:46,48,67`, `credit-memos.ts:60`
-  (`packages/db/src`). Correct each when its file is next touched, in that task; delete this note
-  then.
 - A dev sign-in as the seed admin binds the seeded row, and `seed.test.ts` then fails on
   `identity_subject`: `DELETE FROM users WHERE email = 'admin@jpteq.app'`, then `pnpm db:seed`.
 - `@trpc/*` peers are exact (`@trpc/client@11.23.0` wants `@trpc/server@11.23.0`): the three
@@ -282,12 +278,6 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `take_screenshot` takes about 25 s, the rest under a second; the first use leaves a
   `maestro-driver-ios` app on the simulator. `assertVisible` takes no `timeout`
   (`extendedWaitUntil` does), and a wrong key fails the whole flow before it starts.
-- `materials/cost.test.ts`, "prices an open receipt…", asserts `updated_at` changed: the
-  fixture's insert and the save can share a millisecond of the Node clock (seen once on
-  2026-11-12, red in a full `pnpm check`, green on the rerun). Rerun; the fix is its own line.
-- `roster/pay-rates.ts` and `roster/list.ts` import each other: a module that loads
-  `pay-rates.ts` first finds `rate` undefined at load. Pure consumers import
-  `roster/rate-on.ts`; a query on `pay_rates` elsewhere selects the table itself.
 - Two `eventIn` events of one worker at one instant order by their random ids: a fixture's
   job switch starts the second session a minute later, or the fold answers
   `session_already_open`.
@@ -304,13 +294,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   row (`table.rowLink`), never a word in a paragraph.
 - A name link in a wide table cell wraps where the bare name did: a 49 pt row there is two
   lines of name, not the link.
-- `materials/create-commit.test.ts`, "answers the same entry sent twice at once…", failed
-  once on 2026-11-12 in a full `pnpm check` of a documents-only tree, and passed 15 reruns
-  alone: 23505 on `materials_company_id_id_unique` from `material.create`'s insert
-  (`create.ts`, step 6). Its `ON CONFLICT` names `id`, and `materials` has a second unique
-  on `(company_id, id)`, which a conflict target does not cover — the likely cause, not
-  proven. One of two identical entries sent at once would answer a failure and write
-  nothing, and its resend `duplicate`. Rerun; the fix is its own line.
+- `ON CONFLICT (id) DO NOTHING` names one arbiter index: when two copies of a row insert at
+  once, the second passes the arbiter unchecked-for-now and then waits on any other unique
+  that holds the id, such as `(company_id, id)`, and raises 23505 when the first commits
+  (seen on `material.create`, 1 run in 30, gone with no target). Where every unique of a
+  table holds the id, name no target; where a natural key must still raise, the writer
+  must already hold a lock that keeps two copies apart. Not audited for that lock: the
+  targets in `invoices/draft.ts`, `payments.ts`, `send.ts`, `assignments/write.ts`,
+  `closeout/submit.ts`, `labor/repair.ts`.
 - A closed pay period and its `pay_period_lines` can never be deleted, and they reference
   the company, the closer, the workers and the jobs: tests close periods only in a
   rolled-back transaction or a `disposableDb()`. Check `/pay-periods` by hand only in
@@ -2267,3 +2258,26 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   the merge's own run rehearses and prints the code; the owner dispatches `promote` with
   it; then one invoice email to the allow-listed address.
 - **Next:** the rehearsal's report to the owner; after the promotion, P3's send.
+
+### 2026-11-17 — Overhaul planned and approved; reliability batch (O2)
+
+- **Did:** read-only ground truth at `9108276` (three investigations: the pipeline, the
+  product and code, the toolbox), then the plan, approved. Read: promotion run
+  44009174126 rehearsed `0040`–`0049` cleanly and stopped at the owner's gate; staging at
+  40 of 50, its host 73 commits behind and naming no commit; the `staging` environment
+  holds no `E2E_*` variable, so the suite's tenant guard is idle in CI; Clerk's connector
+  shows no test-mode setting, so that switch is the dashboard's. Branch
+  `overhaul-reliability`: the roster cycle broken by `roster/current-rates.ts`;
+  `material.create` with no conflict target (the racing test 1 red in 30 before, 30 green
+  after); the cost test's fixture stamped in the past; the queue and the pull reading
+  `receiptStandings`; the browser's id minter at `app/uuidv7.ts`; 31 unused strings gone;
+  not-found to the Overview; the README. No migration, no dependency.
+- **Decided:** by the owner on 2026-11-17 (the mandate and four answers): the backlog is
+  applied first, before any merge; staging deploys from `main` by Vercel's deploy hook, a
+  secret of the `staging` environment; the phone keeps the PRD's phasing; Cloudflare gets
+  its documentation connector and a read-only token, writes staying on the pinned wrapper.
+  Their decision rows come with the batches that enact them (TASKS, Overhaul). Not done:
+  the other conflict targets are unaudited (Notes); `@types/pg` stays a dependency of
+  `packages/db`, whose exported types need it. For the owner: DESIGN's "Scheduled shift
+  (crew)" row still reads "To be built (TASKS S7)" though S7 is ticked.
+- **Next:** the owner's three steps of O0; O1's branch; neither branch merges before O0.
