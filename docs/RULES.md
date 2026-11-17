@@ -154,6 +154,7 @@ the owner's machine, outside the repository.
   | Onboard a company on staging                  | the owner-role wrapper's `onboard`                                          |
   | Migrate staging, move `staging-preview`       | the promotion workflow, never a session's shell                             |
   | Staging's DNS records                         | the DNS wrapper, pinned to the record names it may write                    |
+  | Reading the zone's DNS                        | the DNS wrapper's `inspect`, on a token that can read and nothing else      |
   | Neon branches and operations                  | the Neon CLI through its wrapper, pinned to the staging project             |
   | Test people at the identity provider          | the Clerk wrapper or CLI, fictional numbers only                            |
   | Deployments, logs, a preview's variables      | Vercel's connector to read; the staging project's wrapper to deploy and set |
@@ -170,6 +171,12 @@ the owner's machine, outside the repository.
   DELETE or UPDATE without a key, REVOKE, any SQL as the database's owner, a role or
   password change, a Neon restore, reset or deletion, a variable removed, a test user
   deleted, and any cleanup of a fixture, synthetic ones included.
+- **A session's rules live in two places.** `.claude/settings.json`, committed, holds what
+  is true on any machine: what is never run (a merge, a push to a permanent branch, a
+  workflow dispatch, a vendor's production command, a Keychain item's name) and what
+  asks first. Rules that name a path on the owner's machine stay in the owner's local file, which
+  git ignores. `.claude/skills/` holds the project's short procedures; a skill restates no
+  rule of this document, it links.
 - **A tool is verified before it is relied on**: its version is read from its registry, at
   least a day old; its first use is a read whose answer is already known; a rule that
   should refuse is watched refusing. A tool registered while a session is open answers

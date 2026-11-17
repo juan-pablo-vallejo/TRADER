@@ -2281,3 +2281,25 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   `packages/db`, whose exported types need it. For the owner: DESIGN's "Scheduled shift
   (crew)" row still reads "To be built (TASKS S7)" though S7 is ticked.
 - **Next:** the owner's three steps of O0; O1's branch; neither branch merges before O0.
+
+### 2026-11-17 — Toolbox batch (O1): built; the machine's half waits for the owner
+
+- **Did:** branch `overhaul-toolbox`, stacked on `overhaul-reliability` (#122).
+  `.claude/settings.json` and three skills (`pr-prep`, `staging-status`, `ui-check`);
+  `.claude/settings.local.json` ignored; `audit.yml` beside CI; overrides for
+  `source-map-js` and `vite` (both published more than a day before), after which
+  `pnpm audit` reads 5 moderate, none high. RULES (Toolbox), the decision row. Watched
+  refusing: Clerk's five denied tools left the session the moment the file existed; the
+  new `staging-dns` draft refused a name with a metacharacter, a name outside the zone and
+  an argument to `plan`, and its write path is byte-identical to the installed one. Read
+  for the owner's steps: staging's fixture company, its admin and worker both bound, on
+  the suite's default numbers.
+- **Decided:** the row of 2026-11-17 (toolbox, shared rules and the audit). Not done, each
+  the owner's to install since a session may not write there: the new `staging-dns`, the
+  `trader-cloudflare-dns-read` Keychain item, Cloudflare's documentation connector, the
+  Playwright connector's version pin, `eas-cli`'s upgrade. Not seen: `inspect` answering
+  (no token yet); gitleaks over this history (first run is the pull request's); the audit
+  on a schedule. Vercel's and Sentry's connectors still read every project the account
+  can: a rule cannot narrow a tool's arguments, so "staging only" there is a session's
+  discipline, stated in RULES, not a guarantee.
+- **Next:** O0's three owner steps; then both pull requests merge and O3 starts.
