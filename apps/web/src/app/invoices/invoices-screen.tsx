@@ -9,7 +9,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
 
-import { uuidv7 } from "../closeout/uuidv7";
+import { uuidv7 } from "../uuidv7";
 import controls from "../controls.module.css";
 import { Failure } from "../failure";
 import { Field } from "../field";

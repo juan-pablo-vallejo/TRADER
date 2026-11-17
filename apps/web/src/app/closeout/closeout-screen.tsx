@@ -26,7 +26,7 @@ import { strings } from "../strings";
 import table from "../table.module.css";
 import { useTRPC } from "../trpc";
 import styles from "./closeout.module.css";
-import { uuidv7 } from "./uuidv7";
+import { uuidv7 } from "../uuidv7";
 
 type Asked = { jobId: string; workDate: string };
 type Status = "open" | "complete";

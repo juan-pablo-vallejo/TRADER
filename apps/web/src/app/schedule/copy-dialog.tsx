@@ -10,7 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
-import { uuidv7 } from "../closeout/uuidv7";
+import { uuidv7 } from "../uuidv7";
 import controls from "../controls.module.css";
 import { Failure } from "../failure";
 import { addDays, weekDay } from "../format";

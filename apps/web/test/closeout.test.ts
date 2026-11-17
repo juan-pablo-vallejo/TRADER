@@ -19,7 +19,7 @@ import {
 } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
-import { uuidv7 } from "../src/app/closeout/uuidv7";
+import { uuidv7 } from "../src/app/uuidv7";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
 import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
