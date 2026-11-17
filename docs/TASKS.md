@@ -22,7 +22,7 @@ ARCHITECTURE by the batch that enacts them. Phone scope stays the PRD's.
       rules; the DNS wrapper's read-only `inspect`; Cloudflare's documentation connector;
       consumer: every later batch. Done when each tool answers a known read and each new
       rule is watched refusing
-- [ ] O2 — Reliability and cleanup: the two flaky material tests, the roster import cycle,
+- [x] O2 — Reliability and cleanup: the two flaky material tests, the roster import cycle,
       one receipt-standing read, the retired screen's strings, the README. Done when
       `pnpm check` is green five times running
 - [ ] O3 — Staging from `main`: the promotion workflow deploys by Vercel's deploy hook and
