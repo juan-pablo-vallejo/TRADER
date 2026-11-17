@@ -63,4 +63,4 @@ jobs:
 
       # --redact: a finding is reported by file, line and rule, never by its value.
       - name: Scan every commit
-        run: '"$RUNNER_TEMP/gitleaks/gitleaks" git --redact --no-banner --exit-code 1 .'
+        run: '"$RUNNER_TEMP/gitleaks/gitleaks" git --redact --no-banner --verbose --exit-code 1 .'
