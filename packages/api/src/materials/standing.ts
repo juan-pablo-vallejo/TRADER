@@ -1,7 +1,7 @@
 // What a receipt's standing is derived from, read in one place: every correction of the
 // receipts named, each with its decision, and each receipt's own decision. Plain reads under
 // RLS, no locks; the derivation is effective.ts (facts) and approval.ts (whether it counts).
-// Consumed by materials/list.ts and jobs/cost.ts.
+// Consumed by materials/list.ts, jobs/cost.ts, approvals/queue.ts and sync/pull.ts.
 import { approvals, materialCorrections } from "@trader/db/schema";
 import { eq, inArray } from "drizzle-orm";
 

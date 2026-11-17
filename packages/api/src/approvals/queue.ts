@@ -26,7 +26,8 @@ import type { LaborEvent } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
 import { workDate } from "../labor/work-date";
 import { receiptAccounting } from "../materials/approval";
-import { effectiveMaterial, type CorrectionState } from "../materials/effective";
+import { effectiveMaterial } from "../materials/effective";
+import { receiptStandings } from "../materials/standing";
 import type { AppUser } from "../core/resolve-user";
 
 // The cursor is the last item's approval id: its created_at is read back in SQL at full
@@ -247,30 +248,12 @@ export async function approvalQueue(
       ? []
       : await tx.select().from(materials).where(inArray(materials.id, materialIds));
   const receiptById = new Map(receipts.map((m) => [m.id, m]));
-  const history =
-    materialIds.length === 0
-      ? []
-      : await tx
-          .select({
-            materialId: materialCorrections.materialId,
-            id: materialCorrections.id,
-            kind: materialCorrections.kind,
-            description: materialCorrections.description,
-            quantity: materialCorrections.quantity,
-            unit: materialCorrections.unit,
-            serverTimestamp: materialCorrections.serverTimestamp,
-            decision: approvals.decision,
-          })
-          .from(materialCorrections)
-          .leftJoin(approvals, eq(approvals.materialCorrectionId, materialCorrections.id))
-          .where(inArray(materialCorrections.materialId, materialIds));
-  const receiptDecisions = await decisionsOf(tx, "materialId", materialIds);
+  const standings = await receiptStandings(tx, materialIds);
   const effectiveOf = (materialId: string) => {
     const m = receiptById.get(materialId);
     if (m === undefined)
       throw new Error(`a referenced material is not visible: ${materialId}`);
-    const states: CorrectionState[] = history.filter((c) => c.materialId === materialId);
-    const e = effectiveMaterial(m, states);
+    const e = effectiveMaterial(m, standings.correctionsOf(materialId));
     return {
       receipt: m,
       original: { description: m.description, quantity: m.quantity, unit: m.unit },
@@ -361,7 +344,7 @@ export async function approvalQueue(
           capturedOffline: m.capturedOffline,
           clockSkewed: m.clockSkewed,
           clockSkewMs: m.clockSkewMs,
-          accounting: receiptAccounting(receiptDecisions.get(m.id), effective),
+          accounting: receiptAccounting(standings.decisionOf(m.id), effective),
         },
       };
     }
