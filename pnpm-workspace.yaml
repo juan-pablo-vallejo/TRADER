@@ -18,3 +18,14 @@ minimumReleaseAge: 1440
 overrides:
   "source-map-js@<1.2.2": ^1.2.2
   "vite@>=7.0.0 <7.3.7": ^7.3.7
+
+# One advisory the audit does not count, and why (ARCHITECTURE, 2026-11-17, two branches
+# and a release by pull request). GHSA-fc5q-39xc-vjpf, picomatch <=4.0.7, a slow match on
+# a crafted glob: no fixed release exists (the advisory names 4.0.8; the registry's newest
+# was 4.0.7 on 2026-11-17), so an override cannot hold it. It arrives only beneath
+# apps/mobile through Expo's build tooling, which matches the developer's own patterns on
+# the developer's machine; nothing deployed to Vercel carries it. Removed, with an
+# override to the fixed release, as soon as one is published (TASKS, Overhaul).
+audit:
+  ignore:
+    - GHSA-fc5q-39xc-vjpf
