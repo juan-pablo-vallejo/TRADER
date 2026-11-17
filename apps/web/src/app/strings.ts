@@ -338,7 +338,7 @@ export const strings = {
     "Nothing was saved by the step that failed. Reload the page to carry on.",
   reload: "Reload",
   notFound: "There is no page at this address.",
-  goToJobs: "Go to Jobs",
+  goToOverview: "Go to Overview",
   cancel: "Cancel",
 
   // Editors and create forms
