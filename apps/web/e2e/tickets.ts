@@ -8,8 +8,8 @@
 // apart from the step that runs the browser: the key reaches this file and nothing else.
 // It writes each ticket to $GITHUB_ENV, tells the runner to mask it, and prints codes only.
 // The request is Clerk's as its pages document it (Backend API, `GET /v1/users` and
-// `POST /v1/sign_in_tokens`, read 2026-11-16). Consumed by staging.spec.ts (the numbers),
-// the workflow and test/e2e-tickets.test.ts.
+// `POST /v1/sign_in_tokens`, read 2026-11-16). Consumed by staging.spec.ts (the suite's
+// required settings), the workflow and test/e2e-tickets.test.ts.
 import { appendFileSync } from "node:fs";
 
 export const CLERK_API = "https://api.clerk.com/v1";
@@ -18,9 +18,24 @@ export const CLERK_API = "https://api.clerk.com/v1";
 export const TICKET_SECONDS = 600;
 export const REQUEST_TIMEOUT_MS = 15_000;
 
-// Staging's two fixture people, in the browser suite's own company.
-export const DEFAULT_ADMIN_PHONE = "+14015550100";
-export const DEFAULT_WORKER_PHONE = "+14015550101";
+// What the suite must be told and has no default for: its own company on the shared
+// database and its two people there. A default would let a run with one of them unset go
+// on without the tenant check, or as people nobody named.
+export const SUITE_SETTINGS = [
+  "E2E_COMPANY_ID",
+  "E2E_ADMIN_PHONE",
+  "E2E_WORKER_PHONE",
+] as const;
+export type SuiteSetting = (typeof SUITE_SETTINGS)[number];
+
+// The names among `names` that `env` leaves unset. A variable set and blank, as an unset
+// one arrives from a workflow, is unset.
+export function missingSettings(
+  env: Record<string, string | undefined>,
+  names: readonly SuiteSetting[] = SUITE_SETTINGS,
+): SuiteSetting[] {
+  return names.filter((name) => (env[name] ?? "").trim() === "");
+}
 
 // Clerk's fictional range: nothing here ever names a real person's number.
 const FICTIONAL = /^\+1[2-9][0-9]{2}55501[0-9]{2}$/;
@@ -131,11 +146,15 @@ export async function mintForWorkflow(
     say: (line: string) => void;
   },
 ): Promise<number> {
-  const orDefault = (value: string | undefined, fallback: string) =>
-    value === undefined || value === "" ? fallback : value;
+  // Before the key is used: a number left unset names nobody, and is never guessed.
+  const missing = missingSettings(env, ["E2E_ADMIN_PHONE", "E2E_WORKER_PHONE"]);
+  if (missing.length > 0) {
+    deps.say(`sign-in tickets not made: ${missing.join(", ")} not set`);
+    return 1;
+  }
   const people = [
-    ["E2E_ADMIN_TICKET", orDefault(env.E2E_ADMIN_PHONE, DEFAULT_ADMIN_PHONE)],
-    ["E2E_WORKER_TICKET", orDefault(env.E2E_WORKER_PHONE, DEFAULT_WORKER_PHONE)],
+    ["E2E_ADMIN_TICKET", (env.E2E_ADMIN_PHONE ?? "").trim()],
+    ["E2E_WORKER_TICKET", (env.E2E_WORKER_PHONE ?? "").trim()],
   ] as const;
   const lines: string[] = [];
   for (const [name, phone] of people) {
