@@ -20,7 +20,7 @@ on:
         options: [rehearse-only, promote]
         default: rehearse-only
       authorize_through:
-        description: "Owner only, with promote: the tag of the last pending migration this run may apply to staging (for example 0049_invoice-send-guards)"
+        description: "Owner only, with promote: the approval code an earlier run's report printed for this commit and its pending migrations"
         type: string
         default: ""
 
@@ -128,6 +128,11 @@ jobs:
         env:
           STAGING_MIGRATOR_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
           REHEARSAL_MIGRATOR_URL: ${{ secrets.REHEARSAL_MIGRATOR_URL }}
+          # C2's pins: the endpoint id each string must be on, direct. A variable or a
+          # secret of the environment, whichever the owner made.
+          STAGING_ENDPOINT_ID: ${{ secrets.STAGING_ENDPOINT_ID || vars.STAGING_ENDPOINT_ID }}
+          REHEARSAL_ENDPOINT_ID: ${{ secrets.REHEARSAL_ENDPOINT_ID || vars.REHEARSAL_ENDPOINT_ID }}
+          PROMOTION_COMMIT: ${{ env.SHA }}
           PROMOTION_EVENT: ${{ github.event_name }}
           PROMOTION_MODE: ${{ inputs.mode }}
           PROMOTION_AUTHORIZE_THROUGH: ${{ inputs.authorize_through }}
@@ -145,6 +150,7 @@ jobs:
         if: steps.plan.outputs.rehearse == 'true'
         env:
           DATABASE_URL: ${{ secrets.REHEARSAL_MIGRATOR_URL }}
+          TRADER_MIGRATE_PURPOSE: promotion
         run: pnpm db:migrate
 
       - name: Verify the rehearsal — the journal exactly, and the replay's schema
@@ -162,12 +168,13 @@ jobs:
         if: steps.plan.outputs.migrate == 'withheld'
         env:
           WITHHELD: ${{ steps.plan.outputs.withheld }}
-          LAST: ${{ steps.plan.outputs.last_pending }}
+          CODE: ${{ steps.plan.outputs.approval_code }}
         run: |
           set -euo pipefail
           {
             echo "- **stopped before staging changed** ($WITHHELD)"
-            echo "- staging is migrated only by the owner's dispatch of this workflow: mode \`promote\`, authorize_through \`$LAST\`"
+            echo "- staging is migrated only by the owner's dispatch of this workflow while \`main\` is still at \`$SHA\`: mode \`promote\`, authorize_through \`$CODE\`"
+            echo "- the code holds for this commit and the migrations listed above, content included; a later commit needs its own report"
           } >> "$GITHUB_STEP_SUMMARY"
           # A rehearsal that was asked for and passed is a green run; a promotion that
           # could not finish is not.
@@ -177,6 +184,7 @@ jobs:
         if: steps.plan.outputs.migrate == 'automatic' || steps.plan.outputs.migrate == 'authorized'
         env:
           DATABASE_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
+          TRADER_MIGRATE_PURPOSE: promotion
         run: |
           set -euo pipefail
           # One transaction: a failure here leaves staging as it was.
@@ -246,8 +254,6 @@ jobs:
     environment: staging
     permissions:
       contents: read
-    env:
-      STAGING_URL: ${{ vars.STAGING_URL }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -255,10 +261,13 @@ jobs:
           persist-credentials: false
 
       - name: Wait until staging's host serves this commit and is ready
+        env:
+          # A secret of the environment, so the host is masked in this public log.
+          STAGING_URL: ${{ secrets.STAGING_URL }}
         run: |
           set -euo pipefail
           echo "STAGE=migrated-not-deployed" >> "$GITHUB_ENV"
-          case "$STAGING_URL" in https://*) ;; *) echo "::error::the STAGING_URL variable is not set"; exit 1 ;; esac
+          case "$STAGING_URL" in https://*) ;; *) echo "::error::the STAGING_URL secret is not set"; exit 1 ;; esac
           for attempt in $(seq 1 90); do
             body=$(curl -sS --max-time 10 "$STAGING_URL/api/ready" || true)
             commit=$(printf '%s' "$body" | jq -r '.commit // empty' 2>/dev/null || true)
@@ -281,12 +290,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @trader/web exec playwright install --with-deps chromium
 
+      # Clerk's fixed test code is public, so the suite signs in with single-use tickets
+      # (apps/web/e2e/tickets.ts). The development instance's key reaches this one step,
+      # which runs that one file with `node` and nothing a package installed; the tickets
+      # are masked and live ten minutes.
+      - name: Sign-in tickets for the suite's two people
+        env:
+          CLERK_STAGING_SECRET_KEY: ${{ secrets.CLERK_STAGING_SECRET_KEY }}
+          E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
+          E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
+        run: node apps/web/e2e/tickets.ts
+
       # No trace, no video and no uploaded artifact: this log and its artifacts are public,
       # and any of them could hold a signed-in session.
       - name: Browser suite on staging's host
         env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
           E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
           E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
+          # The browser suite's own tenant on the shared database: an id, not a secret.
+          E2E_COMPANY_ID: ${{ vars.E2E_COMPANY_ID }}
           E2E_EXPECT_COMMIT: ${{ env.SHA }}
           E2E_OUTPUT_DIR: ${{ runner.temp }}/e2e
         run: |

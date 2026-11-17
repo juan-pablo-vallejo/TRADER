@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
-import { assertLocalDatabase, databaseConnection, parseDatabaseEnv } from "../../src/env";
+import {
+  assertLocalDatabase,
+  assertMigrationPurpose,
+  databaseConnection,
+  parseDatabaseEnv,
+} from "../../src/env";
 
 const compose = {
   POSTGRES_USER: "trader",
@@ -81,6 +86,37 @@ describe("assertLocalDatabase", () => {
       assertLocalDatabase(env, "tests");
     } catch (error) {
       expect((error as Error).message).not.toContain("hunter2");
+    }
+  });
+});
+
+describe("assertMigrationPurpose", () => {
+  const url = "postgresql://owner:pw@db.example.test/neondb";
+
+  it("asks nothing of the local database", () => {
+    expect(() => assertMigrationPurpose({})).not.toThrow();
+    expect(() => assertMigrationPurpose({ DATABASE_URL: "" })).not.toThrow();
+  });
+
+  it("refuses a deployed database with no purpose stated, or an unknown one", () => {
+    for (const purpose of [undefined, "", "development", "Promotion", "owner "]) {
+      expect(() =>
+        assertMigrationPurpose({ DATABASE_URL: url, TRADER_MIGRATE_PURPOSE: purpose }),
+      ).toThrow(/refusing to run drizzle-kit/);
+    }
+  });
+
+  it("admits the promotion and the owner, and never repeats the string", () => {
+    for (const purpose of ["promotion", "owner"]) {
+      expect(() =>
+        assertMigrationPurpose({ DATABASE_URL: url, TRADER_MIGRATE_PURPOSE: purpose }),
+      ).not.toThrow();
+    }
+    try {
+      assertMigrationPurpose({ DATABASE_URL: url });
+      expect.unreachable();
+    } catch (error) {
+      expect(String(error)).not.toContain("example.test");
     }
   });
 });

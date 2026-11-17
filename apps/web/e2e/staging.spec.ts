@@ -3,16 +3,38 @@
 // wall is checked first; without it, it is staging's public host, which must answer with
 // no bypass at all. Then an
 // admin's sign-in through Clerk, one fixture customer rewritten and read back, sign-out, and
-// a worker refused the office. Identities are Clerk's fictional numbers (code 424242, nothing
-// is sent) and must already be on the staging roster. The flow writes one customer row and
+// a worker refused the office. Identities are Clerk's fictional numbers and must already be
+// on the staging roster. Given tickets (tickets.ts; the promotion workflow always gives
+// them) each person signs in with a single-use Clerk sign-in token, a made-up ticket is
+// seen refused and a used one seen dead; given none, by the number and Clerk's test code,
+// which works only while the development instance's test mode is on. The flow writes one customer row and
 // rewrites it on every run; it deletes nothing (RULES, Toolbox: cleanup is destructive).
+// The database is shared with development and with the phone flows, each in a company of
+// its own (ARCHITECTURE, 2026-11-16, shared database): before it writes anything the flow
+// holds its admin to the browser suite's company, and its worker to the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+
+import { DEFAULT_ADMIN_PHONE, DEFAULT_WORKER_PHONE } from "./tickets";
 
 // A variable that is set and blank, as an unset one arrives from a workflow, is unset.
 const orDefault = (value: string | undefined, fallback: string) =>
   value === undefined || value === "" ? fallback : value;
-const ADMIN_PHONE = orDefault(process.env.E2E_ADMIN_PHONE, "+14015550100");
-const WORKER_PHONE = orDefault(process.env.E2E_WORKER_PHONE, "+14015550101");
+const ADMIN_PHONE = orDefault(process.env.E2E_ADMIN_PHONE, DEFAULT_ADMIN_PHONE);
+const WORKER_PHONE = orDefault(process.env.E2E_WORKER_PHONE, DEFAULT_WORKER_PHONE);
+const ADMIN_TICKET = orDefault(process.env.E2E_ADMIN_TICKET, "");
+const WORKER_TICKET = orDefault(process.env.E2E_WORKER_TICKET, "");
+// Both or neither, as tickets.ts makes them: one alone would hide a broken ticket path
+// behind the test code.
+if ((ADMIN_TICKET === "") !== (WORKER_TICKET === "")) {
+  throw new Error(
+    "E2E_ADMIN_TICKET and E2E_WORKER_TICKET are given together or not at all",
+  );
+}
+const BY_TICKET = ADMIN_TICKET !== "";
+// The browser suite's own company, by id. Set, an identity of any other tenant stops the
+// flow before its first write; unset (a preview with a database of its own), the two
+// identities must still share one company.
+const COMPANY_ID = orDefault(process.env.E2E_COMPANY_ID, "");
 const CLERK_TEST_CODE = "424242";
 const FIXTURE_CUSTOMER = "E2E Customer";
 const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
@@ -30,8 +52,58 @@ async function passTheWall(context: BrowserContext): Promise<void> {
   expect(ready.status(), "readiness behind the wall").toBe(200);
 }
 
-// Clerk's own form: the number, Continue, then the six-digit code, which submits itself.
-async function signIn(page: Page, phone: string): Promise<void> {
+type TicketAnswer = { signedIn: boolean; code: string };
+
+// A ticket handed to Clerk's own script on the sign-in page, as its custom flow documents:
+// `signIn.create` with the `ticket` strategy, then `setActive` on the session it made.
+// Answers what happened and never the ticket; a refusal's code is Clerk's own.
+async function redeem(page: Page, ticket: string): Promise<TicketAnswer> {
+  await page.goto("/sign-in");
+  await page.waitForFunction(
+    () => (window as unknown as { Clerk?: { loaded?: boolean } }).Clerk?.loaded === true,
+    undefined,
+    { timeout: 60_000 },
+  );
+  return page.evaluate(async (given): Promise<TicketAnswer> => {
+    type Attempt = { status: string | null; createdSessionId: string | null };
+    const clerk = (
+      window as unknown as {
+        Clerk: {
+          client: { signIn: { create(p: Record<string, string>): Promise<Attempt> } };
+          setActive(p: { session: string }): Promise<void>;
+        };
+      }
+    ).Clerk;
+    try {
+      const attempt = await clerk.client.signIn.create({
+        strategy: "ticket",
+        ticket: given,
+      });
+      if (attempt.status !== "complete" || attempt.createdSessionId === null) {
+        return { signedIn: false, code: `status_${attempt.status ?? "none"}` };
+      }
+      await clerk.setActive({ session: attempt.createdSessionId });
+      return { signedIn: true, code: "complete" };
+    } catch (error) {
+      const first = (error as { errors?: { code?: unknown }[] }).errors?.[0]?.code;
+      return { signedIn: false, code: typeof first === "string" ? first : "error" };
+    }
+  }, ticket);
+}
+
+async function signIn(page: Page, phone: string, ticket: string): Promise<void> {
+  if (ticket !== "") {
+    expect(await redeem(page, ticket), "the ticket signs its one person in").toEqual({
+      signedIn: true,
+      code: "complete",
+    });
+    await page.goto("/");
+    await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), {
+      timeout: 60_000,
+    });
+    return;
+  }
+  // Clerk's own form: the number, Continue, then the six-digit code, which submits itself.
   await page.goto("/sign-in");
   const identifier = page.locator('input[name="identifier"]');
   await identifier.waitFor({ state: "visible", timeout: 60_000 });
@@ -51,6 +123,17 @@ async function signIn(page: Page, phone: string): Promise<void> {
     timeout: 60_000,
   });
 }
+
+// The signed-in caller's company, as the API itself answers it.
+async function companyOf(context: BrowserContext): Promise<string> {
+  const me = await context.request.get("/api/trpc/me.get");
+  expect(me.status(), "the caller's own profile").toBe(200);
+  const found = /"companyId":"([0-9a-f-]{36})"/.exec(await me.text());
+  expect(found, "a company in the caller's profile").not.toBeNull();
+  return found![1]!;
+}
+
+let adminCompany = "";
 
 async function signOut(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Sign out", exact: true }).first().click();
@@ -81,12 +164,29 @@ test("the deployment answers as its kind should: walled, or public and ready", a
   await passTheWall(context);
 });
 
+test("a made-up ticket signs nobody in", async ({ context, page }) => {
+  test.skip(!BY_TICKET, "no tickets were given: the sign-in is by Clerk's test code");
+  await passTheWall(context);
+  // The shape of a token, and nothing Clerk made.
+  const forged = `${"e30".repeat(12)}.${"e30".repeat(12)}.${"A".repeat(43)}`;
+  const answer = await redeem(page, forged);
+  expect(answer.signedIn, "a forged ticket").toBe(false);
+  const me = await context.request.get("/api/trpc/me.get");
+  expect(me.status(), "a protected call after a forged ticket").toBe(401);
+});
+
 test("an admin signs in, rewrites the fixture customer, and signs out", async ({
   context,
   page,
 }) => {
   await passTheWall(context);
-  await signIn(page, ADMIN_PHONE);
+  await signIn(page, ADMIN_PHONE, ADMIN_TICKET);
+
+  // Before any write: this admin is the browser suite's tenant and nobody else's.
+  adminCompany = await companyOf(context);
+  if (COMPANY_ID !== "") {
+    expect(adminCompany, "the admin's company is the browser suite's").toBe(COMPANY_ID);
+  }
 
   await page.goto("/roster");
   await expect(page.getByRole("table")).toBeVisible();
@@ -119,9 +219,21 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
   expect(me.status(), "a protected call after sign-out").toBe(401);
 });
 
+test("a ticket already used signs nobody in again", async ({ context, page }) => {
+  test.skip(!BY_TICKET, "no tickets were given: the sign-in is by Clerk's test code");
+  await passTheWall(context);
+  const answer = await redeem(page, ADMIN_TICKET);
+  expect(answer.signedIn, "the admin's ticket, a second time").toBe(false);
+  const me = await context.request.get("/api/trpc/me.get");
+  expect(me.status(), "a protected call after a spent ticket").toBe(401);
+});
+
 test("a worker signs in and is refused the office", async ({ context, page }) => {
   await passTheWall(context);
-  await signIn(page, WORKER_PHONE);
+  await signIn(page, WORKER_PHONE, WORKER_TICKET);
+  expect(await companyOf(context), "the worker's company is the admin's").toBe(
+    adminCompany,
+  );
 
   await page.goto("/customers");
   await expect(page.getByText("Not permitted.")).toBeVisible();

@@ -65,6 +65,24 @@ describe("development identity adapter", () => {
     }
   });
 
+  it("refuses when enabled against a deployed database, and trusts a blank one", async () => {
+    const deployed = createDevIdentityAdapter({
+      NODE_ENV: "development",
+      TRADER_DEV_IDENTITY: "enabled",
+      DATABASE_URL: "postgresql://app:pw@db.example.test/neondb",
+    });
+    await expect(deployed.identify(signedIn)).rejects.toThrow(
+      /refusing the development identity: .* DATABASE_URL is set/,
+    );
+    await expect(deployed.identify(signedIn)).rejects.not.toThrow(/example\.test/);
+    const local = createDevIdentityAdapter({
+      NODE_ENV: "development",
+      TRADER_DEV_IDENTITY: "enabled",
+      DATABASE_URL: "",
+    });
+    expect(await local.identify(signedIn)).toMatchObject({ subject: "dev-sub" });
+  });
+
   it("returns null for a missing or invalid header", async () => {
     const adapter = createDevIdentityAdapter({
       NODE_ENV: "test",
@@ -116,6 +134,14 @@ describe("devIdentityEnabled", () => {
       expect(devIdentityEnabled({ NODE_ENV, TRADER_DEV_IDENTITY: "" })).toBe(false);
       expect(devIdentityEnabled({ NODE_ENV })).toBe(false);
     }
+  });
+
+  it("is false against a deployed database, so the sign-in route is a 404 there", () => {
+    const env = { NODE_ENV: "development", TRADER_DEV_IDENTITY: "enabled" };
+    expect(
+      devIdentityEnabled({ ...env, DATABASE_URL: "postgresql://x@db.example.test/d" }),
+    ).toBe(false);
+    expect(devIdentityEnabled({ ...env, DATABASE_URL: "" })).toBe(true);
   });
 
   it("is false, and does not throw, when enabled under any other NODE_ENV", () => {

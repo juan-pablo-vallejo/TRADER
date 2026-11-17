@@ -57,8 +57,13 @@ security. The owner role is the one Neon made with the project; on Neon it carri
 
 ```sh
 cd <repository>
-DATABASE_URL='<direct endpoint, owner>' pnpm db:migrate
+TRADER_MIGRATE_PURPOSE=owner DATABASE_URL='<direct endpoint, owner>' pnpm db:migrate
 ```
+
+- **A deployed database is never migrated by accident.** With `DATABASE_URL` set, every
+  `drizzle-kit` command refuses to run unless `TRADER_MIGRATE_PURPOSE` says who is asking:
+  `promotion` (the workflow below) or `owner` (this runbook, for a database the workflow
+  does not serve — production). Staging is the workflow's alone.
 
 - **Order against deploys: migrate first, then deploy.** Migrations are additive
   (ARCHITECTURE, invariant 8), so the code already running keeps working against the newer
@@ -91,11 +96,18 @@ owner's, from the Actions page or a terminal:
 
 ```sh
 gh workflow run promote-staging.yml --ref main -f mode=rehearse-only
-gh workflow run promote-staging.yml --ref main -f mode=promote -f authorize_through=<last pending tag>
+gh workflow run promote-staging.yml --ref main -f mode=promote -f authorize_through=<the report's code>
 ```
 
 The first never migrates staging. The second is refused unless the repository's owner
-started it and the tag is exactly the last pending migration's. A flag is a reason to read
+started it, the rehearsal branch already holds the journal from an earlier run, and the
+code is the one that run's summary printed: it is made from the commit and from every
+pending migration's tag and content hash, so a commit merged since, an edited migration or
+a different pending set each need a new report. An authorized run never rehearses. Before
+either, the plan step holds each migrator string to the endpoint id stated for it in the
+`staging` environment (`STAGING_ENDPOINT_ID`, `REHEARSAL_ENDPOINT_ID`, the direct
+endpoint's id as Neon prints it): a pooled string, another endpoint or one id stated twice
+stops the run before any connection. A flag is a reason to read
 the migration, not a verdict: an `ALTER TYPE … ADD VALUE`, a dropped constraint and a
 `REVOKE` are all flagged. The rehearsal branch is never reset by the workflow; a branch
 that no longer stands between staging and the journal stops the run, and its reset is
