@@ -662,6 +662,11 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   `E2E_ADMIN_PHONE` and `E2E_WORKER_PHONE` stops at "refusing to run" before a test loads.
   The promotion reads them as variables of the `staging` environment (`vars.`), not
   secrets; a run from this machine needs all three in its environment too.
+- A merge into `main` starts a promotion and changes the commit an approval code is bound
+  to: while migrations wait on the owner's dispatch, merge nothing, or the code the owner
+  holds is dead and the next run prints another.
+- `gh pr merge` is denied in the owner's local settings file, which a session does not
+  edit: a session merges only once the owner has lifted that rule there.
 - The migration reading flags by text and widely (`reading.ts`): a trigger's `BEFORE
 TRUNCATE`, a quoted word and a function's body are not flags, a dropped constraint, a
   REVOKE and an enum value are. A flag sends the migration to the owner; it is not a fault.
@@ -2297,3 +2302,29 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   commit, and a code printed for `9108276` no longer holds.
 - **Next:** owner merges this branch, reads that run's report and dispatches `promote`
   with its code; then the verify job's first log.
+
+### 2026-11-17 — #124 merged; the gate held; `main` made a session's to merge
+
+- **Did:** read-only after the owner merged #124 (`main` at `f5e31aa`): CI green; the
+  merge's promotion verified the rehearsal branch (50 of 50, schema equal to a replay) and
+  stopped at the owner's gate with `deploy` and `verify` skipped; staging still at 40 by
+  hash, `staging-preview` still `1c94b64`; the run's approval code recomputed from the
+  files and equal. Read for the owner: every way a session reaches the owner's GitHub
+  credentials (the CLI's token with repository and workflow scope, the account SSH key,
+  the Keychain helper, a signed-in browser), and that a collaborator's fine-grained token
+  cannot work on a personal repository (GitHub's page, this date), so an isolated identity
+  here is a GitHub App. Then branch `main-autonomy-policy`, documents only: RULES (Git and
+  CI, Session protocol), `CLAUDE.md`, one decision row, one TASKS line.
+- **Decided:** by the owner on 2026-11-17, the row of that date: a session merges into
+  `main` through its pull request and `check`; production is the owner's alone, by policy
+  and not yet by permission; the backlog's approval stays the owner's dispatch. Not
+  changed, and asked of the owner: whether "plan, stop, wait" for schema, auth, sync,
+  money and CI still waits. Not done: nothing merged by a session yet — the local deny
+  rule stands, and a merge now would kill the code the owner holds; #123's committed
+  settings still list a merge and a dispatch as never run and need this policy before
+  they merge.
+- **Release 0.1 state:** `main` at `f5e31aa`; staging at 40 of 50, serving `1c94b64`; the
+  approval code for this commit is in run 44037693363's report. Open: #122, #123 and this
+  branch, none to merge before the backlog is applied.
+- **Next:** the owner's dispatch, `promote` with that code; then the verify job's first
+  log, and these three pull requests merged in order.

@@ -416,6 +416,14 @@ every gate, and a candidate missing a platform reads as not native-verified.
       candidate tag; the production-tree check; the dependency audit; the manual
       checklist for physical phones, "not performed" by default. Done when a candidate's
       report names every gate and one with a platform missing reads not native-verified
+- [ ] Isolated identity before production (ARCHITECTURE, 2026-11-17, `main` worked
+      autonomously). Depends on nothing; blocks the first production deployment. Work: a
+      GitHub App or its equal for sessions, with contents and pull requests on this
+      repository and no administration, environments or secrets; the owner's CLI token
+      and account SSH key out of a session's reach; `production`'s branch and
+      environment admitting the owner alone. Done when, from a session, a production
+      dispatch, a settings change and a push to `production` are each watched refused
+      by GitHub
 - [ ] Owner — each when its line reaches it: merge #117 and each line's pull request;
       the GitHub environments `staging` and, at P6, `production`, and no other, with
       their secrets and variables (`STAGING_MIGRATOR_URL`, `REHEARSAL_MIGRATOR_URL`, a

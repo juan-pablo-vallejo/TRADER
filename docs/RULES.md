@@ -98,8 +98,9 @@ is wrong.
 - `main` is protected: pull request plus the required check `check`, the literal job name in
   `.github/workflows/ci.yml`. Branch per TASKS line, pull request, `check` green, then
   `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused. The agent
-  pushes its feature branch and opens and updates that branch's pull request; the merge is
-  Juan Pablo's.
+  pushes its feature branch, opens and updates that branch's pull request and, once
+  `check` is green on its newest commit, merges it (ARCHITECTURE, 2026-11-17, `main` worked
+  autonomously).
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
 - CI is one workflow with one job, `check`: install, typecheck, lint, format check, build,
@@ -114,8 +115,17 @@ is wrong.
   track line, never committed to, deleted by the owner when the track has merged. Track
   lines are stacked, each with its own pull request into `main`.
 - Branches other than `main`, `staging-preview` and `release-0.1` are short-lived and
-  deleted on merge. A merge into `main`, a force-push and a branch's deletion are human
-  actions in a terminal, never agent actions.
+  deleted on merge, by the merge that retires them. A force-push, a rewrite of history and
+  the deletion of any other branch are human actions in a terminal, never agent actions.
+- A session dispatches staging's workflows as its work needs them. An approval code
+  (`authorize_through`) is the owner's alone to send: the backlog `0040` to `0049`, and
+  any migration the reading flags after it, reach staging by the owner's own dispatch.
+- `production` is the owner's alone: its branch, its deployments and releases, its
+  credentials, databases, infrastructure and environment configuration, its authorization
+  and its rollback. A session performs none of it and creates none of it. This is a rule a
+  session follows, not a permission GitHub enforces: a session works with the owner's own
+  GitHub credentials, so no document may say production is isolated until a separate
+  identity and branch and environment controls exist (TASKS, Automation).
 - `staging-preview` is staging's permanent branch. It holds only commits of `main`; nothing
   is committed to it, merged into it or opened as a pull request from it. It moves by an
   ordinary push, which the remote refuses unless it is a fast-forward, to a commit of
@@ -196,7 +206,7 @@ the owner's machine, outside the repository.
 3. Make the change; run `pnpm check` (typecheck, lint, format check, tests). Per-commit green
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
-4. Commit per the rules above. Push the feature branch and open or update its pull request;
-   never push to `main`, never merge.
+4. Commit per the rules above. Push the feature branch, open or update its pull request,
+   and merge it once `check` is green; never push to `main`.
 5. End by ticking the task in TASKS.md and appending an entry to MEMORY.md in its format. Never
    edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.
