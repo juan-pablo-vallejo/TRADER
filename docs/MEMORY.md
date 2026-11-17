@@ -649,6 +649,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The promotion workflow cannot be tried from a branch: its environment admits `main`
   alone, and GitHub reads a `workflow_run` workflow from the default branch. A change to
   it is proven by its first run after the merge; say so in its pull request.
+- The browser suite has no default company or number: a run not given `E2E_COMPANY_ID`,
+  `E2E_ADMIN_PHONE` and `E2E_WORKER_PHONE` stops at "refusing to run" before a test loads.
+  The promotion reads them as variables of the `staging` environment (`vars.`), not
+  secrets; a run from this machine needs all three in its environment too.
+- A merge into `main` starts a promotion and changes the commit an approval code is bound
+  to: while migrations wait on the owner's dispatch, merge nothing, or the code the owner
+  holds is dead and the next run prints another.
+- `gh pr merge` is denied in the owner's local settings file, which a session does not
+  edit: a session merges only once the owner has lifted that rule there.
 - The migration reading flags by text and widely (`reading.ts`): a trigger's `BEFORE
 TRUNCATE`, a quoted word and a function's body are not flags, a dropped constraint, a
   REVOKE and an enum value are. A flag sends the migration to the owner; it is not a fault.
