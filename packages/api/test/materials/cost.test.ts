@@ -99,6 +99,12 @@ describe("material.setCost", () => {
       const d = await crewDayIn(tx);
       const admin = await boundIn(tx, d.companyId, "admin");
       const m = await materialIn(tx, d, d.J, ON_D);
+      // Stamped in the past: the fixture's stamp is the database's clock and the save's is
+      // Node's, and the two can name the same millisecond.
+      await tx
+        .update(materials)
+        .set({ updatedAt: new Date("2026-01-01T00:00:00Z") })
+        .where(eq(materials.id, m));
       await asTenant(tx, d.companyId);
       const before = await rowOf(tx, m);
       expect([before.costCents, before.currency]).toEqual([null, null]);
