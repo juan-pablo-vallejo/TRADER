@@ -164,7 +164,7 @@ the owner's machine, outside the repository.
   | Onboard a company on staging                  | the owner-role wrapper's `onboard`                                          |
   | Migrate staging, move `staging-preview`       | the promotion workflow, never a session's shell                             |
   | Staging's DNS records                         | the DNS wrapper, pinned to the record names it may write                    |
-  | Reading the zone's DNS                        | the DNS wrapper's `inspect`, on a token that can read and nothing else      |
+  | Reading the zone's DNS                        | the DNS wrapper's `inspect`, which sends nothing but a GET                  |
   | Neon branches and operations                  | the Neon CLI through its wrapper, pinned to the staging project             |
   | Test people at the identity provider          | the Clerk wrapper or CLI, fictional numbers only                            |
   | Deployments, logs, a preview's variables      | Vercel's connector to read; the staging project's wrapper to deploy and set |

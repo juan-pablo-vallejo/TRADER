@@ -435,6 +435,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   Toolbox): call a wrapper by its absolute path so its permission rule matches. A wrapper
   answering "no Keychain item named …" means the owner has not created that item yet, not
   that the command is wrong.
+- The DNS wrapper is `~/.config/trader/staging-dns`, on the Keychain item
+  `trader-cloudflare-dns-token` (one Cloudflare token: DNS read and edit on the zone):
+  `list` (the staging mail subtree), `plan` (what `apply` would do; writes nothing),
+  `apply` (the four fixed records), `inspect` (every record of the zone) and
+  `inspect <name>` (that name and under it, with two resolvers' answers). `inspect` sends
+  only GETs. The file before `inspect` is kept beside it as `staging-dns.bak-20261117`.
+  The zone on 2026-11-17: ten records — the four staging mail records, the staging
+  host's CNAME to Vercel, Cloudflare's own mail routing (three MX, an SPF and a DKIM
+  TXT) — and none at the apex, `app` or `www`: no production routing exists.
 - A permission rule that asks beats one that allows, whatever their order or length: never
   add a broad "ask" for a wrapper whose narrower forms should run unprompted.
 - A session's safety classifier refuses `git push` while `CLAUDE.md` says not to push, and
@@ -2367,3 +2376,25 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   the owner's.
 - **Next:** O3, staging from `main` by the deploy hook (plan first: CI); it needs the
   owner's deploy hook as a secret of the `staging` environment.
+
+### 2026-11-17 — The DNS wrapper's `inspect` installed; the zone read whole
+
+- **Did:** on the owner's instruction, `~/.config/trader/staging-dns` extended with
+  `inspect [NAME]`, the earlier file kept beside it; its write path is the installed one
+  unchanged (four lines of argument handling differ). Seen: `inspect` listing the zone's
+  ten records and the staging host's CNAME with both resolvers' answers; `list` and
+  `plan` as before, all four records "ok"; `apply` not run. Watched refusing: a name
+  outside the zone, a name that is not a host name, a second name, an argument to `list`
+  and to `plan`, an unknown command; and, with the wrapper's request function run alone
+  against a stand-in for `curl`, every method but GET under `inspect`. The zone read
+  the same before and after. Branch `dns-inspect-docs`, documents only: RULES' Toolbox
+  line, one decision row, a Note.
+- **Decided:** by the owner on 2026-11-17, the row of that date: one token, no read-only
+  second one. Not done: whether the Keychain item named "TRADER Cloudflare DNS
+  Automation" holds the same token as `trader-cloudflare-dns-token` — a session does not
+  read the Keychain, so the comparison is the owner's one command; the committed
+  settings still deny a `trader-cloudflare-dns-read` item that no longer exists. No DNS
+  record was written.
+- **Release 0.1 state:** unchanged: `main` at `0eec8b9`, staging serving it at 50 of 50,
+  the suite green; #127 open, this branch stacked on it.
+- **Next:** O3, staging from `main` by the deploy hook (plan first: CI).
