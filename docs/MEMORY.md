@@ -686,8 +686,17 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   included: `git.deploymentEnabled` for `main` stops both building `main` on a push.
 - `pnpm audit` can turn red with nothing changed here: on 2026-11-17 a high advisory
   against `picomatch` (GHSA-fc5q-39xc-vjpf, `<=4.0.7`) named `4.0.8` as patched while the
-  registry's newest was `4.0.7`. An override cannot fix what is not published; ignoring an
-  advisory is the owner's call.
+  registry's newest was `4.0.7`. An override cannot hold what is not published. It is
+  excepted by name under `audit.ignore` in `pnpm-workspace.yaml` (pnpm 11's key;
+  `auditConfig.ignoreGhsas` is the deprecated one), which also drops it from the counts:
+  read `pnpm audit --prod --json` for where an advisory reaches before excepting any.
+- "Production" means two things. The staging Vercel project's Production deployment is
+  staging, with `VERCEL_ENV=production`: nothing may read `VERCEL_ENV` to decide what a
+  deployment is. `traderEnvironment` (`apps/web/src/server/environment.ts`) reads
+  `TRADER_ENVIRONMENT`, and a deployment without it refuses to start — a pull request's
+  Preview included, so the variable is set for Preview too.
+- A merge is the owner's, every time: `gh pr merge` is denied in the committed settings
+  and the session reports a pull request and stops.
 
 ## Log
 
@@ -2409,33 +2418,42 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   the suite green; #127 open, this branch stacked on it.
 - **Next:** O3, staging from `main` by the deploy hook (plan first: CI).
 
-### 2026-11-17 — Staging from `main` (O3): built, its first run still to be seen
+### 2026-11-17 — Staging from `main` (O3) and the final two-branch workflow: built, not yet run
 
 - **Did:** read first, on the owner's report: #122 and #123 merged, `main` at `0eec8b9`
   with `check` green, staging at 50 of 50 and its host naming that commit, the three
-  `E2E_*` variables set, both numbers already in E.164 with their `+` (the ticket step
-  refuses any other form). Branch `o3-staging-from-main`, stacked on #128.
-  `promote-staging.yml`: the preflight no longer reads `staging-preview`; `deploy` calls
-  the staging project's deploy hook with no checkout and no token, only while `main`'s
-  head is the run's commit; `verify` runs when the hook was called or the host already
-  serves the commit; a `report` job writes the `staging` status. `apps/web/vercel.json`
-  stops a push to `main` building. Tests of the workflow's text, watched red against the
-  old file (four of four). The deploy and report steps run by hand against stand-ins for
-  `curl`, `git` and `gh`: no hook, a hook at another host, already served, superseded,
-  called, no job answered, head unread; seven outcomes of the status. RULES, the
-  runbook, one decision row.
-- **Decided:** by the owner on 2026-11-17, the row of that date (staging from `main`; no
-  separate GitHub identity; production by rule). In the plan: staging stays a Preview of
-  its project, so the project's Production branch must stop being `main`; a superseded
-  run is green with a `pending` status. Not done: **nothing has run.** The workflow
-  cannot be tried from a branch, and the hook does not exist yet. Unseen until the first
-  merge: the hook building `main` as a Preview with `git.deploymentEnabled` off, the
-  host moving to it, the status written. O3 is not ticked. The Audit workflow is red on
-  an advisory with no published fix (Notes). Notes about `staging-preview` stand until
-  the cutover is seen.
-- **Release 0.1 state:** `main` at `0eec8b9`, staging serving it at 50 of 50. Before this
-  branch merges, the owner's, on the staging project: Production branch off `main`, a
-  deploy hook for `main` stored as `STAGING_DEPLOY_HOOK`, the staging host assigned to
-  `main`; then a session scopes `CLERK_AUTHORIZED_PARTIES` to `main`.
+  `E2E_*` variables set, both numbers already in E.164 with their `+`. Branch
+  `o3-staging-from-main`, stacked on #128 (#129). `promote-staging.yml`: no
+  `staging-preview` anywhere; `deploy` calls the staging project's deploy hook with no
+  checkout and no token, only while `main`'s head is the run's commit; `verify` holds
+  the host to the commit before the suite; a `report` job writes the `staging` status.
+  `apps/web/vercel.json` stops a push to `main` building. `TRADER_ENVIRONMENT`
+  (`environment.ts`): required at start, the only thing that lifts the mail allow-list,
+  the name on an error report. The audit's one exception, by name. Watched red: the
+  workflow's four text tests against the old file; seven tests of the environment before
+  its code. The deploy and report steps run by hand against stand-ins for `curl`, `git`
+  and `gh`, fourteen cases. RULES, `CLAUDE.md`, the README, the runbook (the staging
+  project's settings, expand and contract, releasing to production and its setup order),
+  one decision row, TASKS.
+- **Decided:** by the owner on 2026-11-17, the row of that date (two branches and a
+  release by pull request): the staging project keeps `main` as its Production branch;
+  the owner merges every pull request; no separate GitHub identity; a release is a pull
+  request into `production`. In the plan: the hook stays, since a native build starts
+  before the migration; a superseded run is green with a `pending` status. A first
+  version of this batch made staging a Preview with the project's Production branch
+  moved off `main`; the owner corrected it before it merged. Not done: **nothing has
+  run.** The workflow cannot be tried from a branch and the hook does not exist yet.
+  Unseen until the first merge: the hook building `main` with `git.deploymentEnabled`
+  off, that build being the project's Production deployment, the host moving to it, the
+  status written, a deployment starting with `TRADER_ENVIRONMENT`. Not built: the
+  `release` check (P6); nothing of production exists. O3 is not ticked. Notes about
+  `staging-preview` stand until the cutover is seen.
+- **Release 0.1 state:** `main` at `0eec8b9`, staging serving it at 50 of 50. Before #129
+  merges, the owner's, on the staging project (the runbook's list): every variable for
+  Production as well, `CLERK_AUTHORIZED_PARTIES` and `TRADER_ENVIRONMENT=staging` added,
+  the ignored build step removed, one deploy hook for `main` stored as
+  `STAGING_DEPLOY_HOOK`, the staging host made the Production domain. Merge #129 alone:
+  it carries #127 and #128.
 - **Next:** the first promotion after the merge, read end to end; a second merge unaided;
-  then O3's tick and the two branch deletions, each on the owner's word.
+  then O3's tick, the `release` check, and the branch deletions on the owner's word. O4
+  only after.
