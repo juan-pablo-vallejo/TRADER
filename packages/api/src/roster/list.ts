@@ -2,14 +2,14 @@
 // company, deactivated ones included with their timestamp so the office can reactivate them,
 // ordered by name. `invited` is "never signed in" (identity_subject still NULL); the subject
 // itself is never output, as me.get never outputs it. A plain read under RLS, no locks.
-// Each row carries the pay rate in force today (pay-rates.ts). Consumed by routers/roster.ts,
+// Each row carries the pay rate in force today (current-rates.ts). Consumed by routers/roster.ts,
 // and by invite.ts, role.ts, deactivation.ts and pay-rates.ts for the row they answer with.
 import { userRole, users } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
-import { currentRates, rate } from "./pay-rates";
+import { currentRates, rate } from "./current-rates";
 
 export const rosterUser = z.strictObject({
   id: z.uuid(),
@@ -22,7 +22,7 @@ export const rosterUser = z.strictObject({
   role: z.enum(userRole.enumValues),
   invited: z.boolean(),
   deactivatedAt: z.date().nullable(),
-  // The rate in force today (pay-rates.ts), or null: unpriced.
+  // The rate in force today (current-rates.ts), or null: unpriced.
   currentRate: rate.nullable(),
 });
 

@@ -9,7 +9,7 @@
 import type { AppRouter } from "@trader/api";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 
-import { uuidv7 } from "../closeout/uuidv7";
+import { uuidv7 } from "../uuidv7";
 import { instantToWall, wallToInstant } from "../zoned";
 
 export type RepairInput = inferRouterInputs<AppRouter>["labor"]["repair"];

@@ -1,8 +1,8 @@
-// The browser's id for an office closeout (src/app/closeout/uuidv7.ts): the shape the API's
+// The browser's id for an office closeout (src/app/uuidv7.ts): the shape the API's
 // `z.uuid({ version: "v7" })` and the table's CHECK admit, carrying the time it was minted.
 import { describe, expect, it } from "vitest";
 
-import { uuidv7 } from "../src/app/closeout/uuidv7";
+import { uuidv7 } from "../src/app/uuidv7";
 
 const V7 = /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 

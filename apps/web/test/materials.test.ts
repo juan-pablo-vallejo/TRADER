@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
-import { uuidv7 } from "../src/app/closeout/uuidv7";
+import { uuidv7 } from "../src/app/uuidv7";
 import { getDb } from "../src/server/db";
 import { invitation, mutate, ownerDb, query } from "./helpers";
 

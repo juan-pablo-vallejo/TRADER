@@ -22,7 +22,7 @@ import {
 } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
-import { uuidv7 } from "../src/app/closeout/uuidv7";
+import { uuidv7 } from "../src/app/uuidv7";
 import {
   createMinter,
   draftOf,

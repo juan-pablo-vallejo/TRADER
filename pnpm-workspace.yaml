@@ -11,3 +11,10 @@ allowBuilds:
   esbuild: true
 # RULES:68; explicit, so the quarantine is strict (pnpm.io/settings).
 minimumReleaseAge: 1440
+
+# Transitive packages held at their patched releases until their parents ask for them
+# (the Audit workflow's advisories): remove a line when `pnpm why` shows the parent's own
+# range has moved past it.
+overrides:
+  "source-map-js@<1.2.2": ^1.2.2
+  "vite@>=7.0.0 <7.3.7": ^7.3.7

@@ -1,0 +1,7 @@
+# Findings read and judged not secrets, one fingerprint a line (gitleaks' own format). Each is
+# a test's made-up value: a placeholder Clerk key and a token whose signature is the word
+# "signature" (apps/web/test/e2e-tickets.test.ts), and a marker string a redaction test
+# plants in an error (packages/api/test/report.test.ts, since moved).
+78f73abe74141f8aa1fef11334018c47f52d66d4:apps/web/test/e2e-tickets.test.ts:generic-api-key:17
+78f73abe74141f8aa1fef11334018c47f52d66d4:apps/web/test/e2e-tickets.test.ts:jwt:18
+779894ff10e9798776dc8281bc6dbb5636c3956f:packages/api/test/report.test.ts:generic-api-key:142

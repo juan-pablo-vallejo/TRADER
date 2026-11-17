@@ -163,7 +163,9 @@ export async function createMaterial(
 
   // 6. The row, stamped after the locks as a pushed receipt is. Nothing back is this id
   // committed meanwhile — the same entry sent twice at once, answered from its row — or
-  // another tenant's row, which is `id_conflict` and says nothing more.
+  // another tenant's row, which is `id_conflict` and says nothing more. No conflict target,
+  // as in the push (sync/material.ts): every unique on this table holds the id, and a named
+  // target leaves the others to raise 23505 when two copies of one entry insert at once.
   const stampedAt = await receiptStamp(tx);
   const [inserted] = await tx
     .insert(materials)
@@ -185,7 +187,7 @@ export async function createMaterial(
       createdAt: stampedAt,
       updatedAt: stampedAt,
     })
-    .onConflictDoNothing({ target: materials.id })
+    .onConflictDoNothing()
     .returning();
   if (inserted === undefined) {
     const raced = await byId(tx, input.id);

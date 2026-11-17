@@ -6,6 +6,39 @@ it may overlap. No dates. A task is ticked when its done-criterion holds, not wh
 exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not in code.
 **Current work: the Release 0.1 track**, taken ahead of the open lines of Stages 4 to 10.
 
+## Overhaul — toolbox, cleanup, staging from `main`
+
+The owner's mandate of 2026-11-17, worked in batches beside the Release 0.1 track; each batch
+is one pull request, planned in its description. Its decisions (two permanent branches,
+staging deployed from `main` by a deploy hook, no native runner for now) are written into
+ARCHITECTURE by the batch that enacts them. Phone scope stays the PRD's.
+
+- [ ] O0 — The migration backlog `0040` to `0049` applied by the owner's dispatch before
+      anything else merges, with Clerk's test mode off and the suite's three `E2E_*`
+      variables set first. Done when staging is at the journal, the host names `main`'s
+      commit and the browser suite is green there
+- [ ] O1 — Toolbox: `.claude/settings.json` shared rules and three project skills; a
+      dependency audit and a secret scan as a workflow beside CI; Clerk's connector under
+      rules; the DNS wrapper's read-only `inspect`; Cloudflare's documentation connector;
+      consumer: every later batch. Done when each tool answers a known read and each new
+      rule is watched refusing
+- [x] O2 — Reliability and cleanup: the two flaky material tests, the roster import cycle,
+      one receipt-standing read, the retired screen's strings, the README. Done when
+      `pnpm check` is green five times running
+- [ ] O3 — Staging from `main`: the promotion workflow deploys by Vercel's deploy hook and
+      pushes no branch; a readiness summary and a commit status per run (P2). Done when two
+      merges in a row are migrated, deployed and verified with no session open; then
+      `staging-preview` and `release-0.1` are deleted, each on the owner's word
+- [ ] O4 — Office design pass: shared loading and pill, one list editor, tokens for every
+      size, a sidebar from 768, search and filter on the lists; a local browser suite with
+      axe (`@axe-core/playwright`, consumer: `apps/web/e2e-local`). Done when every route is
+      clean at 390, 768 and 1280
+- [ ] O5 — Phone polish inside Release 0.1: tab icons, own profile, accessibility labels,
+      Spanish layouts measured, Clerk sign-in on Android, `eas.json` (with P4)
+- [ ] O6 — Staging acceptance: R7's one send, the fixture tenants, S9, R8's pages
+- [ ] O7 — Production prepared, not created: P6's gate, the owner's setup list in the
+      database runbook, the readiness assessment
+
 ## Release 0.1 — first production release
 
 Done when the go/no-go line is recorded as passed and D Sierra Painting's crew is on the
@@ -579,7 +612,7 @@ jobs, assignments, approvals, a closeout, close, export.
 - [ ] One browser smoke test of the pay period end to end at 390 and 1280 against the demo
       fixture, run in CI (`@playwright/test` in `apps/web`)
 - [ ] Carry-over cleanups, each when its file is next touched: `row N` and `D1–D6` comment
-      citations replaced by date and subject; the Stage 8 comments noted in MEMORY; `job.ts`'s
+      citations replaced by date and subject; `job.ts`'s
       erased literal type; the `pay-rates.ts` currency default
 
 ## Stage 5 — Field app (`apps/mobile`)

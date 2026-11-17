@@ -31,7 +31,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import controls from "../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../failure";
 import { Field } from "../field";
-import { uuidv7 } from "../closeout/uuidv7";
+import { uuidv7 } from "../uuidv7";
 import { amount, cents, dayIn, materialFacts, money, stamp } from "../format";
 import { Note } from "../note";
 import { CREATE_FORM_ID, PageHeader } from "../page-header";

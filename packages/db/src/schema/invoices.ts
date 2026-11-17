@@ -74,7 +74,7 @@ export const invoices = pgTable(
     customerId: uuid("customer_id").notNull(),
     jobId: uuid("job_id").notNull(),
     // NULL while draft; assigned at issue by the trigger, never supplied. Unique per
-    // company: the series. The partner's format (prefix, padding) is presentation, Stage 8.
+    // company: the series. The partner's format (prefix, padding) is presentation, Stage 7.
     number: integer("number"),
     // ISO 4217, upper case; no default (ARCHITECTURE decisions).
     currency: text("currency").notNull(),
@@ -109,7 +109,7 @@ export const invoices = pgTable(
       columns: [t.companyId, t.voidedByUserId],
       foreignColumns: [users.companyId, users.id],
     }),
-    // The invoice list and the drafts (Stage 8); a job's invoices; a customer's.
+    // The invoice list and the drafts (Stage 7); a job's invoices; a customer's.
     index("invoices_company_id_issued_at_idx").on(t.companyId, t.issuedAt),
     index("invoices_job_id_idx").on(t.jobId),
     index("invoices_customer_id_idx").on(t.customerId),

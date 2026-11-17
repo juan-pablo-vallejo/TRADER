@@ -7,25 +7,17 @@
 // (owner, 2026-11-12): a close stores hours and reads no rate, so it changes job cost to date
 // and nothing a close stored. The unique index is the race guard; no row lock beyond the
 // foreign key's. An added rate leaves one audit row (core/audit.ts). Consumed by routers/roster.ts
-// and, for the rate in force, by list.ts.
-import { companies, payRates } from "@trader/db/schema";
-import { and, desc, eq, sql } from "drizzle-orm";
+// alone; the rate in force today is current-rates.ts.
+import { payRates } from "@trader/db/schema";
+import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
+import { rate, rateColumns, type Rate } from "./current-rates";
 import { readRosterUser } from "./list";
-
-export const rate = z.strictObject({
-  id: z.uuid(),
-  effectiveFrom: z.iso.date(),
-  hourlyRateCents: z.number().int(),
-  currency: z.string(),
-});
-
-export type Rate = z.infer<typeof rate>;
 
 export const setPayRateInput = z.strictObject({
   userId: z.uuid(),
@@ -53,13 +45,6 @@ export const setPayRateOutput = z.discriminatedUnion("result", [
 
 export type SetPayRateResult = z.infer<typeof setPayRateOutput>;
 
-const columns = {
-  id: payRates.id,
-  effectiveFrom: payRates.effectiveFrom,
-  hourlyRateCents: payRates.hourlyRateCents,
-  currency: payRates.currency,
-};
-
 export async function setPayRate(
   tx: Tx,
   user: AppUser,
@@ -79,7 +64,7 @@ export async function setPayRate(
     .onConflictDoNothing({
       target: [payRates.companyId, payRates.userId, payRates.effectiveFrom],
     })
-    .returning(columns);
+    .returning(rateColumns);
   if (added !== undefined) {
     await recordAudit(tx, user, {
       action: "pay_rates.add",
@@ -94,7 +79,7 @@ export async function setPayRate(
     return { result: "added", rate: added };
   }
   const [standing] = await tx
-    .select(columns)
+    .select(rateColumns)
     .from(payRates)
     .where(
       and(
@@ -113,22 +98,8 @@ export const payRatesOutput = z.array(rate);
 export async function listPayRates(tx: Tx, userId: string): Promise<Rate[]> {
   if ((await readRosterUser(tx, userId)) === undefined) throw forbidden();
   return tx
-    .select(columns)
+    .select(rateColumns)
     .from(payRates)
     .where(eq(payRates.userId, userId))
     .orderBy(desc(payRates.effectiveFrom));
-}
-
-// The rate in force today for every user who has one: the greatest effective_from on or
-// before today's date in companies.timezone (RULES: work dates are judged in it).
-export async function currentRates(tx: Tx): Promise<Map<string, Rate>> {
-  const rows = await tx
-    .selectDistinctOn([payRates.userId], { userId: payRates.userId, ...columns })
-    .from(payRates)
-    .innerJoin(companies, eq(companies.id, payRates.companyId))
-    .where(
-      sql`${payRates.effectiveFrom} <= (now() at time zone ${companies.timezone})::date`,
-    )
-    .orderBy(payRates.userId, desc(payRates.effectiveFrom));
-  return new Map(rows.map(({ userId, ...r }) => [userId, r]));
 }

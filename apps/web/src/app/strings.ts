@@ -3,7 +3,6 @@
 // is what moves there. Nothing crew-facing lives here.
 export const strings = {
   wordmark: "TRADER",
-  empty: "Nothing to show yet.",
   devSignIn: "Development sign-in",
   devSignInBadEmail: "Enter an email address.",
   email: "Email",
@@ -17,7 +16,6 @@ export const strings = {
   customers: "Customers",
   jobs: "Jobs",
   crews: "Crews",
-  assignments: "Assignments",
   scheduleNav: "Schedule",
   // The Weekly Schedule screen (DESIGN, Weekly Schedule): a shift is a "Shift", a job a
   // "Jobsite". One namespace, so its many words cannot collide with the flat keys above.
@@ -338,7 +336,7 @@ export const strings = {
     "Nothing was saved by the step that failed. Reload the page to carry on.",
   reload: "Reload",
   notFound: "There is no page at this address.",
-  goToJobs: "Go to Jobs",
+  goToOverview: "Go to Overview",
   cancel: "Cancel",
 
   // Editors and create forms
@@ -487,57 +485,16 @@ export const strings = {
   emptyJobCost: "Nothing has been recorded on this job yet.",
   noSuchJob: "There is no job at this address.",
 
-  // Assignments
-  planWork: "Plan work",
-  emptyAssignments: "Nothing is planned for these days.",
-  assignmentsExplain:
-    "A plan says where someone is expected and when. It does not let anyone clock in: that is still the job's crew.",
   weekOf: "Week of",
   previousWeek: "Previous week",
   nextWeek: "Next week",
   person: "Person",
-  allPeople: "Everyone",
-  everyJob: "Every job",
   chooseJob: "Choose a job",
   planFrom: "From",
   planThrough: "Through",
   expectedStart: "Start",
-  expectedEnd: "End",
   date: "Date",
-  planned: "Planned",
-  clockIn: "Clock-in",
-  savePlan: "Save plan",
-  removePlan: "Remove plan",
-  removePlanEffect: (name: string, job: string) =>
-    `${name} will no longer be planned on ${job} that day. Their hours and their crews do not change.`,
-  planRemoved: "Plan removed.",
-  plannedDays: (created: number, existing: number) =>
-    `Planned ${created === 1 ? "1 day" : `${created} days`}.` +
-    (existing === 0
-      ? ""
-      : ` ${existing === 1 ? "1 day was" : `${existing} days were`} already planned and ${existing === 1 ? "was" : "were"} left as ${existing === 1 ? "it was" : "they were"}.`),
-  alreadyPlannedAll: "Every one of those days is already planned. No change.",
   endAfterStart: "The end must be after the start.",
-  throughAfterFrom: "The last day cannot be before the first.",
-  tooManyDays: "Plan at most 14 days at a time.",
-  alreadyPlanned: "They are already planned on this job that day.",
-  daysRefused: (n: number) =>
-    n === 1 ? " 1 day was refused." : ` ${n} days were refused.`,
-  scheduleConflict: "That repeats or overlaps another shift of theirs that day.",
-  scheduleAuthorization:
-    "They have already clocked in that day on a shift this would change.",
-  shiftLocked:
-    "They have clocked in on this shift, so it cannot change. Correct attendance in the labor ledger.",
-  shiftStale: "This shift changed meanwhile. Reload and try again.",
-  jobArchived: "That job is archived.",
-  planGone:
-    "This plan is no longer there, or you can no longer change it. Nothing was saved.",
-  notOnCrew: "Not on this job's crew",
-  notOnCrewHelp:
-    "This plan does not let them clock in here — add them to the crew to allow it",
-  jobArchivedHelp: "Nobody can clock in on an archived job",
-  workerInactiveHelp: "A deactivated person cannot clock in",
-
   // Refused entries
   refusals: "Refused entries",
   refusalsExplain:
@@ -673,7 +630,6 @@ export const strings = {
   periodRange: (from: string, to: string) => `${from} – ${to}`,
   periodIsOpen: "Open",
   periodClosedBy: (when: string, name: string) => `Closed ${when} by ${name}`,
-  periodOpened: "Opened.",
   periodExists: "A period with these dates is already open.",
   periodNotContiguous: (day: string) =>
     `A period starts the day after the one before it ends: ${day}.`,

@@ -10,7 +10,6 @@ import {
   crewMembers,
   crews,
   jobs,
-  materialCorrections,
   materials,
   users,
 } from "@trader/db/schema";
@@ -23,6 +22,7 @@ import { replay } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
 import { effectiveMaterial } from "../materials/effective";
+import { receiptStandings } from "../materials/standing";
 import type { AppUser } from "../core/resolve-user";
 import type { PullOutput } from "../contract/pull";
 
@@ -174,33 +174,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     )
     .orderBy(asc(materials.loggedAt), asc(materials.id));
   const receiptIds = receipts.map((r) => r.id);
-  const corrections =
-    receiptIds.length === 0
-      ? []
-      : await tx
-          .select({
-            materialId: materialCorrections.materialId,
-            id: materialCorrections.id,
-            kind: materialCorrections.kind,
-            description: materialCorrections.description,
-            quantity: materialCorrections.quantity,
-            unit: materialCorrections.unit,
-            serverTimestamp: materialCorrections.serverTimestamp,
-            decision: approvals.decision,
-          })
-          .from(materialCorrections)
-          .leftJoin(approvals, eq(approvals.materialCorrectionId, materialCorrections.id))
-          .where(inArray(materialCorrections.materialId, receiptIds));
-  const receiptApprovals =
-    receiptIds.length === 0
-      ? []
-      : await tx
-          .select({ materialId: approvals.materialId, decision: approvals.decision })
-          .from(approvals)
-          .where(inArray(approvals.materialId, receiptIds));
-  const receiptDecision = new Map(
-    receiptApprovals.map((a) => [a.materialId, a.decision]),
-  );
+  const standings = await receiptStandings(tx, receiptIds);
 
   // The caller's own shifts and the hours each is the eligible one, a day at a time.
   const today = workDate(serverNow, company.timezone);
@@ -280,10 +254,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
       approval: stateOf(eventDecision.get(e.id)),
     })),
     materials: receipts.map((r) => {
-      const effective = effectiveMaterial(
-        r,
-        corrections.filter((c) => c.materialId === r.id),
-      );
+      const effective = effectiveMaterial(r, standings.correctionsOf(r.id));
       return {
         id: r.id,
         jobId: r.jobId,
@@ -296,7 +267,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
           voided: effective.voided,
         },
         correctionPending: effective.pendingId !== null,
-        approval: stateOf(receiptDecision.get(r.id)),
+        approval: stateOf(standings.decisionOf(r.id)),
       };
     }),
   };
