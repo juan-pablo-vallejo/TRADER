@@ -20,7 +20,7 @@ and stop — never edit the document to match the code.
    0.1 track line is planned in its pull request and worked (RULES, Session protocol).
 3. `pnpm check` before every commit.
 4. One change per commit; imperative subject ≤ 72 characters; no trailers. Push the feature
-   branch, open or update its pull request, merge it once `check` is green; never push
+   branch, open or update its pull request, report it and stop — the owner merges; never push
    to `main`.
 5. End by ticking TASKS.md and appending a MEMORY.md entry in its format.
 
@@ -30,9 +30,11 @@ and stop — never edit the document to match the code.
 - Add a dependency, tool or version bump without a TASKS.md line naming its consumer.
 - Force-push, delete a branch a merge did not retire, rewrite history, or touch
   `archive/pre-rebuild`.
+- Merge a pull request, into `main` or `production`. Every merge is the owner's.
 - Send an approval code to the promotion workflow. Migrations it withholds are the owner's.
-- Touch production: its credentials, variables, deployments, data, store releases or
-  permissions are the owner's. Staging is yours within RULES.md, Toolbox; a destructive
+- Touch production: its branch, credentials, variables, deployments, migrations, data,
+  store releases or permissions are the owner's. A release is a pull request you may
+  prepare and never merge. Staging is yours within RULES.md, Toolbox; a destructive
   step there, a fixture's cleanup included, is approved one at a time.
 - Add a document. The set is fixed in RULES.md; extend the owner instead.
 - State a version, price or platform policy from memory. Look it up.

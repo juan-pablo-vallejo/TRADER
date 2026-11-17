@@ -97,10 +97,10 @@ is wrong.
 
 - `main` is protected: pull request plus the required check `check`, the literal job name in
   `.github/workflows/ci.yml`. Branch per TASKS line, pull request, `check` green, then
-  `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused. The agent
-  pushes its feature branch, opens and updates that branch's pull request and, once
-  `check` is green on its newest commit, merges it (ARCHITECTURE, 2026-11-17, `main` worked
-  autonomously).
+  the owner's merge; direct pushes to `main` are refused. The agent pushes its feature
+  branch, opens and updates that branch's pull request and reports it. Every merge is the
+  owner's: it is the one human gate between a change and staging (ARCHITECTURE,
+  2026-11-17, two branches and a release by pull request).
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
 - CI is one workflow with one job, `check`: install, typecheck, lint, format check, build,
@@ -112,27 +112,42 @@ is wrong.
   commit (ARCHITECTURE, 2026-11-16, staging credentials).
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
 - Two branches are permanent: `main`, which is development, integration and staging's
-  source, and `production`, the owner's (ARCHITECTURE, 2026-11-17, staging from `main`).
+  source, and `production`, the owner's release branch (ARCHITECTURE, 2026-11-17, two
+  branches and a release by pull request). No `develop`, staging or release branch is kept.
   Every other branch is short-lived and deleted on merge, by the merge that retires it. A
   force-push, a rewrite of history and the deletion of any other branch are human actions
   in a terminal, never agent actions. `staging-preview` and `release-0.1` stay on the
   remote until the owner deletes them; nothing reads or moves either.
-- A session dispatches staging's workflows as its work needs them. An approval code
-  (`authorize_through`) is the owner's alone to send: the backlog `0040` to `0049`, and
-  any migration the reading flags after it, reach staging by the owner's own dispatch.
+- Staging needs no dispatch: a merge is the whole of what starts it. An approval code
+  (`authorize_through`) is the owner's alone to send, for a migration the reading flags;
+  a session never runs `gh workflow run` on the promotion.
 - `production` is the owner's alone: its branch, its deployments and releases, its
   credentials, databases, infrastructure and environment configuration, its authorization
   and its rollback. A session performs none of it and creates none of it. This is a rule a
   session follows, not a permission GitHub enforces: a session works with the owner's own
   GitHub credentials, so no document may say production is isolated until a separate
-  identity and branch and environment controls exist (TASKS, Automation).
+  identity and branch and environment controls exist; the owner has decided against a
+  separate identity (ARCHITECTURE, 2026-11-17).
+- A release is a pull request into `production`, never a push and never automatic. Its
+  head is one commit of `main` whose `check` passed and whose `staging` status is
+  `success`, cut as its own short-lived branch so that `main` moving on changes nothing
+  in it; a newer commit is a new candidate with its own verification. A session may
+  prepare that pull request, with the commit, what it contains, the migrations production
+  has not had and how each is undone, and then stops: the merge, every production
+  migration, credential and deployment, and the first release are the owner's, each on
+  its own word.
 - Staging is deployed from `main`, by the promotion workflow and by nothing else: after a
   merge whose `check` passed it migrates what the gate allows, calls the staging project's
   deploy hook only while `main`'s head is still that commit, holds the host to the commit
   before the browser suite runs, and writes the outcome as the commit's `staging` status.
-  It pushes no branch. Vercel builds nothing from a push to `main`
-  (`apps/web/vercel.json`): a build before the migration would run new code on the old
-  schema. A session never calls the hook and never deploys `main` by another road.
+  It pushes no branch and waits for nobody. Vercel builds nothing from a push to `main`
+  (`apps/web/vercel.json`), in either project: a build before the migration would run new
+  code on the old schema, and the production project builds `production` alone. A session
+  never calls the hook and never deploys `main` by another road.
+- A migration and the code that needs it may overlap on staging and will on production:
+  the schema moves first and the earlier code keeps running on it. A change that cannot
+  ship that way is split — expand, move the code, contract — one merge each
+  (`packages/db/README.md`).
 
 ## Toolbox
 
@@ -142,8 +157,8 @@ the owner's machine, outside the repository.
 
 - **Three environments.** Local, for tests alone: the compose database and `.env`, where
   the suites, the seed, the demo and the local flows run. Development and staging, one
-  shared database: a Neon project of its own, Clerk's development instance, Vercel
-  previews, and the office app on this machine through its wrapper (ARCHITECTURE,
+  shared database: a Neon project of its own, Clerk's development instance with test mode
+  off, the staging Vercel project, and the office app on this machine through its wrapper (ARCHITECTURE,
   2026-11-16, shared database); the development identity is never used there, and only the
   promotion workflow migrates it. Production: the owner's alone. A session holds no
   production credential and runs no production command, read or write.
@@ -195,12 +210,15 @@ the owner's machine, outside the repository.
   a secret, so `pnpm check` and the `check` job never run them; the promotion workflow
   runs them on staging's public host after each deployment of `main`. A flow
   sends the bypass to the preview's own host alone, records no trace, and deletes nothing.
-- **Staging's standing deployment is `main`'s Preview on the staging project**, the one
-  the public staging host is attached to. It is a Preview on purpose: the staging project
-  builds nothing for Vercel's Production target, so no staging variable is ever a
-  Production one. A feature branch's preview is run against only when its change must be
-  seen before the merge, after a branch-scoped `CLERK_AUTHORIZED_PARTIES` names its own
-  alias: `staging-e2e https://<alias>`, the alias read from Vercel's connector.
+- **Staging's standing deployment is the staging project's Production deployment**, built
+  from `main`, the one the public staging host is attached to. "Production" there is
+  Vercel's word for a project's main branch and nothing more: that project holds staging
+  credentials alone, and the customer-facing application is a separate project, database
+  and Clerk instance. What a deployment is, it states itself (`TRADER_ENVIRONMENT`,
+  `staging` or `production`); nothing reads Vercel's `VERCEL_ENV` to decide it. A feature
+  branch's preview is run against only when its change must be seen before the merge,
+  after a branch-scoped `CLERK_AUTHORIZED_PARTIES` names its own alias:
+  `staging-e2e https://<alias>`, the alias read from Vercel's connector.
 - **One staging host is public**, for the phones, once ARCHITECTURE's checks of it have
   passed (2026-11-15). A phone build carries no bypass, key or credential; every other
   Preview stays behind the wall.
@@ -215,6 +233,6 @@ the owner's machine, outside the repository.
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
 4. Commit per the rules above. Push the feature branch, open or update its pull request,
-   and merge it once `check` is green; never push to `main`.
+   report it and stop: the merge is the owner's. Never push to `main` or `production`.
 5. End by ticking the task in TASKS.md and appending an entry to MEMORY.md in its format. Never
    edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.

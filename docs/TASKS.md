@@ -9,9 +9,10 @@ exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not 
 ## Overhaul — toolbox, cleanup, staging from `main`
 
 The owner's mandate of 2026-11-17, worked in batches beside the Release 0.1 track; each batch
-is one pull request, planned in its description. Its decisions (two permanent branches,
-staging deployed from `main` by a deploy hook, no native runner for now) are written into
-ARCHITECTURE by the batch that enacts them. Phone scope stays the PRD's.
+is one pull request, planned in its description and merged by the owner. Its decisions (two
+permanent branches, staging deployed from `main` by a deploy hook, a release by pull
+request into `production`, no native runner for now) are written into ARCHITECTURE by the
+batch that enacts them. Phone scope stays the PRD's.
 
 - [x] O0 — The migration backlog `0040` to `0049` applied by the owner's dispatch before
       anything else merges, with Clerk's test mode off and the suite's three `E2E_*`
@@ -25,10 +26,17 @@ ARCHITECTURE by the batch that enacts them. Phone scope stays the PRD's.
 - [x] O2 — Reliability and cleanup: the two flaky material tests, the roster import cycle,
       one receipt-standing read, the retired screen's strings, the README. Done when
       `pnpm check` is green five times running
-- [ ] O3 — Staging from `main`: the promotion workflow deploys by Vercel's deploy hook and
-      pushes no branch; a readiness summary and a commit status per run (P2). Done when two
-      merges in a row are migrated, deployed and verified with no session open; then
+- [ ] O3 — Staging from `main`: the promotion workflow deploys `main` as the staging
+      project's Production deployment by Vercel's deploy hook and pushes no branch; a
+      readiness summary and a `staging` commit status per run (P2); `TRADER_ENVIRONMENT`
+      stated by every deployment; the release by pull request and production's setup
+      written into RULES and the database runbook. Done when two merges in a row are
+      migrated, deployed and verified with no dispatch and no session open; then
       `staging-preview` and `release-0.1` are deleted, each on the owner's word
+- [ ] Remove the audit's one exception (`pnpm-workspace.yaml`, `audit.ignore`,
+      GHSA-fc5q-39xc-vjpf) and hold `picomatch` at its fixed release by override, consumer:
+      the Audit workflow. Done when the registry publishes the fix and `pnpm audit` is
+      clean of it with no exception
 - [ ] O4 — Office design pass: shared loading and pill, one list editor, tokens for every
       size, a sidebar from 768, search and filter on the lists; a local browser suite with
       axe (`@axe-core/playwright`, consumer: `apps/web/e2e-local`). Done when every route is
@@ -444,13 +452,16 @@ every gate, and a candidate missing a platform reads as not native-verified.
       a launchd agent the owner installs; statuses `native/ios`, `native/android` and a
       heartbeat; the watchdog workflow. Done when a night's run posts both platforms, and
       with the agent stopped the watchdog says the runner is offline
-- [ ] P6 — Release gate. Depends on P2 and P5. Work: RULES' rule for `production` (Git
-      and CI); `release-readiness.yml` on a
-      candidate tag; the production-tree check; the dependency audit; the manual
+- [ ] P6 — Release gate. Depends on P2 and P5. Work: a check `release` on a pull request
+      into `production`, holding its head to a commit of `main` with `check` passed and a
+      successful `staging` status (RULES, Git and CI; the runbook's "Releasing to
+      production"), with no secret; `release-readiness.yml` on a candidate; the production-tree check; the dependency audit; the manual
       checklist for physical phones, "not performed" by default. Done when a candidate's
       report names every gate and one with a platform missing reads not native-verified
-- [ ] Isolated identity before production (ARCHITECTURE, 2026-11-17, `main` worked
-      autonomously). Depends on nothing; blocks the first production deployment. Work: a
+- [ ] ~~Isolated identity before production~~ — not taken: the owner decided on
+      2026-11-17 that a separate GitHub identity is not required and accepts that production
+      is kept apart by rule, not by GitHub (ARCHITECTURE, two branches and a release by
+      pull request). The line as it stood: a
       GitHub App or its equal for sessions, with contents and pull requests on this
       repository and no administration, environments or secrets; the owner's CLI token
       and account SSH key out of a session's reach; `production`'s branch and
