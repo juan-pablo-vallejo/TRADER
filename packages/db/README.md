@@ -88,7 +88,30 @@ journal exactly and to the schema of a fresh replay (`src/promotion/fingerprint.
 catalog as sorted lines, no owner, no data). Only then, and only when every pending
 migration is past the owner's gate (`OWNER_GATED_THROUGH`, `src/promotion/plan.ts`) and the
 reading flags none of them (`src/promotion/reading.ts`), it runs the same command against
-staging, checks staging the same way, and moves `staging-preview`.
+staging and checks staging the same way.
+
+Then it deploys (ARCHITECTURE, 2026-11-17, staging from `main`). The `deploy` job calls
+the staging project's deploy hook, a secret of the `staging` environment
+(`STAGING_DEPLOY_HOOK`), which builds `main`'s head as a Preview of that project. A hook
+takes no commit, so the job calls it only while `main`'s head is the run's commit; when
+`main` has moved on it deploys nothing and the newer commit's run does. The `verify` job
+waits until the host's `/api/ready` names the run's commit, and only then runs the browser
+suite. The `report` job writes the outcome as the commit's `staging` status:
+
+```sh
+gh api repos/<owner>/<repo>/commits/<sha>/status --jq '.statuses[] | select(.context == "staging")'
+```
+
+A red run names where it stopped: `before-staging-change`, `migrated-not-deployed` or
+`deployed-failing`. After `migrated-not-deployed` staging runs the earlier code on the
+newer schema, which additive migrations allow; the next merge, or a re-run of the failed
+jobs while `main` is still at that commit, deploys it.
+
+The staging project's side is the owner's, set once: its Production branch is not `main`
+(so `main` builds as a Preview, with the Preview variables), one deploy hook for `main`,
+the staging host assigned to `main`, and `CLERK_AUTHORIZED_PARTIES` scoped to `main`.
+`apps/web/vercel.json` stops Vercel building `main` on a push, in every project connected
+to this repository; the hook is the one road.
 
 Anything else stops before staging changes, and the run's summary names the pending
 migrations, their flags and the dispatch that would apply them. That dispatch is the

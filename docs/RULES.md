@@ -111,12 +111,12 @@ is wrong.
   request's event; its token's permissions are stated per job and its actions are pinned by
   commit (ARCHITECTURE, 2026-11-16, staging credentials).
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
-- `release-0.1` is the track's integration branch: moved only by fast-forward to the newest
-  track line, never committed to, deleted by the owner when the track has merged. Track
-  lines are stacked, each with its own pull request into `main`.
-- Branches other than `main`, `staging-preview` and `release-0.1` are short-lived and
-  deleted on merge, by the merge that retires them. A force-push, a rewrite of history and
-  the deletion of any other branch are human actions in a terminal, never agent actions.
+- Two branches are permanent: `main`, which is development, integration and staging's
+  source, and `production`, the owner's (ARCHITECTURE, 2026-11-17, staging from `main`).
+  Every other branch is short-lived and deleted on merge, by the merge that retires it. A
+  force-push, a rewrite of history and the deletion of any other branch are human actions
+  in a terminal, never agent actions. `staging-preview` and `release-0.1` stay on the
+  remote until the owner deletes them; nothing reads or moves either.
 - A session dispatches staging's workflows as its work needs them. An approval code
   (`authorize_through`) is the owner's alone to send: the backlog `0040` to `0049`, and
   any migration the reading flags after it, reach staging by the owner's own dispatch.
@@ -126,14 +126,13 @@ is wrong.
   session follows, not a permission GitHub enforces: a session works with the owner's own
   GitHub credentials, so no document may say production is isolated until a separate
   identity and branch and environment controls exist (TASKS, Automation).
-- `staging-preview` is staging's permanent branch. It holds only commits of `main`; nothing
-  is committed to it, merged into it or opened as a pull request from it. It moves by an
-  ordinary push, which the remote refuses unless it is a fast-forward, to a commit of
-  `main` whose `check` passed, and only after staging's database is at that commit's
-  journal: by the promotion workflow after each merge (ARCHITECTURE, 2026-11-16, staging
-  promotion). Until that workflow has promoted once (TASKS, Automation), a session moves
-  it with `git fetch origin main && git push origin origin/main:refs/heads/staging-preview`
-  under the same two conditions, then runs the browser suite.
+- Staging is deployed from `main`, by the promotion workflow and by nothing else: after a
+  merge whose `check` passed it migrates what the gate allows, calls the staging project's
+  deploy hook only while `main`'s head is still that commit, holds the host to the commit
+  before the browser suite runs, and writes the outcome as the commit's `staging` status.
+  It pushes no branch. Vercel builds nothing from a push to `main`
+  (`apps/web/vercel.json`): a build before the migration would run new code on the old
+  schema. A session never calls the hook and never deploys `main` by another road.
 
 ## Toolbox
 
@@ -152,7 +151,8 @@ the owner's machine, outside the repository.
   macOS Keychain, handed to one fixed command by a wrapper that refuses any other target. A
   session never prints one, never writes one to a file, and never reads `.env` or the
   Keychain itself. The workflows' copies — staging's migrator connection strings, an Expo
-  token, the Clerk development instance's key for the suite's sign-in tickets — are secrets of GitHub environments restricted to `main`, created by the owner;
+  token, the Clerk development instance's key for the suite's sign-in tickets, the staging
+  project's deploy hook — are secrets of GitHub environments restricted to `main`, created by the owner;
   nothing of production, no vendor's account-wide key, no DNS token and no signing
   credential is stored there.
 - **Which tool for which job.**
@@ -162,7 +162,7 @@ the owner's machine, outside the repository.
   | Read staging's data and schema                | Neon's connector (read-only), or `psql` as `trader_app` through its wrapper |
   | Write staging's data as the application would | the deployment itself, or `psql` as `trader_app`                            |
   | Onboard a company on staging                  | the owner-role wrapper's `onboard`                                          |
-  | Migrate staging, move `staging-preview`       | the promotion workflow, never a session's shell                             |
+  | Migrate staging, deploy `main` to it          | the promotion workflow, never a session's shell                             |
   | Staging's DNS records                         | the DNS wrapper, pinned to the record names it may write                    |
   | Reading the zone's DNS                        | the DNS wrapper's `inspect`, which sends nothing but a GET                  |
   | Neon branches and operations                  | the Neon CLI through its wrapper, pinned to the staging project             |
@@ -193,13 +193,14 @@ the owner's machine, outside the repository.
   only in the next one.
 - **Browser flows live in `apps/web/e2e/`**, apart from `test/`: they need a deployment and
   a secret, so `pnpm check` and the `check` job never run them; the promotion workflow
-  runs them on staging's public host after each deployment of `staging-preview`. A flow
+  runs them on staging's public host after each deployment of `main`. A flow
   sends the bypass to the preview's own host alone, records no trace, and deletes nothing.
-- **Staging's standing deployment is `staging-preview`'s Preview.** The suite runs on that
-  branch's alias, read from Vercel's connector and never worked out from the branch name:
-  `staging-e2e https://<alias>`. A feature branch's preview is run against only when its
-  change must be seen before the merge, after a branch-scoped `CLERK_AUTHORIZED_PARTIES`
-  names its own alias. `release-0.1`'s Preview is that case for the whole track.
+- **Staging's standing deployment is `main`'s Preview on the staging project**, the one
+  the public staging host is attached to. It is a Preview on purpose: the staging project
+  builds nothing for Vercel's Production target, so no staging variable is ever a
+  Production one. A feature branch's preview is run against only when its change must be
+  seen before the merge, after a branch-scoped `CLERK_AUTHORIZED_PARTIES` names its own
+  alias: `staging-e2e https://<alias>`, the alias read from Vercel's connector.
 - **One staging host is public**, for the phones, once ARCHITECTURE's checks of it have
   passed (2026-11-15). A phone build carries no bypass, key or credential; every other
   Preview stays behind the wall.
