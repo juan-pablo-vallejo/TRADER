@@ -2,7 +2,7 @@
 // device that observed the event): 48 bits of milliseconds, version 7, variant 10, the rest
 // random. The office originates three kinds of record under ids of its own, kept across
 // retries so the server can answer a resend as a duplicate: a closeout, the events of a
-// labor repair, and a receipt it enters itself. Consumed by closeout-screen.tsx,
+// labor repair, and a receipt it enters itself. Consumed by closeout/closeout-screen.tsx,
 // ledger/repair-set.ts and materials/materials-screen.tsx.
 export function uuidv7(ms: number = Date.now()): string {
   if (!Number.isInteger(ms) || ms < 0 || ms > 0xffff_ffff_ffff) {
