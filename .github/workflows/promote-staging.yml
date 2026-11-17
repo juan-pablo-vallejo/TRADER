@@ -2,8 +2,9 @@ name: Promote staging
 
 # Staging's promotion (ARCHITECTURE, 2026-11-16, staging promotion and migration gate;
 # RULES, Git and CI). After a merge into `main` whose `check` passed, this carries that
-# commit to staging (ARCHITECTURE, 2026-11-17, staging from `main`): migrations rehearsed
-# on the kept Neon branch, staging migrated, `main` deployed to the staging project by its
+# commit to staging (ARCHITECTURE, 2026-11-17, two branches and a release by pull
+# request): migrations rehearsed on the kept Neon branch, staging migrated, `main` built as
+# the staging project's Production deployment — staging's, not the customers' — by its
 # deploy hook, the host held to this commit, the browser suite run, the outcome reported
 # as a commit status. It moves no branch and holds no credential of Vercel's account.
 # It holds staging's secrets, so it runs only code already on `main`: it is started by CI's

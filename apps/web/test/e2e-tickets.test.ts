@@ -305,7 +305,7 @@ describe("the workflows and the staging key", () => {
   });
 
   // Staging is deployed from `main` by Vercel's deploy hook (ARCHITECTURE, 2026-11-17,
-  // staging from `main`): the workflow moves no branch and holds no key that could.
+  // two branches and a release by pull request): the workflow moves no branch and holds no key that could.
   it("deploys by the hook alone, held to Vercel's address and to this run's commit", () => {
     expect(promote).not.toMatch(/git push|contents: write|ssh-key|STAGING_DEPLOY_KEY/);
     expect(promote).not.toContain("staging-preview");
