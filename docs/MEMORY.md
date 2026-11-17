@@ -658,6 +658,14 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   holds is dead and the next run prints another.
 - `gh pr merge` is denied in the owner's local settings file, which a session does not
   edit: a session merges only once the owner has lifted that rule there.
+- Playwright disposes a request context's responses with the context: after `dispose()` a
+  response's `status()` still answers and its `json()` throws "Response has been
+  disposed". Read the body first (`e2e/readiness.ts`). A stand-in context in a unit test
+  disposes nothing: test such code with `request` from `@playwright/test` against a local
+  server (`test/e2e-readiness.test.ts`).
+- Re-running a promotion's failed job runs that run's own commit again: a suite fault is
+  fixed by a merge, whose promotion finds nothing pending, migrates nothing, deploys the
+  new commit and runs the suite with fresh tickets.
 - The migration reading flags by text and widely (`reading.ts`): a trigger's `BEFORE
 TRUNCATE`, a quoted word and a function's body are not flags, a dropped constraint, a
   REVOKE and an enum value are. A flag sends the migration to the owner; it is not a fault.
@@ -2312,3 +2320,26 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   can: a rule cannot narrow a tool's arguments, so "staging only" there is a session's
   discipline, stated in RULES, not a guarantee.
 - **Next:** O0's three owner steps; then both pull requests merge and O3 starts.
+
+### 2026-11-17 — First promotion: staging at the journal and deployed; the suite's first test faulty
+
+- **Did:** read after the owner's authorized dispatch (run 44046566988, `main` at
+  `5c2cc12`): `database` and `deploy` green, staging at 50 of 50 by hash, `staging-preview`
+  and the staging host at `5c2cc12`, readiness 200, a call with no session 401, the
+  development sign-in 404. `verify` red at the suite's first test, the other four not
+  run: on the public host with an expected commit — a path no run had taken — it read the
+  readiness body after disposing the request context. The ticket step made two tickets;
+  the log holds neither a ticket nor a key. Branch `e2e-readiness-read`: `askReadiness`
+  (`e2e/readiness.ts`) reads the body before the context goes, the spec uses it, and a
+  test asks it with Playwright's own context of a local server. Watched red: the original
+  fault ("Response has been disposed"), a followed redirect, a commit taken from any 200.
+  Seen on the staging host, the first test alone: green on `5c2cc12`, red on another
+  commit.
+- **Decided:** nothing. Not done: the four signed-in tests have still never run in the
+  workflow — tenant check, forged ticket, spent ticket, the worker's refusal; O0 is not
+  ticked.
+- **Release 0.1 state:** `main` at `5c2cc12`; staging at 50 of 50 and serving it; nothing
+  pending, so this branch's merge starts a promotion that migrates nothing, deploys the
+  merge and runs all five tests with fresh tickets.
+- **Next:** merge this branch on a green `check`; read that promotion's verify log; then
+  O0's tick and O3.
