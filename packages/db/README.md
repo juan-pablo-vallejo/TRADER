@@ -1,15 +1,15 @@
 # @trader/db — deployed database runbook
 
 How a deployed database is migrated, given its application role, onboarded and restored.
-Decisions live in [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) (rows of 2026-11-12, Release
-0.1 R3); this file is the procedure. Local development needs none of it: `pnpm db:up`,
+The rules are in [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) and [RULES.md](../../docs/RULES.md);
+this file is the procedure. Local development needs none of it: `pnpm db:up`,
 `pnpm db:migrate`, `pnpm db:seed`.
 
 On production every command here is run by the owner, from a terminal on the owner's
 machine, with the connection string typed into that shell and nowhere else. On staging the
 same commands are also run by Claude Code, through wrappers on the owner's machine that take
 a connection string from the macOS Keychain, refuse any host but staging's and hand the
-string to one fixed command (ARCHITECTURE, 2026-11-14 staging autonomy; RULES, Toolbox):
+string to one fixed command (RULES, Toolbox):
 
 | Wrapper command         | Connects as                         | Approval                         |
 | ----------------------- | ----------------------------------- | -------------------------------- |
@@ -22,7 +22,7 @@ A connection string is never written into `.env`, the repository, a deployment's
 the `check` job, and never shown to an assistant's session. Staging's two migrator strings
 — its default branch's and the rehearsal branch's, each the direct endpoint as the owner —
 are also secrets of the GitHub environment `staging`, which only the promotion workflow on
-`main` can read (ARCHITECTURE, 2026-11-16, staging credentials). Production's is in neither.
+`main` can read (RULES, Toolbox, "A credential is used, never read"). Production's is in neither.
 
 ## Two connections, two roles
 
@@ -81,7 +81,7 @@ TRADER_MIGRATE_PURPOSE=owner DATABASE_URL='<direct endpoint, owner>' pnpm db:mig
 ### Staging: the promotion workflow
 
 Staging is migrated by `.github/workflows/promote-staging.yml` and by nothing else
-(ARCHITECTURE, 2026-11-16, staging promotion and migration gate). After a merge into `main`
+(RULES, Git and CI). After a merge into `main`
 whose `check` passed it reads both databases' applied migrations against the commit's
 journal, applies the pending ones to the rehearsal branch, and holds that branch to the
 journal exactly and to the schema of a fresh replay (`src/promotion/fingerprint.ts`: the
@@ -90,7 +90,7 @@ migration is past the owner's gate (`OWNER_GATED_THROUGH`, `src/promotion/plan.t
 reading flags none of them (`src/promotion/reading.ts`), it runs the same command against
 staging and checks staging the same way.
 
-Then it deploys (ARCHITECTURE, 2026-11-17, two branches and a release by pull request).
+Then it deploys (RULES, Git and CI).
 The `deploy` job calls the staging project's deploy hook, a secret of the `staging`
 environment (`STAGING_DEPLOY_HOOK`), which builds `main`'s head as that project's
 Production deployment. A hook takes no commit, so the job calls it only while `main`'s head
@@ -281,7 +281,7 @@ DATABASE_URL='<direct endpoint, owner>' pnpm --filter @trader/db onboard \
 ## Restoring
 
 Release 0.1 relies on Neon's point-in-time restore of a project's root branch; the window
-is the plan's (ARCHITECTURE, 2026-11-12 Release 0.1 backups).
+is the plan's (ARCHITECTURE, Technology stack, Backups).
 
 1. Note the time to restore to, in UTC, before the fault.
 2. Restore the branch to that time in Neon (Backup & Restore). Neon keeps the replaced
