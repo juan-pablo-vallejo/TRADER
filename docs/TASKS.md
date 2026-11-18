@@ -40,13 +40,6 @@ batch that enacts them. Phone scope stays the PRD's.
 - [ ] O6 — Staging acceptance: R7's one send, the fixture tenants, S9, R8's pages
 - [ ] O7 — Production prepared, not created: P6's gate, the owner's setup list in the
       database runbook, the readiness assessment
-- [ ] O9 — `docs/LOG.md`, the three moves, the union merge and the append-only step: the
-      session log, the Decisions table and the ticked TASKS items moved without a word
-      changed; `.gitattributes` gives the log `merge=union`; a step in `check` fails when
-      the log loses a line relative to `main`; RULES names the log in its authority table
-      and document set. Plan first: each decision row matched to the line that states its
-      fact. Done when a script shows every line removed from the three documents present
-      in the log, and the step is watched red
 - [ ] O9b — The decision rows with no home: each row in force that no line of PRD, ARCHITECTURE, RULES or DESIGN states (the list in O9's pull request) written into the section the match names, and the rows the match marked partial completed. It changes words in decided documents: plan first. Done when a second match finds a home for every row in force
 - [ ] O10 — MEMORY.md reshaped, package notes to `.claude/rules/`, `CLAUDE.md`'s duplicate
       removed, the byte budget: MEMORY as Now, Context and Notes; a rules file per package
