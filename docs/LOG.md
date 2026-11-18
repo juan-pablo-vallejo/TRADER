@@ -2574,3 +2574,175 @@ Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersed
 - **Next:** the owner's word on each withheld sentence — the code or the row — then O9b's
   remaining rows; the second reader holds line 217 in force where the plan held it
   superseded.
+
+## 2026-11-18
+
+- **2026-11-18** — One ordered list in TASKS (by the owner). TASKS.md is one list in the order it is worked: the Release 0.1 track first, as the path to production; then what follows it toward V1 complete; then the overhaul and upkeep lines; then Parked. A line states only what is still open and when it is done: what was built, seen or decided on the way is this log's, and a line's plan is its pull request's. An id never changes and is never reused, and the order is the list's. A session works the track's first open line that waits on nothing of the owner's; nothing below the track is started before the go/no-go line is recorded as passed, unless the owner names the line; a new idea enters under Parked as one line and moves up on the owner's word. The stages keep their numbers and done-criteria as a list, so a cite of a stage still reads; a cite of TASKS' Overhaul names the O lines and a cite of its Automation section the P lines, wherever they stand. TASKS.md as it stood before is read at `19a6ab4` (`git show 19a6ab4:docs/TASKS.md`), and this day's session entry says where each of its 99 open lines went — Supersedes: TASKS, 'Stages are dependency-ordered; a stage starts when the one before it is done'; TASKS' Overhaul, Release 0.1 and Automation sections as three lists worked beside each other; the track's 'A line that takes a stage's line ticks it there'
+- **2026-11-18** — Lean automation before the first release (by the owner). Of the automation lines only P4, the preview builds, and P6, the release check, stand on the path to production. P6 rests on the `staging` status every promotion already writes; until P5 exists a candidate reads not native-verified, and the physical phones' checklist is its native evidence. What is left of P1, P2 and P3, and P5, follow the release — Supersedes: TASKS P6, 'Depends on P2 and P5'; TASKS, Automation, 'It runs beside the Release 0.1 track', for P1, P2, P3 and P5
+- **2026-11-18** — Production starts with schedule enforcement on (by the owner). S9 stays on the path to production: enforcement is accepted on staging and on both physical phones and its refusals are read, and the owner's approval is recorded before the go/no-go line. Week one's schedule is entered in production before the crew starts, since with enforcement on a worker with no shift is refused a clock-in (TASKS R16). The approval itself is still S9's to record, and PRD's 'only once the owner has approved turning enforcement on' stands
+- **2026-11-18** — Overhaul and upkeep frozen until the go/no-go line (by the owner). O1, O4, O9b's remaining rows, O10 to O13 and the upkeep lines are worked after Release 0.1's go/no-go line is recorded as passed. One exception stands on the path: the owner's word on each of the 31 sentences O9b withheld (TASKS O15), since the rows they belong to include tenancy, the runtime role, identity binding and push authority — Supersedes: TASKS, Overhaul, 'worked in batches beside the Release 0.1 track'
+- **2026-11-18** — A changed sign-in number is handled by hand at launch (by the owner). Until an admin procedure is built — the first line after Release 0.1 — the owner changes the number on the person's Clerk user. By the code's reading the roster row keeps working, since a bound row is found by its subject (`core/resolve-user.ts`), and its stored `sign_in_phone` goes stale; that is tried once on staging before it is relied on, and written into the runbook (TASKS R17). How `users.email` and a bound number follow a changed address is decided in that procedure's plan — Supersedes: TASKS, Stage 6, Clerk production instance, 'Still to decide: how `users.email` and a bound phone number follow a changed sign-in address', for Release 0.1
+- **2026-11-18** — The privacy policy and the terms are drafted for the owner's approval (by the owner). Claude drafts both from what the app collects — name, phone number, location at clock events, diagnostics — and nothing is published before the owner approves it; the RISEUP legal clinic reviews the text when it can be booked. TASKS R8's 'the owner's to supply or approve' stands — Supersedes: TASKS, Stage 8, 'Privacy policy and terms (RISEUP legal clinic)', as who writes them
+- **2026-11-18** — The crew app's strings are two typed catalogs (by the owner; TASKS O14). `apps/mobile/src/i18n/en.ts` and `es.ts` are plain objects of one type, so a key missing from either language does not compile, and no i18n library is used; one is added only when a string needs a plural rule the catalogs cannot express — Supersedes: DESIGN, Localization, 'All strings live in message catalogs with ICU plurals'
+- **2026-11-18** — Four lines added to the path to production (by the owner): S10, `confirmCopy`'s lock order; R12, Release 0.1's acceptance checklist; R11, a way in without an SMS for the stores' reviewers and for staging's phone flows, taken out of R10 and ahead of it; R16, week one's schedule entered before the crew starts
+
+### 2026-11-18 — TASKS reordered into one list: 8 lines ticked, 21 retired, O14 decided
+
+- **Did:** on the owner's instruction, with the eight answers the owner gave the review
+  chat, branch `tasks-one-list` from `19a6ab4`, two commits, documents only. `docs/TASKS.md`
+  is one ordered list: the Release 0.1 track as the path to production, three lines the
+  owner starts now and 23 in order; what follows the release toward V1 complete; the
+  overhaul and upkeep lines; Parked; the stages as a list. Of the 99 lines open at
+  `19a6ab4`: 8 ticked and moved here, 21 retired without a tick because another open line or
+  a later decision holds them, 28 reworded to what is still open, 42 unchanged and only
+  moved; 12 lines are new; 82 are open now. DESIGN, Localization, states the crew app's two
+  typed catalogs. A script kept out of the repository put every line open at `19a6ab4` in
+  exactly one of the four sets. Watched: `pnpm check` green before each commit (1,666
+  tests: 407 db, 970 api, 45 mobile, 244 web); `docs/TASKS.md`'s sha256 equal to the review
+  chat's, at 491 lines; `pnpm format:check` passing with nothing rewritten; the script
+  printing 99 base lines as 42 kept, 8 ticked, 21 retired and 28 reworded, 82 open and
+  `PROOF HOLDS`, and `PROOF FAILS` on a copy with one word of an unchanged line changed;
+  each of the eight ticks confirmed against its file or its log entry, and a denied command
+  (`gh workflow run --help`) refused in this session
+- **Decided:** by the owner on 2026-11-18, the eight bullets of this date above. On the
+  owner's word that day: no clone of the repository exists but `~/Documents/TRADER`;
+  Cloudflare's documentation connector, the Playwright connector's pin and `eas-cli`'s
+  upgrade are done on the owner's machine; the Google Play account is a personal one made in
+  October 2026. Read that day on the vendors' pages by the review chat: Play gives such an
+  account production access only after a closed test with twelve testers opted in for
+  fourteen days running; TestFlight's first build for outside testers waits for Apple's
+  review; Clerk's test mode on a production instance lets anyone sign in, with one fixed
+  code, as any user whose number is a fictional one. Asked and not confirmed: that the owner
+  saw `vercel env rm` ask on 2026-11-14, so "Staging autonomy" stays open; that an invoice
+  email has arrived, so R7 stays open. Found and not changed: DESIGN, Localization, still
+  says the office web is "built through the same catalog", and the office's strings are a
+  module of their own; O12 and O13 cite an audit that is not in the repository; MEMORY's
+  Context still says no vendor account is in use. Not done: no TASKS line was started; the
+  pull request is not merged, since the review chat reads the diff first; no document
+  outside TASKS, LOG and DESIGN was edited.
+- **Next:** R11, the track's first line; beside it the owner's three: R19, R18 and O15.
+
+- [x] O14 — DESIGN, Localization says message catalogs with ICU plurals; the phone has two
+      typed catalogs and no i18n library (LOG, 2026-11-15, field app skeleton). Decide which
+      stands. Done when DESIGN and `apps/mobile` say the same thing
+- [x] PRD Access brought into line with the sign-in decisions (documents only; the wording
+      is the owner's). PRD says an office admin is invited by their own email address; since
+      the 2026-11-12 row "A sign-in number on every new invitation" every invitation requires
+      a number and takes an email beside it. Done when PRD Access and its summary sentence
+      state the rule the decision row states
+- [x] `.claude/settings.json` committed with a deny list for the vendor tools that write or
+      read a secret (plan first: it changes what a session can do). Depends on the Toolbox
+      line. Consumer: Claude Code in this repository. Done when a denied tool is refused in
+      a new session and a read tool still answers
+- [x] Resync every other clone to the new `main`
+- [x] Xcode with the iOS Simulator (Mac)
+- [x] Android Studio with one emulator (Mac)
+- [x] Invoice drafting (V1-D14; plan first: money): lines drawn from job labor and materials
+      as snapshots of description and quantity, using Stage 4's aggregation, or written
+      free-hand; the customer price entered by the admin on every line; tax entered per
+      invoice; the office screens (DESIGN, Invoice line). Tests: no line's price is derived
+      from a pay rate or a receipt cost; a labor line's quantity is the rounded daily figure;
+      a later change to the job's labor or materials changes no draft line
+- [x] PDF on demand, rendered from the issued snapshot
+
+### TASKS reordered 2026-11-18: where each line open at `19a6ab4` went
+
+Line numbers are those of `git show 19a6ab4:docs/TASKS.md`.
+
+- **Ticked (8),** the lines above, each on what holds it:
+  - 57–59: O14 — decided by the owner, 2026-11-18; DESIGN amended in this pull request
+  - 87–91: PRD Access — PRD.md:43-44 and 248-253 state the rule; LOG, 2026-11-17, the
+    decision rows written into their homes
+  - 92–95: `.claude/settings.json` — on `main` since #123; LOG, 2026-11-17, toolbox batch
+    (Clerk's five denied tools left the session) and O8 (`gh pr merge --help` refused)
+  - 326: Resync every other clone — the owner's word, 2026-11-18: no other clone exists
+  - 380: Xcode with the iOS Simulator — LOG, 2026-11-15, R4: built and run on iPhone 17 Pro,
+    iOS 26.2
+  - 381: Android Studio with one emulator — LOG, 2026-11-15, R4: built and run on
+    `Medium_Phone_API_36.1`
+  - 476–481: Invoice drafting (V1-D14) — taken by R6, ticked 2026-11-15;
+    `packages/api/test/invoices/invoice.test.ts`:240 and :282
+  - 492: PDF on demand — LOG, 2026-11-15, invoice PDF on demand (R7, the PDF)
+- **Retired without a tick (21),** each held by another open line or by a later decision:
+  - 40: O6, staging acceptance — an umbrella: its four parts are R7, P7, S9 and R8
+  - 41–42: O7, production prepared — P6 is its gate and takes its readiness assessment; its
+    setup list is written in the runbook and performed by R13
+  - 75–82: Owner, accounts — each account is recorded as existing in LOG (2026-11-14 to
+    2026-11-17) or superseded by 2026-11-12 deployed database path; what is left is R19's
+    and R10's
+  - 130–135: Public staging host — its three unseen checks are P7's; the host itself is seen
+    (LOG, 2026-11-16 and 2026-11-17) and now serves `main`'s deployment
+  - 297–306: Isolated identity before production — struck: not taken, by the owner,
+    2026-11-17
+  - 307–320: Owner, each when its line reaches it — done as LOG records, or carried by R19
+    (builds), R13 (production), R20 (repository settings), O3 (deletions), P5 (the launchd
+    agent); the owner's own test of staging is the runbook's step 1
+  - 382–383: Stage 5, Expo app — built by R4 (ticked 2026-11-15), which left it unticked;
+    its asset-spec check is O5's
+  - 384–387: Stage 5, development sign-in on the device — built by R4; its absence from a
+    release build is seen in P4
+  - 388–389: Stage 5, i18n layer — built by R4 and R5; the Spanish layouts are O5's
+  - 390–391: Stage 5, sign-in on the device — R5's
+  - 392–397: Stage 5, offline capture evidence (V1-D02) — R5's; built (LOG, 2026-11-15, the
+    phone's clock and sync)
+  - 400–402: Stage 5, job list, own history and own assignments — R5's and S8's; built (LOG,
+    2026-11-15)
+  - 405: Stage 5, own profile — R5's
+  - 425–430: Stage 6, Clerk production instance — R13's; its open decision settled for
+    launch by 2026-11-18 a changed sign-in number, and by the address-change line after the
+    release
+  - 434–436: Stage 6, Neon Launch project — R13's and R9's; the replay and its proof are the
+    runbook's
+  - 437–439: Stage 6, Environments — built by R3 (ticked 2026-11-14); production's half is
+    R13's
+  - 440–441: Stage 6, Vercel Pro project — the project is R13's, the pool R14's, Vercel Cron
+    the daily delete's
+  - 447–449: Stage 6, edge protection — built by the edge line and R3 (LOG, 2026-11-12 and
+    2026-11-15); what is left is R15's
+  - 514–515: Stage 8, privacy policy, terms, deletion and store forms — R8's and R10's
+  - 520–521: Stage 8, pilot onboarding — R9's, by the onboarding of 2026-11-12
+  - 535–536: Stage 8, TestFlight and the Play closed track — R10's
+- **Reworded to what is still open (28);** the words cut are read at that commit:
+  - 18–22: O1 — cut: the list of what was built
+  - 23–29: O3 — cut: what was built; added: the leftovers that are the owner's to remove
+  - 38–39: O5 — own profile and the Android sign-in named as R5's, `eas.json` as P4's; Stage
+    5's Spanish layouts and asset specs taken in
+  - 83–86: Owner, connectors — Cloudflare's API connector not connected (2026-11-17,
+    toolbox); production no longer its consumer
+  - 105–114: Staging autonomy — cut: the work list, built 2026-11-14
+  - 115–121: Staging tools — cut: the tools, each of which answered
+  - 122–129: S6 — cut: the work list, built 2026-11-15
+  - 136–158: R5 — cut: the packages, installed; 'Built so far'
+  - 159–162: S8 — cut: 'Depends on S7', ticked
+  - 163–166: S9 — 'recorded in MEMORY' is 'recorded in LOG' since 2026-11-17; the owner's
+    intent of 2026-11-18
+  - 167–183: R7 — cut: 'Built so far', the tests and `pdf-lib`, built 2026-11-15
+  - 184–187: R8 — who drafts the text (2026-11-18)
+  - 188–191: R9 — its dependencies, the replay's proof and the first release named
+  - 192–197: R10 — reviewer access is R11's; Play's closed test and TestFlight's review as
+    read on 2026-11-18
+  - 198–206: Go/no-go — 'recorded in MEMORY' is 'recorded in LOG'; the checklist is R12's
+  - 220–249: P1 — cut: the work and safeguards, built 2026-11-16
+  - 250–263: Fixture tenants, now P7 — cut: what was ready; the public host's unseen checks
+    taken in
+  - 264–270: P2 — cut: what runs on every promotion
+  - 271–276: P3 — cut: the DNS, domain and variables, done 2026-11-16; the one send is R7's
+  - 277–285: P4 — depends on R19 and R11; the sign-in is R11's path, since staging's test
+    mode is off
+  - 286–290: P5 — marked deferred (2026-11-17, toolbox)
+  - 291–296: P6 — depends on the `staging` status, no longer on P2 and P5 (2026-11-18, lean
+    automation); takes O7's readiness assessment
+  - 398–399: Stage 5, clock line — the clock and the location stamp are R5's; biometrics
+    left
+  - 421–424: Stage 6, sign-in address for every person — named R18, its words unchanged
+  - 461–462: Stage 6, reporting line — the Sentry reporter and the EAS project done
+  - 466–468: Stage 6, repository hygiene — Actions pinned (2026-11-16); vulnerability alerts
+    moved to R20
+  - 482–486: Stage 7, issue line — issue, void and numbering built by R6; credit memos left
+  - 561–562: Stage 10, store line — R10 submits; this is the listing itself
+- **Unchanged, only moved (42):** every other line.
+- **New (12):** R11, R12, R13, R14, R15, R16, R17, R19, R20, S10, O15, and the sign-in
+  address change by an admin that leads what follows the release. R13, R14, R15, R19 and R20
+  gather what the retired lines left open; R17 and the address change are the owner's
+  decision of this date on a changed number; O15 is the one exception to the overhaul's
+  freeze; R11, R12, R16 and S10 are the owner's additions of this date.

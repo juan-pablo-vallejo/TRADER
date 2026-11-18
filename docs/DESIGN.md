@@ -158,9 +158,11 @@ integer cents through the locale formatter; dates and times render in the compan
 ## Localization
 
 Crew app: English and Spanish, selectable in-app and defaulting to the device language. All
-strings live in message catalogs with ICU plurals; dates, times and currency go through the
-platform formatter in the company's timezone. Office web: English in V1, built through the same
-catalog so Spanish is a translation, not a rewrite.
+strings live in two typed catalogs, one object a language, held to one shape by the compiler,
+with no i18n library; one is added only when a string needs a plural rule the catalogs cannot
+express. Dates, times and currency go through the platform formatter in the company's
+timezone. Office web: English in V1, built through the same catalog so Spanish is a
+translation, not a rewrite.
 
 ## Brand
 
