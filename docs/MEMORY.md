@@ -2349,6 +2349,58 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   discipline, stated in RULES, not a guarantee.
 - **Next:** O0's three owner steps; then both pull requests merge and O3 starts.
 
+### 2026-11-17 — Gate #3 read; the browser suite made to refuse a run it was not told
+
+- **Did:** read-only, twice: the promotion's sign-in path (the key in the `staging`
+  environment alone, tickets by `POST /v1/sign_in_tokens` and the `ticket` strategy, no
+  trace or artifact), and staging itself — one company, `R3 Staging Co`, its admin and
+  worker on the suite's two fictional numbers, each bound, one customer, nothing else; 40
+  migrations, equal by hash to the journal's first forty; the rehearsal branch at 50.
+  Found: the three `E2E_*` values had been made as secrets where the workflow reads
+  variables, so they arrived blank; the owner made them variables. Then branch
+  `e2e-fail-closed` from `9108276`: the defaults removed, `missingSettings` in
+  `tickets.ts`, the ticket step and the spec both refusing. Watched red: the spec's
+  refusal, the ticket step's, a blank counted as set, a name dropped from the list — the
+  last turned nothing red until the list was pinned by name.
+- **Decided:** by the owner on 2026-11-17: no default for the suite's company or its two
+  people. Not done: no workflow change, so with the company alone unset the two tickets
+  are still made before the suite refuses, and expire unused; the fallback to Clerk's
+  test code when no ticket is given is kept. Not seen: the refusal in the workflow, and
+  the verify job at all, which has never run. The `staging-e2e` wrapper passes none of
+  the three, so a session's own run refuses until it does: the owner's file.
+- **Release 0.1 state:** `main` at `9108276`; staging at 40 of 50, serving `1c94b64`. This
+  branch's merge starts a promotion that verifies the rehearsal and stops at the owner's
+  gate, red by design, with nothing migrated; its report prints the code for the new
+  commit, and a code printed for `9108276` no longer holds.
+- **Next:** owner merges this branch, reads that run's report and dispatches `promote`
+  with its code; then the verify job's first log.
+
+### 2026-11-17 — #124 merged; the gate held; `main` made a session's to merge
+
+- **Did:** read-only after the owner merged #124 (`main` at `f5e31aa`): CI green; the
+  merge's promotion verified the rehearsal branch (50 of 50, schema equal to a replay) and
+  stopped at the owner's gate with `deploy` and `verify` skipped; staging still at 40 by
+  hash, `staging-preview` still `1c94b64`; the run's approval code recomputed from the
+  files and equal. Read for the owner: every way a session reaches the owner's GitHub
+  credentials (the CLI's token with repository and workflow scope, the account SSH key,
+  the Keychain helper, a signed-in browser), and that a collaborator's fine-grained token
+  cannot work on a personal repository (GitHub's page, this date), so an isolated identity
+  here is a GitHub App. Then branch `main-autonomy-policy`, documents only: RULES (Git and
+  CI, Session protocol), `CLAUDE.md`, one decision row, one TASKS line.
+- **Decided:** by the owner on 2026-11-17, the row of that date: a session merges into
+  `main` through its pull request and `check`; production is the owner's alone, by policy
+  and not yet by permission; the backlog's approval stays the owner's dispatch. Not
+  changed, and asked of the owner: whether "plan, stop, wait" for schema, auth, sync,
+  money and CI still waits. Not done: nothing merged by a session yet — the local deny
+  rule stands, and a merge now would kill the code the owner holds; #123's committed
+  settings still list a merge and a dispatch as never run and need this policy before
+  they merge.
+- **Release 0.1 state:** `main` at `f5e31aa`; staging at 40 of 50, serving `1c94b64`; the
+  approval code for this commit is in run 44037693363's report. Open: #122, #123 and this
+  branch, none to merge before the backlog is applied.
+- **Next:** the owner's dispatch, `promote` with that code; then the verify job's first
+  log, and these three pull requests merged in order.
+
 ### 2026-11-17 — First promotion: staging at the journal and deployed; the suite's first test faulty
 
 - **Did:** read after the owner's authorized dispatch (run 44046566988, `main` at
