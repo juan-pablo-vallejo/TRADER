@@ -168,6 +168,16 @@ Console records and listings, which need no build.
       settings and its four session claims copied and 30-day sessions; the Vercel project on
       Pro, with ARCHITECTURE's domain layout, its variables for Production alone, the customer
       domain last. Done when the runbook's steps 1 to 5 are each recorded in LOG
+- [ ] R22 — The invitation message on the Roster screen (LOG, 2026-11-18, the invitation
+      message). Work: after `roster.invite` answers, the screen shows a ready message in
+      English and Spanish with the app's install link and how to sign in, a Copy control, and
+      on a phone a link that opens the admin's own Messages app with the text and the
+      person's number filled in; TRADER sends nothing. The install link is read from the
+      deployment's configuration, absent until R10 has the TestFlight and Play links, and the
+      control is hidden while it is absent. DESIGN's Roster row is amended in this line's own
+      pull request. No auth, schema or sync change; if its plan finds one, it stops and says
+      so. Done when an admin on staging invites a fixture person, copies the message, and on
+      a phone the link opens Messages with the number and both languages' text
 - [ ] R9 — Production cutover, each step approved by the owner when it is reached. Depends on
       R13 and P6. The journal migrated into production and proven against a fresh replay (the
       runbook); the first release, by pull request into `production`; D Sierra Painting
@@ -183,7 +193,8 @@ Console records and listings, which need no build.
       Play Console records, listings, privacy labels and the Data safety form declaring name,
       phone number, location at clock events and diagnostics; reviewer access by R11's path;
       submission to both reviews; TestFlight and the Play closed track opened to the crew once
-      the go/no-go line is passed, with crew onboarding in English and Spanish. Play gives
+      the go/no-go line is passed, with crew onboarding in English and Spanish, whose message
+      is R22's. Play gives
       this account production access only after a closed test with twelve testers opted in for
       fourteen days running (Google's page, read 2026-11-18): the crew's Android users are its
       testers, counted with the partner before the track opens
@@ -448,7 +459,9 @@ is green.
 
 One line an idea. Nothing here is planned or worked until the owner moves it up.
 
-Nothing yet.
+- A worker asks to join with a company's join code and an admin approves (LOG, 2026-11-18,
+  the invitation message). Changes PRD's invitation-only rule and ARCHITECTURE's invariant 6
+  when taken up
 
 ## Stages
 

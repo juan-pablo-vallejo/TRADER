@@ -2798,3 +2798,20 @@ Line numbers are those of `git show 19a6ab4:docs/TASKS.md`.
       texts of each, from pull request #133's description. Done when LOG holds the word on
       each and every defect in the code is a line here, on this track where the rule is a
       safety rule
+
+- **2026-11-18** — The invitation message, and how an account is created (by the owner). 1. An office invitation stays the only way an account is created: PRD's invitation-only rule and ARCHITECTURE's invariant 6 stand. 2. An invitation message, before Release 0.1: after `roster.invite` answers, the Roster screen shows a ready message in English and Spanish with the app's install link and how to sign in, a Copy control, and on a phone a link that opens the admin's own Messages app with the text and the person's number filled in. TRADER sends nothing: no SMS vendor, no carrier registration, no new seam; TASKS R22, on the track before R9. 3. Self-registration by a company join code, with an admin's approval, is parked (TASKS, Parked) — Supersedes: 2026-11-12 invitation at the provider, 'the office tells them', as word of mouth alone; its 'No message is sent to the person', by TRADER, stands
+
+### 2026-11-18 — The invitation message decided and made a line (R22); the join code parked
+
+- **Did:** on the owner's instruction, branch `invite-message-decided` from `2e8355d`, one
+  commit, `docs/LOG.md` and `docs/TASKS.md` only. The decision bullet above holds the
+  owner's three points. TASKS: R22 added on the track, directly before R9, for the message
+  on the Roster screen; R10's crew onboarding names R22 as the message's home; Parked
+  holds its first line, a worker joining by a company's code with an admin's approval.
+  Watched: `pnpm check` green before the commit (1,666 tests).
+- **Decided:** by the owner, the bullet of this date above. The id is R22, not used before
+  in TASKS or in this log. Not done: no code, no test and no other document was touched,
+  so the message does not exist yet and DESIGN's Roster row is unchanged; that is R22's
+  own pull request.
+- **Next:** R11, the track's first line, then R21 and R22; beside them the owner's two:
+  R19 and R18.
