@@ -75,8 +75,8 @@ their platforms and are never committed.
 
 ## Contributing
 
-One change per branch and pull request into `main`; the `check` job must pass; the owner
-merges. A merge is migrated and deployed to staging and verified there by a workflow, with
+One change per branch and pull request into `main`; the `check` job must pass before
+it merges. A merge is migrated and deployed to staging and verified there by a workflow, with
 no further step. A release is a pull request from a staging-verified commit of `main` into
 `production`, merged by the owner. Commit, review and release rules →
 [docs/RULES.md](docs/RULES.md); the runbook → [packages/db/README.md](packages/db/README.md).

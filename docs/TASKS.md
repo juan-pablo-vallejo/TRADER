@@ -9,7 +9,7 @@ exists. A line marked **decide** ends in a decision row in ARCHITECTURE.md, not 
 ## Overhaul — toolbox, cleanup, staging from `main`
 
 The owner's mandate of 2026-11-17, worked in batches beside the Release 0.1 track; each batch
-is one pull request, planned in its description and merged by the owner. Its decisions (two
+is one pull request, planned in its description and merged once `check` is green. Its decisions (two
 permanent branches, staging deployed from `main` by a deploy hook, a release by pull
 request into `production`, no native runner for now) are written into ARCHITECTURE by the
 batch that enacts them. Phone scope stays the PRD's.

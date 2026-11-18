@@ -103,7 +103,7 @@ status, which a release later requires:
 gh api repos/<owner>/<repo>/commits/<sha>/status --jq '.statuses[] | select(.context == "staging")'
 ```
 
-Nobody dispatches anything for this: the owner's merge is the whole of it. A red run names
+Nobody dispatches anything for this: a merge is the whole of it. A red run names
 where it stopped: `before-staging-change`, `migrated-not-deployed` or `deployed-failing`.
 After `migrated-not-deployed` staging runs the earlier code on the newer schema, which
 additive migrations allow; the next merge, or a re-run of the failed jobs while `main` is

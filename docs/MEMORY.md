@@ -695,8 +695,6 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   deployment is. `traderEnvironment` (`apps/web/src/server/environment.ts`) reads
   `TRADER_ENVIRONMENT`, and a deployment without it refuses to start — a pull request's
   Preview included, so the variable is set for Preview too.
-- A merge is the owner's, every time: `gh pr merge` is denied in the committed settings
-  and the session reports a pull request and stops.
 
 ## Log
 

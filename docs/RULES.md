@@ -97,10 +97,10 @@ is wrong.
 
 - `main` is protected: pull request plus the required check `check`, the literal job name in
   `.github/workflows/ci.yml`. Branch per TASKS line, pull request, `check` green, then
-  the owner's merge; direct pushes to `main` are refused. The agent pushes its feature
-  branch, opens and updates that branch's pull request and reports it. Every merge is the
-  owner's: it is the one human gate between a change and staging (ARCHITECTURE,
-  2026-11-17, two branches and a release by pull request).
+  `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused. The agent
+  pushes its feature branch, opens and updates that branch's pull request and, once
+  `check` is green on its newest commit, merges it (ARCHITECTURE, 2026-11-17, a session
+  merges into `main`). It never merges a pull request into `production`.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
 - CI is one workflow with one job, `check`: install, typecheck, lint, format check, build,
@@ -197,7 +197,7 @@ the owner's machine, outside the repository.
   password change, a Neon restore, reset or deletion, a variable removed, a test user
   deleted, and any cleanup of a fixture, synthetic ones included.
 - **A session's rules live in two places.** `.claude/settings.json`, committed, holds what
-  is true on any machine: what is never run (a merge, a push to a permanent branch, a
+  is true on any machine: what is never run (a push to a permanent branch, a
   workflow dispatch, a vendor's production command, a Keychain item's name) and what
   asks first. Rules that name a path on the owner's machine stay in the owner's local file, which
   git ignores. `.claude/skills/` holds the project's short procedures; a skill restates no
@@ -233,6 +233,7 @@ the owner's machine, outside the repository.
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
 4. Commit per the rules above. Push the feature branch, open or update its pull request,
-   report it and stop: the merge is the owner's. Never push to `main` or `production`.
+   and merge it once `check` is green on its newest commit. Never push to `main`; never
+   merge into or push to `production`.
 5. End by ticking the task in TASKS.md and appending an entry to MEMORY.md in its format. Never
    edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.
