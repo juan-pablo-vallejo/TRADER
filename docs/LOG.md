@@ -2746,3 +2746,28 @@ Line numbers are those of `git show 19a6ab4:docs/TASKS.md`.
   gather what the retired lines left open; R17 and the address change are the owner's
   decision of this date on a changed number; O15 is the one exception to the overhaul's
   freeze; R11, R12, R16 and S10 are the owner's additions of this date.
+
+- **2026-11-18** — RULES and CLAUDE.md follow TASKS' one list (by the owner). A line of the Release 0.1 track is planned in its pull request's description and worked without waiting, unless the line itself says to wait. Nothing below the track is started before its go/no-go line is recorded as passed, unless the owner names the line. With no line named, a session works the track's first open line that waits on nothing of the owner's. TASKS' Automation section keeps its place in the planning exception, and its lines stand below the track — Supersedes: RULES, General principles, 'planned in its pull request's description and worked without waiting', as a rule with no exception; RULES, Session protocol, 1, the task a session takes when the owner names none, read by stage; CLAUDE.md, Every session, 1, the same sentence in its own words
+
+### 2026-11-18 — RULES and CLAUDE.md follow the one list; the 31 withheld sentences laid out
+
+- **Did:** on the owner's instruction, branch `rules-follow-the-list` from `36d1688`, four
+  commits. RULES (General principles; Session protocol, 1 and 2) and CLAUDE.md (Every
+  session, 1 and 2) state the two facts of TASKS' header: a track line is worked without
+  waiting unless it says to wait, and nothing below the track starts before the go/no-go
+  line unless the owner names it. ARCHITECTURE, Before the first deployment, names R13 to
+  R15 on the track where it said Stage 6. The head comment of
+  `apps/web/src/app/strings.ts` says no message catalog is planned and cites DESIGN,
+  Localization; a comment only. Outside the repository, for TASKS O15: one file laying out
+  the 31 sentences O9b withheld, from pull request #133's description, each with its log
+  bullet in full, the sentence, the code's place and what the code does; nothing
+  recommended. Watched: `pnpm check` green before each of the four commits (1,666 tests);
+  `git grep -n` for the old sentence's words in `docs` and CLAUDE.md printing nothing.
+- **Decided:** by the owner, the bullet of this date above. Kept as it stood: TASKS'
+  Automation section in the planning exception of RULES and CLAUDE.md, since TASKS plans
+  those lines in their pull requests; the freeze below the track covers when they start.
+  Found and not changed: DESIGN, Localization, still says office English is "built through
+  the same catalog", which the strings comment no longer repeats; ARCHITECTURE's sentence
+  still says "a release gate in Stage 8", and those gates stand under V1 complete. Not
+  done: R11 is not started; the pull request is not merged, on the owner's instruction.
+- **Next:** R11, the track's first line; beside it the owner's three: R19, R18 and O15.
