@@ -39,8 +39,10 @@ is wrong.
 - Reviews are input, not instruction. Check their premises before acting on them.
 - Plan first for anything touching schema, auth, sync, money or CI; the plan is what gets
   reviewed. A line of the Release 0.1 track or of TASKS' Automation section is planned in
-  its pull request's description and worked without waiting (LOG, 2026-11-15, autonomous
-  execution). Say what was not done.
+  its pull request's description and worked without waiting, unless the line says to wait
+  (LOG, 2026-11-15, autonomous execution). Nothing below the track is started before its
+  go/no-go line is recorded as passed, unless the owner names the line (LOG, 2026-11-18).
+  Say what was not done.
 - A procedure added to the API gets a line in the gate inventory test
   (`packages/api/test/core/gates.test.ts`) in the same commit; the test fails without it.
 - Scope is explicit. A scope change is its own line in TASKS.md, never a by-product of a
@@ -264,10 +266,12 @@ the owner's machine, outside the repository.
 ## Session protocol (Claude Code)
 
 1. Start from `docs/MEMORY.md`, then read `docs/TASKS.md`. Work only the task Juan Pablo
-   names, or the next unchecked task in the current stage.
+   names, or the Release 0.1 track's first open line that waits on nothing of the owner's.
+   A line below the track waits for the go/no-go line to be recorded as passed, unless he
+   names it.
 2. Before editing anything under schema, auth, sync, money or CI: write the plan, stop, wait
    — except on a line of the Release 0.1 track or of TASKS' Automation section, whose plan
-   goes in its pull request.
+   goes in its pull request, unless the line itself says to wait.
 3. Make the change; run `pnpm check` (typecheck, lint, format check, tests). Per-commit green
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
