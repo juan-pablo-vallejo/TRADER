@@ -46,6 +46,33 @@ batch that enacts them. Phone scope stays the PRD's.
 - [ ] O6 — Staging acceptance: R7's one send, the fixture tenants, S9, R8's pages
 - [ ] O7 — Production prepared, not created: P6's gate, the owner's setup list in the
       database runbook, the readiness assessment
+- [x] O8 — Restore and reconcile: the decision row and the two log entries that merge
+      `23a5001` dropped, back byte-identical; one answer to who merges into `main` in
+      RULES, `CLAUDE.md`, the README, the committed settings and `pr-prep`. Done when a
+      byte comparison with `c5a1cae` is empty and no file gives a different answer
+- [ ] O9 — `docs/LOG.md`, the three moves, the union merge and the append-only step: the
+      session log, the Decisions table and the ticked TASKS items moved without a word
+      changed; `.gitattributes` gives the log `merge=union`; a step in `check` fails when
+      the log loses a line relative to `main`; RULES names the log in its authority table
+      and document set. Plan first: each decision row matched to the line that states its
+      fact. Done when a script shows every line removed from the three documents present
+      in the log, and the step is watched red
+- [ ] O10 — MEMORY.md reshaped, package notes to `.claude/rules/`, `CLAUDE.md`'s duplicate
+      removed, the byte budget: MEMORY as Now, Context and Notes; a rules file per package
+      with `paths:`; the session protocol stated once, in RULES; `check` fails when
+      `CLAUDE.md`, RULES.md and MEMORY.md together pass 40 KB. Done when one rules file is
+      watched loading on a matching file, then the other three, and the budget is watched
+      red
+- [ ] O11 — The two hooks, and always-loading the four connectors on the owner's machine:
+      a hook on Bash that answers a raw vendor command with the wrapper or connector to
+      use, and one on `git commit` that refuses until `pnpm check` has passed on the
+      staged tree. Done when each hook is watched refusing and each connector answers
+      with no search first
+- [ ] O12 — Code residue, the audit's H6 to H8 and L2 to L8. Done when each item is closed
+      or struck with its reason and `pnpm check` is green
+- [ ] O13 — The snapshots: `0000` to `0048` deleted in a pull request of their own, after
+      the audit's experiment is repeated on this machine; RULES gains "only the newest
+      snapshot is kept". Done when a generate with the newest snapshot alone emits nothing
 
 ## Release 0.1 — first production release
 

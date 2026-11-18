@@ -667,6 +667,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   holds is dead and the next run prints another.
 - `gh pr merge` is denied in the owner's local settings file, which a session does not
   edit: a session merges only once the owner has lifted that rule there.
+- A merge of `main` into a branch conflicts wherever both appended to the end of MEMORY's
+  Log or ARCHITECTURE's table: keep both sides. Taking the branch's side dropped a decision
+  row and two entries in `23a5001`, unnoticed for a day. After any such merge, count the
+  lines `main` added since the merge base that the result lacks; the answer is 0.
+- A permission rule sees a command, not a pull request's base branch: no rule on
+  `gh pr merge` can admit `main` and refuse `production`. That half is a rule a session
+  follows; read the base (`gh pr view --json baseRefName`) before every merge.
 - Playwright disposes a request context's responses with the context: after `dispose()` a
   response's `status()` still answers and its `json()` throws "Response has been
   disposed". Read the body first (`e2e/readiness.ts`). A stand-in context in a unit test
@@ -2507,3 +2514,27 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
 - **Next:** the first promotion after the merge, read end to end; a second merge unaided;
   then O3's tick, the `release` check, and the branch deletions on the owner's word. O4
   only after.
+
+### 2026-11-17 — Restore and reconcile (O8): the dropped row and entries back; a session merges into `main`
+
+- **Did:** from the audit taken at `0eec8b9`, read at `82b33b9`. Branch
+  `o8-restore-reconcile`, five commits, documents and settings only. Restored, each equal
+  byte for byte to `c5a1cae`: ARCHITECTURE's row "`main` worked autonomously", and the Log
+  entries "Gate #3 read" and "#124 merged". Counted: of the lines `main` had added since
+  the merge base, `23a5001` lost that one row and those 48 lines and nothing else; every
+  other removal in that merge was a commit of the branch. One answer to who merges, in
+  RULES (Git and CI, Toolbox, Session protocol), `CLAUDE.md`, the README, TASKS, the
+  database runbook, `pr-prep` and the committed settings, which no longer deny
+  `gh pr merge`. TASKS lines O8 to O13. Watched: `gh pr merge --help` refused before the
+  change.
+- **Decided:** by the owner on 2026-11-17, the row of that date (a session merges into
+  `main`; `production` stays the owner's), which supersedes the owner's merge in the
+  two-branches row written the same day. Not done: the owner's local settings file still
+  denies `gh pr merge`, so no session can merge until the owner removes that line, and
+  this pull request is the owner's to merge; nothing refuses a merge into `production`
+  but the rule (Notes); "Isolated identity before production" is not brought back; of the
+  audit's decisions only D1 and D9 are recorded — D2 to D8 are each its batch's plan.
+- **Release 0.1 state:** `main` at `82b33b9`. O3's first promotion is still unread in
+  this file: this session did not look at staging.
+- **Next:** owner merges this branch and lifts the local deny; then O3's first promotion
+  read end to end, and O9, plan first.
