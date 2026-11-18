@@ -2815,3 +2815,111 @@ Line numbers are those of `git show 19a6ab4:docs/TASKS.md`.
   own pull request.
 - **Next:** R11, the track's first line, then R21 and R22; beside them the owner's two:
   R19 and R18.
+
+- **2026-11-18** — Workers and admins (by the owner). 1. The product has two roles, admin and worker. Crews and the foreman role are removed from the project: API, phone, office, demo, seed, tests and documents. D Sierra Painting's office is its admins; its field is workers only. 2. Authority comes from the schedule. A worker's start needs their eligible shift, as built under enforcement. A worker logs a receipt on the job of their open session or of a shift of theirs that day. With enforcement off, a worker may start on any job that is not archived, and that start goes to approval. An admin closes each job's day; no worker closes out. A material correction is an admin's. 3. The migration journal is re-baselined once before production, so `crews`, `crew_members`, `jobs.crew_id` and the role value `foreman` never exist in production: a one-time exception to ARCHITECTURE's invariant 8, by the owner. Staging's database and the rehearsal branch are rebuilt, and every destructive step there is approved one at a time. 4. The office dashboard is redesigned before Release 0.1, replacing what is still open of S6. 5. All of 1 to 4 is done before the go/no-go line: TASKS R23, the removal; R24, the re-baseline; R25, the redesign — Supersedes: 2026-11-04 role gates, 'foreman crew and job scope'; 2026-11-04 company field-write lock, 'crews' in its lock order; 2026-11-04 closeout scope, 'the job's current crew's foreman, crew active'; 2026-11-04 `closeout.review`, 'the foreman gate'; 2026-11-04 `material.correct`, 'or the job's current crew's foreman'; 2026-11-05 push authority, 'a foreman's also for current members of an active crew they lead, on its jobs', 'a `started` or a receipt needs a non-archived job of a crew the caller is in or leads', and 'crews, `crew_members` read unlocked' in its order; 2026-11-05 `sync.pull`, 'led crews' active members by id and name'; 2026-11-05 crew membership writers, whole; 2026-11-06 dated assignments, 'authority stays crew membership judged at receipt, and a worker may work several crews' jobs in a day' and 'mean jobs of the worker's crews'; 2026-11-06 admin day closeout, 'the foreman path behaving exactly as today'; 2026-11-06 pilot scope, 'foreman and admin closeout', for the foreman's; 2026-11-07 roster API, the role `foreman` as one an invitation or `setRole` may name, and 'a crew led by a demoted or deactivated foreman'; 2026-11-07 customers, jobs and crews API, its `crew.*` procedures, `job.assign`, a job's crew and every refusal that names a crew or a foreman; 2026-11-07 crew membership lifecycle, whole; V1-D07, 'whatever the worker's crew membership' and 'whether push authority would admit the worker', as a reading of crews; V1-D08, 'a foreman's scope and answers unchanged, a crew-less job still refused to a foreman'; V1-D10, 'a worker's or foreman's event', for the foreman; V1-D11, 'foreman authority stays crew-scoped'; 2026-11-12 dated assignments, as built, `blockedBy` `crew`; 2026-11-12 admin closeout, as built, 'a foreman goes through `lockForemanScope` unchanged, which `material.correct` still calls directly' and 'gated to foreman and admin'; 2026-11-12 an admin's own labor, as built, 'a foreman's push for a crew member who is an admin'; 2026-11-12 Release 0.1, 'the foreman's closeout' among what is left for after it; 2026-11-15 schedule authority, 'a foreman's `started` for a crew member needs that member's eligible shift and the foreman's authority' and 'receipts stay under crew authority'; 2026-11-15 schedule enforcement is a switch, 'With it off … crew membership decides'; 2026-11-15 office navigation names, 'Crews' under Jobsites; 2026-11-15 clock-in eligibility and the punch lock, as built, every foreman clause and 'while it is off, push reads no shift' as the whole of the rule with enforcement off; 2026-11-18 the owner's word on the 31 sentences, the sentences for lines 127 and 152 and the foreman's half of the one for line 1172; TASKS S6, what was still open, now R25's; ARCHITECTURE, invariant 8, 'no migration drops a table, a column or data', for the re-baseline alone
+
+### 2026-11-18 — Workers and admins decided: R23, R24 and R25 on the track; nothing built
+
+- **Did:** on the owner's instruction, branch `workers-and-admins-decided` from `781ba8c`,
+  one commit, `docs/LOG.md` and `docs/TASKS.md` only. The decision bullet above holds the
+  owner's five points. TASKS, Release 0.1, "In order": R23, crews and the foreman role
+  removed, plan first and wait, directly after R21 and before P4; R24, the journal
+  re-baselined once, plan first and wait, directly after R23; R25, the office dashboard
+  redesign, decide then build, directly before S9; S6 says what R25 takes from it, which
+  is all that was open; P7 and R5 depend on R23 and R24; P7's phone-flow company has
+  workers and their shifts, enforcement on, no crew and no foreman; R5's done-criterion
+  says the worker has no crew; R16 and the go/no-go line no longer say "crew". R12 and R9
+  named neither a crew nor a foreman and are unchanged; S9's check from O15 stays as it
+  was. Watched: `pnpm check` green before the commit, unpiped (1,666 tests).
+- **Decided:** by the owner, the bullet of this date above. The three ids are R23, R24 and
+  R25, none used before in TASKS or in this log. Chosen in writing the lines, the owner
+  having given none: R25's done-criterion is S6's own, with "every screen the brief names
+  is seen on staging as the owner decided it" beside it; R24 and R25 each depend on R23.
+  The sentences the decision makes false in PRD, ARCHITECTURE, RULES and DESIGN are listed
+  below and none is edited: that is R23's, by its plan. Found and not changed, in TASKS,
+  since the instruction named the lines to edit: P2's fixtures still name "a crew, a
+  foreman, a worker"; V1 on the phone still holds "Foreman crew-state read" and "Crew
+  labor for a foreman; day closeout: review and submit; material correction", both of
+  which the decision leaves nothing of but a worker's own; "Office lists" still names
+  crews; S9 still says "outside their crew", on the owner's word; and the track's opening,
+  R18, R10, the Mobile flow suite line, Stage 8 and After V1 still say "crew" for the
+  people in the field. MEMORY's Notes on `crew_members`, the demo worker "on no crew" and
+  the seed's crews stand until R23 removes their cause. Not done: no code, test, migration
+  or staging step; no plan for R23 or R24 was written.
+- **Next:** R11, the track's first line, then R21; R23 after it, whose plan waits for the
+  owner; beside them the owner's two: R19 and R18.
+
+### Workers and admins, 2026-11-18: the sentences the decision makes false
+
+Line numbers are those of each file at `781ba8c`. Found by reading every line of the four
+documents that says "crew", "foreman", "member" or "role"; a sentence that says none of
+them and still rests on a crew would be missed.
+
+- **PRD.md**
+  - 40: the Target users row "Foreman", whole
+  - 50: "A foreman's extra authority reaches only the crews they lead and those crews' jobs."
+  - 82–87: "Everything else is approved by default.", since with enforcement off a worker's
+    start on any job that is not archived goes to approval, and the list of reasons above
+    it does not name that one
+  - 127: "Jobs belong to a customer and are assigned to a crew; a crew has a foreman."
+  - 128–129: "a worker's jobs are those of every crew they belong to, switched freely
+    during a day"
+  - 130: "it never authorizes work", of a dated assignment, for a receipt: a shift of
+    theirs that day now admits one
+  - 131–133: "the assignment adds nobody to a crew", and "the office is shown when the
+    worker could not clock in on that job as things stand" where what stands in the way is
+    a crew
+  - 154: "and crew membership is not needed"
+  - 158–159: "A foreman clocking in a crew member needs that member's shift and the
+    authority the foreman already has"
+  - 181: "entering a crew job's radius"
+  - 200–202: "The foreman of the job's crew, or an admin, reviews the day's labor and
+    materials for a job", and "both submit the same way and get the same answers"
+  - 203–204: "An admin may also close out a job that is archived or has no crew; a foreman
+    closes out only the jobs of a crew they lead."
+  - 236: "crew views are online-only"
+  - 268: "the foreman's closeout on the phone", among what the pilot waits for
+- **ARCHITECTURE.md**
+  - 85–87, invariant 8: "no migration drops a table, a column or data" and "A destructive
+    migration is a defect" stand, with the one exception of the re-baseline; the invariant
+    does not say so
+  - 88: invariant 9, "A user, a crew and a customer are deactivated", for the crew
+  - 139–140: "a foreman's push for a crew member is the foreman's, because the subject is
+    in the payload"
+  - 228–229: "A foreman's authority is the crews they lead."
+  - 233–234: "a foreman's crews", as an example of a permission over a resource
+  - 263–268, Customers, jobs and crews: "A crew's foreman is an active user with the
+    foreman role who is also its member."; "Membership is current state — one row to a
+    crew and a person, never dated"; "A crew is deactivated only with no job that is not
+    archived"; "leaving the archive checks both again", for the crew; "Nothing is deleted
+    but a membership."
+  - 269–270: "a foreman also pushes for the current members of an active crew they lead,
+    on its jobs"
+  - 272–281, Dated assignments: "whatever the person's crew membership or role"; "An
+    assignment is never read by push authority", for a receipt; "creates no `crew_members`
+    row"; "the one thing a plan shows them that their crews' jobs might not"
+  - 304–308, Weekly schedule: "off, clock-in authority is the crew's, as built"; "a
+    worker's or a foreman's own `started` needs their eligible shift and no crew
+    membership"; "a foreman's `started` for a crew member needs that member's eligible
+    shift and the foreman's authority as it is today"; "receipts are judged as they are
+    today"
+  - 323–326, Admin closeout: "also admit an admin", the admin being the only one admitted;
+    "archived or with no crew included"; "The foreman path is as today: the job's current
+    crew's foreman, a crew-less job refused."
+  - 345: "An admin, or the foreman of the job's crew, corrects a receipt"
+  - 353–354: "a foreman's push for them", among an admin's own labor
+  - 480: "3. `crews` rows" in the lock order, and with it the numbers after it and "the
+    first five" at 488
+  - 494–495: "A crew or membership writer holds the crew's row `FOR NO KEY UPDATE`, so a
+    removal waits out a push that holds it `FOR SHARE`."
+  - 579: `crews` among the domains of `packages/api/src/<domain>/`
+- **DESIGN.md**
+  - 97: "Crews" in the Jobsites group of the navigation
+  - 115: "`Needs a foreman` in the `attention` tint"
+  - 140, Closeout (web): "or a job with no crew"; "No crew on this job"; "the review and
+    the submit are otherwise the foreman's"
+- **RULES.md:** none.
+- **Not false, and to be read again by R23:** "crew" as a word for the people in the
+  field, where the decision says the field is workers only — PRD 8, 20, 108, 248–250 and
+  265; ARCHITECTURE 44, 47, 236 and 334; DESIGN 9, 13, 67, 76, 78, 89, 105, 116, 118, 138,
+  139, 142 and 160; RULES 77–78. Outside the four: `README.md` 3 says "A field crew".

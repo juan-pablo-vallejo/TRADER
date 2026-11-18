@@ -60,6 +60,25 @@ Console records and listings, which need no build.
       Work: `admitsParty` refuses a named origin when the list is empty; a test watched
       failing first; `.env.example` says local development with Clerk sets the list. Done
       when that test is green and staging signs in from the office and from a phone build
+- [ ] R23 — Crews and the foreman role removed (plan first, and wait: auth, sync, schema; LOG,
+      2026-11-18, workers and admins). Two roles, admin and worker, and authority from the
+      schedule, across the API, the phone, the office, the demo, the seed, the tests and the
+      documents. Its plan names every procedure, table, screen, test file and document
+      sentence it touches; the new authority rules as code — a worker's start by their
+      eligible shift under enforcement; with enforcement off, a start on any job that is not
+      archived, sent to approval; a receipt on the job of the worker's open session or of a
+      shift of theirs that day; the day's closeout and a material correction an admin's
+      alone — and how staging's existing rows are read meanwhile. Done when no procedure
+      admits a foreman, no code reads a crew, a worker with no crew clocks in and logs a
+      receipt by their shift on staging, and the documents state two roles
+- [ ] R24 — The migration journal re-baselined, once (plan first, and wait: schema, CI;
+      destructive on staging; LOG, 2026-11-18, workers and admins). Depends on R23. Its plan
+      gives the new journal, in which `crews`, `crew_members`, `jobs.crew_id` and the role
+      value `foreman` never exist; how the promotion workflow's replay and rehearsal checks
+      are satisfied; the exact order of destructive steps on staging and the rehearsal
+      branch, each approved one at a time; what happens to bound Clerk users; and the
+      rollback. Done when a fresh replay, the rehearsal branch and staging hold the new
+      journal exactly, `check` is green, and the promotion has run green once on it
 - [ ] P4 — Preview builds (takes the device builds' line; plan first: CI). Depends on R19, and
       on R11 for its sign-in. Work: `eas.json` with development, preview, preview-simulator
       and production profiles; the build number from EAS in place of the constant in
@@ -70,9 +89,11 @@ Console records and listings, which need no build.
       never run by automation. Done when one commit has an APK and a simulator build, the
       smoke flow signs in to staging on both, and the development sign-in is seen absent from
       the preview build (Stage 5's development sign-in line)
-- [ ] P7 — Fixture tenants on the shared database (LOG, 2026-11-16, shared database). Work:
+- [ ] P7 — Fixture tenants on the shared database (LOG, 2026-11-16, shared database). Depends
+      on R23 and R24. Work:
       `R3 Staging Co` stays the browser suite's and nothing else's; one company for the phone
-      flows, with jobs, a crew, a foreman and a worker, and one for development by hand,
+      flows, with jobs, workers and their shifts, schedule enforcement on, no crew and no
+      foreman, and one for development by hand,
       through the owner-role wrapper's `onboard` and the office's own invitations, each with
       identities no other company holds — fictional numbers ending `0100`–`0109` for the
       browser suite, `0110`–`0119` for the phone flows, `0120`–`0129` for development by hand.
@@ -84,9 +105,10 @@ Console records and listings, which need no build.
 - [ ] R5 — Field app, time tracking (plan first: sync; with Stage 5's sign-in, offline
       evidence, history and own profile lines). Still open: the SMS-code sign-in on Android;
       all of it against the staging deployment; own profile, name and contact phone. Depends
-      on P4's preview builds, ad hoc on the registered iPhone, and on P7, with a real number
-      on a staging roster to receive the code. Done when a worker on a physical iPhone and a
-      physical Android phone signs in by SMS code, clocks in on an assigned job, switches jobs
+      on P4's preview builds, ad hoc on the registered iPhone, on P7, with a real number on a
+      staging roster to receive the code, and on R23 and R24. Done when a worker with no crew,
+      on a physical iPhone and a physical Android phone, signs in by SMS code, clocks in on an
+      assigned job, switches jobs
       and clocks out across an airplane-mode gap, and the office shows the hours once, per job
 - [ ] S8 — The worker's own week, and a schedule gone stale (DESIGN, Own history): the
       caller's shifts for the week, read-only, from the last pull, with how old that pull is;
@@ -103,13 +125,20 @@ Console records and listings, which need no build.
       first, `users` fourth. Its plan says whether any other writer does the same. Done when a
       two-connection test, watched hanging before the fix, is green and `confirmCopy` takes
       its locks in the stated order
-- [ ] S6 — Weekly Schedule office screen (DESIGN, Weekly Schedule). Still open: the week
-      planned with about 24 people; one pass with a screen reader; the reviewed prototype's
-      fourth revision reconciled with the screen, or set aside by the owner. Done when an
-      admin plans, overrides, copies and undoes a week by keyboard at 390, 768, 1024 and 1280
-      with about 24 people, no control under its target, no sideways page scroll, a refused
-      circular choice said in words, a locked shift read-only, and one pass with a screen
-      reader
+- [ ] S6 — Weekly Schedule office screen (DESIGN, Weekly Schedule). What was still open is
+      R25's (LOG, 2026-11-18, workers and admins): the week planned with about 24 people, the
+      pass with a screen reader, the reviewed prototype's fourth revision, and the acceptance
+      at the four widths. Done when R25 is
+- [ ] R25 — Office dashboard redesign (**decide**, then build; DESIGN changes are the
+      owner's; LOG, 2026-11-18, workers and admins). Depends on R23. First half, a brief put
+      to the owner: which office screens the redesign covers, what each shows an admin where
+      there are no crews, and whether the Weekly Schedule prototype's fourth revision is
+      reconciled with it or set aside. Second half, once the owner's decision is in LOG and
+      DESIGN states it: the build. Taken from S6: done when an admin plans, overrides,
+      copies and undoes a week by keyboard at 390, 768, 1024 and 1280 with about 24 people,
+      no control under its target, no sideways page scroll, a refused circular choice said
+      in words, a locked shift read-only, and one pass with a screen reader; and when every
+      screen the brief names is seen on staging as the owner decided it
 - [ ] S9 — Schedule enforcement, rollout acceptance. Depends on S6 and S8. The switch on for
       staging alone; the browser suite; both physical phones; a worker scheduled on a job
       outside their crew clocks in on a physical phone; refusals and error reports read
@@ -199,8 +228,8 @@ Console records and listings, which need no build.
       fourteen days running (Google's page, read 2026-11-18): the crew's Android users are its
       testers, counted with the partner before the track opens
 - [ ] R16 — Owner, with the partner's admin: week one's schedule entered in production before
-      the crew starts (LOG, 2026-11-18). With enforcement on, a worker with no shift is
-      refused a clock-in. Done when every invited crew member has a shift on their first
+      the workers start (LOG, 2026-11-18). With enforcement on, a worker with no shift is
+      refused a clock-in. Done when every invited worker has a shift on their first
       working day, or is known to have none
 - [ ] Go/no-go, recorded in LOG with who checked each: production's login role is
       `trader_app`, neither superuser nor `BYPASSRLS`, and a second company's rows cannot be
@@ -209,7 +238,7 @@ Console records and listings, which need no build.
       by email, records a payment and reads it as paid; a forced error from the web and from
       each store build reaches Sentry; sync paused and resumed with `TRADER_SYNC_MODE` and a
       minimum build refused, nothing lost; the public pages live and both store forms
-      accepted; a Spanish speaker has read the crew screens; the partner's admin has signed
+      accepted; a Spanish speaker has read the phone's screens; the partner's admin has signed
       the acceptance checklist (R12)
 
 ## After Release 0.1 — toward V1 complete
