@@ -517,8 +517,9 @@ it never ends the process.
 
 ## Before the first deployment
 
-Each is a line in TASKS Stage 6 and a release gate in Stage 8; the Release 0.1 track in TASKS
-names the ones it takes and the ones it leaves for after it. Those marked built exist in
+Each is a line in TASKS — R13 to R15 on the Release 0.1 track, the rest under what follows it
+— and a release gate in Stage 8; the track names the ones it takes and the ones it leaves
+for after it. Those marked built exist in
 code (the 2026-11-12 Release 0.1 R3 rows) and are proven only when the staging deployment
 has shown them; the rest do not exist yet.
 
