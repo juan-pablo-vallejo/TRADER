@@ -88,7 +88,26 @@ journal exactly and to the schema of a fresh replay (`src/promotion/fingerprint.
 catalog as sorted lines, no owner, no data). Only then, and only when every pending
 migration is past the owner's gate (`OWNER_GATED_THROUGH`, `src/promotion/plan.ts`) and the
 reading flags none of them (`src/promotion/reading.ts`), it runs the same command against
-staging, checks staging the same way, and moves `staging-preview`.
+staging and checks staging the same way.
+
+Then it deploys (ARCHITECTURE, 2026-11-17, two branches and a release by pull request).
+The `deploy` job calls the staging project's deploy hook, a secret of the `staging`
+environment (`STAGING_DEPLOY_HOOK`), which builds `main`'s head as that project's
+Production deployment. A hook takes no commit, so the job calls it only while `main`'s head
+is the run's commit; when `main` has moved on it deploys nothing and the newer commit's run
+does. The `verify` job waits until the host's `/api/ready` names the run's commit, and only
+then runs the browser suite. The `report` job writes the outcome as the commit's `staging`
+status, which a release later requires:
+
+```sh
+gh api repos/<owner>/<repo>/commits/<sha>/status --jq '.statuses[] | select(.context == "staging")'
+```
+
+Nobody dispatches anything for this: the owner's merge is the whole of it. A red run names
+where it stopped: `before-staging-change`, `migrated-not-deployed` or `deployed-failing`.
+After `migrated-not-deployed` staging runs the earlier code on the newer schema, which
+additive migrations allow; the next merge, or a re-run of the failed jobs while `main` is
+still at that commit, deploys it.
 
 Anything else stops before staging changes, and the run's summary names the pending
 migrations, their flags and the dispatch that would apply them. That dispatch is the
@@ -120,6 +139,78 @@ select count(*) from drizzle.__drizzle_migrations;          -- the number of fil
 select rolcanlogin, rolsuper, rolbypassrls, rolinherit
 from pg_roles where rolname = 'trader_app';                 -- t, f, f, f
 ```
+
+**The staging Vercel project, set once by the owner.** "Production" below is Vercel's word
+for the project's main branch; every value is staging's, and nothing of the customer-facing
+application is ever entered there.
+
+1. Production branch: `main` (as it is).
+2. Every variable applies to Production as well as Preview: `DATABASE_URL` (the pooled
+   `trader_app` string of the staging database), both Clerk keys of the development
+   instance, `SENTRY_DSN`, `RESEND_API_KEY`, `MAIL_FROM`, `INVOICE_EMAIL_ALLOWLIST`;
+   `CLERK_AUTHORIZED_PARTIES` for Production is the staging host's origin;
+   `TRADER_ENVIRONMENT` is `staging` for both.
+3. Ignored Build Step: none. (`apps/web/vercel.json` already stops a push to `main`
+   building; a pull request's branch still gets its Preview.)
+4. One deploy hook, for `main`; its address is the secret `STAGING_DEPLOY_HOOK` of GitHub's
+   `staging` environment and is kept nowhere else.
+5. The staging host is the project's Production domain, with its Deployment Protection
+   exception; every other deployment stays behind the wall.
+
+### A change that cannot ship in one step
+
+The schema moves before the code, and for a while the earlier code runs on the newer
+schema — minutes on staging, as long as the owner chooses on production. An additive
+migration is safe by construction. A rename, a narrowed type, a new requirement on old rows
+or a removed column is three merges, each verified on staging before the next: **expand**
+(add the new shape beside the old, written by both), **move** (the code reads and writes
+the new shape alone), **contract** (drop the old; flagged by the reading, so it waits for
+the owner's code). No migration is ever written against the code of the same merge alone.
+
+### Releasing to production
+
+Owned by the owner end to end; a session prepares a release and stops (RULES, Git and CI).
+None of it exists yet, and nothing here is run by a workflow of staging's.
+
+A release:
+
+1. Choose a commit of `main` whose `check` passed and whose `staging` status is `success`,
+   after the owner's own testing on staging.
+2. Branch `release/<short sha>` at exactly that commit and open a pull request into
+   `production`. `main` moving on changes nothing in it; a newer commit is a new candidate.
+3. The pull request's description states the commit, the changes since the last release,
+   every migration production has not had with the reading's flags, and how each is undone.
+4. The required checks pass for that commit: `check`, and `release`, which holds the head to
+   a commit of `main` carrying a successful `staging` status (TASKS P6: not built yet;
+   until it is, the owner reads the status with the command above).
+5. The owner migrates the production database (`TRADER_MIGRATE_PURPOSE=owner`, the direct
+   endpoint, Order against deploys above), then merges. The production Vercel project
+   builds `production`; the owner reads `/api/ready` and the error reports.
+
+Setting production up, in the order that cannot deploy early. Existing on 2026-11-17: the
+repository, `main`'s protection, the DNS zone, and a second Vercel project on this
+repository that builds nothing. Everything else is missing.
+
+1. **Ruleset `production`** (GitHub, Settings → Rules; target branch `production`):
+   restrict deletions; block force pushes; require a pull request before merging, with 0
+   required approvals; require status checks `check` and `release`; no bypass list. `main`
+   already has its equivalent as branch protection: pull request, `check`, administrators
+   included, no force push, no deletion, 0 approvals. No rule requires a second reviewer:
+   one person owns this repository.
+2. **GitHub environment `production`**, deployment branch `production` alone, for whatever
+   a production workflow later needs. No pull request's workflow reads it.
+3. **Neon production project**, separate from staging's: its owner role, the journal
+   applied by the owner as above, `trader_app` given its login (The application role's password, below). Paid
+   history for restores is a cost decision.
+4. **Clerk production instance** on its own keys and domain records. SMS codes need the
+   paid plan: a cost decision.
+5. **The production Vercel project**: Production branch `production`; its own variables —
+   the production database's pooled `trader_app` string, the production Clerk keys,
+   `CLERK_AUTHORIZED_PARTIES`, its own `SENTRY_DSN`, mail's three, and
+   `TRADER_ENVIRONMENT=production` — entered for Production only, so no Preview or pull
+   request ever holds them; the customer domain attached last.
+6. **Then the branch**: `production` is created by the first release above, from a
+   staging-verified commit, never from `main`'s head by hand.
 
 ### Proving nothing differs from the journal
 

@@ -187,6 +187,21 @@ describe("scrubEvent", () => {
 });
 
 describe("sentryInitOptions", () => {
+  it("names the environment as TRADER's own, before the platform's", () => {
+    // Staging is its Vercel project's Production deployment; its reports are staging's.
+    const named = (env: Record<string, string>) =>
+      sentryInitOptions(DSN, env).environment;
+    expect(named({ TRADER_ENVIRONMENT: "staging", VERCEL_ENV: "production" })).toBe(
+      "staging",
+    );
+    expect(named({ TRADER_ENVIRONMENT: "production", VERCEL_ENV: "production" })).toBe(
+      "production",
+    );
+    expect(named({ TRADER_ENVIRONMENT: "anything", VERCEL_ENV: "preview" })).toBe(
+      "preview",
+    );
+  });
+
   it("switches off every integration, tracing, breadcrumbs and data collection", () => {
     const options = sentryInitOptions(DSN, {
       VERCEL_ENV: "preview",

@@ -13,6 +13,7 @@ const good = {
   CLERK_SECRET_KEY: "sk_test_abc",
   CLERK_AUTHORIZED_PARTIES: "https://staging.example.test",
   SENTRY_DSN: "https://0123456789abcdef@o1.ingest.example.test/42",
+  TRADER_ENVIRONMENT: "staging",
 };
 
 afterEach(() => {
@@ -36,6 +37,10 @@ describe("deployEnvFaults", () => {
   });
 
   it.each([
+    ["TRADER_ENVIRONMENT", { TRADER_ENVIRONMENT: "" }],
+    ["TRADER_ENVIRONMENT", { TRADER_ENVIRONMENT: undefined }],
+    ["TRADER_ENVIRONMENT", { TRADER_ENVIRONMENT: "preview" }],
+    ["TRADER_ENVIRONMENT", { TRADER_ENVIRONMENT: "Production" }],
     ["DATABASE_URL", { DATABASE_URL: "" }],
     ["DATABASE_URL", { DATABASE_URL: undefined }],
     ["DATABASE_URL", { DATABASE_URL: "db.example.test/neondb" }],
@@ -70,6 +75,7 @@ describe("deployEnvFaults", () => {
       "CLERK_AUTHORIZED_PARTIES",
       "TRADER_SYNC_MODE",
       "SENTRY_DSN",
+      "TRADER_ENVIRONMENT",
     ]);
     expect(() => assertDeployEnv({ DATABASE_URL: "postgres://u:leak-me@h/d" })).toThrow(
       /^refusing to start: missing or invalid [A-Z_, ]+$/,

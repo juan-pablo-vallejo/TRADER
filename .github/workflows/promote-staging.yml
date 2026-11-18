@@ -2,8 +2,11 @@ name: Promote staging
 
 # Staging's promotion (ARCHITECTURE, 2026-11-16, staging promotion and migration gate;
 # RULES, Git and CI). After a merge into `main` whose `check` passed, this carries that
-# commit to staging: migrations rehearsed on the kept Neon branch, staging migrated,
-# `staging-preview` fast-forwarded, the deployment awaited, the browser suite run.
+# commit to staging (ARCHITECTURE, 2026-11-17, two branches and a release by pull
+# request): migrations rehearsed on the kept Neon branch, staging migrated, `main` built as
+# the staging project's Production deployment — staging's, not the customers' — by its
+# deploy hook, the host held to this commit, the browser suite run, the outcome reported
+# as a commit status. It moves no branch and holds no credential of Vercel's account.
 # It holds staging's secrets, so it runs only code already on `main`: it is started by CI's
 # completion on `main` or by a dispatch on `main`, never by a pull request's event, and
 # GitHub reads this file from the default branch for both.
@@ -54,7 +57,7 @@ jobs:
       checks: read
     outputs:
       proceed: ${{ steps.done.outputs.proceed }}
-      already: ${{ steps.preflight.outputs.already }}
+      withheld: ${{ steps.plan.outputs.withheld }}
 
     # The replay: the same journal on an empty database of the same major, which the
     # rehearsal branch and staging are then compared with.
@@ -84,23 +87,13 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Preflight — the commit is on main and staging-preview can fast-forward to it
-        id: preflight
+      - name: Preflight — the commit is on main
         run: |
           set -euo pipefail
           echo "STAGE=before-staging-change" >> "$GITHUB_ENV"
-          git fetch --no-tags origin \
-            +refs/heads/main:refs/remotes/origin/main \
-            +refs/heads/staging-preview:refs/remotes/origin/staging-preview
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
           if ! git merge-base --is-ancestor "$SHA" origin/main; then
             echo "::error::$SHA is not a commit of main"; exit 1
-          fi
-          if git merge-base --is-ancestor "$SHA" origin/staging-preview; then
-            echo "already=true" >> "$GITHUB_OUTPUT"
-          elif git merge-base --is-ancestor origin/staging-preview "$SHA"; then
-            echo "already=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::staging-preview cannot fast-forward to $SHA"; exit 1
           fi
           echo "### Promotion of \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
 
@@ -217,39 +210,66 @@ jobs:
     if: needs.database.outputs.proceed == 'true'
     runs-on: ubuntu-24.04
     environment: staging
-    permissions:
-      contents: write
+    # No checkout and no token: this job reads two public answers and calls one address.
+    permissions: {}
+    outputs:
+      result: ${{ steps.hook.outputs.result }}
     steps:
-      # With the deploy key when the owner has made one; with the job's token otherwise.
-      # The token may not move a branch across a change to a workflow file, and a push it
-      # makes may not start the staging project's build: the key has neither limit.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          ref: ${{ env.SHA }}
-          fetch-depth: 0
-          ssh-key: ${{ secrets.STAGING_DEPLOY_KEY }}
-
-      - name: Fast-forward staging-preview
+      # The hook belongs to the staging project and to `main`, and builds that branch's
+      # head, whatever it is by then: it takes no commit. So it is called only while the
+      # head is this run's commit, and the verify job then holds the host to that commit.
+      # A merge landing between the two lines below is the one window left: the hook
+      # would build the newer commit, verify would stay red here, and that commit's own
+      # run, next in the queue, migrates and verifies it.
+      - name: Deploy main to the staging project by its deploy hook
+        id: hook
         env:
-          ALREADY: ${{ needs.database.outputs.already }}
+          STAGING_DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
         run: |
           set -euo pipefail
-          if [ "$ALREADY" = "true" ]; then
-            echo "- staging-preview already holds \`$SHA\`: nothing pushed" >> "$GITHUB_STEP_SUMMARY"
+          # Anyone holding the hook's address can deploy with it, so it is sent to
+          # Vercel's own host and nowhere else, and never printed.
+          case "$STAGING_DEPLOY_HOOK" in
+            https://api.vercel.com/v1/integrations/deploy/*) ;;
+            *) echo "::error::the STAGING_DEPLOY_HOOK secret is not set, or is not a Vercel deploy hook"; exit 1 ;;
+          esac
+          case "$STAGING_URL" in https://*) ;; *) echo "::error::the STAGING_URL secret is not set"; exit 1 ;; esac
+
+          serving=$(curl -sS --max-time 10 "$STAGING_URL/api/ready" | jq -r '.commit // empty' 2>/dev/null || true)
+          if [ "$serving" = "$SHA" ]; then
+            echo "- staging's host already serves \`$SHA\`: nothing deployed" >> "$GITHUB_STEP_SUMMARY"
+            echo "result=already" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # An ordinary push: git and the branch's ruleset both refuse anything but a
-          # fast-forward.
-          git push origin "$SHA:refs/heads/staging-preview"
-          echo "- staging-preview fast-forwarded to \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+
+          head=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY" refs/heads/main | cut -f1)
+          case "$head" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
+            *) echo "::error::main's head could not be read"; exit 1 ;;
+          esac
+          if [ "$head" != "$SHA" ]; then
+            echo "- **not deployed**: \`main\` has moved on to \`$head\`, and the hook would build that commit, not this one. Its own run follows and deploys it" >> "$GITHUB_STEP_SUMMARY"
+            echo "result=superseded" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          answer=$(curl -sS --proto '=https' --max-time 30 -X POST "$STAGING_DEPLOY_HOOK" || true)
+          state=$(printf '%s' "$answer" | jq -r '.job.state // empty' 2>/dev/null || true)
+          if [ -z "$state" ]; then
+            echo "::error::the deploy hook did not answer with a job"; exit 1
+          fi
+          echo "- deploy hook called for \`main\` at \`$SHA\` (job $state)" >> "$GITHUB_STEP_SUMMARY"
+          echo "result=called" >> "$GITHUB_OUTPUT"
 
       - name: Report a failure by where it happened
         if: failure()
         run: |
-          echo "- **failed: migrated-not-deployed** (staging's database is at this commit's journal; the branch did not move)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **failed: migrated-not-deployed** (staging's database is at this commit's journal; nothing was deployed)" >> "$GITHUB_STEP_SUMMARY"
 
   verify:
     needs: [database, deploy]
+    if: needs.deploy.outputs.result == 'called' || needs.deploy.outputs.result == 'already'
     runs-on: ubuntu-24.04
     environment: staging
     permissions:
@@ -260,6 +280,7 @@ jobs:
           ref: ${{ env.SHA }}
           persist-credentials: false
 
+      # Fails closed: the suite never runs on a host that has not named this commit.
       - name: Wait until staging's host serves this commit and is ready
         env:
           # A secret of the environment, so the host is masked in this public log.
@@ -321,3 +342,44 @@ jobs:
         if: failure()
         run: |
           echo "- **failed: ${STAGE:-migrated-not-deployed}**" >> "$GITHUB_STEP_SUMMARY"
+
+  # Every run's outcome, on the commit itself: `gh api repos/<repo>/commits/<sha>/status`,
+  # or the mark beside the commit on GitHub. It holds no secret and reads no environment.
+  report:
+    needs: [database, deploy, verify]
+    if: always() && needs.database.result != 'skipped'
+    runs-on: ubuntu-24.04
+    permissions:
+      statuses: write
+    steps:
+      - name: Staging readiness, as a status of the commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DATABASE: ${{ needs.database.result }}
+          PROCEED: ${{ needs.database.outputs.proceed }}
+          WITHHELD: ${{ needs.database.outputs.withheld }}
+          DEPLOY: ${{ needs.deploy.result }}
+          HOOK: ${{ needs.deploy.outputs.result }}
+          VERIFY: ${{ needs.verify.result }}
+        run: |
+          set -euo pipefail
+          if [ "$VERIFY" = "success" ]; then
+            state=success; say="migrated, deployed from main and verified by the browser suite"
+          elif [ "$DATABASE" = "success" ] && [ "$PROCEED" != "true" ]; then
+            echo "- rehearsal only: no status written" >> "$GITHUB_STEP_SUMMARY"; exit 0
+          elif [ "$DATABASE" != "success" ] && [ -n "$WITHHELD" ]; then
+            state=failure; say="not migrated: withheld ($WITHHELD); the owner's dispatch applies it, see the run"
+          elif [ "$DATABASE" != "success" ]; then
+            state=failure; say="the database job failed; the run's summary names the stage"
+          elif [ "$HOOK" = "superseded" ]; then
+            state=pending; say="migrated, not deployed: main moved on, and the newer commit's run deploys it"
+          elif [ "$DEPLOY" != "success" ]; then
+            state=failure; say="migrated, not deployed: the deploy hook failed"
+          else
+            state=failure; say="the host did not serve this commit, or the browser suite failed; see the run"
+          fi
+          gh api -X POST "repos/$GITHUB_REPOSITORY/statuses/$SHA" \
+            -f state="$state" -f context=staging -f description="${say:0:140}" \
+            -f target_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > /dev/null
+          echo "### Staging readiness: $state" >> "$GITHUB_STEP_SUMMARY"
+          echo "- $say" >> "$GITHUB_STEP_SUMMARY"

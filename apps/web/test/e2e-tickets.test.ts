@@ -301,6 +301,42 @@ describe("the workflows and the staging key", () => {
     for (const job of jobs) {
       if (/secrets\./.test(job)) expect(job).toMatch(/\n {4}environment: staging\n/);
     }
-    expect(jobs.length).toBe(3);
+    expect(jobs.length).toBe(4);
+  });
+
+  // Staging is deployed from `main` by Vercel's deploy hook (ARCHITECTURE, 2026-11-17,
+  // two branches and a release by pull request): the workflow moves no branch and holds no key that could.
+  it("deploys by the hook alone, held to Vercel's address and to this run's commit", () => {
+    expect(promote).not.toMatch(/git push|contents: write|ssh-key|STAGING_DEPLOY_KEY/);
+    expect(promote).not.toContain("staging-preview");
+    const named = promote
+      .split("\n")
+      .filter((l) => l.includes("secrets.STAGING_DEPLOY_HOOK"));
+    expect(named).toHaveLength(1);
+    const at = promote.indexOf("secrets.STAGING_DEPLOY_HOOK");
+    const step = promote.slice(promote.lastIndexOf(STEP, at), promote.indexOf(STEP, at));
+    expect(step).toContain("https://api.vercel.com/v1/integrations/deploy/*)");
+    // The hook builds the branch's head, so it is called only while that is this commit.
+    expect(step).toContain('[ "$head" != "$SHA" ]');
+    expect(step.indexOf('[ "$head" != "$SHA" ]')).toBeLessThan(step.indexOf("-X POST"));
+    expect(step).not.toMatch(/pnpm|npm |npx/);
+  });
+
+  it("verifies the deployed commit before the suite, and reports every run's outcome", () => {
+    const verify = promote.slice(promote.indexOf("\n  verify:"));
+    expect(verify.indexOf('[ "$commit" = "$SHA" ]')).toBeGreaterThan(0);
+    expect(verify.indexOf('[ "$commit" = "$SHA" ]')).toBeLessThan(
+      verify.indexOf("pnpm e2e:staging"),
+    );
+    expect(promote).toMatch(/\n {2}report:\n[\s\S]*if: always\(\)/);
+    expect(promote).toMatch(/\n {6}statuses: write\n/);
+  });
+
+  it("gives no workflow a Vercel account token or a production target", () => {
+    for (const file of files) {
+      expect(text(file), file).not.toMatch(
+        /VERCEL_TOKEN|VERCEL_ORG_ID|vercel[^\n]*--prod|environment: production|refs\/heads\/production|sk_live_/,
+      );
+    }
   });
 });

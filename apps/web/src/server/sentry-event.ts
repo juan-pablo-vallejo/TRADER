@@ -9,6 +9,7 @@
 // Pure, and free of the SDK at run time, so the tests state the output byte for byte.
 import type { ErrorReport } from "@trader/api";
 import type { ErrorEvent, Event, NodeOptions } from "@sentry/nextjs";
+import { traderEnvironment } from "./environment";
 
 // The reporter's own events carry this prefix; no other message is ever sent.
 export const MESSAGE_PREFIX = "trader_error";
@@ -129,7 +130,8 @@ export function scrubEvent(event: Event): ErrorEvent {
 // Sentry.init's options: errors only, from the server only. No default integration (so no
 // request, console or HTTP capture and no process-wide handlers), no tracing, no logs, no
 // breadcrumbs, every data-collection switch off, and the allow-list on what is left.
-// `environment` and `release` are Vercel's own variables. Off Vercel the SDK still finds a
+// `environment` is TRADER's own (environment.ts), then Vercel's for a pull request's
+// preview; `release` is Vercel's commit. Off Vercel the SDK still finds a
 // release where a commit variable is set (GITHUB_SHA under Actions): a commit hash, and
 // held to `token` by the allow-list like any other.
 export function sentryInitOptions(
@@ -138,7 +140,11 @@ export function sentryInitOptions(
 ): NodeOptions {
   return {
     dsn,
-    environment: token(env.VERCEL_ENV) ?? token(env.NODE_ENV) ?? "development",
+    environment:
+      traderEnvironment(env) ??
+      token(env.VERCEL_ENV) ??
+      token(env.NODE_ENV) ??
+      "development",
     release: token(env.VERCEL_GIT_COMMIT_SHA),
     defaultIntegrations: false,
     integrations: [],

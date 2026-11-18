@@ -435,6 +435,15 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   Toolbox): call a wrapper by its absolute path so its permission rule matches. A wrapper
   answering "no Keychain item named …" means the owner has not created that item yet, not
   that the command is wrong.
+- The DNS wrapper is `~/.config/trader/staging-dns`, on the Keychain item
+  `trader-cloudflare-dns-token` (one Cloudflare token: DNS read and edit on the zone):
+  `list` (the staging mail subtree), `plan` (what `apply` would do; writes nothing),
+  `apply` (the four fixed records), `inspect` (every record of the zone) and
+  `inspect <name>` (that name and under it, with two resolvers' answers). `inspect` sends
+  only GETs. The file before `inspect` is kept beside it as `staging-dns.bak-20261117`.
+  The zone on 2026-11-17: ten records — the four staging mail records, the staging
+  host's CNAME to Vercel, Cloudflare's own mail routing (three MX, an SPF and a DKIM
+  TXT) — and none at the apex, `app` or `www`: no production routing exists.
 - A permission rule that asks beats one that allows, whatever their order or length: never
   add a broad "ask" for a wrapper whose narrower forms should run unprompted.
 - A session's safety classifier refuses `git push` while `CLAUDE.md` says not to push, and
@@ -669,6 +678,25 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
 - The migration reading flags by text and widely (`reading.ts`): a trigger's `BEFORE
 TRUNCATE`, a quoted word and a function's body are not flags, a dropped constraint, a
   REVOKE and an enum value are. A flag sends the migration to the owner; it is not a fault.
+- A Vercel deploy hook takes no commit: it builds its branch's head at the moment it is
+  called, and answers `{ job: { id, state } }` with no deployment in it. The promotion
+  calls it only while `main`'s head is the run's commit and learns what was built from
+  the host's `/api/ready` alone. Anyone holding the hook's address can deploy with it.
+- `apps/web/vercel.json` is read by every Vercel project rooted there, production's
+  included: `git.deploymentEnabled` for `main` stops both building `main` on a push.
+- `pnpm audit` can turn red with nothing changed here: on 2026-11-17 a high advisory
+  against `picomatch` (GHSA-fc5q-39xc-vjpf, `<=4.0.7`) named `4.0.8` as patched while the
+  registry's newest was `4.0.7`. An override cannot hold what is not published. It is
+  excepted by name under `audit.ignore` in `pnpm-workspace.yaml` (pnpm 11's key;
+  `auditConfig.ignoreGhsas` is the deprecated one), which also drops it from the counts:
+  read `pnpm audit --prod --json` for where an advisory reaches before excepting any.
+- "Production" means two things. The staging Vercel project's Production deployment is
+  staging, with `VERCEL_ENV=production`: nothing may read `VERCEL_ENV` to decide what a
+  deployment is. `traderEnvironment` (`apps/web/src/server/environment.ts`) reads
+  `TRADER_ENVIRONMENT`, and a deployment without it refuses to start — a pull request's
+  Preview included, so the variable is set for Preview too.
+- A merge is the owner's, every time: `gh pr merge` is denied in the committed settings
+  and the session reports a pull request and stops.
 
 ## Log
 
@@ -2343,3 +2371,89 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   merge and runs all five tests with fresh tickets.
 - **Next:** merge this branch on a green `check`; read that promotion's verify log; then
   O0's tick and O3.
+
+### 2026-11-17 — Staging promoted end to end; all five browser tests green; O0 ticked
+
+- **Did:** read after the owner merged #126 (`main` at `0eec8b9`): CI green; promotion
+  44049053024 green in all three jobs with nothing pending and nothing migrated;
+  `staging-preview` and the staging host at `0eec8b9`; staging at 50 of 50. The verify job
+  made two tickets and ran five tests green in 16.6 s: readiness and the commit, a
+  made-up ticket refused, the admin held to `E2E_COMPANY_ID` and rewriting the fixture
+  customer, the spent ticket refused, the worker refused the office. The log holds no
+  ticket and no key; no artifact exists. Read back from the database: one company, two
+  users, one customer, its notes carrying the run's stamp. Branch `o0-record`, documents
+  only: O0 ticked.
+- **Decided:** nothing new. Not done: the committed `.claude/settings.json` and the
+  owner's local file both still deny `gh pr merge` and every `gh workflow run`, against
+  the 2026-11-17 policy in RULES; a session's edit of its own rules was refused, rightly,
+  so the change is the owner's to make. No session has merged yet. P1 is not ticked: a
+  run for a commit already promoted, a merge carrying a flagged migration and a dispatch
+  with a wrong code are each unseen. Clerk's test mode being off rests on the owner's
+  word.
+- **Release 0.1 state:** `main` at `0eec8b9`, staging serving it at the journal, the
+  suite green. Still on GitHub: `overhaul-reliability` and `release-0.1`, each deletion
+  the owner's.
+- **Next:** O3, staging from `main` by the deploy hook (plan first: CI); it needs the
+  owner's deploy hook as a secret of the `staging` environment.
+
+### 2026-11-17 — The DNS wrapper's `inspect` installed; the zone read whole
+
+- **Did:** on the owner's instruction, `~/.config/trader/staging-dns` extended with
+  `inspect [NAME]`, the earlier file kept beside it; its write path is the installed one
+  unchanged (four lines of argument handling differ). Seen: `inspect` listing the zone's
+  ten records and the staging host's CNAME with both resolvers' answers; `list` and
+  `plan` as before, all four records "ok"; `apply` not run. Watched refusing: a name
+  outside the zone, a name that is not a host name, a second name, an argument to `list`
+  and to `plan`, an unknown command; and, with the wrapper's request function run alone
+  against a stand-in for `curl`, every method but GET under `inspect`. The zone read
+  the same before and after. Branch `dns-inspect-docs`, documents only: RULES' Toolbox
+  line, one decision row, a Note.
+- **Decided:** by the owner on 2026-11-17, the row of that date: one token, no read-only
+  second one. Not done: whether the Keychain item named "TRADER Cloudflare DNS
+  Automation" holds the same token as `trader-cloudflare-dns-token` — a session does not
+  read the Keychain, so the comparison is the owner's one command; the committed
+  settings still deny a `trader-cloudflare-dns-read` item that no longer exists. No DNS
+  record was written.
+- **Release 0.1 state:** unchanged: `main` at `0eec8b9`, staging serving it at 50 of 50,
+  the suite green; #127 open, this branch stacked on it.
+- **Next:** O3, staging from `main` by the deploy hook (plan first: CI).
+
+### 2026-11-17 — Staging from `main` (O3) and the final two-branch workflow: built, not yet run
+
+- **Did:** read first, on the owner's report: #122 and #123 merged, `main` at `0eec8b9`
+  with `check` green, staging at 50 of 50 and its host naming that commit, the three
+  `E2E_*` variables set, both numbers already in E.164 with their `+`. Branch
+  `o3-staging-from-main`, stacked on #128 (#129). `promote-staging.yml`: no
+  `staging-preview` anywhere; `deploy` calls the staging project's deploy hook with no
+  checkout and no token, only while `main`'s head is the run's commit; `verify` holds
+  the host to the commit before the suite; a `report` job writes the `staging` status.
+  `apps/web/vercel.json` stops a push to `main` building. `TRADER_ENVIRONMENT`
+  (`environment.ts`): required at start, the only thing that lifts the mail allow-list,
+  the name on an error report. The audit's one exception, by name. Watched red: the
+  workflow's four text tests against the old file; seven tests of the environment before
+  its code. The deploy and report steps run by hand against stand-ins for `curl`, `git`
+  and `gh`, fourteen cases. RULES, `CLAUDE.md`, the README, the runbook (the staging
+  project's settings, expand and contract, releasing to production and its setup order),
+  one decision row, TASKS.
+- **Decided:** by the owner on 2026-11-17, the row of that date (two branches and a
+  release by pull request): the staging project keeps `main` as its Production branch;
+  the owner merges every pull request; no separate GitHub identity; a release is a pull
+  request into `production`. In the plan: the hook stays, since a native build starts
+  before the migration; a superseded run is green with a `pending` status. A first
+  version of this batch made staging a Preview with the project's Production branch
+  moved off `main`; the owner corrected it before it merged. Not done: **nothing has
+  run.** The workflow cannot be tried from a branch and the hook does not exist yet.
+  Unseen until the first merge: the hook building `main` with `git.deploymentEnabled`
+  off, that build being the project's Production deployment, the host moving to it, the
+  status written, a deployment starting with `TRADER_ENVIRONMENT`. Not built: the
+  `release` check (P6); nothing of production exists. O3 is not ticked. Notes about
+  `staging-preview` stand until the cutover is seen.
+- **Release 0.1 state:** `main` at `0eec8b9`, staging serving it at 50 of 50. Before #129
+  merges, the owner's, on the staging project (the runbook's list): every variable for
+  Production as well, `CLERK_AUTHORIZED_PARTIES` and `TRADER_ENVIRONMENT=staging` added,
+  the ignored build step removed, one deploy hook for `main` stored as
+  `STAGING_DEPLOY_HOOK`, the staging host made the Production domain. Merge #129 alone:
+  it carries #127 and #128.
+- **Next:** the first promotion after the merge, read end to end; a second merge unaided;
+  then O3's tick, the `release` check, and the branch deletions on the owner's word. O4
+  only after.

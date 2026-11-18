@@ -1,3 +1,4 @@
+import { traderEnvironment } from "../../server/environment";
 import { signInPath } from "../../server/identity-mode";
 import { DeveloperScreen } from "./developer-screen";
 
@@ -11,7 +12,12 @@ export default function DeveloperPage() {
     <DeveloperScreen
       signInHref={signInPath(process.env)}
       commit={process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null}
-      environment={process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? null}
+      environment={
+        traderEnvironment(process.env) ??
+        process.env.VERCEL_ENV ??
+        process.env.NODE_ENV ??
+        null
+      }
     />
   );
 }
