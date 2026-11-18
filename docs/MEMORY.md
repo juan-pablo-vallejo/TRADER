@@ -470,6 +470,9 @@ newest entry's **Next** is where a session resumes.
   Preview outright, and a pushed branch's first build is assigned to Production, which the
   staging project's ignored build step then cancels. After that one cancelled record,
   Previews deploy.
+- That ignored build step also cancelled a deploy hook's build (promotion 44218631940, first
+  attempt, "Canceled by Ignored Build Step"): `git.deploymentEnabled` does not stop a hook,
+  the project's own setting did. It reads "Automatic" since 2026-11-18 and the re-run built.
 - A Preview made by the CLI has no alias, only its own hashed URL, which changes on every
   redeploy; a Preview Vercel builds from a pushed branch has the branch's alias. An origin
   that must be known before the deployment starts (`CLERK_AUTHORIZED_PARTIES`) is the
