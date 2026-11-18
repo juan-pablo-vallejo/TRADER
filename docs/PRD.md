@@ -40,8 +40,8 @@ portal, a marketplace, an AI estimator, and anything that requires a second cont
 | Foreman        | Own phone                  | Unreliable   | Everything a worker does, plus crew labor on own jobs, the crew's current state when online, and the day closeout                                                                                              |
 | Admin (office) | Phone and laptop           | Reliable     | Roster, jobs, customers, the weekly schedule, approvals, any worker's hours and their repair, material costs and missing material entries, job cost, closeouts, pay periods, payroll export, invoices, exports |
 
-Everyone is a user with their own login — a crew member's on their own phone number, an office
-admin's on their own email address; nobody shares an account.
+Everyone is a user with their own login, on their own mobile number — an office admin's also on
+their email address when their invitation named one; nobody shares an account.
 
 - A worker creates their own labor and material records on the jobs they are allowed to work,
   sees their own recorded history, and changes their own name and phone. A worker never edits a
@@ -82,9 +82,10 @@ admin's on their own email address; nobody shares an account.
 An entry needs office approval before it counts toward payroll or job cost when any of these
 holds: it was captured offline; it was edited or corrected; its recorded time was set by the
 user, not taken at capture; its location stamp is missing or outside the job's radius; its
-device's clock disagreed with server time beyond the allowed tolerance; it arrived after its
-day's closeout was accepted. Everything else is approved by default. The approval queue tags
-each entry with every reason it is there.
+device's clock disagreed with server time beyond the allowed tolerance; it arrived after its day's
+closeout was accepted; it is a clock-in captured offline that the schedule does not admit while
+schedule enforcement is on (Weekly schedule). Everything else is approved by default. The approval
+queue tags each entry with every reason it is there.
 
 - Captured offline means the phone had no confirmed contact with TRADER's server when the entry
   was recorded; unknown or out-of-date contact counts as offline. Recording never waits to find
@@ -244,10 +245,11 @@ connection it says so and saves nothing for later.
 
 ### Access
 
-Invitation-only accounts, one per person. A crew member is invited by their own mobile number
-and signs in with a one-time code sent to it by SMS; an office admin is invited by their own
-email address and signs in with a one-time code sent to it. The same code is how an account
-is recovered; no passwords. SMS codes go to United States and Canada numbers only. A new user
+Invitation-only accounts, one per person. A crew member and an office admin are each invited by
+their own mobile number, and an admin's invitation may also name their email address. A crew
+member signs in with a one-time code sent by SMS to that number; an admin with a code sent to
+their number or, when the invitation named one, to their email. The same code is how an account is
+recovered; no passwords. SMS codes go to United States and Canada numbers only. A new user
 starts as a worker; roles are a deliberate roster action.
 
 ## Pilot and V1 completion
