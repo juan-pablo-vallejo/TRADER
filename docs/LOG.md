@@ -193,7 +193,6 @@ Rows beginning `V1-Dnn` are the owner's V1 decision register; where one supersed
   amended with its decision row; Figma file _TRADER — Office_ (tokens, screens as built). Shell:
   56 pt header, grouped navigation, `/` to Jobs, rows by a 720 px container query. List pattern:
   `page-header`, `field`, `note`, `row-editor`; roster at 390 from 3,547 px to 1,183; 770 tests.
-- **Decided:** by the owner on 2026-11-09: plan K-1 to K-6, K-8, K-9 as recommended; K-7 not taken.
 - **Next:** owner merges `ux-review`, `office-shell`, `office-list-pattern` in order; then TASKS.
 
 ## 2026-11-11
