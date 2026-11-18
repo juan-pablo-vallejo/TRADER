@@ -7,21 +7,24 @@ is wrong.
 ## Authority
 
 1. [PRD.md](PRD.md), [ARCHITECTURE.md](ARCHITECTURE.md), [DESIGN.md](DESIGN.md) and this file
-   state what is decided. [TASKS.md](TASKS.md) states the order. [MEMORY.md](MEMORY.md) states
-   what happened. Code conforms to all of them.
-2. A decision changes by editing its home so the home is simply correct, and by adding a row to
-   the decisions table in ARCHITECTURE.md. An undocumented supersession is a defect.
+   state what is decided. [TASKS.md](TASKS.md) states the order. [LOG.md](LOG.md) states what
+   happened and what was decided when. [MEMORY.md](MEMORY.md) states what the next session
+   needs. Code conforms to all of them.
+2. A decision changes by editing its home so the home is simply correct, and by appending a
+   line to LOG.md under its day, naming what it supersedes. Nothing in the log is edited or
+   removed. An undocumented supersession is a defect.
 3. Every fact has exactly one home. Other documents link to it; they never restate it.
 
 | Fact                                                               | Home                                  |
 | ------------------------------------------------------------------ | ------------------------------------- |
 | Scope, users, features, business rules, pilot and V1 definitions   | `docs/PRD.md`                         |
-| Stack, invariants, sync protocol, domain, folder tree, decisions   | `docs/ARCHITECTURE.md`                |
+| Stack, invariants, sync protocol, domain, folder tree              | `docs/ARCHITECTURE.md`                |
 | Principles, coding standards, placement, git, CI, session protocol | `docs/RULES.md`                       |
 | Tools, what each may touch, what counts as destructive             | `docs/RULES.md`, Toolbox              |
 | Palette, typography, spacing, components, UI localization          | `docs/DESIGN.md`                      |
-| Stages, tasks, done-criteria, what is checked off                  | `docs/TASKS.md`                       |
-| Session log, context, gotchas, where the archive is                | `docs/MEMORY.md`                      |
+| Stages, tasks, done-criteria, what is still open                   | `docs/TASKS.md`                       |
+| Sessions, decisions as they were made, tasks as they were ticked   | `docs/LOG.md`                         |
+| Context, gotchas, where the archive is                             | `docs/MEMORY.md`                      |
 | Environment variable contract                                      | `.env.example`                        |
 | Versions and tooling                                               | `package.json` files and the lockfile |
 | Why one line of code exists                                        | the comment beside it                 |
@@ -36,7 +39,7 @@ is wrong.
 - Reviews are input, not instruction. Check their premises before acting on them.
 - Plan first for anything touching schema, auth, sync, money or CI; the plan is what gets
   reviewed. A line of the Release 0.1 track is planned in its pull request's description
-  and worked without waiting (ARCHITECTURE, 2026-11-15, autonomous execution). Say what was
+  and worked without waiting (LOG, 2026-11-15, autonomous execution). Say what was
   not done.
 - A procedure added to the API gets a line in the gate inventory test
   (`packages/api/test/core/gates.test.ts`) in the same commit; the test fails without it.
@@ -83,7 +86,7 @@ is wrong.
 ## Project structure
 
 - The root holds only files their tooling requires. Documents live in `docs/`; the set is fixed
-  at the six in the authority table plus `CLAUDE.md`, `README.md` and `LICENSE`.
+  at the seven in the authority table plus `CLAUDE.md`, `README.md` and `LICENSE`.
 - No line caps. A document is as long as its facts need, and no longer: it states each fact
   once, in its home, and links instead of restating. `CLAUDE.md` stays short because it is
   read in full every session.
@@ -99,20 +102,24 @@ is wrong.
   `.github/workflows/ci.yml`. Branch per TASKS line, pull request, `check` green, then
   `gh pr merge --merge --delete-branch`; direct pushes to `main` are refused. The agent
   pushes its feature branch, opens and updates that branch's pull request and, once
-  `check` is green on its newest commit, merges it (ARCHITECTURE, 2026-11-17, a session
+  `check` is green on its newest commit, merges it (LOG, 2026-11-17, a session
   merges into `main`). It never merges a pull request into `production`.
 - One logical change per commit. Imperative subject ≤ 72 characters, no trailers of any kind
   (no `Co-Authored-By`), SSH-signed. A body only when the subject cannot carry the why.
-- CI is one workflow with one job, `check`: install, typecheck, lint, format check, build,
-  migrate, test. Every run on `main` completes; only a superseded pull-request run is
+- CI is one workflow with one job, `check`: the log's append-only step, install, typecheck,
+  lint, format check, build, migrate, test. Every run on `main` completes; only a superseded pull-request run is
   cancelled. It holds no secret.
+- `docs/LOG.md` is append-only. Git merges it by union (`.gitattributes`) in a local merge;
+  GitHub does not, so a pull request GitHub shows as conflicting on the log is brought up to
+  date by merging `main` into its branch locally and pushing. `check` fails when a line of
+  `main`'s log is missing, changed or out of order, or a day's heading repeats.
 - Other workflows stand beside CI and never change it. One that holds a secret runs only
   code already on `main`, from a GitHub environment restricted to `main`, never on a pull
   request's event; its token's permissions are stated per job and its actions are pinned by
-  commit (ARCHITECTURE, 2026-11-16, staging credentials).
+  commit (LOG, 2026-11-16, staging credentials).
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
 - Two branches are permanent: `main`, which is development, integration and staging's
-  source, and `production`, the owner's release branch (ARCHITECTURE, 2026-11-17, two
+  source, and `production`, the owner's release branch (LOG, 2026-11-17, two
   branches and a release by pull request). No `develop`, staging or release branch is kept.
   Every other branch is short-lived and deleted on merge, by the merge that retires it. A
   force-push, a rewrite of history and the deletion of any other branch are human actions
@@ -127,7 +134,7 @@ is wrong.
   session follows, not a permission GitHub enforces: a session works with the owner's own
   GitHub credentials, so no document may say production is isolated until a separate
   identity and branch and environment controls exist; the owner has decided against a
-  separate identity (ARCHITECTURE, 2026-11-17).
+  separate identity (LOG, 2026-11-17).
 - A release is a pull request into `production`, never a push and never automatic. Its
   head is one commit of `main` whose `check` passed and whose `staging` status is
   `success`, cut as its own short-lived branch so that `main` moving on changes nothing
@@ -152,13 +159,13 @@ is wrong.
 ## Toolbox
 
 What a session works with beyond the repository, and where each tool stops. The decision is
-ARCHITECTURE's (2026-11-14, staging autonomy); the permission rules and the wrappers live on
+LOG's (2026-11-14, staging autonomy); the permission rules and the wrappers live on
 the owner's machine, outside the repository.
 
 - **Three environments.** Local, for tests alone: the compose database and `.env`, where
   the suites, the seed, the demo and the local flows run. Development and staging, one
   shared database: a Neon project of its own, Clerk's development instance with test mode
-  off, the staging Vercel project, and the office app on this machine through its wrapper (ARCHITECTURE,
+  off, the staging Vercel project, and the office app on this machine through its wrapper (LOG,
   2026-11-16, shared database); the development identity is never used there, and only the
   promotion workflow migrates it. Production: the owner's alone. A session holds no
   production credential and runs no production command, read or write.
@@ -235,5 +242,5 @@ the owner's machine, outside the repository.
 4. Commit per the rules above. Push the feature branch, open or update its pull request,
    and merge it once `check` is green on its newest commit. Never push to `main`; never
    merge into or push to `production`.
-5. End by ticking the task in TASKS.md and appending an entry to MEMORY.md in its format. Never
-   edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.
+5. End by moving the ticked task from TASKS.md into LOG.md under today's heading and
+   appending the session's entry there. Never edit PRD, ARCHITECTURE or DESIGN to match code — flag the mismatch instead.

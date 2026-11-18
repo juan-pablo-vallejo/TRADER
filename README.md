@@ -20,7 +20,7 @@ security per company.
 | `packages/api` | The tRPC API: `core/` request plumbing, one folder per domain, `routers/`  |
 | `packages/db`  | Drizzle schema, migrations, seed, staging promotion, invariant tests       |
 | `assets/brand` | The mark and the icon                                                      |
-| `docs`         | The six documents below                                                    |
+| `docs`         | The seven documents below                                                  |
 
 Stack, invariants, the sync protocol, environments and every decision →
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
@@ -85,15 +85,16 @@ no further step. A release is a pull request from a staging-verified commit of `
 
 Each fact has one home; this README links and does not restate.
 
-| Document                                     | Owns                                                             |
-| -------------------------------------------- | ---------------------------------------------------------------- |
-| [docs/PRD.md](docs/PRD.md)                   | What it is for: problem, goals, users, V1 features               |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it is built: stack, invariants, sync, folder tree, decisions |
-| [docs/RULES.md](docs/RULES.md)               | How work is done: principles, standards, structure, git, CI      |
-| [docs/DESIGN.md](docs/DESIGN.md)             | How it looks: principles, palette, type, components              |
-| [docs/TASKS.md](docs/TASKS.md)               | The build order and what is done                                 |
-| [docs/MEMORY.md](docs/MEMORY.md)             | Project memory: context, gotchas, session log                    |
-| [CLAUDE.md](CLAUDE.md)                       | The session contract for Claude Code                             |
+| Document                                     | Owns                                                        |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| [docs/PRD.md](docs/PRD.md)                   | What it is for: problem, goals, users, V1 features          |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How it is built: stack, invariants, sync, folder tree       |
+| [docs/RULES.md](docs/RULES.md)               | How work is done: principles, standards, structure, git, CI |
+| [docs/DESIGN.md](docs/DESIGN.md)             | How it looks: principles, palette, type, components         |
+| [docs/TASKS.md](docs/TASKS.md)               | The build order and what is open                            |
+| [docs/LOG.md](docs/LOG.md)                   | What happened: sessions, decisions as made, tasks as ticked |
+| [docs/MEMORY.md](docs/MEMORY.md)             | Project memory: context, gotchas                            |
+| [CLAUDE.md](CLAUDE.md)                       | The session contract for Claude Code                        |
 
 ## License
 

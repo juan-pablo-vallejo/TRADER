@@ -12,3 +12,6 @@ apps/mobile/ios/
 apps/mobile/android/
 apps/mobile/.expo/
 apps/mobile/expo-env.d.ts
+
+# The log is append-only and its long lines are its own (RULES, Git and CI).
+docs/LOG.md

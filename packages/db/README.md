@@ -276,7 +276,7 @@ DATABASE_URL='<direct endpoint, owner>' pnpm --filter @trader/db onboard \
 - It refuses a company name that exists, and a number or email already on any roster.
 - It tells the identity provider nothing. Create the admin's user there with the same
   number; their first sign-in binds it to the row.
-- It writes no audit row: record each onboarding in `docs/MEMORY.md`.
+- It writes no audit row: record each onboarding in `docs/LOG.md`.
 
 ## Restoring
 
@@ -292,7 +292,7 @@ is the plan's (ARCHITECTURE, 2026-11-12 Release 0.1 backups).
    The first drill (2026-11-14, a branch made from a past instant of staging) carried
    `trader_app` with its login attribute and its grants; a login with its password on the
    restored state was not tried.
-4. Record the start, the end and what was lost in `docs/MEMORY.md`.
+4. Record the start, the end and what was lost in `docs/LOG.md`.
 
 A restore discards every write after the chosen time, in every company. It is the owner's
 decision each time.

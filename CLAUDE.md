@@ -22,7 +22,8 @@ and stop — never edit the document to match the code.
 4. One change per commit; imperative subject ≤ 72 characters; no trailers. Push the feature
    branch, open or update its pull request, merge it once `check` is green; never push
    to `main`.
-5. End by ticking TASKS.md and appending a MEMORY.md entry in its format.
+5. End by moving the ticked task from TASKS.md into LOG.md under today's heading and
+   appending the session's entry there.
 
 ## Never
 
