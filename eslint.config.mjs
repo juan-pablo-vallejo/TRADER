@@ -94,5 +94,11 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // The scripts a workflow step runs with plain Node. No globals package is installed, so
+    // the two they read are named.
+    files: [".github/scripts/**/*.mjs"],
+    languageOptions: { globals: { console: "readonly", process: "readonly" } },
+  },
   prettier,
 );
