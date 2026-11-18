@@ -42,13 +42,6 @@ Console records and listings, which need no build.
       the roster checked with the partner, each crew member's own mobile number and each
       admin's own email recorded before their invitation; no shared number or address. Done
       when every roster row to be invited has a distinct one its owner has confirmed
-- [ ] O15 — Owner: a word on each of the 31 sentences O9b withheld (LOG, 2026-11-17, the
-      decision rows written into their homes): the row stands and the code is the defect, or
-      the code stands and the row is superseded. Their rows include tenancy, the runtime role,
-      identity binding, push authority and the origin rule for a phone's token. Needs both
-      texts of each, from pull request #133's description. Done when LOG holds the word on
-      each and every defect in the code is a line here, on this track where the rule is a
-      safety rule
 
 ### In order
 
@@ -61,6 +54,12 @@ Console records and listings, which need no build.
       company's people in production and the fixture numbers on staging. Done when the
       decision is in LOG, staging's smoke flow signs in on both platforms with no code sent,
       and the reviewer's way in is seen on a preview build
+- [ ] R21 — The origin rule fails closed (plan first, and wait: auth; LOG, 2026-11-18, the
+      owner's word on the 31 sentences). An empty `CLERK_AUTHORIZED_PARTIES` admits a session
+      token that names any origin (`apps/web/src/server/clerk-identity.ts`, `admitsParty`).
+      Work: `admitsParty` refuses a named origin when the list is empty; a test watched
+      failing first; `.env.example` says local development with Clerk sets the list. Done
+      when that test is green and staging signs in from the office and from a phone build
 - [ ] P4 — Preview builds (takes the device builds' line; plan first: CI). Depends on R19, and
       on R11 for its sign-in. Work: `eas.json` with development, preview, preview-simulator
       and production profiles; the build number from EAS in place of the constant in
@@ -112,7 +111,8 @@ Console records and listings, which need no build.
       circular choice said in words, a locked shift read-only, and one pass with a screen
       reader
 - [ ] S9 — Schedule enforcement, rollout acceptance. Depends on S6 and S8. The switch on for
-      staging alone; the browser suite; both physical phones; refusals and error reports read
+      staging alone; the browser suite; both physical phones; a worker scheduled on a job
+      outside their crew clocks in on a physical phone; refusals and error reports read
       after. The owner means production to start with it on (LOG, 2026-11-18). Done when the
       owner's approval to turn it on in production is recorded in LOG, or withheld;
       production's setting is the owner's
@@ -124,7 +124,8 @@ Console records and listings, which need no build.
       request in the app's profile, after R5's; deactivate-and-pseudonymize as an
       admin-confirmed action. The text is drafted for the owner's approval and reviewed by the
       RISEUP legal clinic when it can be booked; nothing is published before the owner
-      approves it (LOG, 2026-11-18). Seen on staging before production
+      approves it (LOG, 2026-11-18). The pseudonymization accounts for `audit_log` rows that
+      hold a user's id beside a pay rate. Seen on staging before production
 - [ ] R12 — Release 0.1's acceptance checklist (documents only; the wording is the owner's):
       what the partner's admin signs at the go/no-go line, drafted from PRD's Release 0.1
       definition, one line a thing the admin does or sees. Its plan says where it lives in the
@@ -309,6 +310,11 @@ Stage 5's open lines beyond the track.
       by `testID`; every flow that writes is followed by a server assertion against
       `trader_demo_e2e`, reset before each run; run on the Mac before a release build, not
       in CI
+- [ ] O16 — The phone's value imports held by lint (LOG, 2026-11-18, the owner's word on the
+      31 sentences): `apps/mobile` imports values from `@trader/api/contract` and
+      `@trader/api/eligibility` alone, and lint refuses every other value import of
+      `@trader/api`, subpaths included (`eslint.config.mjs`). Done when a test, watched
+      failing on a third subpath, is green
 
 ### V1 in the office
 
@@ -388,8 +394,8 @@ Stage 8's release gates are V1-D17's; the go/no-go line replaced them for Releas
 ## Overhaul and upkeep — frozen until the go/no-go line
 
 The owner's mandate of 2026-11-17, and what keeps the repository and its sessions in order.
-Frozen until the go/no-go line is recorded as passed (LOG, 2026-11-18); O15, O5 and O3 are on
-the track. Each O line is one pull request, planned in its description and merged once `check`
+Frozen until the go/no-go line is recorded as passed (LOG, 2026-11-18); O5 and O3 are on the
+track. Each O line is one pull request, planned in its description and merged once `check`
 is green.
 
 - [ ] O11 — The two hooks, and always-loading the four connectors on the owner's machine:
@@ -421,7 +427,7 @@ is green.
       toolbox). Consumer: reading staging instead of screenshots; production is read by the
       owner (RULES, Toolbox). No connector for either store: none is published by Apple or
       Google
-- [ ] O9b — The decision rows with no home: each row in force that no line of PRD, ARCHITECTURE, RULES or DESIGN states (the list in O9's pull request) written into the section the match names, and the rows the match marked partial completed. It changes words in decided documents: plan first. Done when a second match finds a home for every row in force
+- [ ] O9b — The decision rows with no home: each row in force that no line of PRD, ARCHITECTURE, RULES or DESIGN states (the list in O9's pull request) written into the section the match names, and the rows the match marked partial completed. It changes words in decided documents: plan first. Done when a second match finds a home for every row in force. The wording for the 31 withheld sentences is the 2026-11-18 O15 bullet's (LOG, the owner's word on the 31 sentences)
 - [ ] O12 — Code residue, the audit's H6 to H8 and L2 to L8. Done when each item is closed
       or struck with its reason and `pnpm check` is green
 - [ ] O13 — The snapshots: `0000` to `0048` deleted in a pull request of their own, after
