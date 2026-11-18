@@ -9,7 +9,6 @@
       "Bash(*trader-sentry-token*)",
       "Bash(*trader-cloudflare-dns-token*)",
       "Bash(*trader-cloudflare-dns-read*)",
-      "Bash(gh pr merge:*)",
       "Bash(gh workflow run:*)",
       "Bash(gh secret set:*)",
       "Bash(gh variable set:*)",

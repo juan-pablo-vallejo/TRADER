@@ -667,6 +667,13 @@ lives in [TASKS.md](TASKS.md); decisions live in [ARCHITECTURE.md](ARCHITECTURE.
   holds is dead and the next run prints another.
 - `gh pr merge` is denied in the owner's local settings file, which a session does not
   edit: a session merges only once the owner has lifted that rule there.
+- A merge of `main` into a branch conflicts wherever both appended to the end of MEMORY's
+  Log or ARCHITECTURE's table: keep both sides. Taking the branch's side dropped a decision
+  row and two entries in `23a5001`, unnoticed for a day. After any such merge, count the
+  lines `main` added since the merge base that the result lacks; the answer is 0.
+- A permission rule sees a command, not a pull request's base branch: no rule on
+  `gh pr merge` can admit `main` and refuse `production`. That half is a rule a session
+  follows; read the base (`gh pr view --json baseRefName`) before every merge.
 - Playwright disposes a request context's responses with the context: after `dispose()` a
   response's `status()` still answers and its `json()` throws "Response has been
   disposed". Read the body first (`e2e/readiness.ts`). A stand-in context in a unit test
@@ -695,8 +702,6 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   deployment is. `traderEnvironment` (`apps/web/src/server/environment.ts`) reads
   `TRADER_ENVIRONMENT`, and a deployment without it refuses to start — a pull request's
   Preview included, so the variable is set for Preview too.
-- A merge is the owner's, every time: `gh pr merge` is denied in the committed settings
-  and the session reports a pull request and stops.
 
 ## Log
 
@@ -2349,6 +2354,58 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
   discipline, stated in RULES, not a guarantee.
 - **Next:** O0's three owner steps; then both pull requests merge and O3 starts.
 
+### 2026-11-17 — Gate #3 read; the browser suite made to refuse a run it was not told
+
+- **Did:** read-only, twice: the promotion's sign-in path (the key in the `staging`
+  environment alone, tickets by `POST /v1/sign_in_tokens` and the `ticket` strategy, no
+  trace or artifact), and staging itself — one company, `R3 Staging Co`, its admin and
+  worker on the suite's two fictional numbers, each bound, one customer, nothing else; 40
+  migrations, equal by hash to the journal's first forty; the rehearsal branch at 50.
+  Found: the three `E2E_*` values had been made as secrets where the workflow reads
+  variables, so they arrived blank; the owner made them variables. Then branch
+  `e2e-fail-closed` from `9108276`: the defaults removed, `missingSettings` in
+  `tickets.ts`, the ticket step and the spec both refusing. Watched red: the spec's
+  refusal, the ticket step's, a blank counted as set, a name dropped from the list — the
+  last turned nothing red until the list was pinned by name.
+- **Decided:** by the owner on 2026-11-17: no default for the suite's company or its two
+  people. Not done: no workflow change, so with the company alone unset the two tickets
+  are still made before the suite refuses, and expire unused; the fallback to Clerk's
+  test code when no ticket is given is kept. Not seen: the refusal in the workflow, and
+  the verify job at all, which has never run. The `staging-e2e` wrapper passes none of
+  the three, so a session's own run refuses until it does: the owner's file.
+- **Release 0.1 state:** `main` at `9108276`; staging at 40 of 50, serving `1c94b64`. This
+  branch's merge starts a promotion that verifies the rehearsal and stops at the owner's
+  gate, red by design, with nothing migrated; its report prints the code for the new
+  commit, and a code printed for `9108276` no longer holds.
+- **Next:** owner merges this branch, reads that run's report and dispatches `promote`
+  with its code; then the verify job's first log.
+
+### 2026-11-17 — #124 merged; the gate held; `main` made a session's to merge
+
+- **Did:** read-only after the owner merged #124 (`main` at `f5e31aa`): CI green; the
+  merge's promotion verified the rehearsal branch (50 of 50, schema equal to a replay) and
+  stopped at the owner's gate with `deploy` and `verify` skipped; staging still at 40 by
+  hash, `staging-preview` still `1c94b64`; the run's approval code recomputed from the
+  files and equal. Read for the owner: every way a session reaches the owner's GitHub
+  credentials (the CLI's token with repository and workflow scope, the account SSH key,
+  the Keychain helper, a signed-in browser), and that a collaborator's fine-grained token
+  cannot work on a personal repository (GitHub's page, this date), so an isolated identity
+  here is a GitHub App. Then branch `main-autonomy-policy`, documents only: RULES (Git and
+  CI, Session protocol), `CLAUDE.md`, one decision row, one TASKS line.
+- **Decided:** by the owner on 2026-11-17, the row of that date: a session merges into
+  `main` through its pull request and `check`; production is the owner's alone, by policy
+  and not yet by permission; the backlog's approval stays the owner's dispatch. Not
+  changed, and asked of the owner: whether "plan, stop, wait" for schema, auth, sync,
+  money and CI still waits. Not done: nothing merged by a session yet — the local deny
+  rule stands, and a merge now would kill the code the owner holds; #123's committed
+  settings still list a merge and a dispatch as never run and need this policy before
+  they merge.
+- **Release 0.1 state:** `main` at `f5e31aa`; staging at 40 of 50, serving `1c94b64`; the
+  approval code for this commit is in run 44037693363's report. Open: #122, #123 and this
+  branch, none to merge before the backlog is applied.
+- **Next:** the owner's dispatch, `promote` with that code; then the verify job's first
+  log, and these three pull requests merged in order.
+
 ### 2026-11-17 — First promotion: staging at the journal and deployed; the suite's first test faulty
 
 - **Did:** read after the owner's authorized dispatch (run 44046566988, `main` at
@@ -2457,3 +2514,27 @@ TRUNCATE`, a quoted word and a function's body are not flags, a dropped constrai
 - **Next:** the first promotion after the merge, read end to end; a second merge unaided;
   then O3's tick, the `release` check, and the branch deletions on the owner's word. O4
   only after.
+
+### 2026-11-17 — Restore and reconcile (O8): the dropped row and entries back; a session merges into `main`
+
+- **Did:** from the audit taken at `0eec8b9`, read at `82b33b9`. Branch
+  `o8-restore-reconcile`, five commits, documents and settings only. Restored, each equal
+  byte for byte to `c5a1cae`: ARCHITECTURE's row "`main` worked autonomously", and the Log
+  entries "Gate #3 read" and "#124 merged". Counted: of the lines `main` had added since
+  the merge base, `23a5001` lost that one row and those 48 lines and nothing else; every
+  other removal in that merge was a commit of the branch. One answer to who merges, in
+  RULES (Git and CI, Toolbox, Session protocol), `CLAUDE.md`, the README, TASKS, the
+  database runbook, `pr-prep` and the committed settings, which no longer deny
+  `gh pr merge`. TASKS lines O8 to O13. Watched: `gh pr merge --help` refused before the
+  change.
+- **Decided:** by the owner on 2026-11-17, the row of that date (a session merges into
+  `main`; `production` stays the owner's), which supersedes the owner's merge in the
+  two-branches row written the same day. Not done: the owner's local settings file still
+  denies `gh pr merge`, so no session can merge until the owner removes that line, and
+  this pull request is the owner's to merge; nothing refuses a merge into `production`
+  but the rule (Notes); "Isolated identity before production" is not brought back; of the
+  audit's decisions only D1 and D9 are recorded — D2 to D8 are each its batch's plan.
+- **Release 0.1 state:** `main` at `82b33b9`. O3's first promotion is still unread in
+  this file: this session did not look at staging.
+- **Next:** owner merges this branch and lifts the local deny; then O3's first promotion
+  read end to end, and O9, plan first.
