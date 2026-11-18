@@ -54,6 +54,9 @@ batch that enacts them. Phone scope stays the PRD's.
       with no search first
 - [ ] O12 — Code residue, the audit's H6 to H8 and L2 to L8. Done when each item is closed
       or struck with its reason and `pnpm check` is green
+- [ ] O14 — DESIGN, Localization says message catalogs with ICU plurals; the phone has two
+      typed catalogs and no i18n library (LOG, 2026-11-15, field app skeleton). Decide which
+      stands. Done when DESIGN and `apps/mobile` say the same thing
 - [ ] O13 — The snapshots: `0000` to `0048` deleted in a pull request of their own, after
       the audit's experiment is repeated on this machine; RULES gains "only the newest
       snapshot is kept". Done when a generate with the newest snapshot alone emits nothing

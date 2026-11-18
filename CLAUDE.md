@@ -16,8 +16,9 @@ and stop — never edit the document to match the code.
 ## Every session
 
 1. Start from MEMORY.md, then read TASKS.md. Work the named task or the next unchecked one.
-2. Plan first, then wait, for anything touching schema, auth, sync, money or CI; a Release
-   0.1 track line is planned in its pull request and worked (RULES, Session protocol).
+2. Plan first, then wait, for anything touching schema, auth, sync, money or CI; a line of
+   the Release 0.1 track or of TASKS' Automation section is planned in its pull request and
+   worked (RULES, Session protocol).
 3. `pnpm check` before every commit.
 4. One change per commit; imperative subject ≤ 72 characters; no trailers. Push the feature
    branch, open or update its pull request, merge it once `check` is green; never push
