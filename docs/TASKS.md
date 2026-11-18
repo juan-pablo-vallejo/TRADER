@@ -68,10 +68,10 @@ batch that enacts them. Phone scope stays the PRD's.
 ## Release 0.1 — first production release
 
 Done when the go/no-go line is recorded as passed and D Sierra Painting's crew is on the
-store builds (ARCHITECTURE, the 2026-11-12 Release 0.1 rows). Lines are ordered by
+store builds (LOG, the 2026-11-12 Release 0.1 rows). Lines are ordered by
 dependency; R4 to R5 and R6 to R7 may run beside each other, S1 to S6 beside R4, and the
 owner's lines beside R1. Each line is planned in its pull request and worked without a
-per-line approval (ARCHITECTURE, 2026-11-15, autonomous execution), and names the packages
+per-line approval (LOG, 2026-11-15, autonomous execution), and names the packages
 it installs here before they are installed. A line that takes a stage's line ticks it there.
 Staging and production are separate databases and identity instances throughout; nothing
 paid is created and no production migration runs without the owner's approval of that step.
@@ -214,7 +214,7 @@ Left where they are until this track is done: every other open line of Stages 4 
 ## Automation — promotion, tests and release gates
 
 Permanent, and not Release 0.1's alone: what carries every later merge to staging and every
-later release to its gate (ARCHITECTURE, the 2026-11-16 rows). Lines are ordered by
+later release to its gate (LOG, the 2026-11-16 rows). Lines are ordered by
 dependency, each planned in its pull request and worked without a per-line approval. It runs
 beside the Release 0.1 track and gives that track's staging and device lines their evidence.
 Nothing here is paid, touches production, or stores a production value. Done when two
@@ -241,7 +241,7 @@ every gate, and a candidate missing a platform reads as not native-verified.
       migrations' contents, the rehearsal branch already at the journal; each migrator
       string is held to its stated endpoint; `drizzle-kit` refuses a deployed database
       without a stated purpose; the development identity is refused on one
-      (ARCHITECTURE, 2026-11-16, promotion safeguards); the browser suite signs in with
+      (LOG, 2026-11-16, promotion safeguards); the browser suite signs in with
       single-use Clerk tickets made in a step of their own (2026-11-16, staging sign-in
       by ticket). No GitHub environment beyond `staging` is used
       for it. The backlog, `0040` to `0049`, is rehearsed and its results and risks put
@@ -251,7 +251,7 @@ every gate, and a candidate missing a platform reads as not native-verified.
       the suite green; a run for a commit already promoted changes nothing; a merge
       carrying a flagged migration stops before staging changes; and a dispatch with
       any other code, or with no earlier rehearsal, is refused
-- [ ] Fixture tenants on the shared database (ARCHITECTURE, 2026-11-16, shared
+- [ ] Fixture tenants on the shared database (LOG, 2026-11-16, shared
       database). The code is ready: the browser flow holds its admin to
       `E2E_COMPANY_ID` before its first write and its worker to the same company
       (seen green on staging's alias, and red on a wrong id with nothing written). The
@@ -437,7 +437,7 @@ ARCHITECTURE.md is a line here.
       the office tells each person to sign in with their number
 - [ ] Neon Launch project; `trader_app` created in SQL and used as the login role; the
       journal replayed as it stands, with a schema diff against a fresh local replay proving
-      nothing hand-written was lost (ARCHITECTURE, 2026-11-12 deployed database path)
+      nothing hand-written was lost (LOG, 2026-11-12 deployed database path)
 - [ ] Environments: production and preview with separate databases and identity instances;
       the environment validated at start; a readiness check that touches the database and
       asserts the role

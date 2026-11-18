@@ -19,7 +19,7 @@ newest entry's **Next** is where a session resumes.
   payment follows "V1 complete" as defined in PRD.md.
 - The project went through research, a specification, a Phase 0–1 build with a working
   cursor-based sync core, two independent architecture reviews and an adjudicated synthesis
-  (October 2026), then this rebuild. The decisions table in ARCHITECTURE.md is the synthesis
+  (October 2026), then this rebuild. The first decisions in [LOG.md](LOG.md) are the synthesis
   outcome; the archived documents predate it.
 - No vendor account is in use yet. Apple Developer (individual) and Google Play Console
   (personal) are enrolled; Clerk, Neon, Vercel, Sentry, Resend and EAS are
@@ -646,7 +646,7 @@ newest entry's **Next** is where a session resumes.
   GitHub's page, 2026-11-16); whether Vercel builds a branch pushed with it is unproven
   until P1's first promotion.
 - Never register this Mac as a self-hosted Actions runner: the repository is public, and a
-  pull request's workflow would run beside the Keychain. The Mac polls (ARCHITECTURE,
+  pull request's workflow would run beside the Keychain. The Mac polls (LOG,
   2026-11-16, native tests).
 - To run a `packages/db` script against the local database without a session reading
   `.env`: `DATABASE_URL= node --env-file=../../.env --import tsx src/<script>.ts` from the
@@ -666,10 +666,6 @@ newest entry's **Next** is where a session resumes.
   holds is dead and the next run prints another.
 - `gh pr merge` is denied in the owner's local settings file, which a session does not
   edit: a session merges only once the owner has lifted that rule there.
-- A merge of `main` into a branch conflicts wherever both appended to the end of MEMORY's
-  Log or ARCHITECTURE's table: keep both sides. Taking the branch's side dropped a decision
-  row and two entries in `23a5001`, unnoticed for a day. After any such merge, count the
-  lines `main` added since the merge base that the result lacks; the answer is 0.
 - A permission rule sees a command, not a pull request's base branch: no rule on
   `gh pr merge` can admit `main` and refuse `production`. That half is a rule a session
   follows; read the base (`gh pr view --json baseRefName`) before every merge.
