@@ -38,9 +38,9 @@ is wrong.
 - A test you have not watched fail proves nothing: remove the guard, see red, restore it.
 - Reviews are input, not instruction. Check their premises before acting on them.
 - Plan first for anything touching schema, auth, sync, money or CI; the plan is what gets
-  reviewed. A line of the Release 0.1 track is planned in its pull request's description
-  and worked without waiting (LOG, 2026-11-15, autonomous execution). Say what was
-  not done.
+  reviewed. A line of the Release 0.1 track or of TASKS' Automation section is planned in
+  its pull request's description and worked without waiting (LOG, 2026-11-15, autonomous
+  execution). Say what was not done.
 - A procedure added to the API gets a line in the gate inventory test
   (`packages/api/test/core/gates.test.ts`) in the same commit; the test fails without it.
 - Scope is explicit. A scope change is its own line in TASKS.md, never a by-product of a
@@ -62,12 +62,16 @@ is wrong.
 - Append-only tables have no `updated_at`, no UPDATE path in code, and a trigger that rejects
   one.
 - Migrations are additive and reviewed as plans. Every tenant-scoped query runs with
-  `app.company_id` set.
+  `app.company_id` set, per transaction, by `set_config(…, true)`; a test of row-level security
+  takes the application role with `SET LOCAL ROLE` in a rolled-back transaction (ARCHITECTURE,
+  Invariants, 5).
+- Triggers, functions, extensions, exclusion constraints, roles, grants and policies are
+  hand-written SQL in `generate --custom` migrations.
 - Auth guards fail closed at request time, never by throwing at module load — that breaks
   `next build`. A switched-off route answers 404; an API call answers 401 without an active
   user and 403 when its role is not admitted.
-- Three seams stay thin so a vendor can be swapped without a rewrite: the identity adapter, the
-  database driver behind an environment variable, the error-reporting wrapper.
+- Four seams stay thin so a vendor can be swapped without a rewrite: the identity adapter, the
+  database driver behind an environment variable, the error-reporting wrapper, the mailer.
 - Every crew-facing string goes through the i18n layer with English and Spanish entries; a
   hard-coded string in a crew screen fails review.
 - Every control in `apps/mobile` carries a `testID`; a Maestro flow selects by it, never by
@@ -80,6 +84,8 @@ is wrong.
   only for a runbook nothing else owns. Invariant tests run against a real Postgres. Tests and
   the seed run only against the local compose database or CI's service container; they refuse
   to start while `DATABASE_URL` is set.
+  The seed writes one fixture company, as the owner, in one transaction; a contractor's own
+  company is written by onboarding, never by the seed.
 - Every promise is awaited or deliberately discarded with `void`; lint enforces it. A
   statement on a transaction that is never awaited runs after the transaction has ended.
 
@@ -117,6 +123,8 @@ is wrong.
   code already on `main`, from a GitHub environment restricted to `main`, never on a pull
   request's event; its token's permissions are stated per job and its actions are pinned by
   commit (LOG, 2026-11-16, staging credentials).
+  `Audit` is one, and holds no secret: `pnpm audit`, red on a high advisory in what is deployed
+  and on a critical one in the toolchain, and a secret scan of the whole history.
 - Dependabot is off. Dependency updates are tasks, verified against the registry.
 - Two branches are permanent: `main`, which is development, integration and staging's
   source, and `production`, the owner's release branch (LOG, 2026-11-17, two
@@ -128,6 +136,10 @@ is wrong.
 - Staging needs no dispatch: a merge is the whole of what starts it. An approval code
   (`authorize_through`) is the owner's alone to send, for a migration the reading flags;
   a session never runs `gh workflow run` on the promotion.
+  A code binds the commit and every pending migration's content, and any other is refused; an
+  authorized run never rehearses and migrates in one run. Every `drizzle-kit` command refuses a
+  set `DATABASE_URL` unless `TRADER_MIGRATE_PURPOSE` says `promotion` or `owner`, and the
+  development identity is refused wherever `DATABASE_URL` is set.
 - `production` is the owner's alone: its branch, its deployments and releases, its
   credentials, databases, infrastructure and environment configuration, its authorization
   and its rollback. A session performs none of it and creates none of it. This is a rule a
@@ -151,6 +163,11 @@ is wrong.
   (`apps/web/vercel.json`), in either project: a build before the migration would run new
   code on the old schema, and the production project builds `production` alone. A session
   never calls the hook and never deploys `main` by another road.
+- A promotion applies the pending migrations first to one kept Neon branch of staging and compares
+  the result with a fresh replay of the journal. The reading flags a DROP other than of a default
+  or a NOT NULL, TRUNCATE, DELETE, an UPDATE with no WHERE, REVOKE, a role statement, row security
+  switched off or unforced, an enum value added, NOT NULL added without a default or set, a
+  column's type changed and a rename; it does not read a function's body.
 - A migration and the code that needs it may overlap on staging and will on production:
   the schema moves first and the earlier code keeps running on it. A change that cannot
   ship that way is split — expand, move the code, contract — one merge each
@@ -169,6 +186,8 @@ the owner's machine, outside the repository.
   2026-11-16, shared database); the development identity is never used there, and only the
   promotion workflow migrates it. Production: the owner's alone. A session holds no
   production credential and runs no production command, read or write.
+  Fixtures there are kept apart by tenant: one company each for the browser suite, the phone flows
+  and development by hand, each with test numbers of its own.
 - **A credential is used, never read.** Each staging secret is an item in the owner's
   macOS Keychain, handed to one fixed command by a wrapper that refuses any other target. A
   session never prints one, never writes one to a file, and never reads `.env` or the
@@ -177,6 +196,9 @@ the owner's machine, outside the repository.
   project's deploy hook — are secrets of GitHub environments restricted to `main`, created by the owner;
   nothing of production, no vendor's account-wide key, no DNS token and no signing
   credential is stored there.
+  The suite signs in with one-use sign-in tokens, minted in a step of its own that alone holds
+  that key; the minter refuses a key that is not a development instance's and a number outside the
+  provider's fictional range.
 - **Which tool for which job.**
 
   | Job                                           | Tool                                                                        |
@@ -196,6 +218,9 @@ the owner's machine, outside the repository.
   | The phone app                                 | Maestro and its connector, on a simulator or an emulator                    |
   | Library and vendor documentation              | the vendor's own connector or page, never memory                            |
 
+- **Mail and DNS.** Staging mails from a subdomain of its own, with a key that can only send and
+  only from it; the apex's mail is untouched. Cloudflare's API connector is not connected: a token
+  cannot be narrowed below the zone, and the zone carries production.
 - **Routine staging work needs no approval**: reads, SQL as `trader_app`, onboarding, a
   test user, a Preview deployed or redeployed, its non-secret variable, a Neon branch
   created, the browser suite.
@@ -217,6 +242,11 @@ the owner's machine, outside the repository.
   a secret, so `pnpm check` and the `check` job never run them; the promotion workflow
   runs them on staging's public host after each deployment of `main`. A flow
   sends the bypass to the preview's own host alone, records no trace, and deletes nothing.
+- **Phone flows live in `apps/mobile/.maestro/`**: they sign in through the development identity
+  against a demo database of their own and run on the owner's Mac, never in `check`. A green flow
+  shows the screens are wired, never that an invariant holds: a flow that writes is followed by a
+  server assertion, and dropped responses, duplicate sends, id conflicts and a wrong clock stay
+  with the injected-failure tests.
 - **Staging's standing deployment is the staging project's Production deployment**, built
   from `main`, the one the public staging host is attached to. "Production" there is
   Vercel's word for a project's main branch and nothing more: that project holds staging
@@ -229,13 +259,15 @@ the owner's machine, outside the repository.
 - **One staging host is public**, for the phones, once ARCHITECTURE's checks of it have
   passed (2026-11-15). A phone build carries no bypass, key or credential; every other
   Preview stays behind the wall.
+  It holds fictional data only, and there is no second public host.
 
 ## Session protocol (Claude Code)
 
 1. Start from `docs/MEMORY.md`, then read `docs/TASKS.md`. Work only the task Juan Pablo
    names, or the next unchecked task in the current stage.
 2. Before editing anything under schema, auth, sync, money or CI: write the plan, stop, wait
-   — except on a Release 0.1 track line, whose plan goes in its pull request.
+   — except on a line of the Release 0.1 track or of TASKS' Automation section, whose plan
+   goes in its pull request.
 3. Make the change; run `pnpm check` (typecheck, lint, format check, tests). Per-commit green
    is `pnpm check` against a database migrated to that commit's own journal; one fully
    migrated database carried across commits is a false red.
