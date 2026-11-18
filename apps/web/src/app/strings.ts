@@ -1,6 +1,6 @@
-// The office's English strings, in one module until the message catalog (TASKS, Stage 5)
-// exists; DESIGN wants office English through the same catalog as the crew app, so this file
-// is what moves there. Nothing crew-facing lives here.
+// The office's English strings, in one module. No message catalog is planned: the crew
+// app's strings are two typed catalogs with no i18n library (DESIGN, Localization). Nothing
+// crew-facing lives here.
 export const strings = {
   wordmark: "TRADER",
   devSignIn: "Development sign-in",
