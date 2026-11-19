@@ -1,6 +1,6 @@
 // TASKS S3, the weekly schedule's writers: assignment.create, update and remove — an admin
 // schedules any active person of the company on any job of the company that is not
-// archived, whatever their crews; the day and the times kept as written; ids the browser's,
+// archived, whatever their role; the day and the times kept as written; ids the browser's,
 // a resend `duplicate`; an overlap refused, a day that would not resolve refused with its
 // issues; a locked shift and what authorized its clock-in left alone; admin only, a job or a
 // person of another company one FORBIDDEN. Every call runs in a rolled-back transaction
@@ -8,7 +8,7 @@
 // rules themselves are eligibility.test.ts's, the reads list.test.ts's, what a shift does
 // not change about labor authority.test.ts's, and real commits against each other
 // assignment-commit.test.ts's.
-import { crewMembers, jobAssignments, users, workSessionEvents } from "@trader/db/schema";
+import { jobAssignments, users, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -17,8 +17,8 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  type CrewDay,
-  crewDayIn,
+  type WorkDay,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
@@ -34,11 +34,11 @@ afterAll(async () => {
 const WEEK = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"];
 const HOURS = { expectedStart: "07:00", expectedEnd: "15:30" };
 
-// A crew's day (w1 and w2 in the crew of job J; job K on no crew) with an admin, and a second
+// A working day (workers w1 and w2; jobs J and K) with an admin, and a second
 // company's day beside it. Fixtures are the owner's; from here the transaction is trader_app.
 async function office(tx: Tx) {
-  const day = await crewDayIn(tx);
-  const other = await crewDayIn(tx);
+  const day = await workDayIn(tx);
+  const other = await workDayIn(tx);
   const admin = await boundIn(tx, day.companyId, "admin");
   const worker = await boundIn(tx, day.companyId, "worker");
   const gone = await boundIn(tx, day.companyId, "worker", { deactivated: true });
@@ -73,7 +73,7 @@ const MON = "2026-11-16";
 // One shift of w1 on J on Monday, and its id.
 async function shift(
   plan: Awaited<ReturnType<typeof office>>["plan"],
-  day: CrewDay,
+  day: WorkDay,
   expectedStart: string,
   expectedEnd: string,
   over: { jobId?: string; workDate?: string } = {},
@@ -91,7 +91,7 @@ async function shift(
 
 // A clock-in of w1 on `job` at `at` (an instant; New York is UTC-5 that week), and the shift
 // locked by it — written as the owner, as push will under enforcement (TASKS S4).
-async function punched(tx: Tx, day: CrewDay, shiftId: string, at: string, job = day.J) {
+async function punched(tx: Tx, day: WorkDay, shiftId: string, at: string, job = day.J) {
   await tx.execute(sql`reset role`);
   const eventId = await eventIn(tx, day, {
     worker: day.w1,
@@ -128,15 +128,14 @@ describe("assignment.create", () => {
     });
   });
 
-  it("schedules several people on one job at once, whatever their crews and roles", async () => {
+  it("schedules several people on one job at once, whatever their roles", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, admin, plan } = await office(tx);
-      // K has no crew and w1 is not on it: a shift never reads membership. A foreman and an
-      // admin are scheduled like anyone.
+      // An admin is scheduled like anyone.
       for (const [userId, jobId] of [
         [day.w1, day.J],
         [day.w2, day.J],
-        [day.foremanId, day.K],
+        [day.userId, day.K],
         [admin.id, day.K],
       ] as const) {
         const days = on(MON);
@@ -536,15 +535,15 @@ describe("a shift locked by a clock-in", () => {
 });
 
 describe("gates and targets", () => {
-  it("is admin only: a worker and a foreman schedule nobody, not even themselves", async () => {
+  it("is admin only: a worker schedules nobody, not even themselves", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, worker, as, plan } = await office(tx);
       const morning = await shift(plan, day, "07:00", "15:30");
       const before = await plansOf(tx, day.companyId);
-      // day.who is the foreman of J's crew.
+      // Two workers: day.who is one more.
       for (const [who, self] of [
         [worker.who, worker.id],
-        [day.who, day.foremanId],
+        [day.who, day.userId],
       ] as const) {
         for (const call of [
           () =>
@@ -600,8 +599,8 @@ describe("gates and targets", () => {
 
   it("neither edits nor removes another company's shift, nor takes its id", async () => {
     await rolledBack(owner, async (tx) => {
-      const day = await crewDayIn(tx);
-      const other = await crewDayIn(tx);
+      const day = await workDayIn(tx);
+      const other = await workDayIn(tx);
       const admin = await boundIn(tx, day.companyId, "admin");
       const theirs = (expectedStart: string, expectedEnd: string) => ({
         companyId: other.companyId,
@@ -644,11 +643,10 @@ describe("gates and targets", () => {
 });
 
 describe("what a shift leaves alone", () => {
-  it("writes no membership and no labor event", async () => {
+  it("writes no labor event", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       const counts = async () => ({
-        members: await tx.$count(crewMembers, eq(crewMembers.companyId, day.companyId)),
         events: await tx.$count(
           workSessionEvents,
           eq(workSessionEvents.companyId, day.companyId),
@@ -657,13 +655,12 @@ describe("what a shift leaves alone", () => {
       // A first call, so the tenant is set for the counts that follow.
       await plan.remove({ assignmentId: crypto.randomUUID() });
       const before = await counts();
-      // w1 is not on K's crew — K has none.
       await plan.create({ userId: day.w1, jobId: day.K, days: on(...WEEK), ...HOURS });
       const [row] = await plansOf(tx, day.companyId);
       await plan.update({ assignmentId: row!.id, workDate: "2026-11-23", ...HOURS });
       await plan.remove({ assignmentId: row!.id });
       expect(await counts()).toEqual(before);
-      expect(before).toEqual({ members: 3, events: 0 });
+      expect(before).toEqual({ events: 0 });
     });
   });
 });

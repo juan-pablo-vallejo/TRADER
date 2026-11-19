@@ -10,7 +10,7 @@
 // transaction is never aborted, and a read then says which address is held. The id is the
 // database's own uuidv7(), so the only conflicts there can be are those two. An invitation
 // leaves one audit row (core/audit.ts). Consumed by routers/roster.ts.
-import { userRole } from "@trader/db/schema";
+import { ROLES } from "../contract/enums";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -45,7 +45,7 @@ export const inviteInput = z.strictObject({
   email: signInEmailSchema.optional(),
   phone: invitedPhone,
   name: z.string().trim().min(1).max(120),
-  role: z.enum(userRole.enumValues).default("worker"),
+  role: z.enum(ROLES).default("worker"),
 });
 
 export type InviteInput = z.infer<typeof inviteInput>;

@@ -3,8 +3,8 @@
 // record runs in a savepoint of it as trader_app under the day's tenant, as a record's own
 // transaction would. Commit independence is not provable here: the real-commit suite
 // (sync/push-commit.test.ts) proves it.
-import { crewMembers, crews, jobs, users, workSessionEvents } from "@trader/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { jobs, users, workSessionEvents } from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
@@ -18,12 +18,12 @@ import {
   asTenant,
   boundIn,
   companyIn,
-  crewDayIn,
+  workDayIn,
   ownerDb,
   rejection,
   rolledBack,
   uuidv7,
-  type CrewDay,
+  type WorkDay,
 } from "../helpers";
 
 const owner = ownerDb();
@@ -82,7 +82,7 @@ async function asOwner<T>(tx: Tx, d: { companyId: string }, body: () => Promise<
   return result;
 }
 
-const rowsOf = (tx: Tx, d: CrewDay) =>
+const rowsOf = (tx: Tx, d: WorkDay) =>
   asOwner(tx, d, async () => ({
     events: (
       await tx
@@ -93,12 +93,12 @@ const rowsOf = (tx: Tx, d: CrewDay) =>
   }));
 
 async function dayFor(tx: Tx) {
-  const d = await crewDayIn(tx);
+  const d = await workDayIn(tx);
   await asTenant(tx, d.companyId);
   return {
     d,
     w1: appUser(d, d.w1, "worker"),
-    foreman: appUser(d, d.foremanId, "foreman"),
+    w2: appUser(d, d.w2, "worker"),
   };
 }
 
@@ -334,7 +334,7 @@ describe("sync.push labor — flags", () => {
 
 describe("sync.push labor — the time an event claims, against its receipt (V1-D01)", () => {
   const HOUR = 3_600_000;
-  const rowOf = (tx: Tx, d: CrewDay, id: string) =>
+  const rowOf = (tx: Tx, d: WorkDay, id: string) =>
     asOwner(
       tx,
       d,
@@ -457,12 +457,12 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       const future = new Date(Date.now() + HOUR);
-      // K is not w1's crew's job: a caller out of scope learns no time verdict.
+      // Not w1's own labor: a caller out of scope learns no time verdict.
       expect(
         await push(
           tx,
           w1,
-          record({ workerId: d.w1, jobId: d.K, clientTimestamp: future }),
+          record({ workerId: d.w2, jobId: d.J, clientTimestamp: future }),
         ),
       ).toEqual({ result: "rejected", code: "not_permitted" });
       // An end with no session, in the future: named as the future time it is.
@@ -496,22 +496,16 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
 });
 
 describe("sync.push labor — who may push", () => {
-  it("lets a worker start only on their crew's jobs, never archived, and end anywhere", async () => {
+  it("lets a worker start on any job that is not archived, and end on one archived since", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       const notPermitted = { result: "rejected", code: "not_permitted" };
-      expect(await push(tx, w1, record({ workerId: d.w1, jobId: d.K }))).toEqual(
-        notPermitted,
-      );
       const start = record({ workerId: d.w1, jobId: d.J });
       expect((await push(tx, w1, start)).result).toBe("accepted");
-      // Removed from the crew and the job archived mid-session: the end is still accepted.
-      await asOwner(tx, d, async () => {
-        await tx
-          .delete(crewMembers)
-          .where(and(eq(crewMembers.crewId, d.crewId), eq(crewMembers.userId, d.w1)));
-        await tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.J));
-      });
+      // The job archived mid-session: the end is still accepted.
+      await asOwner(tx, d, () =>
+        tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.J)),
+      );
       expect(
         (
           await push(
@@ -537,10 +531,24 @@ describe("sync.push labor — who may push", () => {
           }),
         ),
       ).toEqual(notPermitted);
+      // Any other job of the company that is not archived, with nothing tying them to it.
+      expect(
+        (
+          await push(
+            tx,
+            w1,
+            record({
+              workerId: d.w1,
+              jobId: d.K,
+              clientTimestamp: at("2026-10-06T12:00:00Z"),
+            }),
+          )
+        ).result,
+      ).toBe("accepted");
     });
   });
 
-  it("refuses a worker's start on an archived job of their own crew", async () => {
+  it("refuses a worker's start on an archived job", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       await asOwner(tx, d, () =>
@@ -552,74 +560,32 @@ describe("sync.push labor — who may push", () => {
     });
   });
 
-  it("lets a foreman record a current member's labor, every type, and their own as a lead", async () => {
+  it("refuses a record naming another person as its worker not_permitted, every type, and writes nothing", async () => {
     await rolledBack(owner, async (tx) => {
-      const { d, foreman } = await dayFor(tx);
-      const types = ["started", "paused", "resumed", "ended"] as const;
-      for (const [i, type] of types.entries()) {
+      const { d, w1, w2 } = await dayFor(tx);
+      const a = await asOwner(tx, d, () => boundIn(tx, d.companyId, "admin"));
+      const notPermitted = { result: "rejected", code: "not_permitted" };
+      // A worker for a worker, and an admin for a worker: nobody records another's labor.
+      for (const caller of [w1, appUser(d, a.id, "admin")]) {
+        expect(await push(tx, caller, record({ workerId: d.w2, jobId: d.J }))).toEqual(
+          notPermitted,
+        );
+      }
+      expect(await rowsOf(tx, d)).toEqual({ events: 0 });
+      // Nor a pause, a resume or an end of a session that person opened themself.
+      expect((await push(tx, w2, record({ workerId: d.w2, jobId: d.J }))).result).toBe(
+        "accepted",
+      );
+      for (const [i, type] of (["paused", "resumed", "ended"] as const).entries()) {
         const r = record({
           workerId: d.w2,
           jobId: d.J,
           type,
-          clientTimestamp: at(`2026-10-05T1${2 + i}:00:00Z`),
-          location: HERE,
+          clientTimestamp: at(`2026-10-05T1${3 + i}:00:00Z`),
         });
-        expect((await push(tx, foreman, r)).result).toBe("accepted");
+        expect(await push(tx, w1, r)).toEqual(notPermitted);
       }
-      // Leading counts without a member row.
-      await asOwner(tx, d, () =>
-        tx
-          .delete(crewMembers)
-          .where(
-            and(eq(crewMembers.crewId, d.crewId), eq(crewMembers.userId, d.foremanId)),
-          ),
-      );
-      expect(
-        (await push(tx, foreman, record({ workerId: d.foremanId, jobId: d.J }))).result,
-      ).toBe("accepted");
-    });
-  });
-
-  it("refuses a foreman's labor for a non-member, a deactivated member, or after a demotion", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, foreman } = await dayFor(tx);
-      const outsider = await asOwner(tx, d, () => boundIn(tx, d.companyId, "worker"));
-      expect(
-        await push(tx, foreman, record({ workerId: outsider.id, jobId: d.J })),
-      ).toMatchObject({ code: "not_permitted" });
-      await asOwner(tx, d, () =>
-        tx.update(users).set({ deactivatedAt: new Date() }).where(eq(users.id, d.w1)),
-      );
-      expect(
-        await push(tx, foreman, record({ workerId: d.w1, jobId: d.J })),
-      ).toMatchObject({ code: "not_permitted" });
-      // The role is read under the lock, not from the resolved user the call was given.
-      await asOwner(tx, d, () =>
-        tx.update(users).set({ role: "worker" }).where(eq(users.id, d.foremanId)),
-      );
-      expect(
-        await push(tx, foreman, record({ workerId: d.w2, jobId: d.J })),
-      ).toMatchObject({ code: "not_permitted" });
-    });
-  });
-
-  it("refuses another crew's foreman, for this crew's member on this crew's job", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d } = await dayFor(tx);
-      const other = await asOwner(tx, d, async () => {
-        const f = await boundIn(tx, d.companyId, "foreman");
-        await tx
-          .insert(crews)
-          .values({ companyId: d.companyId, name: "Other", foremanUserId: f.id });
-        return f;
-      });
-      expect(
-        await push(
-          tx,
-          appUser(d, other.id, "foreman"),
-          record({ workerId: d.w1, jobId: d.J }),
-        ),
-      ).toMatchObject({ code: "not_permitted" });
+      expect(await rowsOf(tx, d)).toEqual({ events: 1 });
     });
   });
 
@@ -651,13 +617,13 @@ describe("sync.push labor — who may push", () => {
 
   it("sees no other tenant's job or worker", async () => {
     await rolledBack(owner, async (tx) => {
-      const other = await crewDayIn(tx);
-      const { d, w1, foreman } = await dayFor(tx);
+      const other = await workDayIn(tx);
+      const { d, w1, w2 } = await dayFor(tx);
       expect(
         await push(tx, w1, record({ workerId: d.w1, jobId: other.J })),
       ).toMatchObject({ code: "not_permitted" });
       expect(
-        await push(tx, foreman, record({ workerId: other.w1, jobId: d.J })),
+        await push(tx, w2, record({ workerId: other.w1, jobId: d.J })),
       ).toMatchObject({ code: "not_permitted" });
     });
   });
@@ -675,15 +641,13 @@ describe("sync.push labor — idempotency", () => {
     });
   });
 
-  it("answers its initiator's retry after they left the crew, from their own record", async () => {
+  it("answers its initiator's retry after the job was archived, from their own record", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       const r = record({ workerId: d.w1, jobId: d.J });
       const first = await push(tx, w1, r);
       await asOwner(tx, d, () =>
-        tx
-          .delete(crewMembers)
-          .where(and(eq(crewMembers.crewId, d.crewId), eq(crewMembers.userId, d.w1))),
+        tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.J)),
       );
       expect(await push(tx, w1, r)).toEqual({ ...first, result: "duplicate" });
     });
@@ -725,16 +689,19 @@ describe("sync.push labor — idempotency", () => {
 
   it("answers another initiator's id as id_conflict only in scope", async () => {
     await rolledBack(owner, async (tx) => {
-      const { d, w1, foreman } = await dayFor(tx);
-      const r = record({ workerId: d.w1, jobId: d.J });
-      expect((await push(tx, foreman, r)).result).toBe("accepted");
-      expect(await push(tx, w1, r)).toEqual({ result: "rejected", code: "id_conflict" });
-      expect(await push(tx, w1, { ...r, payload: { ...r.payload, jobId: d.K } })).toEqual(
-        {
-          result: "rejected",
-          code: "not_permitted",
-        },
-      );
+      const { d, w1, w2 } = await dayFor(tx);
+      const theirs = record({ workerId: d.w2, jobId: d.J });
+      expect((await push(tx, w2, theirs)).result).toBe("accepted");
+      // The same id on w1's own record: taken. On a record out of w1's scope: nothing said.
+      const mine = record({ workerId: d.w1, jobId: d.J }, theirs.id);
+      expect(await push(tx, w1, mine)).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
+      expect(await push(tx, w1, theirs)).toEqual({
+        result: "rejected",
+        code: "not_permitted",
+      });
     });
   });
 
@@ -781,7 +748,7 @@ describe("sync.push labor — an admin's own labor", () => {
   const FLAGGED = { capturedOffline: true, timeSetByUser: true, location: null } as const;
   const REASONS = ["offline", "user_timed", "location", "clock_skewed"];
 
-  const flagsOf = (tx: Tx, d: CrewDay, eventId: string) =>
+  const flagsOf = (tx: Tx, d: WorkDay, eventId: string) =>
     asOwner(
       tx,
       d,
@@ -795,7 +762,7 @@ describe("sync.push labor — an admin's own labor", () => {
     );
 
   // How one worker's sessions count, by the accounting every reader uses.
-  async function accounting(tx: Tx, d: CrewDay, workerId: string) {
+  async function accounting(tx: Tx, d: WorkDay, workerId: string) {
     return asOwner(tx, d, async () =>
       [...sessionAccounting(await readWorkerEvents(tx, workerId)).byRoot.values()].map(
         (s) => s.accounting,
@@ -803,14 +770,14 @@ describe("sync.push labor — an admin's own labor", () => {
     );
   }
 
-  async function adminIn(tx: Tx, d: CrewDay) {
+  async function adminIn(tx: Tx, d: WorkDay) {
     const a = await asOwner(tx, d, () => boundIn(tx, d.companyId, "admin"));
     return appUser(d, a.id, "admin");
   }
 
   it("flags an admin's event like anyone's, keeps its evidence, and it counts", async () => {
     await rolledBack(owner, async (tx) => {
-      const { d, w1, foreman } = await dayFor(tx);
+      const { d, w1, w2 } = await dayFor(tx);
       const admin = await adminIn(tx, d);
       const r = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
       expect(await push(tx, admin, r, SKEWED)).toMatchObject({
@@ -832,8 +799,8 @@ describe("sync.push labor — an admin's own labor", () => {
       });
       expect(await accounting(tx, d, admin.id)).toEqual(["eligible"]);
 
-      // The same event from a worker and from a foreman: the same flags, and it counts.
-      for (const who of [w1, foreman]) {
+      // The same event from a worker, and from another: the same flags, and it counts.
+      for (const who of [w1, w2]) {
         const theirs = record({ workerId: who.id, jobId: d.J, ...FLAGGED });
         expect(await push(tx, who, theirs, SKEWED)).toMatchObject({
           result: "accepted",
@@ -841,27 +808,6 @@ describe("sync.push labor — an admin's own labor", () => {
         });
         expect(await flagsOf(tx, d, theirs.id)).toEqual(REASONS);
         expect(await accounting(tx, d, who.id)).toEqual(["eligible"]);
-      }
-    });
-  });
-
-  it("flags an admin's labor their foreman recorded as it does any member's", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, foreman } = await dayFor(tx);
-      const admin = await adminIn(tx, d);
-      await asOwner(tx, d, () =>
-        tx
-          .insert(crewMembers)
-          .values({ companyId: d.companyId, crewId: d.crewId, userId: admin.id }),
-      );
-      const flags = ["offline", "user_timed", "location"];
-      for (const workerId of [admin.id, d.w2]) {
-        const r = record({ workerId, jobId: d.J, ...FLAGGED });
-        expect(await push(tx, foreman, r)).toMatchObject({
-          result: "accepted",
-          ack: { reasons: flags },
-        });
-        expect(await flagsOf(tx, d, r.id)).toEqual(flags);
       }
     });
   });

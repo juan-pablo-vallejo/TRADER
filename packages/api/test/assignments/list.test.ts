@@ -11,7 +11,7 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  crewDayIn,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
@@ -25,11 +25,11 @@ afterAll(async () => {
 
 const HOURS = { expectedStart: "07:00", expectedEnd: "15:30" };
 
-// Two companies' crew days, a bound admin and two bound workers in the first, a bound worker
+// Two companies' working days, a bound admin and two bound workers in the first, a bound worker
 // in the second. `put` writes a plan as the owner, before the transaction becomes trader_app.
 async function office(tx: Tx) {
-  const day = await crewDayIn(tx);
-  const other = await crewDayIn(tx);
+  const day = await workDayIn(tx);
+  const other = await workDayIn(tx);
   const admin = await boundIn(tx, day.companyId, "admin");
   const ana = await boundIn(tx, day.companyId, "worker");
   const ben = await boundIn(tx, day.companyId, "worker");
@@ -182,7 +182,7 @@ describe("assignment.list", () => {
     });
   });
 
-  it("is the office's alone: a worker and a foreman are FORBIDDEN", async () => {
+  it("is the office's alone: a worker is FORBIDDEN", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, ana } = await office(tx);
       await becomeApp(tx);

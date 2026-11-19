@@ -1,16 +1,9 @@
-// sync.pull (ARCHITECTURE, Sync protocol; sync.pull of 2026-11-05): a per-user snapshot of the
-// caller's own entries and the reference data the push admits, never anyone else's labor. Devices hold only their user's own entries offline; crew views are online-only
-// (PRD, Sync and offline). One protected transaction; under READ COMMITTED each statement reads
-// its own committed state, so the snapshot may combine moments, and the next pull converges. Consumed by routers/sync.ts.
-import {
-  companies,
-  crewMembers,
-  crews,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
-import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+// sync.pull: a per-user snapshot of the caller's own entries and the reference data the push
+// admits, never anyone else's labor. One protected transaction; under READ COMMITTED each
+// statement reads its own committed state, so the snapshot may combine moments, and the next
+// pull converges. Consumed by routers/sync.ts.
+import { companies, jobs, workSessionEvents } from "@trader/db/schema";
+import { asc, eq, inArray, ne } from "drizzle-orm";
 
 import { loadDays } from "../assignments/day";
 import type { Tx } from "../core/context";
@@ -50,70 +43,13 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   if (company === undefined) throw new Error("the caller's company is not visible");
   const from = daysBefore(workDate(serverNow, company.timezone), WINDOW_DAYS - 1);
 
-  // Crews the caller is in or leads, active.
-  const memberOf = tx
-    .select({ crewId: crewMembers.crewId })
-    .from(crewMembers)
-    .where(eq(crewMembers.userId, user.id));
-  const myCrews = await tx
-    .select({ id: crews.id, name: crews.name, foremanUserId: crews.foremanUserId })
-    .from(crews)
-    .where(
-      and(
-        isNull(crews.deactivatedAt),
-        or(eq(crews.foremanUserId, user.id), inArray(crews.id, memberOf)),
-      ),
-    )
-    .orderBy(asc(crews.id));
-
-  const jobColumns = {
-    id: jobs.id,
-    name: jobs.name,
-    address: jobs.address,
-    status: jobs.status,
-  };
-  const notArchived = ne(jobs.status, "archived");
-  const crewIds = myCrews.map((c) => c.id);
-  const jobRows =
-    user.role === "admin"
-      ? await tx.select(jobColumns).from(jobs).where(notArchived).orderBy(asc(jobs.id))
-      : crewIds.length === 0
-        ? []
-        : await tx
-            .select(jobColumns)
-            .from(jobs)
-            .where(and(notArchived, inArray(jobs.crewId, crewIds)))
-            .orderBy(asc(jobs.id));
-
-  // Led crews need the foreman role as well as the pointer: a foreman demoted by the roster
-  // keeps the pointer until the office changes it (ARCHITECTURE, crew membership lifecycle)
-  // and must stop receiving member names at once.
-  const led =
-    user.role === "foreman" ? myCrews.filter((c) => c.foremanUserId === user.id) : [];
-  const memberRows =
-    led.length === 0
-      ? []
-      : await tx
-          .select({ crewId: crewMembers.crewId, id: users.id, name: users.name })
-          .from(crewMembers)
-          .innerJoin(users, eq(users.id, crewMembers.userId))
-          .where(
-            and(
-              inArray(
-                crewMembers.crewId,
-                led.map((c) => c.id),
-              ),
-              isNull(users.deactivatedAt),
-            ),
-          )
-          .orderBy(asc(users.id));
-  const ledCrews = led.map((c) => ({
-    id: c.id,
-    name: c.name,
-    members: memberRows
-      .filter((m) => m.crewId === c.id)
-      .map((m) => ({ id: m.id, name: m.name })),
-  }));
+  // Every job a start may name: not archived. Under the schedule the phone offers the
+  // shift's own job; without it, the person picks from these.
+  const jobRows = await tx
+    .select({ id: jobs.id, name: jobs.name, address: jobs.address, status: jobs.status })
+    .from(jobs)
+    .where(ne(jobs.status, "archived"))
+    .orderBy(asc(jobs.id));
 
   // The caller's labor, folded whole (the fold needs the whole ledger), then windowed.
   const ledger = await readWorkerEvents(tx, user.id);
@@ -196,7 +132,6 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     scheduleEnforced: company.scheduleEnforced,
     shifts,
     jobs: jobRows,
-    ledCrews,
     sessions: kept.map((s) => ({
       rootEventId: s.rootEventId,
       jobId: s.jobId,

@@ -13,8 +13,8 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  type CrewDay,
-  crewDayIn,
+  type WorkDay,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
@@ -33,8 +33,8 @@ const THIS = "2026-11-09";
 const HOURS = { expectedStart: "07:00", expectedEnd: "15:30" };
 
 async function office(tx: Tx) {
-  const day = await crewDayIn(tx);
-  const other = await crewDayIn(tx);
+  const day = await workDayIn(tx);
+  const other = await workDayIn(tx);
   const admin = await boundIn(tx, day.companyId, "admin");
   const worker = await boundIn(tx, day.companyId, "worker");
   // A shift written as the owner: the fixture is last week as it stands, however it got so.
@@ -55,7 +55,7 @@ async function office(tx: Tx) {
   return { day, other, admin, worker, put, as, plan: as(admin.who) };
 }
 
-const shiftsOf = async (tx: Tx, d: CrewDay, from = THIS) =>
+const shiftsOf = async (tx: Tx, d: WorkDay, from = THIS) =>
   tx
     .select({
       userId: jobAssignments.userId,

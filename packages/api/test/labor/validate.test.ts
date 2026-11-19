@@ -524,20 +524,20 @@ describe("two sources for one worker", () => {
   const setup = () => {
     const ev = builder();
     const start = ev("started", at("08:00"));
-    const foremanPause = ev("paused", at("10:00"), { server: RECEIVED });
+    const officePause = ev("paused", at("10:00"), { server: RECEIVED });
     const workerResume = ev("resumed", at("10:15"), { server: RECEIVED });
-    return { ev, start, foremanPause, workerResume };
+    return { ev, start, officePause, workerResume };
   };
 
   it("accepts both when the pause arrives first", () => {
-    const { start, foremanPause, workerResume } = setup();
-    pushAll([start], foremanPause, workerResume);
+    const { start, officePause, workerResume } = setup();
+    pushAll([start], officePause, workerResume);
   });
 
   it("rejects the resume that arrives first; the pause lands; a repair resumes", () => {
-    const { ev, start, foremanPause, workerResume } = setup();
+    const { ev, start, officePause, workerResume } = setup();
     expect(push([start], workerResume)).toEqual(no("not_paused", start.id));
-    const timeline = pushAll([start], foremanPause);
+    const timeline = pushAll([start], officePause);
     expect(foldSessions(timeline)[0]!.state).toBe("paused");
     pushAll(timeline, ev("resumed", at("10:15"), { server: RECEIVED }));
   });

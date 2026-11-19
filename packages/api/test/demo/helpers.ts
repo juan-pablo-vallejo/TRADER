@@ -68,23 +68,12 @@ export async function count(db: Db, table: string): Promise<number> {
 }
 
 export async function counts(db: Db) {
-  const [users, customers, jobs, crews, crewMembers, events, assignments] =
-    await Promise.all([
-      count(db, "users"),
-      count(db, "customers"),
-      count(db, "jobs"),
-      count(db, "crews"),
-      count(db, "crew_members"),
-      count(db, "work_session_events"),
-      count(db, "job_assignments"),
-    ]);
-  return {
-    users,
-    customers,
-    jobs,
-    crews,
-    crewMembers,
-    events,
-    assignments,
-  };
+  const [users, customers, jobs, events, assignments] = await Promise.all([
+    count(db, "users"),
+    count(db, "customers"),
+    count(db, "jobs"),
+    count(db, "work_session_events"),
+    count(db, "job_assignments"),
+  ]);
+  return { users, customers, jobs, events, assignments };
 }

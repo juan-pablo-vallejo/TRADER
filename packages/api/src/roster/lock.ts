@@ -14,7 +14,8 @@ import { forbidden, unauthorized } from "../core/trpc";
 
 export type LockedTarget = {
   id: string;
-  role: AppUser["role"];
+  // As stored.
+  role: string;
   deactivatedAt: Date | null;
 };
 

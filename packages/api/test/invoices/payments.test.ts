@@ -12,7 +12,7 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  crewDayIn,
+  workDayIn,
   outcome,
   ownerDb,
   rolledBack,
@@ -26,8 +26,8 @@ afterAll(async () => {
 
 // A company with a series at 1042 and an admin; another company with an issued invoice.
 async function office(tx: Tx) {
-  const day = await crewDayIn(tx);
-  const other = await crewDayIn(tx);
+  const day = await workDayIn(tx);
+  const other = await workDayIn(tx);
   const admin = await boundIn(tx, day.companyId, "admin");
   const theirAdmin = await boundIn(tx, other.companyId, "admin");
   const worker = await boundIn(tx, day.companyId, "worker");

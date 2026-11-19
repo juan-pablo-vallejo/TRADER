@@ -65,7 +65,6 @@ describe("jobs through the route handler", () => {
       location: { lat: 41.8, lng: -71.4, radiusM: 150 },
       status: "open",
       customer: { id: customer!.id, name: "Smith Residence" },
-      crew: null,
     });
     const list = await query(GET, "job.list", { headers: as(admin.email) });
     expect(list.status).toBe(200);

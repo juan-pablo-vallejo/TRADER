@@ -1,6 +1,5 @@
-// The office's English strings, in one module. No message catalog is planned: the crew
-// app's strings are two typed catalogs with no i18n library (DESIGN, Localization). Nothing
-// crew-facing lives here.
+// The office's English strings, in one module. The phone app's strings are its own two
+// typed catalogs; nothing a worker sees lives here.
 export const strings = {
   wordmark: "TRADER",
   devSignIn: "Development sign-in",
@@ -24,7 +23,6 @@ export const strings = {
   roster: "People",
   customers: "Customers",
   jobs: "Jobs",
-  crews: "Crews",
   // The Weekly Schedule screen (DESIGN, Weekly Schedule): a shift is a "Shift", a job a
   // "Jobsite". One namespace, so its many words cannot collide with the flat keys above.
   schedule: {
@@ -268,8 +266,6 @@ export const strings = {
   // Editors and create forms
   details: "Details",
   location: "Location (optional)",
-  leadsCrew: "Leads this crew",
-  chooseForemanFirst: "Choose a foreman to add the crew.",
 
   // Roster
   emptyRoster: "Nobody is on the roster yet.",
@@ -298,7 +294,7 @@ export const strings = {
   invited: "Invited",
   active: "Active",
   deactivated: "Deactivated",
-  roles: { admin: "Admin", foreman: "Foreman", worker: "Worker" },
+  roles: { admin: "Admin", worker: "Worker" },
 
   // Customers
   emptyCustomers: "No customers yet.",
@@ -312,29 +308,8 @@ export const strings = {
   deactivateCustomerEffect:
     "No new job can be added for this customer. Its past jobs stay.",
 
-  // Crews
-  emptyCrews: "No crews yet.",
-  addCrew: "Add crew",
-  crew: "Crew",
-  foreman: "Foreman",
-  members: "Members",
-  chooseForeman: "Choose a foreman",
   choosePerson: "Choose a person",
-  needsForeman: "Needs a foreman",
-  changeForeman: "Change foreman",
-  addMember: "Add member",
   remove: "Remove",
-  deactivateCrew: "Deactivate crew",
-  deactivateCrewEffect:
-    "No job can be assigned to this crew, and its foreman can no longer record crew hours or close out its days.",
-  removeMemberEffect: (name: string) =>
-    `Hours ${name} recorded on this crew's jobs and has not synced yet will be refused when they arrive.`,
-  userInactive: "That person is deactivated.",
-  notAForeman: "The foreman must have the Foreman role.",
-  reactivateCrewFirst: "Reactivate the crew first",
-  changeForemanFirst: "Change the foreman first",
-  jobsAssigned: (n: number) =>
-    `${n === 1 ? "1 job is" : `${n} jobs are`} assigned to this crew. Reassign or archive ${n === 1 ? "it" : "them"} first.`,
 
   // Jobs
   emptyJobs: "No jobs to show.",
@@ -342,7 +317,6 @@ export const strings = {
   job: "Job",
   customer: "Customer",
   chooseCustomer: "Choose a customer",
-  unassigned: "Unassigned",
   latitude: "Latitude",
   longitude: "Longitude",
   radiusM: "Radius (m)",
@@ -351,17 +325,13 @@ export const strings = {
   allJobs: "All",
   jobStatus: { open: "Open", complete: "Complete", archived: "Archived" },
   saveDetails: "Save details",
-  assign: "Assign",
   setStatus: "Set status",
   customerInactive: "That customer is deactivated.",
-  crewInactive: "That crew is deactivated.",
   customerInactiveOnStatus:
     "This customer is deactivated. Reactivate them, or move the job to another customer first.",
-  crewInactiveOnStatus:
-    "This job's crew is deactivated. Reactivate it or reassign the job first.",
   hasInvoices: "This job has invoices; its customer can no longer change.",
   archivedNote:
-    "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
+    "Archived jobs leave the phones' job list on the next sync; open sessions still clock out.",
   person: "Person",
   chooseJob: "Choose a job",
   planFrom: "From",

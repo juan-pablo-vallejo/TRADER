@@ -26,10 +26,9 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
-import { lockActiveSelf } from "../core/locks";
+import { lockActiveSelf, lockUsersShare } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
-import { lockUsersShare } from "../crews/lock";
 import {
   type DayShift,
   judgeDay,

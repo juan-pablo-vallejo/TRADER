@@ -12,7 +12,7 @@ import { createCallerFactory } from "../../src/core/trpc";
 import { appRouter } from "../../src/router";
 import {
   boundIn,
-  crewDayIn,
+  workDayIn,
   disposableDb,
   quietReporter,
   REQUEST_ID,
@@ -46,11 +46,11 @@ const caller = (who: VerifiedIdentity) =>
 const DAY = "2026-11-09";
 const SEVEN_TEN = new Date(`${DAY}T07:10:00-05:00`);
 
-// A committed crew day with a bound admin and a bound worker who is in no crew, one shift of
+// A committed working day with a bound admin and a bound worker, one shift of
 // hers on J from 07:00 to 15:30, and enforcement as asked.
 async function world(enforced: boolean) {
   return D.owner.transaction(async (tx) => {
-    const d = await crewDayIn(tx);
+    const d = await workDayIn(tx);
     const admin = await boundIn(tx, d.companyId, "admin");
     const ana = await boundIn(tx, d.companyId, "worker");
     const [shift] = await tx
@@ -121,8 +121,8 @@ describe("with enforcement off", () => {
     const d = await world(false);
     await D.owner.transaction(async (tx) => {
       await tx.execute(sql`lock table job_assignments in access exclusive mode`);
-      // The foreman's own start on their crew's job, as before the schedule existed.
-      const answer = await start(d.who, d.foremanId, d.J);
+      // A worker's own start with no shift, as before the schedule existed.
+      const answer = await start(d.who, d.userId, d.J);
       expect(answer).toMatchObject({ result: "accepted" });
     });
   });

@@ -1,4 +1,4 @@
-// Every string the crew reads, as one typed shape (RULES: every crew-facing string goes
+// Every string a worker reads, as one typed shape (every such string goes
 // through the i18n layer with English and Spanish entries). A catalog is a plain object of
 // this type, so a key missing from either language does not compile, and a test holds the
 // two to the same keys with nothing left blank (test/i18n.test.ts). No library: two objects.

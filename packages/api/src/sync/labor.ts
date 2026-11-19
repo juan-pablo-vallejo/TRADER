@@ -109,11 +109,8 @@ export async function pushLaborEvent(
   // 2. Authority, from rows locked now (sync/scope.ts). Whether the schedule decides a start
   // is the company's setting, read here; with it off nothing reads a shift.
   const enforced = p.type === "started" && (await scheduleEnforced(tx));
-  const scope = await lockPushScope(tx, user, p.jobId, p.workerId);
-  if (!mayRecordLabor(scope, user, p.workerId, p.type, enforced))
-    return rejected("not_permitted");
-  // An admin's own start needs no shift (2026-11-15, schedule authority).
-  const scheduled = enforced && !(p.workerId === user.id && scope!.role === "admin");
+  const scope = await lockPushScope(tx, user, p.jobId);
+  if (!mayRecordLabor(scope, user, p.workerId, p.type)) return rejected("not_permitted");
 
   // 3. The worker's ledger, with no other labor writer for them.
   const timeline = await loadWorkerTimeline(tx, p.workerId);
@@ -166,14 +163,15 @@ export async function pushLaborEvent(
   // 6. The schedule, where the company enforces it. Admitted, the start will lock its shift.
   // Not admitted and captured offline, it is stored under its own id at its recorded time,
   // flagged `unscheduled`, and counts unless the office corrects it: the pause, resume and
-  // end behind it are judged against it and not refused in a chain. Any other start the
-  // schedule does not admit is refused and writes nothing.
+  // end behind it are judged against it and not refused in a chain. An admin starts on any
+  // open job, shift or not: theirs is stored and flagged the same way, online too. Any other
+  // start the schedule does not admit is refused: the worker calls the office.
   let admittedOn: string | null = null;
   let unscheduled = false;
-  if (scheduled) {
+  if (enforced) {
     const start = await judgeStart(tx, p.workerId, p.jobId, p.clientTimestamp);
     if (start.admitted) admittedOn = start.shiftId;
-    else if (p.capturedOffline) unscheduled = true;
+    else if (p.capturedOffline || scope!.role === "admin") unscheduled = true;
     else return rejected("not_scheduled");
   }
 

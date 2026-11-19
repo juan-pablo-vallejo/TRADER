@@ -67,14 +67,13 @@ async function single(who: unknown, path: string) {
 }
 
 // The matrix: what each active role gets at each gate.
-const ADMITTED: Record<"worker" | "foreman" | "admin", Record<Gate, boolean>> = {
-  worker: { protected: true, field: true, foreman: false, admin: false, office: false },
-  foreman: { protected: true, field: true, foreman: true, admin: false, office: true },
-  admin: { protected: true, field: false, foreman: false, admin: true, office: true },
+const ADMITTED: Record<"worker" | "admin", Record<Gate, boolean>> = {
+  worker: { protected: true, worker: true, admin: false, either: true },
+  admin: { protected: true, worker: false, admin: true, either: true },
 };
 
 describe("role gates", () => {
-  for (const role of ["worker", "foreman", "admin"] as const) {
+  for (const role of ["worker", "admin"] as const) {
     it(`admit each role at exactly its gates (${role}) and refuse it with FORBIDDEN elsewhere`, async () => {
       const { who } = await member(owner, w, "a", role);
       for (const gate of GATES) {
@@ -105,10 +104,10 @@ describe("role gates", () => {
   });
 });
 
-// No identity, then a deactivated worker, foreman and admin.
+// No identity, then a deactivated worker and admin.
 async function anonymousAndDeactivated() {
   const deactivated = [];
-  for (const role of ["worker", "foreman", "admin"] as const) {
+  for (const role of ["worker", "admin"] as const) {
     deactivated.push((await member(owner, w, "a", role, { deactivated: true })).who);
   }
   return [null, ...deactivated];
@@ -127,7 +126,7 @@ describe("a deactivated account, exactly like an anonymous one", () => {
   it("gets the same status, code and message over HTTP, one request each", async () => {
     const callers = await anonymousAndDeactivated();
     for (const who of callers) {
-      for (const path of ["gate.admin", "gate.foreman", "gate.protected"]) {
+      for (const path of ["gate.admin", "gate.worker", "gate.protected"]) {
         expect([path, await single(who, path)]).toEqual([path, UNAUTHORIZED]);
       }
     }
@@ -137,15 +136,14 @@ describe("a deactivated account, exactly like an anonymous one", () => {
 describe("a denial", () => {
   it("is FORBIDDEN with one message that names no role, distinct from sign-in", async () => {
     const worker = (await member(owner, w, "a", "worker")).who;
-    const foreman = (await member(owner, w, "a", "foreman")).who;
+    const admin = (await member(owner, w, "a", "admin")).who;
     for (const [who, path] of [
       [worker, "gate.admin"],
-      [worker, "gate.foreman"],
-      [foreman, "gate.admin"],
+      [admin, "gate.worker"],
     ] as const) {
       const answer = await single(who, path);
       expect([path, answer]).toEqual([path, FORBIDDEN]);
-      expect(answer.message).not.toMatch(/admin|foreman|worker/i);
+      expect(answer.message).not.toMatch(/admin|worker/i);
     }
   });
 

@@ -149,7 +149,7 @@ describe("roster.invite", () => {
   it("inserts an invitation by number alone that a sign-in with that number binds", async () => {
     const admin = await member(owner, w, "a", "admin");
     const phone = testPhone();
-    const answer = await invite(admin.who, { phone: typed(phone), name: "Crew Member" });
+    const answer = await invite(admin.who, { phone: typed(phone), name: "Field Worker" });
     expect(answer).toMatchObject({
       result: "invited",
       user: {
@@ -171,9 +171,9 @@ describe("roster.invite", () => {
     // Another number is no one; the number itself is this row, once.
     const stranger = phoneIdentity(`sub-stranger-${w.run}`, testPhone());
     expect(await outcome(appCaller(app, stranger).me.get())).toBe("UNAUTHORIZED");
-    const me = await appCaller(app, phoneIdentity(`sub-crew-${w.run}`, phone)).me.get();
+    const me = await appCaller(app, phoneIdentity(`sub-field-${w.run}`, phone)).me.get();
     expect(me).toMatchObject({ id: answer.user.id, email: null, signInPhone: phone });
-    const second = phoneIdentity(`sub-crew-2-${w.run}`, phone);
+    const second = phoneIdentity(`sub-field-2-${w.run}`, phone);
     expect(await outcome(appCaller(app, second).me.get())).toBe("UNAUTHORIZED");
   });
 

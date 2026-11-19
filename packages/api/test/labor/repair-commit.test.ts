@@ -3,7 +3,7 @@
 // rollback surviving a commit, or a repair holding at a true COMMIT; these do. A holder
 // transaction takes a lock first; the calls are started against it, seen waiting in
 // pg_stat_activity (waitForLockWait, no sleeps), and the holder then ends.
-import { crewMembers, users, workSessionEvents } from "@trader/db/schema";
+import { users, workSessionEvents } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -17,7 +17,7 @@ import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
 import {
   boundIn,
-  crewDayIn,
+  workDayIn,
   disposableDb,
   eventIn,
   outcome,
@@ -87,17 +87,14 @@ const voidOf = (root: string): Op => ({ kind: "void", id: uuidv7(), voidsEventId
 const repair = (who: VerifiedIdentity, workerId: string, operations: Op[]) =>
   caller(who).labor.repair({ workerId, operations });
 
-// Committed: a crew day, two admins, a bound crew worker `w`, and w's day on J, 08:00–16:00
+// Committed: a working day, two admins, a bound worker `w`, and w's day on J, 08:00–16:00
 // local (12:00–20:00 UTC).
 async function world() {
   return D.owner.transaction(async (tx) => {
-    const d = await crewDayIn(tx);
+    const d = await workDayIn(tx);
     const admin = await boundIn(tx, d.companyId, "admin");
     const admin2 = await boundIn(tx, d.companyId, "admin");
     const w = await boundIn(tx, d.companyId, "worker");
-    await tx
-      .insert(crewMembers)
-      .values({ companyId: d.companyId, crewId: d.crewId, userId: w.id });
     const start = await eventIn(tx, d, {
       worker: w.id,
       job: d.J,

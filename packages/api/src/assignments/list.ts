@@ -2,40 +2,27 @@
 // dated assignments, V1-D07; DESIGN, Assignment row).
 //
 // `list` is the office's: the company's plans over a range of days, each with whether the
-// planned person could clock in on that job as things stand now. That answer is push
-// authority's own — `mayStartOn` (sync/scope.ts), asked of the planned person from the rows
-// this read joins — so the office is never told something the phone's push would contradict.
-// `blockedBy` says which fact stands in the way, in the order push meets them: a deactivated
-// person cannot push at all; an archived job takes no clock-in from anyone; otherwise it is
-// the crew — the job has none, its crew is deactivated, or the person is not on it. The flag
-// is read without locks and is true of the moment of the read: it follows the next membership
-// change at the next read. It never blocks a write (write.ts).
+// planned person could clock in on that job as things stand now, and which fact stands in
+// the way, in the order push meets them: a deactivated person cannot push at all; an archived
+// job takes no clock-in from anyone. The flag is read without locks and is true of the moment
+// of the read. It never blocks a write (write.ts).
 //
 // `mine` is the caller's own plans and takes no person in its input, so there is nothing to
 // ask about anyone else. It carries what a worker needs to turn up — the day, the times, the
 // job's name and address — and nothing the office decides by: no flag, no customer, no status,
-// no coordinates. It widens no other read: the job's ledger, its crew and its other workers
+// no coordinates. It widens no other read: the job's ledger and its other workers
 // stay where they were.
 //
 // Both ranges are inclusive calendar days, as written (schema, job-assignments.ts), and
 // bounded. Plain reads under RLS. Consumed by routers/assignment.ts; `ownAssignments` is also
 // what the pull extension reads (TASKS, Stage 5).
-import {
-  companies,
-  crewMembers,
-  crews,
-  jobAssignments,
-  jobs,
-  jobStatus,
-  users,
-} from "@trader/db/schema";
+import { companies, jobAssignments, jobs, jobStatus, users } from "@trader/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
-import { mayStartOn } from "../sync/scope";
 import { toWallTime, wallTime, workDay } from "./write";
 
 // The longest range one read covers: any month.
@@ -61,7 +48,7 @@ export const listInput = z
 
 export const mineInput = z.strictObject(range).refine(bounded, RANGE);
 
-const BLOCKED_BY = ["worker_inactive", "job_archived", "crew"] as const;
+const BLOCKED_BY = ["worker_inactive", "job_archived"] as const;
 
 export const listOutput = z.array(
   z.strictObject({
@@ -125,28 +112,14 @@ export async function listAssignments(
       expectedEnd: jobAssignments.expectedEnd,
       workerId: users.id,
       workerName: users.name,
-      workerRole: users.role,
       workerDeactivatedAt: users.deactivatedAt,
       jobId: jobs.id,
       jobName: jobs.name,
       jobStatus: jobs.status,
-      crewId: crews.id,
-      crewForemanUserId: crews.foremanUserId,
-      crewDeactivatedAt: crews.deactivatedAt,
-      memberUserId: crewMembers.userId,
     })
     .from(jobAssignments)
     .innerJoin(users, eq(users.id, jobAssignments.userId))
     .innerJoin(jobs, eq(jobs.id, jobAssignments.jobId))
-    .leftJoin(crews, eq(crews.id, jobs.crewId))
-    // The planned person's own membership of the job's crew: at most one row.
-    .leftJoin(
-      crewMembers,
-      and(
-        eq(crewMembers.crewId, jobs.crewId),
-        eq(crewMembers.userId, jobAssignments.userId),
-      ),
-    )
     .where(
       and(
         gte(jobAssignments.workDate, input.from),
@@ -166,29 +139,7 @@ export async function listAssignments(
   return rows.map((r) => {
     const active = r.workerDeactivatedAt === null;
     const jobArchived = r.jobStatus === "archived";
-    // The scope push would lock for this person on this job (sync/scope.ts, lockPushScope):
-    // the crew only when the job has one and it is active.
-    const admitted =
-      active &&
-      mayStartOn(
-        {
-          role: r.workerRole,
-          jobArchived,
-          place: null,
-          crew:
-            r.crewId !== null &&
-            r.crewForemanUserId !== null &&
-            r.crewDeactivatedAt === null
-              ? {
-                  foremanUserId: r.crewForemanUserId,
-                  members: new Set(r.memberUserId === null ? [] : [r.memberUserId]),
-                }
-              : null,
-          workerActive: active,
-          workerAdmin: r.workerRole === "admin",
-        },
-        { id: r.workerId },
-      );
+    const admitted = active && !jobArchived;
     return {
       id: r.id,
       workDate: r.workDate,
@@ -201,9 +152,7 @@ export async function listAssignments(
         ? null
         : !active
           ? ("worker_inactive" as const)
-          : jobArchived
-            ? ("job_archived" as const)
-            : ("crew" as const),
+          : ("job_archived" as const),
     };
   });
 }

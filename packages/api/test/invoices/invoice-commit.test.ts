@@ -11,7 +11,7 @@ import { createCallerFactory } from "../../src/core/trpc";
 import { appRouter } from "../../src/router";
 import {
   boundIn,
-  crewDayIn,
+  workDayIn,
   disposableDb,
   quietReporter,
   REQUEST_ID,
@@ -43,7 +43,7 @@ const bill = (who: VerifiedIdentity) =>
 // A committed company with a series at 1042, an admin, and `n` drafts of one line each.
 async function world(n: number) {
   return D.owner.transaction(async (tx) => {
-    const d = await crewDayIn(tx);
+    const d = await workDayIn(tx);
     const admin = await boundIn(tx, d.companyId, "admin");
     await tx.insert(invoiceCounters).values({
       companyId: d.companyId,

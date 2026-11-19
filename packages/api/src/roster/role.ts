@@ -4,7 +4,8 @@
 // demote themself while another remains; their call commits and the next is FORBIDDEN. The
 // same role again is `unchanged` and writes nothing. A change leaves one audit row
 // (core/audit.ts). Consumed by routers/roster.ts.
-import { userRole, users } from "@trader/db/schema";
+import { ROLES } from "../contract/enums";
+import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -15,7 +16,7 @@ import { isActiveAdmin, lockRosterRows } from "./lock";
 
 export const setRoleInput = z.strictObject({
   userId: z.uuid(),
-  role: z.enum(userRole.enumValues),
+  role: z.enum(ROLES),
 });
 
 export type SetRoleInput = z.infer<typeof setRoleInput>;

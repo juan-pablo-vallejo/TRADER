@@ -38,7 +38,7 @@ export async function assertReadCommitted(tx: Tx, who: string) {
 // exclusive, so a closeout reads a company's labor and materials with no writer in flight: a
 // record either committed before the closeout's read or is written after its commit, and then
 // sees the closeout. Shared holders never block each other. Lock order: a transaction takes
-// any row locks it needs on jobs, crews, users or companies before this lock and none after
+// any row locks it needs on jobs, users or companies before this lock and none after
 // it (foreign-key checks take KEY SHARE, which no closeout lock conflicts with). Keyed on the
 // request's tenant, so it fails closed without one: a NULL key would lock nothing.
 export async function lockCompanyFieldWrites(

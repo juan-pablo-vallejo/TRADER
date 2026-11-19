@@ -6,7 +6,8 @@
 // never self-written; an email changes through the identity provider's verified flow.
 // `signInPhone` is the number the roster invited (users.ts): read here, written by no one
 // through this router.
-import { userRole, users } from "@trader/db/schema";
+import { ROLES } from "../contract/enums";
+import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -15,7 +16,7 @@ import { protectedProcedure, router } from "../core/trpc";
 const meOutput = z.strictObject({
   id: z.uuid(),
   companyId: z.uuid(),
-  role: z.enum(userRole.enumValues),
+  role: z.enum(ROLES),
   name: z.string(),
   // Null for a person invited by number alone; then `signInPhone` is never null.
   email: z.string().nullable(),

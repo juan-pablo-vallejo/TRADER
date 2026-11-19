@@ -13,13 +13,13 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  crewDayIn,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
   rolledBack,
   uuidv7,
-  type CrewDay,
+  type WorkDay,
 } from "../helpers";
 
 let owner: Db;
@@ -44,7 +44,7 @@ const ledger = (
 ) => appCallerIn(tx, who).labor.ledger({ workerId, ...range });
 
 async function office(tx: Tx) {
-  const d = await crewDayIn(tx);
+  const d = await workDayIn(tx);
   const admin = await boundIn(tx, d.companyId, "admin");
   return { d, admin };
 }
@@ -52,7 +52,7 @@ async function office(tx: Tx) {
 // A started-and-ended session of `worker` on `job`.
 async function shift(
   tx: Tx,
-  d: CrewDay,
+  d: WorkDay,
   worker: string,
   start: string,
   end: string,
@@ -67,7 +67,7 @@ describe("labor.ledger", () => {
   it("is the office's alone, and of the caller's company alone", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
-      const other = await crewDayIn(tx);
+      const other = await workDayIn(tx);
       await shift(tx, d, d.w1, T("12:00"), T("16:00"));
       await shift(tx, other, other.w1, T("12:00"), T("16:00"));
       const worker = await boundIn(tx, d.companyId, "worker");

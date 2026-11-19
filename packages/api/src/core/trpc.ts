@@ -148,8 +148,7 @@ export const syncProcedure = t.procedure.use(({ ctx, next }) => {
 
 // A role gate: procedure entry for the listed roles only, judged on the role resolved from the
 // database inside the protected transaction. An allowlist, not a rank, so a role added to the
-// enum later is admitted nowhere until a procedure names it. It checks entry only: a worker's
-// assigned jobs and a foreman's crews are scoped inside each procedure that needs them. A
+// enum later is admitted nowhere until a procedure names it. It checks entry only. A
 // denial is a failed call, so the protected procedure rolls its transaction back.
 export const roleProcedure = (...allowed: [AppUser["role"], ...AppUser["role"][]]) => {
   const admitted = new Set(allowed);

@@ -1,4 +1,4 @@
-// The crew's two catalogs (RULES: every crew-facing string in English and Spanish). The
+// The workers' two catalogs (RULES: every string they see in English and Spanish). The
 // compiler already holds both to one shape; this holds what it cannot: that no entry is
 // left blank, that a Spanish entry is not the English one left untranslated, and that a
 // sentence built from a name carries the name in both.

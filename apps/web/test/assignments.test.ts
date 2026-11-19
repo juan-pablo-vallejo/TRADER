@@ -107,14 +107,14 @@ describe("assignments through the route handler", () => {
     expect(list.status).toBe(200);
     const rows = list.body.result?.data.json as Record<string, unknown>[];
     expect(rows.map((r) => r.workDate)).toEqual(days);
-    // The job has no crew: planned all the same, and the office is told.
+    // Planned, and the office is told the worker may clock in there.
     expect(rows[0]).toMatchObject({
       expectedStart: "07:00",
       expectedEnd: "15:30",
       worker: { id: painter!.id, name: "Painter", active: true },
       job: { id: job!.id, name: "Porch", status: "open" },
-      mayClockIn: false,
-      blockedBy: "crew",
+      mayClockIn: true,
+      blockedBy: null,
     });
 
     const mine = await query(GET, "assignment.mine", { input: WEEK, headers: as(email) });

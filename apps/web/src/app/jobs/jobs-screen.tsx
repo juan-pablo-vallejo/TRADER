@@ -1,13 +1,12 @@
 "use client";
 
-// The jobs screen (PRD, Jobs and location: jobs belong to a customer and are assigned to a
-// crew; DESIGN, Data table). Three queries — jobs, customers and crews, the last two for the
-// selects; every mutation invalidates the jobs. A status filter, open by default, narrows the
-// table on the client. The page header's action opens the create form; the location waits
-// behind a disclosure. Each row is text plus one Edit toggle; the editor row beneath holds the
-// details with Save, the crew with Assign, and the status with Set status — three procedures,
-// three sections, three answers. A `rejected` answer reads beneath the control it came from.
-// A job's name opens its own page, where its cost to date is. Consumed by page.tsx.
+// The jobs screen: jobs belong to a customer. Two queries, jobs and customers, the second for
+// the select; every mutation invalidates the jobs. A status filter, open by default, narrows
+// the table on the client. The page header's action opens the create form; the location
+// waits behind a disclosure. Each row is text plus one Edit toggle; the editor row beneath
+// holds the details with Save and the status with Set status: two procedures, two sections,
+// two answers. A `rejected` answer reads beneath the control it came from. Consumed by
+// page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState, type FormEvent } from "react";
 
@@ -25,7 +24,6 @@ import styles from "./jobs.module.css";
 type Rows = NonNullable<ReturnType<typeof useJobs>["data"]>;
 type Row = Rows[number];
 type Customers = NonNullable<ReturnType<typeof useCustomers>["data"]>;
-type Crews = NonNullable<ReturnType<typeof useCrews>["data"]>;
 type Status = Row["status"];
 const STATUSES = ["open", "complete", "archived"] as const satisfies readonly Status[];
 
@@ -79,11 +77,6 @@ function useCustomers() {
   const trpc = useTRPC();
   return useQuery(trpc.customer.list.queryOptions());
 }
-function useCrews() {
-  const trpc = useTRPC();
-  return useQuery(trpc.crew.list.queryOptions());
-}
-
 function useRefresh() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -93,11 +86,10 @@ function useRefresh() {
 export function JobsScreen({ signInHref }: { signInHref: string }) {
   const list = useJobs();
   const customers = useCustomers();
-  const crews = useCrews();
   const [filter, setFilter] = useState<Status | "all">("open");
   const [adding, setAdding] = useState(false);
-  const failed = [list, customers, crews].find((q) => q.isError);
-  const ready = list.isSuccess && customers.isSuccess && crews.isSuccess;
+  const failed = [list, customers].find((q) => q.isError);
+  const ready = list.isSuccess && customers.isSuccess;
   return (
     <>
       <PageHeader
@@ -112,7 +104,7 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
             : undefined
         }
       />
-      {list.isPending || customers.isPending || crews.isPending ? (
+      {list.isPending || customers.isPending ? (
         <p className="body">{strings.loading}</p>
       ) : failed !== undefined ? (
         <Failure
@@ -123,11 +115,7 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
       ) : (
         <>
           {adding && (
-            <CreateForm
-              customers={customers.data!}
-              crews={crews.data!}
-              onDone={() => setAdding(false)}
-            />
+            <CreateForm customers={customers.data!} onDone={() => setAdding(false)} />
           )}
           <Field id="jobs-filter" label={strings.show} className={styles.filter}>
             <select
@@ -144,12 +132,7 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
               <option value="all">{strings.allJobs}</option>
             </select>
           </Field>
-          <JobsTable
-            rows={list.data!}
-            filter={filter}
-            customers={customers.data!}
-            crews={crews.data!}
-          />
+          <JobsTable rows={list.data!} filter={filter} customers={customers.data!} />
         </>
       )}
     </>
@@ -228,65 +211,20 @@ function FactsFields({
   );
 }
 
-function CrewSelect({
-  id,
-  crews,
-  value,
-  onChange,
-}: {
-  id: string;
-  crews: Crews;
-  value: string;
-  onChange: (id: string) => void;
-}) {
-  const options = crews.filter((c) => c.deactivatedAt === null || c.id === value);
-  return (
-    <Field id={id} label={strings.crew}>
-      <select
-        id={id}
-        className={controls.select}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        <option value="">{strings.unassigned}</option>
-        {options.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-            {c.deactivatedAt !== null && ` (${strings.deactivated.toLowerCase()})`}
-          </option>
-        ))}
-      </select>
-    </Field>
-  );
-}
-
 // What a `rejected` answer says, by its code and the control it came from.
-const reason = (code: string, on: "facts" | "assign" | "status") =>
+const reason = (code: string, on: "facts" | "status") =>
   code === "customer_inactive"
     ? on === "status"
       ? strings.customerInactiveOnStatus
       : strings.customerInactive
-    : code === "crew_inactive"
-      ? on === "status"
-        ? strings.crewInactiveOnStatus
-        : strings.crewInactive
-      : code === "has_invoices"
-        ? strings.hasInvoices
-        : strings.requestFailed;
+    : code === "has_invoices"
+      ? strings.hasInvoices
+      : strings.requestFailed;
 
-function CreateForm({
-  customers,
-  crews,
-  onDone,
-}: {
-  customers: Customers;
-  crews: Crews;
-  onDone: () => void;
-}) {
+function CreateForm({ customers, onDone }: { customers: Customers; onDone: () => void }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [facts, setFacts] = useState<Facts>(EMPTY);
-  const [crewId, setCrewId] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const create = useMutation(
     trpc.job.create.mutationOptions({
@@ -296,7 +234,6 @@ function CreateForm({
           return;
         }
         setFacts(EMPTY);
-        setCrewId("");
         setNote(null);
         await refresh();
         onDone();
@@ -317,7 +254,6 @@ function CreateForm({
       name: facts.name,
       address: facts.address,
       location,
-      crewId: crewId === "" ? null : crewId,
     });
   };
   return (
@@ -328,7 +264,6 @@ function CreateForm({
       onSubmit={submit}
     >
       <FactsFields id="new-job" customers={customers} value={facts} onChange={setFacts} />
-      <CrewSelect id="new-job-crew" crews={crews} value={crewId} onChange={setCrewId} />
       <Note text={note} />
       <button type="submit" className={controls.primary} disabled={create.isPending}>
         {strings.addJob}
@@ -341,12 +276,10 @@ function JobsTable({
   rows: all,
   filter,
   customers,
-  crews,
 }: {
   rows: Rows;
   filter: Status | "all";
   customers: Customers;
-  crews: Crews;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   // The row whose editor is open stays whatever the filter says: a status change under the
@@ -362,7 +295,6 @@ function JobsTable({
         <tr>
           <th scope="col">{strings.job}</th>
           <th scope="col">{strings.customer}</th>
-          <th scope="col">{strings.crew}</th>
           <th scope="col">{strings.status}</th>
           <th scope="col">{strings.address}</th>
           <th scope="col">
@@ -380,18 +312,6 @@ function JobsTable({
                   {row.name}
                 </td>
                 <td data-label={strings.customer}>{row.customer.name}</td>
-                <td
-                  data-label={strings.crew}
-                  className={
-                    row.crew !== null && !row.crew.active ? table.attention : undefined
-                  }
-                >
-                  {row.crew === null
-                    ? strings.unassigned
-                    : row.crew.active
-                      ? row.crew.name
-                      : `${row.crew.name} (${strings.deactivated.toLowerCase()})`}
-                </td>
                 <td data-label={strings.status} className={table.status}>
                   {strings.jobStatus[row.status]}
                 </td>
@@ -408,8 +328,8 @@ function JobsTable({
                 />
               </tr>
               {open ? (
-                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={6}>
-                  <Editor row={row} customers={customers} crews={crews} />
+                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={5}>
+                  <Editor row={row} customers={customers} />
                 </EditorRow>
               ) : null}
             </Fragment>
@@ -420,21 +340,13 @@ function JobsTable({
   );
 }
 
-function Editor({
-  row,
-  customers,
-  crews,
-}: {
-  row: Row;
-  customers: Customers;
-  crews: Crews;
-}) {
+function Editor({ row, customers }: { row: Row; customers: Customers }) {
   return (
     <div className={styles.editorGrid}>
       <EditorSection heading={strings.details}>
         <FactsEditor row={row} customers={customers} />
       </EditorSection>
-      <CrewAndStatus row={row} crews={crews} />
+      <StatusEditor row={row} />
     </div>
   );
 }
@@ -493,28 +405,11 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
   );
 }
 
-function CrewAndStatus({ row, crews }: { row: Row; crews: Crews }) {
+function StatusEditor({ row }: { row: Row }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
-  const [crewId, setCrewId] = useState(row.crew?.id ?? "");
   const [status, setStatus] = useState<Status>(row.status);
-  const [crewNote, setCrewNote] = useState<string | null>(null);
   const [statusNote, setStatusNote] = useState<string | null>(null);
-  const assign = useMutation(
-    trpc.job.assign.mutationOptions({
-      onSuccess: async (answer) => {
-        setCrewNote(
-          answer.result === "rejected"
-            ? reason(answer.code, "assign")
-            : answer.result === "unchanged"
-              ? strings.unchanged
-              : strings.saved,
-        );
-        await refresh();
-      },
-      onError: () => setCrewNote(strings.requestFailed),
-    }),
-  );
   const setStatusCall = useMutation(
     trpc.job.setStatus.mutationOptions({
       onSuccess: async (answer) => {
@@ -532,29 +427,10 @@ function CrewAndStatus({ row, crews }: { row: Row; crews: Crews }) {
       onError: () => setStatusNote(strings.requestFailed),
     }),
   );
-  const busy = assign.isPending || setStatusCall.isPending;
+  const busy = setStatusCall.isPending;
   const statusId = `job-status-${row.id}`;
   return (
     <div>
-      <EditorSection>
-        <CrewSelect
-          id={`job-crew-${row.id}`}
-          crews={crews}
-          value={crewId}
-          onChange={setCrewId}
-        />
-        <button
-          type="button"
-          className={`${controls.secondary} ${table.stretch}`}
-          disabled={busy}
-          onClick={() =>
-            assign.mutate({ jobId: row.id, crewId: crewId === "" ? null : crewId })
-          }
-        >
-          {strings.assign}
-        </button>
-        <Note text={crewNote} />
-      </EditorSection>
       <EditorSection>
         <Field id={statusId} label={strings.status}>
           <select

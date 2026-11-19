@@ -13,12 +13,12 @@
 // defined over all of it; the range selects sessions, and there is no limit, so nothing in the
 // range is ever left out. No coordinates, cost, rate or rounded hours. Consumed by
 // routers/labor.ts.
+import { ROLES, roleOf } from "../contract/enums";
 import {
   approvalReason,
   companies,
   jobs,
   jobStatus,
-  userRole,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -106,7 +106,7 @@ export const ledgerOutput = z.strictObject({
   worker: z.strictObject({
     id: z.uuid(),
     name: z.string(),
-    role: z.enum(userRole.enumValues),
+    role: z.enum(ROLES),
     active: z.boolean(),
   }),
   // The zone every work date here was judged in.
@@ -266,7 +266,7 @@ export async function workerLedger(
     worker: {
       id: worker.id,
       name: worker.name,
-      role: worker.role,
+      role: roleOf(worker.role),
       active: worker.deactivatedAt === null,
     },
     timezone,

@@ -2,7 +2,7 @@
 // own store — the last pull and the entries captured since — so it opens and works with no
 // signal. A tap writes to the store and returns; sending is the sync layer's. Without the
 // weekly schedule the person picks a jobsite of theirs; under it the clock offers the one
-// shift the schedule makes eligible now, or says to ask the office. The server decides what
+// shift the schedule makes eligible now, or says to call the office. The server decides what
 // counts either way, and an entry it stored for review or refused is shown as what it is.
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Pressable, StyleSheet, Text, View } from "react-native";

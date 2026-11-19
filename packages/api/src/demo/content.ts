@@ -16,7 +16,7 @@ export const DEMO: SeedCompany = {
   adminName: "Dana Ortiz",
 };
 
-export type Role = "admin" | "foreman" | "worker";
+export type Role = "admin" | "worker";
 
 export type Persona = {
   key: string;
@@ -26,8 +26,8 @@ export type Persona = {
   // fiction, so none is anyone's.
   phone: string;
   role: Role;
-  // Which crew's labor they record; the invitation-only persona records none.
-  crew: "a" | "b" | null;
+  // The job they record their days on; the invitation-only persona records none.
+  job: "j1" | "j2" | null;
 };
 
 // Emails are lower case already: the development subject is `dev:` + the lower-cased email
@@ -39,16 +39,16 @@ export const PEOPLE: readonly Persona[] = [
     name: "Luis Herrera",
     email: "luis.herrera@demo.invalid",
     phone: "+14015550101",
-    role: "foreman",
-    crew: "a",
+    role: "worker",
+    job: "j1",
   },
   {
     key: "marcus",
     name: "Marcus Bell",
     email: "marcus.bell@demo.invalid",
     phone: "+14015550102",
-    role: "foreman",
-    crew: "b",
+    role: "worker",
+    job: "j2",
   },
   {
     key: "ana",
@@ -56,7 +56,7 @@ export const PEOPLE: readonly Persona[] = [
     email: "ana.ruiz@demo.invalid",
     phone: "+14015550103",
     role: "worker",
-    crew: "a",
+    job: "j1",
   },
   {
     key: "tom",
@@ -64,7 +64,7 @@ export const PEOPLE: readonly Persona[] = [
     email: "tom.nguyen@demo.invalid",
     phone: "+14015550104",
     role: "worker",
-    crew: "a",
+    job: "j1",
   },
   {
     key: "priya",
@@ -72,7 +72,7 @@ export const PEOPLE: readonly Persona[] = [
     email: "priya.shah@demo.invalid",
     phone: "+14015550105",
     role: "worker",
-    crew: "a",
+    job: "j1",
   },
   {
     key: "omar",
@@ -80,7 +80,7 @@ export const PEOPLE: readonly Persona[] = [
     email: "omar.haddad@demo.invalid",
     phone: "+14015550106",
     role: "worker",
-    crew: "b",
+    job: "j2",
   },
   {
     key: "elena",
@@ -88,7 +88,7 @@ export const PEOPLE: readonly Persona[] = [
     email: "elena.petrov@demo.invalid",
     phone: "+14015550107",
     role: "worker",
-    crew: "b",
+    job: "j2",
   },
   {
     key: "sam",
@@ -96,14 +96,9 @@ export const PEOPLE: readonly Persona[] = [
     email: "sam.carter@demo.invalid",
     phone: "+14015550108",
     role: "worker",
-    crew: null,
+    job: null,
   },
 ];
-
-export const CREWS = {
-  a: { name: "Crew A — Herrera", foreman: "luis" },
-  b: { name: "Crew B — Bell", foreman: "marcus" },
-} as const;
 
 export const CUSTOMERS = [
   {
@@ -146,7 +141,6 @@ export type JobPlan = {
   customer: (typeof CUSTOMERS)[number]["key"];
   address: string;
   location: { lat: number; lng: number; radiusM: number } | null;
-  crew: "a" | "b" | null;
   status: "open" | "complete" | "archived";
 };
 
@@ -160,7 +154,6 @@ export const JOBS: readonly JobPlan[] = [
     customer: "whitmore",
     address: "14 Elmgrove Ave, Providence, RI",
     location: { lat: 41.824, lng: -71.4128, radiusM: 150 },
-    crew: "a",
     status: "open",
   },
   {
@@ -169,7 +162,6 @@ export const JOBS: readonly JobPlan[] = [
     customer: "harbor",
     address: "200 Allens Ave, Providence, RI",
     location: null,
-    crew: "b",
     status: "open",
   },
   {
@@ -178,7 +170,6 @@ export const JOBS: readonly JobPlan[] = [
     customer: "greenfield",
     address: "55 School St, Seekonk, MA",
     location: null,
-    crew: null,
     status: "open",
   },
   {
@@ -187,7 +178,6 @@ export const JOBS: readonly JobPlan[] = [
     customer: "whitmore",
     address: "14 Elmgrove Ave, Providence, RI",
     location: null,
-    crew: "a",
     status: "complete",
   },
   {
@@ -196,7 +186,6 @@ export const JOBS: readonly JobPlan[] = [
     customer: "harbor",
     address: "200 Allens Ave, Providence, RI",
     location: null,
-    crew: "b",
     status: "complete",
   },
   {
@@ -205,13 +194,9 @@ export const JOBS: readonly JobPlan[] = [
     customer: "oldmill",
     address: "9 Mill Rd, Pawtucket, RI",
     location: null,
-    crew: null,
     status: "archived",
   },
 ];
-
-// The job each crew records its days on.
-export const CREW_JOB = { a: "j1", b: "j2" } as const;
 
 // A stamp inside J1's radius, one a kilometre north of it, and one near J2 (no place: unflagged).
 export const STAMPS = {
@@ -273,9 +258,9 @@ export const SCENARIOS = {
     time: "16:00",
     reasons: ["corrected", "user_timed", "location"] as ApprovalReason[],
   },
-  // Priya leaves after week one; Marcus steps down as foreman, so Crew B needs one.
+  // Priya leaves after week one; Marcus joins the office as a second admin.
   deactivatedWorker: "priya",
-  demotedForeman: "marcus",
+  madeAdmin: "marcus",
   // Old Mill's only job is archived, then the customer is deactivated.
   deactivatedCustomer: "oldmill",
 } as const;
@@ -285,10 +270,8 @@ export const PRIYA_LAST_DAY = 4;
 
 // The week the office is planning: the one after the two recorded weeks, which with the
 // default anchor is the week the demo is opened in. `days` are offsets from that Monday.
-// Ordinary plans on a person's own crew's job, and one of each thing the office is shown
-// when a plan does not let its person clock in: Tom and Elena planned on jobs that are not
-// their crews' (J3 has no crew; J1 is crew A's and Elena is on crew B), and Priya planned
-// before she is deactivated. A plan never changes any of that (V1-D07).
+// Ordinary plans on a person's own job, Tom and Elena each planned on a second job, and
+// Priya planned before she is deactivated.
 export const planWeek = (anchor: string): string[] =>
   [14, 15, 16, 17, 18].map((n) => addDays(anchor, n));
 
@@ -308,8 +291,6 @@ export const EXPECTED = {
   users: 1 + PEOPLE.length,
   customers: CUSTOMERS.length,
   jobs: JOBS.length,
-  crews: 2,
-  crewMembers: PEOPLE.filter((p) => p.crew !== null).length,
   // Six people for ten days and Priya for four, four events each; her late day of two; one
   // office correction.
   events: 6 * 10 * 4 + 4 * 4 + 2 + 1,

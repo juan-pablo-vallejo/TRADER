@@ -18,7 +18,7 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  crewDayIn,
+  workDayIn,
   outcome,
   ownerDb,
   rolledBack,
@@ -46,8 +46,8 @@ const TO = "billing@customer.test";
 // An issued invoice of 520.00 with 36.40 tax in a company whose series starts at 1042, and
 // a caller for each mailer a test brings.
 async function office(tx: Tx) {
-  const day = await crewDayIn(tx);
-  const other = await crewDayIn(tx);
+  const day = await workDayIn(tx);
+  const other = await workDayIn(tx);
   const admin = await boundIn(tx, day.companyId, "admin");
   const worker = await boundIn(tx, day.companyId, "worker");
   const foreign = await boundIn(tx, other.companyId, "admin");

@@ -1,4 +1,4 @@
-// How the crew app writes a time, a length of time and an age. Times are the company's wall
+// How the phone app writes a time, a length of time and an age. Times are the company's wall
 // clock, whatever zone the phone is in: it is the clock the schedule is written on.
 import type { Catalog } from "./i18n/catalog";
 

@@ -44,12 +44,12 @@ describe("roster.setRole", () => {
     const admin = await member(owner, w, "a", "admin");
     const worker = await member(owner, w, "a", "worker");
     expect(
-      await roster(admin.who).setRole({ userId: worker.id, role: "foreman" }),
-    ).toMatchObject({ result: "updated", user: { id: worker.id, role: "foreman" } });
-    expect(await userRow(owner, worker.id)).toMatchObject({ role: "foreman" });
+      await roster(admin.who).setRole({ userId: worker.id, role: "admin" }),
+    ).toMatchObject({ result: "updated", user: { id: worker.id, role: "admin" } });
+    expect(await userRow(owner, worker.id)).toMatchObject({ role: "admin" });
     expect(
-      await roster(admin.who).setRole({ userId: worker.id, role: "foreman" }),
-    ).toMatchObject({ result: "unchanged", user: { id: worker.id, role: "foreman" } });
+      await roster(admin.who).setRole({ userId: worker.id, role: "admin" }),
+    ).toMatchObject({ result: "unchanged", user: { id: worker.id, role: "admin" } });
   });
 
   it("refuses to demote the last active admin, a deactivated admin not counting", async () => {
@@ -68,7 +68,7 @@ describe("roster.setRole", () => {
     const one = await member(owner, w, "a", "admin", { label: "one" });
     const two = await member(owner, w, "a", "admin", { label: "two" });
     expect(
-      await roster(one.who).setRole({ userId: two.id, role: "foreman" }),
+      await roster(one.who).setRole({ userId: two.id, role: "worker" }),
     ).toMatchObject({
       result: "updated",
     });
@@ -76,7 +76,7 @@ describe("roster.setRole", () => {
       result: "rejected",
       code: "last_admin",
     });
-    // Promotion is always allowed; the demoted admin is a foreman now, so it cannot call.
+    // Promotion is always allowed; the demoted admin is a worker now, so it cannot call.
     expect(
       await outcome(roster(two.who).setRole({ userId: two.id, role: "admin" })),
     ).toBe("FORBIDDEN");

@@ -3,7 +3,7 @@
 // connections serialize; these do, in a database of their own (helpers.ts, disposableDb),
 // migrated through the whole journal and dropped at the end with everything committed in it.
 // Every call runs as trader_app over the real caller transaction, one per record.
-import { crewMembers, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { jobs, users, workSessionEvents } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -20,7 +20,7 @@ import {
 } from "../../src/core/trpc";
 import {
   boundIn,
-  crewDayIn,
+  workDayIn,
   disposableDb,
   rolledBack,
   uuidv7,
@@ -56,23 +56,15 @@ const caller = (
     }),
   );
 
-// A committed crew day with a bound worker `w` on the crew (crewDayIn's own workers are
-// invitations: no identity to push with), and a second crew job J2.
+// A committed working day with a bound worker `w` (workDayIn's own workers are invitations:
+// no identity to push with), and a third job J2.
 async function world() {
   return D.owner.transaction(async (tx) => {
-    const d = await crewDayIn(tx);
+    const d = await workDayIn(tx);
     const w = await boundIn(tx, d.companyId, "worker");
-    await tx
-      .insert(crewMembers)
-      .values({ companyId: d.companyId, crewId: d.crewId, userId: w.id });
     const [j2] = await tx
       .insert(jobs)
-      .values({
-        companyId: d.companyId,
-        customerId: d.customerId,
-        name: "J2",
-        crewId: d.crewId,
-      })
+      .values({ companyId: d.companyId, customerId: d.customerId, name: "J2" })
       .returning({ id: jobs.id });
     return { ...d, w, J2: j2!.id };
   });
@@ -129,37 +121,48 @@ const eventIds = async (ids: string[]) =>
 describe("sync.push — commits, record by record", () => {
   it("keeps A committed when B throws, writes nothing of B, and leaves C out", async () => {
     const d = await world();
-    // A ledger that fails replay for w1 (an `ended` with no session), written by the owner:
-    // validating anything for w1 throws, as a corrupt ledger must (fold.ts).
-    await D.owner.insert(workSessionEvents).values({
-      id: uuidv7(),
-      companyId: d.companyId,
-      workerId: d.w1,
-      jobId: d.J,
-      type: "ended",
-      clientTimestamp: new Date("2026-10-01T12:00:00Z"),
-      serverTimestamp: new Date("2026-10-01T12:00:00Z"),
-      clockSkewed: false,
-      clockSkewMs: 0,
-      attestationLevel: "none",
-      schemaVersion: 1,
-      timeSetByUser: false,
-      capturedOffline: false,
-      initiatorUserId: d.w1,
+    const a = labor(d.userId, d.J, { capturedOffline: true });
+    const b = labor(d.userId, d.J2, {
+      capturedOffline: true,
+      clientTimestamp: new Date("2026-10-05T13:00:00Z"),
     });
-    const a = labor(d.foremanId, d.J, { capturedOffline: true });
-    const b = labor(d.w1, d.J, { capturedOffline: true });
-    const c = labor(d.foremanId, d.J, {
+    const c = labor(d.userId, d.J, {
       type: "ended",
       clientTimestamp: new Date("2026-10-05T16:00:00Z"),
     });
     const { reporter, events } = recordingReporter();
-    const answer = await push(d.who, [a, b, c], reporter);
+    let running!: ReturnType<typeof push>;
+    await D.owner.transaction(async (tx) => {
+      // B's job, held: A commits, then B waits on this row before it reads any ledger.
+      await tx.execute(sql`select 1 from jobs where id = ${d.J2} for no key update`);
+      running = push(d.who, [a, b, c], reporter);
+      await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
+      // Meanwhile the caller's ledger stops replaying (an `ended` with no session), written
+      // by the owner: validating anything for them throws, as a corrupt ledger must
+      // (fold.ts).
+      await tx.insert(workSessionEvents).values({
+        id: uuidv7(),
+        companyId: d.companyId,
+        workerId: d.userId,
+        jobId: d.J,
+        type: "ended",
+        clientTimestamp: new Date("2026-10-01T12:00:00Z"),
+        serverTimestamp: new Date("2026-10-01T12:00:00Z"),
+        clockSkewed: false,
+        clockSkewMs: 0,
+        attestationLevel: "none",
+        schemaVersion: 1,
+        timeSetByUser: false,
+        capturedOffline: false,
+        initiatorUserId: d.userId,
+      });
+    }); // the commit releases the job; B then loads the ledger and throws
+    const answer = await running;
     expect(answer.results.map((r) => [r.id, r.result])).toEqual([[a.id, "accepted"]]);
     expect(await eventIds([a.id, b.id, c.id])).toEqual([a.id]);
     // B's failure is answered by omission, so it is reported here, once, naming nobody.
     expect(events).toMatchObject([{ source: "push_record", path: "sync.push" }]);
-    expect(JSON.stringify(events)).not.toContain(d.w1);
+    expect(JSON.stringify(events)).not.toContain(d.userId);
     expect(JSON.stringify(events)).not.toContain(d.companyId);
     // A is committed with its flag; nothing of B or C is.
     const stored = await D.owner
@@ -269,10 +272,13 @@ describe("sync.push — concurrency on real locks", () => {
   it("serializes two sources for one worker: the second sees the first's committed start", async () => {
     const d = await world();
     const own = labor(d.w.id, d.J);
-    const crew = labor(d.w.id, d.J, {
+    const other = labor(d.w.id, d.J, {
       clientTimestamp: new Date("2026-10-05T12:05:00Z"),
     });
-    const [a, b] = await race(d, [() => push(d.w.who, [own]), () => push(d.who, [crew])]);
+    const [a, b] = await race(d, [
+      () => push(d.w.who, [own]),
+      () => push(d.w.who, [other]),
+    ]);
     const results = [a!.results[0]!, b!.results[0]!];
     expect(results.map((r) => r.result).sort()).toEqual(["accepted", "rejected"]);
     expect(results.find((r) => r.result === "rejected")).toMatchObject({
@@ -363,12 +369,23 @@ describe("sync.push — transaction boundaries", () => {
     let running!: ReturnType<typeof push>;
     let seen: Record<string, unknown> = {};
     await D.owner.transaction(async (tx) => {
-      // Record 2's job, held: record 2 waits on its row, before any lock of its own beyond it.
+      // Record 3's job, held: record 3 waits on its row, before any lock of its own beyond it.
       await tx.execute(sql`select 1 from jobs where id = ${d.J2} for no key update`);
-      // The foreman's push: w's start on J, then their own on J2.
-      running = push(d.who, [labor(d.w.id, d.J), labor(d.foremanId, d.J2)]);
+      // One push: w's hour on J, then their start on J2.
+      running = push(d.w.who, [
+        labor(d.w.id, d.J, { capturedOffline: true }),
+        labor(d.w.id, d.J, {
+          type: "ended",
+          capturedOffline: true,
+          clientTimestamp: new Date("2026-10-05T13:00:00Z"),
+        }),
+        labor(d.w.id, d.J2, {
+          capturedOffline: true,
+          clientTimestamp: new Date("2026-10-05T14:00:00Z"),
+        }),
+      ]);
       await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
-      // Record 1 has committed: its worker and field-write locks are gone, and the rows it
+      // Records 1 and 2 have committed: their worker and field-write locks are gone, and the rows it
       // held FOR SHARE are free (row locks live in the tuples; NOWAIT finds them).
       const { rows } = await D.owner.execute<{ n: number }>(sql`
         select count(*)::int as n from pg_locks
@@ -386,6 +403,7 @@ describe("sync.push — transaction boundaries", () => {
     });
     expect(seen).toEqual({ advisory: 0, rows: "free" });
     expect((await running).results.map((r) => r.result)).toEqual([
+      "accepted",
       "accepted",
       "accepted",
     ]);

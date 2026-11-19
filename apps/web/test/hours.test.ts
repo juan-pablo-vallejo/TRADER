@@ -34,9 +34,9 @@ const as = (email: string) => ({
 const WEEK = { from: "2026-10-05", to: "2026-10-11" };
 
 describe("hours for the reconciliation through the route handler", () => {
-  it("answers 401 anonymous and 403 to a worker and a foreman", async () => {
+  it("answers 401 anonymous and 403 to a worker", async () => {
     expect((await query(GET, "labor.hours", { input: WEEK })).status).toBe(401);
-    for (const role of ["worker", "foreman"] as const) {
+    for (const role of ["worker"] as const) {
       const other = await invitation(owner, { role });
       try {
         const r = await query(GET, "labor.hours", {

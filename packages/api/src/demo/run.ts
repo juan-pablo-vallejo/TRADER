@@ -20,8 +20,6 @@ import type { ApprovalReason } from "../sync/reasons";
 import { createCallerFactory } from "../core/trpc";
 import {
   BASELINE_TIMES,
-  CREW_JOB,
-  CREWS,
   CUSTOMERS,
   DEMO,
   EXPECTED,
@@ -45,8 +43,6 @@ export type Summary = {
   users: number;
   customers: number;
   jobs: number;
-  crews: number;
-  crewMembers: number;
   events: number;
   assignments: number;
 };
@@ -101,8 +97,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     users: 0,
     customers: 0,
     jobs: 0,
-    crews: 0,
-    crewMembers: 0,
     events: 0,
     assignments: 0,
   };
@@ -159,7 +153,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
 
   const userIds = new Map<string, string>();
   const customerIds = new Map<string, string>();
-  const crewIds = new Map<string, string>();
   const jobIds = new Map<string, string>();
   // Every accepted labor event by (who, day, type); the repair names one.
   const eventIds = new Map<string, string>();
@@ -202,7 +195,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     attestation?: "biometric" | "device_credential" | "none";
   };
 
-  // One labor event record for `who` on their crew's job.
+  // One labor event record for `who` on their own job.
   const labor = (
     who: string,
     day: number,
@@ -217,7 +210,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     eventIds.set(`${who}:${day}:${type}`, id);
     const defaultStamp =
       type === "started" || type === "ended"
-        ? p.crew === "a"
+        ? p.job === "j1"
           ? STAMPS.inside
           : STAMPS.harbor
         : null;
@@ -227,7 +220,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       schemaVersion: 1,
       payload: {
         workerId: userIds.get(who)!,
-        jobId: jobIds.get(CREW_JOB[p.crew!])!,
+        jobId: jobIds.get(p.job!)!,
         type,
         clientTimestamp: when,
         attestationLevel: facts.attestation ?? "biometric",
@@ -318,34 +311,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     }
   });
 
-  await step("form the crews", async () => {
-    for (const key of ["a", "b"] as const) {
-      const crew = CREWS[key];
-      const a = expectResult(
-        await admin().crew.create({
-          name: crew.name,
-          foremanUserId: userIds.get(crew.foreman)!,
-        }),
-        "created",
-      );
-      if (a.result !== "created") return;
-      crewIds.set(key, a.crew.id);
-      summary.crews++;
-      // The foreman is a member from creation (crews/write.ts).
-      summary.crewMembers++;
-      for (const p of PEOPLE.filter((p) => p.crew === key && p.role !== "foreman")) {
-        expectResult(
-          await admin().crew.addMember({
-            crewId: a.crew.id,
-            userId: userIds.get(p.key)!,
-          }),
-          "added",
-        );
-        summary.crewMembers++;
-      }
-    }
-  });
-
   await step("add jobs and set their status", async () => {
     for (const j of JOBS) {
       const a = expectResult(
@@ -354,7 +319,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
           name: j.name,
           address: j.address,
           location: j.location,
-          crewId: j.crew === null ? null : crewIds.get(j.crew)!,
         }),
         "created",
       );
@@ -376,7 +340,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   for (let day = 0; day < days.length; day++) {
     await step(`record ${days[day]}`, async () => {
       for (const p of PEOPLE) {
-        if (p.crew === null) continue;
+        if (p.job === null) continue;
         if (p.key === late.who && (day === late.day || day > PRIYA_LAST_DAY)) continue;
         const records = ordinaryDay(p.key, day);
         await push(p.key, records);
@@ -411,7 +375,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
             correctsEventId: source,
             replacesEventId: source,
             type: "ended",
-            jobId: jobIds.get(CREW_JOB[person(s.who).crew!])!,
+            jobId: jobIds.get(person(s.who).job!)!,
             clientTimestamp: when,
           },
         ],
@@ -455,7 +419,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     }
   });
 
-  await step("deactivate a worker and demote a foreman", async () => {
+  await step("deactivate a worker and make another an admin", async () => {
     expectResult(
       await admin().roster.deactivate({
         userId: userIds.get(SCENARIOS.deactivatedWorker)!,
@@ -464,8 +428,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     );
     expectResult(
       await admin().roster.setRole({
-        userId: userIds.get(SCENARIOS.demotedForeman)!,
-        role: "worker",
+        userId: userIds.get(SCENARIOS.madeAdmin)!,
+        role: "admin",
       }),
       "updated",
     );

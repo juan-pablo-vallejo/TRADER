@@ -24,7 +24,7 @@ export const en: Catalog = {
   today: {
     title: "Today",
     jobs: "Your jobsites",
-    noJobs: "No jobsite is yours yet. Ask the office.",
+    noJobs: "No jobsite is open yet. Call the office.",
     firstLoad: "This phone has not loaded your jobsites yet. Connect and try again.",
     off: "You are off the clock.",
     working: (job, since) => `On the clock at ${job} since ${since}.`,
@@ -40,7 +40,7 @@ export const en: Catalog = {
     shiftLater: (job, start) =>
       `Your next shift is at ${job} at ${start}. You can clock in 15 minutes before.`,
     noMoreShifts: "You have no more shifts today.",
-    noShift: "You have no shift today. Ask the office.",
+    noShift: "You have no shift today. Call the office.",
     attention: "Needs attention",
   },
   entry: {
@@ -54,14 +54,14 @@ export const en: Catalog = {
     refused: "The office's system did not accept this entry.",
     refusals: {
       not_scheduled:
-        "You had no shift at that jobsite then. Ask the office to add your hours.",
+        "You had no shift at that jobsite then. Call the office to add your hours.",
       time_in_future:
         "This phone's clock was ahead. Set the time automatically and ask the office to add your hours.",
       session_already_open:
         "You were already on the clock. Ask the office to check your hours.",
       no_open_session:
         "You were not on the clock then. Ask the office to check your hours.",
-      not_permitted: "You are not on that jobsite. Ask the office to add your hours.",
+      not_permitted: "That jobsite is closed. Call the office to add your hours.",
       other: (code) => `Ask the office to add your hours. Tell them: ${code}.`,
     },
   },

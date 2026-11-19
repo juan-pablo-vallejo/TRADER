@@ -24,9 +24,8 @@ import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
-import { lockActiveSelf } from "../core/locks";
+import { lockActiveSelf, lockUsersShare } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
-import { lockUsersShare } from "../crews/lock";
 import { type Day, dayOf, type DayShift, judgeDay, loadDays, lockDays } from "./day";
 import { toWallTime, wallTime, workDay } from "./write";
 

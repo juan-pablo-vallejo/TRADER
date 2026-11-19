@@ -61,8 +61,8 @@ describe("roster.list", () => {
     expect(rows.map((r) => r.id)).not.toContain(w.b.boundId);
   });
 
-  it("is admin only: FORBIDDEN for a worker or foreman, UNAUTHORIZED otherwise", async () => {
-    for (const role of ["worker", "foreman"] as const) {
+  it("is admin only: FORBIDDEN for a worker, UNAUTHORIZED otherwise", async () => {
+    for (const role of ["worker"] as const) {
       const { who } = await member(owner, w, "a", role);
       expect([role, await outcome(list(who))]).toEqual([role, "FORBIDDEN"]);
     }

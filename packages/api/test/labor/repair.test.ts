@@ -15,13 +15,13 @@ import {
   appCallerIn,
   asTenant,
   boundIn,
-  crewDayIn,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
   rolledBack,
   uuidv7,
-  type CrewDay,
+  type WorkDay,
 } from "../helpers";
 
 let owner: Db;
@@ -72,16 +72,16 @@ const repair = (tx: Tx, who: unknown, workerId: string, operations: Op[]) =>
   appCallerIn(tx, who).labor.repair({ workerId, operations });
 
 // Back to the owner, to write fixtures or look past RLS, then the runtime role again.
-async function asOwner<T>(tx: Tx, d: CrewDay, body: () => Promise<T>): Promise<T> {
+async function asOwner<T>(tx: Tx, d: WorkDay, body: () => Promise<T>): Promise<T> {
   await tx.execute(sql`reset role`);
   const result = await body();
   await asTenant(tx, d.companyId);
   return result;
 }
 
-// A crew day with two admins.
+// A working day with two admins.
 async function world(tx: Tx) {
-  const d = await crewDayIn(tx);
+  const d = await workDayIn(tx);
   const admin = await boundIn(tx, d.companyId, "admin");
   const admin2 = await boundIn(tx, d.companyId, "admin");
   return { d, admin, admin2 };
@@ -89,7 +89,7 @@ async function world(tx: Tx) {
 
 const ev = (
   tx: Tx,
-  d: CrewDay,
+  d: WorkDay,
   worker: string,
   type: Positional,
   hhmm: string,
@@ -97,7 +97,7 @@ const ev = (
 ) => eventIn(tx, d, { worker, job, type, client: T(hhmm) });
 
 // Every row a rejection must leave as it was, read as the owner.
-async function counts(tx: Tx, d: CrewDay) {
+async function counts(tx: Tx, d: WorkDay) {
   return asOwner(tx, d, async () => {
     const [e] = await tx
       .select({ n: sql<number>`count(*)::int` })
@@ -109,7 +109,7 @@ async function counts(tx: Tx, d: CrewDay) {
 
 async function rejectsWritingNothing(
   tx: Tx,
-  d: CrewDay,
+  d: WorkDay,
   call: () => Promise<unknown>,
   expected: Record<string, unknown>,
 ) {
@@ -166,7 +166,7 @@ describe("labor.repair — who may repair", () => {
   it("is one FORBIDDEN for a worker or job that is missing or another tenant's", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await world(tx);
-      const other = await crewDayIn(tx);
+      const other = await workDayIn(tx);
       await asTenant(tx, d.companyId);
       const before = await counts(tx, d);
       for (const [worker, job] of [
@@ -187,7 +187,7 @@ describe("labor.repair — who may repair", () => {
   it("names another worker's or tenant's event as missing, never revealing it", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await world(tx);
-      const other = await crewDayIn(tx);
+      const other = await workDayIn(tx);
       const theirs = await eventIn(tx, other, {
         worker: other.w1,
         job: other.J,
@@ -618,7 +618,7 @@ describe("labor.repair — retries and ids", () => {
   it("answers an id another tenant holds with id_conflict, writing nothing", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await world(tx);
-      const other = await crewDayIn(tx);
+      const other = await workDayIn(tx);
       const held = await eventIn(tx, other, {
         worker: other.w1,
         job: other.J,

@@ -157,7 +157,7 @@ async function phoneInvitation(
     .insert(users)
     .values({
       companyId: w[company].companyId,
-      // No email unless the test names one: invited by number alone, as the crew is.
+      // No email unless the test names one: invited by number alone, as the workers are.
       ...(opts.email !== undefined && { email: opts.email }),
       name: `By phone ${company}`,
       signInPhone,

@@ -71,9 +71,9 @@ describe("the roster through the route handler", () => {
     ]);
 
     const input = {
-      email: `crew-${admin.run}@web.test`,
+      email: `painter-${admin.run}@web.test`,
       phone: "(401) 555-0143",
-      name: "Crew Member",
+      name: "New Painter",
     };
     const first = await mutate(POST, "roster.invite", {
       input,
@@ -101,7 +101,7 @@ describe("the roster through the route handler", () => {
   it("invites by mobile number, answers phone_taken, and signs that number in", async () => {
     const phone = "+14015550142";
     const first = await mutate(POST, "roster.invite", {
-      input: { phone: "(401) 555-0142", name: "Crew By Number" },
+      input: { phone: "(401) 555-0142", name: "Painter By Number" },
       headers: as(admin.email),
     });
     expect(first.status).toBe(200);
@@ -131,12 +131,12 @@ describe("the roster through the route handler", () => {
 
     // The number's own login, with no email at all. The admin's browser cookie rides along
     // and is not bridged over a request that names its own development identity.
-    const crew = {
+    const byNumber = {
       [DEV_SUBJECT_HEADER]: `dev:${phone}`,
       [DEV_PHONE_HEADER]: phone,
       cookie: `${DEV_EMAIL_COOKIE}=${encodeURIComponent(admin.email)}`,
     };
-    const me = await query(GET, "me.get", { headers: crew });
+    const me = await query(GET, "me.get", { headers: byNumber });
     expect(me.status).toBe(200);
     expect(me.body.result?.data.json).toMatchObject({
       id: (first.body.result?.data.json as { user: { id: string } }).user.id,
@@ -146,7 +146,7 @@ describe("the roster through the route handler", () => {
     });
     // A development header with no subject is no identity: the cookie is not bridged around
     // it into the admin's login with a number attached.
-    const { [DEV_SUBJECT_HEADER]: _subject, ...noSubject } = crew;
+    const { [DEV_SUBJECT_HEADER]: _subject, ...noSubject } = byNumber;
     expect((await query(GET, "me.get", { headers: noSubject })).status).toBe(401);
     // A second login presenting the number is nobody.
     const other = await query(GET, "me.get", {

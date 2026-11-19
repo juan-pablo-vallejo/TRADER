@@ -101,8 +101,8 @@ describe("customer.list", () => {
       return { status: r.status, ...failure(r.results[0]) };
     };
     expect(await send(null)).toMatchObject({ status: 401, code: "UNAUTHORIZED" });
-    const foreman = await member(owner, w, "a", "foreman");
-    expect(await send(foreman.who)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+    const worker = await member(owner, w, "a", "worker");
+    expect(await send(worker.who)).toMatchObject({ status: 403, code: "FORBIDDEN" });
     const admin = await member(owner, w, "a", "admin");
     expect((await send(admin.who)).status).toBe(200);
   });

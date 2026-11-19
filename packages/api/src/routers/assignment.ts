@@ -1,6 +1,6 @@
 // The weekly schedule (PRD, Weekly schedule; V1-D07). The writers and the office reads are
-// admin only, at the gate: a foreman schedules nobody, not even their own crew. What a shift
-// may name is judged inside each writer; none of them reads crew membership. `mine` admits
+// admin only, at the gate. What a shift
+// may name is judged inside each writer. `mine` admits
 // any active user and takes no person: it answers with the caller's own shifts.
 import {
   confirmCopy,

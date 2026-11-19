@@ -1,4 +1,4 @@
-// The sync banner (DESIGN, crew components): one line saying where this phone's entries
+// The sync banner : one line saying where this phone's entries
 // stand — sent, waiting, or held and why — and never a silent failure. Shown on every tab.
 import { StyleSheet, Text, View } from "react-native";
 

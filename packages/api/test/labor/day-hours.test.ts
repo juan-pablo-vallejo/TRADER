@@ -16,13 +16,13 @@ import {
   asTenant,
   becomeApp,
   boundIn,
-  crewDayIn,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
   rolledBack,
   uuidv7,
-  type CrewDay,
+  type WorkDay,
 } from "../helpers";
 
 let owner: Db;
@@ -43,14 +43,14 @@ const hours = (tx: Tx, who: unknown, filter: Filter = {}) =>
   appCallerIn(tx, who).labor.hours({ ...WEEK, ...filter });
 
 async function office(tx: Tx) {
-  const d = await crewDayIn(tx);
+  const d = await workDayIn(tx);
   const admin = await boundIn(tx, d.companyId, "admin");
   return { d, admin };
 }
 
 async function shift(
   tx: Tx,
-  d: CrewDay,
+  d: WorkDay,
   worker: string,
   start: string,
   end: string,
@@ -77,7 +77,7 @@ describe("labor.hours", () => {
   it("is the office's alone, and of the caller's company alone", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
-      const other = await crewDayIn(tx);
+      const other = await workDayIn(tx);
       await shift(tx, d, d.w1, T("12:00"), T("16:00"));
       await shift(tx, other, other.w1, T("12:00"), T("20:00"));
       const worker = await boundIn(tx, d.companyId, "worker");
@@ -345,7 +345,7 @@ describe("labor.hours", () => {
   });
 
   // The push's own writer, as w1's phone sends a day it captured with no connection.
-  function offlineDay(tx: Tx, d: CrewDay) {
+  function offlineDay(tx: Tx, d: WorkDay) {
     const now = new Date();
     const skew = measureSkew(now, now);
     const pusher = {

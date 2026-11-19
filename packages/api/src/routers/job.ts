@@ -1,10 +1,7 @@
-// Jobs (PRD, Jobs and location). Admin only, at the gate; the customer, crew and invoice rules
+// Jobs (PRD, Jobs and location). Admin only, at the gate; the customer and invoice rules
 // and the target's visibility are judged inside each writer under its locks.
 import { listJobs, listOutput } from "../jobs/list";
 import {
-  assignInput,
-  assignJob,
-  assignOutput,
   createInput,
   createJob,
   createOutput,
@@ -29,10 +26,6 @@ export const jobRouter = router({
     .input(updateInput)
     .output(updateOutput)
     .mutation(({ ctx, input }) => updateJob(ctx.tx, ctx.user, input)),
-  assign: roleProcedure("admin")
-    .input(assignInput)
-    .output(assignOutput)
-    .mutation(({ ctx, input }) => assignJob(ctx.tx, ctx.user, input)),
   setStatus: roleProcedure("admin")
     .input(setStatusInput)
     .output(setStatusOutput)

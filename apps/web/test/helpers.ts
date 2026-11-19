@@ -6,8 +6,6 @@ import { fileURLToPath } from "node:url";
 import { createDb, type Db } from "@trader/db";
 import {
   companies,
-  crewMembers,
-  crews,
   customers,
   jobAssignments,
   jobs,
@@ -94,10 +92,7 @@ export type TrpcResult = {
 
 // One company with one unbound invitation, a worker unless a role is named, committed;
 // `cleanup` removes the company and everything the test wrote under it.
-export async function invitation(
-  owner: Db,
-  opts: { role?: "admin" | "foreman" | "worker" } = {},
-) {
+export async function invitation(owner: Db, opts: { role?: "admin" | "worker" } = {}) {
   const run = crypto.randomUUID().slice(0, 8);
   const [company] = await owner
     .insert(companies)
@@ -113,9 +108,7 @@ export async function invitation(
   const cleanup = async () => {
     await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, companyId));
     await owner.delete(jobAssignments).where(eq(jobAssignments.companyId, companyId));
-    await owner.delete(crewMembers).where(eq(crewMembers.companyId, companyId));
     await owner.delete(jobs).where(eq(jobs.companyId, companyId));
-    await owner.delete(crews).where(eq(crews.companyId, companyId));
     await owner.delete(customers).where(eq(customers.companyId, companyId));
     await owner.delete(users).where(eq(users.companyId, companyId));
     await owner.delete(companies).where(eq(companies.id, companyId));

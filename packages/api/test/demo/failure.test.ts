@@ -72,16 +72,14 @@ describe("demo failure recovery", () => {
     const { committed, error } = await attempt(target, (step) => {
       if (step.name.startsWith("add jobs")) throw new DemoFailure(step, "injected");
     });
-    expect(committed).toBe(4);
-    expect(error.message).toMatch(/^step 5 \(add jobs/);
+    expect(committed).toBe(3);
+    expect(error.message).toMatch(/^step 4 \(add jobs/);
     expect(await exists(name)).toBe(true);
     const owner = createDb({ ...process.env, POSTGRES_DB: name, DATABASE_URL: "" });
     try {
       expect(await counts(owner)).toMatchObject({
         users: 9,
         customers: 4,
-        crews: 2,
-        crewMembers: 7,
         jobs: 0,
         events: 0,
       });

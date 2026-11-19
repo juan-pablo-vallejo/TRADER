@@ -1,7 +1,7 @@
 // The row editor (DESIGN, UI components): a table row's Edit toggle and the editor row that
 // opens beneath it, plus the two pieces every editor is built from — a section and the footer
 // where a destructive button stands last and alone — and the destructive action itself, which
-// says what it will do before it does it. Consumed by the roster, customers, jobs, crews
+// says what it will do before it does it. Consumed by the roster, customers, jobs
 // and pay-periods screens.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 

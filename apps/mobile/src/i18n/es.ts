@@ -24,7 +24,7 @@ export const es: Catalog = {
   today: {
     title: "Hoy",
     jobs: "Tus obras",
-    noJobs: "Todavía no tienes ninguna obra. Pregunta en la oficina.",
+    noJobs: "Todavía no hay ninguna obra abierta. Llama a la oficina.",
     firstLoad:
       "Este teléfono todavía no ha cargado tus obras. Conéctate e inténtalo de nuevo.",
     off: "No has marcado entrada.",
@@ -41,7 +41,7 @@ export const es: Catalog = {
     shiftLater: (job, start) =>
       `Tu próximo turno es en ${job} a las ${start}. Puedes marcar entrada 15 minutos antes.`,
     noMoreShifts: "No tienes más turnos hoy.",
-    noShift: "No tienes turno hoy. Pregunta en la oficina.",
+    noShift: "No tienes turno hoy. Llama a la oficina.",
     attention: "Requiere atención",
   },
   entry: {
@@ -55,14 +55,15 @@ export const es: Catalog = {
     refused: "El sistema de la oficina no aceptó este registro.",
     refusals: {
       not_scheduled:
-        "No tenías turno en esa obra a esa hora. Pide a la oficina que agregue tus horas.",
+        "No tenías turno en esa obra a esa hora. Llama a la oficina para que agregue tus horas.",
       time_in_future:
         "El reloj de este teléfono estaba adelantado. Pon la hora en automático y pide a la oficina que agregue tus horas.",
       session_already_open:
         "Ya habías marcado entrada. Pide a la oficina que revise tus horas.",
       no_open_session:
         "No habías marcado entrada. Pide a la oficina que revise tus horas.",
-      not_permitted: "No estás en esa obra. Pide a la oficina que agregue tus horas.",
+      not_permitted:
+        "Esa obra está cerrada. Llama a la oficina para que agregue tus horas.",
       other: (code) => `Pide a la oficina que agregue tus horas. Diles: ${code}.`,
     },
   },

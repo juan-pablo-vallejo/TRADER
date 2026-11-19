@@ -36,7 +36,7 @@ const update = (who: unknown, input: Input) => appCaller(app, who).me.update(inp
 
 describe("me.update", () => {
   it("writes the caller's own name and phone, for every role, and nothing else", async () => {
-    for (const role of ["worker", "foreman", "admin"] as const) {
+    for (const role of ["worker", "admin"] as const) {
       const m = await member(owner, w, "a", role);
       const before = await userRow(owner, m.id);
       const answer = await update(m.who, {

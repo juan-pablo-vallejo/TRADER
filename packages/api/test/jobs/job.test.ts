@@ -1,10 +1,9 @@
-// TASKS:46: job.list, create, update, assign, setStatus — a job under an active customer and,
-// if staffed, an active crew, both judged under FOR SHARE; its customer immutable once invoiced;
-// any status writable, archived reversible, and leaving archived re-judging the customer and
-// the crew so a deactivated one never regains a live job; admin only, a missing or foreign id
-// one FORBIDDEN; a caller deactivated mid-call UNAUTHORIZED. The lock against a push in flight
-// is crews/members-commit.test.ts.
-import { crewMembers, crews, customers, invoices, jobs } from "@trader/db/schema";
+// TASKS:46: job.list, create, update, setStatus — a job under an active customer, judged
+// under FOR SHARE; its customer immutable once invoiced; any status writable, archived
+// reversible, and leaving archived re-judging the customer so a deactivated one never regains
+// a live job; admin only, a missing or foreign id one FORBIDDEN; a caller deactivated mid-call
+// UNAUTHORIZED.
+import { customers, invoices, jobs } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -41,23 +40,10 @@ const job = (who: unknown) => appCaller(app, who).job;
 
 type CreateInput = Parameters<ReturnType<typeof job>["create"]>[0];
 
-async function crewIn(company: "a" | "b", foremanId: string, name = "Crew") {
-  const companyId = w[company].companyId;
-  const [row] = await owner
-    .insert(crews)
-    .values({ companyId, name, foremanUserId: foremanId })
-    .returning({ id: crews.id });
-  await owner
-    .insert(crewMembers)
-    .values({ companyId, crewId: row!.id, userId: foremanId });
-  return row!.id;
-}
-
 async function jobIn(
   company: "a" | "b",
   o: {
     name?: string;
-    crewId?: string | null;
     status?: "open" | "complete" | "archived";
   } = {},
 ) {
@@ -67,7 +53,6 @@ async function jobIn(
       companyId: w[company].companyId,
       customerId: w[company].customerId,
       name: o.name ?? "Job",
-      crewId: o.crewId ?? null,
       status: o.status ?? "open",
     })
     .returning({ id: jobs.id });
@@ -79,7 +64,6 @@ const jobRow = async (id: string) =>
     await owner
       .select({
         customerId: jobs.customerId,
-        crewId: jobs.crewId,
         status: jobs.status,
         name: jobs.name,
         lat: jobs.locationLat,
@@ -90,16 +74,12 @@ const jobRow = async (id: string) =>
 
 const deactivateCustomer = (id: string) =>
   owner.update(customers).set({ deactivatedAt: new Date() }).where(eq(customers.id, id));
-const deactivateCrew = (id: string) =>
-  owner.update(crews).set({ deactivatedAt: new Date() }).where(eq(crews.id, id));
 
 describe("job.list", () => {
-  it("lists the company's jobs by status then name with customer, crew and location", async () => {
+  it("lists the company's jobs by status then name with customer and location", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const crewId = await crewIn("a", foreman.id);
     const archived = await jobIn("a", { name: "Attic", status: "archived" });
-    const open = await jobIn("a", { name: "zebra", crewId });
+    const open = await jobIn("a", { name: "zebra" });
     const complete = await jobIn("a", { name: "Barn", status: "complete" });
     await owner
       .update(jobs)
@@ -115,11 +95,8 @@ describe("job.list", () => {
       location: { lat: 41.8, lng: -71.4, radiusM: 150 },
       status: "open",
       customer: { id: w.a.customerId, name: "Customer a" },
-      crew: { id: crewId, name: "Crew", active: true },
     });
-    expect(rows[1]).toMatchObject({ status: "complete", location: null, crew: null });
-    await deactivateCrew(crewId);
-    expect((await job(admin.who).list())[0]!.crew).toMatchObject({ active: false });
+    expect(rows[1]).toMatchObject({ status: "complete", location: null });
   });
 
   it("answers 401, 403 and 200 over HTTP", async () => {
@@ -128,58 +105,48 @@ describe("job.list", () => {
       return { status: r.status, ...failure(r.results[0]) };
     };
     expect(await send(null)).toMatchObject({ status: 401, code: "UNAUTHORIZED" });
-    const foreman = await member(owner, w, "a", "foreman");
-    expect(await send(foreman.who)).toMatchObject({ status: 403, code: "FORBIDDEN" });
+    const worker = await member(owner, w, "a", "worker");
+    expect(await send(worker.who)).toMatchObject({ status: 403, code: "FORBIDDEN" });
     const admin = await member(owner, w, "a", "admin");
     expect((await send(admin.who)).status).toBe(200);
   });
 });
 
 describe("job.create", () => {
-  it("creates under the customer, staffed or not, with blank address as NULL", async () => {
+  it("creates under the customer, located or not, with blank address as NULL", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const crewId = await crewIn("a", foreman.id);
-    const unstaffed = await job(admin.who).create({
+    const plain = await job(admin.who).create({
       customerId: w.a.customerId,
       name: " Kitchen ",
       address: "  ",
     });
-    expect(unstaffed).toMatchObject({
+    expect(plain).toMatchObject({
       result: "created",
-      job: { name: "Kitchen", address: null, location: null, status: "open", crew: null },
+      job: { name: "Kitchen", address: null, location: null, status: "open" },
     });
-    const staffed = await job(admin.who).create({
+    const located = await job(admin.who).create({
       customerId: w.a.customerId,
       name: "Deck",
       address: "1 Main St",
       location: { lat: 41.8, lng: -71.4, radiusM: 100 },
-      crewId,
     });
-    expect(staffed).toMatchObject({
+    expect(located).toMatchObject({
       result: "created",
       job: {
         address: "1 Main St",
         location: { lat: 41.8, lng: -71.4, radiusM: 100 },
-        crew: { id: crewId, active: true },
       },
     });
-    if (staffed.result !== "created") throw new Error("unreachable");
-    expect(await jobRow(staffed.job.id)).toMatchObject({
-      crewId,
+    if (located.result !== "created") throw new Error("unreachable");
+    expect(await jobRow(located.job.id)).toMatchObject({
       customerId: w.a.customerId,
+      lat: 41.8,
     });
   });
 
-  it("refuses a deactivated customer or crew, a partial location and an unknown field", async () => {
+  it("refuses a deactivated customer, a partial location and an unknown field", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const crewId = await crewIn("a", foreman.id);
     const before = await owner.$count(jobs, eq(jobs.companyId, w.a.companyId));
-    await deactivateCrew(crewId);
-    expect(
-      await job(admin.who).create({ customerId: w.a.customerId, name: "X", crewId }),
-    ).toEqual({ result: "rejected", code: "crew_inactive" });
     await deactivateCustomer(w.a.customerId);
     expect(
       await job(admin.who).create({ customerId: w.a.customerId, name: "X" }),
@@ -273,42 +240,10 @@ describe("job.update", () => {
   });
 });
 
-describe("job.assign", () => {
-  it("moves a job between crews and to unassigned, refusing a deactivated crew", async () => {
-    const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const one = await crewIn("a", foreman.id, "One");
-    const two = await crewIn("a", foreman.id, "Two");
-    const id = await jobIn("a", { crewId: one });
-    expect(await job(admin.who).assign({ jobId: id, crewId: one })).toMatchObject({
-      result: "unchanged",
-    });
-    expect(await job(admin.who).assign({ jobId: id, crewId: two })).toMatchObject({
-      result: "updated",
-      job: { crew: { id: two } },
-    });
-    expect(await job(admin.who).assign({ jobId: id, crewId: null })).toMatchObject({
-      result: "updated",
-      job: { crew: null },
-    });
-    expect(await job(admin.who).assign({ jobId: id, crewId: null })).toMatchObject({
-      result: "unchanged",
-    });
-    await deactivateCrew(one);
-    expect(await job(admin.who).assign({ jobId: id, crewId: one })).toEqual({
-      result: "rejected",
-      code: "crew_inactive",
-    });
-    expect(await jobRow(id)).toMatchObject({ crewId: null });
-  });
-});
-
 describe("job.setStatus", () => {
   it("writes any status, archived included and back, and answers unchanged for the same", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const crewId = await crewIn("a", foreman.id);
-    const id = await jobIn("a", { crewId });
+    const id = await jobIn("a");
     const set = (status: "open" | "complete" | "archived") =>
       job(admin.who).setStatus({ jobId: id, status });
     expect(await set("open")).toMatchObject({ result: "unchanged" });
@@ -328,27 +263,6 @@ describe("job.setStatus", () => {
     expect(await jobRow(id)).toMatchObject({ status: "open" });
   });
 
-  it("refuses to un-archive a job of a crew deactivated while it held only archived jobs", async () => {
-    const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const crewId = await crewIn("a", foreman.id);
-    const id = await jobIn("a", { crewId, status: "archived" });
-    expect(await appCaller(app, admin.who).crew.deactivate({ crewId })).toMatchObject({
-      result: "updated",
-    });
-    expect(await job(admin.who).setStatus({ jobId: id, status: "open" })).toEqual({
-      result: "rejected",
-      code: "crew_inactive",
-    });
-    // Not leaving archived: no re-judgement, and a complete job may still be archived.
-    expect(
-      await job(admin.who).setStatus({ jobId: id, status: "archived" }),
-    ).toMatchObject({
-      result: "unchanged",
-    });
-    expect(await jobRow(id)).toMatchObject({ status: "archived" });
-  });
-
   it("refuses to un-archive a job of a customer deactivated while it held only archived jobs", async () => {
     const admin = await member(owner, w, "a", "admin");
     const id = await jobIn("a", { status: "archived" });
@@ -364,20 +278,15 @@ describe("job.setStatus", () => {
 });
 
 describe("gates and targets", () => {
-  it("is admin only and answers FORBIDDEN for a missing or foreign job, customer or crew", async () => {
+  it("is admin only and answers FORBIDDEN for a missing or foreign job or customer", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
     const worker = await member(owner, w, "a", "worker");
-    const crewId = await crewIn("a", foreman.id);
     const id = await jobIn("a");
-    const foremanB = await member(owner, w, "b", "foreman");
-    const crewB = await crewIn("b", foremanB.id);
     const jobB = await jobIn("b");
     const facts = { customerId: w.a.customerId, name: "X" };
     for (const call of [
       () => job(worker.who).create(facts),
-      () => job(foreman.who).update({ jobId: id, ...facts }),
-      () => job(worker.who).assign({ jobId: id, crewId }),
+      () => job(worker.who).update({ jobId: id, ...facts }),
       () => job(worker.who).setStatus({ jobId: id, status: "complete" }),
     ]) {
       expect(await outcome(call())).toBe("FORBIDDEN");
@@ -385,7 +294,6 @@ describe("gates and targets", () => {
     expect(await outcome(job(null).create(facts))).toBe("UNAUTHORIZED");
     for (const jobId of [jobB, crypto.randomUUID()]) {
       expect(await outcome(job(admin.who).update({ jobId, ...facts }))).toBe("FORBIDDEN");
-      expect(await outcome(job(admin.who).assign({ jobId, crewId }))).toBe("FORBIDDEN");
       expect(await outcome(job(admin.who).setStatus({ jobId, status: "complete" }))).toBe(
         "FORBIDDEN",
       );
@@ -398,33 +306,23 @@ describe("gates and targets", () => {
         await outcome(job(admin.who).update({ jobId: id, customerId, name: "X" })),
       ).toBe("FORBIDDEN");
     }
-    for (const foreign of [crewB, crypto.randomUUID()]) {
-      expect(await outcome(job(admin.who).create({ ...facts, crewId: foreign }))).toBe(
-        "FORBIDDEN",
-      );
-      expect(await outcome(job(admin.who).assign({ jobId: id, crewId: foreign }))).toBe(
-        "FORBIDDEN",
-      );
-    }
-    expect(await jobRow(jobB)).toMatchObject({ status: "open", crewId: null });
-    expect(await jobRow(id)).toMatchObject({ status: "open", crewId: null, name: "Job" });
+    expect(await jobRow(jobB)).toMatchObject({ status: "open" });
+    expect(await jobRow(id)).toMatchObject({ status: "open", name: "Job" });
   });
 
   it("re-reads the caller under lock: a deactivation committed while it waited refuses", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const foreman = await member(owner, w, "a", "foreman");
-    const crewId = await crewIn("a", foreman.id);
     const id = await jobIn("a");
     let result!: Promise<string>;
     await owner.transaction(async (tx) => {
       await tx.execute(sql`select 1 from jobs where id = ${id} for update`);
-      result = outcome(job(admin.who).assign({ jobId: id, crewId }));
+      result = outcome(job(admin.who).setStatus({ jobId: id, status: "complete" }));
       await waitForLockWait(owner, '%from "jobs"%for no key update%');
       await tx.execute(
         sql`update users set deactivated_at = now() where id = ${admin.id}`,
       );
     });
     expect(await result).toBe("UNAUTHORIZED");
-    expect(await jobRow(id)).toMatchObject({ crewId: null });
+    expect(await jobRow(id)).toMatchObject({ status: "open" });
   });
 });

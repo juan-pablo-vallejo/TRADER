@@ -28,7 +28,10 @@ const sameCodes: Equal<LaborRejectionCode, LaborRejection> = true;
 
 describe("the contract's restated lists", () => {
   it("are the schema's own, member for member", () => {
-    expect([...contract.ROLES]).toEqual(userRole.enumValues);
+    // Two roles on the wire, each a label of the database's enum, which keeps a third label
+    // that nothing holds until the baseline.
+    expect([...contract.ROLES]).toEqual(["admin", "worker"]);
+    for (const role of contract.ROLES) expect(userRole.enumValues).toContain(role);
     expect([...contract.JOB_STATUSES]).toEqual(jobStatus.enumValues);
     expect([...contract.LABOR_EVENT_TYPES]).toEqual(workSessionEventType.enumValues);
     expect([...contract.ATTESTATION_LEVELS]).toEqual(attestationLevel.enumValues);

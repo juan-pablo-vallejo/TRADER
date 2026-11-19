@@ -10,8 +10,6 @@ import { fileURLToPath } from "node:url";
 import { createDb, type Db } from "@trader/db";
 import {
   companies,
-  crewMembers,
-  crews,
   customers,
   jobs,
   jobAssignments,
@@ -91,7 +89,7 @@ export const identity = (
   emailVerified: true,
 });
 
-// A login the provider verified by phone number alone, as a crew member's is.
+// A login the provider verified by phone number alone, as a worker's is.
 export const phoneIdentity = (subject: string, phone: string): VerifiedIdentity => ({
   subject,
   phone,
@@ -152,9 +150,7 @@ export async function world(owner: Db) {
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
     await owner.delete(jobAssignments).where(inArray(jobAssignments.companyId, ids));
-    await owner.delete(crewMembers).where(inArray(crewMembers.companyId, ids));
     await owner.delete(jobs).where(inArray(jobs.companyId, ids));
-    await owner.delete(crews).where(inArray(crews.companyId, ids));
     await owner.delete(customers).where(inArray(customers.companyId, ids));
     await owner.delete(users).where(inArray(users.companyId, ids));
     await owner.delete(companies).where(inArray(companies.id, ids));
@@ -297,10 +293,9 @@ async function report({ ctx }: { ctx: { tx: Tx; user: AppUser } }) {
 
 const gate = router({
   protected: protectedProcedure.query(report),
-  field: roleProcedure("worker", "foreman").query(report),
-  foreman: roleProcedure("foreman").query(report),
+  worker: roleProcedure("worker").query(report),
   admin: roleProcedure("admin").query(report),
-  office: roleProcedure("foreman", "admin").query(report),
+  either: roleProcedure("worker", "admin").query(report),
   // Accepts any input, so a caller can send role and company claims at an admin gate.
   adminLoose: roleProcedure("admin").input(z.looseObject({})).query(report),
   adminWrite: roleProcedure("admin")
@@ -314,7 +309,7 @@ const gate = router({
     }),
 });
 
-export const GATES = ["protected", "field", "foreman", "admin", "office"] as const;
+export const GATES = ["protected", "worker", "admin", "either"] as const;
 
 export const testRouter = router({ probe, gate });
 
@@ -436,10 +431,10 @@ export function uuidv7(ms = Date.now()): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-// A crew's day, inside `tx`: a New York company whose bound foreman runs a crew assigned job
-// J, two workers, and job K on no crew.
-export async function crewDayIn(tx: Tx) {
-  const c = await companyIn(tx, "foreman");
+// A working day, inside `tx`: a New York company with its bound worker, two more workers
+// who are invitations (no identity to push with), and jobs J and K.
+export async function workDayIn(tx: Tx) {
+  const c = await companyIn(tx, "worker");
   const worker = async (n: string) =>
     (
       await tx
@@ -449,30 +444,19 @@ export async function crewDayIn(tx: Tx) {
     )[0]!.id;
   const w1 = await worker("w1");
   const w2 = await worker("w2");
-  const [crew] = await tx
-    .insert(crews)
-    .values({ companyId: c.companyId, name: "Crew", foremanUserId: c.userId })
-    .returning({ id: crews.id });
-  await tx.insert(crewMembers).values(
-    [c.userId, w1, w2].map((userId) => ({
-      companyId: c.companyId,
-      crewId: crew!.id,
-      userId,
-    })),
-  );
-  const job = async (name: string, crewId: string | null) =>
+  const job = async (name: string) =>
     (
       await tx
         .insert(jobs)
-        .values({ companyId: c.companyId, customerId: c.customerId, name, crewId })
+        .values({ companyId: c.companyId, customerId: c.customerId, name })
         .returning({ id: jobs.id })
     )[0]!.id;
-  const J = await job("J", crew!.id);
-  const K = await job("K", null);
-  return { ...c, foremanId: c.userId, crewId: crew!.id, w1, w2, J, K };
+  const J = await job("J");
+  const K = await job("K");
+  return { ...c, w1, w2, J, K };
 }
 
-export type CrewDay = Awaited<ReturnType<typeof crewDayIn>>;
+export type WorkDay = Awaited<ReturnType<typeof workDayIn>>;
 
 type EventInput = {
   worker: string;
@@ -491,7 +475,7 @@ type EventInput = {
 };
 
 // One ledger row, written as the owner (the API's writers are later lines).
-export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<string> {
+export async function eventIn(tx: Tx, day: WorkDay, e: EventInput): Promise<string> {
   const server = new Date(e.server ?? e.client);
   const id = uuidv7(server.getTime());
   await tx.insert(workSessionEvents).values({
@@ -692,7 +676,7 @@ export async function rejection(p: Promise<unknown>) {
 }
 
 // A worked, ended day on J, 5 October in New York: w1 4 h, w2 8 h.
-export async function workedDay(tx: Tx, d: CrewDay) {
+export async function workedDay(tx: Tx, d: WorkDay) {
   const at = (worker: string, start: string, end: string) => [
     { worker, job: d.J, type: "started" as const, client: start },
     { worker, job: d.J, type: "ended" as const, client: end },

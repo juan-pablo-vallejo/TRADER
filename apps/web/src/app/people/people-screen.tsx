@@ -27,7 +27,7 @@ import { useTRPC } from "../trpc";
 import styles from "./people.module.css";
 
 type Roles = keyof typeof strings.roles;
-const ROLES = ["worker", "foreman", "admin"] as const satisfies readonly Roles[];
+const ROLES = ["worker", "admin"] as const satisfies readonly Roles[];
 
 type Rows = NonNullable<ReturnType<typeof useRoster>["data"]>;
 type Row = Rows[number];

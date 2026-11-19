@@ -2,7 +2,7 @@
 // takes its event ids from (labor/ledger.ts), and the hours that count per worker, job and
 // work date (labor/day-hours.ts). Admin only, at the gate: the office client is
 // online, so there is no device retry to keep open across a demotion (unlike
-// material.correct), and one worker's evidence is not a worker's or a foreman's to list.
+// push), and one worker's evidence is not another worker's to list.
 import { hoursInput, hoursOutput, listHours } from "../labor/day-hours";
 import { ledgerInput, ledgerOutput, workerLedger } from "../labor/ledger";
 import { repairInput, repairLabor, repairOutput } from "../labor/repair";

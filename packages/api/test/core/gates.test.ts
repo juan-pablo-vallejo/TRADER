@@ -3,7 +3,7 @@
 // or dropped fails the second. Each call carries no input, so nothing is written: a gate runs
 // before input validation, and what comes back is the gate's own answer (UNAUTHORIZED or
 // FORBIDDEN) or anything else, which means the caller was let in. Resource checks inside a
-// procedure (a foreman's own crew, an admin-or-foreman rule) are that procedure's tests'.
+// procedure are that procedure's tests'.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -28,7 +28,7 @@ import {
   type World,
 } from "../helpers";
 
-type Role = "worker" | "foreman" | "admin";
+type Role = "worker" | "admin";
 // `public`: no identity. `protected`: any active user. Otherwise the roles admitted.
 type Gate = "public" | "protected" | readonly Role[];
 
@@ -55,14 +55,6 @@ const EXPECTED: Record<string, Gate> = {
   "invoice.send": ADMIN,
   "invoice.suggest": ADMIN,
   "invoice.void": ADMIN,
-  "crew.list": ADMIN,
-  "crew.create": ADMIN,
-  "crew.update": ADMIN,
-  "crew.setForeman": ADMIN,
-  "crew.addMember": ADMIN,
-  "crew.removeMember": ADMIN,
-  "crew.deactivate": ADMIN,
-  "crew.reactivate": ADMIN,
   "customer.list": ADMIN,
   "customer.create": ADMIN,
   "customer.update": ADMIN,
@@ -71,7 +63,6 @@ const EXPECTED: Record<string, Gate> = {
   "job.list": ADMIN,
   "job.create": ADMIN,
   "job.update": ADMIN,
-  "job.assign": ADMIN,
   "job.setStatus": ADMIN,
   "labor.hours": ADMIN,
   "labor.ledger": ADMIN,
@@ -128,7 +119,7 @@ describe("the gate inventory", () => {
     }
   });
 
-  for (const role of ["worker", "foreman", "admin"] as const) {
+  for (const role of ["worker", "admin"] as const) {
     it(`admits a ${role} at exactly the gates that name the role`, async () => {
       const { who } = await member(owner, w, "a", role, { label: "gates" });
       for (const [path, gate] of Object.entries(EXPECTED)) {

@@ -13,8 +13,8 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  type CrewDay,
-  crewDayIn,
+  type WorkDay,
+  workDayIn,
   eventIn,
   outcome,
   ownerDb,
@@ -28,11 +28,11 @@ afterAll(async () => {
   await owner.$client.end();
 });
 
-// A crew's day with a number series starting at 1042, an admin, and a second company
+// A working day with a number series starting at 1042, an admin, and a second company
 // beside it with an invoice of its own.
 async function office(tx: Tx, counter = true) {
-  const day = await crewDayIn(tx);
-  const other = await crewDayIn(tx);
+  const day = await workDayIn(tx);
+  const other = await workDayIn(tx);
   const admin = await boundIn(tx, day.companyId, "admin");
   const worker = await boundIn(tx, day.companyId, "worker");
   if (counter) {
@@ -78,7 +78,7 @@ async function draft(
   return id;
 }
 
-const rowsOf = async (tx: Tx, d: CrewDay) => {
+const rowsOf = async (tx: Tx, d: WorkDay) => {
   await tx.execute(sql`reset role`);
   const rows = await tx
     .select({ id: invoices.id, number: invoices.number })
@@ -253,13 +253,13 @@ describe("invoice.suggest", () => {
       // Later: more hours that day.
       await tx.execute(sql`reset role`);
       await eventIn(tx, o.day, {
-        worker: o.day.foremanId,
+        worker: o.day.userId,
         job: o.day.J,
         type: "started",
         client: "2026-10-05T12:00:00Z",
       });
       await eventIn(tx, o.day, {
-        worker: o.day.foremanId,
+        worker: o.day.userId,
         job: o.day.J,
         type: "ended",
         client: "2026-10-05T14:00:00Z",
@@ -447,7 +447,7 @@ describe("another company's invoice", () => {
     });
   });
 
-  it("and a worker or a foreman reaches none of them", async () => {
+  it("and a worker reaches none of them", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const id = await draft(o);

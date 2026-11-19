@@ -14,7 +14,7 @@ import { createCallerFactory } from "../../src/core/trpc";
 import { appRouter } from "../../src/router";
 import {
   boundIn,
-  crewDayIn,
+  workDayIn,
   disposableDb,
   outcome,
   quietReporter,
@@ -48,10 +48,10 @@ const plan = (who: VerifiedIdentity) =>
 const HOURS = { expectedStart: "07:00", expectedEnd: "15:30" };
 const DAY = "2026-11-16";
 
-// A committed crew day with two bound admins.
+// A committed working day with two bound admins.
 async function world() {
   return D.owner.transaction(async (tx) => {
-    const d = await crewDayIn(tx);
+    const d = await workDayIn(tx);
     const admin = await boundIn(tx, d.companyId, "admin");
     const second = await boundIn(tx, d.companyId, "admin");
     return { ...d, admin, second };

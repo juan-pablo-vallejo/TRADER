@@ -47,7 +47,6 @@ const snapshot = (over: Partial<PullOutput> = {}): PullOutput => ({
   scheduleEnforced: false,
   shifts: [],
   jobs: [],
-  ledCrews: [],
   sessions: [],
   events: [],
   ...over,

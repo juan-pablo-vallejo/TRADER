@@ -60,7 +60,7 @@ api_down() {
 trap api_down EXIT
 flow() { "$here/run.sh" "$platform" "$device" "$@"; }
 
-# A shift for one person on the first job of crew A, around now on the company's clock.
+# A shift for one person on the demo's first job, around now on the company's clock.
 shift_now() {
   sql "insert into job_assignments
          (company_id, user_id, job_id, work_date, expected_start, expected_end)

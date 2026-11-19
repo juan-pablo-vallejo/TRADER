@@ -3,7 +3,7 @@
    row opening an editor row beneath it. Narrow: each row two lines — its name, then the other
    cells joined by a middle dot, an empty one omitted — the editor inside the card, every
    stretching control full width — the destructive button never. Consumed by the roster,
-   customers, jobs and crews screens through row-editor.tsx. */
+   customers and jobs screens through row-editor.tsx. */
 .table {
   width: 100%;
   border-collapse: collapse;

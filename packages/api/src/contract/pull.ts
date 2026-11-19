@@ -40,22 +40,13 @@ export const pullOutput = z.strictObject({
       locked: z.boolean(),
     }),
   ),
-  // What the caller may start on or log against (sync/scope.ts): no place, customer or cost.
+  // Every job a start may name: no place, no customer.
   jobs: z.array(
     z.strictObject({
       id: z.uuid(),
       name: z.string(),
       address: z.string().nullable(),
       status: z.enum(JOB_STATUSES),
-    }),
-  ),
-  // Crews the caller leads, with their active members by id and name: what recording crew
-  // labor offline needs, and nothing more. A worker gets none.
-  ledCrews: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      name: z.string(),
-      members: z.array(z.strictObject({ id: z.uuid(), name: z.string() })),
     }),
   ),
   sessions: z.array(

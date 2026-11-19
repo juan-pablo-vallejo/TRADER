@@ -4,7 +4,8 @@
 // itself is never output, as me.get never outputs it. A plain read under RLS, no locks.
 // Consumed by routers/roster.ts, and by invite.ts, role.ts and deactivation.ts for the row
 // they answer with.
-import { userRole, users } from "@trader/db/schema";
+import { ROLES, roleOf } from "../contract/enums";
+import { users } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -18,7 +19,7 @@ export const rosterUser = z.strictObject({
   phone: z.string().nullable(),
   // The number the person signs in with (users.ts), or null: invited by email alone.
   signInPhone: z.string().nullable(),
-  role: z.enum(userRole.enumValues),
+  role: z.enum(ROLES),
   invited: z.boolean(),
   deactivatedAt: z.date().nullable(),
 });
@@ -44,7 +45,7 @@ type Row = {
   email: string | null;
   phone: string | null;
   signInPhone: string | null;
-  role: RosterUser["role"];
+  role: string;
   bound: boolean;
   deactivatedAt: Date | null;
 };
@@ -55,7 +56,7 @@ const toUser = (row: Row): RosterUser => ({
   email: row.email,
   phone: row.phone,
   signInPhone: row.signInPhone,
-  role: row.role,
+  role: roleOf(row.role),
   invited: !row.bound,
   deactivatedAt: row.deactivatedAt,
 });

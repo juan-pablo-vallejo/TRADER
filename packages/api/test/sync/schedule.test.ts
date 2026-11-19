@@ -20,8 +20,8 @@ import {
   appCallerIn,
   asTenant,
   boundIn,
-  type CrewDay,
-  crewDayIn,
+  type WorkDay,
+  workDayIn,
   ownerDb,
   rolledBack,
   uuidv7,
@@ -38,7 +38,7 @@ const at = (wall: string, day = DAY) => new Date(`${day}T${wall}:00-05:00`);
 
 const asOwner = (tx: Tx) => tx.execute(sql`reset role`);
 
-async function enforce(tx: Tx, d: CrewDay, on = true) {
+async function enforce(tx: Tx, d: WorkDay, on = true) {
   await asOwner(tx);
   await tx
     .update(companies)
@@ -50,7 +50,7 @@ async function enforce(tx: Tx, d: CrewDay, on = true) {
 // writes (assignment.test.ts).
 async function shift(
   tx: Tx,
-  d: CrewDay,
+  d: WorkDay,
   userId: string,
   jobId: string,
   expectedStart: string,
@@ -72,7 +72,7 @@ async function shift(
   return row!.id;
 }
 
-const who = (d: CrewDay, id: string, role: AppUser["role"]): AppUser => ({
+const who = (d: WorkDay, id: string, role: AppUser["role"]): AppUser => ({
   id,
   companyId: d.companyId,
   role,
@@ -93,7 +93,7 @@ type Sent = {
 // refused. Captured offline at a fixed instant unless told otherwise.
 async function push(
   tx: Tx,
-  d: CrewDay,
+  d: WorkDay,
   caller: AppUser,
   workerId: string,
   jobId: string,
@@ -139,20 +139,20 @@ const lockOf = async (tx: Tx, shiftId: string) => {
   return row!.lockedByEventId;
 };
 
-const eventsOf = async (tx: Tx, d: CrewDay) => {
+const eventsOf = async (tx: Tx, d: WorkDay) => {
   await asOwner(tx);
   return tx.$count(workSessionEvents, eq(workSessionEvents.companyId, d.companyId));
 };
 
 describe("judgeStart", () => {
-  const judged = async (tx: Tx, d: CrewDay, jobId: string, when: Date) => {
+  const judged = async (tx: Tx, d: WorkDay, jobId: string, when: Date) => {
     await asTenant(tx, d.companyId);
     return judgeStart(tx, d.w1, jobId, when);
   };
 
   it("admits the shift's own job from its first minute to the one before its end", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const id = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
       const yes = { admitted: true, shiftId: id };
       const no = { admitted: false };
@@ -171,7 +171,7 @@ describe("judgeStart", () => {
 
   it("admits a start up to fifteen minutes early, and only when no shift holds that minute", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const morning = await shift(tx, d, d.w1, d.J, "07:00", "11:00");
       const late = await shift(tx, d, d.w1, d.K, "11:10", "15:00");
       expect(await judged(tx, d, d.J, at("06:45"))).toEqual({
@@ -196,7 +196,7 @@ describe("judgeStart", () => {
 
   it("admits nothing on a day whose shifts overlap", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       // Rows the office's writers would have refused: the day does not resolve, and nothing
       // is admitted on it at all, in the shared time or out of it.
       await shift(tx, d, d.w1, d.J, "07:00", "15:30");
@@ -210,7 +210,7 @@ describe("judgeStart", () => {
 
   it("reads the wall clock on the days the clocks change", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       // 2026-11-01, New York: 01:30 happens twice. A shift over it is eligible both times.
       const back = await shift(tx, d, d.w1, d.J, "01:00", "02:00", "2026-11-01");
       for (const instant of ["2026-11-01T05:30:00Z", "2026-11-01T06:30:00Z"]) {
@@ -233,7 +233,7 @@ describe("judgeStart", () => {
 
   it("never looks past the day's end at the next day's shifts", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const evening = await shift(tx, d, d.w1, d.J, "22:00", "23:59");
       await shift(tx, d, d.w1, d.J, "00:00", "08:00", "2026-11-10");
       expect(await judged(tx, d, d.J, at("23:58"))).toEqual({
@@ -247,26 +247,46 @@ describe("judgeStart", () => {
 });
 
 describe("sync.push with schedule enforcement off", () => {
-  it("is the crew's as before: a shift admits nobody and its absence refuses nobody", async () => {
+  it("lets a worker start on any job that is not archived: a shift admits nobody and its absence refuses nobody", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const onK = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
       await asTenant(tx, d.companyId);
       expect(await scheduleEnforced(tx)).toBe(false);
       const worker = who(d, d.w1, "worker");
-      // K has no crew: the shift there changes nothing. J is the crew's: no shift is needed.
-      expect((await push(tx, d, worker, d.w1, d.K)).result).toBe("not_permitted");
-      expect((await push(tx, d, worker, d.w1, d.J)).result).toBe("accepted");
+      // No shift on J, captured online: nothing asks for one.
+      expect(
+        await push(tx, d, worker, d.w1, d.J, {
+          offline: false,
+          when: new Date(Date.now() - 2000),
+        }),
+      ).toMatchObject({ result: "accepted", reasons: ["location"] });
+      await push(tx, d, worker, d.w1, d.J, {
+        type: "ended",
+        offline: false,
+        when: new Date(Date.now() - 1000),
+      });
+      // A shift on K: the start there is accepted like any other, and locks nothing.
+      const onShift = await push(tx, d, worker, d.w1, d.K, {
+        offline: false,
+        when: new Date(),
+      });
+      expect(onShift).toMatchObject({ result: "accepted", reasons: ["location"] });
       expect(await lockOf(tx, onK)).toBeNull();
+      // An archived job is the one a start is refused on.
+      const other = who(d, d.w2, "worker");
+      await asOwner(tx);
+      await tx.execute(sql`update jobs set status = 'archived' where id = ${d.J}`);
+      expect((await push(tx, d, other, d.w2, d.J)).result).toBe("not_permitted");
+      expect((await push(tx, d, other, d.w2, d.K)).result).toBe("accepted");
     });
   });
 });
 
 describe("sync.push with schedule enforcement on", () => {
-  it("admits a worker on their shift's job, crew or no crew, and locks the shift", async () => {
+  it("admits a worker's start on a shift of theirs, and locks the shift", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      // K is on no crew, and w1 is in none that has it.
+      const d = await workDayIn(tx);
       const id = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
       await enforce(tx, d);
       const start = await push(tx, d, who(d, d.w1, "worker"), d.w1, d.K);
@@ -320,9 +340,32 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
+  it("admits a worker's start up to fifteen minutes before their shift, and no earlier", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await workDayIn(tx);
+      const id = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      await enforce(tx, d);
+      const worker = who(d, d.w1, "worker");
+      // Sixteen minutes early no shift admits it: stored, being offline, and flagged.
+      const early = await push(tx, d, worker, d.w1, d.J, { when: at("06:44") });
+      expect(early).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location", "unscheduled"],
+      });
+      expect(await lockOf(tx, id)).toBeNull();
+      await push(tx, d, worker, d.w1, d.J, { type: "ended", when: at("06:44") });
+      const start = await push(tx, d, worker, d.w1, d.J, { when: at("06:45") });
+      expect(start).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location"],
+      });
+      expect(await lockOf(tx, id)).toBe(start.id);
+    });
+  });
+
   it("locks a shift once: a second start on it leaves the first lock", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const id = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
       await enforce(tx, d);
       const worker = who(d, d.w1, "worker");
@@ -334,13 +377,13 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
-  it("refuses a start captured with a connection that no shift admits, and writes nothing", async () => {
+  it("refuses a worker's start captured online that no shift admits as not_scheduled, and writes nothing", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       await enforce(tx, d);
       const worker = who(d, d.w1, "worker");
       const now = { offline: false, when: new Date(Date.now() - 1000) };
-      // No shift at all — though J is their own crew's job.
+      // No shift at all.
       expect((await push(tx, d, worker, d.w1, d.J, now)).result).toBe("not_scheduled");
       // A shift through the whole of today and tomorrow, on the other job.
       await asTenant(tx, d.companyId);
@@ -357,9 +400,9 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
-  it("stores a start captured offline that the schedule does not admit, flagged unscheduled", async () => {
+  it("stores a worker's start captured offline that no shift admits, flagged unscheduled", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       // The phone's copy said J at 07:00; the office has since moved the day to K.
       const id = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
       await enforce(tx, d);
@@ -404,63 +447,75 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
-  it("asks no shift of an admin's own start", async () => {
+  it("accepts an admin's start that no shift admits, captured online, flagged unscheduled", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const admin = await boundIn(tx, d.companyId, "admin");
       await enforce(tx, d);
       const start = await push(tx, d, who(d, admin.id, "admin"), admin.id, d.K, {
         offline: false,
         when: new Date(Date.now() - 1000),
       });
-      // No shift and no crew: the schedule does not judge an admin's own start, so it is
-      // never `unscheduled`. Its other flags are anyone's: this one carries no stamp.
-      expect(start).toMatchObject({ result: "accepted", reasons: ["location"] });
-    });
-  });
-
-  it("asks a foreman's start for a crew member for that member's shift and the crew's authority", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      const foreman = who(d, d.foremanId, "foreman");
-      const onJ = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
-      // w2 has a shift on K, which is no crew's: the foreman leads nobody there.
-      await shift(tx, d, d.w2, d.K, "07:00", "15:30");
-      await enforce(tx, d);
-      const now = { offline: false, when: new Date(Date.now() - 1000) };
-      // With the member's shift: admitted, and the member's shift locked.
-      const start = await push(tx, d, foreman, d.w1, d.J);
-      expect(start.result).toBe("accepted");
-      expect(await lockOf(tx, onJ)).toBe(start.id);
-      // A member with no shift on J: the crew's authority is not enough.
-      expect((await push(tx, d, foreman, d.w2, d.J, now)).result).toBe("not_scheduled");
-      // A shift where the foreman has no authority is not enough either.
-      expect((await push(tx, d, foreman, d.w2, d.K)).result).toBe("not_permitted");
-      // The foreman's own start is their own shift's, like anyone's.
-      expect((await push(tx, d, foreman, d.foremanId, d.J, now)).result).toBe(
-        "not_scheduled",
-      );
-    });
-  });
-
-  it("stores an unscheduled offline start for an admin worker too, flagged the same", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      // w1 becomes an admin and stays in the foreman's crew: a foreman's start for them.
-      await asOwner(tx);
-      await tx.execute(sql`update users set role = 'admin' where id = ${d.w1}`);
-      await enforce(tx, d);
-      expect(await push(tx, d, who(d, d.foremanId, "foreman"), d.w1, d.J)).toMatchObject({
+      // No shift: an admin starts on any open job all the same, and the office sees it was
+      // outside the schedule. Its other flags are anyone's: this one carries no stamp.
+      expect(start).toMatchObject({
         result: "accepted",
-        reasons: ["offline", "location", "unscheduled"],
+        reasons: ["location", "unscheduled"],
       });
       expect(await eventsOf(tx, d)).toBe(1);
     });
   });
 
+  it("stores an admin's unscheduled start captured offline too, flagged the same", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await workDayIn(tx);
+      // w1 becomes an admin, with a shift on the other job.
+      await asOwner(tx);
+      await tx.execute(sql`update users set role = 'admin' where id = ${d.w1}`);
+      const onK = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
+      await enforce(tx, d);
+      expect(await push(tx, d, who(d, d.w1, "admin"), d.w1, d.J)).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location", "unscheduled"],
+      });
+      expect(await lockOf(tx, onK)).toBeNull();
+      expect(await eventsOf(tx, d)).toBe(1);
+    });
+  });
+
+  it("admits an admin's start on a shift of theirs like anyone's: locked, and not unscheduled", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await workDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const id = await shift(tx, d, admin.id, d.J, "07:00", "15:30");
+      await enforce(tx, d);
+      const start = await push(tx, d, who(d, admin.id, "admin"), admin.id, d.J);
+      expect(start).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location"],
+      });
+      expect(await lockOf(tx, id)).toBe(start.id);
+    });
+  });
+
+  it("refuses a start recorded for somebody else, shift or no shift, and writes nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await workDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      const id = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      await enforce(tx, d);
+      // w1's own shift admits w1's own start, and nobody else's record of it.
+      for (const caller of [who(d, d.w2, "worker"), who(d, admin.id, "admin")]) {
+        expect((await push(tx, d, caller, d.w1, d.J)).result).toBe("not_permitted");
+      }
+      expect(await lockOf(tx, id)).toBeNull();
+      expect(await eventsOf(tx, d)).toBe(0);
+    });
+  });
+
   it("still refuses an archived job, a future time and a second open session by their own names", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       await shift(tx, d, d.w1, d.J, "07:00", "15:30");
       await shift(tx, d, d.w1, d.K, "16:00", "20:00");
       await enforce(tx, d);
@@ -492,7 +547,7 @@ describe("sync.push with schedule enforcement on", () => {
 describe("sync.pull", () => {
   it("says whether the schedule is enforced", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const worker = await boundIn(tx, d.companyId, "worker");
       await asTenant(tx, d.companyId);
       const pull = () => appCallerIn(tx, worker.who).sync.pull({ protocolVersion: 1 });
@@ -510,7 +565,7 @@ describe("sync.pull", () => {
 
   it("answers the caller's own shifts with their hours, and nobody else's", async () => {
     await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
+      const d = await workDayIn(tx);
       const worker = await boundIn(tx, d.companyId, "worker");
       await asTenant(tx, d.companyId);
       const pull = () => appCallerIn(tx, worker.who).sync.pull({ protocolVersion: 1 });
@@ -535,10 +590,10 @@ describe("sync.pull", () => {
         locked: false,
       });
       expect(snapshot.shifts[1]).toMatchObject({ start: "12:00", end: "15:00" });
-      // The jobsite travels with the shift: this caller is in no crew, so `jobs` has none.
+      // The jobsite travels with the shift, and is among the open jobs as well.
       expect(snapshot.shifts[0]!.job.id).toBe(d.J);
       expect(snapshot.shifts[0]!.job.name).not.toBe("");
-      expect(snapshot.jobs.map((j) => j.id)).not.toContain(d.J);
+      expect(snapshot.jobs.map((j) => j.id)).toContain(d.J);
     });
   });
 });

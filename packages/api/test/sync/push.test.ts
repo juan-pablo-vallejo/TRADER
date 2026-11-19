@@ -2,7 +2,13 @@
 // Postgres, in rolled-back owner transactions: each record's caller transaction is a savepoint
 // of it. What a commit proves is sync/push-commit.test.ts's; the loop's stop rules are also
 // proved here without a database, through pushRecords with a stand-in runner.
-import { crewMembers, users, workSessionEvents } from "@trader/db/schema";
+import {
+  companies,
+  jobAssignments,
+  jobs,
+  users,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
@@ -21,7 +27,7 @@ import {
   appCallerIn,
   asTenant,
   boundIn,
-  crewDayIn,
+  workDayIn,
   identity,
   ownerDb,
   recordingReporter,
@@ -63,13 +69,10 @@ function labor(
   };
 }
 
-// A crew day with a bound worker `w` on the crew, the app role and tenant on.
+// A working day with a bound worker `w`, the app role and tenant on.
 async function world(tx: Tx) {
-  const d = await crewDayIn(tx);
+  const d = await workDayIn(tx);
   const w = await boundIn(tx, d.companyId, "worker");
-  await tx
-    .insert(crewMembers)
-    .values({ companyId: d.companyId, crewId: d.crewId, userId: w.id });
   await asTenant(tx, d.companyId);
   return { ...d, w };
 }
@@ -172,7 +175,7 @@ describe("sync.push — envelopes", () => {
   it("answers a malformed addressable record invalid_record and runs its neighbours", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
-      const bad = labor(d.w.id, d.J, { initiatorUserId: d.foremanId });
+      const bad = labor(d.w.id, d.J, { initiatorUserId: d.userId });
       const unknownKind = { ...labor(d.w.id, d.J), kind: "photo" };
       const extra = { ...labor(d.w.id, d.J), companyId: d.companyId };
       const answer = await push(tx, d.w.who, [
@@ -250,14 +253,14 @@ describe("sync.push — the day as the field sends it", () => {
     });
   });
 
-  it("rejects an end whose start has not arrived, from another source; the start still lands", async () => {
+  it("rejects an end whose start has not arrived; the start still lands", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
       const end = labor(d.w.id, d.J, {
         type: "ended",
         clientTimestamp: new Date("2026-10-05T16:00:00Z"),
       });
-      expect(summary((await push(tx, d.who, [end])).results)).toEqual([
+      expect(summary((await push(tx, d.w.who, [end])).results)).toEqual([
         "rejected:no_open_session",
       ]);
       expect(summary((await push(tx, d.w.who, [labor(d.w.id, d.J)])).results)).toEqual([
@@ -332,10 +335,10 @@ describe("sync.push — the day as the field sends it", () => {
         ]),
       );
 
-      // The foreman's own hour on a past day, sent now as if captured online then: flagged.
+      // Another worker's own hour on a past day, sent now as if captured online then: flagged.
       const claimed = await push(tx, d.who, [
-        labor(d.foremanId, d.J),
-        labor(d.foremanId, d.J, {
+        labor(d.userId, d.J),
+        labor(d.userId, d.J, {
           type: "ended",
           clientTimestamp: new Date("2026-10-05T13:00:00Z"),
         }),
@@ -675,5 +678,198 @@ describe("pushRecords — the loop, without a database", () => {
     );
     expect(codes(broken)).toEqual(codes(plain));
     expect(codes(broken)).toEqual(["r_0"]);
+  });
+});
+
+// Who starts where (ARCHITECTURE, schedule authority), through the router: the five answers
+// a start gets by the company's schedule switch, and the one a record for somebody else
+// gets. The rules' edges are sync/schedule.test.ts's and sync/labor.test.ts's.
+describe("sync.push — a start, by the schedule switch", () => {
+  type Day = Awaited<ReturnType<typeof world>>;
+  // A Monday in the past, in New York's winter (UTC-5); the shift is 07:00 to 15:30.
+  const DAY = "2026-11-09";
+  const at = (wall: string) => new Date(`${DAY}T${wall}:00-05:00`);
+  // Captured offline at a fixed instant, or online a second ago: an online capture that old
+  // would be flagged `clock_skewed` besides.
+  const offline = (workerId: string, jobId: string, o: Record<string, unknown> = {}) =>
+    labor(workerId, jobId, { clientTimestamp: at("07:10"), capturedOffline: true, ...o });
+  const online = (workerId: string, jobId: string) =>
+    labor(workerId, jobId, { clientTimestamp: new Date(Date.now() - 1000) });
+
+  const enforce = (tx: Tx, d: Day) =>
+    asOwner(tx, d.companyId, () =>
+      tx
+        .update(companies)
+        .set({ scheduleEnforced: true })
+        .where(eq(companies.id, d.companyId)),
+    );
+  const shiftFor = (tx: Tx, d: Day, userId: string, jobId: string) =>
+    asOwner(
+      tx,
+      d.companyId,
+      async () =>
+        (
+          await tx
+            .insert(jobAssignments)
+            .values({
+              companyId: d.companyId,
+              userId,
+              jobId,
+              workDate: DAY,
+              expectedStart: "07:00",
+              expectedEnd: "15:30",
+            })
+            .returning({ id: jobAssignments.id })
+        )[0]!.id,
+    );
+  const lockOf = (tx: Tx, d: Day, shiftId: string) =>
+    asOwner(
+      tx,
+      d.companyId,
+      async () =>
+        (
+          await tx
+            .select({ by: jobAssignments.lockedByEventId })
+            .from(jobAssignments)
+            .where(eq(jobAssignments.id, shiftId))
+        )[0]!.by,
+    );
+  const eventCount = (tx: Tx, d: Day) =>
+    asOwner(tx, d.companyId, () =>
+      tx.$count(workSessionEvents, eq(workSessionEvents.companyId, d.companyId)),
+    );
+  // One record's answer: its result and flags, or its code when refused.
+  const one = async (tx: Tx, who: unknown, record: unknown) => {
+    const [r] = (await push(tx, who, [record])).results;
+    if (r === undefined) throw new Error("the record was left out");
+    return r.result === "rejected"
+      ? r.code
+      : { result: r.result, reasons: r.ack.reasons };
+  };
+
+  it("switch on, a shift of the worker's own admits it: accepted, and the shift is locked", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const shiftId = await shiftFor(tx, d, d.w.id, d.J);
+      await enforce(tx, d);
+      // Fifteen minutes before the shift is the earliest it admits.
+      const start = offline(d.w.id, d.J, { clientTimestamp: at("06:45") });
+      expect(await one(tx, d.w.who, start)).toEqual({
+        result: "accepted",
+        reasons: ["offline"],
+      });
+      expect(await lockOf(tx, d, shiftId)).toBe(start.id);
+      expect(await eventCount(tx, d)).toBe(1);
+    });
+  });
+
+  it("switch on, no shift admits it, captured online: rejected not_scheduled, nothing written", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      // A shift of theirs, on another day and another job.
+      const shiftId = await shiftFor(tx, d, d.w.id, d.K);
+      await enforce(tx, d);
+      expect(await one(tx, d.w.who, online(d.w.id, d.J))).toBe("not_scheduled");
+      expect(await one(tx, d.w.who, online(d.w.id, d.K))).toBe("not_scheduled");
+      expect(await lockOf(tx, d, shiftId)).toBeNull();
+      expect(await eventCount(tx, d)).toBe(0);
+    });
+  });
+
+  it("switch off: a worker starts on any job that is not archived, with no shift", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      expect(await one(tx, d.w.who, online(d.w.id, d.K))).toEqual({
+        result: "accepted",
+        reasons: [],
+      });
+      // Another worker, on the other job; and neither on a job once it is archived.
+      const other = await asOwner(tx, d.companyId, () =>
+        boundIn(tx, d.companyId, "worker"),
+      );
+      expect(await one(tx, other.who, online(other.id, d.J))).toEqual({
+        result: "accepted",
+        reasons: [],
+      });
+      const third = await asOwner(tx, d.companyId, async () => {
+        await tx.update(jobs).set({ status: "archived" }).where(eq(jobs.id, d.J));
+        return boundIn(tx, d.companyId, "worker");
+      });
+      expect(await one(tx, third.who, online(third.id, d.J))).toBe("not_permitted");
+      expect(await eventCount(tx, d)).toBe(2);
+    });
+  });
+
+  it("switch on, no shift admits it, captured offline: accepted and flagged unscheduled", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      // The office moved the day to K after the phone last heard from it.
+      const shiftId = await shiftFor(tx, d, d.w.id, d.K);
+      await enforce(tx, d);
+      expect(await one(tx, d.w.who, offline(d.w.id, d.J, { location: null }))).toEqual({
+        result: "accepted",
+        reasons: ["offline", "location", "unscheduled"],
+      });
+      expect(await lockOf(tx, d, shiftId)).toBeNull();
+      expect(await eventCount(tx, d)).toBe(1);
+    });
+  });
+
+  it("switch on, an admin with no shift: accepted online or offline, flagged unscheduled", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const [a, b] = await asOwner(tx, d.companyId, async () => [
+        await boundIn(tx, d.companyId, "admin"),
+        await boundIn(tx, d.companyId, "admin"),
+      ]);
+      await enforce(tx, d);
+      expect(await one(tx, a!.who, online(a!.id, d.J))).toEqual({
+        result: "accepted",
+        reasons: ["unscheduled"],
+      });
+      expect(await one(tx, b!.who, offline(b!.id, d.K))).toEqual({
+        result: "accepted",
+        reasons: ["offline", "unscheduled"],
+      });
+      expect(await eventCount(tx, d)).toBe(2);
+    });
+  });
+
+  it("switch on, an admin with a shift that admits it: accepted, locked, not unscheduled", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const admin = await asOwner(tx, d.companyId, () =>
+        boundIn(tx, d.companyId, "admin"),
+      );
+      const shiftId = await shiftFor(tx, d, admin.id, d.J);
+      await enforce(tx, d);
+      const start = offline(admin.id, d.J);
+      expect(await one(tx, admin.who, start)).toEqual({
+        result: "accepted",
+        reasons: ["offline"],
+      });
+      expect(await lockOf(tx, d, shiftId)).toBe(start.id);
+    });
+  });
+
+  it("a record naming another person as its worker: rejected not_permitted, nothing written", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const admin = await asOwner(tx, d.companyId, () =>
+        boundIn(tx, d.companyId, "admin"),
+      );
+      // With the switch off, then on with a shift of that person's own that would admit it.
+      for (const who of [d.who, admin.who]) {
+        expect(await one(tx, who, offline(d.w.id, d.J))).toBe("not_permitted");
+      }
+      const shiftId = await shiftFor(tx, d, d.w.id, d.J);
+      await enforce(tx, d);
+      for (const who of [d.who, admin.who]) {
+        expect(await one(tx, who, offline(d.w.id, d.J))).toBe("not_permitted");
+        expect(await one(tx, who, online(d.w.id, d.J))).toBe("not_permitted");
+      }
+      expect(await lockOf(tx, d, shiftId)).toBeNull();
+      expect(await eventCount(tx, d)).toBe(0);
+    });
   });
 });

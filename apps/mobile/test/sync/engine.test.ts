@@ -45,7 +45,6 @@ function server() {
     scheduleEnforced: false,
     shifts: [],
     jobs: [],
-    ledCrews: [],
     sessions: [],
     events: [...accepted.keys()].map((id) => ({
       id,

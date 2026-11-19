@@ -98,7 +98,7 @@ describe("the demo run", () => {
     const bound = new Map(rows.map((r) => [r.email, r.subject]));
     expect(bound.get(DEMO.adminEmail)).toBe(`dev:${DEMO.adminEmail}`);
     for (const p of PEOPLE) {
-      expect(bound.get(p.email)).toBe(p.crew === null ? null : `dev:${p.email}`);
+      expect(bound.get(p.email)).toBe(p.job === null ? null : `dev:${p.email}`);
     }
   });
 
@@ -107,16 +107,8 @@ describe("the demo run", () => {
     expect(roster).toHaveLength(EXPECTED.users);
     const byEmail = new Map(roster.map((u) => [u.email, u]));
     expect(byEmail.get("priya.shah@demo.invalid")!.deactivatedAt).not.toBeNull();
-    expect(byEmail.get("marcus.bell@demo.invalid")!.role).toBe("worker");
+    expect(byEmail.get("marcus.bell@demo.invalid")!.role).toBe("admin");
     expect(byEmail.get("sam.carter@demo.invalid")!.invited).toBe(true);
-
-    const crews = await admin().crew.list();
-    expect(
-      crews.map((c) => [c.name, c.foreman.available, c.members.length]).sort(),
-    ).toEqual([
-      ["Crew A — Herrera", true, 4],
-      ["Crew B — Bell", false, 3],
-    ]);
 
     const customers = await admin().customer.list();
     expect(
@@ -133,7 +125,6 @@ describe("the demo run", () => {
       "open",
       "open",
     ]);
-    expect(jobs.filter((j) => j.crew === null)).toHaveLength(2);
 
     // Every flag the plan's scenarios raise is on some day of the two weeks.
     const days = workDays(ANCHOR);
@@ -191,6 +182,6 @@ describe("the demo run", () => {
 
   it("names its scenarios' people", () => {
     expect(PEOPLE.map((p) => p.key)).toContain(SCENARIOS.deactivatedWorker);
-    expect(PEOPLE.map((p) => p.key)).toContain(SCENARIOS.demotedForeman);
+    expect(PEOPLE.map((p) => p.key)).toContain(SCENARIOS.madeAdmin);
   });
 });

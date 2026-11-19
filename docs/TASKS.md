@@ -104,7 +104,7 @@ you find under "Found along the way". Never reorder, never add scope.
       entry takes effect when it is written and carries `corrected`. Done when a test shows
       an offline-captured session counted in the day's hours with its flag, and no code
       reads `approvals`.
-- [ ] 5. **Two roles, no crews.** Remove the `foreman` role and crews from the API, the
+- [x] 5. **Two roles, no crews.** Remove the `foreman` role and crews from the API, the
       office, the phone, the seed, the demo and the tests. Authority comes from the shift.
       Where the company's schedule switch is on, a worker starts only on a shift of theirs
       that day, by the eligibility rules already built, and with no shift is told to call
