@@ -12,6 +12,9 @@ try {
   if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
 }
 
+// The `dev` script in package.json passes --webpack. The default bundler (Turbopack, Next
+// 16.4.5) loops on "Fast Refresh rebuilding" at the first page load: /schedule reloaded
+// 1,133 times in 30 seconds and never left "Loading…", against 3 loads under webpack.
 const config: NextConfig = {
   // `next dev` would write an AGENTS.md into this app; the document set is fixed.
   agentRules: false,
