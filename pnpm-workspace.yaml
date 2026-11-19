@@ -5,11 +5,16 @@ packages:
 # vitest depends on it. Denying this breaks the test runner.
 # browser-tabs-lock and core-js arrive with @clerk/expo; their postinstall scripts only print
 # a message (read 2026-11-15), so they are denied by name and build nothing.
+# `expo install` rewrites this file with a placeholder for a package whose install script it
+# will not run: read the file's diff after any `expo install`.
+# @clerk/expo also brings react-dom through @clerk/react; apps/mobile pins it to its own
+# React, or the bundle stops at "Incompatible React versions".
 allowBuilds:
   browser-tabs-lock: false
   core-js: false
   esbuild: true
-# RULES:68; explicit, so the quarantine is strict (pnpm.io/settings).
+# A package published in the last 24 hours is refused; explicit, so the quarantine is strict
+# (pnpm.io/settings). Wait it out, never disable it.
 minimumReleaseAge: 1440
 
 # Transitive packages held at their patched releases until their parents ask for them
@@ -19,13 +24,12 @@ overrides:
   "source-map-js@<1.2.2": ^1.2.2
   "vite@>=7.0.0 <7.3.7": ^7.3.7
 
-# One advisory the audit does not count, and why (ARCHITECTURE, 2026-11-17, two branches
-# and a release by pull request). GHSA-fc5q-39xc-vjpf, picomatch <=4.0.7, a slow match on
+# One advisory the audit does not count, and why. GHSA-fc5q-39xc-vjpf, picomatch <=4.0.7, a slow match on
 # a crafted glob: no fixed release exists (the advisory names 4.0.8; the registry's newest
 # was 4.0.7 on 2026-11-17), so an override cannot hold it. It arrives only beneath
 # apps/mobile through Expo's build tooling, which matches the developer's own patterns on
 # the developer's machine; nothing deployed to Vercel carries it. Removed, with an
-# override to the fixed release, as soon as one is published (TASKS, Overhaul).
+# override to the fixed release, as soon as one is published.
 audit:
   ignore:
     - GHSA-fc5q-39xc-vjpf

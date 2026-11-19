@@ -3,6 +3,8 @@
 # installed (`pnpm ios` / `pnpm android`), Metro on 8081 started with
 # EXPO_PUBLIC_DEV_IDENTITY=enabled, and `next dev` on 3000 serving the demo database with
 # TRADER_DEV_IDENTITY=enabled (suite.sh starts that one itself). Never in CI.
+# Start Metro plainly: with CI=1 it does not watch files and serves a stale bundle after an
+# edit. Use --clear when in doubt.
 #
 #   .maestro/run.sh ios <simulator udid> <flow> [fresh|resume] [allow|deny] [email]
 #   .maestro/run.sh android <emulator serial> <flow> [fresh|resume] [allow|deny] [email]

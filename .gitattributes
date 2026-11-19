@@ -1,3 +1,0 @@
-# Two branches that both append to the log merge without a conflict (RULES, Git and CI).
-# Git applies this in a local merge; GitHub does not.
-docs/LOG.md merge=union

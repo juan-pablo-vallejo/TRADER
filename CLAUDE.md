@@ -1,48 +1,66 @@
-# Working in this repository
+# TRADER: working in this repository
 
-TRADER is phone-first daily closeout and job costing for painting contractors, built by one
-person with Claude Code as the executing agent. This file loads every session; the two imports
-below are the rules you work under and the memory you continue from.
+Phone-first time tracking, scheduling and invoicing for a painting contractor. One owner,
+Juan Pablo, with Claude Code doing the building. The owner's notebook decides; its typed copy
+is `docs/TASKS.md` (the MVP and the list) and `docs/ARCHITECTURE.md` (how it is built and
+released). Where the code disagrees with them, the code is wrong: fix it, or stop and ask.
 
-@docs/RULES.md
-@docs/MEMORY.md
+## The loop
 
-## Authority
+1. Read `docs/TASKS.md`. Take the top open item.
+2. Build it. Run `pnpm check` until green.
+3. Commit and land it on `main`: a push, or a pull request you merge yourself.
+4. Watch `check` and the staging deploy (`gh run watch`). Red: fix it before anything else.
+5. See it working on staging: a browser for the office, a simulator for the phone.
+6. Tick the item. Next item.
 
-`docs/PRD.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN.md` and `docs/RULES.md` are decided.
-`docs/TASKS.md` is the order. Code conforms to them; when code and a document disagree, say so
-and stop — never edit the document to match the code.
+Done means `check` green on `main`, deployed to staging, seen working there.
 
-## Every session
+## Stop and ask the owner only for
 
-1. Start from MEMORY.md, then read TASKS.md. Work the named task, or the Release 0.1
-   track's first open line that waits on nothing of the owner's; nothing below the track
-   starts before its go/no-go line is passed, unless the owner names the line.
-2. Plan first, then wait, for anything touching schema, auth, sync, money or CI; a line of
-   the Release 0.1 track or of TASKS' Automation section is planned in its pull request and
-   worked, unless the line says to wait (RULES, Session protocol).
-3. `pnpm check` before every commit.
-4. One change per commit; imperative subject ≤ 72 characters; no trailers. Push the feature
-   branch, open or update its pull request, merge it once `check` is green; never push
-   to `main`.
-5. End by moving the ticked task from TASKS.md into LOG.md under today's heading and
-   appending the session's entry there.
+- money or a new service
+- a key you don't hold
+- a change to the MVP (top of `docs/TASKS.md`) or to the six invariants
+  (`docs/ARCHITECTURE.md`)
+- anything on Apple, Google or legal text
+- a migration that drops or rewrites data, once production exists
+
+Everything else, decide, and say why in the commit message. While a pull request into
+`production` is open, don't push to `main`.
 
 ## Never
 
-- Commit a secret, a hostname or a machine address. This repository is public.
-- Add a dependency, tool or version bump without a TASKS.md line naming its consumer.
-- Force-push, delete a branch a merge did not retire, rewrite history, or touch
-  `archive/pre-rebuild`.
-- Merge a pull request into `production`. That merge is the owner's.
-- Send an approval code to the promotion workflow. Migrations it withholds are the owner's.
-- Touch production: its branch, credentials, variables, deployments, migrations, data,
-  store releases or permissions are the owner's. A release is a pull request you may
-  prepare and never merge. Staging is yours within RULES.md, Toolbox; a destructive
-  step there, a fixture's cleanup included, is approved one at a time.
-- Add a document. The set is fixed in RULES.md; extend the owner instead.
-- State a version, price or platform policy from memory. Look it up.
+- merge into `production`, push to it, or use an admin bypass (`--admin`)
+- touch a production key, dashboard, resource or store account
+- route around a block in `.claude/settings.json`: if a blocked tool is the only way to do
+  the task, stop and ask
+- read the owner's mail, drive or calendar
+- commit a secret: this repository is public
 
-## This file
+## The owner's sign-ins
 
-Short, read in full every session. Changes here go through the same plan-and-review as code.
+The vendor CLIs and plugins on this Mac (Vercel, Neon, Clerk, Expo, Sentry) are signed in as
+the owner and reach the whole account, production included once it exists. Read and inspect
+through them. Change staging only with staging's own keys in `.env.staging`. Sentry is
+read-only for you.
+
+## Rules
+
+1. Scope is the MVP. Nothing outside it is built without the owner's word.
+2. The six invariants are never weakened.
+3. `main` stays green: `pnpm check` before every commit.
+4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
+   clock. Everything else gets ordinary tests.
+5. Every screen the crew sees exists in English and Spanish.
+6. Versions, prices and platform rules are looked up, never recalled.
+7. Commits are as large as the work needs; the message says what changed and why. Signed, no
+   trailers.
+8. In `docs/TASKS.md`: tick items, add what you find at the bottom, never reorder, never add
+   scope.
+9. Four documents and no more: `README.md`, `CLAUDE.md`, `docs/ARCHITECTURE.md`,
+   `docs/TASKS.md`. A gotcha that will bite again is a comment beside the code it concerns.
+
+## Staging is yours
+
+Fictional data only. Reset, reseed or break it without asking. Its keys are in
+`.env.staging`, which git ignores. Local development never connects to a deployed database.

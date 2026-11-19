@@ -20,6 +20,12 @@ const connection = databaseConnection();
 const dbCredentials =
   "connectionString" in connection ? { url: connection.connectionString } : connection;
 
+// drizzle-kit sees tables, enums, constraints and indexes only. Triggers, functions, roles,
+// grants, policies and FORCE are hand-written in a `drizzle-kit generate --custom` file,
+// statements separated by `--> statement-breakpoint`.
+// Pending migrations run in one transaction, so a label added by ALTER TYPE ... ADD VALUE is
+// unusable (55P04) in any CHECK, DEFAULT or index predicate of the same run; name it in
+// plpgsql, which resolves at run time.
 export default defineConfig({
   dialect: "postgresql",
   schema: "./src/schema/index.ts",

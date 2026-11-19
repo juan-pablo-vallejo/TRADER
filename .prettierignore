@@ -13,5 +13,5 @@ apps/mobile/android/
 apps/mobile/.expo/
 apps/mobile/expo-env.d.ts
 
-# The log is append-only and its long lines are its own (RULES, Git and CI).
-docs/LOG.md
+# The owner's file, committed byte for byte as handed over.
+.claude/settings.json

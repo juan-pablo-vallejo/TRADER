@@ -390,6 +390,9 @@ export async function sealNow(tx: Tx) {
   await tx.execute(sql`set constraints all immediate`);
 }
 
+// Two calls started at once on one rolled-back transaction share its one connection, and the
+// second's rejection is unhandled before it is awaited: vitest prints "Unhandled Rejection"
+// with every test green. Hold thunks and call each in turn.
 // `waits: "inherit"`: the test's transaction owns its lock and statement timeouts (lockTimeout
 // below), and the call inside it must not replace them with the procedure's defaults.
 export const callerIn = (tx: Tx, who: unknown) =>

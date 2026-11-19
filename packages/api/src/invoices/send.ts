@@ -8,7 +8,8 @@
 //
 // The invoice's row is held from the check to the record, so a void cannot land between a
 // message leaving and its row being written; the mailer answers within its own timeout
-// (apps/web, server/mailer.ts). Where a deployment names an allow-list, a recipient outside
+// (apps/web, server/mailer.ts), up to 8 s: a void or a payment of that invoice waits behind it
+// and gives up at its own 5 s lock_timeout. Where a deployment names an allow-list, a recipient outside
 // it is a failed send that asked the service nothing (mailer.ts, restrictedTo).
 // Consumed by routers/invoice.ts.
 import { companies, invoiceSends } from "@trader/db/schema";
