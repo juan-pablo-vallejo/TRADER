@@ -10,7 +10,6 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import type { Tx } from "./context";
 import { pgFailure } from "./pg-error";
 import type { VerifiedIdentity } from "./identity";
-import { roleOf, type Role } from "../contract/enums";
 
 const columns = {
   id: users.id,
@@ -26,9 +25,7 @@ const columns = {
 
 type Row = Pick<typeof users.$inferSelect, keyof typeof columns>;
 
-export type AppUser = Omit<Row, "identitySubject" | "deactivatedAt" | "role"> & {
-  role: Role;
-};
+export type AppUser = Omit<Row, "identitySubject" | "deactivatedAt">;
 
 // One login bound to a second row: a concurrent bind of the same subject elsewhere won. The
 // only database error that resolution recognizes; trpc.ts turns it into UNAUTHORIZED after the
@@ -42,7 +39,7 @@ const active = (row: Row): AppUser | null =>
     ? {
         id: row.id,
         companyId: row.companyId,
-        role: roleOf(row.role),
+        role: row.role,
         name: row.name,
         email: row.email,
         phone: row.phone,

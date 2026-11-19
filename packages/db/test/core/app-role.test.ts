@@ -10,45 +10,22 @@ import { asApp, one, rolledBack, sqlstate, type Tx } from "../helpers";
 type Privilege = "SELECT" | "INSERT" | "UPDATE" | "DELETE" | "TRUNCATE";
 const PRIVILEGES: Privilege[] = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE"];
 
-// What 0013 grants, table by table, and 0017 for the closeout tables. Every table in public
-// must appear here: a table added without stated grants fails the matrix test.
+// What the baseline grants, table by table. Every table in public must appear here, and
+// every entry must be a table in public: a table added without stated grants fails the matrix.
 const GRANTS: Record<string, Privilege[]> = {
-  // UPDATE is held on three columns only, never on the table (0041): its own test, below.
+  // UPDATE is held on three columns only, never on the table: its own test, below.
   companies: ["SELECT"],
   invoice_counters: ["SELECT", "UPDATE"],
   users: ["SELECT", "INSERT", "UPDATE"],
-  crews: ["SELECT", "INSERT", "UPDATE"],
   customers: ["SELECT", "INSERT", "UPDATE"],
   jobs: ["SELECT", "INSERT", "UPDATE"],
-  // Insert-only (ARCHITECTURE, roster API): a rate is superseded by a later row. 0027 revoked
-  // the UPDATE that 0013 granted with the roster tables.
-  pay_rates: ["SELECT", "INSERT"],
-  pay_periods: ["SELECT", "INSERT", "UPDATE"],
-  approvals: ["SELECT", "INSERT", "UPDATE"],
-  materials: ["SELECT", "INSERT", "UPDATE"],
-  photos: ["SELECT", "INSERT", "UPDATE"],
-  crew_members: ["SELECT", "INSERT", "DELETE"],
+  // A plan, not a fact: the office edits and removes it.
+  job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   invoices: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   invoice_line_items: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   work_session_events: ["SELECT", "INSERT"],
-  credit_memos: ["SELECT", "INSERT"],
-  audit_log: ["SELECT", "INSERT"],
-  day_closeouts: ["SELECT", "INSERT"],
-  day_closeout_workers: ["SELECT", "INSERT"],
-  day_closeout_materials: ["SELECT", "INSERT"],
-  material_corrections: ["SELECT", "INSERT"],
-  // Short-lived (0029): the writer deletes its company's expired lines; never edited.
-  sync_diagnostics: ["SELECT", "INSERT", "DELETE"],
-  // A plan, not a fact (0031): the office edits and removes it.
-  job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   invoice_payments: ["SELECT", "INSERT"],
   invoice_sends: ["SELECT", "INSERT"],
-  // Not tenant data: a hash and a count (0047).
-  rate_limit_windows: ["SELECT", "INSERT", "UPDATE", "DELETE"],
-  shift_overrides: ["SELECT", "INSERT", "UPDATE", "DELETE"],
-  shift_override_history: ["SELECT", "INSERT"],
-  // What a close exported (0035): added by the closing transaction, never edited or removed.
-  pay_period_lines: ["SELECT", "INSERT"],
 };
 
 let db: Db;
@@ -85,7 +62,7 @@ describe("trader_app", () => {
       const { rows } = await tx.execute<{ tablename: string }>(sql`
         select tablename from pg_tables where schemaname = 'public' order by tablename
       `);
-      expect(rows.length).toBeGreaterThan(0);
+      expect(rows.map((r) => r.tablename)).toEqual(Object.keys(GRANTS).sort());
       for (const { tablename } of rows) {
         const granted = GRANTS[tablename];
         expect(granted, `${tablename} has no entry in GRANTS`).toBeDefined();
@@ -100,6 +77,26 @@ describe("trader_app", () => {
           expect(held, `${tablename} ${privilege}`).toBe(granted!.includes(privilege));
         }
       }
+    });
+  });
+
+  it("holds column privileges on companies only, and only UPDATE of three columns", async () => {
+    await rolledBack(db, async (tx) => {
+      // The grants stated on a column itself; a table's grant is not one of them.
+      const { rows } = await tx.execute<{ grant: string }>(sql`
+        select c.relname || '.' || a.attname || ' ' || x.privilege_type as grant
+        from pg_attribute a
+        join pg_class c on c.oid = a.attrelid
+        cross join lateral aclexplode(a.attacl) x
+        where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+          and x.grantee = 'trader_app'::regrole
+        order by 1
+      `);
+      expect(rows.map((r) => r.grant)).toEqual([
+        "companies.name UPDATE",
+        "companies.timezone UPDATE",
+        "companies.updated_at UPDATE",
+      ]);
     });
   });
 

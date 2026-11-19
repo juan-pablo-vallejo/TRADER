@@ -14,7 +14,7 @@ import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
 import type { AppUser } from "../core/resolve-user";
 import type { LaborPayload, laborAck } from "../contract/labor";
-import { judgeEventTime, laborReasons, type ApprovalReason, type Skew } from "./reasons";
+import { judgeEventTime, laborReasons, type EntryFlag, type Skew } from "./reasons";
 import { judgeStart, lockShift, scheduleEnforced } from "./schedule";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
@@ -56,7 +56,6 @@ const same = (row: Prior, user: AppUser, r: LaborRecord) => {
     row.jobId === p.jobId &&
     row.type === p.type &&
     row.clientTimestamp.getTime() === p.clientTimestamp.getTime() &&
-    row.attestationLevel === p.attestationLevel &&
     row.locationLat === (p.location?.lat ?? null) &&
     row.locationLng === (p.location?.lng ?? null) &&
     row.locationAccuracyM === (p.location?.accuracyM ?? null) &&
@@ -176,7 +175,7 @@ export async function pushLaborEvent(
   }
 
   // 7. The entry's flags, written with it.
-  const reasons: ApprovalReason[] = laborReasons({
+  const reasons: EntryFlag[] = laborReasons({
     type: p.type,
     corrected: false,
     capturedOffline: p.capturedOffline,
@@ -204,7 +203,6 @@ export async function pushLaborEvent(
       // The per-push reading alone, signed; the receipt comparison's evidence is the row's
       // own two timestamps.
       clockSkewMs: skew.clockSkewMs,
-      attestationLevel: p.attestationLevel,
       locationLat: p.location?.lat ?? null,
       locationLng: p.location?.lng ?? null,
       locationAccuracyM: p.location?.accuracyM ?? null,

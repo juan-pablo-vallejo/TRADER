@@ -8,7 +8,7 @@ import { jobs, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 
 import type { Tx } from "../core/context";
-import { roleOf, type Role } from "../contract/enums";
+import type { Role } from "../contract/enums";
 import type { AppUser } from "../core/resolve-user";
 import { unauthorized } from "../core/trpc";
 import type { JobPlace } from "./reasons";
@@ -48,7 +48,7 @@ export async function lockPushScope(
     job.lat !== null && job.lng !== null && job.radiusM !== null
       ? { lat: job.lat, lng: job.lng, radiusM: job.radiusM }
       : null;
-  return { role: roleOf(self.role), jobArchived: job.status === "archived", place };
+  return { role: self.role, jobArchived: job.status === "archived", place };
 }
 
 // A person's own event, on a job of their company. A start needs a job that is not

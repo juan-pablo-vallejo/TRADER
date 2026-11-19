@@ -63,7 +63,6 @@ async function event(
     serverTimestamp: e.at,
     clockSkewed: false,
     clockSkewMs: 0,
-    attestationLevel: "none",
     locationLat: 41.8,
     locationLng: -71.4,
     schemaVersion: 1,

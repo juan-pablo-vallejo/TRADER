@@ -6,13 +6,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import {
-  approvalReason,
-  attestationLevel,
-  jobStatus,
-  userRole,
-  workSessionEventType,
-} from "@trader/db/schema";
+import { entryFlag, jobStatus, userRole, workSessionEventType } from "@trader/db/schema";
 import { describe, expect, it } from "vitest";
 
 import * as contract from "../../src/contract";
@@ -28,14 +22,10 @@ const sameCodes: Equal<LaborRejectionCode, LaborRejection> = true;
 
 describe("the contract's restated lists", () => {
   it("are the schema's own, member for member", () => {
-    // Two roles on the wire, each a label of the database's enum, which keeps a third label
-    // that nothing holds until the baseline.
-    expect([...contract.ROLES]).toEqual(["admin", "worker"]);
-    for (const role of contract.ROLES) expect(userRole.enumValues).toContain(role);
+    expect([...contract.ROLES]).toEqual(userRole.enumValues);
     expect([...contract.JOB_STATUSES]).toEqual(jobStatus.enumValues);
     expect([...contract.LABOR_EVENT_TYPES]).toEqual(workSessionEventType.enumValues);
-    expect([...contract.ATTESTATION_LEVELS]).toEqual(attestationLevel.enumValues);
-    expect([...contract.APPROVAL_REASONS]).toEqual(approvalReason.enumValues);
+    expect([...contract.ENTRY_FLAGS]).toEqual(entryFlag.enumValues);
     // What a device may record is every type but the office's void.
     expect([...contract.DEVICE_EVENT_TYPES]).toEqual(
       workSessionEventType.enumValues.filter((t) => t !== "voided"),
@@ -62,7 +52,6 @@ describe("the contract's schemas", () => {
       jobId: "01a1e0e6-4d47-7b0f-b575-c15685a0d051",
       type: "started",
       clientTimestamp: new Date("2026-11-09T12:10:00Z"),
-      attestationLevel: "none",
       location: null,
       timeSetByUser: false,
       capturedOffline: true,

@@ -1,26 +1,22 @@
-// Postgres enum types. A value is only ever added (`ALTER TYPE … ADD VALUE`, which drizzle-kit
-// emits); removing or renaming one needs a type rebuild, a destructive diff invariant 8
-// forbids. Choose members as permanent. Consumed by users.ts, jobs.ts,
-// work-session-events.ts, approvals.ts, day-closeouts.ts and material-corrections.ts.
+// Postgres enum types. After the first production release a value is only ever added
+// (`ALTER TYPE ... ADD VALUE`, which drizzle-kit emits); removing or renaming one needs a type
+// rebuild. A label added that way is unusable in a CHECK, DEFAULT or index predicate of the
+// migration run that adds it (55P04); plpgsql may name it. Consumed by users.ts, jobs.ts and
+// work-session-events.ts.
 import { pgEnum } from "drizzle-orm/pg-core";
 
-// PRD, Target users. A new user starts as a worker; roles are a deliberate roster action.
-export const userRole = pgEnum("user_role", ["admin", "foreman", "worker"]);
+// A new user starts as a worker; making an admin is a deliberate act.
+export const userRole = pgEnum("user_role", ["admin", "worker"]);
 
-// PRD, Day closeout: the foreman "sets job status"; no states are named there. `open` is the
-// default from creation through the last day of work; `complete` ends field work and lets
-// invoicing start; `archived` hides a job from lists while labor history keeps referencing it.
-// Not `scheduled` (scheduling is a non-goal) and not `active` (that is "has labor events",
-// a derived fact).
+// `open` is the default from creation through the last day of work; `complete` ends field
+// work and lets invoicing start; `archived` hides a job from lists while labor history keeps
+// referencing it.
 export const jobStatus = pgEnum("job_status", ["open", "complete", "archived"]);
 
-// PRD, Labor: clock in/out and pause/resume. A job switch is `ended` on the old job then
-// `started` on the new one, two events that sync independently, so "one open session" stays a
-// property of the fold. `voided` is an appended event that nullifies a whole session; it names
-// that session's `started` event in `voids_event_id`, and the tie between the member and the
-// column is a trigger, not a CHECK: the member arrived by `ALTER TYPE … ADD VALUE`, and Postgres
-// refuses to use such a label inside the transaction that added it, which on a fresh database
-// is the one replaying every migration. Last in the list, so the migration was a plain ADD VALUE.
+// Clock in and out, pause and resume. A job switch is `ended` on the old job then `started`
+// on the new one, two events that sync independently, so "one open session" stays a property
+// of the fold. `voided` is an appended event that nullifies a whole session; it names that
+// session's `started` event in `voids_event_id`, a tie held by a trigger.
 export const workSessionEventType = pgEnum("work_session_event_type", [
   "started",
   "paused",
@@ -29,43 +25,17 @@ export const workSessionEventType = pgEnum("work_session_event_type", [
   "voided",
 ]);
 
-// PRD, Labor: a clock action is confirmed with the device's biometrics; a failed or unavailable
-// check records `none` and the event is still written. `device_credential` is the OS passcode
-// fallback. Evidence for the office, never a precondition.
-export const attestationLevel = pgEnum("attestation_level", [
-  "biometric",
-  "device_credential",
-  "none",
-]);
-
-// PRD, Office approval: why an entry is in the queue, every reason that applies. `offline` is
-// captured_offline, the device's evidence at capture (delivery delay is evidence, never a
-// reason); `corrected` is a corrects_event_id, a void or a material correction; `user_timed` is
-// time_set_by_user; `location` is a missing or out-of-radius stamp; `clock_skewed` is the push's
-// verdict on the device clock or on an event's time against its receipt (ARCHITECTURE, Sync
-// protocol); `after_closeout` is arrival after the day's accepted
-// closeout; `unscheduled` is a clock-in captured offline that the weekly schedule did not admit
-// when it arrived (ARCHITECTURE, 2026-11-15; api sync/schedule.ts), stored for the office to
-// decide. `after_closeout` and `unscheduled` arrived by ADD VALUE, so no CHECK, DEFAULT or
-// index predicate may name either (see workSessionEventType above); plpgsql may.
-export const approvalReason = pgEnum("approval_reason", [
+// Why the office may want to look at an entry, every flag that applies; an entry counts
+// whatever it holds. `offline` is captured_offline, the device's evidence at capture;
+// `corrected` is a correcting entry or a void; `user_timed` is time_set_by_user; `location`
+// is a missing or out-of-radius stamp; `clock_skewed` is the push's verdict on the device
+// clock or on an event's time against its receipt; `unscheduled` is a clock-in the weekly
+// schedule did not allow when it arrived (api sync/schedule.ts).
+export const entryFlag = pgEnum("entry_flag", [
   "offline",
   "corrected",
   "user_timed",
   "location",
   "clock_skewed",
-  "after_closeout",
   "unscheduled",
-]);
-
-// The office's answer. No `pending`: that is a NULL decision, derived (invariant 7). A
-// rejected event never counts; the office issues a correcting event instead.
-export const approvalDecision = pgEnum("approval_decision", ["approved", "rejected"]);
-
-// A correction of a closed-out material (PRD, Day closeout): `amend` replaces its description,
-// quantity and unit together; `void` takes the receipt out of effect for good. Created with the
-// type, so CHECKs may name both members.
-export const materialCorrectionKind = pgEnum("material_correction_kind", [
-  "amend",
-  "void",
 ]);

@@ -5,7 +5,7 @@
 // coordinates are a point in Providence used only as a job's place. Consumed by demo/run.ts.
 import type { SeedCompany } from "@trader/db";
 
-import type { ApprovalReason } from "../sync/reasons";
+import type { EntryFlag } from "../sync/reasons";
 import { addDays } from "./ids";
 
 export const DEMO: SeedCompany = {
@@ -224,23 +224,23 @@ export const SCENARIOS = {
   // captured, so it says so — captured offline — and carries `offline` (V1-D01: an entry that
   // claimed to be online that long ago would be flagged instead). The admin approves the
   // ordinary ones in a step of their own; the scenarios below stay pending.
-  backlog: { reasons: ["offline"] as ApprovalReason[] },
+  backlog: { reasons: ["offline"] as EntryFlag[] },
   // Luis's second Thursday reached the office claiming an online capture, days after the
   // fact: the server's receipt comparison flags every event of it, at the time it claims.
-  lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as ApprovalReason[] },
+  lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as EntryFlag[] },
   // Tom's last day is the one ordinary day the office has not approved yet.
-  offlineDay: { who: "tom", day: 9, reasons: ["offline"] as ApprovalReason[] },
+  offlineDay: { who: "tom", day: 9, reasons: ["offline"] as EntryFlag[] },
   // Omar forgot to clock out and set the time himself on the last day.
   userTimedEnd: {
     who: "omar",
     day: 9,
-    reasons: ["offline", "user_timed"] as ApprovalReason[],
+    reasons: ["offline", "user_timed"] as EntryFlag[],
   },
   // Ana clocked in from the supply store on the last day: a kilometre outside J1's radius.
   outOfRadiusStart: {
     who: "ana",
     day: 9,
-    reasons: ["offline", "location"] as ApprovalReason[],
+    reasons: ["offline", "location"] as EntryFlag[],
   },
   // Priya's Wednesday of week one reached the office a day late: her phone was offline until
   // Thursday. Pushed before any later day of hers.
@@ -248,7 +248,7 @@ export const SCENARIOS = {
     who: "priya",
     day: 2,
     times: { started: "07:30", ended: "14:00" },
-    reasons: ["offline"] as ApprovalReason[],
+    reasons: ["offline"] as EntryFlag[],
   },
   // The office corrects Elena's last clock-out from 15:30 to 16:00: an office event is
   // user-timed and unstamped, so it carries those reasons with `corrected`.
@@ -256,7 +256,7 @@ export const SCENARIOS = {
     who: "elena",
     day: 9,
     time: "16:00",
-    reasons: ["corrected", "user_timed", "location"] as ApprovalReason[],
+    reasons: ["corrected", "user_timed", "location"] as EntryFlag[],
   },
   // Priya leaves after week one; Marcus joins the office as a second admin.
   deactivatedWorker: "priya",

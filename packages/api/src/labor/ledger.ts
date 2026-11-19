@@ -13,9 +13,9 @@
 // defined over all of it; the range selects sessions, and there is no limit, so nothing in the
 // range is ever left out. No coordinates, cost, rate or rounded hours. Consumed by
 // routers/labor.ts.
-import { ROLES, roleOf } from "../contract/enums";
+import { ROLES } from "../contract/enums";
 import {
-  approvalReason,
+  entryFlag,
   companies,
   jobs,
   jobStatus,
@@ -66,7 +66,6 @@ const event = z.strictObject({
   clockSkewMs: z.number().int(),
   timeSetByUser: z.boolean(),
   capturedOffline: z.boolean(),
-  attestationLevel: z.enum(["biometric", "device_credential", "none"]),
   // Whether a location stamp was recorded; never the stamp.
   hasLocation: z.boolean(),
   correctsEventId: z.uuid().nullable(),
@@ -75,7 +74,7 @@ const event = z.strictObject({
   // session's void.
   effect: z.enum(["in_effect", "superseded", "void"]),
   // As stored with the entry: why the office should look at it. Empty when nothing applies.
-  flags: z.array(z.enum(approvalReason.enumValues)),
+  flags: z.array(z.enum(entryFlag.enumValues)),
 });
 
 const session = z.strictObject({
@@ -237,7 +236,6 @@ export async function workerLedger(
           clockSkewMs: row.clockSkewMs,
           timeSetByUser: row.timeSetByUser,
           capturedOffline: row.capturedOffline,
-          attestationLevel: row.attestationLevel,
           hasLocation: row.locationLat !== null,
           correctsEventId: row.correctsEventId,
           voidsEventId: row.voidsEventId,
@@ -266,7 +264,7 @@ export async function workerLedger(
     worker: {
       id: worker.id,
       name: worker.name,
-      role: roleOf(worker.role),
+      role: worker.role,
       active: worker.deactivatedAt === null,
     },
     timezone,

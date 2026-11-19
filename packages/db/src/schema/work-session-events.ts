@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
-import { approvalReason, attestationLevel, workSessionEventType } from "./enums";
+import { entryFlag, workSessionEventType } from "./enums";
 import { jobs } from "./jobs";
 import { users } from "./users";
 
@@ -44,7 +44,7 @@ export const workSessionEvents = pgTable(
     serverTimestamp: timestamp("server_timestamp", { withTimezone: true, precision: 3 })
       .notNull()
       .defaultNow(),
-    // Evidence for the approval rule, never a rule of the fold (V1-D01). `clock_skewed` is true
+    // Evidence behind the `clock_skewed` flag, never a rule of the fold. `clock_skewed` is true
     // when the push's |device_now − server_now| exceeded the 5-minute tolerance, or when the
     // event claimed an online capture more than the tolerance before its receipt (ARCHITECTURE,
     // Sync protocol; the constant and both tests live in the API, sync/reasons.ts). The verdict
@@ -54,11 +54,8 @@ export const workSessionEvents = pgTable(
     // days, and an event from a reset phone clock must still be written.
     clockSkewed: boolean("clock_skewed").notNull(),
     clockSkewMs: bigint("clock_skew_ms", { mode: "number" }).notNull(),
-    // No default: the zod payload schema requires the field, so `none` is always written by
-    // the device, never implied by the database.
-    attestationLevel: attestationLevel("attestation_level").notNull(),
     // Foreground stamp at clock events (PRD, Jobs and location). A NULL pair is "missing",
-    // which routes the entry to approval and never blocks it. Accuracy only with a fix, since
+    // which flags the entry and never blocks it. Accuracy only with a fix, since
     // a platform may report a fix without one. Floats: physical position, no exact arithmetic.
     locationLat: doublePrecision("location_lat"),
     locationLng: doublePrecision("location_lng"),
@@ -68,33 +65,27 @@ export const workSessionEvents = pgTable(
     schemaVersion: smallint("schema_version").notNull(),
     // Corrections are new events that reference the original (PRD, Labor). A `voided` event
     // names the `started` event of the session it nullifies; the fold gives that session zero
-    // duration. Set exactly when type is `voided`, a rule migration 0004 enforces in plpgsql
-    // (see enums.ts for why not a CHECK).
+    // duration. Set exactly when type is `voided`, a rule a trigger holds.
     voidsEventId: uuid("voids_event_id"),
     // The single event this one replaces: a corrected clock-out is a new `ended` event naming
     // the old one, and the fold reads the newest accepted correction. Never set on a void.
-    // Corrections and voids are the office's (labor.repair); migration 0026 requires each to
-    // have an approval holding `corrected` at commit, except an admin's repair of their own
-    // labor, which needs none (0032, V1-D10 as amended).
+    // Corrections and voids are the office's (labor.repair), flagged `corrected`.
     correctsEventId: uuid("corrects_event_id"),
-    // The approval rule's "recorded time was set by the user rather than taken from the moment
-    // of capture" (PRD, Office approval). NOT NULL with no default, like attestation_level: the
-    // zod payload requires it. Adding it so was possible only because the ledger was empty in
-    // every environment; after the pilot, an added column is nullable or defaulted.
+    // The recorded time was set by the user rather than taken from the moment of capture:
+    // the `user_timed` flag. NOT NULL with no default: the zod payload requires it.
     timeSetByUser: boolean("time_set_by_user").notNull(),
-    // The approval rule's "captured offline" (PRD, Office approval): the device's own evidence,
+    // The `offline` flag's evidence: the device's own,
     // recorded at capture — no confirmed reach of the API, an unknown state counting as offline.
     // Not receipt lag: a capture offline may arrive seconds later, and a capture online may sit
-    // in the outbox for hours. NOT NULL with no default under the empty-ledger condition above.
+    // in the outbox for hours.
     capturedOffline: boolean("captured_offline").notNull(),
-    // Who recorded the event: the worker, the foreman for crew labor, or the admin issuing a
-    // correction (PRD, Target users). worker_id stays whose labor it is. Added NOT NULL with no
-    // default under the same empty-ledger condition as time_set_by_user.
+    // Who recorded the event: the worker, or the admin writing a correcting entry. worker_id
+    // stays whose labor it is.
     initiatorUserId: uuid("initiator_user_id").notNull(),
     // Why the office should look at this entry, every reason that applies, judged once when
     // the entry is received and written with it: the row is append-only, so they never move.
-    // An entry counts toward hours whatever it holds. Empty for rows older than the column.
-    flags: approvalReason("flags")
+    // An entry counts toward hours whatever it holds.
+    flags: entryFlag("flags")
       .array()
       .notNull()
       .default(sql`'{}'`),

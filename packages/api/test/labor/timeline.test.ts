@@ -90,7 +90,6 @@ async function event(
     ...(server === undefined ? {} : { serverTimestamp: new Date(server) }),
     clockSkewed: false,
     clockSkewMs: 0,
-    attestationLevel: "none",
     schemaVersion: 1,
     timeSetByUser: false,
     capturedOffline: false,
@@ -262,11 +261,11 @@ describe("loadWorkerTimeline", () => {
       });
     });
   });
-  it("waits out a closeout's exclusive lock in its company, and not in another", async () => {
+  it("waits out an exclusive lock in its company, and not in another", async () => {
     const tenant = uuidv7();
-    await rolledBack(owner, async (closeout) => {
-      await tenantOnly(closeout, tenant);
-      await lockCompanyFieldWrites(closeout, "exclusive");
+    await rolledBack(owner, async (exclusive) => {
+      await tenantOnly(exclusive, tenant);
+      await lockCompanyFieldWrites(exclusive, "exclusive");
       await rolledBack(other, async (tx) => {
         await tx.execute(sql`set local lock_timeout = '200ms'`);
         await tenantOnly(tx, tenant);
@@ -279,7 +278,7 @@ describe("loadWorkerTimeline", () => {
     });
   });
 
-  it("holds a closeout off while a writer is in flight; writers share", async () => {
+  it("holds an exclusive lock off while a writer is in flight; writers share", async () => {
     const tenant = uuidv7();
     await rolledBack(owner, async (writer) => {
       await tenantOnly(writer, tenant);

@@ -112,8 +112,7 @@ export function uuidv7(): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-// One company, one worker, one job: the rows an event must reference. Shared by the
-// events and approvals tests.
+// One company, one worker, one job: the rows an event must reference.
 export async function fixture(tx: Tx, values = company) {
   const c = one(
     await tx.insert(companies).values(values).returning({ id: companies.id }),
@@ -149,7 +148,6 @@ export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
   clientTimestamp: new Date(),
   clockSkewed: false,
   clockSkewMs: 0,
-  attestationLevel: "none",
   schemaVersion: 1,
   timeSetByUser: false,
   capturedOffline: false,
@@ -157,8 +155,8 @@ export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
 });
 
 // The billing rows on top of fixture(): the job's customer, the admin who issues, and the
-// counter row starting where the partner's series left off. Shared by the invoice, line,
-// credit memo and guard tests.
+// counter row starting where the partner's series left off. Shared by the invoice, line
+// and guard tests.
 export async function billing(tx: Tx, values = company) {
   const refs = await fixture(tx, values);
   const job = one(
@@ -178,11 +176,9 @@ export async function billing(tx: Tx, values = company) {
       })
       .returning({ id: users.id }),
   );
-  await tx.insert(invoiceCounters).values({
-    companyId: refs.companyId,
-    nextInvoiceNumber: 1042,
-    nextCreditMemoNumber: 7,
-  });
+  await tx
+    .insert(invoiceCounters)
+    .values({ companyId: refs.companyId, nextInvoiceNumber: 1042 });
   return { ...refs, customerId: job.customerId, adminId: admin.id };
 }
 
@@ -227,7 +223,7 @@ export async function draftInvoice(tx: Tx, refs: Billing) {
   return { invoiceId: invoice.id, lineId: item.id };
 }
 
-// The issue transition as the office will perform it: the trigger (0010) assigns the number.
+// The issue transition as the office will perform it: the trigger assigns the number.
 export async function issue(tx: Tx, refs: Billing, invoiceId: string) {
   return one(
     await tx

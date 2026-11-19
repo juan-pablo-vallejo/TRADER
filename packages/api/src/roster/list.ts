@@ -4,7 +4,7 @@
 // itself is never output, as me.get never outputs it. A plain read under RLS, no locks.
 // Consumed by routers/roster.ts, and by invite.ts, role.ts and deactivation.ts for the row
 // they answer with.
-import { ROLES, roleOf } from "../contract/enums";
+import { ROLES } from "../contract/enums";
 import { users } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -45,7 +45,7 @@ type Row = {
   email: string | null;
   phone: string | null;
   signInPhone: string | null;
-  role: string;
+  role: RosterUser["role"];
   bound: boolean;
   deactivatedAt: Date | null;
 };
@@ -56,7 +56,7 @@ const toUser = (row: Row): RosterUser => ({
   email: row.email,
   phone: row.phone,
   signInPhone: row.signInPhone,
-  role: roleOf(row.role),
+  role: row.role,
   invited: !row.bound,
   deactivatedAt: row.deactivatedAt,
 });

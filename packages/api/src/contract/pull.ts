@@ -3,7 +3,7 @@
 // with.
 import { z } from "zod";
 
-import { APPROVAL_REASONS, JOB_STATUSES, LABOR_EVENT_TYPES, ROLES } from "./enums";
+import { ENTRY_FLAGS, JOB_STATUSES, LABOR_EVENT_TYPES, ROLES } from "./enums";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 
 export const pullInput = z.strictObject({
@@ -74,7 +74,7 @@ export const pullOutput = z.strictObject({
       correctsEventId: z.uuid().nullable(),
       voidsEventId: z.uuid().nullable(),
       // Why the office may look at the entry. It counts whatever it holds.
-      flags: z.array(z.enum(APPROVAL_REASONS)),
+      flags: z.array(z.enum(ENTRY_FLAGS)),
     }),
   ),
 });

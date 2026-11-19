@@ -21,7 +21,7 @@ export const users = pgTable(
     identitySubject: text("identity_subject"),
     // An invitation join key (PRD, Access: invitation-only): the address a one-time code is
     // sent to. Unique per company without regard to case; stored as given. NULL for a person
-    // invited by number alone, as the crew is; users_sign_in_address_present keeps one of the
+    // invited by number alone, as workers are; users_sign_in_address_present keeps one of the
     // two on every row.
     email: text("email"),
     name: text("name").notNull(),

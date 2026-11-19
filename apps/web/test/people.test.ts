@@ -20,9 +20,9 @@ import { getDb } from "../src/server/db";
 import { DEV_EMAIL_COOKIE } from "../src/server/identity";
 import { disposableDb, invitation, mutate, query } from "./helpers";
 
-// A database of its own: an invitation leaves an audit_log row, which is append-only and
-// references the company and the admin, so no fixture here could be deleted again. The route
-// handler's pool is pointed at it before the first request.
+// A database of its own: the invitations these requests commit are never deleted, so they
+// stay out of the shared one. The route handler's pool is pointed at it before the first
+// request.
 let D: Awaited<ReturnType<typeof disposableDb>>;
 let owner: Db;
 let admin: Awaited<ReturnType<typeof invitation>>;

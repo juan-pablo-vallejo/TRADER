@@ -1,1 +1,0 @@
-ALTER TYPE "public"."approval_reason" ADD VALUE 'unscheduled';

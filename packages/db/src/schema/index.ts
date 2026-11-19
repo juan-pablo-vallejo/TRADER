@@ -1,27 +1,15 @@
-// The `@trader/db/schema` subpath: tables and enums only, consumed by drizzle.config.ts
-// (`schema` path), the Stage 3 API (values for queries) and the Stage 5 app (`import type`
-// of the unions). It never imports the client, so a value import here never loads `pg`.
-// One file per table group.
+// The `@trader/db/schema` subpath: the eleven tables and their enums, consumed by
+// drizzle.config.ts (`schema` path), the API (values for queries) and the phone app
+// (`import type` of the unions). It never imports the client, so a value import here never
+// loads `pg`.
 export * from "./companies";
 export * from "./enums";
 export * from "./users";
-export * from "./crews";
 export * from "./customers";
 export * from "./jobs";
+export * from "./job-assignments";
 export * from "./work-session-events";
-export * from "./pay";
-export * from "./approvals";
-export * from "./materials";
-export * from "./photos";
 export * from "./invoices";
 export * from "./invoice-line-items";
-export * from "./credit-memos";
-export * from "./audit-log";
-export * from "./day-closeouts";
-export * from "./material-corrections";
-export * from "./sync-diagnostics";
-export * from "./job-assignments";
-export * from "./shift-overrides";
 export * from "./invoice-payments";
 export * from "./invoice-sends";
-export * from "./rate-limits";

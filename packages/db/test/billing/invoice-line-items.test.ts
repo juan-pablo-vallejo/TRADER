@@ -3,17 +3,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import { invoiceLineItems, invoices, materials } from "../../src/schema";
-import {
-  billing,
-  type Billing,
-  fixture,
-  one,
-  pgError,
-  rolledBack,
-  sqlstate,
-  uuidv7,
-} from "../helpers";
+import { invoiceLineItems, invoices } from "../../src/schema";
+import { billing, type Billing, one, rolledBack, sqlstate } from "../helpers";
 
 async function draft(tx: Parameters<typeof billing>[0], refs: Billing) {
   return one(
@@ -104,40 +95,6 @@ describe("invoice_line_items", () => {
           .values({ ...line(refs, invoice.id), quantity: "0", amountCents: 0 }),
       );
       expect(code).toBe("23514");
-    });
-  });
-
-  it("rejects a material of another company", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await billing(tx);
-      const invoice = await draft(tx, refs);
-      const other = await fixture(tx);
-      const material = one(
-        await tx
-          .insert(materials)
-          .values({
-            id: uuidv7(),
-            companyId: other.companyId,
-            jobId: other.jobId,
-            loggedByUserId: other.workerId,
-            description: "Tape",
-            quantity: "1",
-            unit: "roll",
-            loggedAt: new Date(),
-            capturedOffline: false,
-            clockSkewed: false,
-            clockSkewMs: 0,
-            enteredByOffice: false,
-          })
-          .returning({ id: materials.id }),
-      );
-      const error = await pgError(
-        tx
-          .insert(invoiceLineItems)
-          .values({ ...line(refs, invoice.id), materialId: material.id }),
-      );
-      expect(error.code).toBe("23503");
-      expect(error.message).toContain("invoice_line_items_company_id_material_id_fk");
     });
   });
 });

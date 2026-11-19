@@ -37,9 +37,7 @@ describe("invoice_counters", () => {
     await rolledBack(db, async (tx) => {
       const { companyId } = await fixture(tx);
       const code = await sqlstate(
-        tx
-          .insert(invoiceCounters)
-          .values({ companyId, nextInvoiceNumber: 0, nextCreditMemoNumber: 1 }),
+        tx.insert(invoiceCounters).values({ companyId, nextInvoiceNumber: 0 }),
       );
       expect(code).toBe("23514");
     });

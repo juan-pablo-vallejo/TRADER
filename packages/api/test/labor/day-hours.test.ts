@@ -365,7 +365,6 @@ describe("labor.hours", () => {
         jobId: d.J,
         type,
         clientTimestamp: new Date(client),
-        attestationLevel: "biometric",
         location: { lat: 41.824, lng: -71.4128, accuracyM: 8 },
         timeSetByUser: false,
         capturedOffline: true,

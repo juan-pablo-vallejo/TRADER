@@ -88,7 +88,6 @@ const start = (who: VerifiedIdentity, workerId: string, jobId: string) =>
             jobId,
             type: "started",
             clientTimestamp: SEVEN_TEN,
-            attestationLevel: "biometric",
             location: null,
             timeSetByUser: false,
             capturedOffline: true,

@@ -2,9 +2,9 @@
 // no database, no clock. Every flag is computed here, in one place, and written once with
 // the entry it describes (work_session_events.flags). A flag is evidence for the office and
 // never keeps an entry from counting. Consumed by sync/labor.ts and labor/repair.ts.
-import type { approvalReason } from "@trader/db/schema";
+import type { entryFlag } from "@trader/db/schema";
 
-export type ApprovalReason = (typeof approvalReason.enumValues)[number];
+export type EntryFlag = (typeof entryFlag.enumValues)[number];
 
 // ARCHITECTURE, Sync protocol: device skew is |device_now − server_now| against a five-minute
 // tolerance, measured once per push. Strictly beyond it is skewed: exactly five minutes is not.
@@ -74,7 +74,7 @@ export function locationFlagged(
 }
 
 // The enum's order, so equal facts give equal arrays.
-export const REASON_ORDER: readonly ApprovalReason[] = [
+export const REASON_ORDER: readonly EntryFlag[] = [
   "offline",
   "corrected",
   "user_timed",
@@ -82,7 +82,7 @@ export const REASON_ORDER: readonly ApprovalReason[] = [
   "clock_skewed",
   "unscheduled",
 ];
-const ordered = (flags: Partial<Record<ApprovalReason, boolean>>): ApprovalReason[] =>
+const ordered = (flags: Partial<Record<EntryFlag, boolean>>): EntryFlag[] =>
   REASON_ORDER.filter((r) => flags[r] === true);
 
 // `corrected` is a corrects_event_id or a void (enums.ts): only the office writes either
@@ -98,7 +98,7 @@ export function laborReasons(e: {
   // A start the schedule did not admit, stored for review (sync/schedule.ts). Push alone
   // says so: an office repair is never judged by the schedule.
   unscheduled?: boolean;
-}): ApprovalReason[] {
+}): EntryFlag[] {
   return ordered({
     offline: e.capturedOffline,
     corrected: e.corrected,

@@ -10,7 +10,6 @@ import {
   customers,
   jobAssignments,
   jobs,
-  shiftOverrides,
   users,
   workSessionEvents,
 } from "../../src/schema";
@@ -322,44 +321,14 @@ describe("job_assignments, the punch lock", () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       await lockedShift(tx, refs);
-      // The whole cascade set, never waiting (helpers.ts, lockExclusive), and nothing but
-      // the TRUNCATE after it: a statement that waited while holding these would stall the
+      // The table held first, never waiting (helpers.ts, lockExclusive), and nothing but
+      // the TRUNCATE after it: a statement that waited while holding it would stall the
       // suites that write shifts.
-      await lockExclusive(tx, ["job_assignments", "shift_overrides"]);
+      await lockExclusive(tx, ["job_assignments"]);
       expect(await raised(tx, sql`truncate job_assignments cascade`)).toEqual({
         code: "23000",
         constraint: "job_assignments_locked",
       });
-    });
-  });
-
-  it("keeps the day of a shift an override names, and lets its times change", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const holder = await insertShift(tx, plan(refs));
-      const yielding = await insertShift(
-        tx,
-        plan(refs, { expectedStart: "12:00", expectedEnd: "17:00" }),
-      );
-      await tx.insert(shiftOverrides).values({
-        companyId: refs.companyId,
-        holderId: holder,
-        yieldingId: yielding,
-        reason: "Covering the afternoon",
-        createdBy: refs.workerId,
-      });
-      for (const id of [holder, yielding]) {
-        expect(
-          await raised(
-            tx,
-            sql`update job_assignments set work_date = '2026-11-17' where id = ${id}`,
-          ),
-        ).toEqual({ code: "23000", constraint: "job_assignments_override_day" });
-      }
-      const edited = await tx.execute(
-        sql`update job_assignments set expected_end = '18:00' where id = ${yielding}`,
-      );
-      expect(edited.rowCount).toBe(1);
     });
   });
 });

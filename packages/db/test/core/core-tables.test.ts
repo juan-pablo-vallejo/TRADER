@@ -1,23 +1,49 @@
-// Stage 2 line 2: the six core tables, asserted against the migrated container. Rolled-back
+// The eleven tables and their triggers, asserted against the migrated container. Rolled-back
 // transactions throughout; see helpers.ts.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import { companies, crews, customers, jobs, users } from "../../src/schema";
+import { companies, customers, jobs, users } from "../../src/schema";
 import { company, one, rolledBack, sqlstate } from "../helpers";
 
-const TENANT_TABLES = [
-  "users",
-  "crews",
-  "crew_members",
+// Every table in public. The inventory tests below hold the catalog to exactly this list.
+const TABLES = [
+  "companies",
   "customers",
+  "invoice_counters",
+  "invoice_line_items",
+  "invoice_payments",
+  "invoice_sends",
+  "invoices",
+  "job_assignments",
   "jobs",
+  "users",
   "work_session_events",
-  "pay_rates",
-  "pay_periods",
-  "pay_period_lines",
-  "approvals",
+];
+
+const TENANT_TABLES = TABLES.filter((t) => t !== "companies");
+
+// Every trigger a table in public carries, the ones Postgres makes for foreign keys aside.
+const TRIGGERS = [
+  "invoice_line_items_check_mutation",
+  "invoice_payments_check_insert",
+  "invoice_payments_no_delete",
+  "invoice_payments_no_truncate",
+  "invoice_payments_no_update",
+  "invoice_sends_check_insert",
+  "invoice_sends_no_delete",
+  "invoice_sends_no_truncate",
+  "invoice_sends_no_update",
+  "invoices_check_mutation",
+  "job_assignments_check_insert",
+  "job_assignments_check_mutation",
+  "job_assignments_check_truncate",
+  "users_identity_guard",
+  "work_session_events_check_references",
+  "work_session_events_no_delete",
+  "work_session_events_no_truncate",
+  "work_session_events_no_update",
 ];
 
 let db: Db;
@@ -29,6 +55,38 @@ afterAll(async () => {
 });
 
 describe("core tables", () => {
+  it("holds exactly eleven tables in public", async () => {
+    await rolledBack(db, async (tx) => {
+      const { rows } = await tx.execute<{ count: string }>(
+        sql`select count(*) from pg_tables where schemaname = 'public'`,
+      );
+      expect(Number(one(rows).count)).toBe(11);
+    });
+  });
+
+  it("holds exactly the eleven named tables in public", async () => {
+    await rolledBack(db, async (tx) => {
+      const { rows } = await tx.execute<{ tablename: string }>(sql`
+        select tablename::text from pg_tables where schemaname = 'public' order by tablename
+      `);
+      expect(rows.map((r) => r.tablename)).toEqual(TABLES);
+    });
+  });
+
+  it("carries exactly the eighteen named triggers on the tables in public", async () => {
+    await rolledBack(db, async (tx) => {
+      const { rows } = await tx.execute<{ tgname: string }>(sql`
+        select t.tgname::text from pg_trigger t
+        join pg_class c on c.oid = t.tgrelid
+        join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and not t.tgisinternal
+        order by t.tgname
+      `);
+      expect(rows.map((r) => r.tgname)).toEqual(TRIGGERS);
+      expect(rows).toHaveLength(18);
+    });
+  });
+
   it("defaults an office-created id to a version 7 UUID from Postgres", async () => {
     await rolledBack(db, async (tx) => {
       const row = one(
@@ -45,6 +103,7 @@ describe("core tables", () => {
         where table_schema = 'public' and column_name = 'company_id'
       `);
       const nullable = new Map(rows.map((r) => [r.table_name, r.is_nullable]));
+      expect([...nullable.keys()].sort()).toEqual(TENANT_TABLES);
       for (const table of TENANT_TABLES) expect(nullable.get(table), table).toBe("NO");
     });
   });
@@ -60,7 +119,8 @@ describe("core tables", () => {
         where c.contype = 'u'
         group by c.oid, c.conrelid
       `);
-      for (const table of TENANT_TABLES.filter((t) => t !== "crew_members")) {
+      // invoice_counters has no id: its key is the company.
+      for (const table of TENANT_TABLES.filter((t) => t !== "invoice_counters")) {
         const pair = rows.find(
           (r) => r.table_name === table && r.columns.join(",") === "company_id,id",
         );
@@ -69,7 +129,7 @@ describe("core tables", () => {
     });
   });
 
-  it("rejects a job whose crew belongs to another company", async () => {
+  it("rejects a job whose customer belongs to another company", async () => {
     await rolledBack(db, async (tx) => {
       const a = one(
         await tx.insert(companies).values(company).returning({ id: companies.id }),
@@ -77,31 +137,16 @@ describe("core tables", () => {
       const b = one(
         await tx.insert(companies).values(company).returning({ id: companies.id }),
       );
-      const foreman = one(
-        await tx
-          .insert(users)
-          .values({ companyId: b.id, email: "f@b.test", name: "Foreman B" })
-          .returning({ id: users.id }),
-      );
-      const crewB = one(
-        await tx
-          .insert(crews)
-          .values({ companyId: b.id, name: "Crew B", foremanUserId: foreman.id })
-          .returning({ id: crews.id }),
-      );
-      const customerA = one(
+      const customerB = one(
         await tx
           .insert(customers)
-          .values({ companyId: a.id, name: "Customer A" })
+          .values({ companyId: b.id, name: "Customer B" })
           .returning({ id: customers.id }),
       );
       const code = await sqlstate(
-        tx.insert(jobs).values({
-          companyId: a.id,
-          customerId: customerA.id,
-          crewId: crewB.id,
-          name: "Job",
-        }),
+        tx
+          .insert(jobs)
+          .values({ companyId: a.id, customerId: customerB.id, name: "Job" }),
       );
       expect(code).toBe("23503");
     });
@@ -244,19 +289,6 @@ describe("core tables", () => {
           .values({ companyId: a.id, email: "ben@co.test", name: "Ben", signInPhone }),
       );
       expect(code).toBe("23505");
-    });
-  });
-
-  it("rejects a crew without a foreman", async () => {
-    await rolledBack(db, async (tx) => {
-      const c = one(
-        await tx.insert(companies).values(company).returning({ id: companies.id }),
-      );
-      // Raw SQL: the Drizzle insert type already refuses to omit a NOT NULL column.
-      const code = await sqlstate(
-        tx.execute(sql`insert into crews (company_id, name) values (${c.id}, 'Crew')`),
-      );
-      expect(code).toBe("23502");
     });
   });
 });

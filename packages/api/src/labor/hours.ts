@@ -10,7 +10,7 @@
 // someone is on the clock. A voided session adds nothing anywhere. A cell carries every flag
 // of the entries its sessions are made of. Hours are integer hundredths everywhere: no float
 // is ever an hour. Consumed by labor/day-hours.ts (readDayHours).
-import { REASON_ORDER, type ApprovalReason } from "../sync/reasons";
+import { REASON_ORDER, type EntryFlag } from "../sync/reasons";
 import type { sessionAccounting } from "./accounting";
 import { workDate } from "./work-date";
 
@@ -37,7 +37,7 @@ export type DayCell = {
   // Sessions with no clock-out yet.
   openSessions: number;
   // Every flag of the entries in effect behind this cell's sessions, in the enum's order.
-  flags: ApprovalReason[];
+  flags: EntryFlag[];
 };
 
 // One worker's cells, from that worker's whole folded ledger, ordered by work date then job.
@@ -46,9 +46,9 @@ export function dayHours(
   workerId: string,
   folded: ReturnType<typeof sessionAccounting>,
   timeZone: string,
-  flagsOf: (eventId: string) => readonly ApprovalReason[],
+  flagsOf: (eventId: string) => readonly EntryFlag[],
 ): DayCell[] {
-  const cells = new Map<string, DayCell & { seen: Set<ApprovalReason> }>();
+  const cells = new Map<string, DayCell & { seen: Set<EntryFlag> }>();
   for (const s of folded.structural.sessions) {
     const counted = folded.byRoot.get(s.rootEventId);
     if (counted === undefined)

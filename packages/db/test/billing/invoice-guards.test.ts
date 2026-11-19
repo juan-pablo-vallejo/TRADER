@@ -1,17 +1,12 @@
-// Stage 2 line 5: the invoice lifecycle, gap-free numbering and credit-memo rules — the
-// triggers of migration 0010 — asserted against the migrated container. Rolled-back
+// The invoice lifecycle and gap-free numbering (ARCHITECTURE invariant 6): the invoice and
+// line triggers, asserted against the migrated container. Rolled-back
 // transactions throughout, except the two lock tests at the end, which need rows two
 // connections can both see and therefore commit a fixture and delete it after.
-import { count, eq, sql, type SQL } from "drizzle-orm";
+import { count, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import {
-  creditMemos,
-  invoiceCounters,
-  invoiceLineItems,
-  invoices,
-} from "../../src/schema";
+import { invoiceCounters, invoiceLineItems, invoices } from "../../src/schema";
 import {
   billing,
   type Billing,
@@ -26,18 +21,6 @@ import {
   type Tx,
 } from "../helpers";
 
-type MemoInsert = Omit<typeof creditMemos.$inferInsert, "number"> & { number: SQL };
-
-const memo = (refs: Billing, invoiceId: string): MemoInsert => ({
-  companyId: refs.companyId,
-  invoiceId,
-  currency: "USD",
-  number: sql`NULL`,
-  amountCents: 5000,
-  reason: "Touch-up not completed",
-  issuedByUserId: refs.adminId,
-});
-
 const voidIt = (tx: Tx, refs: Billing, invoiceId: string) =>
   tx
     .update(invoices)
@@ -48,10 +31,7 @@ const voidIt = (tx: Tx, refs: Billing, invoiceId: string) =>
 async function counter(tx: Tx, companyId: string) {
   return one(
     await tx
-      .select({
-        invoice: invoiceCounters.nextInvoiceNumber,
-        memo: invoiceCounters.nextCreditMemoNumber,
-      })
+      .select({ invoice: invoiceCounters.nextInvoiceNumber })
       .from(invoiceCounters)
       .where(eq(invoiceCounters.companyId, companyId)),
   );
@@ -302,87 +282,6 @@ describe("draft invoices", () => {
       const { invoiceId } = await draftInvoice(tx, refs);
       await tx.delete(invoices).where(eq(invoices.id, invoiceId));
       expect(await lineCount(tx, invoiceId)).toBe(0);
-    });
-  });
-});
-
-describe("credit memos", () => {
-  it("are numbered from their own series", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await billing(tx);
-      const { invoiceId } = await draftInvoice(tx, refs);
-      await issue(tx, refs, invoiceId);
-      const rows = await tx
-        .insert(creditMemos)
-        .values([memo(refs, invoiceId), memo(refs, invoiceId)])
-        .returning({ number: creditMemos.number });
-      expect(rows.map((r) => r.number)).toEqual([7, 8]);
-      expect(await counter(tx, refs.companyId)).toEqual({ invoice: 1043, memo: 9 });
-    });
-  });
-
-  it("refuse a caller-supplied number", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await billing(tx);
-      const { invoiceId } = await draftInvoice(tx, refs);
-      await issue(tx, refs, invoiceId);
-      const error = await pgError(
-        tx.insert(creditMemos).values({ ...memo(refs, invoiceId), number: sql`7` }),
-      );
-      expect(error.code).toBe("23000");
-      expect(error.message).toContain("never supplied");
-    });
-  });
-
-  it("refuse a draft invoice", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await billing(tx);
-      const { invoiceId } = await draftInvoice(tx, refs);
-      const error = await pgError(tx.insert(creditMemos).values(memo(refs, invoiceId)));
-      expect(error.code).toBe("23000");
-      expect(error.message).toContain("issued, unvoided");
-    });
-  });
-
-  it("refuse a voided invoice", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await billing(tx);
-      const { invoiceId } = await draftInvoice(tx, refs);
-      await issue(tx, refs, invoiceId);
-      await voidIt(tx, refs, invoiceId);
-      expect(await sqlstate(tx.insert(creditMemos).values(memo(refs, invoiceId)))).toBe(
-        "23000",
-      );
-    });
-  });
-
-  it("refuse UPDATE, DELETE and TRUNCATE", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await billing(tx);
-      const { invoiceId } = await draftInvoice(tx, refs);
-      await issue(tx, refs, invoiceId);
-      const row = one(
-        await tx
-          .insert(creditMemos)
-          .values(memo(refs, invoiceId))
-          .returning({ id: creditMemos.id }),
-      );
-      const attempts = [
-        (sp: Tx) =>
-          sp
-            .update(creditMemos)
-            .set({ amountCents: 1 })
-            .where(eq(creditMemos.id, row.id)),
-        (sp: Tx) => sp.delete(creditMemos).where(eq(creditMemos.id, row.id)),
-        (sp: Tx) => sp.execute(sql`TRUNCATE credit_memos CASCADE`),
-      ];
-      for (const attempt of attempts) {
-        const error = await pgError(
-          tx.transaction(async (sp) => void (await attempt(sp))),
-        );
-        expect(error.code).toBe("23000");
-        expect(error.message).toContain("append-only");
-      }
     });
   });
 });

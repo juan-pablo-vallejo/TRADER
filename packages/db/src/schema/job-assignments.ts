@@ -20,8 +20,7 @@ import { workSessionEvents } from "./work-session-events";
 // A dated plan: this person is expected on this job, on this day, between these times
 // (PRD, Jobs and location; ARCHITECTURE, Office authority: dated assignments, V1-D07). It is
 // planning only. Nothing that judges or counts labor reads this table — not push authority,
-// validation, the fold, approvals, closeouts, pay or invoices — and a row here creates no
-// crew_members row and widens no read but one: the planned person sees that job's name and
+// validation, the fold or invoices, and a row here widens no read but one: the planned person sees that job's name and
 // address. Written by the office (api assignments/write.ts), read by `assignment.list` and
 // `assignment.mine`.
 //
@@ -35,12 +34,11 @@ import { workSessionEvents } from "./work-session-events";
 // Unlike a fact table a plan is edited and removed: updated_at, an UPDATE and a DELETE grant
 // (migration 0031), and no append-only guard — until a clock-in is admitted on it.
 //
-// The weekly schedule (ARCHITECTURE, 2026-11-15 rows; TASKS S2) makes a row a shift. A person
-// may have several in a day, on one job or several; only the exact duplicate is refused here,
-// and whether two overlap is the writers' question (api assignments/eligibility.ts), answered
-// with shift_overrides. locked_at and locked_by_event_id are the punch lock: set once, by the
-// push that admits a `started` on the shift, to that event; from then the row's day, times
-// and job never change and it is never removed (migration 0041's guard). copy_id marks the
+// A row is a shift. A person may have several in a day, on one job or several; only the
+// exact duplicate is refused here, and two that overlap are refused by the writers (api
+// assignments/eligibility.ts). locked_at and locked_by_event_id are the punch lock: set
+// once, by the push that admits a `started` on the shift, to that event; from then the row's
+// day, times and job never change and it is never removed (a trigger). copy_id marks the
 // rows one Copy Last Week created, so the copy is undone whole.
 export const jobAssignments = pgTable(
   "job_assignments",
@@ -72,7 +70,6 @@ export const jobAssignments = pgTable(
       columns: [t.companyId, t.jobId],
       foreignColumns: [jobs.companyId, jobs.id],
     }),
-    // The target of shift_overrides' composite keys: an override names shifts of its company.
     unique("job_assignments_company_id_id_unique").on(t.companyId, t.id),
     // The event that locked the shift belongs to the row's company (invariant 4).
     foreignKey({

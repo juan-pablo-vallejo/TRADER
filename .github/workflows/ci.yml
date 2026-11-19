@@ -213,8 +213,6 @@ jobs:
           STAGING_URL: ${{ secrets.STAGING_URL }}
           E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
           E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
-          # The smoke test's own tenant on the shared database: an id, not a secret.
-          E2E_COMPANY_ID: ${{ vars.E2E_COMPANY_ID }}
           E2E_EXPECT_COMMIT: ${{ env.SHA }}
           E2E_OUTPUT_DIR: ${{ runner.temp }}/e2e
         run: |

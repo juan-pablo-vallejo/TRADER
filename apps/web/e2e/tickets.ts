@@ -18,14 +18,9 @@ export const CLERK_API = "https://api.clerk.com/v1";
 export const TICKET_SECONDS = 600;
 export const REQUEST_TIMEOUT_MS = 15_000;
 
-// What the suite must be told and has no default for: its own company on the shared
-// database and its two people there. A default would let a run with one of them unset go
-// on without the tenant check, or as people nobody named.
-export const SUITE_SETTINGS = [
-  "E2E_COMPANY_ID",
-  "E2E_ADMIN_PHONE",
-  "E2E_WORKER_PHONE",
-] as const;
+// What the suite must be told and has no default for: its two people. A default would let
+// a run with one of them unset go on as people nobody named.
+export const SUITE_SETTINGS = ["E2E_ADMIN_PHONE", "E2E_WORKER_PHONE"] as const;
 export type SuiteSetting = (typeof SUITE_SETTINGS)[number];
 
 // The names among `names` that `env` leaves unset. A variable set and blank, as an unset

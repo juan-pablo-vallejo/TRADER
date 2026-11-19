@@ -20,10 +20,7 @@ afterAll(async () => {
 const counter = async (tx: Tx) =>
   one(
     await tx
-      .select({
-        next: invoiceCounters.nextInvoiceNumber,
-        nextMemo: invoiceCounters.nextCreditMemoNumber,
-      })
+      .select({ next: invoiceCounters.nextInvoiceNumber })
       .from(invoiceCounters)
       .where(eq(invoiceCounters.companyId, SEED.companyId)),
   );
@@ -41,7 +38,7 @@ const admin = async (tx: Tx) =>
   );
 
 describe("seed", () => {
-  it("creates one company, its counter at 1 and 1, and one admin; a re-run adds nothing", async () => {
+  it("creates one company, its counter at 1, and one admin; a re-run adds nothing", async () => {
     await rolledBack(db, async (tx) => {
       const first = await seed(tx);
       const second = await seed(tx);
@@ -52,7 +49,7 @@ describe("seed", () => {
         users: 1,
       });
       expect(second).toEqual(first);
-      expect(await counter(tx)).toEqual({ next: 1, nextMemo: 1 });
+      expect(await counter(tx)).toEqual({ next: 1 });
       expect(await admin(tx)).toEqual({
         role: "admin",
         identitySubject: null,
@@ -66,14 +63,14 @@ describe("seed", () => {
       await seed(tx);
       await tx
         .update(invoiceCounters)
-        .set({ nextInvoiceNumber: 1043, nextCreditMemoNumber: 8 })
+        .set({ nextInvoiceNumber: 1043 })
         .where(eq(invoiceCounters.companyId, SEED.companyId));
       await tx
         .update(users)
         .set({ role: "worker" })
         .where(eq(users.companyId, SEED.companyId));
       await seed(tx);
-      expect(await counter(tx)).toEqual({ next: 1043, nextMemo: 8 });
+      expect(await counter(tx)).toEqual({ next: 1043 });
       expect((await admin(tx)).role).toBe("admin");
     });
   });
@@ -91,7 +88,7 @@ describe("seed", () => {
       const second = await seed(tx, other);
       expect(second).toEqual({ ...first, currentUser: first.currentUser });
       expect(await seed(tx)).toEqual(first);
-      expect(await counter(tx)).toEqual({ next: 1, nextMemo: 1 });
+      expect(await counter(tx)).toEqual({ next: 1 });
       expect(await admin(tx)).toEqual({
         role: "admin",
         identitySubject: null,

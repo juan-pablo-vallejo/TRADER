@@ -13,13 +13,7 @@
 // Hours screen and whatever exports it read one figure and add nothing themselves. The range
 // is refused past its bound, never truncated, and there is no limit, so nothing in it is
 // left out. Consumed by routers/labor.ts, labor/export.ts and invoices/read.ts.
-import {
-  approvalReason,
-  companies,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { entryFlag, companies, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -107,7 +101,7 @@ export const hoursOutput = z.strictObject({
       workDate: z.iso.date(),
       ...figures,
       // Every flag of the entries behind the cell, in the enum's order.
-      flags: z.array(z.enum(approvalReason.enumValues)),
+      flags: z.array(z.enum(entryFlag.enumValues)),
     }),
   ),
   // Each worker with a cell above and the sum of their cells, by name then id.

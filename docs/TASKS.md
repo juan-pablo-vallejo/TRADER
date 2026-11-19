@@ -121,7 +121,7 @@ you find under "Found along the way". Never reorder, never add scope.
       materials on lines, no credit memos. Draft, issue, void, numbering, PDF, email and
       payments stay as built. Done when `pnpm check` is green and no invoice code names a
       material or a credit memo.
-- [ ] 8. **One fresh baseline.** The schema is the eleven tables of ARCHITECTURE. Replace
+- [x] 8. **One fresh baseline.** The schema is the eleven tables of ARCHITECTURE. Replace
       the 50 migrations with one journal that builds exactly that on an empty database:
       tables, enums, the append-only trigger, row-level security enabled and forced on
       every company table, and the `trader_app` role created if absent, without
@@ -199,6 +199,12 @@ now, production when it exists); the roster's phone numbers, and a Google accoun
 each Android user.
 
 ### Found along the way
+
+- [ ] The deploy job spends most of its time installing a browser for the smoke test
+      (`playwright install --with-deps chromium`, about ten minutes a run). Cache it.
+- [ ] OWNER: `STAGING_MIGRATOR_URL` in `.env.staging` ends in a cut-off query parameter
+      (`&ch`); the value in GitHub's `staging` environment is whole. Fix the file's copy.
+- [ ] OWNER: the `staging` environment variable `E2E_COMPANY_ID` is no longer read; delete it.
 
 ## After MVP
 

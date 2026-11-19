@@ -16,15 +16,13 @@ import { jobs } from "./jobs";
 import { createdAt, id, updatedAt } from "./shared";
 import { users } from "./users";
 
-// The company's number series (PRD, Invoicing and exports: gap-free per company, continuing
-// the partner's existing series). One row per company, created with it (the seed, line 8;
-// onboarding after V1) holding the next number of each series — that is how the partner's
-// series continues. Migration 0010 advances a column inside the issuing transaction by
-// UPDATE … RETURNING: the row lock serialises concurrent issues, and an aborted issue rolls
-// the counter back with it, so there is never a gap. A Postgres sequence is not used because
-// nextval is never rolled back, and one sequence per tenant would be DDL at onboarding.
-// A table rather than columns on companies: tenant-scoped for RLS (line 7), and the lock
-// never touches the company row.
+// The company's invoice number series: gap-free per company, continuing the contractor's
+// existing series. One row per company, created with it (the seed; onboarding) holding the
+// next number. A trigger advances it inside the issuing transaction by UPDATE ... RETURNING:
+// the row lock serialises concurrent issues, and an aborted issue rolls the counter back with
+// it, so there is never a gap. A Postgres sequence is not used because nextval is never
+// rolled back, and one sequence per tenant would be DDL at onboarding. A table rather than a
+// column on companies: tenant-scoped for RLS, and the lock never touches the company row.
 export const invoiceCounters = pgTable(
   "invoice_counters",
   {
@@ -32,9 +30,6 @@ export const invoiceCounters = pgTable(
       .primaryKey()
       .references(() => companies.id),
     nextInvoiceNumber: integer("next_invoice_number").notNull(),
-    // Unused since credit memos left the MVP; defaulted so nothing names it, and dropped
-    // with the baseline.
-    nextCreditMemoNumber: integer("next_credit_memo_number").notNull().default(1),
     createdAt,
     updatedAt,
   },
@@ -42,10 +37,6 @@ export const invoiceCounters = pgTable(
     check(
       "invoice_counters_next_invoice_number_positive",
       sql`${t.nextInvoiceNumber} > 0`,
-    ),
-    check(
-      "invoice_counters_next_credit_memo_number_positive",
-      sql`${t.nextCreditMemoNumber} > 0`,
     ),
   ],
 );
@@ -57,8 +48,8 @@ export const invoiceCounters = pgTable(
 //
 // Money (invariant 3): tax_cents is the one input — the admin enters tax per invoice and
 // TRADER does the arithmetic. The subtotal is the sum of the lines' amount_cents and the
-// total is that plus tax, both derived and stable because migration 0010 freezes the lines
-// and this row at issue. Every line and credit memo carries the invoice's currency through
+// total is that plus tax, both derived and stable because a trigger freezes the lines
+// and this row at issue. Every line carries the invoice's currency through
 // a foreign key over (company_id, id, currency), which also makes the currency immutable
 // once a line exists.
 //
@@ -89,7 +80,7 @@ export const invoices = pgTable(
   },
   (t) => [
     unique("invoices_company_id_id_unique").on(t.companyId, t.id),
-    // The target of the lines' and credit memos' currency-carrying foreign key.
+    // The target of the lines' currency-carrying foreign key.
     unique("invoices_company_id_id_currency_unique").on(t.companyId, t.id, t.currency),
     unique("invoices_company_id_number_unique").on(t.companyId, t.number),
     // Composite over jobs' (company_id, customer_id, id) unique, so the invoice is to the

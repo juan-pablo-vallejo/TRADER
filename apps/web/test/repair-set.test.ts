@@ -35,7 +35,6 @@ function event(
     clockSkewMs: 0,
     timeSetByUser: false,
     capturedOffline: false,
-    attestationLevel: "none",
     hasLocation: false,
     correctsEventId: null,
     voidsEventId: null,

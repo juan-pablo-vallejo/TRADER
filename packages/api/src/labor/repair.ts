@@ -7,7 +7,7 @@
 // (both success) with acknowledgements in input order, or `rejected` with a code, writing
 // nothing, so the same ids may be sent again. Anything thrown rolls the call back. Consumed
 // by routers/labor.ts.
-import { approvalReason, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { entryFlag, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { inArray, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -15,7 +15,7 @@ import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import { instant } from "../core/instant";
 import type { AppUser } from "../core/resolve-user";
-import { laborReasons, type ApprovalReason } from "../sync/reasons";
+import { laborReasons, type EntryFlag } from "../sync/reasons";
 import { forbidden } from "../core/trpc";
 import { replay, type LaborEvent } from "./fold";
 import { assertReadCommitted, loadWorkerTimeline } from "./timeline";
@@ -91,7 +91,7 @@ export type RepairInput = z.infer<typeof repairInput>;
 const acknowledgement = z.strictObject({
   id: z.uuid(),
   serverTimestamp: z.date(),
-  reasons: z.array(z.enum(approvalReason.enumValues)),
+  reasons: z.array(z.enum(entryFlag.enumValues)),
 });
 
 type RepairRejection = RejectionCode | "id_conflict" | "time_in_future" | "repair_stale";
@@ -152,11 +152,10 @@ const rejected = (
 type Stored = typeof workSessionEvents.$inferSelect;
 
 // An office event's facts, fixed by the server: the time was set by a person (a void sets none),
-// it was captured online, it is placed where the office put it, no attestation, no stamp.
+// it was captured online, it is placed where the office put it, no stamp.
 const officeFacts = (op: Operation) => ({
   clockSkewed: false,
   clockSkewMs: 0,
-  attestationLevel: "none" as const,
   locationLat: null,
   locationLng: null,
   locationAccuracyM: null,
@@ -173,7 +172,6 @@ function same(row: Stored, user: AppUser, workerId: string, op: Operation): bool
     row.initiatorUserId === user.id &&
     row.workerId === workerId &&
     row.clockSkewed === facts.clockSkewed &&
-    row.attestationLevel === facts.attestationLevel &&
     row.locationLat === null &&
     row.locationLng === null &&
     row.locationAccuracyM === null &&
@@ -344,7 +342,7 @@ export async function repairLabor(
   }
 
   // 9. Each entry's flags: an office entry is corrected or user-timed, and unstamped.
-  const reasons: ApprovalReason[][] = [];
+  const reasons: EntryFlag[][] = [];
   for (const [i, op] of input.operations.entries()) {
     const c = candidates[i]!;
     reasons.push(

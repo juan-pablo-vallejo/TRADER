@@ -5,13 +5,13 @@ import { describe, expect, it } from "vitest";
 import { sessionAccounting } from "../../src/labor/accounting";
 import type { LaborEvent } from "../../src/labor/fold";
 import { dayHours, HUNDREDTH_HOUR_MS, roundHours } from "../../src/labor/hours";
-import type { ApprovalReason } from "../../src/sync/reasons";
+import type { EntryFlag } from "../../src/sync/reasons";
 import { at, builder, HOUR, JOB_A, JOB_B, MINUTE, WORKER } from "./events";
 
 const ZONE = "America/New_York";
-const flagged = (...pairs: [LaborEvent, ApprovalReason[]][]) =>
+const flagged = (...pairs: [LaborEvent, EntryFlag[]][]) =>
   new Map(pairs.map(([e, f]) => [e.id, f]));
-const cells = (ledger: LaborEvent[], flags = new Map<string, ApprovalReason[]>()) =>
+const cells = (ledger: LaborEvent[], flags = new Map<string, EntryFlag[]>()) =>
   dayHours(WORKER, sessionAccounting(ledger), ZONE, (id) => flags.get(id) ?? []);
 
 describe("roundHours", () => {

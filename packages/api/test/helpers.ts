@@ -32,7 +32,7 @@ import {
   type ErrorReporter,
 } from "../src/core/report";
 import type { AppUser } from "../src/core/resolve-user";
-import type { ApprovalReason } from "../src/sync/reasons";
+import type { EntryFlag } from "../src/sync/reasons";
 import type { Mailer } from "../src/core/mailer";
 import { appRouter } from "../src/router";
 import {
@@ -471,7 +471,7 @@ type EventInput = {
   // Who recorded it; defaults to the worker.
   initiator?: string;
   // As its writer would have stored them; none by default.
-  flags?: ApprovalReason[];
+  flags?: EntryFlag[];
 };
 
 // One ledger row, written as the owner (the API's writers are later lines).
@@ -488,7 +488,6 @@ export async function eventIn(tx: Tx, day: WorkDay, e: EventInput): Promise<stri
     serverTimestamp: server,
     clockSkewed: e.skewed ?? false,
     clockSkewMs: e.skewed ? 600_000 : 0,
-    attestationLevel: "none",
     schemaVersion: 1,
     timeSetByUser: false,
     capturedOffline: false,

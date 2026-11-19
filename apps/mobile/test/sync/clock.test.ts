@@ -99,7 +99,6 @@ describe("a tap", () => {
       type: "started",
       clientTimestamp: new Date(T0),
       timeSetByUser: false,
-      attestationLevel: "none",
     });
   });
 

@@ -59,20 +59,14 @@ describe("work_session_events", () => {
   });
 
   it("rejects TRUNCATE, which bypasses row triggers", async () => {
-    // CASCADE, because approvals references this table and Postgres refuses a plain
-    // TRUNCATE of a referenced table (0A000) before any trigger runs; with CASCADE the
-    // statement reaches the guard. The whole cascade set held first, without waiting: a
-    // waiting TRUNCATE closed a cycle with another suite's approval insert (40P01; helpers.ts,
-    // lockExclusive). job_assignments names the event that locked a shift, and
-    // shift_overrides names job_assignments, so both are in the set (migration 0040).
+    // CASCADE, because job_assignments names the event that locked a shift and Postgres
+    // refuses a plain TRUNCATE of a referenced table (0A000) before any trigger runs; with
+    // CASCADE the statement reaches the guard. The whole cascade set held first, without
+    // waiting: a waiting TRUNCATE can close a cycle with another suite's insert (40P01;
+    // helpers.ts, lockExclusive).
     await rolledBack(db, async (tx) => {
       await tx.insert(workSessionEvents).values(started(await fixture(tx)));
-      await lockExclusive(tx, [
-        "work_session_events",
-        "approvals",
-        "job_assignments",
-        "shift_overrides",
-      ]);
+      await lockExclusive(tx, ["work_session_events", "job_assignments"]);
       const error = await pgError(
         tx.transaction((sp) => sp.execute(sql`truncate work_session_events cascade`)),
       );
@@ -123,10 +117,9 @@ describe("work_session_events", () => {
         tx.execute(sql`
           insert into work_session_events
             (company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
-             clock_skew_ms, attestation_level, schema_version, time_set_by_user,
-             initiator_user_id)
-          values (${companyId}, ${workerId}, ${jobId}, 'started', now(), false, 0, 'none', 1,
-                  false, ${workerId})
+             clock_skew_ms, schema_version, time_set_by_user, initiator_user_id)
+          values (${companyId}, ${workerId}, ${jobId}, 'started', now(), false, 0, 1, false,
+                  ${workerId})
         `),
       );
       expect(code).toBe("23502");
@@ -141,9 +134,9 @@ describe("work_session_events", () => {
         tx.execute(sql`
           insert into work_session_events
             (id, company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
-             clock_skew_ms, attestation_level, schema_version, initiator_user_id)
+             clock_skew_ms, schema_version, initiator_user_id)
           values (${uuidv7()}, ${companyId}, ${workerId}, ${jobId}, 'started', now(), false,
-                  0, 'none', 1, ${workerId})
+                  0, 1, ${workerId})
         `),
       );
       expect(code).toBe("23502");
@@ -352,17 +345,15 @@ describe("work_session_events", () => {
         "offline",
         "unscheduled",
       ]);
-      // Not an approval reason: the column is the enum's array.
+      // Not a flag: the column is the enum's array.
       const code = await sqlstate(
         tx.transaction((sp) =>
           sp.execute(sql`
             insert into work_session_events
               (id, company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
-               clock_skew_ms, attestation_level, schema_version, time_set_by_user,
-               initiator_user_id, flags)
+               clock_skew_ms, schema_version, time_set_by_user, initiator_user_id, flags)
             values (${uuidv7()}, ${refs.companyId}, ${refs.workerId}, ${refs.jobId},
-                    'started', now(), false, 0, 'none', 1, false, ${refs.workerId},
-                    '{late}')
+                    'started', now(), false, 0, 1, false, ${refs.workerId}, '{late}')
           `),
         ),
       );

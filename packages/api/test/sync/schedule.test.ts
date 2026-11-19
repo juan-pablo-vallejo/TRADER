@@ -114,7 +114,6 @@ async function push(
           jobId,
           type: o.type ?? "started",
           clientTimestamp: o.when ?? at("07:10"),
-          attestationLevel: "biometric",
           location: null,
           timeSetByUser: false,
           capturedOffline: o.offline ?? true,

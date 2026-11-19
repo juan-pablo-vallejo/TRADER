@@ -3,7 +3,7 @@
 // this shape and the server parses them with the same schema.
 import { z } from "zod";
 
-import { APPROVAL_REASONS, ATTESTATION_LEVELS, DEVICE_EVENT_TYPES } from "./enums";
+import { DEVICE_EVENT_TYPES, ENTRY_FLAGS } from "./enums";
 import { instant } from "./instant";
 
 // Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
@@ -15,7 +15,6 @@ export const laborPayloadV1 = z.strictObject({
   jobId: z.uuid(),
   type: z.enum(DEVICE_EVENT_TYPES),
   clientTimestamp: instant,
-  attestationLevel: z.enum(ATTESTATION_LEVELS),
   location: z
     .strictObject({
       lat: z.number().min(-90).max(90),
@@ -33,5 +32,5 @@ export const laborAck = z.strictObject({
   id: z.uuid(),
   serverTimestamp: z.date(),
   clockSkewed: z.boolean(),
-  reasons: z.array(z.enum(APPROVAL_REASONS)),
+  reasons: z.array(z.enum(ENTRY_FLAGS)),
 });

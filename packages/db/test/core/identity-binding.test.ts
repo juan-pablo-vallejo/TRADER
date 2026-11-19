@@ -424,7 +424,7 @@ describe("users identity guard", () => {
       expect(
         await rowCount(
           tx,
-          sql`update users set role = 'foreman', deactivated_at = now() where id = ${a.boundId}`,
+          sql`update users set role = 'admin', deactivated_at = now() where id = ${a.boundId}`,
         ),
       ).toBe(1);
     });

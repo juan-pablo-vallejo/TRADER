@@ -247,7 +247,6 @@ describe("labor.repair — append, correct, void", () => {
         type: "ended",
         clientTimestamp: at("16:00"),
         initiatorUserId: admin.id,
-        attestationLevel: "none",
         timeSetByUser: true,
         capturedOffline: false,
         clockSkewed: false,

@@ -15,11 +15,10 @@ import {
   TICKET_SECONDS,
 } from "../e2e/tickets";
 
-// Two of Clerk's fictional numbers and a company's id, as a run would be given them.
+// Two of Clerk's fictional numbers, as a run would be given them.
 const ADMIN_PHONE = "+14015550100";
 const WORKER_PHONE = "+14015550101";
 const SETTINGS = {
-  E2E_COMPANY_ID: "01900000-0000-7000-8000-000000000001",
   E2E_ADMIN_PHONE: ADMIN_PHONE,
   E2E_WORKER_PHONE: WORKER_PHONE,
 };
@@ -192,16 +191,12 @@ describe("mintForWorkflow", () => {
   });
 });
 
-// The suite's company and its two people have no default: a run that is not told all three
-// must stop, never go on without the tenant check or as people nobody named.
+// The suite's two people have no default: a run that is not told both
+// must stop, never go on as people nobody named.
 describe("the suite's required settings", () => {
   it("names every setting left unset or blank, and none when all are given", () => {
-    // The three, by name: a name dropped from the list is a check dropped from every run.
-    expect([...SUITE_SETTINGS]).toEqual([
-      "E2E_COMPANY_ID",
-      "E2E_ADMIN_PHONE",
-      "E2E_WORKER_PHONE",
-    ]);
+    // Both, by name: a name dropped from the list is a check dropped from every run.
+    expect([...SUITE_SETTINGS]).toEqual(["E2E_ADMIN_PHONE", "E2E_WORKER_PHONE"]);
     expect(missingSettings(SETTINGS)).toEqual([]);
     expect(missingSettings({})).toEqual([...SUITE_SETTINGS]);
     for (const name of SUITE_SETTINGS) {
@@ -230,7 +225,7 @@ describe("the suite's required settings", () => {
       },
     );
 
-  it("loads its five tests when told its company and both people", () => {
+  it("loads its five tests when told both people", () => {
     const listed = list(SETTINGS);
     expect(listed.stdout).toContain("Total: 5 tests in 1 file");
     expect(listed.status).toBe(0);

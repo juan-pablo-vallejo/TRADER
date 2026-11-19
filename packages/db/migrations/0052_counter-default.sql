@@ -1,1 +1,0 @@
-ALTER TABLE "invoice_counters" ALTER COLUMN "next_credit_memo_number" SET DEFAULT 1;

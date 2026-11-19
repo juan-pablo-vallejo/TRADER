@@ -16,7 +16,7 @@ import { createContext } from "../core/context";
 import { localDirectory } from "../core/identity";
 import { logReporter } from "../core/report";
 import { appRouter } from "../router";
-import type { ApprovalReason } from "../sync/reasons";
+import type { EntryFlag } from "../sync/reasons";
 import { createCallerFactory } from "../core/trpc";
 import {
   BASELINE_TIMES,
@@ -81,7 +81,7 @@ type Record_ = {
   kind: "labor_event";
   schemaVersion: 1;
   payload: unknown;
-  reasons: ApprovalReason[];
+  reasons: EntryFlag[];
 };
 
 export async function runDemo(opts: RunOptions): Promise<Summary> {
@@ -192,7 +192,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     capturedOffline?: boolean;
     timeSetByUser?: boolean;
     stamp?: { lat: number; lng: number; accuracyM: number } | null;
-    attestation?: "biometric" | "device_credential" | "none";
   };
 
   // One labor event record for `who` on their own job.
@@ -201,7 +200,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     day: number,
     type: "started" | "paused" | "resumed" | "ended",
     time: string,
-    reasons: ApprovalReason[],
+    reasons: EntryFlag[],
     facts: Facts = {},
   ): Record_ => {
     const p = person(who);
@@ -223,7 +222,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         jobId: jobIds.get(p.job!)!,
         type,
         clientTimestamp: when,
-        attestationLevel: facts.attestation ?? "biometric",
         location: facts.stamp === undefined ? defaultStamp : facts.stamp,
         timeSetByUser: facts.timeSetByUser ?? false,
         capturedOffline: facts.capturedOffline ?? false,
@@ -242,7 +240,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     // the one day that claims an online capture and is flagged for it (lateOnlineDay).
     const claimsOnline =
       SCENARIOS.lateOnlineDay.who === who && SCENARIOS.lateOnlineDay.day === day;
-    const base: ApprovalReason[] = claimsOnline
+    const base: EntryFlag[] = claimsOnline
       ? SCENARIOS.lateOnlineDay.reasons
       : SCENARIOS.backlog.reasons;
     const facts: Facts = claimsOnline ? {} : { capturedOffline: true };
@@ -268,7 +266,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         userTimed ? SCENARIOS.userTimedEnd.reasons : base,
         {
           ...facts,
-          ...(userTimed ? { timeSetByUser: true, attestation: "none" } : {}),
+          ...(userTimed ? { timeSetByUser: true } : {}),
         },
       ),
     ];

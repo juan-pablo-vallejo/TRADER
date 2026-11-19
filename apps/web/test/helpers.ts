@@ -1,17 +1,10 @@
 // Shared by the web tests. Fixtures are committed by the owner under a run suffix and deleted
-// afterwards, as the api suite does; a suite whose requests leave append-only rows (the
-// roster's audit_log) runs in a disposable database instead.
+// afterwards, as the api suite does; a suite whose requests commit rows it never deletes
+// runs in a disposable database instead.
 import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
-import {
-  companies,
-  customers,
-  jobAssignments,
-  jobs,
-  syncDiagnostics,
-  users,
-} from "@trader/db/schema";
+import { companies, customers, jobAssignments, jobs, users } from "@trader/db/schema";
 import type { ErrorReport, ErrorReporter } from "@trader/api";
 import { eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
@@ -106,7 +99,6 @@ export async function invitation(owner: Db, opts: { role?: "admin" | "worker" } 
     .returning({ id: users.id });
   // In reference order: a test may have written any of these.
   const cleanup = async () => {
-    await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, companyId));
     await owner.delete(jobAssignments).where(eq(jobAssignments.companyId, companyId));
     await owner.delete(jobs).where(eq(jobs.companyId, companyId));
     await owner.delete(customers).where(eq(customers.companyId, companyId));

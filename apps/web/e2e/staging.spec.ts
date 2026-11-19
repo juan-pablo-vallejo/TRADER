@@ -9,9 +9,8 @@
 // seen refused and a used one seen dead; given none, by the number and Clerk's test code,
 // which works only while the development instance's test mode is on. The flow writes one customer row and
 // rewrites it on every run; it deletes nothing (RULES, Toolbox: cleanup is destructive).
-// The database is shared with development and with the phone flows, each in a company of
-// its own (ARCHITECTURE, 2026-11-16, shared database): before it writes anything the flow
-// holds its admin to the browser suite's company, and its worker to the same one.
+// Staging's database holds more than one fixture company. The suite's company is the one
+// its signed-in admin belongs to, read from the API; its worker must be of the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 
 import { askReadiness } from "./readiness";
@@ -20,7 +19,7 @@ import { missingSettings } from "./tickets";
 // A variable that is set and blank, as an unset one arrives from a workflow, is unset.
 const orDefault = (value: string | undefined, fallback: string) =>
   value === undefined || value === "" ? fallback : value;
-// The suite's company and its two people are stated, every run: with one unset no test
+// The suite's two people are stated, every run: with one unset no test
 // is loaded, so nothing signs in and nothing is written.
 const unset = missingSettings(process.env);
 if (unset.length > 0) {
@@ -38,9 +37,6 @@ if ((ADMIN_TICKET === "") !== (WORKER_TICKET === "")) {
   );
 }
 const BY_TICKET = ADMIN_TICKET !== "";
-// The browser suite's own company, by id: an identity of any other tenant stops the flow
-// before its first write.
-const COMPANY_ID = (process.env.E2E_COMPANY_ID ?? "").trim();
 const CLERK_TEST_CODE = "424242";
 const FIXTURE_CUSTOMER = "E2E Customer";
 const BYPASS = process.env.VERCEL_AUTOMATION_BYPASS_SECRET ?? "";
@@ -187,9 +183,9 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
   await passTheWall(context);
   await signIn(page, ADMIN_PHONE, ADMIN_TICKET);
 
-  // Before any write: this admin is the browser suite's tenant and nobody else's.
+  // The suite's company is whichever one its signed-in admin belongs to: no id is stored
+  // anywhere, and the worker below must be of the same one.
   adminCompany = await companyOf(context);
-  expect(adminCompany, "the admin's company is the browser suite's").toBe(COMPANY_ID);
 
   await page.goto("/people");
   await expect(page.getByRole("table")).toBeVisible();

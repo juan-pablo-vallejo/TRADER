@@ -70,8 +70,6 @@ export function recordsFor(tap: Tap, state: ClockState, c: Capture): NewRecord[]
       jobId,
       type,
       clientTimestamp: new Date(at),
-      // Biometric attestation is not in this build (TASKS R5).
-      attestationLevel: "none",
       location: c.location,
       timeSetByUser: false,
       capturedOffline: capturedOffline(c.reading, c.now),

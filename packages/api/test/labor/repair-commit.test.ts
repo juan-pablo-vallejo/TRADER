@@ -332,7 +332,6 @@ describe("labor.repair — concurrent repairs, committed", () => {
             jobId: x.d.J,
             type: "ended",
             clientTimestamp: new Date(T("22:30")),
-            attestationLevel: "biometric",
             location: null,
             timeSetByUser: false,
             capturedOffline: false,
