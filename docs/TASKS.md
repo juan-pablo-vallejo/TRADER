@@ -137,7 +137,7 @@ you find under "Found along the way". Never reorder, never add scope.
       forced row-level security once, remembers a pass, and refuses to serve on a fail.
       `/api/ready` keeps its own check. Done when a request after the first makes no
       catalog query and a test shows a bypassing role refused.
-- [ ] 10. **Documents match the code.** Fold what is still true of
+- [x] 10. **Documents match the code.** Fold what is still true of
       `packages/db/README.md` into `README.md` and delete it. Run every command in
       `README.md` once. Re-read `docs/ARCHITECTURE.md` against the code: where they differ
       the code changes, or you stop and ask. Update `.claude/skills/ui-check` to the six
@@ -205,6 +205,17 @@ each Android user.
 - [ ] OWNER: `STAGING_MIGRATOR_URL` in `.env.staging` ends in a cut-off query parameter
       (`&ch`); the value in GitHub's `staging` environment is whole. Fix the file's copy.
 - [ ] OWNER: the `staging` environment variable `E2E_COMPANY_ID` is no longer read; delete it.
+- [ ] The company field-write lock (`packages/api/src/labor/timeline.ts`) is still taken
+      shared by every labor writer, but nothing takes it exclusive since day closeout left.
+      Remove it, with its two tests.
+- [ ] `sync/push.ts` still turns a FORBIDDEN thrown by a record into `not_permitted`; no
+      record path throws it any more.
+- [ ] The push acknowledgement and the phone's outbox call an entry's flags `reasons`; the
+      phone stores them and no screen reads them. Rename to `flags` or drop from the outbox.
+- [ ] Clerk's fixed test code (424242) is refused on staging's sign-in form, so a person
+      cannot sign in to staging's office by hand with a fixture number; the smoke test uses
+      single-use tickets. OWNER: turn the development instance's test mode on, or accept
+      tickets as the only way in.
 
 ## After MVP
 
