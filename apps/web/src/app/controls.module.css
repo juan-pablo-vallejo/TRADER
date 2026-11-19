@@ -17,9 +17,9 @@
   opacity: 0.6;
 }
 
-/* Primary button: 56 pt, full width, accent; one per screen. */
+/* Primary button: 56 px and full width when narrow, accent; one per screen. */
 .primary {
-  min-height: 56px;
+  min-height: var(--primary);
   width: 100%;
   padding: 0 var(--space-4);
   background: var(--accent);
@@ -39,7 +39,10 @@
   padding: 0 var(--space-4);
   background: var(--surface);
   color: var(--ink);
-  border: var(--hairline) solid var(--border);
+  border: var(--hairline) solid var(--control-border);
+}
+.secondary:hover:not(:disabled) {
+  background: var(--canvas);
 }
 
 /* Destructive button: the secondary shape, attention border and label; never full width. */
@@ -67,13 +70,10 @@
   color: var(--attention);
 }
 @media (min-width: 768px) {
-  .textAction {
-    min-height: var(--row);
-  }
-  /* Office, wide: the primary is 48 pt and as wide as its label. */
+  /* Office, wide: the primary is a control's height and as wide as its label. */
   .primary {
-    min-height: var(--target);
     width: auto;
+    border-radius: var(--radius-card);
   }
 }
 
@@ -95,7 +95,7 @@
   padding: 0 var(--space-3);
   background: var(--surface);
   color: var(--ink);
-  border: var(--hairline) solid var(--border);
+  border: var(--hairline) solid var(--control-border);
   border-radius: var(--radius-card);
   box-sizing: border-box;
   width: 100%;
@@ -148,8 +148,8 @@
 
 /* Attention banner: attention tint, what happened and what to do, until resolved. */
 .banner {
-  background: color-mix(in srgb, var(--attention) 10%, var(--surface));
-  color: var(--attention);
+  background: var(--problem-tint);
+  color: var(--problem-ink);
   border-radius: var(--radius-card);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);

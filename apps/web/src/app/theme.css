@@ -2,24 +2,48 @@
    classes. A component names a token, never a color or a size. The comments measure in pt, which
    on the web is the CSS px. */
 :root {
-  /* Color palette */
+  /* Color. The same names and values as the phone's (apps/mobile/src/theme.ts); a test
+     fails when the two differ (apps/web/test/theme.test.ts). D Sierra's brand: their indigo
+     is the color of every action, link, focus ring and current item; their red and their
+     navy belong to the mark and the homepage, never to a control and never to a status. */
   --ink: #111827;
   --ink-secondary: #4b5563;
-  --border: #d1d5db;
+  --canvas: #f5f6f8;
   --surface: #ffffff;
-  --canvas: #f3f4f6;
+  /* A hairline between things. */
+  --border: #d9dce3;
+  /* The edge of a control: 3:1 on white, so a field is seen without its label. */
+  --control-border: #8a93a2;
   --accent: #2808ac;
   --on-accent: #ffffff;
+  /* Behind a selected row and the current item. */
+  --accent-tint: #eeebfa;
   --brand: #bc0c0c;
-  --synced: #166534;
-  --pending: #92400e;
-  --attention: #991b1b;
+  --brand-navy: #140064;
   --muted: #6b7280;
 
-  /* Typography: system fonts, no custom font in V1 */
-  --font: system-ui, sans-serif;
+  /* Five status tones, each an ink on its tint, 4.5:1 or better (the same test). A status
+     is always an icon and a word beside the tint, never the color alone. */
+  --neutral-ink: #374151;
+  --neutral-tint: #eef0f3;
+  --active-ink: #2808ac;
+  --active-tint: #eeebfa;
+  --done-ink: #166534;
+  --done-tint: #e3f2e8;
+  --attention-ink: #92400e;
+  --attention-tint: #fbefd9;
+  --problem-ink: #991b1b;
+  --problem-tint: #fbe6e6;
+  /* What the screens built before the tones call them: saved, waiting, wrong. */
+  --synced: var(--done-ink);
+  --pending: var(--attention-ink);
+  --attention: var(--problem-ink);
 
-  /* Layout and spacing: a 4 pt grid */
+  /* Type: Inter, served by the app itself (layout.tsx, fonts/): the content security
+     policy admits no font host. The phone keeps the system font. */
+  --font: var(--font-inter), system-ui, sans-serif;
+
+  /* Layout and spacing: a 4 px grid */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -28,17 +52,47 @@
   --radius-card: 8px;
   --radius-primary: 12px;
   --hairline: 1px;
-  --target: 48px;
-  --row: 44px;
   --wide: 1280px;
   --nav: 240px;
   --header: 56px;
+  /* A change of state moves in this long, and not at all under reduced motion (below). */
+  --move: 150ms;
+
+  /* Density, narrow: a phone in a hand. 17 px text, 48 px targets. */
+  --target: 48px;
+  --row: 48px;
+  --primary: 56px;
+  --text: 17px;
+  --text-line: 24px;
+  --text-small: 15px;
+  --text-small-line: 20px;
+  --text-label: 13px;
+  --text-title: 24px;
+  --text-title-line: 30px;
+  --text-heading: 20px;
+  --text-heading-line: 26px;
 }
 
-/* The one breakpoint: 768 px. Below it the office is narrow — one column,
-   navigation in a menu, table rows stacked, targets 48 px; at or above it, wide — the 1280
-   grid, left navigation, dense tables. Media queries cannot read a custom property, so each
-   module writes `(min-width: 768px)` and this comment is the value's home in code. */
+/* The one breakpoint: 768 px. Below it the office is narrow: one column, navigation in a
+   menu, table rows stacked. At or above it, wide: a laptop, so 15 px text, 40 px table
+   rows and 36 px controls. A media query cannot read a custom property, so each module
+   writes `(min-width: 768px)`; the sizes themselves change here and nowhere else. */
+@media (min-width: 768px) {
+  :root {
+    --target: 36px;
+    --row: 40px;
+    --primary: 36px;
+    --text: 15px;
+    --text-line: 22px;
+    --text-small: 13px;
+    --text-small-line: 18px;
+    --text-label: 12px;
+    --text-title: 22px;
+    --text-title-line: 28px;
+    --text-heading: 17px;
+    --text-heading-line: 24px;
+  }
+}
 
 html {
   background: var(--canvas);
@@ -49,8 +103,38 @@ html {
 
 body {
   margin: 0;
-  font-size: 17px;
-  line-height: 24px;
+  font-size: var(--text);
+  line-height: var(--text-line);
+}
+
+/* Hours and money line up: every figure the same width. */
+.num,
+td,
+time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A change of state (hover, focus, selection, a disclosure) moves; nothing else does. */
+a,
+button,
+input,
+select,
+textarea,
+summary {
+  transition:
+    background-color var(--move),
+    border-color var(--move),
+    color var(--move),
+    box-shadow var(--move);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Type styles */
@@ -61,32 +145,32 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .title {
-  font-size: 24px;
-  line-height: 30px;
+  font-size: var(--text-title);
+  line-height: var(--text-title-line);
   font-weight: 600;
 }
 .heading {
-  font-size: 20px;
-  line-height: 26px;
+  font-size: var(--text-heading);
+  line-height: var(--text-heading-line);
   font-weight: 600;
 }
 .body {
-  font-size: 17px;
-  line-height: 24px;
+  font-size: var(--text);
+  line-height: var(--text-line);
   font-weight: 400;
 }
 .body-strong {
-  font-size: 17px;
-  line-height: 24px;
+  font-size: var(--text);
+  line-height: var(--text-line);
   font-weight: 600;
 }
 .secondary {
-  font-size: 15px;
-  line-height: 20px;
+  font-size: var(--text-small);
+  line-height: var(--text-small-line);
   font-weight: 400;
 }
 .label {
-  font-size: 13px;
+  font-size: var(--text-label);
   line-height: 16px;
   font-weight: 600;
   text-transform: uppercase;

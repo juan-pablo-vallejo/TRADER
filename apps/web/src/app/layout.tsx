@@ -1,5 +1,6 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
@@ -12,6 +13,15 @@ import { Nav } from "./nav";
 import { Providers } from "./providers";
 import styles from "./shell.module.css";
 import "./theme.css";
+
+// Inter, from the repository itself (fonts/, with its license): the content security policy
+// admits no font host, so nothing is fetched from one. One variable file, every weight.
+const inter = localFont({
+  src: "./fonts/InterVariable.woff2",
+  variable: "--font-inter",
+  weight: "100 900",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "TRADER",
@@ -40,7 +50,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
     </Providers>
   );
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
         {env === null ? (
           office
