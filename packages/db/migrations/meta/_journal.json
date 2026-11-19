@@ -15,6 +15,13 @@
       "when": 1795110847388,
       "tag": "0001_settings_and_location",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795112034821,
+      "tag": "0002_end_a_started_shift_early",
+      "breakpoints": true
     }
   ]
 }

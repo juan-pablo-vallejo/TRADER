@@ -38,6 +38,8 @@ const EXPECTED: Record<string, Gate> = {
   "assignment.mine": "protected",
   "assignment.create": ADMIN,
   "assignment.update": ADMIN,
+  "assignment.endEarly": ADMIN,
+  "assignment.moveToday": ADMIN,
   "assignment.remove": ADMIN,
   "assignment.week": ADMIN,
   "assignment.copyPreview": ADMIN,

@@ -25,6 +25,14 @@ import {
   weekOutput,
 } from "../assignments/list";
 import {
+  endEarlyInput,
+  endEarlyOutput,
+  endShiftEarly,
+  moveToday,
+  moveTodayInput,
+  moveTodayOutput,
+} from "../assignments/move";
+import {
   createAssignments,
   createInput,
   createOutput,
@@ -62,6 +70,14 @@ export const assignmentRouter = router({
     .input(removeInput)
     .output(removeOutput)
     .mutation(({ ctx, input }) => removeAssignment(ctx.tx, ctx.user, input)),
+  endEarly: roleProcedure("admin")
+    .input(endEarlyInput)
+    .output(endEarlyOutput)
+    .mutation(({ ctx, input }) => endShiftEarly(ctx.tx, ctx.user, input)),
+  moveToday: roleProcedure("admin")
+    .input(moveTodayInput)
+    .output(moveTodayOutput)
+    .mutation(({ ctx, input }) => moveToday(ctx.tx, ctx.user, input)),
   copyPreview: roleProcedure("admin")
     .input(copyPreviewInput)
     .output(copyPreview)

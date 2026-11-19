@@ -279,7 +279,7 @@ describe("job_assignments, the punch lock", () => {
     });
   });
 
-  it("keeps a locked shift's day, times and lock, and never removes it", async () => {
+  it("keeps a locked shift's day, start and lock, never moves its end later, and never removes it", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       const { shift } = await lockedShift(tx, refs);
@@ -314,6 +314,96 @@ describe("job_assignments, the punch lock", () => {
       );
       const gone = await tx.execute(sql`delete from job_assignments where id = ${free}`);
       expect(gone.rowCount).toBe(1);
+    });
+  });
+
+  it("moves a locked shift's end earlier, to any minute after its clock-in, and no other way", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      // 07:00 to 15:30 on the 16th; clocked in at 07:05:40 on New York's wall clock.
+      const shift = await insertShift(tx, plan(refs));
+      const event = {
+        ...started(refs),
+        clientTimestamp: new Date("2026-11-16T12:05:40Z"),
+      };
+      await tx.insert(workSessionEvents).values(event);
+      await tx.execute(sql`
+        update job_assignments set locked_at = now(), locked_by_event_id = ${event.id}
+        where id = ${shift}
+      `);
+      const end = async () =>
+        one(
+          await tx
+            .select({ end: jobAssignments.expectedEnd })
+            .from(jobAssignments)
+            .where(eq(jobAssignments.id, shift)),
+        ).end;
+      const to = (time: string) =>
+        sql`update job_assignments set expected_end = ${time} where id = ${shift}`;
+
+      // Earlier, and after the clock-in: written. Again, earlier still.
+      expect((await tx.execute(to("12:00"))).rowCount).toBe(1);
+      expect(await end()).toBe("12:00:00");
+      // The minute after the clock-in's own is the earliest end: 07:05:40 is minute 07:05.
+      expect((await tx.execute(to("07:06"))).rowCount).toBe(1);
+      expect(await end()).toBe("07:06:00");
+
+      // At the clock-in's minute, or before it: refused, by a name of its own.
+      const beforeClockIn = { code: "23000", constraint: "job_assignments_locked_end" };
+      expect(await raised(tx, to("07:05"))).toEqual(beforeClockIn);
+      expect(await raised(tx, to("07:01"))).toEqual(beforeClockIn);
+      // Later again, even back to where it was: refused. A trim is not undone.
+      const locked = { code: "23000", constraint: "job_assignments_locked" };
+      expect(await raised(tx, to("07:07"))).toEqual(locked);
+      expect(await raised(tx, to("15:30"))).toEqual(locked);
+      // A trim that also moves anything else is refused whole.
+      for (const statement of [
+        sql`update job_assignments set expected_end = '07:06', expected_start = '06:00'
+            where id = ${shift}`,
+        sql`update job_assignments set expected_end = '07:06', work_date = '2026-11-17'
+            where id = ${shift}`,
+        sql`update job_assignments set expected_end = '07:06', locked_at = null,
+            locked_by_event_id = null where id = ${shift}`,
+        sql`delete from job_assignments where id = ${shift}`,
+      ]) {
+        expect(await raised(tx, statement)).toEqual(locked);
+      }
+      expect(await end()).toBe("07:06:00");
+      // The clock event is as it was written: nothing here touches it.
+      const kept = one(
+        await tx
+          .select({ at: workSessionEvents.clientTimestamp })
+          .from(workSessionEvents)
+          .where(eq(workSessionEvents.id, event.id)),
+      );
+      expect(kept.at.toISOString()).toBe("2026-11-16T12:05:40.000Z");
+    });
+  });
+
+  it("lets trader_app trim its own tenant's locked shift, the clock-in read behind the wall", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const shift = await insertShift(tx, plan(refs));
+      const event = {
+        ...started(refs),
+        clientTimestamp: new Date("2026-11-16T12:05:00Z"),
+      };
+      await tx.insert(workSessionEvents).values(event);
+      await tx.execute(sql`
+        update job_assignments set locked_at = now(), locked_by_event_id = ${event.id}
+        where id = ${shift}
+      `);
+      await asApp(tx, refs.companyId);
+      const trimmed = await tx.execute(
+        sql`update job_assignments set expected_end = '11:00' where id = ${shift}`,
+      );
+      expect(trimmed.rowCount).toBe(1);
+      expect(
+        await raised(
+          tx,
+          sql`update job_assignments set expected_end = '07:00' where id = ${shift}`,
+        ),
+      ).toEqual({ code: "23000", constraint: "job_assignments_locked_end" });
     });
   });
 

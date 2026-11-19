@@ -6,7 +6,8 @@
 // Every write is judged over the person's whole day before anything is written (day.ts,
 // judgeDay): a shift that would overlap another of that person's day, or a write that would
 // change what admitted a clock-in already made, is refused with its reasons and writes
-// nothing. A shift a clock-in has locked is not changed or removed here at all.
+// nothing. A shift a clock-in has locked is not changed or removed here at all: its end
+// alone may move earlier, through move.ts, which shares `lockShift` below.
 //
 // The day and the times are kept as written (schema, job-assignments.ts): no instant, no
 // duration, no comparison with today. A shift lies within its day, so the end is after the
@@ -234,7 +235,12 @@ export async function createAssignments(
 // The caller re-read, the shift read, its days locked, and the shift read again under its row
 // lock. `gone` is a shift that is not there — never made, removed meanwhile, or another
 // tenant's and so invisible.
-async function lockShift(tx: Tx, user: AppUser, assignmentId: string, alsoDay?: string) {
+export async function lockShift(
+  tx: Tx,
+  user: AppUser,
+  assignmentId: string,
+  alsoDay?: string,
+) {
   await lockActiveSelf(tx, user, "admin");
   const read = () =>
     tx

@@ -38,7 +38,8 @@ import { workSessionEvents } from "./work-session-events";
 // exact duplicate is refused here, and two that overlap are refused by the writers (api
 // assignments/eligibility.ts). locked_at and locked_by_event_id are the punch lock: set
 // once, by the push that admits a `started` on the shift, to that event; from then the row's
-// day, times and job never change and it is never removed (a trigger). copy_id marks the
+// day, start and job never change and it is never removed; its end may only move earlier,
+// to a minute after that clock-in (a trigger, migration 0002). copy_id marks the
 // rows one Copy Last Week created, so the copy is undone whole.
 export const jobAssignments = pgTable(
   "job_assignments",

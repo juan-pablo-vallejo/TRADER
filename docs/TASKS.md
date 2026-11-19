@@ -162,7 +162,7 @@ Android user.
       options to the owner, then build the one chosen so that it admits only the Demo
       company's people in production and the fixture numbers on staging. Done when
       staging's phone flow signs in with no code sent.
-- [ ] 4. **Loose ends.** Five small things the cut left, in one session. Cache the browser
+- [x] 4. **Loose ends.** Five small things the cut left, in one session. Cache the browser
       the deploy job installs for the smoke test (`playwright install --with-deps chromium`
       took 21 s to 8 m 47 s). Remove the company field-write lock
       (`packages/api/src/labor/timeline.ts`) with its two tests: nothing takes it exclusive
@@ -171,7 +171,7 @@ Android user.
       `flags`, not `reasons`. `apps/web/vercel.json` turns off Vercel's own deployments for
       `production` as it does for `main`. Done when `pnpm check` and the Maestro suite are
       green and a deploy run restores the browser from its cache.
-- [ ] 5. **Company settings, location switches, and what the phone is told.** One additive
+- [x] 5. **Company settings, location switches, and what the phone is told.** One additive
       migration and the API behind three later screens. No screen changes here.
   - `companies` gains `address`, `phone`, `email` and `payment_instructions` (text,
     optional), `invoice_terms_days` (integer, default 0: due on receipt) and
@@ -569,6 +569,24 @@ Android user.
 - [ ] OWNER: `pnpm --filter @trader/db onboard` and `pnpm db:migrate` fall back to the local
       database when `DATABASE_URL` is given empty, as an unset `$OWNER_URL` makes it. Decide
       whether `run-onboard.ts` should refuse a blank `DATABASE_URL`.
+- [ ] Item 2's fix is on staging and the office signs in there (the smoke test, by
+      ticket). Its box waits on the other half of its "Done when": a phone build signing in
+      to staging, which waits on gate 1 and on item 3.
+- [ ] OWNER, item 3: choose the Demo sign-in. Read on 2026-11-19: Apple asks for a demo
+      account that never expires, or a built-in demo mode with its prior approval; Clerk's
+      test numbers (+1 XXX 555-0100 to 0199, code 424242, no SMS sent) work in production
+      only with Test mode on, which Clerk calls "highly discouraged"; a Clerk sign-in token
+      is single use and is redeemed with the `ticket` strategy the smoke test already uses.
+      The options: (a) a Demo code the app sends to the API, which answers a sign-in token
+      for a Demo person only; (b) Test mode on in production; (c) passwords for the Demo
+      people, which `docs/ARCHITECTURE.md` rules out today. Nothing is built until chosen.
+- [ ] `labor.repair`'s answer still calls an entry's flags `reasons`
+      (`packages/api/src/labor/repair.ts`); item 4 named the push acknowledgement and the
+      phone's outbox only. Rename it with item 16, which rebuilds its one screen.
+- [ ] The Maestro suite's sign-in failed once in three runs on a fresh iPhone 17 simulator:
+      the tap on Sign in never reached the API, and the same flow passed on the next two
+      runs unchanged. If it recurs, wait for the keyboard before the tap
+      (`apps/mobile/.maestro/parts/sign-in.yaml`).
 
 ## After MVP
 
