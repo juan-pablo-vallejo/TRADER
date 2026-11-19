@@ -5,7 +5,7 @@
 //
 // The body is read before the context that made the request is disposed. Disposing a
 // context disposes its responses too: a status read afterwards still answers, a body read
-// afterwards throws "Response has been disposed" — which is how the first promotion's
+// afterwards throws "Response has been disposed" — which is how the first deploy's
 // suite failed, on a host that was serving the right commit.
 import type { APIRequest } from "@playwright/test";
 

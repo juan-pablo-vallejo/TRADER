@@ -1,5 +1,5 @@
 // The staging suite's sign-in tickets (e2e/tickets.ts) and where the key that makes them
-// may be named (RULES, Git and CI: a workflow that holds a secret). No Clerk, no network.
+// may be named. No Clerk, no network.
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -250,71 +250,94 @@ describe("the suite's required settings", () => {
   );
 });
 
-// The key is a secret of the `staging` environment, which admits `main` alone. These hold
-// the repository's side of that: where the key is named, and what may start that workflow.
+// The key is a secret of the `staging` environment. These hold the repository's side of
+// that: where a secret is named, and what may start the job that holds it.
 describe("the workflows and the staging key", () => {
   const dir = join(__dirname, "../../../.github/workflows");
   const files = readdirSync(dir).filter((f) => /\.ya?ml$/.test(f));
   const text = (file: string) => readFileSync(join(dir, file), "utf8");
-  const promote = text("promote-staging.yml");
+  const ci = text("ci.yml");
   const STEP = `\n${" ".repeat(6)}- `;
+  const jobs = ci
+    .slice(ci.indexOf("\njobs:"))
+    .split(/\n {2}(?=[a-z-]+:\n)/)
+    .slice(1);
+  const job = (name: string) => jobs.find((j) => j.startsWith(`${name}:\n`))!;
+  const deploy = job("deploy");
+  const stepAt = (needle: string) => {
+    const at = deploy.indexOf(needle);
+    expect(at, needle).toBeGreaterThan(0);
+    const end = deploy.indexOf(STEP, at);
+    return deploy.slice(deploy.lastIndexOf(STEP, at), end === -1 ? undefined : end);
+  };
+  const PRODUCTION_ONLY =
+    "github.ref == 'refs/heads/production' && 'production' || 'staging'";
 
-  it("names the Clerk key in the promotion workflow alone, once, for the ticket step", () => {
+  it("names the Clerk key in the deploy job alone, once, for the ticket step", () => {
     for (const file of files) {
       const named = text(file)
         .split("\n")
         .filter((l) => l.includes("CLERK_STAGING_SECRET_KEY"));
-      if (file !== "promote-staging.yml") expect(named, file).toEqual([]);
+      if (file !== "ci.yml") expect(named, file).toEqual([]);
     }
-    const named = promote
-      .split("\n")
-      .filter((l) => l.includes("secrets.CLERK_STAGING_SECRET_KEY"));
-    expect(named).toHaveLength(1);
-    const at = promote.indexOf("secrets.CLERK_STAGING_SECRET_KEY");
-    const step = promote.slice(promote.lastIndexOf(STEP, at), promote.indexOf(STEP, at));
+    expect(
+      ci.split("\n").filter((l) => l.includes("CLERK_STAGING_SECRET_KEY")),
+    ).toHaveLength(1);
+    expect(deploy).toContain("secrets.CLERK_STAGING_SECRET_KEY");
+    const step = stepAt("secrets.CLERK_STAGING_SECRET_KEY");
     expect(step).toContain("node apps/web/e2e/tickets.ts");
     // The step that holds the key installs nothing and runs no package's code.
     expect(step).not.toMatch(/pnpm|npm |npx|playwright/);
   });
 
-  it("never starts the promotion from a pull request, and gives CI no secret", () => {
-    const triggers = promote.slice(
-      promote.indexOf("\non:"),
-      promote.indexOf("\npermissions:"),
-    );
-    expect(triggers).toMatch(/workflow_run:/);
-    expect(triggers).toMatch(/workflow_dispatch:/);
-    expect(triggers).not.toMatch(/pull_request|issue_comment|push:/);
-    // A fork's pull request reaches the promotion only as a CI run, which it refuses.
-    expect(promote).toContain("github.event.workflow_run.event == 'push'");
-    expect(promote).toContain(
-      "github.event.workflow_run.head_repository.full_name == github.repository",
-    );
-    expect(text("ci.yml")).not.toMatch(/secrets\./);
-  });
-
-  it("runs every job that reads a secret from the staging environment", () => {
-    const jobs = promote
-      .slice(promote.indexOf("\njobs:"))
-      .split(/\n {2}(?=[a-z-]+:\n)/)
-      .slice(1);
-    for (const job of jobs) {
-      if (/secrets\./.test(job)) expect(job).toMatch(/\n {4}environment: staging\n/);
+  it("holds every secret in the deploy job, which runs only on a push", () => {
+    expect(jobs.map((j) => j.slice(0, j.indexOf(":")))).toEqual(["check", "deploy"]);
+    expect(job("check")).not.toMatch(/secrets\.|environment:/);
+    expect(deploy).toMatch(/\n {4}needs: check\n/);
+    expect(deploy).toMatch(/\n {4}if: github\.event_name == 'push'\n/);
+    for (const file of files) {
+      if (file !== "ci.yml") expect(text(file), file).not.toMatch(/secrets\./);
     }
-    expect(jobs.length).toBe(4);
   });
 
-  // Staging is deployed from `main` by Vercel's deploy hook (ARCHITECTURE, 2026-11-17,
-  // two branches and a release by pull request): the workflow moves no branch and holds no key that could.
+  it("is started by a push or a pull request and by nothing else", () => {
+    const triggers = ci.slice(ci.indexOf("\non:"), ci.indexOf("\npermissions:"));
+    expect(triggers).toMatch(/push:\n {4}branches: \[main, production\]/);
+    expect(triggers).toMatch(/pull_request:\n {4}branches: \[main, production\]/);
+    expect(ci).not.toMatch(
+      /workflow_dispatch|workflow_run|pull_request_target|issue_comment/,
+    );
+  });
+
+  it("selects the production environment for the production ref alone", () => {
+    expect(deploy).toContain(`\n    environment: \${{ ${PRODUCTION_ONLY} }}\n`);
+    expect(deploy).toContain(`\n      group: deploy-\${{ ${PRODUCTION_ONLY} }}\n`);
+    expect(deploy).toContain(`\n      TARGET: \${{ ${PRODUCTION_ONLY} }}\n`);
+    expect(deploy).toMatch(/\n {6}cancel-in-progress: false\n/);
+    // Nothing else in any workflow names the environment or the branch's ref.
+    for (const file of files) {
+      const rest = text(file).split(PRODUCTION_ONLY).join("");
+      expect(rest, file).not.toMatch(/environment: production|refs\/heads\/production/);
+    }
+  });
+
+  it("migrates with a stated purpose and the environment's own migrator", () => {
+    const step = stepAt("secrets.STAGING_MIGRATOR_URL");
+    expect(step).toContain("secrets.PRODUCTION_MIGRATOR_URL");
+    expect(step).toContain(
+      'if [ "$TARGET" = production ]; then url=$PRODUCTION_MIGRATOR_URL',
+    );
+    expect(step).toContain(
+      'DATABASE_URL="$url" TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate',
+    );
+  });
+
   it("deploys by the hook alone, held to Vercel's address and to this run's commit", () => {
-    expect(promote).not.toMatch(/git push|contents: write|ssh-key|STAGING_DEPLOY_KEY/);
-    expect(promote).not.toContain("staging-preview");
-    const named = promote
-      .split("\n")
-      .filter((l) => l.includes("secrets.STAGING_DEPLOY_HOOK"));
-    expect(named).toHaveLength(1);
-    const at = promote.indexOf("secrets.STAGING_DEPLOY_HOOK");
-    const step = promote.slice(promote.lastIndexOf(STEP, at), promote.indexOf(STEP, at));
+    expect(ci).not.toMatch(/git push|contents: write|ssh-key|DEPLOY_KEY/);
+    expect(
+      ci.split("\n").filter((l) => l.includes("secrets.STAGING_DEPLOY_HOOK")),
+    ).toHaveLength(1);
+    const step = stepAt("secrets.STAGING_DEPLOY_HOOK");
     expect(step).toContain("https://api.vercel.com/v1/integrations/deploy/*)");
     // The hook builds the branch's head, so it is called only while that is this commit.
     expect(step).toContain('[ "$head" != "$SHA" ]');
@@ -322,20 +345,24 @@ describe("the workflows and the staging key", () => {
     expect(step).not.toMatch(/pnpm|npm |npx/);
   });
 
-  it("verifies the deployed commit before the suite, and reports every run's outcome", () => {
-    const verify = promote.slice(promote.indexOf("\n  verify:"));
-    expect(verify.indexOf('[ "$commit" = "$SHA" ]')).toBeGreaterThan(0);
-    expect(verify.indexOf('[ "$commit" = "$SHA" ]')).toBeLessThan(
-      verify.indexOf("pnpm e2e:staging"),
+  it("skips the wait and the smoke test in a superseded run, and holds the smoke test to the commit", () => {
+    const after = deploy.slice(deploy.indexOf('echo "result=called"'));
+    const steps = after.split(STEP).slice(1);
+    expect(steps).toHaveLength(4);
+    for (const step of steps) {
+      expect(step).toContain("steps.hook.outputs.result != 'superseded'");
+    }
+    for (const step of steps.slice(1)) expect(step).toContain("env.TARGET == 'staging'");
+    expect(after.indexOf('[ "$commit" = "$SHA" ]')).toBeGreaterThan(0);
+    expect(after.indexOf('[ "$commit" = "$SHA" ]')).toBeLessThan(
+      after.indexOf("pnpm e2e:staging"),
     );
-    expect(promote).toMatch(/\n {2}report:\n[\s\S]*if: always\(\)/);
-    expect(promote).toMatch(/\n {6}statuses: write\n/);
   });
 
-  it("gives no workflow a Vercel account token or a production target", () => {
+  it("gives no workflow a Vercel account token or a production key", () => {
     for (const file of files) {
       expect(text(file), file).not.toMatch(
-        /VERCEL_TOKEN|VERCEL_ORG_ID|vercel[^\n]*--prod|environment: production|refs\/heads\/production|sk_live_/,
+        /VERCEL_TOKEN|VERCEL_ORG_ID|vercel[^\n]*--prod|sk_live_/,
       );
     }
   });

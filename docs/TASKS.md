@@ -71,7 +71,7 @@ you find under "Found along the way". Never reorder, never add scope.
       to 5 and `README.md` from Page 9: both describe the target, and the items below bring
       the code to them. Done when `pnpm check` is green without the log step and the only
       prose left is the four documents, `LICENSE` and `packages/db/README.md`.
-- [ ] 2. **One short deploy job.** Delete `.github/workflows/promote-staging.yml`,
+- [x] 2. **One short deploy job.** Delete `.github/workflows/promote-staging.yml`,
       `packages/db/src/promotion/`, `packages/db/src/run-promotion.ts` and
       `packages/db/test/promotion/`. `check` runs on pushes to `main` and
       `production` and on pull requests into either. After a green `check` on a push, a

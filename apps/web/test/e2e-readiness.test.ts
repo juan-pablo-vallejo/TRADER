@@ -1,6 +1,6 @@
 // The staging suite's readiness question (e2e/readiness.ts), asked with Playwright's own
 // request context of a server on this machine. A stand-in for the context would not
-// dispose anything: the first promotion's suite failed on exactly that, reading a body
+// dispose anything: the first deploy's suite failed on exactly that, reading a body
 // after its context was gone.
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";

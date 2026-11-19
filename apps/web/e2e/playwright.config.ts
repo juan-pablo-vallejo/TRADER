@@ -1,6 +1,6 @@
 // The staging browser suite's configuration (RULES, Toolbox; ARCHITECTURE, 2026-11-14 staging
-// browser suite and 2026-11-16 staging promotion). It runs against one deployment of the
-// staging project: staging's public host, from the promotion workflow after each
+// browser suite). It runs against one deployment of the
+// staging project: staging's public host, from the deploy job after each
 // deployment, with no secret; or a protected preview, from a machine that holds Vercel's
 // automation bypass secret. It is never part of `pnpm check` or the `check` job. Its values
 // come from the environment of the one command that runs it and are never read from a

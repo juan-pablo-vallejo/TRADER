@@ -1,24 +1,27 @@
 name: CI
 
+# `check` on every push to the two permanent branches and on every pull request into them;
+# `deploy` after a green `check` on a push: `main` to staging, `production` to production.
 on:
   push:
-    branches: [main]
+    branches: [main, production]
   pull_request:
-    branches: [main]
+    branches: [main, production]
 
-# The job only reads the repository; nothing it runs needs to write to it.
+# The jobs only read the repository; nothing they run needs to write to it.
 permissions:
   contents: read
 
-# A newer push to a pull request supersedes the run before it. On main every merge commit
-# keeps its own run: the group is the commit itself there, because a shared group holds only
-# one pending run and would drop the middle of three quick merges unverified.
+# A newer push to a pull request supersedes the run before it. On the two permanent branches
+# every commit keeps its own run: the group is the commit itself there, because a shared
+# group holds only one pending run and would drop the middle of three quick pushes unverified.
 concurrency:
-  group: ci-${{ github.ref == 'refs/heads/main' && github.sha || github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: ci-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
-  # The job id is the required status check on main. Renaming it disarms branch protection.
+  # The job id is the status check `production`'s ruleset requires. Renaming it disarms the
+  # ruleset. It holds no secret: a pull request's event reaches this job and no other.
   check:
     # The image is a version, pinned like node-version. `ubuntu-latest` is 24.04 today and
     # moves on GitHub's schedule (26.04 is already listed), which would change the toolchain
@@ -67,7 +70,154 @@ jobs:
       - run: pnpm format:check
       # The web app builds with no database: its routes are dynamic and the pool is lazy.
       - run: pnpm build
-      # Before the tests: the client test and, from Stage 2 line 8, the invariant tests run
-      # against the migrated schema.
+      # Before the tests: they run against the migrated schema.
       - run: pnpm db:migrate
       - run: pnpm test
+
+  # One deploy per branch at a time, on a push alone: migrate, call the deploy hook, wait
+  # until the host serves this commit, then, on staging, the browser smoke test. The
+  # environment hands this job its secrets; `production`'s admits the `production` branch
+  # alone.
+  deploy:
+    needs: check
+    if: github.event_name == 'push'
+    runs-on: ubuntu-24.04
+    environment: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
+    # Runs of one environment queue; GitHub keeps the newest waiting one and cancels the
+    # rest, which the superseded guard below would have skipped anyway.
+    concurrency:
+      group: deploy-${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
+      cancel-in-progress: false
+    env:
+      SHA: ${{ github.sha }}
+      BRANCH: ${{ github.ref_name }}
+      TARGET: ${{ github.ref == 'refs/heads/production' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The direct endpoint, as the database's owner. drizzle-kit refuses a deployed
+      # database unless its caller states a purpose (packages/db/src/env.ts). Migrations
+      # roll forward only, so a superseded run migrating is harmless.
+      - name: Migrate the environment's database
+        env:
+          STAGING_MIGRATOR_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
+          PRODUCTION_MIGRATOR_URL: ${{ secrets.PRODUCTION_MIGRATOR_URL }}
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = production ]; then url=$PRODUCTION_MIGRATOR_URL; else url=$STAGING_MIGRATOR_URL; fi
+          if [ -z "$url" ]; then echo "::error::the $TARGET migrator URL secret is not set"; exit 1; fi
+          DATABASE_URL="$url" TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate
+          echo "- $TARGET database migrated to \`$SHA\`'s journal" >> "$GITHUB_STEP_SUMMARY"
+
+      # A Vercel deploy hook takes no commit: it builds its branch's head at the moment it
+      # is called and answers with a job, not a deployment. So it is called only while the
+      # head is this run's commit, and what was built is learned from /api/ready alone. A
+      # run whose branch has moved on skips the hook, the wait and the smoke test, and ends
+      # green: the newer commit's own run deploys it. (apps/web/vercel.json stops every
+      # Vercel project building `main` on a push by itself; the hook is the only road.)
+      - name: Deploy this branch by the environment's deploy hook
+        id: hook
+        env:
+          STAGING_DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          PRODUCTION_DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = production ]; then hook=$PRODUCTION_DEPLOY_HOOK; host=$PRODUCTION_URL; else hook=$STAGING_DEPLOY_HOOK; host=$STAGING_URL; fi
+          # Anyone holding the hook's address can deploy with it, so it is sent to Vercel's
+          # own host and nowhere else, and never printed.
+          case "$hook" in
+            https://api.vercel.com/v1/integrations/deploy/*) ;;
+            *) echo "::error::the $TARGET deploy hook secret is not set, or is not a Vercel deploy hook"; exit 1 ;;
+          esac
+          case "$host" in https://*) ;; *) echo "::error::the $TARGET URL secret is not set"; exit 1 ;; esac
+
+          serving=$(curl -sS --max-time 10 "$host/api/ready" | jq -r '.commit // empty' 2>/dev/null || true)
+          if [ "$serving" = "$SHA" ]; then
+            echo "- the host already serves \`$SHA\`: nothing deployed" >> "$GITHUB_STEP_SUMMARY"
+            echo "result=already" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          head=$(git ls-remote "https://github.com/$GITHUB_REPOSITORY" "refs/heads/$BRANCH" | cut -f1)
+          case "$head" in
+            [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) ;;
+            *) echo "::error::the head of $BRANCH could not be read"; exit 1 ;;
+          esac
+          if [ "$head" != "$SHA" ]; then
+            echo "- **not deployed**: \`$BRANCH\` has moved on to \`$head\`; its own run deploys it" >> "$GITHUB_STEP_SUMMARY"
+            echo "result=superseded" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          answer=$(curl -sS --proto '=https' --max-time 30 -X POST "$hook" || true)
+          state=$(printf '%s' "$answer" | jq -r '.job.state // empty' 2>/dev/null || true)
+          if [ -z "$state" ]; then
+            echo "::error::the deploy hook did not answer with a job"; exit 1
+          fi
+          echo "- deploy hook called for \`$BRANCH\` at \`$SHA\` (job $state)" >> "$GITHUB_STEP_SUMMARY"
+          echo "result=called" >> "$GITHUB_OUTPUT"
+
+      # Fails closed: the smoke test never runs on a host that has not named this commit.
+      - name: Wait until the host serves this commit and is ready
+        if: steps.hook.outputs.result != 'superseded'
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+        run: |
+          set -euo pipefail
+          if [ "$TARGET" = production ]; then host=$PRODUCTION_URL; else host=$STAGING_URL; fi
+          for attempt in $(seq 1 90); do
+            body=$(curl -sS --max-time 10 "$host/api/ready" || true)
+            commit=$(printf '%s' "$body" | jq -r '.commit // empty' 2>/dev/null || true)
+            ready=$(printf '%s' "$body" | jq -r '.ready // empty' 2>/dev/null || true)
+            if [ "$commit" = "$SHA" ] && [ "$ready" = "true" ]; then
+              echo "- deployed revision: \`$commit\`, ready" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::the host did not serve $SHA within 15 minutes (last answered: commit '${commit:-none}', ready '${ready:-none}')"
+          exit 1
+
+      - name: A browser for the smoke test
+        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        run: pnpm --filter @trader/web exec playwright install --with-deps chromium
+
+      # Clerk's fixed test code is public, so the suite signs in with single-use tickets
+      # (apps/web/e2e/tickets.ts). The development instance's key reaches this one step,
+      # which runs that one file with `node` and nothing a package installed; the tickets
+      # are masked and live ten minutes.
+      - name: Sign-in tickets for the smoke test's two people
+        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        env:
+          CLERK_STAGING_SECRET_KEY: ${{ secrets.CLERK_STAGING_SECRET_KEY }}
+          E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
+          E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
+        run: node apps/web/e2e/tickets.ts
+
+      # No trace, no video and no uploaded artifact: this log and its artifacts are public,
+      # and any of them could hold a signed-in session.
+      - name: Browser smoke test on staging
+        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
+          E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
+          # The smoke test's own tenant on the shared database: an id, not a secret.
+          E2E_COMPANY_ID: ${{ vars.E2E_COMPANY_ID }}
+          E2E_EXPECT_COMMIT: ${{ env.SHA }}
+          E2E_OUTPUT_DIR: ${{ runner.temp }}/e2e
+        run: |
+          set -euo pipefail
+          pnpm e2e:staging
+          echo "- browser smoke test: passed" >> "$GITHUB_STEP_SUMMARY"

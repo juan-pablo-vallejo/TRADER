@@ -99,15 +99,22 @@ describe("assertMigrationPurpose", () => {
   });
 
   it("refuses a deployed database with no purpose stated, or an unknown one", () => {
-    for (const purpose of [undefined, "", "development", "Promotion", "owner "]) {
+    for (const purpose of [
+      undefined,
+      "",
+      "development",
+      "promotion",
+      "Deploy",
+      "owner ",
+    ]) {
       expect(() =>
         assertMigrationPurpose({ DATABASE_URL: url, TRADER_MIGRATE_PURPOSE: purpose }),
       ).toThrow(/refusing to run drizzle-kit/);
     }
   });
 
-  it("admits the promotion and the owner, and never repeats the string", () => {
-    for (const purpose of ["promotion", "owner"]) {
+  it("admits the deploy job and the owner, and never repeats the string", () => {
+    for (const purpose of ["deploy", "owner"]) {
       expect(() =>
         assertMigrationPurpose({ DATABASE_URL: url, TRADER_MIGRATE_PURPOSE: purpose }),
       ).not.toThrow();

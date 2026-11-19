@@ -8,8 +8,8 @@
 // The answer is a boolean and the commit the deployment was built from, and nothing else:
 // the route is public, and why a deployment is not ready belongs in the error report, not
 // in a response anyone can read. The commit is the platform's own variable, a public
-// repository's public fact; staging's promotion reads it to know which revision is serving
-// (ARCHITECTURE, 2026-11-16, staging promotion). Anything that is not a full commit id is
+// repository's public fact; the deploy job reads it to know which revision is serving
+// (.github/workflows/ci.yml). Anything that is not a full commit id is
 // answered as null. Each probe is one cheap query; rate limits are the edge's (TASKS,
 // Stage 6).
 // Dependencies are passed in, as in handler.ts; the route wires the real ones.

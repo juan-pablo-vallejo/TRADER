@@ -4,7 +4,7 @@
 // instance's secret key, for one named user, used once and dead in ten minutes. So the
 // suite keeps signing in unattended once the owner turns Clerk's test mode off.
 //
-// Run by the promotion workflow's verify job, by `node`, with no package beneath it and
+// Run by the deploy job (.github/workflows/ci.yml), by `node`, with no package beneath it and
 // apart from the step that runs the browser: the key reaches this file and nothing else.
 // It writes each ticket to $GITHUB_ENV, tells the runner to mask it, and prints codes only.
 // The request is Clerk's as its pages document it (Backend API, `GET /v1/users` and
