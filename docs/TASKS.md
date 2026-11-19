@@ -223,6 +223,12 @@ each Android user.
 - [ ] An entry the office adds from "Add missing hours" is flagged `user_timed` and
       `location` (it has no location stamp), never `corrected`. Decide whether an office
       entry should carry `location` at all.
+- [ ] OWNER: invoice email does not leave staging. A send of invoice 1 to the allow-listed
+      address passed the allow-list, reached Resend and was refused (`provider_refused`,
+      recorded on the invoice). The Resend key in `.env.staging` is accepted by Resend, so
+      the cause is in the staging Vercel project: its `RESEND_API_KEY` (an older key?) or
+      its `MAIL_FROM` (a domain Resend has not verified). Resend's log shows the reason.
+      Item 11's send step and item 16 wait on it.
 
 ## After MVP
 
