@@ -1,7 +1,7 @@
 "use client";
 
-// The signed-in person in the header: their name, linking to the profile, and
-// Sign out. `me.get` is the one query every role may call; while it is pending or refused the
+// The signed-in person in the header: their name, which opens a small menu with their
+// profile and Sign out. `me.get` is the one query every role may call; while it is pending or refused the
 // name is absent. Sign-out is the identity's own: the development route's form where that
 // route answers, Clerk's where Clerk's provider is around
 // the office (clerk-session.tsx), and absent on a server with neither. Consumed by header.tsx.
@@ -37,25 +37,39 @@ export function Account({ signInHref }: { signInHref: string }) {
       </div>
     );
   }
+  // The person's name opens what is theirs: the profile, and Sign out. A native
+  // disclosure: it opens by pointer, Enter or Space, and Escape closes it with the focus
+  // back on the name.
   return (
-    <div className={styles.account}>
-      <Link
-        href="/profile"
-        className={`${styles.name} ${path === "/profile" ? styles.current : ""}`}
-        aria-current={path === "/profile" ? "page" : undefined}
-        title={strings.profile}
-      >
-        {me.data.name}
-      </Link>
-      {clerk && <ClerkSignOut />}
-      {devSignIn && (
-        <form method="post" action={DEV_SIGN_IN_PATH}>
-          <input type="hidden" name="intent" value="signout" />
-          <button type="submit" className={controls.textAction}>
-            {strings.signOut}
-          </button>
-        </form>
-      )}
-    </div>
+    <details
+      className={styles.account}
+      onKeyDown={(e) => {
+        if (e.key !== "Escape" || !e.currentTarget.open) return;
+        e.currentTarget.open = false;
+        e.currentTarget.querySelector("summary")?.focus();
+      }}
+    >
+      <summary className={styles.name} title={strings.account}>
+        <span className={styles.nameText}>{me.data.name}</span>
+      </summary>
+      <div className={styles.menu}>
+        <Link
+          href="/profile"
+          className={`${styles.item} ${path === "/profile" ? styles.current : ""}`}
+          aria-current={path === "/profile" ? "page" : undefined}
+        >
+          {strings.profile}
+        </Link>
+        {clerk && <ClerkSignOut />}
+        {devSignIn && (
+          <form method="post" action={DEV_SIGN_IN_PATH}>
+            <input type="hidden" name="intent" value="signout" />
+            <button type="submit" className={controls.textAction}>
+              {strings.signOut}
+            </button>
+          </form>
+        )}
+      </div>
+    </details>
   );
 }

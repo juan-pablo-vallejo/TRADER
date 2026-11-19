@@ -6,6 +6,7 @@
 import { devIdentityEnabled, signInEmailSchema } from "@trader/api";
 
 import { DEV_EMAIL_COOKIE } from "../../server/identity";
+import { OFFICE_HOME } from "../../server/sign-in-paths";
 import { strings } from "../strings";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,10 @@ const cookie = (value: string, maxAge: number) =>
 const redirectHome = (req: Request, setCookie: string) =>
   new Response(null, {
     status: 303,
-    headers: { location: new URL("/", req.url).toString(), "set-cookie": setCookie },
+    headers: {
+      location: new URL(OFFICE_HOME, req.url).toString(),
+      "set-cookie": setCookie,
+    },
   });
 
 export async function GET(): Promise<Response> {

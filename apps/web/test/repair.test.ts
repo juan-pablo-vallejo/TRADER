@@ -1,6 +1,6 @@
 // Labor repair from the Hours screen and the hours it leaves, over
 // the real transport — the route module as Next calls it, the bodies in superjson's envelope,
-// and the repair sets built by the screen's own builder (src/app/hours/repair-set.ts) from
+// and the repair sets built by the screen's own builder (src/app/(office)/hours/repair-set.ts) from
 // what `labor.ledger` answered. The rules of a repair are the api suite's
 // (labor/repair*.test.ts); this holds the screen's path through them together.
 import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
@@ -28,7 +28,7 @@ import {
   missingHours,
   sessionOperations,
   voidOperation,
-} from "../src/app/hours/repair-set";
+} from "../src/app/(office)/hours/repair-set";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
 import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";

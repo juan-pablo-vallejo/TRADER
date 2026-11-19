@@ -7,6 +7,14 @@ export const strings = {
   email: "Email",
   signIn: "Sign in",
   signOut: "Sign out",
+  // The homepage's way in for the crew and the office.
+  teamSignIn: "Team sign-in",
+  // The header's menu behind the person's name.
+  account: "Your account",
+  // The two tabs of one place: a job belongs to a customer.
+  jobsTabs: "Jobs and customers",
+  // Said to a screen reader while a list's first rows are on their way.
+  loadingRows: "Loading",
 
   // Navigation
   navigation: "Office",

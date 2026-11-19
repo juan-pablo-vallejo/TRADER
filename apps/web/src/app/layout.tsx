@@ -1,17 +1,7 @@
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { headers } from "next/headers";
 import type { ReactNode } from "react";
 
-import { clerkEnv } from "../server/clerk-env";
-import { NONCE_HEADER } from "../server/csp";
-import { identityMode } from "../server/identity-mode";
-import { SIGN_IN_PATH } from "../server/sign-in-paths";
-import { Header } from "./header";
-import { Nav } from "./nav";
-import { Providers } from "./providers";
-import styles from "./shell.module.css";
 import "./theme.css";
 
 // Inter, from the repository itself (fonts/, with its license): the content security policy
@@ -28,47 +18,14 @@ export const metadata: Metadata = {
   description: "Time tracking, scheduling and invoicing for painting contractors",
 };
 
-// Clerk's provider is around the office only where Clerk is this server's identity and its
-// keys are present (server/identity-mode.ts, clerk-env.ts): under the development identity,
-// and in a build with no keys, nothing of Clerk is rendered or loaded. The publishable key
-// is handed over as a prop, read on the server per request, so it never depends on what a
-// build inlined. Every page is dynamic, so this is read per request too.
-export const dynamic = "force-dynamic";
-
-export default async function RootLayout({ children }: { children: ReactNode }) {
-  // The request's nonce (proxy.ts), for the script Clerk's provider adds; absent on a
-  // development server, which sets no policy.
-  const nonce = (await headers()).get(NONCE_HEADER) ?? undefined;
-  const env = identityMode(process.env) === "clerk" ? clerkEnv(process.env) : null;
-  const office = (
-    <Providers clerk={env !== null}>
-      <Header />
-      <div className={styles.shell}>
-        <Nav />
-        <main className={styles.main}>{children}</main>
-      </div>
-    </Providers>
-  );
+// The document and the type, and nothing else. Three layouts sit beneath it, one per route
+// group: `(public)`, the pages anyone may read, with no menu and nothing of Clerk loaded;
+// `(auth)`, sign-in alone on its page under the logo; `(office)`, the header and the menu.
+// A route group's name is not part of an address.
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={inter.variable}>
-      <body>
-        {env === null ? (
-          office
-        ) : (
-          <ClerkProvider
-            publishableKey={env.publishableKey}
-            nonce={nonce}
-            // Clerk's SDK reports usage to a host of its own from a development instance;
-            // the policy admits no such host, and nothing here needs it sent.
-            telemetry={false}
-            signInUrl={SIGN_IN_PATH}
-            signInFallbackRedirectUrl="/"
-            afterSignOutUrl={SIGN_IN_PATH}
-          >
-            {office}
-          </ClerkProvider>
-        )}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

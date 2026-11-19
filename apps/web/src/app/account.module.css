@@ -1,26 +1,88 @@
-/* The signed-in person in the header: the name, shrinking before anything else, and Sign
-   out. Consumed by account.tsx. */
+/* The signed-in person in the header: the name, shrinking before anything else, and behind
+   it a small menu with the profile and Sign out. Consumed by account.tsx. */
 .account {
   margin-left: auto;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.name {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-height: var(--target);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-card);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  list-style: none;
 }
-.account form {
-  margin: 0;
-  flex: 0 0 auto;
+summary.name::-webkit-details-marker {
+  display: none;
 }
-.name {
+/* The disclosure's own mark: a chevron that turns when the menu is open. */
+summary.name::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--ink-secondary);
+  border-bottom: 2px solid var(--ink-secondary);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform var(--move);
+}
+.account[open] summary.name::after {
+  transform: translateY(2px) rotate(225deg);
+}
+.name:hover,
+.account[open] .name {
+  background: var(--canvas);
+}
+.nameText {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  z-index: 10;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-1);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 8px 24px rgb(17 24 39 / 0.12);
+}
+.menu form {
+  margin: 0;
+  display: flex;
+}
+.item,
+.menu button {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
   min-height: var(--target);
+  padding: 0 var(--space-3);
+  border-radius: calc(var(--radius-card) - 2px);
   color: var(--ink);
+  font-weight: 400;
   text-decoration: none;
+  text-align: left;
+}
+.item:hover,
+.menu button:hover {
+  background: var(--canvas);
 }
 .current {
   color: var(--accent);

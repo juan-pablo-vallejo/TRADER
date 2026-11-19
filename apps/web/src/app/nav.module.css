@@ -37,10 +37,43 @@
   text-decoration: none;
   border-left: var(--space-1) solid transparent;
 }
-.current {
+.link:hover {
+  background: var(--canvas);
+}
+.current,
+.current:hover {
   color: var(--accent);
   font-weight: 600;
   border-left-color: var(--accent);
+  background: var(--accent-tint);
+}
+
+/* Two tabs of one place (jobs-tabs.tsx): a row of links, the current one underlined in
+   accent as well as colored. */
+.tabs {
+  display: flex;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.tab {
+  display: flex;
+  align-items: center;
+  min-height: var(--target);
+  padding: 0 var(--space-1);
+  color: var(--ink-secondary);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: calc(-1 * var(--hairline));
+}
+.tab:hover {
+  color: var(--ink);
+}
+.tabCurrent,
+.tabCurrent:hover {
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 @media (min-width: 768px) {
   .nav {

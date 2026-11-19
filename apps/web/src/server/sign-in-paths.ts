@@ -3,3 +3,6 @@
 // the Clerk session components.
 export const DEV_SIGN_IN_PATH = "/dev-signin";
 export const SIGN_IN_PATH = "/sign-in";
+
+// Where a signed-in person lands: the office's first screen. `/` is the public homepage.
+export const OFFICE_HOME = "/schedule";

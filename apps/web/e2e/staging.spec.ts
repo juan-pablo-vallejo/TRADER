@@ -99,7 +99,8 @@ async function signIn(page: Page, phone: string, ticket: string): Promise<void> 
       signedIn: true,
       code: "complete",
     });
-    await page.goto("/");
+    // The office's first screen: `/` is the public homepage and asks nobody to sign in.
+    await page.goto("/schedule");
     await page.waitForURL((url) => !url.pathname.startsWith("/sign-in"), {
       timeout: 60_000,
     });
@@ -138,6 +139,8 @@ async function companyOf(context: BrowserContext): Promise<string> {
 let adminCompany = "";
 
 async function signOut(page: Page): Promise<void> {
+  // Sign out is behind the person's name in the header.
+  await page.locator("header summary").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).first().click();
   await page.waitForURL(/\/sign-in/, { timeout: 30_000 });
 }

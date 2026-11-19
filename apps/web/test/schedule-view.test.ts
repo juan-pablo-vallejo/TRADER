@@ -13,7 +13,7 @@ import {
   peopleOn,
   refusalText,
   type WeekShift,
-} from "../src/app/schedule/schedule-view";
+} from "../src/app/(office)/schedule/schedule-view";
 
 const id = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const ana = { id: id(1), name: "Ana", active: true };

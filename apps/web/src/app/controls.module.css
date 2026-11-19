@@ -193,3 +193,32 @@
 .neutral {
   color: var(--ink-secondary);
 }
+
+/* Placeholder rows for a first load (loading-rows.tsx): the list's shape, in the hairline's
+   tone, each a row's height. */
+.loadingRows {
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+  margin-bottom: var(--space-6);
+}
+.loadingRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: var(--row);
+  padding: 0 var(--space-4);
+  border-bottom: var(--hairline) solid var(--border);
+}
+.loadingRow:last-child {
+  border-bottom: 0;
+}
+.loadingRow span {
+  height: 10px;
+  border-radius: 5px;
+  background: var(--neutral-tint);
+  flex: 0 1 32%;
+}
+.loadingRow span:last-child {
+  flex-basis: 18%;
+}

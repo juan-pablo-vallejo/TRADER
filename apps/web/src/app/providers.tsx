@@ -26,9 +26,25 @@ function makeQueryClient() {
   // pauses a request while the browser reports offline and sends it on reconnect, so a write
   // pressed with no signal would land minutes later, unannounced. Here it fails at once and
   // the screen says so; nothing is queued.
+  //
+  // The cache, for every screen at once. A list stays fresh for 30 s: going back to a
+  // screen within that asks the server nothing. A list is kept for half an hour after its
+  // screen is left, so a screen visited before opens on what it last showed, refreshed
+  // behind it, and never says "Loading…" again; only a first load has nothing to show,
+  // and draws placeholder rows (loading-rows.tsx).
+  //
+  // Keeping the old rows on screen while a new range loads is each range list's own
+  // choice (the schedule's week, the hours' dates: `placeholderData: keepPreviousData`),
+  // never a default here: a page about one thing, an invoice or a person's entries, must
+  // not show another one's while its own is on the way.
   return new QueryClient({
     defaultOptions: {
-      queries: { retry: false, networkMode: "always" },
+      queries: {
+        retry: false,
+        networkMode: "always",
+        staleTime: 30_000,
+        gcTime: 30 * 60_000,
+      },
       mutations: { networkMode: "always" },
     },
   });

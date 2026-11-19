@@ -21,3 +21,45 @@
     padding: var(--space-6);
   }
 }
+
+/* Sign-in alone on its page: the logo, then the form, centered in one narrow column. */
+.alone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-4);
+  min-height: 100vh;
+  box-sizing: border-box;
+  /* The logo is drawn on white: so is its page. */
+  background: var(--surface);
+}
+/* D Sierra's logo: their red and navy live here and on the homepage, nowhere else. */
+.logo {
+  width: 160px;
+  height: auto;
+}
+
+/* The public pages: one readable column, 720 px at most, on white (the logo is drawn on
+   white), no menu. */
+.public {
+  min-height: 100vh;
+  padding: var(--space-6) max(var(--space-4), calc((100% - 720px) / 2));
+  box-sizing: border-box;
+  background: var(--surface);
+}
+.home {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-6);
+  padding-top: var(--space-6);
+}
+.home a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  text-decoration: none;
+  max-width: 320px;
+}

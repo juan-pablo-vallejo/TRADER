@@ -153,6 +153,8 @@ Once, in this order.
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`: Clerk's production keys
    - `CLERK_AUTHORIZED_PARTIES=https://app.jpteq.app`
    - `SENTRY_DSN`
+   - `TRADER_OFFICE_HOST=app.jpteq.app`, so `/` there opens the office and `/` on
+     `jpteq.app` opens the homepage
    - `RESEND_API_KEY` and `MAIL_FROM`, both or neither. Leave `INVOICE_EMAIL_ALLOWLIST`
      blank: in production that means any customer may be emailed.
    - `DEMO_SIGN_IN_CODE` and `DEMO_COMPANY_ID`, both or neither, after step 7: a code of

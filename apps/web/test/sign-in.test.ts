@@ -4,7 +4,7 @@
 // states draw JSX, which this suite does not render; they are checked in the browser.
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import SignInPage from "../src/app/sign-in/[[...sign-in]]/page";
+import SignInPage from "../src/app/(auth)/sign-in/[[...sign-in]]/page";
 
 afterEach(() => {
   vi.unstubAllEnvs();

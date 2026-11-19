@@ -7,7 +7,7 @@ import {
   stillOpen,
   type Cell,
   type Hours,
-} from "../src/app/hours/hours-view";
+} from "../src/app/(office)/hours/hours-view";
 
 const ana = { id: "00000000-0000-7000-8000-00000000000a", name: "Ana" };
 const tom = { id: "00000000-0000-7000-8000-00000000000b", name: "Tom" };
