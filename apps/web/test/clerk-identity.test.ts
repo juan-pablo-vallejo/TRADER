@@ -230,6 +230,15 @@ describe("the Clerk adapter behind the route handler", () => {
     expect(await subjectOf(fixture.userId)).toBe(USER);
   });
 
+  it("refuses a token that names an origin where the deployment lists none", async () => {
+    const claims = { phone_number: phone, phone_number_verified: true };
+    const as = (azp: unknown) =>
+      handlerFor(() => Promise.resolve(session(USER, { ...claims, azp })), undefined, []);
+    expect((await query(as(OFFICE), "me.get")).status).toBe(401);
+    expect(await subjectOf(fixture.userId)).toBeNull();
+    expect((await query(as(undefined), "me.get")).status).toBe(200);
+  });
+
   it("answers no identity, reported once, when the session cannot be read", async () => {
     const errors: unknown[] = [];
     const handler = handlerFor(
@@ -341,11 +350,15 @@ describe("the origin rule", () => {
     expect(partiesFor("abc.def.ghi", listed)).toEqual([]);
   });
 
-  it("admits no origin named outside the list, and any where no list is kept", () => {
+  it("admits no origin named outside the list, and none at all where no list is kept", () => {
     expect(admitsParty({ azp: "https://office.example" }, listed)).toBe(true);
     expect(admitsParty({ azp: "https://other.example" }, listed)).toBe(false);
     expect(admitsParty({}, listed)).toBe(true);
     expect(admitsParty({ azp: null }, listed)).toBe(true);
-    expect(admitsParty({ azp: "https://other.example" }, [])).toBe(true);
+    // Fails closed: an empty list is no origin of ours, so a token that names one is refused.
+    expect(admitsParty({ azp: "https://other.example" }, [])).toBe(false);
+    expect(admitsParty({ azp: "https://office.example" }, [])).toBe(false);
+    // A native client's token names none, and is admitted with or without a list.
+    expect(admitsParty({}, [])).toBe(true);
   });
 });

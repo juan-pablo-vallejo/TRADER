@@ -58,12 +58,14 @@ export function identityFromClaims(
 // cookie's token to the list, so a token that names no origin here came in the
 // `Authorization` header: a native client's, which no browser can be made to send across
 // sites. A token that does name one is held to the list wherever it came from, so a
-// browser's token for another origin gains nothing by being moved into the header. An
-// empty list is a machine with no deployment's check (deploy-env.ts requires one).
+// browser's token for another origin gains nothing by being moved into the header. It
+// fails closed: an empty list holds no origin, so a token that names one is refused. A
+// deployment cannot start with the list blank (deploy-env.ts), and this does not lean on
+// that; a machine running Clerk with no list admits native tokens only.
 export function admitsParty(sessionClaims: unknown, listed: readonly string[]): boolean {
   const azp = claim(sessionClaims, "azp");
   if (azp === undefined || azp === null) return true;
-  return listed.length === 0 || (typeof azp === "string" && listed.includes(azp));
+  return typeof azp === "string" && listed.includes(azp);
 }
 
 // What Clerk's `auth()` answers, as far as this file reads it.

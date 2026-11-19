@@ -10,8 +10,8 @@ export type ClerkEnv = {
   publishableKey: string;
   secretKey: string;
   // The origins a session token may have been issued to (Clerk, `authorizedParties`): the
-  // office's own, comma-separated in CLERK_AUTHORIZED_PARTIES. Empty leaves the check to
-  // Clerk's default.
+  // office's own, comma-separated in CLERK_AUTHORIZED_PARTIES. Empty admits no token that
+  // names an origin (clerk-identity.ts, admitsParty): no browser signs in.
   authorizedParties: string[];
 };
 

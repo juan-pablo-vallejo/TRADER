@@ -62,8 +62,8 @@ export function deployEnvFaults(env: Env): string[] {
   return [
     ...databaseFaults(env),
     ...clerk,
-    // Blank leaves the check to Clerk's default, which a deployment does not accept: the
-    // origins a session may have been issued to are stated.
+    // Blank would refuse every browser's session (clerk-identity.ts, admitsParty), so a
+    // deployment says so at start: the origins a session may have been issued to are stated.
     ...(blank(env.CLERK_AUTHORIZED_PARTIES) && !clerk.includes("CLERK_AUTHORIZED_PARTIES")
       ? ["CLERK_AUTHORIZED_PARTIES"]
       : []),
