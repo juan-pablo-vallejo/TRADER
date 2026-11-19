@@ -42,8 +42,6 @@ export const es: Catalog = {
       `Tu próximo turno es en ${job} a las ${start}. Puedes marcar entrada 15 minutos antes.`,
     noMoreShifts: "No tienes más turnos hoy.",
     noShift: "No tienes turno hoy. Pregunta en la oficina.",
-    undecided:
-      "La oficina tiene que resolver el horario de hoy antes de que puedas marcar entrada. Pregunta en la oficina.",
     attention: "Requiere atención",
   },
   entry: {
@@ -99,8 +97,6 @@ export const es: Catalog = {
     refresh: "Revisar ahora",
     empty: "No tienes turnos en las próximas dos semanas.",
     today: "Hoy",
-    clockInFrom: (start, end) => `Marca entrada ${start}–${end}`,
-    undecided: "La oficina tiene que resolver los turnos que se cruzan este día.",
     hours: "Tus horas",
     noHours: "No hay horas en las últimas dos semanas.",
     open: "Trabajando",

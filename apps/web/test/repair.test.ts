@@ -1,14 +1,13 @@
 // TASKS, Stage 4: labor repair from the ledger screen and the approval of what it wrote, over
 // the real transport — the route module as Next calls it, the bodies in superjson's envelope,
-// and the repair sets built by the screen's own builder (src/app/ledger/repair-set.ts) from
+// and the repair sets built by the screen's own builder (src/app/hours/repair-set.ts) from
 // what `labor.ledger` answered. The rules of a repair and of a decision are the api suite's
 // (labor/repair*.test.ts, approvals/); this holds the screen's path through them together.
 import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
 import type { AppRouter } from "@trader/api";
 import type { Db } from "@trader/db";
-import { auditLog, customers, jobs, users } from "@trader/db/schema";
+import { customers, jobs, users } from "@trader/db/schema";
 import type { inferRouterOutputs } from "@trpc/server";
-import { asc, eq } from "drizzle-orm";
 import superjson from "superjson";
 import {
   afterAll,
@@ -29,7 +28,7 @@ import {
   missingHours,
   sessionOperations,
   voidOperation,
-} from "../src/app/ledger/repair-set";
+} from "../src/app/hours/repair-set";
 import { getDb } from "../src/server/db";
 import { ENDPOINT } from "../src/server/handler";
 import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
@@ -144,15 +143,6 @@ const decide = (approvalId: string, decision: "approved" | "rejected") =>
     me(),
     true,
   );
-const audited = async () =>
-  (
-    await owner
-      .select({ action: auditLog.action })
-      .from(auditLog)
-      .where(eq(auditLog.companyId, admin.companyId))
-      .orderBy(asc(auditLog.id))
-  ).map((r) => r.action);
-
 // A day's hours for `who` as the "Add missing hours" form builds them: 7:00 to 3:30 Eastern.
 function hours(who: string) {
   const built = missingHours({ jobId, start: `${DAY}T07:00`, end: `${DAY}T15:30` }, NY);
@@ -174,7 +164,6 @@ describe("labor repair through the route handler", () => {
     expect((await repair(v4)).status).toBe(400);
     // Nothing was written by any of them.
     expect((await ledger(workerId)).data?.sessions).toEqual([]);
-    expect(await audited()).toEqual([]);
   });
 
   it("adds missing hours that wait, lets their writer approve them, and counts them", async () => {
@@ -232,11 +221,6 @@ describe("labor repair through the route handler", () => {
     expect((await queue()).data?.items).toEqual([]);
     expect((await ledger(workerId)).data?.sessions).toMatchObject([
       { accounting: "eligible", eligibleWorkedMs: 8.5 * 3_600_000 },
-    ]);
-    expect(await audited()).toEqual([
-      "work_session_events.repair",
-      "approvals.decide",
-      "approvals.decide",
     ]);
   });
 
@@ -298,12 +282,6 @@ describe("labor repair through the route handler", () => {
     expect(
       (await repair(createMinter()(workerId, [voidOperation(repaired[0]!)]))).data,
     ).toMatchObject({ result: "rejected", code: "already_voided" });
-    // One audit row per accepted set; a refusal leaves none.
-    expect(await audited()).toEqual([
-      "work_session_events.repair",
-      "work_session_events.repair",
-      "work_session_events.repair",
-    ]);
   });
 
   // V1-D10 as amended: an admin's own labor needs no approval. The answer carries no
@@ -318,7 +296,6 @@ describe("labor repair through the route handler", () => {
     expect((await ledger(admin.userId)).data?.sessions).toMatchObject([
       { accounting: "eligible", events: [{ approval: null }, { approval: null }] },
     ]);
-    expect(await audited()).toEqual(["work_session_events.repair"]);
   });
 
   it("refuses a time that has not happened, writing nothing", async () => {
@@ -339,6 +316,5 @@ describe("labor repair through the route handler", () => {
       result: "rejected",
       code: "time_in_future",
     });
-    expect(await audited()).toEqual([]);
   });
 });

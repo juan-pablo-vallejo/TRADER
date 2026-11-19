@@ -1,9 +1,8 @@
 "use client";
 
-// The office navigation (DESIGN, Layout: left navigation wide, a menu narrow), grouped by the
-// work rather than the table; a destination is listed once its screen exists. Static links:
-// what a screen may do is the API's answer, not the menu's. The profile is reached from the
-// name in the header. Consumed by layout.tsx.
+// The office navigation: six destinations, a left column when wide and a menu when narrow.
+// Static links: what a screen may do is the API's answer, not the menu's. The profile is
+// reached from the name in the header. Consumed by layout.tsx.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState, type KeyboardEvent } from "react";
@@ -11,35 +10,13 @@ import { useRef, useState, type KeyboardEvent } from "react";
 import styles from "./nav.module.css";
 import { strings } from "./strings";
 
-// A group with no label is a destination that stands on its own. Routes keep their names;
-// only the grouping and the group labels are the navigation's (ARCHITECTURE, 2026-11-15).
-const groups: { label: string | null; links: (readonly [string, string])[] }[] = [
-  { label: null, links: [["/overview", strings.overview.title]] },
-  {
-    label: strings.navJobsites,
-    links: [
-      ["/jobs", strings.jobs],
-      ["/customers", strings.customers],
-      ["/crews", strings.crews],
-      ["/closeout", strings.closeout],
-      ["/materials", strings.materials],
-    ],
-  },
-  { label: null, links: [["/schedule", strings.scheduleNav]] },
-  {
-    label: strings.navLabor,
-    links: [
-      ["/approvals", strings.approvals],
-      ["/ledger", strings.ledger],
-      ["/reconciliation", strings.reconciliation],
-      ["/pay-periods", strings.payPeriods],
-      ["/refusals", strings.refusals],
-    ],
-  },
-  { label: null, links: [["/invoices", strings.invoices.nav]] },
-  { label: strings.navEmployees, links: [["/roster", strings.roster]] },
-  // Last, apart.
-  { label: null, links: [["/developer", strings.developer.nav]] },
+const links: (readonly [string, string])[] = [
+  ["/people", strings.nav.people],
+  ["/customers", strings.nav.customers],
+  ["/jobs", strings.nav.jobs],
+  ["/schedule", strings.nav.schedule],
+  ["/hours", strings.nav.hours],
+  ["/invoices", strings.nav.invoices],
 ];
 
 export function Nav() {
@@ -65,34 +42,26 @@ export function Nav() {
         {strings.menu}
       </button>
       <div id="office-nav" className={`${styles.groups} ${open ? styles.open : ""}`}>
-        {groups.map((group) => (
-          <section key={group.links[0]![0]} aria-label={group.label ?? undefined}>
-            {group.label !== null && (
-              <p className={`label ${styles.group}`} aria-hidden="true">
-                {group.label}
-              </p>
-            )}
-            <ul className={styles.list}>
-              {group.links.map(([href, label]) => {
-                // A screen beneath a destination (a job's page under Jobs) keeps it marked.
-                const here = path === href;
-                const within = here || path.startsWith(`${href}/`);
-                return (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      className={`${styles.link} ${within ? styles.current : ""}`}
-                      aria-current={here ? "page" : within ? "true" : undefined}
-                      onClick={() => setOpen(false)}
-                    >
-                      {label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
+        <ul className={styles.list}>
+          {links.map(([href, label]) => {
+            // A screen beneath a destination (an invoice's page under Invoices) keeps it
+            // marked.
+            const here = path === href;
+            const within = here || path.startsWith(`${href}/`);
+            return (
+              <li key={href}>
+                <Link
+                  href={href}
+                  className={`${styles.link} ${within ? styles.current : ""}`}
+                  aria-current={here ? "page" : within ? "true" : undefined}
+                  onClick={() => setOpen(false)}
+                >
+                  {label}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </nav>
   );

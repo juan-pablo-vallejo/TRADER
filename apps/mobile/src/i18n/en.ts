@@ -41,8 +41,6 @@ export const en: Catalog = {
       `Your next shift is at ${job} at ${start}. You can clock in 15 minutes before.`,
     noMoreShifts: "You have no more shifts today.",
     noShift: "You have no shift today. Ask the office.",
-    undecided:
-      "The office has to settle today's schedule before you can clock in. Ask the office.",
     attention: "Needs attention",
   },
   entry: {
@@ -95,8 +93,6 @@ export const en: Catalog = {
     refresh: "Check now",
     empty: "You have no shifts in the next two weeks.",
     today: "Today",
-    clockInFrom: (start, end) => `Clock in ${start}–${end}`,
-    undecided: "The office has to settle this day's overlapping shifts.",
     hours: "Your hours",
     noHours: "No hours in the last two weeks.",
     open: "On the clock",

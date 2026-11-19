@@ -11,11 +11,6 @@ export const pullInput = z.strictObject({
 });
 
 const approvalState = z.enum(["none", "pending", "approved", "rejected"]);
-const facts = z.strictObject({
-  description: z.string(),
-  quantity: z.string(),
-  unit: z.string(),
-});
 
 // A time of day on the company's wall clock, `HH:MM`.
 const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -32,10 +27,7 @@ export const pullOutput = z.strictObject({
   // what follows from it; the server alone decides.
   scheduleEnforced: z.boolean(),
   // The caller's own shifts, from the Monday of the company's current week for fourteen days
-  // (ARCHITECTURE, 2026-11-15, schedule authority; TASKS S7): each with its jobsite, since a
-  // shift may name a job outside the caller's crews, and the hours it is the eligible one.
-  // `eligible` is null on a day whose overlaps are not decided: no start is admitted on it.
-  // Nobody else's shift, and nothing of who decided an overlap or why.
+  // each with its jobsite. Nobody else's shift.
   shifts: z.array(
     z.strictObject({
       id: z.uuid(),
@@ -47,7 +39,6 @@ export const pullOutput = z.strictObject({
         name: z.string(),
         address: z.string().nullable(),
       }),
-      eligible: z.array(z.strictObject({ start: wallTime, end: wallTime })).nullable(),
       locked: z.boolean(),
     }),
   ),
@@ -93,19 +84,6 @@ export const pullOutput = z.strictObject({
       clockSkewed: z.boolean(),
       correctsEventId: z.uuid().nullable(),
       voidsEventId: z.uuid().nullable(),
-      approval: approvalState,
-    }),
-  ),
-  // The caller's own receipts in the window: as logged, and as in effect with approved
-  // corrections. No cost, no corrector.
-  materials: z.array(
-    z.strictObject({
-      id: z.uuid(),
-      jobId: z.uuid(),
-      loggedAt: z.date(),
-      original: facts,
-      effective: facts.extend({ voided: z.boolean() }),
-      correctionPending: z.boolean(),
       approval: approvalState,
     }),
   ),

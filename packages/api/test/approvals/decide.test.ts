@@ -12,21 +12,15 @@ import type { Tx } from "../../src/core/context";
 import {
   appCallerIn,
   asTenant,
-  auditRow,
-  auditRowsIn,
   boundIn,
-  correctionIn,
   crewDayIn,
   eventIn,
-  lateReceiptIn,
   outcome,
   ownerDb,
   pendingApproval,
   rejection,
   rolledBack,
   uuidv7,
-  WORKED_DAY,
-  workedDay,
   type CrewDay,
 } from "../helpers";
 
@@ -65,19 +59,12 @@ async function laborApproval(tx: Tx, d: CrewDay, worker: string, initiator?: str
   return pendingApproval(tx, d.companyId, { eventId });
 }
 
-// One pending approval of each subject, none the admin's own.
+// Two pending labor approvals, one per worker, neither the admin's own.
 async function world(tx: Tx) {
   const d = await crewDayIn(tx);
   const admin = await boundIn(tx, d.companyId, "admin");
-  const labor = await laborApproval(tx, d, d.w1);
-  const receipt = await lateReceiptIn(tx, d);
-  const correction = await correctionIn(tx, d, receipt.materialId, d.foremanId);
-  return {
-    d,
-    admin,
-    subjects: [labor, receipt.approvalId, correction.approvalId],
-    receipt,
-  };
+  const subjects = [await laborApproval(tx, d, d.w1), await laborApproval(tx, d, d.w2)];
+  return { d, admin, subjects };
 }
 
 describe("approval.decide — decisions", () => {
@@ -96,16 +83,6 @@ describe("approval.decide — decisions", () => {
           r.result === "decided" ? r.approval.decidedAt : null,
         );
       }
-      // One audit row per decision, whatever the subject: the admin, the approval, the
-      // decision as it was and became — no reason, no worker, no time of its own.
-      expect(await auditRowsIn(tx, d.companyId)).toEqual(
-        subjects.map((id, i) =>
-          auditRow(d.companyId, admin.id, "approvals.decide", id, {
-            before: { decision: null },
-            after: { decision: i % 2 === 0 ? "approved" : "rejected" },
-          }),
-        ),
-      );
       // And the other polarity in another company, its own admin deciding (each call sets
       // its own tenant).
       for (const [i, id] of more.subjects.entries()) {
@@ -113,12 +90,6 @@ describe("approval.decide — decisions", () => {
         expect((await decide(tx, more.admin.who, id, decision)).result).toBe("decided");
         expect((await stored(tx, id)).decision).toBe(decision);
       }
-      // The other company's rows are its own admin's, and the first company's are unchanged.
-      const theirs = await auditRowsIn(tx, more.d.companyId);
-      expect(theirs.map((r) => [r.actorUserId, r.entityId])).toEqual(
-        more.subjects.map((id) => [more.admin.id, id]),
-      );
-      expect(await auditRowsIn(tx, d.companyId)).toHaveLength(subjects.length);
     });
   });
 
@@ -134,8 +105,6 @@ describe("approval.decide — decisions", () => {
         approval: first.result === "decided" ? first.approval : null,
       });
       expect(await stored(tx, subjects[0]!)).toEqual(row);
-      // The retry answered; it did not decide, so it left no second row.
-      expect(await auditRowsIn(tx, d.companyId)).toHaveLength(1);
     });
   });
 
@@ -162,10 +131,6 @@ describe("approval.decide — decisions", () => {
         standing,
       });
       expect(await stored(tx, subjects[1]!)).toEqual(row);
-      // The standing decision's row alone, its actor the admin who decided.
-      expect(await auditRowsIn(tx, d.companyId)).toMatchObject([
-        { actorUserId: admin.id, entityId: subjects[1], after: { decision: "rejected" } },
-      ]);
     });
   });
 });
@@ -185,39 +150,14 @@ describe("approval.decide — own entries", () => {
       });
       expect(await stored(tx, own)).toEqual(row);
       expect((await decide(tx, admin.who, recorded, "approved")).result).toBe("decided");
-      // The refused own entry left no row; the audit trail admits nothing the rule refuses.
-      expect(await auditRowsIn(tx, d.companyId)).toMatchObject([{ entityId: recorded }]);
     });
   });
 
-  it("refuses the logger's receipt and the submitter's correction", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      const admin = await boundIn(tx, d.companyId, "admin");
-      const receipt = await lateReceiptIn(tx, d, admin.id);
-      const other = await lateReceiptIn(tx, d);
-      const correction = await correctionIn(tx, d, other.materialId, admin.id);
-      await asTenant(tx, d.companyId);
-      for (const id of [receipt.approvalId, correction.approvalId]) {
-        expect(await decide(tx, admin.who, id, "approved")).toEqual({
-          result: "rejected",
-          code: "own_entry",
-        });
-        expect((await stored(tx, id)).decision).toBeNull();
-      }
-      expect(await auditRowsIn(tx, d.companyId)).toEqual([]);
-    });
-  });
-
-  it("decides a deactivated worker's, logger's and submitter's entries", async () => {
+  it("decides a deactivated worker's entries", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin, subjects } = await world(tx);
       await tx.update(users).set({ deactivatedAt: new Date() }).where(eq(users.id, d.w1));
-      // The correction's submitter, the foreman, too.
-      await tx
-        .update(users)
-        .set({ deactivatedAt: new Date() })
-        .where(eq(users.id, d.foremanId));
+      await tx.update(users).set({ deactivatedAt: new Date() }).where(eq(users.id, d.w2));
       await asTenant(tx, d.companyId);
       for (const id of subjects) {
         expect((await decide(tx, admin.who, id, "approved")).result).toBe("decided");
@@ -250,72 +190,7 @@ describe("approval.decide — who may call", () => {
         for (const id of [...subjects, ...theirs.subjects]) {
           expect((await stored(tx, id)).decision).toBeNull();
         }
-        expect(await auditRowsIn(tx, d.companyId)).toEqual([]);
-        expect(await auditRowsIn(tx, theirs.d.companyId)).toEqual([]);
       });
-    });
-  });
-});
-
-describe("approval.decide — what follows", () => {
-  it("lets corrections follow their decisions: pending blocks, approved void ends", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      const admin = await boundIn(tx, d.companyId, "admin");
-      const receipt = await lateReceiptIn(tx, d);
-      const amend = await correctionIn(tx, d, receipt.materialId, d.foremanId);
-      await asTenant(tx, d.companyId);
-      const correct = (quantity: string | null) =>
-        appCallerIn(tx, d.who).material.correct({
-          id: uuidv7(),
-          materialId: receipt.materialId,
-          correction:
-            quantity === null
-              ? { kind: "void" }
-              : { kind: "amend", description: "Primer, grey", quantity, unit: "gal" },
-          note: null,
-          clientTimestamp: new Date(),
-        });
-      expect(await correct("4")).toMatchObject({ code: "correction_pending" });
-      await decide(tx, admin.who, amend.approvalId, "rejected");
-      const voiding = await correct(null);
-      expect(voiding.result).toBe("accepted");
-      const [pending] = await tx
-        .select({ id: approvals.id })
-        .from(approvals)
-        .where(
-          eq(
-            approvals.materialCorrectionId,
-            voiding.result === "accepted" ? voiding.correction.id : "",
-          ),
-        );
-      await decide(tx, admin.who, pending!.id, "approved");
-      expect(await correct("5")).toMatchObject({ code: "material_voided" });
-    });
-  });
-
-  it("leaves the day's review and its fingerprint as they were", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      const admin = await boundIn(tx, d.companyId, "admin");
-      await workedDay(tx, d);
-      const events = await tx.execute<{ id: string }>(
-        sql`select id from work_session_events where company_id = ${d.companyId}`,
-      );
-      const ids: string[] = [];
-      for (const e of events.rows) {
-        ids.push(
-          await pendingApproval(tx, d.companyId, { eventId: e.id }, ["after_closeout"]),
-        );
-      }
-      await asTenant(tx, d.companyId);
-      const review = () =>
-        appCallerIn(tx, d.who).closeout.review({ jobId: d.J, workDate: WORKED_DAY });
-      const before = await review();
-      for (const [i, id] of ids.entries()) {
-        await decide(tx, admin.who, id, i % 2 === 0 ? "approved" : "rejected");
-      }
-      expect(await review()).toEqual(before);
     });
   });
 });

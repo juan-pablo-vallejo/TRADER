@@ -58,7 +58,6 @@ function server() {
       voidsEventId: null,
       approval: s.waiting.has(id) ? "pending" : "none",
     })),
-    materials: [],
   });
   s.transport = {
     status: () =>

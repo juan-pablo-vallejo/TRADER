@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <EmptyState
       text={strings.notFound}
-      action={<Link href="/overview">{strings.goToOverview}</Link>}
+      action={<Link href="/schedule">{strings.goToOverview}</Link>}
     />
   );
 }

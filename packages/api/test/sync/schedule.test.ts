@@ -10,7 +10,6 @@ import {
   approvals,
   companies,
   jobAssignments,
-  shiftOverrides,
   workSessionEvents,
 } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
@@ -76,16 +75,6 @@ async function shift(
     })
     .returning({ id: jobAssignments.id });
   return row!.id;
-}
-
-async function holds(tx: Tx, d: CrewDay, holderId: string, yieldingId: string) {
-  await tx.insert(shiftOverrides).values({
-    companyId: d.companyId,
-    holderId,
-    yieldingId,
-    reason: "Covering",
-    createdBy: d.foremanId,
-  });
 }
 
 const who = (d: CrewDay, id: string, role: AppUser["role"]): AppUser => ({
@@ -210,24 +199,17 @@ describe("judgeStart", () => {
     });
   });
 
-  it("admits only the holder's job through the time an override decided", async () => {
+  it("admits nothing on a day whose shifts overlap", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
-      const morning = await shift(tx, d, d.w1, d.J, "07:00", "15:30");
-      const late = await shift(tx, d, d.w1, d.K, "12:00", "17:00");
-      // Undecided, the day does not resolve: nothing is admitted on it at all.
+      // Rows the office's writers would have refused: the day does not resolve, and nothing
+      // is admitted on it at all, in the shared time or out of it.
+      await shift(tx, d, d.w1, d.J, "07:00", "15:30");
+      await shift(tx, d, d.w1, d.K, "12:00", "17:00");
       expect(await judged(tx, d, d.J, at("08:00"))).toEqual({ admitted: false });
-      await asOwner(tx);
-      await holds(tx, d, morning, late);
-      expect(await judged(tx, d, d.J, at("13:00"))).toEqual({
-        admitted: true,
-        shiftId: morning,
-      });
+      expect(await judged(tx, d, d.J, at("13:00"))).toEqual({ admitted: false });
       expect(await judged(tx, d, d.K, at("13:00"))).toEqual({ admitted: false });
-      expect(await judged(tx, d, d.K, at("15:30"))).toEqual({
-        admitted: true,
-        shiftId: late,
-      });
+      expect(await judged(tx, d, d.K, at("16:00"))).toEqual({ admitted: false });
     });
   });
 
@@ -329,18 +311,16 @@ describe("sync.push with schedule enforcement on", () => {
           jobId: d.J,
           expectedStart: "07:00",
           expectedEnd: "08:00",
-          days: [
-            {
-              id: over,
-              workDate: DAY,
-              decisions: [
-                { overrideId: uuidv7(), otherId: id, holder: "this", reason: "Swap" },
-              ],
-            },
-          ],
+          days: [{ id: over, workDate: DAY }],
         }),
       ).toMatchObject({
-        days: [{ result: "rejected", code: "authorization", shiftId: id }],
+        days: [
+          {
+            result: "rejected",
+            code: "schedule",
+            issues: [{ code: "overlap", start: "07:00", end: "08:00" }],
+          },
+        ],
       });
     });
   });
@@ -535,7 +515,7 @@ describe("sync.pull", () => {
   const dayFrom = (day: string, n: number) =>
     new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
 
-  it("answers the caller's own shifts with the hours each is eligible, and nobody else's", async () => {
+  it("answers the caller's own shifts with their hours, and nobody else's", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       const worker = await boundIn(tx, d.companyId, "worker");
@@ -546,8 +526,7 @@ describe("sync.pull", () => {
       expect(first.shifts).toEqual([]);
 
       const early = await shift(tx, d, worker.id, d.J, "07:00", "12:00", today);
-      const late = await shift(tx, d, worker.id, d.K, "11:00", "15:00", today);
-      await holds(tx, d, late, early);
+      const late = await shift(tx, d, worker.id, d.K, "12:00", "15:00", today);
       // Not the caller's; and the caller's own, outside the fourteen days either way.
       await shift(tx, d, d.w1, d.J, "07:00", "12:00", today);
       await shift(tx, d, worker.id, d.J, "07:00", "12:00", dayFrom(today, 14));
@@ -560,48 +539,13 @@ describe("sync.pull", () => {
         workDate: today,
         start: "07:00",
         end: "12:00",
-        eligible: [{ start: "07:00", end: "11:00" }],
         locked: false,
       });
-      expect(snapshot.shifts[1]!.eligible).toEqual([{ start: "11:00", end: "15:00" }]);
+      expect(snapshot.shifts[1]).toMatchObject({ start: "12:00", end: "15:00" });
       // The jobsite travels with the shift: this caller is in no crew, so `jobs` has none.
       expect(snapshot.shifts[0]!.job.id).toBe(d.J);
       expect(snapshot.shifts[0]!.job.name).not.toBe("");
       expect(snapshot.jobs.map((j) => j.id)).not.toContain(d.J);
-    });
-  });
-
-  it("answers no eligible hours on a day whose overlap is not decided", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      const worker = await boundIn(tx, d.companyId, "worker");
-      await asTenant(tx, d.companyId);
-      const pull = () => appCallerIn(tx, worker.who).sync.pull({ protocolVersion: 1 });
-      const first = await pull();
-      const today = workDate(first.serverNow, first.company.timezone);
-      await shift(tx, d, worker.id, d.J, "07:00", "12:00", today);
-      await shift(tx, d, worker.id, d.K, "11:00", "15:00", today);
-      const alone = await shift(
-        tx,
-        d,
-        worker.id,
-        d.J,
-        "07:00",
-        "12:00",
-        dayFrom(today, 1),
-      );
-      await asTenant(tx, d.companyId);
-
-      const { shifts } = await pull();
-      expect(shifts.filter((s) => s.workDate === today).map((s) => s.eligible)).toEqual([
-        null,
-        null,
-      ]);
-      // The next day stands on its own. It may fall outside the window on a Sunday's
-      // second week's end; today is never that late in it.
-      const next = shifts.find((s) => s.id === alone);
-      if (next !== undefined)
-        expect(next.eligible).toEqual([{ start: "07:00", end: "12:00" }]);
     });
   });
 });

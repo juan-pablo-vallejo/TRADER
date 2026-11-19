@@ -22,12 +22,10 @@ import {
 import { inArray, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { recordAudit } from "../core/audit";
 import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import { instant } from "../core/instant";
 import type { AppUser } from "../core/resolve-user";
-import { afterCloseout, sessionOfEvent } from "../sync/labor";
 import { laborReasons, type ApprovalReason } from "../sync/reasons";
 import { forbidden } from "../core/trpc";
 import { replay, type LaborEvent } from "./fold";
@@ -295,7 +293,7 @@ export async function repairLabor(
     if (visible.length !== jobIds.length) throw forbidden();
   }
 
-  // 4. The worker's ledger, with no other labor writer for them and no closeout in flight.
+  // 4. The worker's ledger, with no other labor writer for them.
   const timeline = await loadWorkerTimeline(tx, input.workerId);
   const { receivedAt } = timeline;
 
@@ -366,13 +364,11 @@ export async function repairLabor(
     });
   }
 
-  // 9. The approval facts, the closeout among them judged on the session as repaired, in each
-  // closeout's stored zone (ARCHITECTURE row 201). None for the caller's own ledger: the
+  // 9. The approval facts. None for the caller's own ledger: the
   // caller is an admin under the lock of step 2, so the worker is an admin at this receipt
   // and no different admin is writing — the whole of 0032's rule. Their events are stored
   // with the same facts as anyone's and, with no approvals row, are approved by default.
   const own = input.workerId === user.id;
-  const after = replay([...timeline.events, ...candidates]);
   const reasons: ApprovalReason[][] = [];
   for (const [i, op] of input.operations.entries()) {
     const c = candidates[i]!;
@@ -389,7 +385,6 @@ export async function repairLabor(
         stamp: null,
         job: null,
         clockSkewed: false,
-        afterCloseout: await afterCloseout(tx, sessionOfEvent(after, c)),
       }),
     );
   }
@@ -442,21 +437,6 @@ export async function repairLabor(
     }
     throw error;
   }
-
-  // 11. The repair's audit row: one for the set, since it was written as one. Ids only —
-  // each event's time, job and type are its own row's.
-  await recordAudit(tx, user, {
-    action: "work_session_events.repair",
-    entityId: null,
-    after: {
-      worker_id: input.workerId,
-      events: input.operations.map((op) => ({
-        id: op.id,
-        kind: op.kind,
-        target_event_id: targetOf(op),
-      })),
-    },
-  });
 
   // 12. In input order, whatever order the database returned rows in.
   const events: Acknowledgement[] = candidates.map((c, i) => ({

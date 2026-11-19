@@ -1,18 +1,10 @@
-// What the Weekly Schedule screen works out from `assignment.week` before it draws anything
-// (DESIGN, Weekly Schedule, Shift card, Overlap override, Copy Last Week). Pure: no React, no
-// request. The rules are the server's (api assignments/eligibility.ts, imported as they are);
-// this module only groups what the server answered, puts a refusal into words, and shows —
-// before anything is saved — who would clock in where through a day if a decision were made.
-// The server judges every save again. Consumed by schedule-screen.tsx, shift-dialog.tsx and
-// copy-dialog.tsx.
+// What the Weekly Schedule screen works out from `assignment.week` before it draws anything.
+// Pure: no React, no request. This module only groups what the server answered and puts a
+// refusal into words. The server judges every save. Consumed by schedule-screen.tsx,
+// shift-dialog.tsx and copy-dialog.tsx.
 import type { AppRouter } from "@trader/api";
-import {
-  type Issue,
-  type Override,
-  resolveDay,
-  type Segment,
-} from "@trader/api/eligibility";
-import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
+import type { Issue } from "@trader/api/eligibility";
+import type { inferRouterOutputs } from "@trpc/server";
 
 import { addDays } from "../format";
 import { strings } from "../strings";
@@ -20,11 +12,7 @@ import { strings } from "../strings";
 type Outputs = inferRouterOutputs<AppRouter>["assignment"];
 export type Week = Outputs["week"];
 export type WeekShift = Week["shifts"][number];
-export type WeekOverride = Week["overrides"][number];
 export type CopyPreview = Outputs["copyPreview"];
-export type Decision = NonNullable<
-  inferRouterInputs<AppRouter>["assignment"]["update"]["decisions"]
->[number];
 export type { Issue };
 
 const s = strings.schedule;
@@ -93,27 +81,6 @@ export const byJobsite = (shifts: WeekShift[]): Row[] =>
 export const peopleOn = (row: Row, day: string) =>
   new Set((row.days.get(day) ?? []).map((shift) => shift.worker.id)).size;
 
-// What a shift card says beneath its hours when clocking in is not simply "during the
-// shift": the hours an override left it, or that nothing has been decided.
-export function clockInNote(shift: WeekShift): string | null {
-  if (shift.eligible === null) return s.undecided;
-  const whole =
-    shift.eligible.length === 1 &&
-    shift.eligible[0]!.start === shift.expectedStart &&
-    shift.eligible[0]!.end === shift.expectedEnd;
-  if (whole) return null;
-  return s.clockInDuring(shift.eligible.map((w) => `${w.start}–${w.end}`).join(", "));
-}
-
-export type Timed = { id: string; jobId: string; start: string; end: string };
-
-const toTimed = (shift: WeekShift): Timed => ({
-  id: shift.id,
-  jobId: shift.job.id,
-  start: shift.expectedStart,
-  end: shift.expectedEnd,
-});
-
 // The other shifts of that person and day a shift at these hours would overlap, with the
 // time each shares with it. Both are HH:MM, so text order is time order; ends are excluded.
 export function overlapsWith(
@@ -132,44 +99,17 @@ export function overlapsWith(
     }));
 }
 
-export type DayPreview =
-  { ok: true; timeline: Segment[] } | { ok: false; issues: Issue[] };
-
-// The day as it would stand: the person's other shifts, the shift being written at its new
-// hours, the overrides that would remain and the decisions being made.
-export function previewDay(
-  shift: Timed,
-  others: WeekShift[],
-  overrides: Override[],
-): DayPreview {
-  const resolved = resolveDay(
-    [...others.filter((o) => o.id !== shift.id).map(toTimed), shift],
-    overrides,
-  );
-  return resolved.result === "resolved"
-    ? { ok: true, timeline: resolved.timeline }
-    : { ok: false, issues: resolved.issues };
-}
-
 // A refusal in words. `label` names a shift by what the office sees: its jobsite and hours.
 export function issueText(issue: Issue, label: (shiftId: string) => string): string {
   switch (issue.code) {
     case "duplicate_shift":
       return s.issue.duplicate;
-    case "missing_decision":
-      return s.issue.undecided(
+    case "overlap":
+      return s.issue.overlap(
         label(issue.shiftIds[0]),
         label(issue.shiftIds[1]),
         `${issue.start}–${issue.end}`,
       );
-    case "circular_precedence":
-      return s.issue.circle(`${issue.start}–${issue.end}`);
-    case "no_eligible_time":
-      return s.issue.noTime(label(issue.shiftId));
-    case "override_not_overlapping":
-      return s.issue.notOverlapping;
-    case "override_conflict":
-    case "override_unknown_shift":
     case "duplicate_shift_id":
     case "invalid_interval":
       return s.issue.changed;

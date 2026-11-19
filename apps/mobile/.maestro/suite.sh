@@ -142,9 +142,6 @@ sql "delete from job_assignments a using users u
      where u.id = a.user_id and u.email = '$TOM' and a.locked_at is null;"
 flow schedule-refused resume
 expect "nothing was written" "$(events_of $TOM)" 0
-expect "the refusal left a line for the office" \
-  "select count(*) from sync_diagnostics d join users u on u.id = d.user_id
-   where u.email = '$TOM' and d.code = 'not_scheduled'" 1
 
 echo "— a schedule changed while the phone was offline"
 shift_now $ANA

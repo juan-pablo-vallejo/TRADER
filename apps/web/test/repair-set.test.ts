@@ -1,4 +1,4 @@
-// The office's repair sets (src/app/ledger/repair-set.ts): what a ledger editor's draft
+// The office's repair sets (src/app/hours/repair-set.ts): what a ledger editor's draft
 // becomes on the wire. `labor.repair` judges the set; this holds the set to what the ledger
 // showed — the root and the replaced entry of a correction, the job rule, the ids' order.
 import { describe, expect, it } from "vitest";
@@ -12,7 +12,7 @@ import {
   voidOperation,
   type LedgerEvent,
   type LedgerSession,
-} from "../src/app/ledger/repair-set";
+} from "../src/app/hours/repair-set";
 
 const NY = "America/New_York";
 const J1 = "00000000-0000-7000-8000-0000000000a1";

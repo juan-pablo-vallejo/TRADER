@@ -12,11 +12,10 @@ import { createContext, type Tx } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
 import { sessionApprovals } from "../../src/labor/approval";
 import { replay } from "../../src/labor/fold";
-import { lockCompanyFieldWrites, readWorkerEvents } from "../../src/labor/timeline";
+import { readWorkerEvents } from "../../src/labor/timeline";
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
 import {
-  auditRows,
   boundIn,
   crewDayIn,
   disposableDb,
@@ -29,7 +28,6 @@ import {
   waitForLockWait,
   quietReporter,
   REQUEST_ID,
-  withoutAuditInsert,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -163,8 +161,7 @@ async function counts(companyId: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(approvals)
     .where(eq(approvals.companyId, companyId));
-  const audit = (await auditRows(D.owner, companyId)).length;
-  return { events: e!.n, approvals: a!.n, audit };
+  return { events: e!.n, approvals: a!.n };
 }
 
 const decide = (
@@ -215,32 +212,6 @@ describe("labor.repair — retries and ids, committed", () => {
     expect(await counts(x.d.companyId)).toEqual({
       events: before.events + 2,
       approvals: before.approvals + 2,
-      // One set stored, one audit row: the duplicate added none.
-      audit: before.audit + 1,
-    });
-    expect((await auditRows(D.owner, x.d.companyId)).at(-1)).toMatchObject({
-      actorUserId: x.admin.id,
-      action: "work_session_events.repair",
-      after: { worker_id: x.w.id, events: ops.map((op) => ({ id: op.id })) },
-    });
-  });
-
-  it("stores no event when its audit row cannot be written, then the set and its row", async () => {
-    const x = await world();
-    const ops = [append("started", x.d.J, "21:00")];
-    const before = await counts(x.d.companyId);
-    await withoutAuditInsert(D.owner, async () => {
-      expect(await outcome(repair(x.admin.who, x.w.id, ops))).toBe(
-        "INTERNAL_SERVER_ERROR",
-      );
-    });
-    expect(await counts(x.d.companyId)).toEqual(before);
-    // The same ids again: nothing of the failed call was kept, so this is the first write.
-    expect((await repair(x.admin.who, x.w.id, ops)).result).toBe("accepted");
-    expect(await counts(x.d.companyId)).toEqual({
-      events: before.events + 1,
-      approvals: before.approvals + 1,
-      audit: before.audit + 1,
     });
   });
 
@@ -314,12 +285,6 @@ describe("labor.repair — retries and ids, committed", () => {
     ).toEqual([]);
     expect([...sessionApprovals(ledger, new Map()).byRoot.values()]).toMatchObject([
       { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },
-    ]);
-    expect(
-      (await auditRows(D.owner, x.d.companyId)).map((r) => [r.action, r.actorUserId]),
-    ).toEqual([
-      ["work_session_events.repair", x.admin.id],
-      ["work_session_events.repair", x.admin.id],
     ]);
   });
 
@@ -397,7 +362,7 @@ describe("labor.repair — concurrent repairs, committed", () => {
   // one at 22:30. Both take the worker's lock, and the one queued first wins: the other
   // finds the session already ended — the push by the fold (no_open_session), the repair
   // by the following-event check (breaks_following_event). Either order is a valid
-  // serialization, so each is pinned by queue position, as the closeout tests do.
+  // serialization, so each is pinned by queue position.
   const openSession = async () => {
     const x = await world();
     await D.owner.transaction((tx) =>
@@ -469,70 +434,6 @@ describe("labor.repair — concurrent repairs, committed", () => {
       code: "breaks_following_event",
     });
     expect(await violationOf(x.w.id)).toBeNull();
-  });
-});
-
-describe("labor.repair — closeouts, committed", () => {
-  const review = (x: Awaited<ReturnType<typeof world>>) =>
-    caller(x.d.who).closeout.review({ jobId: x.d.J, workDate: "2026-10-05" });
-  const submit = (x: Awaited<ReturnType<typeof world>>, fingerprint: string) =>
-    caller(x.d.who).closeout.submit({
-      id: uuidv7(),
-      jobId: x.d.J,
-      workDate: "2026-10-05",
-      jobStatus: "open",
-      note: null,
-      clientTimestamp: new Date(),
-      reviewFingerprint: fingerprint,
-    });
-  const holdFieldWrites = (companyId: string) =>
-    hold(async (tx) => {
-      await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
-      await lockCompanyFieldWrites(tx, "exclusive");
-    });
-
-  it("waits behind a closeout queued first and is tagged after_closeout", async () => {
-    const x = await world();
-    const { fingerprint } = await review(x);
-    const h = holdFieldWrites(x.d.companyId);
-    await h.held;
-    const closeout = submit(x, fingerprint);
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock(%", {
-      waitEvent: "advisory",
-    });
-    const fix = repair(x.admin.who, x.w.id, [correct(x.end, "ended", x.d.J, "19:00")]);
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock_shared(%", {
-      waitEvent: "advisory",
-    });
-    await h.release();
-    expect((await closeout).result).toBe("accepted");
-    expect(await fix).toMatchObject({
-      result: "accepted",
-      events: [{ reasons: ["corrected", "user_timed", "location", "after_closeout"] }],
-    });
-  });
-
-  it("goes first when the closeout queues behind it; the stale review is refused", async () => {
-    const x = await world();
-    const { fingerprint } = await review(x);
-    const h = holdWorker(x.w.id);
-    await h.held;
-    // The repair takes the field-write lock shared, then waits on the worker's lock.
-    const fix = repair(x.admin.who, x.w.id, [correct(x.end, "ended", x.d.J, "19:00")]);
-    await workerWaiters(1);
-    const closeout = submit(x, fingerprint);
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock(%", {
-      n: 2,
-      waitEvent: "advisory",
-    });
-    await h.release();
-    expect(await fix).toMatchObject({
-      result: "accepted",
-      events: [{ reasons: ["corrected", "user_timed", "location"] }],
-    });
-    expect(await closeout).toMatchObject({ result: "rejected", code: "review_stale" });
-    // Reviewed again, the day closes with the repair in it.
-    expect((await submit(x, (await review(x)).fingerprint)).result).toBe("accepted");
   });
 });
 

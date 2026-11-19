@@ -8,23 +8,11 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import {
-  closeoutAcknowledgement,
-  closeoutInput,
-  submitCloseout,
-} from "../closeout/submit";
 import type { Tx } from "../core/context";
 import { instant } from "../core/instant";
-import {
-  correctionAcknowledgement,
-  correctionInput,
-  correctMaterial,
-} from "../materials/correct";
 import type { AppUser } from "../core/resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
-import { materialAck, materialPayloadV1, pushMaterial } from "./material";
 import { reportFailure, type ErrorReporter } from "../core/report";
-import type { DiagnosticLine, Note } from "./diagnostics";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
 
@@ -37,12 +25,9 @@ import { measureSkew, type Skew } from "./reasons";
 export const MAX_RECORDS = 100;
 export const BUDGET_MS = 8_000;
 
-export const RECORD_KINDS = [
-  "labor_event",
-  "material",
-  "closeout",
-  "material_correction",
-] as const;
+// One kind today. The envelope keeps the field so a later kind is a new member here and a
+// parser below, never a new wire shape.
+export const RECORD_KINDS = ["labor_event"] as const;
 type Kind = (typeof RECORD_KINDS)[number];
 
 // The envelope every record travels in: its id, what it is, the shape it was written in.
@@ -60,41 +45,18 @@ const addressable = z.object({ id: z.uuid({ version: "v7" }) });
 // Sync protocol).
 const PAYLOADS = {
   labor_event: { 1: laborPayloadV1 },
-  material: { 1: materialPayloadV1 },
-  closeout: { 1: closeoutInput.omit({ id: true }) },
-  material_correction: { 1: correctionInput.omit({ id: true }) },
 } as const satisfies Record<Kind, Record<number, z.ZodType>>;
 
-type Parsed =
-  | {
-      kind: "labor_event";
-      id: string;
-      schemaVersion: number;
-      payload: z.infer<typeof laborPayloadV1>;
-    }
-  | {
-      kind: "material";
-      id: string;
-      schemaVersion: number;
-      payload: z.infer<typeof materialPayloadV1>;
-    }
-  | {
-      kind: "closeout";
-      id: string;
-      schemaVersion: number;
-      payload: z.infer<(typeof PAYLOADS)["closeout"][1]>;
-    }
-  | {
-      kind: "material_correction";
-      id: string;
-      schemaVersion: number;
-      payload: z.infer<(typeof PAYLOADS)["material_correction"][1]>;
-    };
+type Parsed = {
+  kind: "labor_event";
+  id: string;
+  schemaVersion: number;
+  payload: z.infer<typeof laborPayloadV1>;
+};
 
 // What one element of the batch is: a record to run, one answered `invalid_record` without a
 // transaction, or one the batch stops before (no id to answer with, or a version this server
-// does not know yet: retried after it upgrades, never condemned). A stop says what could be
-// read of the record, for its diagnostic line (diagnostics.ts).
+// does not know yet: retried after it upgrades, never condemned).
 type Classified =
   | { kind: "run"; record: Parsed }
   | { kind: "invalid"; id: string; recordKind: Kind | null }
@@ -154,24 +116,6 @@ export const pushResult = z.union([
   }),
   z.strictObject({
     id: z.uuid(),
-    kind: z.literal("material"),
-    result: success,
-    ack: materialAck,
-  }),
-  z.strictObject({
-    id: z.uuid(),
-    kind: z.literal("closeout"),
-    result: success,
-    ack: closeoutAcknowledgement,
-  }),
-  z.strictObject({
-    id: z.uuid(),
-    kind: z.literal("material_correction"),
-    result: success,
-    ack: correctionAcknowledgement,
-  }),
-  z.strictObject({
-    id: z.uuid(),
     kind: kind.nullable(),
     result: z.literal("rejected"),
     code,
@@ -200,33 +144,10 @@ const rejectedAs = (r: { id: string; kind: Kind | null }, c: string): PushResult
 });
 
 async function runOne(tx: Tx, user: AppUser, r: Parsed, skew: Skew): Promise<PushResult> {
-  switch (r.kind) {
-    case "labor_event": {
-      const a = await pushLaborEvent(tx, user, r, skew);
-      return a.result === "rejected"
-        ? { id: r.id, kind: r.kind, ...a }
-        : { id: r.id, kind: r.kind, result: a.result, ack: a.ack };
-    }
-    case "material": {
-      const a = await pushMaterial(tx, user, r, skew);
-      return a.result === "rejected"
-        ? { id: r.id, kind: r.kind, ...a }
-        : { id: r.id, kind: r.kind, result: a.result, ack: a.ack };
-    }
-    // Delegated unchanged: their own-id-first, locks, codes and acknowledgements are theirs.
-    case "closeout": {
-      const a = await submitCloseout(tx, user, { id: r.id, ...r.payload });
-      return a.result === "rejected"
-        ? { id: r.id, kind: r.kind, ...a }
-        : { id: r.id, kind: r.kind, result: a.result, ack: a.closeout };
-    }
-    case "material_correction": {
-      const a = await correctMaterial(tx, user, { id: r.id, ...r.payload });
-      return a.result === "rejected"
-        ? { id: r.id, kind: r.kind, ...a }
-        : { id: r.id, kind: r.kind, result: a.result, ack: a.correction };
-    }
-  }
+  const a = await pushLaborEvent(tx, user, r, skew);
+  return a.result === "rejected"
+    ? { id: r.id, kind: r.kind, ...a }
+    : { id: r.id, kind: r.kind, result: a.result, ack: a.ack };
 }
 
 // A record that throws after an earlier one committed is answered by omission, so no handler
@@ -243,24 +164,14 @@ export const reportRecordFailure =
       requestId,
     });
 
-const omitted = (
-  recordId: string | null,
-  recordKind: Kind | null,
-  code: string,
-): DiagnosticLine => ({ recordId, recordKind, outcome: "omitted", code });
-
 // `clock` is the batch budget's; `onRecordFailure` receives what the loop swallows, and must
-// not throw (reportRecordFailure never does). `note` receives a diagnostic line for every
-// record answered `rejected` and, when the loop stops on a record, for that record and each
-// one behind it whose id can be read (diagnostics.ts); it must not throw either. A line holds
-// an id, a kind and a code: `note` is never handed a payload. The budget running out is not
-// a failure and notes nothing: those records are simply attempted next cycle.
+// not throw (reportRecordFailure never does). The budget running out is not a failure: those
+// records are simply attempted next cycle.
 export async function pushRecords(
   input: z.infer<typeof pushInput>,
   run: RunRecord,
   clock: () => number = Date.now,
   onRecordFailure: (error: unknown) => void = () => undefined,
-  note: Note = () => undefined,
 ): Promise<PushOutput> {
   const started = clock();
   const serverNow = new Date(started);
@@ -271,31 +182,12 @@ export async function pushRecords(
   let ran = 0;
   const answer = (result: PushResult) => {
     results.push(result);
-    if (result.result === "rejected") {
-      note({
-        recordId: result.id,
-        recordKind: result.kind,
-        outcome: "rejected",
-        code: result.code,
-      });
-    }
-  };
-  // The records behind the one the loop stopped on: read for an id and a kind, nothing else.
-  const noteRest = (from: number) => {
-    for (const raw of input.records.slice(from)) {
-      const id = addressable.safeParse(raw);
-      if (id.success) note(omitted(id.data.id, kindOf(raw), "not_attempted"));
-    }
   };
 
-  for (const [i, raw] of input.records.entries()) {
+  for (const raw of input.records) {
     if (clock() - started > BUDGET_MS) break;
     const c = classify(raw);
-    if (c.kind === "stop") {
-      note(omitted(c.id, c.recordKind, c.code));
-      noteRest(i + 1);
-      break;
-    }
+    if (c.kind === "stop") break;
     if (c.kind === "invalid") {
       answer(rejectedAs({ id: c.id, kind: c.recordKind }, "invalid_record"));
       continue;
@@ -315,8 +207,6 @@ export async function pushRecords(
       // left out and retried; what committed before is answered.
       if (ran === 0) throw error;
       onRecordFailure(error);
-      note(omitted(r.id, r.kind, "record_failed"));
-      noteRest(i + 1);
       break;
     }
   }

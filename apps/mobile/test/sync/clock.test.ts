@@ -50,7 +50,6 @@ const snapshot = (over: Partial<PullOutput> = {}): PullOutput => ({
   ledCrews: [],
   sessions: [],
   events: [],
-  materials: [],
   ...over,
 });
 const open = (state: "working" | "paused"): PullOutput["sessions"][number] => ({
@@ -217,7 +216,6 @@ describe("the schedule's offer", () => {
     id: string,
     start: string,
     end: string,
-    eligible: { start: string; end: string }[] | null,
     workDate = "2026-11-16",
   ): PullOutput["shifts"][number] => ({
     id,
@@ -225,14 +223,13 @@ describe("the schedule's offer", () => {
     start,
     end,
     job: { id: J, name: "Elm St", address: null },
-    eligible,
     locked: false,
   });
-  const morning = shift("s1", "07:00", "12:00", [{ start: "07:00", end: "11:00" }]);
-  const midday = shift("s2", "11:00", "15:00", [{ start: "11:00", end: "15:00" }]);
+  const morning = shift("s1", "07:00", "11:00");
+  const midday = shift("s2", "11:00", "15:00");
   const day = [morning, midday];
 
-  it("offers the shift whose eligible time holds this minute, the end excluded", () => {
+  it("offers the shift that holds this minute, the end excluded", () => {
     expect(offerAt(day, "2026-11-16", "07:00")).toEqual({
       kind: "eligible",
       shift: morning,
@@ -259,12 +256,7 @@ describe("the schedule's offer", () => {
     });
   });
 
-  it("offers nothing on a day with no shift, or one whose overlap is not decided", () => {
+  it("offers nothing on a day with no shift", () => {
     expect(offerAt(day, "2026-11-17", "08:00")).toEqual({ kind: "none" });
-    const undecided = [
-      shift("s1", "07:00", "12:00", null),
-      shift("s2", "11:00", "15:00", null),
-    ];
-    expect(offerAt(undecided, "2026-11-16", "08:00")).toEqual({ kind: "undecided" });
   });
 });

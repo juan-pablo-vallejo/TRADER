@@ -15,7 +15,6 @@ export const syncRouter = router({
         ctx.runRecord,
         Date.now,
         reportRecordFailure(ctx.reporter, ctx.requestId),
-        ctx.note,
       ),
     ),
   pull: protectedProcedure

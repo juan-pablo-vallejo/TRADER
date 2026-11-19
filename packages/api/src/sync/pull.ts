@@ -1,28 +1,15 @@
 // sync.pull (ARCHITECTURE, Sync protocol; sync.pull of 2026-11-05): a per-user snapshot of the
-// caller's own entries and the reference data the push admits, never anyone else's labor or
-// receipts. Devices hold only their user's own entries offline; crew views are online-only
+// caller's own entries and the reference data the push admits, never anyone else's labor. Devices hold only their user's own entries offline; crew views are online-only
 // (PRD, Sync and offline). One protected transaction; under READ COMMITTED each statement reads
-// its own committed state, so the snapshot may combine moments, as closeout.review does, and
-// the next pull converges. Consumed by routers/sync.ts.
-import {
-  approvals,
-  companies,
-  crewMembers,
-  crews,
-  jobs,
-  materials,
-  users,
-} from "@trader/db/schema";
-import { and, asc, eq, gte, inArray, isNull, ne, or, sql } from "drizzle-orm";
+// its own committed state, so the snapshot may combine moments, and the next pull converges. Consumed by routers/sync.ts.
+import { approvals, companies, crewMembers, crews, jobs, users } from "@trader/db/schema";
+import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 
 import { loadDays } from "../assignments/day";
-import { resolveDay } from "../assignments/eligibility";
 import type { Tx } from "../core/context";
 import { replay } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
-import { effectiveMaterial } from "../materials/effective";
-import { receiptStandings } from "../materials/standing";
 import type { AppUser } from "../core/resolve-user";
 import type { PullOutput } from "../contract/pull";
 
@@ -156,26 +143,6 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
           );
   const eventDecision = new Map(eventApprovals.map((a) => [a.eventId, a.decision]));
 
-  // The caller's receipts in the window: logged on or after its first midnight in the zone,
-  // which Postgres finds through the zone's rules (as closeout/day.ts does).
-  const fromInstant = sql`(${from}::date::timestamp at time zone ${company.timezone})`;
-  const receipts = await tx
-    .select({
-      id: materials.id,
-      jobId: materials.jobId,
-      loggedAt: materials.loggedAt,
-      description: materials.description,
-      quantity: materials.quantity,
-      unit: materials.unit,
-    })
-    .from(materials)
-    .where(
-      and(eq(materials.loggedByUserId, user.id), gte(materials.loggedAt, fromInstant)),
-    )
-    .orderBy(asc(materials.loggedAt), asc(materials.id));
-  const receiptIds = receipts.map((r) => r.id);
-  const standings = await receiptStandings(tx, receiptIds);
-
   // The caller's own shifts and the hours each is the eligible one, a day at a time.
   const today = workDate(serverNow, company.timezone);
   const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
@@ -196,12 +163,6 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   const shiftJob = new Map(shiftJobs.map((j) => [j.id, j]));
   const shifts = [...ownDays.values()]
     .flatMap((day) => {
-      const resolved = resolveDay(day.shifts, day.overrides);
-      const windows = new Map(
-        resolved.result === "resolved"
-          ? resolved.shifts.map((s) => [s.shiftId, s.windows] as const)
-          : [],
-      );
       return day.shifts.map((s) => {
         const job = shiftJob.get(s.jobId);
         if (job === undefined) throw new Error("a shift's job is not visible");
@@ -211,7 +172,6 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
           start: s.start,
           end: s.end,
           job,
-          eligible: resolved.result === "resolved" ? (windows.get(s.id) ?? []) : null,
           locked: s.lockedStart !== null,
         };
       });
@@ -253,22 +213,5 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
       voidsEventId: e.voidsEventId,
       approval: stateOf(eventDecision.get(e.id)),
     })),
-    materials: receipts.map((r) => {
-      const effective = effectiveMaterial(r, standings.correctionsOf(r.id));
-      return {
-        id: r.id,
-        jobId: r.jobId,
-        loggedAt: r.loggedAt,
-        original: { description: r.description, quantity: r.quantity, unit: r.unit },
-        effective: {
-          description: effective.description,
-          quantity: effective.quantity,
-          unit: effective.unit,
-          voided: effective.voided,
-        },
-        correctionPending: effective.pendingId !== null,
-        approval: stateOf(standings.decisionOf(r.id)),
-      };
-    }),
   };
 }

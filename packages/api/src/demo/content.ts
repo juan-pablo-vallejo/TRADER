@@ -5,7 +5,6 @@
 // coordinates are a point in Providence used only as a job's place. Consumed by demo/run.ts.
 import type { SeedCompany } from "@trader/db";
 
-import type { AuditAction } from "../core/audit";
 import type { ApprovalReason } from "../sync/reasons";
 import { addDays } from "./ids";
 
@@ -221,17 +220,6 @@ export const STAMPS = {
   harbor: { lat: 41.8012, lng: -71.4009, accuracyM: 15 },
 } as const;
 
-// Effective-dated rates in cents (RULES: integer minor units). One worker's rate changes on the
-// anchor so the roster shows a history.
-export const RATES = (anchor: string) =>
-  [
-    { who: "ana", effectiveFrom: addDays(anchor, -365), hourlyRateCents: 2800 },
-    { who: "ana", effectiveFrom: anchor, hourlyRateCents: 3000 },
-    { who: "tom", effectiveFrom: addDays(anchor, -365), hourlyRateCents: 2600 },
-    { who: "priya", effectiveFrom: addDays(anchor, -365), hourlyRateCents: 2500 },
-    { who: "omar", effectiveFrom: addDays(anchor, -365), hourlyRateCents: 2700 },
-  ] as const;
-
 // Ten weekdays from the anchor Monday: two working weeks.
 export const workDays = (anchor: string): string[] =>
   [0, 1, 2, 3, 4, 7, 8, 9, 10, 11].map((n) => addDays(anchor, n));
@@ -242,66 +230,6 @@ export const BASELINE_TIMES = {
   paused: "12:00",
   resumed: "12:30",
   ended: "15:30",
-} as const;
-
-// Receipts logged with the day's events (no approval reason). `day` is an index into
-// workDays(); the day-2 receipt on J2 is the one the foreman amends after it is sealed.
-export const RECEIPTS = [
-  {
-    who: "ana",
-    day: 0,
-    job: "j1",
-    description: "Exterior acrylic, white, 5 gal",
-    quantity: "2",
-    unit: "pail",
-  },
-  {
-    who: "omar",
-    day: 1,
-    job: "j2",
-    description: "Eggshell interior, Harbor Grey",
-    quantity: "3",
-    unit: "gal",
-  },
-  {
-    who: "tom",
-    day: 3,
-    job: "j1",
-    description: "Painter's tape 1.5 in",
-    quantity: "6",
-    unit: "roll",
-  },
-  {
-    who: "elena",
-    day: 5,
-    job: "j2",
-    description: "Primer, stain blocking",
-    quantity: "1",
-    unit: "gal",
-  },
-  {
-    who: "luis",
-    day: 7,
-    job: "j1",
-    description: "Caulk, exterior, white",
-    quantity: "12",
-    unit: "tube",
-  },
-] as const;
-
-// What the office has read off three of the receipts above and entered; the other two and the
-// late one are still unpriced. `receipt` is an index into RECEIPTS: the amended sealed receipt
-// is one of the three, so a frozen row carries a cost. Integer cents with their currency.
-export const COSTS = [
-  { receipt: 0, cents: 38990, currency: "USD" },
-  { receipt: 1, cents: 17196, currency: "USD" },
-  { receipt: 4, cents: 7188, currency: "USD" },
-] as const;
-
-export const AMENDED_RECEIPT = {
-  original: RECEIPTS[1],
-  amend: { description: "Eggshell interior, Harbor Grey", quantity: "4", unit: "gal" },
-  note: "Fourth gallon on the same receipt.",
 } as const;
 
 // The abnormal scenarios, each once. Expected reasons are in the enum's order (sync/reasons.ts);
@@ -329,13 +257,13 @@ export const SCENARIOS = {
     day: 9,
     reasons: ["offline", "location"] as ApprovalReason[],
   },
-  // Priya's Wednesday of week one reached the office after that day's closeout: her phone was
-  // offline until Thursday. Pushed after the closeout, before any later day of hers.
+  // Priya's Wednesday of week one reached the office a day late: her phone was offline until
+  // Thursday. Pushed before any later day of hers.
   lateOfflineDay: {
     who: "priya",
     day: 2,
     times: { started: "07:30", ended: "14:00" },
-    reasons: ["offline", "after_closeout"] as ApprovalReason[],
+    reasons: ["offline"] as ApprovalReason[],
   },
   // The office corrects Elena's last clock-out from 15:30 to 16:00: an office event is
   // user-timed and unstamped, so it carries those reasons with `corrected`.
@@ -345,39 +273,11 @@ export const SCENARIOS = {
     time: "16:00",
     reasons: ["corrected", "user_timed", "location"] as ApprovalReason[],
   },
-  // A receipt from Friday of week one, logged by Elena, pushed after that day's closeout.
-  lateReceipt: {
-    who: "elena",
-    day: 4,
-    job: "j2",
-    time: "13:00",
-    description: "Drop cloths, canvas",
-    quantity: "4",
-    unit: "each",
-    reasons: ["after_closeout"] as ApprovalReason[],
-  },
-  // A receipt the crew never logged, entered by the office from the paper it has, with its
-  // cost, for a day already closed out: marked as the office's, and pending for another
-  // admin — the demo has one, so it stays in the queue (V1-D09).
-  officeReceipt: {
-    day: 6,
-    job: "j1",
-    description: "Roller covers, 9 in",
-    quantity: "10",
-    unit: "each",
-    cost: { cents: 4590, currency: "USD" },
-    reasons: ["after_closeout"] as ApprovalReason[],
-  },
-  // The amend of a sealed receipt is its own pending approval, `corrected`.
-  amendedReceipt: { reasons: ["corrected"] as ApprovalReason[] },
   // Priya leaves after week one; Marcus steps down as foreman, so Crew B needs one.
   deactivatedWorker: "priya",
   demotedForeman: "marcus",
   // Old Mill's only job is archived, then the customer is deactivated.
   deactivatedCustomer: "oldmill",
-  // After the backlog is approved, the admin decides the first three still pending, oldest
-  // first.
-  decisions: ["approved", "approved", "rejected"] as const,
 } as const;
 
 // Days the deactivated worker is absent before leaving: nothing of hers after week one.
@@ -402,13 +302,6 @@ export const PLANS = [
   { who: "priya", job: "j1", days: [0], start: "07:00", end: "15:30" },
 ] as const;
 
-// The pay periods the office keeps: the two recorded weeks, Monday to Sunday. Week one is
-// closed while Priya's late Wednesday still waits for approval — the close acknowledges it —
-// and that day is approved afterwards, so week two, left open for the office to close,
-// carries it as an adjustment (V1-D03).
-export const payWeeks = (anchor: string) =>
-  [0, 7].map((n) => ({ startsOn: addDays(anchor, n), endsOn: addDays(anchor, n + 6) }));
-
 // What a complete run writes, by the plan above. The run reports what it wrote; the test holds
 // both to these numbers.
 export const EXPECTED = {
@@ -417,70 +310,23 @@ export const EXPECTED = {
   jobs: JOBS.length,
   crews: 2,
   crewMembers: PEOPLE.filter((p) => p.crew !== null).length,
-  payRates: 5,
   // Six people for ten days and Priya for four, four events each; her late day of two; one
   // office correction.
   events: 6 * 10 * 4 + 4 * 4 + 2 + 1,
-  // The crew's receipts, the late one, and the one the office entered itself, with its cost.
-  materials: RECEIPTS.length + 1 + 1,
-  pricedMaterials: COSTS.length + 1,
-  materialCorrections: 1,
-  // Nine closed days on each crew's job.
-  closeouts: 9 * 2,
-  // Every pushed clock event (the backlog, the late day included), the correction, the late
-  // receipt, the amend, the office's receipt.
-  approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1 + 1 + 1 + 1,
-  // The ordinary backlog — every event flagged `offline` alone but Tom's last day's four —
-  // then the three decisions. Omar's user-timed end and Ana's out-of-radius start carry a
-  // second reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
-  decided: 6 * 10 * 4 + 4 * 4 - 2 - 4 - 4 + 3,
+  // Every pushed clock event and the correction.
+  approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1,
+  // The ordinary backlog: every event flagged `offline` alone, Priya's late day included, but
+  // Tom's last day's four. Omar's user-timed end and Ana's out-of-radius start carry a second
+  // reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
+  decided: 6 * 10 * 4 + 4 * 4 + 2 - 2 - 4 - 4,
   // One row per planned person, job and day.
   assignments: PLANS.reduce((n, p) => n + p.days.length, 0),
-  payPeriods: 2,
-  // Week one's close: six people for five days and Priya for four, one line each.
-  payPeriodLines: 6 * 5 + 4,
 } as const;
 
-// What the run's labor and receipts come to, worked out by hand from the plan above; run.ts
-// reads `job.cost` and `labor.hours` last and holds them to these, so a drifted rounding,
-// rate or approval rule fails the run. An ordinary day is 5 h, lunch, 3 h: 8.00 h. Hours are
-// hundredths; money is cents, every rate in USD.
+// What the run's labor comes to, worked out by hand from the plan above; run.ts reads
+// `labor.hours` last and holds it to these, so a drifted rounding or approval rule fails the
+// run. An ordinary day is 5 h, lunch, 3 h: 8.00 h. Hours are hundredths.
 //
-// J1, crew A. Ana: nine approved days at the rate in force from the anchor, 3000, never the
-// 2800 before it (9 × 24000); her last day's start is out of radius and waits. Tom: nine
-// days at 2600 (9 × 20800); his last day waits. Priya: four days and her late 6.50 h — the
-// two oldest pending approvals, both approved — at 2500 (4 × 20000 + 16250). Luis has no
-// rate: nine days unrated; his claimed-online day's start is the third oldest pending
-// approval, rejected, and takes the session with it.
-// Receipts: 38990 and 7188 are priced and count, the tape is unpriced, and the office's own
-// entry, 4590, waits for another admin.
-export const EXPECTED_COST = {
-  job: "j1",
-  lines: 9 + 9 + 4 + 1 + 9,
-  labor: {
-    approvedHundredths: 9 * 800 + 9 * 800 + 4 * 800 + 650 + 9 * 800,
-    totals: [{ currency: "USD", cents: 9 * 24000 + 9 * 20800 + 4 * 20000 + 16250 }],
-    unrated: { hundredths: 9 * 800, lines: 9 },
-    pending: {
-      hundredths: 2 * 800,
-      sessions: 2,
-      totals: [{ currency: "USD", cents: 24000 + 20800 }],
-      unratedHundredths: 0,
-    },
-    rejectedSessions: 1,
-    openSessions: 0,
-  },
-  materials: {
-    totals: [{ currency: "USD", cents: 38990 + 7188 }],
-    receipts: 2,
-    unpriced: 1,
-    pending: { totals: [{ currency: "USD", cents: 4590 }], receipts: 1, unpriced: 0 },
-    rejected: 0,
-    voided: 0,
-  },
-  total: [{ currency: "USD", cents: 499450 + 46178 }],
-} as const;
-
 // Two days read through `labor.hours`: Priya's late day, approved, 07:30 to 14:00; and
 // Elena's last, whose clock-out the office moved to 16:00 — 8.50 h, waiting with the
 // correction, and nothing of the day approved meanwhile.
@@ -488,38 +334,3 @@ export const EXPECTED_HOURS = [
   { who: "priya", day: 2, job: "j1", approved: 650, pending: 0, pendingSessions: 0 },
   { who: "elena", day: 9, job: "j2", approved: 0, pending: 850, pendingSessions: 1 },
 ] as const;
-
-// The two pay periods as `payPeriod.read` answers them last, worked out by hand. Week one,
-// closed: its 34 lines of 8.00 h, the one session that waited at the close, and no
-// adjustment — it is the first close. Week two, open: six people for five days less the five
-// days that do not count yet (Tom's, Omar's, Ana's and Elena's last days wait; Luis's
-// claimed-online day was rejected), and the adjustment it would carry if closed now: Priya's
-// Wednesday of week one, 6.50 h, approved after week one closed.
-export const EXPECTED_PERIODS = {
-  closed: {
-    lines: 6 * 5 + 4,
-    hundredths: (6 * 5 + 4) * 800,
-    acknowledged: { pendingSessions: 1, openSessions: 0 },
-    adjustments: 0,
-  },
-  open: {
-    cells: 6 * 5 - 5,
-    hundredths: (6 * 5 - 5) * 800,
-    unresolved: { pendingSessions: 4, openSessions: 0 },
-    adjustment: { who: "priya", day: 2, job: "j1", hundredths: 650 },
-  },
-} as const;
-
-// The audit rows the same run leaves, by action (core/audit.ts): one per invitation, rate,
-// repair call, decision, deactivation and demotion — and none from any other step, which is
-// what the demo test holds the database to. Nobody is reactivated, and opening or closing
-// a pay period is not an audited action (V1-D20).
-export const EXPECTED_AUDIT: Record<AuditAction, number> = {
-  "users.invite": PEOPLE.length,
-  "users.set_role": 1,
-  "users.deactivate": 1,
-  "users.reactivate": 0,
-  "pay_rates.add": EXPECTED.payRates,
-  "work_session_events.repair": 1,
-  "approvals.decide": EXPECTED.decided,
-};

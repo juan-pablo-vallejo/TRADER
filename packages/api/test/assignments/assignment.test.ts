@@ -1,22 +1,14 @@
-// TASKS S3, the weekly schedule's writers: assignment.create, update, remove and decide — an
-// admin schedules any active person of the company on any job of the company that is not
+// TASKS S3, the weekly schedule's writers: assignment.create, update and remove — an admin
+// schedules any active person of the company on any job of the company that is not
 // archived, whatever their crews; the day and the times kept as written; ids the browser's,
-// a resend `duplicate`; an overlap refused without a decision, a day that would not resolve
-// refused with its issues; a locked shift and what authorized its clock-in left alone; every
-// override write in the history; admin only, a job or a person of another company one
-// FORBIDDEN. Every call runs in a rolled-back transaction (helpers, "Rolled-back calls"). The
+// a resend `duplicate`; an overlap refused, a day that would not resolve refused with its
+// issues; a locked shift and what authorized its clock-in left alone; admin only, a job or a
+// person of another company one FORBIDDEN. Every call runs in a rolled-back transaction
+// (helpers, "Rolled-back calls"). The
 // rules themselves are eligibility.test.ts's, the reads list.test.ts's, what a shift does
 // not change about labor authority.test.ts's, and real commits against each other
 // assignment-commit.test.ts's.
-import {
-  auditLog,
-  crewMembers,
-  jobAssignments,
-  shiftOverrideHistory,
-  shiftOverrides,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { crewMembers, jobAssignments, users, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -77,7 +69,6 @@ const created = (days: { id: string; workDate: string }[]) => ({
 });
 
 const MON = "2026-11-16";
-const WHY = "Covering the afternoon";
 
 // One shift of w1 on J on Monday, and its id.
 async function shift(
@@ -85,7 +76,7 @@ async function shift(
   day: CrewDay,
   expectedStart: string,
   expectedEnd: string,
-  over: { jobId?: string; workDate?: string; decisions?: unknown[] } = {},
+  over: { jobId?: string; workDate?: string } = {},
 ) {
   const id = uuidv7();
   const answer = await plan.create({
@@ -93,46 +84,10 @@ async function shift(
     jobId: over.jobId ?? day.J,
     expectedStart,
     expectedEnd,
-    days: [
-      {
-        id,
-        workDate: over.workDate ?? MON,
-        decisions: (over.decisions ?? []) as never,
-      },
-    ],
+    days: [{ id, workDate: over.workDate ?? MON }],
   });
   return { id, answer, day: answer.result === "planned" ? answer.days[0]! : undefined };
 }
-
-const holds = (otherId: string, holder: "this" | "other", reason = WHY) => ({
-  overrideId: uuidv7(),
-  otherId,
-  holder,
-  reason,
-});
-
-const overridesOf = (tx: Tx) =>
-  tx
-    .select({
-      id: shiftOverrides.id,
-      holderId: shiftOverrides.holderId,
-      yieldingId: shiftOverrides.yieldingId,
-      reason: shiftOverrides.reason,
-    })
-    .from(shiftOverrides)
-    .orderBy(asc(shiftOverrides.id));
-
-const historyOf = (tx: Tx) =>
-  tx
-    .select({
-      overrideId: shiftOverrideHistory.overrideId,
-      action: shiftOverrideHistory.action,
-      reason: shiftOverrideHistory.reason,
-      holderShiftId: shiftOverrideHistory.holderShiftId,
-      yieldingShiftId: shiftOverrideHistory.yieldingShiftId,
-    })
-    .from(shiftOverrideHistory)
-    .orderBy(asc(shiftOverrideHistory.createdAt), asc(shiftOverrideHistory.id));
 
 // A clock-in of w1 on `job` at `at` (an instant; New York is UTC-5 that week), and the shift
 // locked by it — written as the owner, as push will under enforcement (TASKS S4).
@@ -193,7 +148,7 @@ describe("assignment.create", () => {
     });
   });
 
-  it("takes one job twice in a day, and shifts that touch, with no decision", async () => {
+  it("takes one job twice in a day, and shifts that touch", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       expect((await shift(plan, day, "07:00", "11:00")).day?.result).toBe("created");
@@ -202,7 +157,7 @@ describe("assignment.create", () => {
       expect(
         (await shift(plan, day, "16:00", "18:00", { jobId: day.K })).day?.result,
       ).toBe("created");
-      expect(await overridesOf(tx)).toEqual([]);
+      expect(await plansOf(tx, day.companyId)).toHaveLength(3);
     });
   });
 
@@ -257,120 +212,35 @@ describe("assignment.create", () => {
     });
   });
 
-  it("refuses an overlap without a decision, and takes it with one", async () => {
+  it("refuses an overlap, naming both shifts and the shared time, and writes nothing", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       const morning = await shift(plan, day, "07:00", "15:30");
-      const undecided = await shift(plan, day, "12:00", "17:00", { jobId: day.K });
-      expect(undecided.day).toEqual({
-        id: undecided.id,
-        workDate: MON,
-        result: "rejected",
-        code: "schedule",
-        issues: [
-          {
-            code: "missing_decision",
-            shiftIds: [morning.id, undecided.id],
-            start: "12:00",
-            end: "15:30",
-          },
-        ],
-      });
-      expect(await plansOf(tx, day.companyId)).toHaveLength(1);
-
-      const decision = holds(morning.id, "other");
-      const decided = await shift(plan, day, "12:00", "17:00", {
-        jobId: day.K,
-        decisions: [decision],
-      });
-      expect(decided.day?.result).toBe("created");
-      expect(await overridesOf(tx)).toEqual([
-        {
-          id: decision.overrideId,
-          holderId: morning.id,
-          yieldingId: decided.id,
-          reason: WHY,
-        },
-      ]);
-      expect(await historyOf(tx)).toEqual([
-        {
-          overrideId: decision.overrideId,
-          action: "created",
-          reason: WHY,
-          holderShiftId: morning.id,
-          yieldingShiftId: decided.id,
-        },
-      ]);
-    });
-  });
-
-  it("refuses a decision that leaves a shift no time, names a stranger, or is not needed", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, other, plan } = await office(tx);
-      const whole = await shift(plan, day, "07:00", "15:30");
-      // Inside the other and yielding to it: no minute would be its own.
-      const inside = await shift(plan, day, "09:00", "11:00", {
-        decisions: [holds(whole.id, "other")],
-      });
-      expect(inside.day).toMatchObject({
-        code: "schedule",
-        issues: [{ code: "no_eligible_time", shiftId: inside.id }],
-      });
-      // A shift of another person, of another company, and one that does not exist.
-      const theirs = await shift(plan, day, "07:00", "15:30", { workDate: "2026-11-17" });
-      await tx.execute(sql`reset role`);
-      const [foreign] = await tx
-        .insert(jobAssignments)
-        .values({
-          companyId: other.companyId,
-          userId: other.w1,
-          jobId: other.J,
+      // Another jobsite, the same jobsite, and a shift inside the first: one person is on one
+      // job at a time.
+      for (const [start, end, jobId, shared] of [
+        ["12:00", "17:00", day.K, ["12:00", "15:30"]],
+        ["12:00", "17:00", day.J, ["12:00", "15:30"]],
+        ["09:00", "11:00", day.K, ["09:00", "11:00"]],
+        ["06:00", "07:01", day.K, ["07:00", "07:01"]],
+      ] as const) {
+        const late = await shift(plan, day, start, end, { jobId });
+        expect(late.day).toEqual({
+          id: late.id,
           workDate: MON,
-          ...HOURS,
-        })
-        .returning({ id: jobAssignments.id });
-      await becomeApp(tx);
-      for (const stranger of [theirs.id, foreign!.id, uuidv7()]) {
-        const answer = await shift(plan, day, "12:00", "17:00", {
-          decisions: [holds(whole.id, "other"), holds(stranger, "this")],
-        });
-        expect(answer.day).toMatchObject({
+          result: "rejected",
           code: "schedule",
-          issues: [{ code: "override_unknown_shift" }],
+          issues: [
+            {
+              code: "overlap",
+              shiftIds: [morning.id, late.id].sort(),
+              start: shared[0],
+              end: shared[1],
+            },
+          ],
         });
       }
-      // A decision about two shifts that do not overlap.
-      const apart = await shift(plan, day, "16:00", "18:00", {
-        decisions: [holds(whole.id, "this")],
-      });
-      expect(apart.day).toMatchObject({
-        code: "schedule",
-        issues: [{ code: "override_not_overlapping" }],
-      });
-      await tx.execute(sql`select set_config('app.company_id', ${day.companyId}, true)`);
-      expect(await plansOf(tx, day.companyId)).toHaveLength(2);
-      expect(await overridesOf(tx)).toEqual([]);
-      expect(await historyOf(tx)).toEqual([]);
-    });
-  });
-
-  it("refuses a circle of three decisions", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const a = await shift(plan, day, "07:00", "12:00");
-      const b = await shift(plan, day, "09:00", "14:00", {
-        decisions: [holds(a.id, "other")],
-      });
-      expect(b.day?.result).toBe("created");
-      // a holds over b; c would yield to b and hold over a.
-      const c = await shift(plan, day, "10:00", "16:00", {
-        decisions: [holds(b.id, "other"), holds(a.id, "this")],
-      });
-      expect(c.day).toMatchObject({
-        code: "schedule",
-        issues: [{ code: "circular_precedence", start: "10:00", end: "12:00" }],
-      });
-      expect(await plansOf(tx, day.companyId)).toHaveLength(2);
+      expect((await plansOf(tx, day.companyId)).map((r) => r.id)).toEqual([morning.id]);
     });
   });
 
@@ -427,7 +297,6 @@ describe("assignment.create", () => {
         ),
       );
       const id = uuidv7();
-      const decided = (d: object) => [{ id: uuidv7(), workDate: MON, decisions: [d] }];
       for (const bad of [
         { ...good, expectedStart: "15:30", expectedEnd: "07:00" },
         { ...good, expectedStart: "07:00", expectedEnd: "07:00" },
@@ -453,19 +322,6 @@ describe("assignment.create", () => {
         { ...good, days: on("0000-12-27") },
         { ...good, days: on("1999-12-31") },
         { ...good, days: on("2100-01-01") },
-        // A decision with no reason, a blank one, and two about one shift.
-        { ...good, days: decided({ ...holds(id, "this"), reason: "" }) },
-        { ...good, days: decided({ ...holds(id, "this"), reason: "   " }) },
-        {
-          ...good,
-          days: [
-            {
-              id: uuidv7(),
-              workDate: MON,
-              decisions: [holds(id, "this"), holds(id, "other")],
-            },
-          ],
-        },
       ]) {
         expect([bad, await outcome(plan.create(bad as never))]).toEqual([
           bad,
@@ -503,7 +359,7 @@ describe("assignment.update", () => {
     });
   });
 
-  it("refuses a change into the same shift, an undecided overlap, or no time of its own", async () => {
+  it("refuses a change into the same shift or into an overlap, on its own day or the day it moves to", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       const monday = await shift(plan, day, "07:00", "15:30");
@@ -515,92 +371,63 @@ describe("assignment.update", () => {
       expect(
         await plan.update({ assignmentId: tuesday.id, workDate: MON, ...HOURS }),
       ).toMatchObject({ code: "schedule", issues: [{ code: "duplicate_shift" }] });
-      const into = { assignmentId: late.id, workDate: MON, expectedStart: "09:00" };
-      expect(await plan.update({ ...into, expectedEnd: "18:00" })).toMatchObject({
-        code: "schedule",
-        issues: [{ code: "missing_decision", start: "09:00", end: "15:30" }],
-      });
-      expect(
-        await plan.update({
-          ...into,
-          expectedEnd: "11:00",
-          decisions: [holds(monday.id, "other")],
-        }),
-      ).toMatchObject({
-        code: "schedule",
-        issues: [{ code: "no_eligible_time", shiftId: late.id }],
-      });
-      // Each refusal left the transaction usable and every row as it was.
-      expect(await plansOf(tx, day.companyId)).toEqual(before);
-      expect(await historyOf(tx)).toEqual([]);
-    });
-  });
-
-  it("keeps a decision while the overlap lasts, changes it when told, and drops it with the overlap", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const morning = await shift(plan, day, "07:00", "15:30");
-      const made = holds(morning.id, "other");
-      const late = await shift(plan, day, "12:00", "17:00", {
-        jobId: day.K,
-        decisions: [made],
-      });
-      const at = (expectedStart: string, expectedEnd: string) => ({
-        assignmentId: late.id,
-        workDate: MON,
-        expectedStart,
-        expectedEnd,
-      });
-      // Still overlapping: the decision stands and nothing new is asked.
-      expect(await plan.update(at("13:00", "17:00"))).toEqual({ result: "updated" });
-      expect(await overridesOf(tx)).toHaveLength(1);
-      // The other way round, with its reason.
-      expect(
-        await plan.update({
-          ...at("13:00", "17:00"),
-          decisions: [
-            { ...holds(morning.id, "this", "Client asked"), overrideId: uuidv7() },
-          ],
-        }),
-      ).toEqual({ result: "updated" });
-      expect(await overridesOf(tx)).toEqual([
-        {
-          id: made.overrideId,
-          holderId: late.id,
-          yieldingId: morning.id,
-          reason: "Client asked",
-        },
-      ]);
-      // No longer overlapping: nothing is left to decide.
-      expect(await plan.update(at("15:30", "17:00"))).toEqual({ result: "updated" });
-      expect(await overridesOf(tx)).toEqual([]);
-      expect(
-        (await historyOf(tx)).map((h) => [h.action, h.reason, h.holderShiftId]),
-      ).toEqual([
-        ["created", WHY, morning.id],
-        ["changed", "Client asked", late.id],
-        ["removed", "Client asked", late.id],
-      ]);
-    });
-  });
-
-  it("leaves a shift's decisions behind when it moves to another day", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const morning = await shift(plan, day, "07:00", "15:30");
-      const late = await shift(plan, day, "12:00", "17:00", {
-        decisions: [holds(morning.id, "other")],
-      });
+      // Its own day: Monday's late shift pulled back over Monday's morning.
       expect(
         await plan.update({
           assignmentId: late.id,
-          workDate: "2026-11-18",
-          expectedStart: "12:00",
+          workDate: MON,
+          expectedStart: "09:00",
+          expectedEnd: "18:00",
+        }),
+      ).toEqual({
+        result: "rejected",
+        code: "schedule",
+        issues: [
+          {
+            code: "overlap",
+            shiftIds: [monday.id, late.id].sort(),
+            start: "09:00",
+            end: "15:30",
+          },
+        ],
+      });
+      // Another day: Tuesday's shift moved to Monday is judged among Monday's shifts.
+      expect(
+        await plan.update({
+          assignmentId: tuesday.id,
+          workDate: MON,
+          expectedStart: "15:00",
           expectedEnd: "17:00",
         }),
+      ).toEqual({
+        result: "rejected",
+        code: "schedule",
+        issues: [
+          {
+            code: "overlap",
+            shiftIds: [monday.id, tuesday.id].sort(),
+            start: "15:00",
+            end: "15:30",
+          },
+          {
+            code: "overlap",
+            shiftIds: [late.id, tuesday.id].sort(),
+            start: "16:00",
+            end: "17:00",
+          },
+        ],
+      });
+      // Each refusal left the transaction usable and every row as it was.
+      expect(await plansOf(tx, day.companyId)).toEqual(before);
+      // Touching both is no overlap, and the day it left no longer holds it.
+      expect(
+        await plan.update({
+          assignmentId: tuesday.id,
+          workDate: MON,
+          expectedStart: "15:30",
+          expectedEnd: "16:00",
+        }),
       ).toEqual({ result: "updated" });
-      expect(await overridesOf(tx)).toEqual([]);
-      expect((await historyOf(tx)).map((h) => h.action)).toEqual(["created", "removed"]);
     });
   });
 
@@ -645,104 +472,6 @@ describe("assignment.remove", () => {
       );
     });
   });
-
-  it("takes the shift's decisions with it, each into the history", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const morning = await shift(plan, day, "07:00", "15:30");
-      const made = holds(morning.id, "this");
-      const late = await shift(plan, day, "12:00", "17:00", { decisions: [made] });
-      expect(await plan.remove({ assignmentId: morning.id })).toEqual({
-        result: "removed",
-      });
-      expect(await overridesOf(tx)).toEqual([]);
-      expect(await historyOf(tx)).toEqual([
-        {
-          overrideId: made.overrideId,
-          action: "created",
-          reason: WHY,
-          holderShiftId: late.id,
-          yieldingShiftId: morning.id,
-        },
-        {
-          overrideId: made.overrideId,
-          action: "removed",
-          reason: WHY,
-          holderShiftId: late.id,
-          yieldingShiftId: morning.id,
-        },
-      ]);
-    });
-  });
-});
-
-describe("assignment.decide", () => {
-  it("turns a decision round or restates its reason; the same again is `unchanged`", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const morning = await shift(plan, day, "07:00", "15:30");
-      const made = holds(morning.id, "other");
-      const late = await shift(plan, day, "12:00", "17:00", { decisions: [made] });
-      const turned = { overrideId: made.overrideId, holderId: late.id, reason: "Swap" };
-      expect(await plan.decide(turned)).toEqual({ result: "updated" });
-      expect(await plan.decide(turned)).toEqual({ result: "unchanged" });
-      expect(await plan.decide({ ...turned, reason: "Swap, confirmed" })).toEqual({
-        result: "updated",
-      });
-      expect(await overridesOf(tx)).toEqual([
-        {
-          id: made.overrideId,
-          holderId: late.id,
-          yieldingId: morning.id,
-          reason: "Swap, confirmed",
-        },
-      ]);
-      expect((await historyOf(tx)).map((h) => [h.action, h.reason])).toEqual([
-        ["created", WHY],
-        ["changed", "Swap"],
-        ["changed", "Swap, confirmed"],
-      ]);
-    });
-  });
-
-  it("refuses a turn that leaves a shift no time, and a holder outside the pair", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const whole = await shift(plan, day, "07:00", "15:30");
-      const made = holds(whole.id, "this");
-      const inside = await shift(plan, day, "09:00", "11:00", { decisions: [made] });
-      expect(inside.day?.result).toBe("created");
-      expect(
-        await plan.decide({
-          overrideId: made.overrideId,
-          holderId: whole.id,
-          reason: WHY,
-        }),
-      ).toMatchObject({
-        code: "schedule",
-        issues: [{ code: "no_eligible_time", shiftId: inside.id }],
-      });
-      const elsewhere = await shift(plan, day, "16:00", "18:00");
-      // One at a time: the calls share this transaction's one connection.
-      for (const call of [
-        () =>
-          plan.decide({
-            overrideId: made.overrideId,
-            holderId: elsewhere.id,
-            reason: WHY,
-          }),
-        () => plan.decide({ overrideId: uuidv7(), holderId: whole.id, reason: WHY }),
-      ]) {
-        expect(await outcome(call())).toBe("FORBIDDEN");
-      }
-      expect(
-        await outcome(
-          plan.decide({ overrideId: made.overrideId, holderId: whole.id, reason: " " }),
-        ),
-      ).toBe("BAD_REQUEST");
-      expect((await historyOf(tx)).map((h) => h.action)).toEqual(["created"]);
-    });
-  });
 });
 
 describe("a shift locked by a clock-in", () => {
@@ -773,59 +502,6 @@ describe("a shift locked by a clock-in", () => {
     });
   });
 
-  it("keeps what admitted its clock-in: no shift, decision or removal may take that minute", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, plan } = await office(tx);
-      const morning = await shift(plan, day, "07:00", "15:30");
-      const made = holds(morning.id, "other");
-      const late = await shift(plan, day, "12:00", "17:00", {
-        jobId: day.K,
-        decisions: [made],
-      });
-      // 13:00 in New York: the shared time, which the morning shift holds.
-      await punched(tx, day, morning.id, "2026-11-16T18:00:00Z");
-      const refusal = { result: "rejected", code: "authorization", shiftId: morning.id };
-
-      // A new shift that would hold 13:00 against it.
-      const over = await shift(plan, day, "12:30", "13:30", {
-        jobId: day.K,
-        decisions: [holds(morning.id, "this"), holds(late.id, "this")],
-      });
-      expect(over.day).toEqual({ id: over.id, workDate: MON, ...refusal });
-      // The decision turned round, by `decide` and through a change of the other shift.
-      expect(
-        await plan.decide({
-          overrideId: made.overrideId,
-          holderId: late.id,
-          reason: WHY,
-        }),
-      ).toEqual(refusal);
-      expect(
-        await plan.update({
-          assignmentId: late.id,
-          workDate: MON,
-          expectedStart: "12:00",
-          expectedEnd: "17:00",
-          decisions: [holds(morning.id, "this")],
-        }),
-      ).toEqual(refusal);
-      // What leaves that minute alone is still allowed: a shift after both, and the other
-      // shift's own end.
-      expect((await shift(plan, day, "18:00", "20:00")).day?.result).toBe("created");
-      expect(
-        await plan.update({
-          assignmentId: late.id,
-          workDate: MON,
-          expectedStart: "12:00",
-          expectedEnd: "17:30",
-        }),
-      ).toEqual({ result: "updated" });
-      expect(await overridesOf(tx)).toEqual([
-        { id: made.overrideId, holderId: morning.id, yieldingId: late.id, reason: WHY },
-      ]);
-    });
-  });
-
   it("keeps an early clock-in's leave: nothing may become eligible before its shift", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
@@ -841,9 +517,20 @@ describe("a shift locked by a clock-in", () => {
         shiftId: id,
       });
       // Ending before that minute changes nothing about it.
+      const earlier = await shift(plan, day, "05:00", "06:45", { jobId: day.K });
+      expect(earlier.day?.result).toBe("created");
+      // Stretched over that minute, the clock-in would have been on this shift instead.
       expect(
-        (await shift(plan, day, "05:00", "06:45", { jobId: day.K })).day?.result,
-      ).toBe("created");
+        await plan.update({
+          assignmentId: earlier.id,
+          workDate: MON,
+          expectedStart: "05:00",
+          expectedEnd: "07:00",
+        }),
+      ).toEqual({ result: "rejected", code: "authorization", shiftId: id });
+      expect(await plan.remove({ assignmentId: earlier.id })).toEqual({
+        result: "removed",
+      });
     });
   });
 });
@@ -853,8 +540,6 @@ describe("gates and targets", () => {
     await rolledBack(owner, async (tx) => {
       const { day, worker, as, plan } = await office(tx);
       const morning = await shift(plan, day, "07:00", "15:30");
-      const made = holds(morning.id, "other");
-      await shift(plan, day, "12:00", "17:00", { decisions: [made] });
       const before = await plansOf(tx, day.companyId);
       // day.who is the foreman of J's crew.
       for (const [who, self] of [
@@ -876,12 +561,6 @@ describe("gates and targets", () => {
               ...HOURS,
             }),
           () => as(who).remove({ assignmentId: morning.id }),
-          () =>
-            as(who).decide({
-              overrideId: made.overrideId,
-              holderId: morning.id,
-              reason: WHY,
-            }),
           () => as(who).week({ weekStart: MON }),
         ]) {
           expect(await outcome(call())).toBe("FORBIDDEN");
@@ -892,7 +571,6 @@ describe("gates and targets", () => {
       );
       await tx.execute(sql`select set_config('app.company_id', ${day.companyId}, true)`);
       expect(await plansOf(tx, day.companyId)).toEqual(before);
-      expect((await historyOf(tx)).map((h) => h.action)).toEqual(["created"]);
     });
   });
 
@@ -920,7 +598,7 @@ describe("gates and targets", () => {
     });
   });
 
-  it("neither edits nor removes another company's shift, nor takes its id or its decision", async () => {
+  it("neither edits nor removes another company's shift, nor takes its id", async () => {
     await rolledBack(owner, async (tx) => {
       const day = await crewDayIn(tx);
       const other = await crewDayIn(tx);
@@ -937,16 +615,6 @@ describe("gates and targets", () => {
         .insert(jobAssignments)
         .values([theirs("07:00", "15:30"), theirs("12:00", "17:00")])
         .returning({ id: jobAssignments.id });
-      const [decided] = await tx
-        .insert(shiftOverrides)
-        .values({
-          companyId: other.companyId,
-          holderId: foreign!.id,
-          yieldingId: second!.id,
-          reason: WHY,
-          createdBy: other.w1,
-        })
-        .returning({ id: shiftOverrides.id });
       await becomeApp(tx);
       const plan = appCallerIn(tx, admin.who).assignment;
       for (const assignmentId of [foreign!.id, crypto.randomUUID()]) {
@@ -957,11 +625,6 @@ describe("gates and targets", () => {
       expect(await plan.remove({ assignmentId: foreign!.id })).toEqual({
         result: "unchanged",
       });
-      expect(
-        await outcome(
-          plan.decide({ overrideId: decided!.id, holderId: second!.id, reason: WHY }),
-        ),
-      ).toBe("FORBIDDEN");
       // Its id for a shift of ours: taken, though this tenant cannot see by what.
       expect(
         await plan.create({
@@ -976,16 +639,12 @@ describe("gates and targets", () => {
         [foreign!.id, second!.id].sort(),
       );
       expect(await plansOf(tx, day.companyId)).toEqual([]);
-      const { rows } = await tx.execute<{ holder_id: string }>(
-        sql`select holder_id from shift_overrides where id = ${decided!.id}`,
-      );
-      expect(rows).toEqual([{ holder_id: foreign!.id }]);
     });
   });
 });
 
 describe("what a shift leaves alone", () => {
-  it("writes no membership, no labor event and no audit row", async () => {
+  it("writes no membership and no labor event", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       const counts = async () => ({
@@ -994,7 +653,6 @@ describe("what a shift leaves alone", () => {
           workSessionEvents,
           eq(workSessionEvents.companyId, day.companyId),
         ),
-        audit: await tx.$count(auditLog, eq(auditLog.companyId, day.companyId)),
       });
       // A first call, so the tenant is set for the counts that follow.
       await plan.remove({ assignmentId: crypto.randomUUID() });
@@ -1005,7 +663,7 @@ describe("what a shift leaves alone", () => {
       await plan.update({ assignmentId: row!.id, workDate: "2026-11-23", ...HOURS });
       await plan.remove({ assignmentId: row!.id });
       expect(await counts()).toEqual(before);
-      expect(before).toEqual({ members: 3, events: 0, audit: 0 });
+      expect(before).toEqual({ members: 3, events: 0 });
     });
   });
 });

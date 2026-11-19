@@ -1,13 +1,11 @@
 // Stage 3 line 7: sync.pull (sync/pull.ts) through the application's router, against Postgres,
 // in rolled-back owner transactions as trader_app under the tenant. What it must never hold:
-// another worker's labor or receipts, costs, coordinates, contact details or rates.
+// another worker's labor, coordinates or contact details.
 import {
   approvals,
   crewMembers,
   crews,
   jobs,
-  materialCorrections,
-  materials,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -96,33 +94,6 @@ async function session(
     by,
   });
   return [s, e];
-}
-
-async function receipt(
-  tx: Tx,
-  d: { companyId: string },
-  by: string,
-  job: string,
-  at: Date,
-) {
-  const id = uuidv7(at.getTime());
-  await tx.insert(materials).values({
-    id,
-    companyId: d.companyId,
-    jobId: job,
-    loggedByUserId: by,
-    description: "Primer",
-    quantity: "1.000",
-    unit: "gal",
-    costCents: 4599,
-    currency: "USD",
-    loggedAt: at,
-    capturedOffline: false,
-    clockSkewed: false,
-    clockSkewMs: 0,
-    enteredByOffice: false,
-  });
-  return id;
 }
 
 const pull = (tx: Tx, who: unknown) =>
@@ -244,102 +215,6 @@ describe("sync.pull — own labor only", () => {
         "approved",
         "rejected",
       ]);
-    });
-  });
-});
-
-describe("sync.pull — own receipts", () => {
-  it("gives each receipt as logged and as in effect, never its cost", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await world(tx);
-      const admin = await boundIn(tx, d.companyId, "admin");
-      const at = noonDaysAgo(1);
-      const amended = await receipt(tx, d, d.w.id, d.J, at);
-      const voided = await receipt(tx, d, d.w.id, d.J, at);
-      const pending = await receipt(tx, d, d.w.id, d.J, at);
-      const refused = await receipt(tx, d, d.w.id, d.J, at);
-      await receipt(tx, d, d.w1, d.J, at);
-      await receipt(tx, d, d.w.id, d.J, noonDaysAgo(20));
-      // Late receipts, so each is correctable (0024); their own approvals stay pending.
-      for (const id of [amended, voided, pending, refused]) {
-        await tx.insert(approvals).values({
-          companyId: d.companyId,
-          materialId: id,
-          reasons: ["after_closeout"],
-        });
-      }
-      const correct = async (
-        materialId: string,
-        kind: "amend" | "void",
-        decision: "approved" | "rejected" | null,
-      ) => {
-        const id = uuidv7();
-        await tx.insert(materialCorrections).values({
-          id,
-          companyId: d.companyId,
-          materialId,
-          kind,
-          description: kind === "amend" ? "Primer, grey" : null,
-          quantity: kind === "amend" ? "2.000" : null,
-          unit: kind === "amend" ? "gal" : null,
-          submittedByUserId: d.foremanId,
-          clientTimestamp: new Date(),
-          serverTimestamp: new Date(),
-        });
-        await tx.insert(approvals).values({
-          companyId: d.companyId,
-          materialCorrectionId: id,
-          reasons: ["corrected"],
-        });
-        if (decision !== null) {
-          await tx
-            .update(approvals)
-            .set({ decision, decidedAt: new Date(), decidedByUserId: admin.id })
-            .where(eq(approvals.materialCorrectionId, id));
-        }
-      };
-      await correct(amended, "amend", "approved");
-      await correct(voided, "void", "approved");
-      await correct(pending, "amend", null);
-      await correct(refused, "amend", "rejected");
-      await asTenant(tx, d.companyId);
-      const snap = await pull(tx, d.w.who);
-      const byId = new Map(snap.materials.map((m) => [m.id, m]));
-      expect([...byId.keys()].sort()).toEqual([amended, voided, pending, refused].sort());
-      const original = { description: "Primer", quantity: "1.000", unit: "gal" };
-      expect(byId.get(amended)).toMatchObject({
-        original,
-        effective: {
-          description: "Primer, grey",
-          quantity: "2.000",
-          unit: "gal",
-          voided: false,
-        },
-        correctionPending: false,
-        approval: "pending",
-      });
-      expect(byId.get(voided)).toMatchObject({
-        effective: { ...original, voided: true },
-      });
-      expect(byId.get(pending)).toMatchObject({
-        effective: { ...original, voided: false },
-        correctionPending: true,
-      });
-      expect(byId.get(refused)).toMatchObject({
-        effective: { ...original, voided: false },
-        correctionPending: false,
-      });
-      expect(Object.keys(byId.get(amended)!).sort()).toEqual(
-        [
-          "approval",
-          "correctionPending",
-          "effective",
-          "id",
-          "jobId",
-          "loggedAt",
-          "original",
-        ].sort(),
-      );
     });
   });
 });

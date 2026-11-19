@@ -12,7 +12,6 @@ import {
   saveInvoice,
   saveOutput,
 } from "../invoices/draft";
-import { exportInvoices, exportOutput } from "../invoices/export";
 import { invoicePdf, pdfInput, pdfOutput } from "../invoices/pdf";
 import {
   issueInput,
@@ -90,7 +89,4 @@ export const invoiceRouter = router({
     .input(sendInput)
     .output(sendOutput)
     .mutation(({ ctx, input }) => sendInvoice(ctx.tx, ctx.user, input, ctx.mailer)),
-  exportCsv: admin
-    .output(exportOutput)
-    .query(({ ctx }) => exportInvoices(ctx.tx, ctx.user)),
 });

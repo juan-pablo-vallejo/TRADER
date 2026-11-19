@@ -3,7 +3,7 @@
 // connections must see the same rows, and the lock-wait probe reads every backend of its
 // database. Each test holds a row from the owner's transaction, lets the calls queue on it,
 // and releases them by committing.
-import { jobAssignments, shiftOverrideHistory } from "@trader/db/schema";
+import { jobAssignments } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -108,7 +108,7 @@ describe("two admins at once", () => {
     expect(await plansOf(d.companyId)).toHaveLength(1);
   });
 
-  it("scheduling overlapping shifts on one person's day leaves one, the other undecided", async () => {
+  it("scheduling overlapping shifts on one person's day leaves one, the other refused", async () => {
     const d = await world();
     const at = (jobId: string, expectedStart: string, expectedEnd: string) => ({
       userId: d.w1,
@@ -130,52 +130,9 @@ describe("two admins at once", () => {
     expect(answers.map((a) => a.result).sort()).toEqual(["created", "rejected"]);
     expect(answers.find((a) => a.result === "rejected")).toMatchObject({
       code: "schedule",
-      issues: [{ code: "missing_decision", start: "12:00", end: "15:30" }],
+      issues: [{ code: "overlap", start: "12:00", end: "15:30" }],
     });
     expect(await plansOf(d.companyId)).toHaveLength(1);
-  });
-
-  it("a call that fails after its writes leaves no shift and no history", async () => {
-    const d = await world();
-    const first = { id: uuidv7(), workDate: DAY };
-    await plan(d.admin.who).create({ userId: d.w1, jobId: d.J, days: [first], ...HOURS });
-    const overrideId = uuidv7();
-    const late = (workDate: string) => ({
-      id: uuidv7(),
-      workDate,
-      decisions: [
-        { overrideId, otherId: first.id, holder: "other" as const, reason: "Covering" },
-      ],
-    });
-    const call = (days: ReturnType<typeof late>[]) =>
-      plan(d.admin.who).create({
-        userId: d.w1,
-        jobId: d.K,
-        expectedStart: "12:00",
-        expectedEnd: "17:00",
-        days,
-      });
-    await call([late(DAY)]);
-    const history = () =>
-      D.owner
-        .select({ action: shiftOverrideHistory.action })
-        .from(shiftOverrideHistory)
-        .where(eq(shiftOverrideHistory.companyId, d.companyId));
-    expect(await history()).toEqual([{ action: "created" }]);
-    // The override id taken: the second day's shift is written, then its override is refused,
-    // and the whole call is undone — the first day of it included.
-    const other = { id: uuidv7(), workDate: "2026-11-17" };
-    await plan(d.admin.who).create({ userId: d.w1, jobId: d.J, days: [other], ...HOURS });
-    const before = await plansOf(d.companyId);
-    const failing = late("2026-11-17");
-    failing.decisions[0]!.otherId = other.id;
-    expect(
-      await outcome(
-        call([{ id: uuidv7(), workDate: "2026-11-23", decisions: [] } as never, failing]),
-      ),
-    ).toBe("FORBIDDEN");
-    expect(await plansOf(d.companyId)).toEqual(before);
-    expect(await history()).toEqual([{ action: "created" }]);
   });
 
   it("editing one plan is serialized by its row, and the later edit stands", async () => {

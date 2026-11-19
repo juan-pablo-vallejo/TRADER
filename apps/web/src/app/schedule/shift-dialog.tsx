@@ -1,12 +1,10 @@
 "use client";
 
-// The shift drawer of the Weekly Schedule (DESIGN, Shift card, Overlap override): one shift
-// opened to change its day and hours or remove it, or a new shift for one employee at one
-// jobsite on several days of the week. A shift that would overlap another of that person's
-// day is blocked with the hours both cover until an admin overrides it — which shift holds
-// the shared time, and why — and the day is shown as it would stand before anything is
-// saved. What cannot stand cannot be saved from here; the server judges every save again
-// (api assignments/write.ts). A locked shift opens read-only.
+// The shift drawer of the Weekly Schedule: one shift opened to change its day and hours or
+// remove it, or a new shift for one employee at one jobsite on several days of the week. A
+// shift that would overlap another of that person's day cannot be saved: the hours both
+// cover are shown, and the server refuses it again (api assignments/write.ts). A locked
+// shift opens read-only.
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useId, useState, type FormEvent } from "react";
@@ -14,7 +12,7 @@ import { useId, useState, type FormEvent } from "react";
 import { uuidv7 } from "../uuidv7";
 import controls from "../controls.module.css";
 import { Field } from "../field";
-import { stamp, weekDay } from "../format";
+import { weekDay } from "../format";
 import { Note } from "../note";
 import { DestructiveAction } from "../row-editor";
 import { strings } from "../strings";
@@ -22,15 +20,11 @@ import { useTRPC } from "../trpc";
 import { Drawer } from "./drawer";
 import styles from "./schedule.module.css";
 import {
-  type Decision,
   hoursOf,
-  issueText,
   overlapsWith,
-  previewDay,
   refusalText,
   type Refusal,
   type Week,
-  type WeekOverride,
   type WeekShift,
 } from "./schedule-view";
 
@@ -42,212 +36,27 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.assignment.pathFilter());
 }
 
-// What the admin has said about one overlap so far.
-type Choice = { holder: "this" | "other" | null; reason: string };
-type Choices = Record<string, Choice>;
-
-type Overlap = {
-  other: WeekShift;
-  start: string;
-  end: string;
-  // The decision already saved between the two, when there is one.
-  existing: WeekOverride | undefined;
-};
-
-const overrideBetween = (overrides: WeekOverride[], a: string, b: string) =>
-  overrides.find(
-    (o) =>
-      (o.holderId === a && o.yieldingId === b) ||
-      (o.holderId === b && o.yieldingId === a),
-  );
-
 const labelOf = (shift: WeekShift) => `${shift.job.name} ${hoursOf(shift)}`;
 
-// For one shift at given hours on one day: its overlaps, what must still be decided, the
-// decisions to send, and the day as it would stand.
-function judge(
-  shift: { id: string; jobId: string; start: string; end: string },
-  dayShifts: WeekShift[],
-  overrides: WeekOverride[],
-  choices: Choices,
-  // Whether the saved decisions of this shift still apply: not when it moves to another day.
-  keepSaved: boolean,
-) {
-  const overlaps: Overlap[] = overlapsWith(shift, dayShifts).map((o) => ({
-    ...o,
-    existing: keepSaved ? overrideBetween(overrides, shift.id, o.other.id) : undefined,
-  }));
-  const decisions: Decision[] = [];
-  const standing: { holderId: string; yieldingId: string }[] = overrides
-    .filter((o) => o.holderId !== shift.id && o.yieldingId !== shift.id)
-    .filter(
-      (o) =>
-        dayShifts.some((d) => d.id === o.holderId) &&
-        dayShifts.some((d) => d.id === o.yieldingId),
-    );
-  let undecided = false;
-  let unexplained = false;
-  for (const { other, existing } of overlaps) {
-    const choice = choices[other.id];
-    if (choice?.holder != null) {
-      const holderId = choice.holder === "this" ? shift.id : other.id;
-      standing.push({
-        holderId,
-        yieldingId: holderId === shift.id ? other.id : shift.id,
-      });
-      if (choice.reason.trim() === "") unexplained = true;
-      decisions.push({
-        overrideId: existing?.id ?? uuidv7(),
-        otherId: other.id,
-        holder: choice.holder,
-        reason: choice.reason.trim(),
-      });
-    } else if (existing !== undefined) {
-      standing.push(existing);
-    } else {
-      undecided = true;
-    }
-  }
-  const preview = previewDay(shift, dayShifts, standing);
-  return { overlaps, decisions, preview, undecided, unexplained };
-}
+type Overlap = ReturnType<typeof overlapsWith>[number];
 
-function Overlaps({
-  idPrefix,
-  shiftId,
-  selfName,
-  judged,
-  dayShifts,
-  choices,
-  onChoose,
-  timeZone,
-}: {
-  idPrefix: string;
-  shiftId: string;
-  // The jobsite of the shift being written, as the day's preview names it.
-  selfName: string;
-  judged: ReturnType<typeof judge>;
-  dayShifts: WeekShift[];
-  choices: Choices;
-  onChoose: (otherId: string, choice: Choice | null) => void;
-  timeZone: string;
-}) {
-  const { overlaps, preview, undecided, unexplained } = judged;
+// The shifts this one would overlap, and why it cannot be saved while it does.
+function Overlaps({ overlaps }: { overlaps: Overlap[] }) {
   if (overlaps.length === 0) return null;
-  const nameOf = (id: string) => {
-    if (id === shiftId) return s.thisShift;
-    const other = dayShifts.find((d) => d.id === id);
-    return other === undefined ? s.thisShift : labelOf(other);
-  };
-  const jobOf = new Map(dayShifts.map((d) => [d.id, d.job.name]));
   return (
     <section className={styles.overlaps} aria-label={s.overlapsHeading}>
-      {overlaps.map(({ other, start, end, existing }) => {
-        const choice = choices[other.id];
-        const hours = `${start}–${end}`;
-        const name = `${idPrefix}-holder-${other.id}`;
-        return (
-          <div key={other.id} className={styles.overlap}>
-            <p className="body">{s.overlap(labelOf(other), hours)}</p>
-            {existing !== undefined && choice === undefined && (
-              <>
-                <p className="secondary">
-                  {s.holds(nameOf(existing.holderId), hours)} {existing.reason}
-                </p>
-                <p className={`secondary ${styles.meta}`}>
-                  {s.decidedBy(existing.by, stamp(existing.at, timeZone))}
-                </p>
-                <button
-                  type="button"
-                  className={controls.secondary}
-                  onClick={() =>
-                    onChoose(other.id, {
-                      holder: existing.holderId === shiftId ? "this" : "other",
-                      reason: existing.reason,
-                    })
-                  }
-                >
-                  {s.changeDecision}
-                </button>
-              </>
-            )}
-            {existing === undefined && choice === undefined && (
-              <button
-                type="button"
-                className={controls.secondary}
-                onClick={() => onChoose(other.id, { holder: null, reason: "" })}
-              >
-                {s.overrideAsAdmin}
-              </button>
-            )}
-            {choice !== undefined && (
-              <>
-                <fieldset className={styles.holder}>
-                  <legend className="label">{s.whoHolds(hours)}</legend>
-                  {(["this", "other"] as const).map((holder) => (
-                    <label key={holder} className={controls.check}>
-                      <input
-                        type="radio"
-                        name={name}
-                        checked={choice.holder === holder}
-                        onChange={() => onChoose(other.id, { ...choice, holder })}
-                      />
-                      <span>
-                        {holder === "this" ? s.thisShift : s.otherShift(labelOf(other))}
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
-                <Field id={`${name}-reason`} label={s.reason}>
-                  <input
-                    id={`${name}-reason`}
-                    className={controls.input}
-                    maxLength={500}
-                    required
-                    value={choice.reason}
-                    onChange={(e) =>
-                      onChoose(other.id, { ...choice, reason: e.target.value })
-                    }
-                  />
-                </Field>
-              </>
-            )}
-          </div>
-        );
-      })}
-      {!undecided && preview.ok && (
-        <div className={styles.preview}>
-          <p className="label">{s.dayPreview}</p>
-          <ul>
-            {preview.timeline.map((segment) => (
-              <li key={`${segment.start}-${segment.shiftId}`} className="secondary">
-                {s.previewLine(
-                  `${segment.start}–${segment.end}`,
-                  segment.shiftId === shiftId
-                    ? selfName
-                    : (jobOf.get(segment.shiftId) ?? ""),
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {overlaps.map(({ other, start, end }) => (
+        <p key={other.id} className="body">
+          {s.overlap(labelOf(other), `${start}–${end}`)}
+        </p>
+      ))}
       {/* Why the save is disabled, said where a screen reader hears it change. */}
       <p className={`secondary ${controls.note} ${controls.error}`} role="status">
-        {undecided
-          ? ""
-          : !preview.ok
-            ? `${s.cannotSave} ${preview.issues.map((i) => issueText(i, nameOf)).join(" ")}`
-            : unexplained
-              ? s.reasonRequired
-              : ""}
+        {s.cannotSave} {s.overlapRefused}
       </p>
     </section>
   );
 }
-
-const blocked = (j: ReturnType<typeof judge>) =>
-  j.undecided || j.unexplained || !j.preview.ok;
 
 export function EditShift({
   shift,
@@ -264,20 +73,14 @@ export function EditShift({
   const [workDate, setWorkDate] = useState(shift.workDate);
   const [start, setStart] = useState(shift.expectedStart);
   const [end, setEnd] = useState(shift.expectedEnd);
-  const [choices, setChoices] = useState<Choices>({});
   const [note, setNote] = useState<string | null>(null);
   const [removeNote, setRemoveNote] = useState<string | null>(null);
 
   const dayShifts = week.shifts.filter(
     (other) => other.worker.id === shift.worker.id && other.workDate === workDate,
   );
-  const judged = judge(
-    { id: shift.id, jobId: shift.job.id, start, end },
-    dayShifts,
-    week.overrides,
-    choices,
-    workDate === shift.workDate,
-  );
+  const overlaps =
+    end > start ? overlapsWith({ id: shift.id, start, end }, dayShifts) : [];
   const label = (id: string) => {
     if (id === shift.id) return s.thisShift;
     const other = week.shifts.find((x) => x.id === id);
@@ -323,7 +126,6 @@ export function EditShift({
       workDate,
       expectedStart: start,
       expectedEnd: end,
-      decisions: judged.decisions,
     });
   };
   const title = s.shiftOf(shift.worker.name);
@@ -337,7 +139,7 @@ export function EditShift({
         </p>
         <p className="secondary">{s.lockedExplain}</p>
         <p className={styles.link}>
-          <Link href="/ledger">{s.correctInLabor}</Link>
+          <Link href="/hours#entries">{s.correctInLabor}</Link>
         </p>
       </Drawer>
     );
@@ -351,10 +153,7 @@ export function EditShift({
             id={`${formId}-day`}
             className={controls.select}
             value={workDate}
-            onChange={(e) => {
-              setWorkDate(e.target.value);
-              setChoices({});
-            }}
+            onChange={(e) => setWorkDate(e.target.value)}
           >
             {week.days.map((day) => (
               <option key={day} value={day}>
@@ -385,28 +184,12 @@ export function EditShift({
             />
           </Field>
         </div>
-        <Overlaps
-          idPrefix={formId}
-          shiftId={shift.id}
-          selfName={shift.job.name}
-          judged={judged}
-          dayShifts={dayShifts}
-          choices={choices}
-          onChoose={(otherId, choice) =>
-            setChoices((c) => {
-              const next = { ...c };
-              if (choice === null) delete next[otherId];
-              else next[otherId] = choice;
-              return next;
-            })
-          }
-          timeZone={week.timezone}
-        />
+        <Overlaps overlaps={overlaps} />
         <div className={controls.actions}>
           <button
             type="submit"
             className={controls.primary}
-            disabled={busy || blocked(judged)}
+            disabled={busy || overlaps.length > 0}
           >
             {s.save}
           </button>
@@ -455,8 +238,6 @@ export function AddShift({
   const [days, setDays] = useState<string[]>(first.day === undefined ? [] : [first.day]);
   const [start, setStart] = useState("07:00");
   const [end, setEnd] = useState("15:30");
-  // One set of choices per day: the same hours may overlap different shifts on each.
-  const [choices, setChoices] = useState<Record<string, Choices>>({});
   const [note, setNote] = useState<string | null>(null);
   // What was added reads as done; anything else in the note is a refusal.
   const [noteTone, setNoteTone] = useState<"saved" | "error">("error");
@@ -470,18 +251,11 @@ export function AddShift({
     const dayShifts = week.shifts.filter(
       (other) => other.worker.id === userId && other.workDate === day,
     );
-    const id = idFor(day);
     return {
       day,
-      id,
-      dayShifts,
-      judged: judge(
-        { id, jobId, start, end },
-        dayShifts,
-        week.overrides,
-        choices[day] ?? {},
-        true,
-      ),
+      id: idFor(day),
+      overlaps:
+        end > start ? overlapsWith({ id: idFor(day), start, end }, dayShifts) : [],
     };
   });
   const label = (id: string) => {
@@ -541,14 +315,10 @@ export function AddShift({
       jobId,
       expectedStart: start,
       expectedEnd: end,
-      days: perDay.map(({ day, id, judged }) => ({
-        id,
-        workDate: day,
-        decisions: judged.decisions,
-      })),
+      days: perDay.map(({ day, id }) => ({ id, workDate: day })),
     });
   };
-  const cannot = perDay.some(({ judged }) => blocked(judged));
+  const cannot = perDay.some(({ overlaps }) => overlaps.length > 0);
   return (
     <Drawer title={s.addShift} onClose={() => onClose(null)}>
       <form onSubmit={submit} className={styles.form}>
@@ -558,10 +328,7 @@ export function AddShift({
             className={controls.select}
             required
             value={userId}
-            onChange={(e) => {
-              setUserId(e.target.value);
-              setChoices({});
-            }}
+            onChange={(e) => setUserId(e.target.value)}
           >
             <option value="" />
             {people.map((p) => (
@@ -628,31 +395,14 @@ export function AddShift({
             />
           </Field>
         </div>
-        {end > start &&
-          perDay
-            .filter(({ judged }) => judged.overlaps.length > 0)
-            .map(({ day, id, dayShifts, judged }) => (
-              <div key={day}>
-                <p className="label">{weekDay(day)}</p>
-                <Overlaps
-                  idPrefix={`${formId}-${day}`}
-                  shiftId={id}
-                  selfName={jobs.find((j) => j.id === jobId)?.name ?? s.thisShift}
-                  judged={judged}
-                  dayShifts={dayShifts}
-                  choices={choices[day] ?? {}}
-                  onChoose={(otherId, choice) =>
-                    setChoices((all) => {
-                      const next = { ...(all[day] ?? {}) };
-                      if (choice === null) delete next[otherId];
-                      else next[otherId] = choice;
-                      return { ...all, [day]: next };
-                    })
-                  }
-                  timeZone={week.timezone}
-                />
-              </div>
-            ))}
+        {perDay
+          .filter(({ overlaps }) => overlaps.length > 0)
+          .map(({ day, overlaps }) => (
+            <div key={day}>
+              <p className="label">{weekDay(day)}</p>
+              <Overlaps overlaps={overlaps} />
+            </div>
+          ))}
         <div className={controls.actions}>
           <button
             type="submit"

@@ -2,31 +2,26 @@
 // transaction: the code under test opens its own. Fixtures are therefore committed by the
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
 // a work_session_event, so the deletes are always allowed. Procedures that write append-only
-// rows — labor, closeouts, and every audited write (core/audit.ts) — run through the
-// rolled-back calls further down or in a disposable database instead.
+// rows (labor) run through the rolled-back calls further down or in a disposable database
+// instead.
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
 import {
   approvals,
-  auditLog,
   companies,
   crewMembers,
   crews,
   customers,
   jobs,
-  materialCorrections,
-  materials,
-  payRates,
   jobAssignments,
-  syncDiagnostics,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
 import type { AnyRouter } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { asc, DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
+import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import superjson from "superjson";
 import { z } from "zod";
@@ -154,16 +149,14 @@ export async function world(owner: Db) {
   };
   const a = await make("a");
   const b = await make("b");
-  // In reference order, as committedCrewDay deletes: a test may have written any of these.
+  // In reference order: a test may have written any of these.
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
-    await owner.delete(syncDiagnostics).where(inArray(syncDiagnostics.companyId, ids));
     await owner.delete(jobAssignments).where(inArray(jobAssignments.companyId, ids));
     await owner.delete(crewMembers).where(inArray(crewMembers.companyId, ids));
     await owner.delete(jobs).where(inArray(jobs.companyId, ids));
     await owner.delete(crews).where(inArray(crews.companyId, ids));
     await owner.delete(customers).where(inArray(customers.companyId, ids));
-    await owner.delete(payRates).where(inArray(payRates.companyId, ids));
     await owner.delete(users).where(inArray(users.companyId, ids));
     await owner.delete(companies).where(inArray(companies.id, ids));
   };
@@ -339,7 +332,7 @@ export const caller = (db: Db, who: unknown) =>
 
 // The application's own router on committed fixtures: in the shared database only for
 // procedures that write nothing append-only (me, the lists), in a disposable one for the
-// roster's audited writers. Consumed by the roster, me-update and gate tests.
+// roster's writers. Consumed by the roster, me-update and gate tests.
 export const appCaller = (db: Db, who: unknown) =>
   createCallerFactory(appRouter)(
     createContext({
@@ -352,7 +345,7 @@ export const appCaller = (db: Db, who: unknown) =>
   );
 
 // --- Rolled-back calls -----------------------------------------------------------------
-// Labor events and closeouts can never be deleted once committed, so a procedure that writes
+// Labor events can never be deleted once committed, so a procedure that writes
 // them cannot run against the committed fixtures above. Instead the whole call runs inside an
 // owner transaction that is always rolled back: fixtures are inserted as the owner, the
 // transaction becomes trader_app (SET LOCAL ROLE, as the schema tests do), and the
@@ -382,12 +375,6 @@ export const txAsDb = (tx: Tx) => tx as unknown as Db;
 // From here on the transaction runs as the runtime role, as production's pool does.
 export async function becomeApp(tx: Tx) {
   await tx.execute(sql`set local role trader_app`);
-}
-
-// Fires deferred constraints now: a rolled-back transaction never reaches commit, where they
-// would otherwise run.
-export async function sealNow(tx: Tx) {
-  await tx.execute(sql`set constraints all immediate`);
 }
 
 // Two calls started at once on one rolled-back transaction share its one connection, and the
@@ -451,7 +438,7 @@ export function uuidv7(ms = Date.now()): string {
 }
 
 // A crew's day, inside `tx`: a New York company whose bound foreman runs a crew assigned job
-// J, two workers, and job K on no crew. Everything a closeout of J reads.
+// J, two workers, and job K on no crew.
 export async function crewDayIn(tx: Tx) {
   const c = await companyIn(tx, "foreman");
   const worker = async (n: string) =>
@@ -527,32 +514,6 @@ export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<stri
   return id;
 }
 
-export async function materialIn(
-  tx: Tx,
-  day: CrewDay,
-  job: string,
-  loggedAt: string,
-  by = day.w1,
-  enteredByOffice = false,
-) {
-  const id = uuidv7();
-  await tx.insert(materials).values({
-    id,
-    companyId: day.companyId,
-    jobId: job,
-    loggedByUserId: by,
-    description: "Eggshell, white",
-    quantity: "2.000",
-    unit: "gal",
-    loggedAt: new Date(loggedAt),
-    capturedOffline: false,
-    clockSkewed: false,
-    clockSkewMs: 0,
-    enteredByOffice,
-  });
-  return id;
-}
-
 // The application's own router, called inside a rolled-back transaction.
 export const appCallerIn = (tx: Tx, who: unknown, mailer?: Mailer) =>
   createCallerFactory(appRouter)(
@@ -587,25 +548,6 @@ export async function boundIn(
     })
     .returning({ id: users.id });
   return { id: row!.id, who: identity(`sub-${tag}`, `${tag}@co.test`) };
-}
-
-// A crew's day committed by the owner, for tests that need two connections to see the same
-// rows. Nothing appended-only is ever committed against it, so cleanup can remove it all.
-export async function committedCrewDay(owner: Db) {
-  const day = await owner.transaction((tx) => crewDayIn(tx));
-  const cleanup = async () => {
-    const id = day.companyId;
-    await owner.delete(syncDiagnostics).where(eq(syncDiagnostics.companyId, id));
-    await owner.delete(jobAssignments).where(eq(jobAssignments.companyId, id));
-    await owner.delete(materials).where(eq(materials.companyId, id));
-    await owner.delete(jobs).where(eq(jobs.companyId, id));
-    await owner.delete(crewMembers).where(eq(crewMembers.companyId, id));
-    await owner.delete(crews).where(eq(crews.companyId, id));
-    await owner.delete(customers).where(eq(customers.companyId, id));
-    await owner.delete(users).where(eq(users.companyId, id));
-    await owner.delete(companies).where(eq(companies.id, id));
-  };
-  return { day, cleanup };
 }
 
 // The runtime role with the day's tenant set, as a protected call runs.
@@ -748,7 +690,6 @@ export async function rejection(p: Promise<unknown>) {
 }
 
 // A worked, ended day on J, 5 October in New York: w1 4 h, w2 8 h.
-export const WORKED_DAY = "2026-10-05";
 export async function workedDay(tx: Tx, d: CrewDay) {
   const at = (worker: string, start: string, end: string) => [
     { worker, job: d.J, type: "started" as const, client: start },
@@ -808,10 +749,9 @@ export async function disposableDb() {
 
 // --- Approvals ---------------------------------------------------------------------------
 
-type Subject =
-  { eventId: string } | { materialId: string } | { materialCorrectionId: string };
+type Subject = { eventId: string };
 
-// A pending approval of one subject, written by the owner as its writer would.
+// A pending approval of one labor event, written by the owner as its writer would.
 export async function pendingApproval(
   tx: Tx,
   companyId: string,
@@ -823,108 +763,4 @@ export async function pendingApproval(
     .values({ companyId, ...subject, reasons })
     .returning({ id: approvals.id });
   return row!.id;
-}
-
-// A correction of a late receipt (its after_closeout approval makes it correctable, 0024) with
-// its pending approval. Returns both ids.
-export async function correctionIn(
-  tx: Tx,
-  day: CrewDay,
-  materialId: string,
-  by: string,
-  kind: "amend" | "void" = "amend",
-  serverTimestamp = new Date(),
-) {
-  const id = uuidv7(serverTimestamp.getTime());
-  await tx.insert(materialCorrections).values({
-    id,
-    companyId: day.companyId,
-    materialId,
-    kind,
-    description: kind === "amend" ? "Primer, grey" : null,
-    quantity: kind === "amend" ? "3.000" : null,
-    unit: kind === "amend" ? "gal" : null,
-    note: null,
-    submittedByUserId: by,
-    clientTimestamp: serverTimestamp,
-    serverTimestamp,
-  });
-  const approvalId = await pendingApproval(
-    tx,
-    day.companyId,
-    { materialCorrectionId: id },
-    ["corrected"],
-  );
-  return { correctionId: id, approvalId };
-}
-
-// A late receipt: logged, with its pending after_closeout approval.
-export async function lateReceiptIn(tx: Tx, day: CrewDay, by = day.w1) {
-  const materialId = await materialIn(tx, day, day.J, "2026-10-05T14:00:00Z", by);
-  const approvalId = await pendingApproval(tx, day.companyId, { materialId }, [
-    "after_closeout",
-  ]);
-  return { materialId, approvalId };
-}
-
-// --- Audit rows --------------------------------------------------------------------------
-// audit_log is append-only and references the company and the actor, so a procedure that
-// writes it is called only inside a rolled-back transaction or in a disposable database.
-
-const auditColumns = {
-  companyId: auditLog.companyId,
-  actorUserId: auditLog.actorUserId,
-  action: auditLog.action,
-  entityTable: auditLog.entityTable,
-  entityId: auditLog.entityId,
-  before: auditLog.before,
-  after: auditLog.after,
-};
-
-// A company's audit rows in the order written, as the owner reads them past RLS.
-export const auditRows = (owner: Db, companyId: string) =>
-  owner
-    .select(auditColumns)
-    .from(auditLog)
-    .where(eq(auditLog.companyId, companyId))
-    .orderBy(asc(auditLog.id));
-
-// The same inside a rolled-back transaction, whatever role it runs as: the tenant is set
-// first, because a failed call's savepoint undid the one its procedure had set.
-export async function auditRowsIn(tx: Tx, companyId: string) {
-  await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
-  return tx
-    .select(auditColumns)
-    .from(auditLog)
-    .where(eq(auditLog.companyId, companyId))
-    .orderBy(asc(auditLog.id));
-}
-
-// One expected row, as auditRows returns it.
-export const auditRow = (
-  companyId: string,
-  actorUserId: string,
-  action: string,
-  entityId: string | null,
-  change: { before?: unknown; after: unknown },
-) => ({
-  companyId,
-  actorUserId,
-  action,
-  entityTable: action.slice(0, action.indexOf(".")),
-  entityId,
-  before: change.before ?? null,
-  after: change.after,
-});
-
-// The runtime role's INSERT on audit_log taken away while `body` runs: what a failing audit
-// write looks like to a procedure. A grant is the whole database's, so only ever in a
-// disposable one.
-export async function withoutAuditInsert(owner: Db, body: () => Promise<void>) {
-  await owner.execute(sql`revoke insert on audit_log from trader_app`);
-  try {
-    await body();
-  } finally {
-    await owner.execute(sql`grant insert on audit_log to trader_app`);
-  }
 }

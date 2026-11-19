@@ -1,15 +1,10 @@
 // TASKS S5, Copy Last Week: assignment.copyPreview, copyConfirm and copyUndo (copy.ts). The
 // preview writes nothing and says what will be created and what is left out and why; a
 // confirmation writes exactly the preview it names, or nothing and the new one; sent again it
-// creates nothing; no override is copied; undo removes the whole copy or none of it. Every
+// creates nothing; undo removes the whole copy or none of it. Every
 // call runs in a rolled-back transaction (helpers, "Rolled-back calls"); two admins copying
 // at once and a failure part-way are assignment-commit.test.ts's.
-import {
-  jobAssignments,
-  shiftOverrideHistory,
-  shiftOverrides,
-  users,
-} from "@trader/db/schema";
+import { jobAssignments, users } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -168,20 +163,13 @@ describe("assignment.copyPreview", () => {
     });
   });
 
-  it("copies no override: of two shifts that overlapped last week, the earlier one alone", async () => {
+  it("copies, of two shifts that overlapped last week, the earlier one alone", async () => {
     await rolledBack(owner, async (tx) => {
-      const { day, admin, put, plan } = await office(tx);
-      const morning = await put(day.w1, day.J, "2026-11-02");
-      const late = await put(day.w1, day.K, "2026-11-02", {
+      const { day, put, plan } = await office(tx);
+      await put(day.w1, day.J, "2026-11-02");
+      await put(day.w1, day.K, "2026-11-02", {
         expectedStart: "12:00",
         expectedEnd: "17:00",
-      });
-      await tx.insert(shiftOverrides).values({
-        companyId: day.companyId,
-        holderId: late,
-        yieldingId: morning,
-        reason: "Covering",
-        createdBy: admin.id,
       });
       await becomeApp(tx);
       const preview = await plan.copyPreview({ weekStart: THIS });
@@ -194,8 +182,7 @@ describe("assignment.copyPreview", () => {
         weekStart: THIS,
         fingerprint: preview.fingerprint,
       });
-      expect(await tx.$count(shiftOverrides)).toBe(1);
-      expect(await tx.$count(shiftOverrideHistory)).toBe(0);
+      expect((await shiftsOf(tx, day)).map((s) => s.expectedStart)).toEqual(["07:00:00"]);
     });
   });
 
@@ -455,49 +442,6 @@ describe("assignment.copyUndo", () => {
         shiftId: monday!.id,
       });
       expect(await shiftsOf(tx, day)).toHaveLength(4);
-    });
-  });
-
-  it("takes a decision made on a copied shift since, into the history", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { day, admin, plan, copyId } = await copied(tx);
-      const [monday] = await tx
-        .select({ id: jobAssignments.id })
-        .from(jobAssignments)
-        .where(
-          sql`${jobAssignments.copyId} = ${copyId} and ${jobAssignments.userId} = ${day.w1}
-            and ${jobAssignments.workDate} = ${THIS}`,
-        );
-      const late = uuidv7();
-      await appCallerIn(tx, admin.who).assignment.create({
-        userId: day.w1,
-        jobId: day.K,
-        expectedStart: "12:00",
-        expectedEnd: "17:00",
-        days: [
-          {
-            id: late,
-            workDate: THIS,
-            decisions: [
-              {
-                overrideId: uuidv7(),
-                otherId: monday!.id,
-                holder: "other",
-                reason: "Covering",
-              },
-            ],
-          },
-        ],
-      });
-      expect(await plan.copyUndo({ copyId })).toEqual({ result: "undone", removed: 3 });
-      expect(await tx.$count(shiftOverrides)).toBe(0);
-      const history = await tx
-        .select({ action: shiftOverrideHistory.action })
-        .from(shiftOverrideHistory)
-        .orderBy(asc(shiftOverrideHistory.createdAt), asc(shiftOverrideHistory.id));
-      expect(history.map((h) => h.action)).toEqual(["created", "removed"]);
-      // The shift the office added itself stays.
-      expect(await tx.$count(jobAssignments, eq(jobAssignments.id, late))).toBe(1);
     });
   });
 });

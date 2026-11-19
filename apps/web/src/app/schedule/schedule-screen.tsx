@@ -23,7 +23,6 @@ import styles from "./schedule.module.css";
 import {
   byEmployee,
   byJobsite,
-  clockInNote,
   hoursOf,
   mondayOf,
   peopleOn,
@@ -59,7 +58,6 @@ function ShiftCard({
   view: View;
   onOpen: () => void;
 }) {
-  const note = clockInNote(shift);
   return (
     <button
       type="button"
@@ -76,7 +74,6 @@ function ShiftCard({
         {view === "employee" ? shift.job.name : shift.worker.name}
       </span>
       <span className={`secondary ${styles.hours}`}>{hoursOf(shift)}</span>
-      {note !== null && <span className={`secondary ${styles.cardNote}`}>{note}</span>}
       {shift.locked && <span className={`label ${styles.lockedMark}`}>{s.locked}</span>}
     </button>
   );

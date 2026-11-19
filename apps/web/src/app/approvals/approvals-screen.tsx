@@ -20,7 +20,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import controls from "../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../failure";
-import { dayIn, duration, materialFacts as facts, stamp } from "../format";
+import { duration, stamp } from "../format";
 import { Note } from "../note";
 import { PageHeader } from "../page-header";
 import { DestructiveAction } from "../row-editor";
@@ -35,34 +35,14 @@ const PAGE = 50;
 
 function entryOf(item: Item): string {
   const s = item.subject;
-  if (s.kind === "labor_event") {
-    const type = strings.entryTypes[s.type];
-    if (s.effect === "superseded") return `${type} (${strings.entryReplaced})`;
-    if (s.effect === "void") return `${type} (${strings.entryVoids})`;
-    return type;
-  }
-  if (s.kind === "material") {
-    const text = strings.materialEntry(facts(s.effective));
-    return s.effective.voided ? `${text} (${strings.materialVoided})` : text;
-  }
-  const change =
-    s.correction.kind === "void"
-      ? strings.correctionVoid(facts(s.original))
-      : strings.correctionAmend(facts(s.original), facts(s.correction));
-  const noted = s.note === null ? change : `${change}. ${strings.correctionNote(s.note)}`;
-  return s.enteredByOffice
-    ? `${noted}. ${strings.receiptEnteredByOffice(s.loggedBy.name)}`
-    : noted;
+  const type = strings.entryTypes[s.type];
+  if (s.effect === "superseded") return `${type} (${strings.entryReplaced})`;
+  if (s.effect === "void") return `${type} (${strings.entryVoids})`;
+  return type;
 }
 
 function whoOf(item: Item): string {
   const s = item.subject;
-  if (s.kind === "material") {
-    return s.enteredByOffice
-      ? strings.enteredByOfficeName(s.loggedBy.name)
-      : s.loggedBy.name;
-  }
-  if (s.kind === "material_correction") return s.submittedBy.name;
   return s.initiator.id === s.worker.id
     ? s.worker.name
     : strings.whoEnteredBy(s.worker.name, s.initiator.name);
@@ -72,25 +52,14 @@ function whoOf(item: Item): string {
 // recorded and the time the server received it.
 function timesOf(item: Item, zone: string): string[] {
   const s = item.subject;
-  const skewed = item.reasons.includes("clock_skewed");
-  if (s.kind === "labor_event") {
-    const recorded = strings.recordedAt(stamp(s.clientTimestamp, zone));
-    return skewed
-      ? [recorded, strings.receivedWhen(stamp(s.serverTimestamp, zone))]
-      : [recorded];
-  }
-  if (s.kind === "material") {
-    // The office names a day, not a moment: the stored noon is not shown as a time.
-    if (s.enteredByOffice) return [strings.receiptDated(dayIn(s.loggedAt, zone))];
-    const logged = strings.loggedWhen(stamp(s.loggedAt, zone));
-    return skewed ? [logged, strings.receivedWhen(stamp(s.receivedAt, zone))] : [logged];
-  }
-  return [strings.submittedWhen(stamp(s.serverTimestamp, zone))];
+  const recorded = strings.recordedAt(stamp(s.clientTimestamp, zone));
+  return item.reasons.includes("clock_skewed")
+    ? [recorded, strings.receivedWhen(stamp(s.serverTimestamp, zone))]
+    : [recorded];
 }
 
 function rejectEffectOf(item: Item): string {
   const s = item.subject;
-  if (s.kind !== "labor_event") return strings.rejectEffect[s.kind];
   if (s.effect === "void") return strings.rejectEffect.void;
   if (s.effect === "superseded") return strings.rejectEffect.superseded;
   return strings.rejectEffect.labor;

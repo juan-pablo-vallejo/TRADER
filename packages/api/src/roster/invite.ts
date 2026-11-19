@@ -14,7 +14,6 @@ import { userRole } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
 import {
   signInEmailSchema,
@@ -92,12 +91,6 @@ export async function rosterInvite(
       code: held[0]?.email_taken === true ? "email_taken" : "phone_taken",
     };
   }
-  // The row names who was invited; the audit row repeats no address and no name.
-  await recordAudit(tx, user, {
-    action: "users.invite",
-    entityId: inserted.id,
-    after: { role: input.role },
-  });
   const invited = await readRosterUser(tx, inserted.id);
   if (invited === undefined) throw new Error("the invited row is not visible");
   // Last, so a refusal above never reaches the provider, and awaited inside the transaction,

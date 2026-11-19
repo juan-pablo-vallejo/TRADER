@@ -71,7 +71,6 @@ async function office(tx: Tx) {
         quantity: "8",
         unit: "h",
         unitPriceCents: 6500,
-        materialId: null,
       },
     ],
   });

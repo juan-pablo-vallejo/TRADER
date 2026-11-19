@@ -12,17 +12,24 @@ export const strings = {
   // Navigation
   navigation: "Office",
   menu: "Menu",
-  roster: "Roster",
+  nav: {
+    people: "People",
+    customers: "Customers",
+    jobs: "Jobs",
+    schedule: "Schedule",
+    hours: "Hours",
+    invoices: "Invoices",
+  },
+  hoursTitle: "Hours",
+  roster: "People",
   customers: "Customers",
   jobs: "Jobs",
   crews: "Crews",
-  scheduleNav: "Schedule",
   // The Weekly Schedule screen (DESIGN, Weekly Schedule): a shift is a "Shift", a job a
   // "Jobsite". One namespace, so its many words cannot collide with the flat keys above.
   schedule: {
     title: "Weekly Schedule",
-    explain:
-      "Planned shifts only. Hours worked, corrections and approvals are on the Labor screens.",
+    explain: "Planned shifts only. Hours worked and corrections are on the Hours screen.",
     previousWeek: "Previous week",
     nextWeek: "Next week",
     // The two steps as their buttons read; the names above are what a screen reader hears.
@@ -42,14 +49,11 @@ export const strings = {
     addShiftFor: (name: string, day: string) => `Add a shift for ${name} on ${day}`,
     copyLastWeek: "Copy last week",
     noShifts: "No shifts this week.",
-    noShiftsDay: "No shift",
     people: (n: number) => (n === 1 ? "1 person" : `${n} people`),
     locked: "Locked",
     lockedExplain:
       "Someone has clocked in on this shift, so its jobsite, day and hours cannot change.",
-    correctInLabor: "Correct attendance in Labor",
-    undecided: "Overlaps another shift; nothing decided",
-    clockInDuring: (hours: string) => `Clock in ${hours}`,
+    correctInLabor: "Correct attendance in Hours",
     shiftOf: (name: string) => `Shift — ${name}`,
     openShift: (name: string, jobsite: string, hours: string, day: string) =>
       `${name}, ${jobsite}, ${hours}, ${day}`,
@@ -71,43 +75,29 @@ export const strings = {
     pickDay: "Choose at least one day.",
     endAfterStart: "The end must be after the start.",
     overlap: (other: string, hours: string) => `Overlaps ${other} during ${hours}.`,
-    overrideAsAdmin: "Override as admin",
-    whoHolds: (hours: string) => `Which shift is clocked in on during ${hours}?`,
     thisShift: "This shift",
-    otherShift: (other: string) => other,
-    reason: "Reason for the override",
-    reasonRequired: "A reason is required.",
-    dayPreview: "Clock-in through the day",
-    previewLine: (hours: string, jobsite: string) => `${hours} ${jobsite}`,
     cannotSave: "This cannot be saved:",
-    decidedBy: (who: string, when: string) => `Decided by ${who}, ${when}`,
-    holds: (holder: string, hours: string) => `${holder} holds ${hours}.`,
-    changeDecision: "Change decision",
-    saveDecision: "Save decision",
-    decisionSaved: "Decision saved.",
+    overlapRefused:
+      "One person is on one jobsite at a time. Change the hours or the day.",
     overlapsHeading: "Overlaps",
     issue: {
       duplicate: "That shift already exists.",
-      undecided: (a: string, b: string, hours: string) =>
-        `${a} and ${b} overlap during ${hours} and nothing says which one holds that time.`,
-      circle: (hours: string) =>
-        `Three shifts would each give way to another in a circle during ${hours}, so nobody could clock in then. Change one of the decisions.`,
-      noTime: (shift: string) => `${shift} would have no time of its own to clock in on.`,
-      notOverlapping: "Those two shifts do not overlap, so there is nothing to decide.",
+      overlap: (a: string, b: string, hours: string) =>
+        `${a} and ${b} overlap during ${hours}.`,
       changed: "The schedule changed meanwhile. Close this and try again.",
     },
     refused: {
       authorization: (shift: string) =>
         `Someone has already clocked in on ${shift}, and this would change what allowed it.`,
       locked:
-        "Someone has clocked in on this shift, so it cannot change. Correct attendance in Labor.",
+        "Someone has clocked in on this shift, so it cannot change. Correct attendance in Hours.",
       stale: "This shift changed meanwhile. Close this and try again.",
       userInactive: "That employee is deactivated.",
       jobArchived: "That jobsite is archived.",
     },
     copyTitle: "Copy last week",
     copyExplain: (from: string, to: string) =>
-      `Copies the shifts of the week of ${from} to the week of ${to}. Overrides are never copied.`,
+      `Copies the shifts of the week of ${from} to the week of ${to}.`,
     copyCreate: (n: number) => (n === 1 ? "Create 1 shift" : `Create ${n} shifts`),
     copyNothing: "There is nothing to create.",
     copyLeftOut: (n: number) =>
@@ -133,13 +123,8 @@ export const strings = {
       authorization: "someone has already clocked in that day",
     },
   },
-  closeout: "Closeout",
   approvals: "Approvals",
   profile: "Profile",
-  // The navigation's groups (ARCHITECTURE, 2026-11-15, office navigation names).
-  navJobsites: "Jobsites",
-  navLabor: "Labor",
-  navEmployees: "Employees",
   // Invoices (DESIGN, Invoice line): a draft priced by the admin, issued once, void once.
   invoices: {
     nav: "Invoices",
@@ -190,7 +175,6 @@ export const strings = {
     add: "Add",
     addOf: (label: string) => `Add ${label} as a line`,
     nothingToDraw: "This job has no approved hours and no receipts that count yet.",
-    jobCost: "Job cost — for your reference",
     issue: "Issue invoice",
     issueEffect: (total: string) =>
       `This invoice for ${total} takes the next number and can no longer be changed. Its lines and its tax are frozen as they are saved now.`,
@@ -262,63 +246,6 @@ export const strings = {
       `The payment of ${amount} will be marked reversed and will no longer count. Both entries stay on the invoice.`,
     hasPayments:
       "A payment still stands against this invoice. Reverse it before voiding.",
-    csv: "Issued invoices (CSV)",
-    csvExplain:
-      "One row for each issued invoice: number, date, customer, jobsite, totals, paid and owed. A plain list, not a QuickBooks import.",
-    csvSaved: (file: string) => `Saved ${file}.`,
-  },
-  // The developer console (DESIGN, Developer console): read-only, name and value.
-  developer: {
-    nav: "Developer",
-    title: "Developer",
-    explain:
-      "How this deployment stands. Nothing here changes anything, and nothing of another company is shown.",
-    commit: "Commit",
-    environment: "Environment",
-    notDeployed: "not a deployment",
-    unknown: "unknown",
-    readiness: "Readiness check",
-    ready: "Ready",
-    notReady: (status: number) => `Not ready (${status})`,
-    syncMode: "Field sync",
-    modes: {
-      normal: "Normal",
-      read_only: "Read only: phones keep their entries and send none",
-      paused: "Paused: phones keep their entries and send none",
-      update_required: "Update required",
-    },
-    modeUnreadable: "Unreadable setting: running as paused",
-    minimumIos: "Minimum iOS build",
-    minimumAndroid: "Minimum Android build",
-    unreadable: "unreadable",
-    protocol: "Sync protocol",
-    protocolRange: (min: number, max: number) =>
-      min === max ? `version ${min}` : `versions ${min} to ${max}`,
-    enforcement: "Schedule enforcement",
-    on: "On: a clock-in needs a shift",
-    off: "Off: a clock-in needs the crew",
-    databaseRole: "Database role",
-    refusedRetained: "Refused entries, last 30 days",
-    refusedLastDay: "Refused entries, last 24 hours",
-    recentRefusals: "Newest refused entries",
-    noRefusals: "None in the last 30 days.",
-    nobody: "no person",
-    wholeRequest: "whole request",
-  },
-  // The Overview (DESIGN, Overview): what waits today, each count a link to its screen.
-  overview: {
-    title: "Overview",
-    explain: (day: string, zone: string) =>
-      `What waits for the office today, ${day} (${zone}).`,
-    approvals: "Entries to approve",
-    openSessions: "Sessions with no clock-out yet",
-    openSessionsHelp:
-      "A session still waiting for approval is among the entries to approve.",
-    refusals: "Refused entries in the last 30 days",
-    refusalsHelp: "Find one by employee and day.",
-    shifts: "Shifts this week",
-    invoicesOwed: "Invoices still owed",
-    open: (label: string, n: number) => `${label}: ${n}`,
   },
 
   // States every screen can be in
@@ -336,7 +263,7 @@ export const strings = {
     "Nothing was saved by the step that failed. Reload the page to carry on.",
   reload: "Reload",
   notFound: "There is no page at this address.",
-  goToOverview: "Go to Overview",
+  goToOverview: "Go to the schedule",
   cancel: "Cancel",
 
   // Editors and create forms
@@ -352,7 +279,6 @@ export const strings = {
   name: "Name",
   role: "Role",
   status: "Status",
-  hourlyRate: "Hourly rate",
   edit: "Edit",
   close: "Close",
   emailTaken: "Someone on this roster already has that email.",
@@ -370,14 +296,6 @@ export const strings = {
   deactivatePersonEffect: (name: string) =>
     `${name} will not be able to sign in or send hours from their phone. Hours the office already has stay on record.`,
   unchanged: "No change.",
-  effectiveFrom: "Effective from",
-  addRate: "Add rate",
-  rateExists: "A rate already starts on that day. Pick another day.",
-  badAmount: "Enter an amount like 25.00.",
-  payRate: "Pay rate",
-  rateHistory: "Rate history",
-  noRates: "No rate yet.",
-  unpriced: "—",
   invited: "Invited",
   active: "Active",
   deactivated: "Deactivated",
@@ -445,84 +363,15 @@ export const strings = {
   hasInvoices: "This job has invoices; its customer can no longer change.",
   archivedNote:
     "Archived jobs leave the crew's list on the next sync; open sessions still clock out.",
-
-  // Job page: cost to date (DESIGN, Job cost)
-  backToJobs: "All jobs",
-  jobCostToDate: "Job cost to date",
-  jobCostExplain:
-    "Approved hours at each person's pay rate on the day, plus the receipts that are priced. For your reference: it is what the job has cost, not a price.",
-  noCostYet: "Nothing counts toward this job's cost yet.",
-  costLabor: (hours: string) => `Labor · ${hours} h approved`,
-  costMaterials: (n: number) =>
-    `Materials · ${n === 1 ? "1 priced receipt" : `${n} priced receipts`}`,
-  noAmount: "—",
-  notInTotal: "Not in this total",
-  apartUnrated: (hours: string, lines: number) =>
-    `${hours} h of approved labor has no pay rate for its day (${lines === 1 ? "1 line" : `${lines} lines`} below). Add the rate on the roster to count it.`,
-  apartPendingLabor: (hours: string, sessions: number) =>
-    `${hours} h of labor waits for approval, in ${sessions === 1 ? "1 session" : `${sessions} sessions`}.`,
-  apartWouldAdd: (amounts: string) => ` Approved, it would add ${amounts}.`,
-  apartPendingUnrated: (hours: string) => ` ${hours} h of it has no pay rate.`,
-  apartRejectedSessions: (n: number) =>
-    `${n === 1 ? "1 session was" : `${n} sessions were`} rejected. ${n === 1 ? "Its" : "Their"} hours are left out until repaired from the labor ledger.`,
-  apartOpenSessions: (n: number) =>
-    `${n === 1 ? "1 session is" : `${n} sessions are`} still open. Nothing of ${n === 1 ? "it" : "them"} counts until the clock out.`,
-  apartUnpricedReceipts: (n: number) =>
-    `${n === 1 ? "1 receipt is" : `${n} receipts are`} not priced. Enter the cost under Materials.`,
-  apartPendingReceipts: (n: number) =>
-    `${n === 1 ? "1 receipt waits" : `${n} receipts wait`} for approval.`,
-  apartPendingPriced: (amounts: string) => ` Priced so far: ${amounts}.`,
-  apartPendingUnpriced: (n: number) =>
-    ` ${n === 1 ? "1 of them is" : `${n} of them are`} not priced.`,
-  apartRejectedReceipts: (n: number) =>
-    `${n === 1 ? "1 receipt was" : `${n} receipts were`} rejected and ${n === 1 ? "is" : "are"} left out.`,
-  apartVoidedReceipts: (n: number) =>
-    `${n === 1 ? "1 receipt was" : `${n} receipts were`} voided and ${n === 1 ? "is" : "are"} left out.`,
-  laborByDay: "Labor by day",
-  rate: "Rate",
-  ratePerHour: (amount: string) => `${amount}/h`,
-  noRate: "No rate",
-  emptyJobCost: "Nothing has been recorded on this job yet.",
-  noSuchJob: "There is no job at this address.",
-
-  weekOf: "Week of",
-  previousWeek: "Previous week",
-  nextWeek: "Next week",
   person: "Person",
   chooseJob: "Choose a job",
   planFrom: "From",
   planThrough: "Through",
-  expectedStart: "Start",
   date: "Date",
-  endAfterStart: "The end must be after the start.",
-  // Refused entries
-  refusals: "Refused entries",
-  refusalsExplain:
-    "What the server refused or could not process from a phone, kept for 30 days. Entries are listed under the person whose phone sent them and the day the server received them, which may be later than the day worked. The entry itself stays on the phone.",
-  sentBy: "Sent by",
-  receivedOn: "Received on",
-  findRefusals: "Find",
-  emptyRefusals: "Nothing from this person was refused on this day.",
-  refusalResult: "Result",
-  refusalKind: "Entry",
-  refusalCode: "Reason code",
   receivedAt: "Received",
-  requestId: "Request",
-  refusalOutcomes: {
-    rejected: "Refused",
-    omitted: "Not processed; the phone sends it again",
-    request_failed: "The whole send failed",
-  },
-  refusalKinds: {
-    labor_event: "Hours",
-    material: "Material",
-    closeout: "Day closeout",
-    material_correction: "Material correction",
-    unknown: "—",
-  },
 
   // Labor ledger (DESIGN, Worker ledger)
-  ledger: "Labor ledger",
+  ledger: "A person's entries",
   ledgerExplain:
     "One person's recorded hours, day by day, with every entry behind them. Nothing here is erased: a repair is a new entry that waits for approval, and the entry it replaces stays on record.",
   showLedger: "Show ledger",
@@ -536,7 +385,6 @@ export const strings = {
     rejected: "Rejected",
     voided: "Voided",
   },
-  sessionClosedOut: "Closed out",
   entry: "Entry",
   recorded: "Recorded",
   enteredBy: "Entered by",
@@ -567,9 +415,6 @@ export const strings = {
   approvalWaiting: "Waiting",
   approvedBy: (name: string) => `Approved by ${name}`,
   rejectedBy: (name: string) => `Rejected by ${name}`,
-
-  // Reconciliation (DESIGN, Reconciliation)
-  reconciliation: "Reconciliation",
   reconExplain:
     "Each person's approved hours by day and job, for the pay period or the days you choose. Hours count once they are approved and the session has ended; a day's time on a job is added up first, then rounded to the hundredth of an hour.",
   showHours: "Show hours",
@@ -583,110 +428,18 @@ export const strings = {
   notInHoursExplain:
     "What waits for approval, was rejected or is still open. None of it is in the approved hours above.",
   decideInApprovals: "Decide what waits in Approvals",
-  repairInLedger: "Repair hours in the Labor ledger",
+  repairInLedger: "Correct hours in a person's entries",
   waitingHours: "Waiting",
   unresolvedState: "Why",
   sessionsWaiting: (n: number) => `${n} waiting for approval`,
   sessionsRejected: (n: number) => `${n} rejected`,
   sessionsOpen: (n: number) => `${n} still open`,
 
-  // Reconciliation of a pay period (DESIGN, Reconciliation; Adjustment line)
-  reconPeriod: "Pay period",
-  reconOtherDates: "Other dates",
-  reconPeriodOption: (range: string, closed: boolean) =>
-    `${range} · ${closed ? "Closed" : "Open"}`,
-  reconNoPeriods: "No pay period is open yet, so choose the days to read.",
-  goToPayPeriods: "Open a pay period",
-  reconPeriodOpen: "Open: these figures move until the period is closed.",
-  reconPeriodClosed: (when: string, name: string) =>
-    `Closed ${when} by ${name}: these are the hours the close stored, and they no longer change.`,
-  reconPeriodTotal: (hours: string) => `${hours} h approved in this period`,
-  noApprovedInPeriod: "No hours are approved in this period yet.",
-  noHoursInClosedPeriod: "This period closed with no approved hours.",
-  notInHoursClosedExplain:
-    "What still waits for approval, was rejected or is still open on these days. None of it is in the hours above; what is approved later is paid as an adjustment in a later period.",
-  adjustments: "Adjustments from earlier periods",
-  adjustmentsOpenExplain:
-    "Hours approved, corrected or repaired after their own period closed. This period carries them when it closes. They are in no day's total above.",
-  adjustmentsClosedExplain:
-    "Hours approved, corrected or repaired after their own period closed, carried by this one. They are in no day's total above.",
-  adjustmentsTotal: (hours: string) => `${hours} h in adjustments`,
-  noAdjustments: "None.",
-  workedOn: (day: string) => `Worked ${day}`,
-  dateWorked: "Date worked",
-  openInReconciliation: "Read this period in Reconciliation",
-
-  // Pay periods (DESIGN, Pay-period close)
-  payPeriods: "Pay periods",
-  hideDetails: "Hide details",
-  payPeriodsExplain:
-    "The weeks or months payroll is run for. A period is closed once, when its hours are ready to export; after that it never changes, and anything approved or corrected later is carried by the next period as an adjustment.",
-  emptyPayPeriods: "No pay period yet. Open the first one.",
-  openPeriod: "Open a period",
-  periodStarts: "Starts",
-  periodEnds: "Ends",
-  periodStartsAfterLast: "The day after the period before it ends.",
-  period: "Period",
-  periodRange: (from: string, to: string) => `${from} – ${to}`,
-  periodIsOpen: "Open",
-  periodClosedBy: (when: string, name: string) => `Closed ${when} by ${name}`,
-  periodExists: "A period with these dates is already open.",
-  periodNotContiguous: (day: string) =>
-    `A period starts the day after the one before it ends: ${day}.`,
-  periodNotLatest: "Only the latest period's dates can be changed.",
-  periodAlreadyClosed: (name: string) =>
-    `Already closed by ${name}. Nothing was changed.`,
-  periodDates: "Dates",
-  saveDates: "Save dates",
-  periodHours: "Hours",
-  // The payroll-hours file of a closed period (DESIGN, Export panel).
-  payrollCsv: "Payroll hours (CSV)",
-  payrollCsvExplain:
-    "One row for each employee, job and work date of this period's approved hours, then each adjustment it carries. Hours only: no rates and no pay.",
-  payrollCsvSaved: (file: string) => `Saved ${file}.`,
-  payrollCsvNotClosed: "Close the period first: its hours can still change.",
-  periodApprovedSoFar: (hours: string) => `${hours} h approved so far.`,
-  periodExported: (hours: string) => `${hours} h closed as this period's hours.`,
-  periodAdjustments: (n: number, hours: string) =>
-    n === 1
-      ? `1 adjustment from earlier periods: ${hours} h.`
-      : `${n} adjustments from earlier periods: ${hours} h in all.`,
-  periodNoAdjustments: "No adjustments from earlier periods.",
-  periodAdjustmentsJoin: (range: string) =>
-    `Adjustments from earlier periods join ${range} first: it closes before this one.`,
-  periodUnresolvedNow: (waiting: number, open: number) =>
-    `Not in these hours now: ${waiting} waiting for approval, ${open} still open.`,
-  periodAcknowledged: (waiting: number, open: number) =>
-    `At the close, ${waiting} waited for approval and ${open} were still open.`,
-  closePeriod: "Close period",
-  closePeriodEffect: (range: string) =>
-    `Closing ${range} is permanent. The period and its payroll export can never be changed.`,
-  // Only what there is: a count of zero is not a thing to acknowledge.
-  closePeriodAcknowledge: (waiting: number, open: number) => {
-    const parts = [
-      waiting === 0
-        ? null
-        : `${waiting} ${waiting === 1 ? "entry still waits" : "entries still wait"} for approval`,
-      open === 0
-        ? null
-        : `${open} ${open === 1 ? "session is" : "sessions are"} still open`,
-    ].filter((part) => part !== null);
-    return `${parts.join(" and ")}; they will be paid as adjustments in a later period.`;
-  },
-  closeEarlierFirst: (range: string) => `Close ${range} first: periods close in order.`,
-  closeNotEnded: (day: string) =>
-    `This period runs through ${day}. It can be closed the day after.`,
-  periodClosed: "Closed. This period can no longer change.",
-  closeUnresolvedChanged: (waiting: number, open: number) =>
-    `What is unresolved changed while you were deciding: now ${waiting} waiting for approval and ${open} still open. Nothing was closed. Read it again, then close.`,
-
   // Labor repair, on the ledger (PRD, Office review)
   repair: "Repair",
   repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,
   repairExplain:
     "Change a time or the job, or add an entry that is missing. Each change is a new entry that waits for approval.",
-  repairClosedOut:
-    "This day is closed out. The new entries will also be flagged after closeout.",
   repairTimes: "Times",
   repairAdded: "Entries to add",
   addEntry: "Add an entry",
@@ -760,17 +513,7 @@ export const strings = {
   whoEnteredBy: (who: string, by: string) => `${who}, entered by ${by}`,
   recordedAt: (when: string) => `Recorded ${when}`,
   receivedWhen: (when: string) => `Received ${when}`,
-  loggedWhen: (when: string) => `Logged ${when}`,
-  submittedWhen: (when: string) => `Submitted ${when}`,
-  materialEntry: (facts: string) => `Material: ${facts}`,
-  materialVoided: "voided",
-  correctionAmend: (from: string, to: string) =>
-    `Material correction: ${from} changed to ${to}`,
-  correctionVoid: (facts: string) => `Material correction: void ${facts}`,
-  correctionNote: (note: string) => `Note: ${note}`,
   ownEntry: "Your own entry. Another admin decides it.",
-  approved: "Approved.",
-  rejected: "Rejected.",
   alreadyDecided: {
     approved: "Someone else already approved this. Their decision stands.",
     rejected: "Someone else already rejected this. Their decision stands.",
@@ -781,105 +524,13 @@ export const strings = {
     superseded:
       "A later correction replaced this entry, so rejecting it changes no hours. A decision cannot be changed.",
     void: "The session will stay as recorded and its hours will not be voided. A decision cannot be changed.",
-    material:
-      "This material will be left out of the job's cost. A decision cannot be changed.",
-    material_correction:
-      "The material will stay as it was before this correction. A decision cannot be changed.",
   },
-
-  // Closeout (DESIGN, Closeout)
-  closeoutExplain:
-    "Review a job's day, then submit it. A submitted closeout is locked: later changes are correcting entries that go through approval, and entries that arrive afterwards wait for approval.",
-  workDate: "Work date",
-  reviewDay: "Review",
-  reviewAgain: "Review again",
-  closeoutArchived: "Archived job. Its status will not change.",
-  closeoutNoCrew: "No crew on this job.",
-  noCrewOption: "no crew",
   closeoutZone: (zone: string) => `Times in ${zone}.`,
-  closeoutLabor: "Labor",
-  closeoutMaterials: "Materials",
-  closeoutNoLabor: "No labor on this day.",
-  closeoutNoMaterials: "No materials on this day.",
-  closeoutEmptyDay: "No labor or materials on this day. Submitting closes it out empty.",
-  started: "Started",
-  ended: "Ended",
   worked: "Worked",
   breaks: "Breaks",
-  sessionNotes: "Notes",
   stillOpen: "Still open",
-  sessionVoided: "Voided",
   sessionEdited: "Edited",
   duration: (h: number, m: number) => `${h} h ${String(m).padStart(2, "0")} min`,
-  material: "Material",
-  quantity: "Quantity",
-  loggedBy: "Logged by",
-  loggedAt: "Logged",
-  statusAfter: "Job status after this day",
-  closeoutNote: "Note (optional)",
-  submitCloseout: "Submit closeout",
-  sessionsOpenReason: (n: number) =>
-    `${n === 1 ? "1 session is" : `${n} sessions are`} still open. End or repair ${n === 1 ? "it" : "them"} before closing out.`,
-  closedOut: "Closed out.",
-  closedOutStatusKept: "Closed out. The job's status was not changed.",
-  closedOutAt: (when: string) =>
-    `Closed out ${when}. Locked: what is shown below is the day as it stands now.`,
-  closeoutUnsent:
-    "That didn't go through. Try again: the same closeout is sent, so it cannot be recorded twice.",
-  closeoutRejected: {
-    id_conflict: "That didn't go through. Review the day again, then submit.",
-    already_submitted: "This day was already closed out.",
-    sessions_open:
-      "A session on this day is still open. End or repair it, then review again.",
-    work_date_in_future: "That day has not happened yet.",
-    review_stale: "The day changed since this review. Check it again, then submit.",
-  },
-
-  // Materials (DESIGN, Material cost)
-  materials: "Materials",
-  materialsExplain:
-    "What each receipt cost, as read off the receipt. A cost can be entered or changed at any time, on a closed-out day too; nothing else about a receipt changes here.",
-  loggedByName: (name: string) => `Logged by ${name}`,
-  cost: "Cost",
-  notPriced: "Not priced",
-  receiptTotal: "Receipt total",
-  saveCost: "Save cost",
-  clearCost: "Clear cost",
-  clearCostEffect: "This receipt goes back to not priced. Nothing else about it changes.",
-  showUnpriced: "Not priced",
-  showAllReceipts: "All receipts",
-  allJobsOption: "All jobs",
-  emptyUnpriced: "Every receipt has a cost.",
-  emptyMaterials: "No receipts to show.",
-  materialStanding: {
-    pending: "Waiting for approval",
-    rejected: "Rejected",
-    voided: "Voided",
-  },
-
-  // Material entry (DESIGN, Material entry): a receipt the office enters itself.
-  addReceipt: "Add a receipt",
-  addReceiptExplain:
-    "For a receipt the crew never logged. It is saved as entered by the office, under your name. A receipt someone else logged is not changed here.",
-  receiptDescription: "Description",
-  receiptUnit: "Unit",
-  receiptTotalOptional: "Receipt total (optional)",
-  saveReceipt: "Save receipt",
-  receiptSaved: "Saved, as entered by the office.",
-  receiptSavedPending:
-    "Saved. That day is closed out, so this receipt now waits for another admin's approval.",
-  badQuantity: "Enter a quantity above zero, like 2 or 2.5.",
-  fillThisIn: "Fill this in.",
-  receiptRejected: {
-    id_conflict:
-      "That didn't go through. Check the list for this receipt before saving it again.",
-    date_in_future: "That day has not happened yet.",
-  },
-  // Each says it whole: a narrow row shows no column heading.
-  enteredByOfficeName: (name: string) => `Entered by the office · ${name}`,
-  receiptEnteredByOffice: (name: string) => `Receipt entered by the office · ${name}`,
-  receiptDated: (day: string) => `Dated ${day}`,
-  noTimeRecorded: "No time recorded",
 
   // Profile
   contactPhone: "Contact phone",
@@ -888,4 +539,6 @@ export const strings = {
   signInNumberCaption: "Your sign-in code is sent here. The office changes it.",
   save: "Save",
   saved: "Saved.",
+  approved: "Approved.",
+  rejected: "Rejected.",
 } as const;

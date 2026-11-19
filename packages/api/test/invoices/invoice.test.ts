@@ -4,7 +4,7 @@
 // answers what the first call did; another company's invoice is one FORBIDDEN on every
 // procedure. Rolled-back transactions; fifty issues at once are invoice-commit.test.ts's,
 // the database's own guards the db suite's (billing/invoice-guards.test.ts).
-import { invoiceCounters, invoiceLineItems, invoices, payRates } from "@trader/db/schema";
+import { invoiceCounters, invoiceLineItems, invoices } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -16,10 +16,8 @@ import {
   type CrewDay,
   crewDayIn,
   eventIn,
-  materialIn,
   outcome,
   ownerDb,
-  pendingApproval,
   rolledBack,
   uuidv7,
   workedDay,
@@ -65,7 +63,6 @@ const line = (over: Record<string, unknown> = {}) => ({
   quantity: "8",
   unit: "h" as string | null,
   unitPriceCents: 6500,
-  materialId: null as string | null,
   ...over,
 });
 
@@ -188,7 +185,7 @@ describe("invoice.save", () => {
     });
   });
 
-  it("refuses what cannot be a line, an amount too large, and a receipt of another job", async () => {
+  it("refuses what cannot be a line and an amount too large", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const id = await draft(o, []);
@@ -215,92 +212,45 @@ describe("invoice.save", () => {
       expect(
         await saving([line({ quantity: "1", unitPriceCents: 2_147_483_000 })], 1000),
       ).toEqual({ result: "rejected", code: "too_large" });
-      // A receipt of job K, of the other company, and one that does not exist.
-      await tx.execute(sql`reset role`);
-      const onK = await materialIn(tx, o.day, o.day.K, "2026-10-05T15:00:00Z");
-      const theirs = await materialIn(
-        tx,
-        o.other,
-        o.other.J,
-        "2026-10-05T15:00:00Z",
-        o.other.w1,
-      );
-      const mine = await materialIn(tx, o.day, o.day.J, "2026-10-05T15:00:00Z");
-      await becomeApp(tx);
-      for (const materialId of [onK, theirs, uuidv7()]) {
-        expect(await outcome(saving([line({ materialId })]))).toBe("FORBIDDEN");
-      }
-      expect(await saving([line({ materialId: mine })])).toEqual({ result: "saved" });
+      expect(await saving([line()])).toEqual({ result: "saved" });
       expect((await o.bill.read({ invoiceId: id })).lines).toHaveLength(1);
     });
   });
 });
 
 describe("invoice.suggest", () => {
-  it("offers the job's approved hours a day and its receipts that count, with no price", async () => {
+  it("offers the job's approved hours a day, with no price", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       await tx.execute(sql`reset role`);
-      // w1 4 h and w2 8 h on J on the worked day; rates in force, so cost exists to leak.
+      // w1 4 h and w2 8 h on J on the worked day.
       await workedDay(tx, o.day);
-      await tx.insert(payRates).values(
-        [o.day.w1, o.day.w2].map((userId) => ({
-          companyId: o.day.companyId,
-          userId,
-          effectiveFrom: "2026-01-01",
-          hourlyRateCents: 3100,
-          currency: "USD",
-        })),
-      );
-      const counted = await materialIn(tx, o.day, o.day.J, "2026-10-05T15:00:00Z");
-      await tx.execute(
-        sql`update materials set cost_cents = 8900, currency = 'USD' where id = ${counted}`,
-      );
-      const waiting = await materialIn(tx, o.day, o.day.J, "2026-10-05T16:00:00Z");
-      await pendingApproval(tx, o.day.companyId, { materialId: waiting });
-      await materialIn(tx, o.day, o.day.K, "2026-10-05T15:00:00Z");
       await becomeApp(tx);
       const id = await draft(o, []);
       const offered = await o.bill.suggest({ invoiceId: id });
       expect(offered).toEqual({
         timezone: "America/New_York",
         labor: [{ workDate: "2026-10-05", hundredths: 1200, quantity: "12.00" }],
-        materials: [
-          {
-            materialId: counted,
-            description: "Eggshell, white",
-            quantity: "2.000",
-            unit: "gal",
-          },
-        ],
       });
       // No price, rate or cost anywhere in what is offered.
-      expect(JSON.stringify(offered)).not.toMatch(/cents|rate|cost|3100|8900/i);
+      expect(JSON.stringify(offered)).not.toMatch(/cents|rate|cost/i);
     });
   });
 
-  it("leaves a draft's lines as they were when the labor and the receipt behind them change", async () => {
+  it("leaves a draft's lines as they were when the labor behind them changes", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       await tx.execute(sql`reset role`);
       await workedDay(tx, o.day);
-      const receipt = await materialIn(tx, o.day, o.day.J, "2026-10-05T15:00:00Z");
       await becomeApp(tx);
       const id = await draft(o, []);
       const offered = await o.bill.suggest({ invoiceId: id });
       const lines = [
         line({ description: "Labor, Oct 5", quantity: offered.labor[0]!.quantity }),
-        line({
-          description: offered.materials[0]!.description,
-          quantity: offered.materials[0]!.quantity,
-          unit: offered.materials[0]!.unit,
-          materialId: receipt,
-          unitPriceCents: 5200,
-        }),
       ];
       await o.bill.save({ invoiceId: id, taxCents: 0, lines });
       const before = await o.bill.read({ invoiceId: id });
-      // Later: more hours that day, and the receipt's own words rewritten.
+      // Later: more hours that day.
       await tx.execute(sql`reset role`);
       await eventIn(tx, o.day, {
         worker: o.day.foremanId,
@@ -314,9 +264,6 @@ describe("invoice.suggest", () => {
         type: "ended",
         client: "2026-10-05T14:00:00Z",
       });
-      await tx.execute(
-        sql`update materials set description = 'Satin, grey', quantity = 9 where id = ${receipt}`,
-      );
       await becomeApp(tx);
       expect((await o.bill.suggest({ invoiceId: id })).labor[0]!.quantity).toBe("14.00");
       expect(await o.bill.read({ invoiceId: id })).toEqual(before);

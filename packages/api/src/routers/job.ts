@@ -1,8 +1,5 @@
 // Jobs (PRD, Jobs and location). Admin only, at the gate; the customer, crew and invoice rules
-// and the target's visibility are judged inside each writer under its locks. `cost` is the
-// office's read of what a job has cost to date (jobs/cost.ts): rates and receipt costs are
-// nobody else's to read.
-import { costInput, costOutput, jobCost } from "../jobs/cost";
+// and the target's visibility are judged inside each writer under its locks.
 import { listJobs, listOutput } from "../jobs/list";
 import {
   assignInput,
@@ -24,10 +21,6 @@ export const jobRouter = router({
   list: roleProcedure("admin")
     .output(listOutput)
     .query(({ ctx }) => listJobs(ctx.tx)),
-  cost: roleProcedure("admin")
-    .input(costInput)
-    .output(costOutput)
-    .query(({ ctx, input }) => jobCost(ctx.tx, ctx.user, input)),
   create: roleProcedure("admin")
     .input(createInput)
     .output(createOutput)

@@ -1,6 +1,6 @@
-// Stage 3 line 8: approval.queue, the admin's pending approvals of every subject, under the
+// Stage 3 line 8: approval.queue, the admin's pending labor approvals, under the
 // runtime role in rolled-back transactions.
-import { approvals, companies, materials } from "@trader/db/schema";
+import { approvals, companies } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -10,11 +10,8 @@ import {
   appCallerIn,
   becomeApp,
   boundIn,
-  correctionIn,
   crewDayIn,
   eventIn,
-  lateReceiptIn,
-  materialIn,
   outcome,
   ownerDb,
   pendingApproval,
@@ -69,13 +66,11 @@ async function pendingSession(tx: Tx, d: CrewDay, worker: string, initiator?: st
 }
 
 describe("approval.queue", () => {
-  it("lists every pending subject with its stored reasons, and nothing decided or row-less", async () => {
+  it("lists every pending labor approval with its stored reasons, and nothing decided or row-less", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       const admin = await boundIn(tx, d.companyId, "admin");
       const labor = await pendingSession(tx, d, d.w1);
-      const receipt = await lateReceiptIn(tx, d);
-      const correction = await correctionIn(tx, d, receipt.materialId, d.foremanId);
       const decided = await pendingSession(tx, d, d.w2);
       await decideAs(tx, decided.approvalId, admin.id);
       await becomeApp(tx);
@@ -83,10 +78,8 @@ describe("approval.queue", () => {
       expect(next).toBeNull();
       expect(items.map((i) => [i.approvalId, i.subject.kind, i.reasons])).toEqual([
         [labor.approvalId, "labor_event", ["offline", "location"]],
-        [receipt.approvalId, "material", ["after_closeout"]],
-        [correction.approvalId, "material_correction", ["corrected"]],
       ]);
-      const [event, material, corrected] = items.map((i) => i.subject);
+      const [event] = items.map((i) => i.subject);
       expect(event).toMatchObject({
         eventId: labor.start,
         type: "started",
@@ -103,57 +96,8 @@ describe("approval.queue", () => {
           eligibleWorkedMs: 0,
         },
       });
-      expect(material).toMatchObject({
-        materialId: receipt.materialId,
-        original: { quantity: "2.000" },
-        accounting: "pending",
-      });
-      expect(corrected).toMatchObject({
-        correctionId: correction.correctionId,
-        submittedBy: { id: d.foremanId },
-        correction: { kind: "amend", quantity: "3.000" },
-        // Pending, so not yet in effect.
-        effective: { quantity: "2.000", voided: false },
-      });
       // No coordinates or cost cross.
       expect(JSON.stringify(items)).not.toMatch(/location_lat|locationLat|cost/i);
-    });
-  });
-
-  it("carries a receipt's stored provenance on the receipt and on its correction", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await crewDayIn(tx);
-      const admin = await boundIn(tx, d.companyId, "admin");
-      const entering = await boundIn(tx, d.companyId, "admin");
-      const pushed = await lateReceiptIn(tx, d, entering.id);
-      const entered = await materialIn(
-        tx,
-        d,
-        d.J,
-        "2026-10-05T14:30:00Z",
-        entering.id,
-        true,
-      );
-      await pendingApproval(tx, d.companyId, { materialId: entered }, ["after_closeout"]);
-      await correctionIn(tx, d, entered, d.foremanId);
-      await becomeApp(tx);
-      const { items } = await queue(tx, admin.who);
-      const shown = items.map((i) =>
-        i.subject.kind === "labor_event"
-          ? null
-          : [
-              i.subject.kind,
-              i.subject.materialId,
-              i.subject.loggedBy.id,
-              i.subject.enteredByOffice,
-            ],
-      );
-      // The same admin logged both: only the stored column tells them apart.
-      expect(shown).toEqual([
-        ["material", pushed.materialId, entering.id, false],
-        ["material", entered, entering.id, true],
-        ["material_correction", entered, entering.id, true],
-      ]);
     });
   });
 
@@ -163,8 +107,7 @@ describe("approval.queue", () => {
       const other = await crewDayIn(tx);
       const admin = await boundIn(tx, d.companyId, "admin");
       const mine = await pendingSession(tx, d, d.w1);
-      await pendingSession(tx, other, other.w1);
-      const theirs = await lateReceiptIn(tx, other);
+      const theirs = await pendingSession(tx, other, other.w1);
       await becomeApp(tx);
       const { items } = await queue(tx, admin.who);
       expect(items.map((i) => i.approvalId)).toEqual([mine.approvalId]);
@@ -181,7 +124,11 @@ describe("approval.queue", () => {
       const admin = await boundIn(tx, d.companyId, "admin");
       // One transaction: every row's created_at is the same now().
       const ids: string[] = [];
-      for (let i = 0; i < 4; i++) ids.push((await lateReceiptIn(tx, d)).approvalId);
+      for (const worker of [d.w1, d.w2]) {
+        const s = await pendingSession(tx, d, worker);
+        ids.push(s.approvalId);
+        ids.push(await pendingApproval(tx, d.companyId, { eventId: s.end }));
+      }
       await becomeApp(tx);
       const all = await queue(tx, admin.who);
       expect(new Set(all.items.map((i) => i.createdAt.getTime())).size).toBe(1);
@@ -207,25 +154,12 @@ describe("approval.queue", () => {
       const admin = await boundIn(tx, d.companyId, "admin");
       const ownLabor = await pendingSession(tx, d, admin.id, d.foremanId);
       const recorded = await pendingSession(tx, d, d.w2, admin.id);
-      const ownReceipt = await lateReceiptIn(tx, d, admin.id);
-      const correctedByForeman = await correctionIn(
-        tx,
-        d,
-        ownReceipt.materialId,
-        d.foremanId,
-      );
-      const other = await lateReceiptIn(tx, d);
-      const ownCorrection = await correctionIn(tx, d, other.materialId, admin.id);
       await becomeApp(tx);
       const own = new Map(
         (await queue(tx, admin.who)).items.map((i) => [i.approvalId, i.ownEntry]),
       );
       expect(own.get(ownLabor.approvalId)).toBe(true);
       expect(own.get(recorded.approvalId)).toBe(false);
-      expect(own.get(ownReceipt.approvalId)).toBe(true);
-      expect(own.get(correctedByForeman.approvalId)).toBe(false);
-      expect(own.get(other.approvalId)).toBe(false);
-      expect(own.get(ownCorrection.approvalId)).toBe(true);
     });
   });
 
@@ -303,7 +237,7 @@ describe("approval.queue", () => {
     });
   });
 
-  it("names the company's zone on every page, and when a receipt was stored", async () => {
+  it("names the company's zone on every page", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       const admin = await boundIn(tx, d.companyId, "admin");
@@ -319,19 +253,11 @@ describe("approval.queue", () => {
         next: null,
       });
       await tx.execute(sql`set local role none`);
-      const receipt = await lateReceiptIn(tx, d);
-      const [stored] = await tx
-        .select({ createdAt: materials.createdAt, loggedAt: materials.loggedAt })
-        .from(materials)
-        .where(eq(materials.id, receipt.materialId));
+      await pendingSession(tx, d, d.w1);
       await becomeApp(tx);
-      // A page of receipts alone, with no labor to read a zone for.
       const page = await queue(tx, admin.who);
       expect(page.timezone).toBe(company!.timezone);
-      expect(page.items.map((i) => i.subject)).toMatchObject([
-        { kind: "material", loggedAt: stored!.loggedAt, receivedAt: stored!.createdAt },
-      ]);
-      expect(stored!.createdAt.getTime()).not.toBe(stored!.loggedAt.getTime());
+      expect(page.items).toHaveLength(1);
     });
   });
 

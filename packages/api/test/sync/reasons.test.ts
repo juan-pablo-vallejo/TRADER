@@ -8,7 +8,6 @@ import {
   laborReasons,
   locationFlagged,
   measureSkew,
-  receiptReasons,
 } from "../../src/sync/reasons";
 
 const SERVER = new Date("2026-11-05T15:00:00.000Z");
@@ -26,7 +25,6 @@ const plain = {
   stamp: north(0),
   job: JOB,
   clockSkewed: false,
-  afterCloseout: false,
 };
 
 describe("measureSkew", () => {
@@ -118,16 +116,9 @@ describe("location", () => {
   });
 });
 
-describe("laborReasons and receiptReasons", () => {
+describe("laborReasons", () => {
   it("is empty for an online, stamped, unskewed, on-time entry", () => {
     expect(laborReasons(plain)).toEqual([]);
-    expect(
-      receiptReasons({
-        capturedOffline: false,
-        clockSkewed: false,
-        afterCloseout: false,
-      }),
-    ).toEqual([]);
   });
 
   it("names each fact once, in the enum's order", () => {
@@ -135,21 +126,16 @@ describe("laborReasons and receiptReasons", () => {
     expect(laborReasons({ ...plain, timeSetByUser: true })).toEqual(["user_timed"]);
     expect(laborReasons({ ...plain, stamp: null })).toEqual(["location"]);
     expect(laborReasons({ ...plain, clockSkewed: true })).toEqual(["clock_skewed"]);
-    expect(laborReasons({ ...plain, afterCloseout: true })).toEqual(["after_closeout"]);
     expect(
       laborReasons({
         ...plain,
-        afterCloseout: true,
         stamp: null,
         capturedOffline: true,
         clockSkewed: true,
         timeSetByUser: true,
       }),
-    ).toEqual(["offline", "user_timed", "location", "clock_skewed", "after_closeout"]);
+    ).toEqual(["offline", "user_timed", "location", "clock_skewed"]);
     expect(laborReasons({ ...plain, corrected: true })).toEqual(["corrected"]);
-    expect(
-      receiptReasons({ capturedOffline: true, clockSkewed: true, afterCloseout: true }),
-    ).toEqual(["offline", "clock_skewed", "after_closeout"]);
   });
 
   it("tags an office repair corrected, and never flags a void's missing stamp", () => {
@@ -164,15 +150,6 @@ describe("laborReasons and receiptReasons", () => {
     expect(
       laborReasons({ ...office, type: "voided", corrected: true, timeSetByUser: false }),
     ).toEqual(["corrected"]);
-    expect(
-      laborReasons({
-        ...office,
-        type: "voided",
-        corrected: true,
-        timeSetByUser: false,
-        afterCloseout: true,
-      }),
-    ).toEqual(["corrected", "after_closeout"]);
   });
 
   it("takes offline from capture evidence alone, never from a delay", () => {

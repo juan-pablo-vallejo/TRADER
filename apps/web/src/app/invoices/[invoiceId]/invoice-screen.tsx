@@ -39,7 +39,6 @@ type Draft = {
   quantity: string;
   unit: string;
   price: string;
-  materialId: string | null;
 };
 
 const QUANTITY = /^\d{1,9}(\.\d{1,3})?$/;
@@ -62,7 +61,6 @@ function parsed(line: Draft) {
     quantity,
     unit: line.unit.trim() === "" ? null : line.unit.trim(),
     unitPriceCents,
-    materialId: line.materialId,
   };
 }
 
@@ -112,7 +110,6 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       quantity: l.quantity.replace(/\.?0+$/, ""),
       unit: l.unit ?? "",
       price: amount(l.unitPriceCents),
-      materialId: l.materialId,
     })),
   );
   const [tax, setTax] = useState(() => amount(invoice.taxCents));
@@ -121,7 +118,6 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   const [note, setNote] = useState<string | null>(null);
   const [tone, setTone] = useState<"saved" | "error">("error");
   const offers = useQuery(trpc.invoice.suggest.queryOptions({ invoiceId: invoice.id }));
-  const cost = useQuery(trpc.job.cost.queryOptions({ jobId: invoice.job.id }));
 
   const change = (next: Draft[]) => {
     setLines(next);
@@ -139,7 +135,6 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         quantity: "",
         unit: "",
         price: "",
-        materialId: null,
         ...line,
       },
     ]);
@@ -206,7 +201,6 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
     if (taxCents === null) return fail(s.badTax);
     save.mutate({ invoiceId: invoice.id, taxCents, lines: sent });
   };
-  const drawn = new Set(lines.flatMap((l) => (l.materialId ? [l.materialId] : [])));
 
   return (
     <>
@@ -290,7 +284,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
           <p className="body">{strings.loading}</p>
         ) : offers.isError ? (
           <p className="body">{strings.requestFailed}</p>
-        ) : offers.data.labor.length + offers.data.materials.length === 0 ? (
+        ) : offers.data.labor.length === 0 ? (
           <p className="body">{s.nothingToDraw}</p>
         ) : (
           <ul className={styles.offers}>
@@ -314,42 +308,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
                 </li>
               );
             })}
-            {offers.data.materials
-              .filter((m) => !drawn.has(m.materialId))
-              .map((m) => {
-                const quantity = m.quantity.replace(/\.?0+$/, "");
-                return (
-                  <li key={m.materialId}>
-                    <span className="body">
-                      {m.description} · {quantity} {m.unit}
-                    </span>
-                    <button
-                      type="button"
-                      className={controls.secondary}
-                      aria-label={s.addOf(m.description)}
-                      onClick={() =>
-                        add({
-                          description: m.description,
-                          quantity,
-                          unit: m.unit,
-                          materialId: m.materialId,
-                        })
-                      }
-                    >
-                      {s.add}
-                    </button>
-                  </li>
-                );
-              })}
           </ul>
-        )}
-        {cost.isSuccess && (
-          <p className={`secondary ${styles.reference}`}>
-            {s.jobCost}:{" "}
-            {cost.data.total.length === 0
-              ? "—"
-              : cost.data.total.map((t) => money(t.cents, t.currency)).join(" + ")}
-          </p>
         )}
       </section>
 

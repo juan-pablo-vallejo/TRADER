@@ -1,7 +1,7 @@
 // The approval rule's facts at push (PRD, Office approval; ARCHITECTURE, sync decisions of
 // 2026-11-05). Pure: no database, no clock. Every reason is computed here, in one place, and
 // written once with the entry it describes; the database requires the column-derived ones
-// (migrations 0022 and 0026). Consumed by sync/labor.ts, sync/material.ts and labor/repair.ts.
+// (migrations 0022 and 0026). Consumed by sync/labor.ts and labor/repair.ts.
 import type { approvalReason } from "@trader/db/schema";
 
 export type ApprovalReason = (typeof approvalReason.enumValues)[number];
@@ -82,7 +82,6 @@ const ordered = (flags: Partial<Record<ApprovalReason, boolean>>): ApprovalReaso
       "user_timed",
       "location",
       "clock_skewed",
-      "after_closeout",
       "unscheduled",
     ] as const
   ).filter((r) => flags[r] === true);
@@ -97,7 +96,6 @@ export function laborReasons(e: {
   stamp: Point | null;
   job: JobPlace;
   clockSkewed: boolean;
-  afterCloseout: boolean;
   // A start the schedule did not admit, stored for review (sync/schedule.ts). Push alone
   // says so: an office repair is never judged by the schedule.
   unscheduled?: boolean;
@@ -108,20 +106,6 @@ export function laborReasons(e: {
     user_timed: e.timeSetByUser,
     location: e.type !== "voided" && locationFlagged(e.type, e.stamp, e.job),
     clock_skewed: e.clockSkewed,
-    after_closeout: e.afterCloseout,
     unscheduled: e.unscheduled === true,
-  });
-}
-
-// A receipt has no user-set time and no stamp (PRD: stamps are at clock events only).
-export function receiptReasons(r: {
-  capturedOffline: boolean;
-  clockSkewed: boolean;
-  afterCloseout: boolean;
-}): ApprovalReason[] {
-  return ordered({
-    offline: r.capturedOffline,
-    clock_skewed: r.clockSkewed,
-    after_closeout: r.afterCloseout,
   });
 }

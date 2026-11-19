@@ -28,9 +28,6 @@ import {
   createAssignments,
   createInput,
   createOutput,
-  decideInput,
-  decideOutput,
-  decideOverride,
   removeAssignment,
   removeInput,
   removeOutput,
@@ -65,10 +62,6 @@ export const assignmentRouter = router({
     .input(removeInput)
     .output(removeOutput)
     .mutation(({ ctx, input }) => removeAssignment(ctx.tx, ctx.user, input)),
-  decide: roleProcedure("admin")
-    .input(decideInput)
-    .output(decideOutput)
-    .mutation(({ ctx, input }) => decideOverride(ctx.tx, ctx.user, input)),
   copyPreview: roleProcedure("admin")
     .input(copyPreviewInput)
     .output(copyPreview)

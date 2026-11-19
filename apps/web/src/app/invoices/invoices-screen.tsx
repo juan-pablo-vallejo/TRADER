@@ -4,7 +4,7 @@
 // ones by number, newest first, each row a link to the invoice. The header's action starts a
 // draft for a jobsite — its customer is the jobsite's — under an id minted here, so a start
 // sent again is the same draft, and opens it.
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
@@ -76,52 +76,6 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
   );
 }
 
-// The plain list of issued invoices (DESIGN, Invoice CSV): its own named button, what the
-// file holds beneath it. Asked for when pressed and saved as it came.
-function InvoicesFile() {
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const save = async () => {
-    setBusy(true);
-    setNote(null);
-    setSaved(false);
-    try {
-      const file = await queryClient.fetchQuery(
-        trpc.invoice.exportCsv.queryOptions(undefined, { staleTime: 0, gcTime: 0 }),
-      );
-      const url = URL.createObjectURL(new Blob([file.csv], { type: "text/csv" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = file.filename;
-      link.click();
-      URL.revokeObjectURL(url);
-      setSaved(true);
-      setNote(s.csvSaved(file.filename));
-    } catch {
-      setNote(strings.requestFailed);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className={styles.section}>
-      <button
-        type="button"
-        className={controls.secondary}
-        disabled={busy}
-        onClick={() => void save()}
-      >
-        {s.csv}
-      </button>
-      <p className={`secondary ${styles.explain}`}>{s.csvExplain}</p>
-      <Note text={note} tone={saved ? "saved" : undefined} />
-    </div>
-  );
-}
-
 export function InvoicesScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const list = useQuery(trpc.invoice.list.queryOptions());
@@ -189,7 +143,6 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
               </tbody>
             </table>
           )}
-          {list.data.some((i) => i.number !== null) && <InvoicesFile />}
         </>
       )}
     </>

@@ -2,16 +2,7 @@
 // Postgres, in rolled-back owner transactions: each record's caller transaction is a savepoint
 // of it. What a commit proves is sync/push-commit.test.ts's; the loop's stop rules are also
 // proved here without a database, through pushRecords with a stand-in runner.
-import {
-  crewMembers,
-  dayCloseoutMaterials,
-  dayCloseouts,
-  dayCloseoutWorkers,
-  materialCorrections,
-  materials,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { crewMembers, users, workSessionEvents } from "@trader/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
@@ -26,7 +17,6 @@ import {
   type PushResult,
   type RunRecord,
 } from "../../src/sync/push";
-import type { DiagnosticLine } from "../../src/sync/diagnostics";
 import {
   appCallerIn,
   asTenant,
@@ -37,7 +27,6 @@ import {
   recordingReporter,
   rejection,
   rolledBack,
-  sqlstateOf,
   throwingReporter,
   uuidv7,
 } from "../helpers";
@@ -68,23 +57,6 @@ function labor(
       attestationLevel: "biometric",
       location: HERE,
       timeSetByUser: false,
-      capturedOffline: false,
-      ...o,
-    },
-  };
-}
-
-function receipt(jobId: string, o: Record<string, unknown> = {}, id = uuidv7()) {
-  return {
-    id,
-    kind: "material",
-    schemaVersion: 1,
-    payload: {
-      jobId,
-      description: "Primer",
-      quantity: "1.5",
-      unit: "gal",
-      loggedAt: new Date("2026-10-05T15:00:00Z"),
       capturedOffline: false,
       ...o,
     },
@@ -208,7 +180,11 @@ describe("sync.push — envelopes", () => {
         bad,
         unknownKind,
         extra,
-        receipt(d.J),
+        labor(d.w.id, d.J, {
+          type: "paused",
+          clientTimestamp: new Date("2026-10-05T13:00:00Z"),
+          location: null,
+        }),
       ]);
       expect(summary(answer.results)).toEqual([
         "accepted",
@@ -230,7 +206,7 @@ describe("sync.push — envelopes", () => {
       const beyond = labor(d.w.id, d.J, {
         clientTimestamp: new Date("+010000-01-01T00:00:00.000Z"),
       });
-      const answer = await push(tx, d.w.who, [beyond, receipt(d.J)]);
+      const answer = await push(tx, d.w.who, [beyond, labor(d.w.id, d.J)]);
       expect(summary(answer.results)).toEqual(["rejected:invalid_record", "accepted"]);
     });
   });
@@ -240,30 +216,16 @@ describe("sync.push — envelopes", () => {
       const d = await world(tx);
       const first = labor(d.w.id, d.J);
       const future = { ...labor(d.w.id, d.J), schemaVersion: 2 };
-      const noId = { ...receipt(d.J), id: "not-a-uuid" };
+      const noId = { ...labor(d.w.id, d.J), id: "not-a-uuid" };
+      const behind = labor(d.w.id, d.J, {
+        type: "paused",
+        clientTimestamp: new Date("2026-10-05T13:00:00Z"),
+        location: null,
+      });
       for (const blocker of [future, noId]) {
-        const answer = await push(tx, d.w.who, [first, blocker, receipt(d.J)]);
+        const answer = await push(tx, d.w.who, [first, blocker, behind]);
         expect(answer.results.map((r) => r.id)).toEqual([first.id]);
       }
-    });
-  });
-
-  it("normalizes a receipt's quantity as Postgres prints it", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await world(tx);
-      const r = receipt(d.J, { quantity: "1.5" });
-      await push(tx, d.w.who, [r]);
-      const row = await asOwner(
-        tx,
-        d.companyId,
-        async () => (await tx.select().from(materials).where(eq(materials.id, r.id)))[0],
-      );
-      expect(row?.quantity).toBe("1.500");
-      // The same receipt written "1.50" is the same receipt.
-      const again = await push(tx, d.w.who, [
-        { ...r, payload: { ...r.payload, quantity: "1.50" } },
-      ]);
-      expect(summary(again.results)).toEqual(["duplicate"]);
     });
   });
 });
@@ -304,154 +266,9 @@ describe("sync.push — the day as the field sends it", () => {
     });
   });
 
-  it("answers a delegate's refusal not_permitted and goes on", async () => {
+  it("carries a two-day backlog: offline throughout, each day at its captured times", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
-      const closeout = {
-        id: uuidv7(),
-        kind: "closeout",
-        schemaVersion: 1,
-        payload: {
-          jobId: d.J,
-          workDate: "2026-10-05",
-          jobStatus: "open",
-          note: null,
-          clientTimestamp: new Date(),
-          reviewFingerprint: `v1.${"0".repeat(64)}`,
-        },
-      };
-      const answer = await push(tx, d.w.who, [closeout, labor(d.w.id, d.J)]);
-      expect(summary(answer.results)).toEqual(["rejected:not_permitted", "accepted"]);
-    });
-  });
-
-  it("answers a delegate's id another tenant holds id_conflict, as a visible one, and goes on", async () => {
-    await rolledBack(owner, async (tx) => {
-      // Their closeout and their late receipt's correction, through their own pushes.
-      const t = await world(tx);
-      const closeoutOf = async (d: typeof t, workDate: string, id = uuidv7()) => ({
-        id,
-        kind: "closeout",
-        schemaVersion: 1,
-        payload: {
-          jobId: d.J,
-          workDate,
-          jobStatus: "open",
-          note: null,
-          clientTimestamp: new Date(),
-          reviewFingerprint: (
-            await appCallerIn(tx, d.who).closeout.review({ jobId: d.J, workDate })
-          ).fingerprint,
-        },
-      });
-      const correctionOf = (materialId: string, id = uuidv7()) => ({
-        id,
-        kind: "material_correction",
-        schemaVersion: 1,
-        payload: {
-          materialId,
-          correction: { kind: "void" },
-          note: null,
-          clientTimestamp: new Date(),
-        },
-      });
-      // A closed day and a receipt that arrived after it: correctable.
-      const lateReceipt = async (d: typeof t) => {
-        const closed = await push(tx, d.who, [await closeoutOf(d, "2026-10-05")]);
-        expect(summary(closed.results)).toEqual(["accepted"]);
-        const late = receipt(d.J);
-        expect(summary((await push(tx, d.w.who, [late])).results)).toEqual(["accepted"]);
-        return late.id;
-      };
-      const theirCloseout = await closeoutOf(t, "2026-10-04");
-      const theirCorrection = correctionOf(await lateReceipt(t));
-      expect(
-        summary((await push(tx, t.who, [theirCloseout, theirCorrection])).results),
-      ).toEqual(["accepted", "accepted"]);
-      await tx.execute(sql`reset role`);
-
-      const d = await world(tx);
-      const mine = await lateReceipt(d);
-      const batch = [
-        await closeoutOf(d, "2026-10-04", theirCloseout.id),
-        correctionOf(mine, theirCorrection.id),
-        labor(d.foremanId, d.J),
-      ];
-      const answer = await push(tx, d.who, batch);
-      expect(answer.results).toEqual([
-        {
-          id: theirCloseout.id,
-          kind: "closeout",
-          result: "rejected",
-          code: "id_conflict",
-        },
-        {
-          id: theirCorrection.id,
-          kind: "material_correction",
-          result: "rejected",
-          code: "id_conflict",
-        },
-        expect.objectContaining({ id: batch[2]!.id, result: "accepted" }),
-      ]);
-      // The same batch again, as after a dropped response: the same answers, nothing written.
-      expect(summary((await push(tx, d.who, batch)).results)).toEqual([
-        "rejected:id_conflict",
-        "rejected:id_conflict",
-        "duplicate",
-      ]);
-      const written = await asOwner(tx, d.companyId, async () => ({
-        closeouts: (
-          await tx
-            .select()
-            .from(dayCloseouts)
-            .where(eq(dayCloseouts.companyId, d.companyId))
-        ).length,
-        corrections: (
-          await tx
-            .select()
-            .from(materialCorrections)
-            .where(eq(materialCorrections.companyId, d.companyId))
-        ).length,
-      }));
-      expect(written).toEqual({ closeouts: 1, corrections: 0 });
-    });
-  });
-
-  it("carries a two-day backlog: offline throughout, after_closeout on the day closed meanwhile", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await world(tx);
-      // Day 1 closed by the foreman while w's phone was offline: w had no session then.
-      const review = await appCallerIn(tx, d.who).closeout.review({
-        jobId: d.J,
-        workDate: "2026-10-05",
-      });
-      const closeoutId = uuidv7();
-      const closed = await appCallerIn(tx, d.who).closeout.submit({
-        id: closeoutId,
-        jobId: d.J,
-        workDate: "2026-10-05",
-        jobStatus: "open",
-        note: null,
-        clientTimestamp: new Date(),
-        reviewFingerprint: review.fingerprint,
-      });
-      expect(closed.result).toBe("accepted");
-      const snapshot = () =>
-        asOwner(tx, d.companyId, async () => ({
-          closeout: await tx
-            .select()
-            .from(dayCloseouts)
-            .where(eq(dayCloseouts.id, closeoutId)),
-          workers: await tx
-            .select()
-            .from(dayCloseoutWorkers)
-            .where(eq(dayCloseoutWorkers.closeoutId, closeoutId)),
-          materials: await tx
-            .select()
-            .from(dayCloseoutMaterials)
-            .where(eq(dayCloseoutMaterials.closeoutId, closeoutId)),
-        }));
-      const before = await snapshot();
       const day = (date: string) => [
         labor(d.w.id, d.J, {
           clientTimestamp: new Date(`${date}T12:00:00Z`),
@@ -474,7 +291,6 @@ describe("sync.push — the day as the field sends it", () => {
           clientTimestamp: new Date(`${date}T20:00:00Z`),
           capturedOffline: true,
         }),
-        receipt(d.J, { loggedAt: new Date(`${date}T16:00:00Z`), capturedOffline: true }),
       ];
       const answer = await push(tx, d.w.who, [
         ...day("2026-10-05"),
@@ -483,12 +299,7 @@ describe("sync.push — the day as the field sends it", () => {
       const reasons = answer.results.map((r) =>
         r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
       );
-      expect(reasons).toEqual([
-        ...Array(5).fill(["offline", "after_closeout"]),
-        ...Array(5).fill(["offline"]),
-      ]);
-      // The closeout and its membership are exactly as submitted.
-      expect(await snapshot()).toEqual(before);
+      expect(reasons).toEqual(Array(8).fill(["offline"]));
 
       // Delivered late, kept where it was captured (V1-D01): each day's session at its own
       // times, in order, and nothing flagged for a delay alone.
@@ -521,8 +332,7 @@ describe("sync.push — the day as the field sends it", () => {
         ]),
       );
 
-      // The foreman's own hour on the closed day, sent now as if captured online then: flagged,
-      // judged on the day it claims, and the closeout still exactly as submitted.
+      // The foreman's own hour on a past day, sent now as if captured online then: flagged.
       const claimed = await push(tx, d.who, [
         labor(d.foremanId, d.J),
         labor(d.foremanId, d.J, {
@@ -534,8 +344,7 @@ describe("sync.push — the day as the field sends it", () => {
         claimed.results.map((r) =>
           r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
         ),
-      ).toEqual(Array(2).fill(["clock_skewed", "after_closeout"]));
-      expect(await snapshot()).toEqual(before);
+      ).toEqual(Array(2).fill(["clock_skewed"]));
     });
   });
 
@@ -548,15 +357,22 @@ describe("sync.push — the day as the field sends it", () => {
       const future = labor(d.w.id, d.J, {
         clientTimestamp: new Date(Date.now() + 3_600_000),
       });
-      const answer = await push(tx, d.w.who, [future, receipt(d.J)]);
-      // An ordinary per-record rejection: the record behind it still runs.
+      const answer = await push(tx, d.w.who, [
+        future,
+        labor(d.w.id, d.J, { type: "ended" }),
+      ]);
+      // An ordinary per-record rejection: the record behind it still runs, and is judged on
+      // a ledger the refused start never reached.
       expect(answer.results[0]).toEqual({
         id: future.id,
         kind: "labor_event",
         result: "rejected",
         code: "time_in_future",
       });
-      expect(summary(answer.results)).toEqual(["rejected:time_in_future", "accepted"]);
+      expect(summary(answer.results)).toEqual([
+        "rejected:time_in_future",
+        "rejected:no_open_session",
+      ]);
       const ledger = () => asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id));
       expect(await ledger()).toEqual([]);
 
@@ -666,86 +482,22 @@ describe("sync.push — the day as the field sends it", () => {
       ).toMatchObject([{ startedAt: start.payload.clientTimestamp, complete: false }]);
     });
   });
-
-  it("records a late receipt pending, then takes its correction, the closeout untouched", async () => {
-    await rolledBack(owner, async (tx) => {
-      const d = await world(tx);
-      const review = await appCallerIn(tx, d.who).closeout.review({
-        jobId: d.J,
-        workDate: "2026-10-05",
-      });
-      const closeout = {
-        id: uuidv7(),
-        kind: "closeout",
-        schemaVersion: 1,
-        payload: {
-          jobId: d.J,
-          workDate: "2026-10-05",
-          jobStatus: "open",
-          note: null,
-          clientTimestamp: new Date(),
-          reviewFingerprint: review.fingerprint,
-        },
-      };
-      expect(summary((await push(tx, d.who, [closeout])).results)).toEqual(["accepted"]);
-      const late = receipt(d.J);
-      const logged = await push(tx, d.w.who, [late]);
-      expect(logged.results[0]).toMatchObject({ ack: { reasons: ["after_closeout"] } });
-      const correction = {
-        id: uuidv7(),
-        kind: "material_correction",
-        schemaVersion: 1,
-        payload: {
-          materialId: late.id,
-          correction: {
-            kind: "amend",
-            description: "Primer",
-            quantity: "2",
-            unit: "gal",
-          },
-          note: "Two gallons",
-          clientTimestamp: new Date(),
-        },
-      };
-      const corrected = await push(tx, d.who, [correction]);
-      expect(corrected.results[0]).toMatchObject({
-        result: "accepted",
-        ack: { id: correction.id },
-      });
-      const members = await asOwner(tx, d.companyId, () =>
-        tx
-          .select()
-          .from(dayCloseoutMaterials)
-          .where(eq(dayCloseoutMaterials.closeoutId, closeout.id)),
-      );
-      expect(members).toEqual([]);
-      // The receipt as logged stays: frozen, corrected only by its correction's approval.
-      await tx.execute(sql`reset role`);
-      const error = await rejection(
-        tx.transaction((sp) =>
-          sp
-            .update(materials)
-            .set({ quantity: "2.000" })
-            .where(eq(materials.id, late.id)),
-        ),
-      );
-      expect(sqlstateOf(error)).toBe("23000");
-    });
-  });
 });
 
 describe("pushRecords — the loop, without a database", () => {
   const records = (n: number) =>
     Array.from({ length: n }, () => ({
       id: uuidv7(),
-      kind: "material",
+      kind: "labor_event",
       schemaVersion: 1,
       payload: {
+        workerId: uuidv7(),
         jobId: uuidv7(),
-        description: "x",
-        quantity: "1",
-        unit: "ea",
-        loggedAt: new Date(),
+        type: "started",
+        clientTimestamp: new Date(),
+        attestationLevel: "none",
+        location: null,
+        timeSetByUser: false,
         capturedOffline: false,
       },
     }));
@@ -757,7 +509,7 @@ describe("pushRecords — the loop, without a database", () => {
       if (fail[i] !== undefined) throw fail[i];
       return {
         id: uuidv7(),
-        kind: "material",
+        kind: "labor_event",
         result: "rejected",
         code: `r_${i}`,
       } as never;
@@ -798,7 +550,7 @@ describe("pushRecords — the loop, without a database", () => {
       calls++;
       return body(undefined as never, undefined as never);
     };
-    const invalid = { id: uuidv7(), kind: "material", schemaVersion: 1, payload: {} };
+    const invalid = { id: uuidv7(), kind: "labor_event", schemaVersion: 1, payload: {} };
     const out = await pushRecords(input([invalid, invalid]), run);
     expect(calls).toBe(1);
     expect(out.results).toHaveLength(2);
@@ -818,80 +570,13 @@ describe("pushRecords — the loop, without a database", () => {
       now += BUDGET_MS / 2 + 1;
       return {
         id: uuidv7(),
-        kind: "material",
+        kind: "labor_event",
         result: "rejected",
         code: `r_${n++}`,
       } as never;
     };
     const out = await pushRecords(input(records(5)), run, clock);
     expect(out.results).toHaveLength(2);
-  });
-
-  // V1-D04: what the loop notes for the diagnostics (sync/diagnostics.ts).
-  const noting = () => {
-    const noted: DiagnosticLine[] = [];
-    return { noted, note: (line: DiagnosticLine) => void noted.push(line) };
-  };
-
-  it("notes each rejection, the record it stopped on and each identifiable one behind it", async () => {
-    const { noted, note } = noting();
-    const rs = [...records(3), { payload: "no id" }, ...records(1)];
-    const out = await pushRecords(
-      input(rs),
-      fakeRun({ 1: new Error("transient") }),
-      Date.now,
-      undefined,
-      note,
-    );
-    expect(out.results).toHaveLength(1);
-    const id = (i: number) => (rs[i] as { id: string }).id;
-    expect(noted).toEqual([
-      // fakeRun answers under an id of its own: the line carries the answer's.
-      {
-        recordId: out.results[0]!.id,
-        recordKind: "material",
-        outcome: "rejected",
-        code: "r_0",
-      },
-      {
-        recordId: id(1),
-        recordKind: "material",
-        outcome: "omitted",
-        code: "record_failed",
-      },
-      {
-        recordId: id(2),
-        recordKind: "material",
-        outcome: "omitted",
-        code: "not_attempted",
-      },
-      {
-        recordId: id(4),
-        recordKind: "material",
-        outcome: "omitted",
-        code: "not_attempted",
-      },
-    ]);
-    // A line is an id, a kind and a code: never the record it came from.
-    expect(JSON.stringify(noted)).not.toContain("jobId");
-  });
-
-  it("notes nothing for an accepted record, a duplicate, or records the budget left out", async () => {
-    const { noted, note } = noting();
-    let now = 0;
-    let n = 0;
-    const run: RunRecord = async () => {
-      now += BUDGET_MS / 2 + 1;
-      return {
-        id: uuidv7(),
-        kind: "material",
-        result: n++ === 0 ? "accepted" : "duplicate",
-        ack: {},
-      } as never;
-    };
-    const out = await pushRecords(input(records(5)), run, () => now, undefined, note);
-    expect(out.results).toHaveLength(2);
-    expect(noted).toEqual([]);
   });
 
   // TASKS:50: what the loop swallows reaches the reporter; nothing else changes.

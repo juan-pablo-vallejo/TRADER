@@ -19,25 +19,18 @@ import { appRouter } from "../router";
 import type { ApprovalReason } from "../sync/reasons";
 import { createCallerFactory } from "../core/trpc";
 import {
-  AMENDED_RECEIPT,
   BASELINE_TIMES,
   CREW_JOB,
-  COSTS,
   CREWS,
   CUSTOMERS,
   DEMO,
   EXPECTED,
-  EXPECTED_COST,
   EXPECTED_HOURS,
-  EXPECTED_PERIODS,
   JOBS,
-  payWeeks,
   PEOPLE,
   PLANS,
   planWeek,
   PRIYA_LAST_DAY,
-  RATES,
-  RECEIPTS,
   SCENARIOS,
   STAMPS,
   workDays,
@@ -54,17 +47,10 @@ export type Summary = {
   jobs: number;
   crews: number;
   crewMembers: number;
-  payRates: number;
   events: number;
-  materials: number;
-  pricedMaterials: number;
-  materialCorrections: number;
-  closeouts: number;
   approvals: number;
   decided: number;
   assignments: number;
-  payPeriods: number;
-  payPeriodLines: number;
 };
 
 export type RunOptions = {
@@ -98,7 +84,7 @@ type Caller = ReturnType<typeof makeCaller>;
 
 type Record_ = {
   id: string;
-  kind: "labor_event" | "material";
+  kind: "labor_event";
   schemaVersion: 1;
   payload: unknown;
   reasons: ApprovalReason[];
@@ -119,17 +105,10 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     jobs: 0,
     crews: 0,
     crewMembers: 0,
-    payRates: 0,
     events: 0,
-    materials: 0,
-    pricedMaterials: 0,
-    materialCorrections: 0,
-    closeouts: 0,
     approvals: 0,
     decided: 0,
     assignments: 0,
-    payPeriods: 0,
-    payPeriodLines: 0,
   };
 
   let current: Step = { index: 0, name: "start" };
@@ -186,8 +165,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   const customerIds = new Map<string, string>();
   const crewIds = new Map<string, string>();
   const jobIds = new Map<string, string>();
-  const materialIds = new Map<string, string>();
-  const periodIds: string[] = [];
   // Every accepted labor event by (who, day, type); the repair names one.
   const eventIds = new Map<string, string>();
 
@@ -217,8 +194,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
             `record ${planned.kind} ${planned.id} flagged [${reasons.join(", ")}], planned [${planned.reasons.join(", ")}]`,
           );
         }
-        if (planned.kind === "labor_event") summary.events++;
-        else summary.materials++;
+        summary.events++;
         summary.approvals += reasons.length > 0 ? 1 : 0;
       });
     }
@@ -268,31 +244,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     };
   };
 
-  const receipt = (
-    who: string,
-    day: number,
-    time: string,
-    job: string,
-    facts: { description: string; quantity: string; unit: string },
-    reasons: ApprovalReason[],
-  ): Record_ => {
-    const when = at(day, time);
-    const id = idAt(when);
-    materialIds.set(`${who}:${day}`, id);
-    return {
-      id,
-      kind: "material",
-      schemaVersion: 1,
-      payload: {
-        jobId: jobIds.get(job)!,
-        ...facts,
-        loggedAt: when,
-        capturedOffline: false,
-      },
-      reasons,
-    };
-  };
-
   // An ordinary day's four events, with the day's scenario facts applied.
   const ordinaryDay = (who: string, day: number): Record_[] => {
     const userTimed =
@@ -335,27 +286,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     ];
   };
 
-  // The foreman closes the crew's job for the day: review, then submit with the fingerprint.
-  const closeout = async (crew: "a" | "b", day: number) => {
-    const foreman = CREWS[crew].foreman;
-    const jobId = jobIds.get(CREW_JOB[crew])!;
-    const review = await as(foreman).closeout.review({ jobId, workDate: days[day]! });
-    if (review.closeout !== null)
-      fail(`day ${days[day]} on ${CREW_JOB[crew]} is already closed`);
-    const when = at(day, "16:30");
-    const answer = await as(foreman).closeout.submit({
-      id: idAt(when),
-      jobId,
-      workDate: days[day]!,
-      jobStatus: "open",
-      note: day === 0 && crew === "a" ? "Scraped and primed the south wall." : null,
-      clientTimestamp: when,
-      reviewFingerprint: review.fingerprint,
-    });
-    expectResult(answer, "accepted");
-    summary.closeouts++;
-  };
-
   // --- The steps -------------------------------------------------------------------------
 
   await step("bootstrap the company, its counter and its first admin", async () => {
@@ -376,20 +306,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       );
       if (a.result === "invited") userIds.set(p.key, a.user.id);
       summary.users++;
-    }
-  });
-
-  await step("set pay rates", async () => {
-    for (const r of RATES(opts.anchor)) {
-      expectResult(
-        await admin().roster.setPayRate({
-          userId: userIds.get(r.who)!,
-          effectiveFrom: r.effectiveFrom,
-          hourlyRateCents: r.hourlyRateCents,
-        }),
-        "added",
-      );
-      summary.payRates++;
     }
   });
 
@@ -459,9 +375,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     }
   });
 
-  // Two working weeks, day by day: everybody's events (and the day's receipts) reach the office,
-  // then each foreman closes the day. Priya's Wednesday arrives late, after its closeout and
-  // before any later day of hers, which is the only order the ledger accepts a backdated day in.
+  // Two working weeks, day by day. Priya's Wednesday arrives late, before any later day of
+  // hers, which is the only order the ledger accepts a backdated day in.
   const late = SCENARIOS.lateOfflineDay;
   for (let day = 0; day < days.length; day++) {
     await step(`record ${days[day]}`, async () => {
@@ -469,33 +384,9 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         if (p.crew === null) continue;
         if (p.key === late.who && (day === late.day || day > PRIYA_LAST_DAY)) continue;
         const records = ordinaryDay(p.key, day);
-        for (const r of RECEIPTS) {
-          if (r.who === p.key && r.day === day) {
-            records.push(
-              receipt(
-                p.key,
-                day,
-                "10:15",
-                r.job,
-                {
-                  description: r.description,
-                  quantity: r.quantity,
-                  unit: r.unit,
-                },
-                [],
-              ),
-            );
-          }
-        }
         await push(p.key, records);
       }
     });
-    if (day < days.length - 1) {
-      await step(`close out ${days[day]}`, async () => {
-        await closeout("a", day);
-        await closeout("b", day);
-      });
-    }
     if (day === late.day) {
       await step(`record ${late.who}'s late day ${days[day]}`, async () => {
         await push(late.who, [
@@ -509,58 +400,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       });
     }
   }
-
-  await step("record a receipt after its day's closeout", async () => {
-    const s = SCENARIOS.lateReceipt;
-    await push(s.who, [
-      receipt(
-        s.who,
-        s.day,
-        s.time,
-        s.job,
-        {
-          description: s.description,
-          quantity: s.quantity,
-          unit: s.unit,
-        },
-        s.reasons,
-      ),
-    ]);
-  });
-
-  await step("amend a sealed receipt", async () => {
-    const original = AMENDED_RECEIPT.original;
-    const foreman = CREWS[person(original.who).crew!].foreman;
-    const when = at(days.length - 1, "17:00");
-    const a = expectResult(
-      await as(foreman).material.correct({
-        id: idAt(when),
-        materialId: materialIds.get(`${original.who}:${original.day}`)!,
-        correction: { kind: "amend", ...AMENDED_RECEIPT.amend },
-        note: AMENDED_RECEIPT.note,
-        clientTimestamp: when,
-      }),
-      "accepted",
-    );
-    if (a.result === "accepted") {
-      summary.materialCorrections++;
-      summary.approvals++;
-    }
-  });
-
-  await step("price the receipts the office has on file", async () => {
-    for (const c of COSTS) {
-      const r = RECEIPTS[c.receipt];
-      const a = expectResult(
-        await admin().material.setCost({
-          materialId: materialIds.get(`${r.who}:${r.day}`)!,
-          cost: { cents: c.cents, currency: c.currency },
-        }),
-        "saved",
-      );
-      if (a.result === "saved") summary.pricedMaterials++;
-    }
-  });
 
   await step("correct a clock-out from the office", async () => {
     const s = SCENARIOS.repairedEnd;
@@ -633,87 +472,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     }
   });
 
-  // After the backlog and before the decisions below: week one closes with Priya's late day
-  // still waiting, which the close is told it knows, and the decision that follows approves
-  // it — so it reaches payroll as an adjustment of week two, never by changing week one.
-  await step("open the two recorded weeks as pay periods", async () => {
-    for (const week of payWeeks(opts.anchor)) {
-      const a = expectResult(await admin().payPeriod.open(week), "opened");
-      if (a.result !== "opened") return;
-      periodIds.push(a.period.id);
-      summary.payPeriods++;
-    }
-  });
-
-  await step("close the first pay period with an entry still waiting", async () => {
-    const periodId = periodIds[0]!;
-    const { unresolved } = await admin().payPeriod.read({ periodId });
-    const waiting = {
-      pendingSessions: unresolved.pendingSessions,
-      openSessions: unresolved.openSessions,
-    };
-    if (
-      JSON.stringify(waiting) !== JSON.stringify(EXPECTED_PERIODS.closed.acknowledged)
-    ) {
-      fail(`week one has ${JSON.stringify(waiting)} unresolved`);
-    }
-    // Without the acknowledgment the close is refused, and writes nothing.
-    const refused = await admin().payPeriod.close({ periodId });
-    if (refused.result !== "rejected" || refused.code !== "unacknowledged") {
-      fail(`an unacknowledged close answered ${refused.result}`);
-    }
-    const a = expectResult(
-      await admin().payPeriod.close({ periodId, acknowledged: waiting }),
-      "closed",
-    );
-    if (a.result !== "closed") return;
-    summary.payPeriodLines += a.lines.own + a.lines.adjustments;
-  });
-
-  await step("decide the oldest pending approvals", async () => {
-    const queue = await admin().approval.queue({ limit: SCENARIOS.decisions.length });
-    if (queue.items.length < SCENARIOS.decisions.length) {
-      fail(
-        `${queue.items.length} pending approvals, ${SCENARIOS.decisions.length} planned`,
-      );
-    }
-    for (const [n, decision] of SCENARIOS.decisions.entries()) {
-      expectResult(
-        await admin().approval.decide({
-          approvalId: queue.items[n]!.approvalId,
-          decision,
-        }),
-        "decided",
-      );
-      summary.decided++;
-    }
-  });
-
-  // After the decisions above, which take the oldest pending rows: this one is the admin's
-  // own and theirs never to decide.
-  await step("enter a receipt the crew never logged", async () => {
-    const s = SCENARIOS.officeReceipt;
-    const a = expectResult(
-      await admin().material.create({
-        id: idAt(at(s.day, "12:00")),
-        jobId: jobIds.get(s.job)!,
-        workDate: days[s.day]!,
-        description: s.description,
-        quantity: s.quantity,
-        unit: s.unit,
-        cost: s.cost,
-      }),
-      "created",
-    );
-    if (a.result !== "created") return;
-    if (a.entry.reasons.join() !== s.reasons.join()) {
-      fail(`the office receipt carries ${a.entry.reasons.join()}`);
-    }
-    summary.materials++;
-    summary.pricedMaterials++;
-    summary.approvals++;
-  });
-
   // Before the deactivation below: a plan is refused for a person already deactivated.
   await step("plan the coming week", async () => {
     const week = planWeek(opts.anchor);
@@ -765,18 +523,9 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     );
   });
 
-  // Last, with everything written: what the hours and the receipts come to, read as the
-  // office reads it and held to the figures worked out by hand (content.ts).
-  await step("read hours and job cost against the plan", async () => {
-    const { labor, materials, total } = await admin().job.cost({
-      jobId: jobIds.get(EXPECTED_COST.job)!,
-    });
-    const { lines, ...laborFigures } = labor;
-    const read = { lines: lines.length, labor: laborFigures, materials, total };
-    const { job: _job, ...planned } = EXPECTED_COST;
-    if (JSON.stringify(read) !== JSON.stringify(planned)) {
-      fail(`job cost read ${JSON.stringify(read)}, planned ${JSON.stringify(planned)}`);
-    }
+  // Last, with everything written: two days read as the office reads them and held to the
+  // figures worked out by hand (content.ts).
+  await step("read hours against the plan", async () => {
     for (const h of EXPECTED_HOURS) {
       const day = days[h.day]!;
       const { cells } = await admin().labor.hours({
@@ -795,47 +544,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       ) {
         fail(`${h.who} on ${day} read ${JSON.stringify(cells)}`);
       }
-    }
-  });
-
-  await step("read the pay periods against the plan", async () => {
-    const [closedId, openId] = periodIds as [string, string];
-    const closed = await admin().payPeriod.read({ periodId: closedId });
-    const wasClosed = {
-      lines: closed.approved.cells.length,
-      hundredths: closed.approved.total,
-      acknowledged: closed.period.closed?.unresolved,
-      adjustments: closed.adjustments.lines.length,
-    };
-    if (JSON.stringify(wasClosed) !== JSON.stringify(EXPECTED_PERIODS.closed)) {
-      fail(`week one read ${JSON.stringify(wasClosed)}`);
-    }
-    const open = await admin().payPeriod.read({ periodId: openId });
-    const plan = EXPECTED_PERIODS.open;
-    const [carried] = open.adjustments.lines;
-    const isOpen = {
-      cells: open.approved.cells.length,
-      hundredths: open.approved.total,
-      unresolved: {
-        pendingSessions: open.unresolved.pendingSessions,
-        openSessions: open.unresolved.openSessions,
-      },
-    };
-    const { adjustment, ...figures } = plan;
-    if (
-      open.period.closed !== null ||
-      JSON.stringify(isOpen) !== JSON.stringify(figures) ||
-      open.adjustments.lines.length !== 1 ||
-      carried === undefined ||
-      carried.worker.id !== userIds.get(adjustment.who) ||
-      carried.job.id !== jobIds.get(adjustment.job) ||
-      carried.workDate !== days[adjustment.day] ||
-      carried.hundredths !== adjustment.hundredths ||
-      open.adjustments.total !== adjustment.hundredths
-    ) {
-      fail(
-        `week two read ${JSON.stringify(isOpen)} carrying ${JSON.stringify(open.adjustments)}`,
-      );
     }
   });
 

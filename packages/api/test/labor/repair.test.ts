@@ -2,16 +2,7 @@
 // rolled-back transactions. Office repairs append, correct and void; a set is one timeline;
 // every event gets its pending approval; a rejection writes nothing; nothing reads a decision.
 // Concurrency and commits are labor/repair-commit.test.ts's.
-import {
-  approvals,
-  auditLog,
-  companies,
-  dayCloseouts,
-  dayCloseoutWorkers,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { approvals, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -23,8 +14,6 @@ import { readWorkerEvents } from "../../src/labor/timeline";
 import {
   appCallerIn,
   asTenant,
-  auditRow,
-  auditRowsIn,
   boundIn,
   crewDayIn,
   eventIn,
@@ -118,24 +107,9 @@ async function counts(tx: Tx, d: CrewDay) {
       .select({ n: sql<number>`count(*)::int` })
       .from(approvals)
       .where(eq(approvals.companyId, d.companyId));
-    const [u] = await tx
-      .select({ n: sql<number>`count(*)::int` })
-      .from(auditLog)
-      .where(eq(auditLog.companyId, d.companyId));
-    return { events: e!.n, approvals: a!.n, audit: u!.n };
+    return { events: e!.n, approvals: a!.n };
   });
 }
-
-// One accepted repair's audit row: the set's ids, kinds and targets, and nothing else.
-const repaired = (
-  d: CrewDay,
-  actor: string,
-  workerId: string,
-  events: { id: string; kind: Op["kind"]; target_event_id: string | null }[],
-) =>
-  auditRow(d.companyId, actor, "work_session_events.repair", null, {
-    after: { worker_id: workerId, events },
-  });
 
 async function rejectsWritingNothing(
   tx: Tx,
@@ -190,21 +164,7 @@ describe("labor.repair — who may repair", () => {
       expect(await outcome(repair(tx, gone.who, d.w1, ops()))).toBe("UNAUTHORIZED");
       expect(await outcome(repair(tx, worker.who, d.w1, ops()))).toBe("FORBIDDEN");
       expect(await outcome(repair(tx, d.who, d.w1, ops()))).toBe("FORBIDDEN");
-      expect(await counts(tx, d)).toEqual({ events: 0, approvals: 0, audit: 0 });
-    });
-  });
-
-  it("audits an admin's repair of their own ledger as their own act", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin } = await world(tx);
-      await asTenant(tx, d.companyId);
-      const start = append("started", d.J, "08:00");
-      expect((await repair(tx, admin.who, admin.id, [start])).result).toBe("accepted");
-      expect(await auditRowsIn(tx, d.companyId)).toEqual([
-        repaired(d, admin.id, admin.id, [
-          { id: start.id, kind: "append", target_event_id: null },
-        ]),
-      ]);
+      expect(await counts(tx, d)).toEqual({ events: 0, approvals: 0 });
     });
   });
 
@@ -500,17 +460,6 @@ describe("labor.repair — append, correct, void", () => {
       // Positional corrections stay legal after a void.
       const later = correct(end, "ended", d.J, "15:00");
       expect((await repair(tx, admin.who, d.w1, [later])).result).toBe("accepted");
-      // One audit row per accepted repair, in order; the three rejections left none. A
-      // void's row names its target and carries no job and no time.
-      expect(await auditRowsIn(tx, d.companyId)).toEqual([
-        repaired(d, admin.id, d.w1, [
-          { id: fix.id, kind: "correct", target_event_id: start },
-        ]),
-        repaired(d, admin.id, d.w1, [{ id: v.id, kind: "void", target_event_id: start }]),
-        repaired(d, admin.id, d.w1, [
-          { id: later.id, kind: "correct", target_event_id: end },
-        ]),
-      ]);
     });
   });
 
@@ -583,7 +532,6 @@ describe("labor.repair — approvals and accounting", () => {
       expect(await counts(tx, d)).toEqual({
         events: before.events + 1,
         approvals: before.approvals + 1,
-        audit: before.audit + 1,
       });
       expect((await accounting(tx, d.w1))[0]).toMatchObject({ accounting: "pending" });
 
@@ -666,13 +614,6 @@ describe("labor.repair — approvals and accounting", () => {
       expect(await decide(tx, admin.who, end.id, "approved")).toMatchObject({
         result: "decided",
       });
-      // The repair and its decision are both audited, each as the admin's (ARCHITECTURE).
-      expect(
-        (await auditRowsIn(tx, d.companyId)).map((r) => [r.action, r.actorUserId]),
-      ).toEqual([
-        ["work_session_events.repair", admin.id],
-        ["approvals.decide", admin.id],
-      ]);
     });
   });
 });
@@ -734,20 +675,8 @@ describe("labor.repair — an admin's own labor (V1-D10 as amended)", () => {
         { accounting: "voided", eligibleWorkedMs: 0 },
       ]);
 
-      // Four events, no approval, and one audit row per accepted set, each the admin's own.
-      expect(await counts(tx, d)).toEqual({ events: 4, approvals: 0, audit: 3 });
-      expect(await auditRowsIn(tx, d.companyId)).toEqual([
-        repaired(d, admin.id, admin.id, [
-          { id: start.id, kind: "append", target_event_id: null },
-          { id: end.id, kind: "append", target_event_id: null },
-        ]),
-        repaired(d, admin.id, admin.id, [
-          { id: fix.id, kind: "correct", target_event_id: end.id },
-        ]),
-        repaired(d, admin.id, admin.id, [
-          { id: v.id, kind: "void", target_event_id: start.id },
-        ]),
-      ]);
+      // Four events and no approval.
+      expect(await counts(tx, d)).toEqual({ events: 4, approvals: 0 });
     });
   });
 
@@ -798,13 +727,6 @@ describe("labor.repair — retries and ids", () => {
       const ops = [correct(end, "ended", d.J, "16:00"), append("started", d.J, "19:00")];
       const first = await repair(tx, admin.who, d.w1, ops);
       expect(first.result).toBe("accepted");
-      // One row for the set of two, in input order; every retry below adds none (counts).
-      expect(await auditRowsIn(tx, d.companyId)).toEqual([
-        repaired(d, admin.id, d.w1, [
-          { id: ops[0]!.id, kind: "correct", target_event_id: end },
-          { id: ops[1]!.id, kind: "append", target_event_id: null },
-        ]),
-      ]);
       const before = await counts(tx, d);
       const events = first.result === "accepted" ? first.events : [];
       expect(await repair(tx, admin.who, d.w1, ops)).toEqual({
@@ -886,111 +808,6 @@ describe("labor.repair — retries and ids", () => {
         );
       }
       expect(again).toEqual({ ...first, result: "duplicate" });
-    });
-  });
-});
-
-describe("labor.repair — closed days", () => {
-  // A closed day on J, 5 October in New York: w1 08:00–12:00 local, submitted by the foreman.
-  async function closedDay(tx: Tx) {
-    const w = await world(tx);
-    const { d } = w;
-    const start = await eventIn(tx, d, {
-      worker: d.w1,
-      job: d.J,
-      type: "started",
-      client: "2026-10-05T12:00:00Z",
-    });
-    const end = await eventIn(tx, d, {
-      worker: d.w1,
-      job: d.J,
-      type: "ended",
-      client: "2026-10-05T16:00:00Z",
-    });
-    await asTenant(tx, d.companyId);
-    const values = { jobId: d.J, workDate: "2026-10-05" };
-    const { fingerprint } = await appCallerIn(tx, d.who).closeout.review(values);
-    const submitted = await appCallerIn(tx, d.who).closeout.submit({
-      ...values,
-      id: uuidv7(),
-      jobStatus: "open",
-      note: null,
-      clientTimestamp: new Date("2026-10-05T21:00:00Z"),
-      reviewFingerprint: fingerprint,
-    });
-    expect(submitted.result).toBe("accepted");
-    const snapshot = () =>
-      asOwner(tx, d, async () => ({
-        closeouts: await tx
-          .select()
-          .from(dayCloseouts)
-          .where(eq(dayCloseouts.jobId, d.J)),
-        marks: await tx
-          .select()
-          .from(dayCloseoutWorkers)
-          .where(eq(dayCloseoutWorkers.companyId, d.companyId)),
-      }));
-    return { ...w, start, end, snapshot };
-  }
-
-  it("tags a correction of a closed day after_closeout and leaves the closeout as it was", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin, end, snapshot } = await closedDay(tx);
-      const before = await snapshot();
-      const c = correct(end, "ended", d.J, "15:00");
-      const r = await repair(tx, admin.who, d.w1, [c]);
-      expect(r).toMatchObject({
-        result: "accepted",
-        events: [{ reasons: ["corrected", "user_timed", "location", "after_closeout"] }],
-      });
-      expect(await snapshot()).toEqual(before);
-      const stamp = r.result === "accepted" ? r.events[0]!.serverTimestamp : new Date(0);
-      for (const mark of before.marks) {
-        expect(stamp.getTime()).toBeGreaterThan(mark.ledgerThrough.getTime());
-      }
-    });
-  });
-
-  it("judges the closed day in the closeout's stored zone, not the company's", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin, end } = await closedDay(tx);
-      // UTC+14: the session's start would fall on 6 October in the company's new zone.
-      await asOwner(tx, d, () =>
-        tx
-          .update(companies)
-          .set({ timezone: "Pacific/Kiritimati" })
-          .where(eq(companies.id, d.companyId)),
-      );
-      const c = correct(end, "ended", d.J, "15:00");
-      expect(await repair(tx, admin.who, d.w1, [c])).toMatchObject({
-        events: [{ reasons: ["corrected", "user_timed", "location", "after_closeout"] }],
-      });
-    });
-  });
-
-  it("judges a re-attributed session on its new job's day; the old day stays sealed", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin, start, snapshot } = await closedDay(tx);
-      const before = await snapshot();
-      const c = {
-        ...correct(start, "started", d.K, "12:00"),
-        clientTimestamp: new Date("2026-10-05T12:00:00Z"),
-      };
-      expect(await repair(tx, admin.who, d.w1, [c])).toMatchObject({
-        result: "accepted",
-        events: [{ reasons: ["corrected", "user_timed", "location"] }],
-      });
-      expect(await snapshot()).toEqual(before);
-    });
-  });
-
-  it("voids a closed day's session after_closeout", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin, start } = await closedDay(tx);
-      const v = voidOf(start);
-      expect(await repair(tx, admin.who, d.w1, [v])).toMatchObject({
-        events: [{ reasons: ["corrected", "after_closeout"] }],
-      });
     });
   });
 });

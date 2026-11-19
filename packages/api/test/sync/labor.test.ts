@@ -5,10 +5,8 @@
 // (sync/push-commit.test.ts) proves it.
 import {
   approvals,
-  companies,
   crewMembers,
   crews,
-  dayCloseouts,
   jobs,
   users,
   workSessionEvents,
@@ -334,173 +332,6 @@ describe("sync.push labor — approval facts", () => {
       expect(
         await reasonsOf({ type: "ended", location: FAR, clientTimestamp: ago(60) }),
       ).toEqual(["location"]);
-    });
-  });
-});
-
-// A closeout of `job` on `workDate` judged in `zone`, as the owner (closeout.submit's own tests
-// cover how one is made; the stored date and zone are what matter here).
-async function closeout(tx: Tx, d: CrewDay, workDate: string, zone: string) {
-  await asOwner(tx, d, () =>
-    tx.insert(dayCloseouts).values({
-      id: uuidv7(),
-      companyId: d.companyId,
-      jobId: d.J,
-      workDate,
-      timezone: zone,
-      jobStatus: "open",
-      jobStatusApplied: true,
-      submittedByUserId: d.foremanId,
-      clientTimestamp: new Date(),
-      serverTimestamp: new Date(),
-      workerMarkCount: 0,
-      materialCount: 0,
-    }),
-  );
-}
-
-describe("sync.push labor — after its day's closeout, in the closeout's stored zone", () => {
-  const NY = "America/New_York";
-  const cases: [
-    string,
-    { date: string; zone: string; start: string; company: string; late: boolean },
-  ][] = [
-    [
-      "zone changed since: the stored zone decides",
-      {
-        date: "2026-11-02",
-        zone: NY,
-        start: "2026-11-03T02:00:00Z",
-        company: "UTC",
-        late: true,
-      },
-    ],
-    [
-      "the converse",
-      {
-        date: "2026-11-03",
-        zone: "UTC",
-        start: "2026-11-03T02:00:00Z",
-        company: NY,
-        late: true,
-      },
-    ],
-    [
-      "the last second of the day, EDT",
-      {
-        date: "2026-10-31",
-        zone: NY,
-        start: "2026-11-01T03:59:59Z",
-        company: NY,
-        late: true,
-      },
-    ],
-    [
-      "the first second of the next day, EDT",
-      {
-        date: "2026-10-31",
-        zone: NY,
-        start: "2026-11-01T04:00:00Z",
-        company: NY,
-        late: false,
-      },
-    ],
-    [
-      "the evening of the fall-back day, EST",
-      {
-        date: "2026-11-01",
-        zone: NY,
-        start: "2026-11-02T04:30:00Z",
-        company: NY,
-        late: true,
-      },
-    ],
-    [
-      "the evening of the spring-forward day, EDT",
-      {
-        date: "2026-03-08",
-        zone: NY,
-        start: "2026-03-09T03:30:00Z",
-        company: NY,
-        late: true,
-      },
-    ],
-  ];
-  for (const [name, c] of cases) {
-    it(`${name}: ${c.late ? "after_closeout" : "no reason"}`, async () => {
-      await rolledBack(owner, async (tx) => {
-        const { d, w1 } = await dayFor(tx);
-        await closeout(tx, d, c.date, c.zone);
-        await asOwner(tx, d, () =>
-          tx
-            .update(companies)
-            .set({ timezone: c.company })
-            .where(eq(companies.id, d.companyId)),
-        );
-        // A day long past is a backlog, and says so: captured offline.
-        const start = record({
-          workerId: d.w1,
-          jobId: d.J,
-          clientTimestamp: at(c.start),
-          capturedOffline: true,
-        });
-        const end = record({
-          workerId: d.w1,
-          jobId: d.J,
-          type: "ended",
-          clientTimestamp: new Date(at(c.start).getTime() + 3_600_000),
-          capturedOffline: true,
-        });
-        for (const r of [start, end]) {
-          expect(await push(tx, w1, r)).toMatchObject({
-            result: "accepted",
-            ack: { reasons: c.late ? ["offline", "after_closeout"] : ["offline"] },
-          });
-        }
-      });
-    });
-  }
-
-  it("judges the session's start, so a late end after midnight takes its start's day", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, w1 } = await dayFor(tx);
-      await closeout(tx, d, "2026-10-05", NY);
-      // Starts 23:00 on the 5th in New York, ends 01:00 on the 6th: wholly the 5th's.
-      const start = record({
-        workerId: d.w1,
-        jobId: d.J,
-        clientTimestamp: at("2026-10-06T03:00:00Z"),
-        capturedOffline: true,
-      });
-      const end = record({
-        workerId: d.w1,
-        jobId: d.J,
-        type: "ended",
-        clientTimestamp: at("2026-10-06T05:00:00Z"),
-        capturedOffline: true,
-      });
-      for (const r of [start, end]) {
-        expect(await push(tx, w1, r)).toMatchObject({
-          ack: { reasons: ["offline", "after_closeout"] },
-        });
-      }
-    });
-  });
-
-  it("is another job's closeout's business only if it is this job's", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, w1 } = await dayFor(tx);
-      await closeout(tx, d, "2026-10-05", NY);
-      // K given to the crew, so a worker may start there: an admin's own event would carry
-      // no reasons at all (V1-D10 as amended) and prove nothing here.
-      await asOwner(tx, d, () =>
-        tx.update(jobs).set({ crewId: d.crewId }).where(eq(jobs.id, d.K)),
-      );
-      expect(
-        await push(tx, w1, record({ workerId: d.w1, jobId: d.K, capturedOffline: true })),
-      ).toMatchObject({
-        ack: { reasons: ["offline"] },
-      });
     });
   });
 });
@@ -953,7 +784,7 @@ describe("sync.push labor — idempotency", () => {
 // Stage 4 (V1-D10 as amended): an admin's own labor needs no approval. The worker's role is
 // read under the lock the scope takes, at this receipt; nothing is judged again afterwards.
 describe("sync.push labor — an admin's own labor (V1-D10 as amended)", () => {
-  // Every reason a push can compute without a closeout, and the reading that flags the clock.
+  // Every reason a push can compute, and the reading that flags the clock.
   const FLAGGED = { capturedOffline: true, timeSetByUser: true, location: null } as const;
   const REASONS = ["offline", "user_timed", "location", "clock_skewed"];
 

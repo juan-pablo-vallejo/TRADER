@@ -11,7 +11,6 @@ import {
   customers,
   jobAssignments,
   jobs,
-  payRates,
   syncDiagnostics,
   users,
 } from "@trader/db/schema";
@@ -118,7 +117,6 @@ export async function invitation(
     await owner.delete(jobs).where(eq(jobs.companyId, companyId));
     await owner.delete(crews).where(eq(crews.companyId, companyId));
     await owner.delete(customers).where(eq(customers.companyId, companyId));
-    await owner.delete(payRates).where(eq(payRates.companyId, companyId));
     await owner.delete(users).where(eq(users.companyId, companyId));
     await owner.delete(companies).where(eq(companies.id, companyId));
   };

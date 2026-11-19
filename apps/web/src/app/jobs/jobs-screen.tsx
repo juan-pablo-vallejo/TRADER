@@ -9,7 +9,6 @@
 // three sections, three answers. A `rejected` answer reads beneath the control it came from.
 // A job's name opens its own page, where its cost to date is. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
 import { Fragment, useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
@@ -378,9 +377,7 @@ function JobsTable({
             <Fragment key={row.id}>
               <tr>
                 <td data-label={strings.job} className="body-strong">
-                  <Link href={`/jobs/${row.id}`} className={table.rowLink}>
-                    {row.name}
-                  </Link>
+                  {row.name}
                 </td>
                 <td data-label={strings.customer}>{row.customer.name}</td>
                 <td

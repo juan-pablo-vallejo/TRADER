@@ -45,7 +45,6 @@ export type Catalog = {
     shiftLater: (job: string, start: string) => string;
     noMoreShifts: string;
     noShift: string;
-    undecided: string;
     attention: string;
   };
   entry: {
@@ -85,8 +84,6 @@ export type Catalog = {
     refresh: string;
     empty: string;
     today: string;
-    clockInFrom: (start: string, end: string) => string;
-    undecided: string;
     hours: string;
     noHours: string;
     open: string;

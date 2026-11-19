@@ -11,8 +11,8 @@
 // re-read, then the invoice's row FOR UPDATE, which is what an issue takes, so a save and an
 // issue of one draft never interleave. No audit row (V1-D20's inventory is closed): who
 // issued and who voided an invoice are on its row. Consumed by routers/invoice.ts.
-import { invoiceLineItems, invoices, jobs, materials } from "@trader/db/schema";
-import { eq, inArray } from "drizzle-orm";
+import { invoiceLineItems, invoices, jobs } from "@trader/db/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
@@ -130,28 +130,10 @@ export async function saveInvoice(
       unit: line.unit,
       unitPriceCents: line.unitPriceCents,
       amountCents: amount,
-      materialId: line.materialId,
     });
   }
   if (subtotal + input.taxCents > MAX_CENTS)
     return { result: "rejected", code: "too_large" };
-
-  // A line names only a receipt of the invoice's own job.
-  const receiptIds = [
-    ...new Set(lines.flatMap((l) => (l.materialId ? [l.materialId] : []))),
-  ];
-  if (receiptIds.length > 0) {
-    const receipts = await tx
-      .select({ id: materials.id, jobId: materials.jobId })
-      .from(materials)
-      .where(inArray(materials.id, receiptIds));
-    if (
-      receipts.length !== receiptIds.length ||
-      receipts.some((r) => r.jobId !== invoice.jobId)
-    ) {
-      throw forbidden();
-    }
-  }
 
   await tx.delete(invoiceLineItems).where(eq(invoiceLineItems.invoiceId, invoice.id));
   if (lines.length > 0) {

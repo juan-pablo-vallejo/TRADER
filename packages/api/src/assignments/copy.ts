@@ -9,8 +9,7 @@
 //
 // What is left out: a shift of a deactivated person or on an archived job; the exact shift
 // already in the target week; and any shift that would overlap one already there or one
-// copied before it — no override is copied, an overlap is decided afresh by an admin — or
-// that would change what admitted a clock-in already made on that day. Within a person's
+// copied before it, or that would change what admitted a clock-in already made on that day. Within a person's
 // day, shifts are taken in start, end and id order, so of two that overlapped in the source
 // week the earlier one is copied.
 //
@@ -20,7 +19,7 @@
 // Consumed by routers/assignment.ts.
 import { createHash } from "node:crypto";
 
-import { jobAssignments, jobs, shiftOverrides, users } from "@trader/db/schema";
+import { jobAssignments, jobs, users } from "@trader/db/schema";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
 
@@ -28,15 +27,7 @@ import type { Tx } from "../core/context";
 import { lockActiveSelf } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
 import { lockUsersShare } from "../crews/lock";
-import {
-  type Day,
-  dayOf,
-  type DayShift,
-  judgeDay,
-  loadDays,
-  lockDays,
-  recordOverrideHistory,
-} from "./day";
+import { type Day, dayOf, type DayShift, judgeDay, loadDays, lockDays } from "./day";
 import { toWallTime, wallTime, workDay } from "./write";
 
 const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
@@ -159,7 +150,7 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
 
   const days = await loadDays(tx, target, dayAfter(target, 6));
   // Each target day as it will stand once the shifts taken so far are created.
-  const standing = new Map<string, Pick<Day, "shifts" | "overrides">>();
+  const standing = new Map<string, Pick<Day, "shifts">>();
   const create: Offered[] = [];
   const leftOut: Preview["leftOut"] = [];
   for (const r of rows) {
@@ -199,8 +190,7 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
       out("duplicate");
       continue;
     }
-    // An overlap would need a decision, and none is copied: the day would not resolve.
-    const after = { shifts: [...day.shifts, shift], overrides: day.overrides };
+    const after = { shifts: [...day.shifts, shift] };
     const judged = judgeDay(after);
     if (!judged.ok) {
       out(judged.refusal.code === "authorization" ? "authorization" : "overlap");
@@ -306,33 +296,9 @@ export async function undoCopy(
   if (locked !== undefined)
     return { result: "rejected", code: "locked", shiftId: locked.id };
 
+  // Removing shifts takes nothing from the ones that stay, so no clock-in already admitted
+  // is touched and the day still resolves. Nothing is judged here.
   const copied = new Set(rows.map((r) => r.id));
-  const dates = rows.map((r) => r.workDate).sort();
-  const days = await loadDays(tx, dates[0]!, dates[dates.length - 1]!, [
-    ...new Set(rows.map((r) => r.userId)),
-  ]);
-  const touched = new Map<string, Day>();
-  for (const r of rows)
-    touched.set(`${r.userId} ${r.workDate}`, dayOf(days, r.userId, r.workDate));
-  // Removing shifts takes nothing from the ones that stay: a shift left behind keeps every
-  // minute it had and may gain some, so no clock-in already admitted is touched and the day
-  // still resolves. Nothing is judged here.
-  for (const day of touched.values()) {
-    const before = new Map(day.shifts.map((s) => [s.id, s]));
-    const gone = day.overrides.filter(
-      (o) => copied.has(o.holderId) || copied.has(o.yieldingId),
-    );
-    for (const o of gone)
-      await recordOverrideHistory(tx, user, "removed", day, o, before);
-    if (gone.length > 0) {
-      await tx.delete(shiftOverrides).where(
-        inArray(
-          shiftOverrides.id,
-          gone.map((o) => o.id),
-        ),
-      );
-    }
-  }
   await tx.delete(jobAssignments).where(inArray(jobAssignments.id, [...copied]));
   return { result: "undone", removed: rows.length };
 }

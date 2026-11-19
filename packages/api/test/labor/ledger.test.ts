@@ -2,13 +2,7 @@
 // them, through the application's router under the runtime role in rolled-back transactions.
 // Fixtures are written by the owner; the one repair here goes through labor.repair itself, to
 // show the read hands it the ids it needs.
-import {
-  approvals,
-  auditLog,
-  dayCloseouts,
-  jobs,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { approvals, jobs, workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -82,25 +76,6 @@ async function decide(
     .where(eq(approvals.id, approvalId));
 }
 
-async function closeoutIn(tx: Tx, d: CrewDay, jobId: string, workDate: string) {
-  const at = new Date(`${workDate}T22:00:00.000Z`);
-  await tx.insert(dayCloseouts).values({
-    id: uuidv7(),
-    companyId: d.companyId,
-    jobId,
-    workDate,
-    timezone: "America/New_York",
-    jobStatus: "open",
-    jobStatusApplied: true,
-    note: null,
-    submittedByUserId: d.foremanId,
-    clientTimestamp: at,
-    serverTimestamp: at,
-    workerMarkCount: 0,
-    materialCount: 0,
-  });
-}
-
 describe("labor.ledger", () => {
   it("is the office's alone, and of the caller's company alone", async () => {
     await rolledBack(owner, async (tx) => {
@@ -148,7 +123,6 @@ describe("labor.ledger", () => {
           accounting: "eligible",
           eligibleWorkedMs: 4 * HOUR,
           corrected: false,
-          closedOut: false,
           events: [started, ended].map((id, i) => ({
             id,
             type: i === 0 ? "started" : "ended",
@@ -525,23 +499,6 @@ describe("labor.ledger", () => {
     });
   });
 
-  it("marks a session on a closed-out day, by job and day", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin } = await office(tx);
-      await shift(tx, d, d.w1, T("12:00"), T("13:00"));
-      await shift(tx, d, d.w1, T("14:00"), T("15:00"), d.K);
-      await shift(tx, d, d.w1, T("12:00", "2026-10-06"), T("13:00", "2026-10-06"));
-      await closeoutIn(tx, d, d.J, DAY);
-      await becomeApp(tx);
-      const { sessions } = await ledger(tx, admin.who, d.w1);
-      expect(sessions.map((s) => [s.job.name, s.workDate, s.closedOut])).toEqual([
-        ["J", "2026-10-05", true],
-        ["K", "2026-10-05", false],
-        ["J", "2026-10-06", false],
-      ]);
-    });
-  });
-
   it("reads an archived job, a deactivated worker and the admin's own ledger", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
@@ -566,16 +523,14 @@ describe("labor.ledger", () => {
       const { started } = await shift(tx, d, d.w1, T("12:00"), T("13:00"));
       await pendingApproval(tx, d.companyId, { eventId: started });
       const counts = async () => {
-        const n = async (
-          table: typeof workSessionEvents | typeof approvals | typeof auditLog,
-        ) =>
+        const n = async (table: typeof workSessionEvents | typeof approvals) =>
           (
             await tx
               .select({ n: sql<number>`count(*)::int` })
               .from(table)
               .where(eq(table.companyId, d.companyId))
           )[0]!.n;
-        return [await n(workSessionEvents), await n(approvals), await n(auditLog)];
+        return [await n(workSessionEvents), await n(approvals)];
       };
       const before = await counts();
       await becomeApp(tx);
@@ -583,7 +538,7 @@ describe("labor.ledger", () => {
       await tx.execute(sql`reset role`);
       await tx.execute(sql`select set_config('app.company_id', '', true)`);
       expect(await counts()).toEqual(before);
-      expect(before).toEqual([2, 1, 0]);
+      expect(before).toEqual([2, 1]);
     });
   });
 });

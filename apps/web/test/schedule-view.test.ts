@@ -1,20 +1,17 @@
-// The Weekly Schedule screen's own arithmetic (DESIGN, Weekly Schedule, Shift card, Overlap
-// override, Copy Last Week): the week a day is in, the rows by employee and by jobsite, what
-// a card says about clocking in, the overlaps a change would make, the day as it would stand,
-// and a refusal in words. The rules are the server's and are tested there
+// The Weekly Schedule screen's own arithmetic (DESIGN, Weekly Schedule, Shift card, Copy
+// Last Week): the week a day is in, the rows by employee and by jobsite, the overlaps a
+// change would make, and a refusal in words. The rules are the server's and are tested there
 // (api eligibility.test.ts); here only what the screen does with them.
 import { describe, expect, it } from "vitest";
 
 import {
   byEmployee,
   byJobsite,
-  clockInNote,
   copiesIn,
   issueText,
   mondayOf,
   overlapsWith,
   peopleOn,
-  previewDay,
   refusalText,
   type WeekShift,
 } from "../src/app/schedule/schedule-view";
@@ -44,7 +41,6 @@ const shift = (
   blockedBy: null,
   locked: false,
   copyId: null,
-  eligible: [{ start: expectedStart, end: expectedEnd }],
   ...over,
 });
 
@@ -98,28 +94,6 @@ describe("the week's rows", () => {
   });
 });
 
-describe("clockInNote", () => {
-  it("says nothing for a whole shift, the hours an override left, or that nothing is decided", () => {
-    const whole = shift(1, ana, kitchen, MON, "07:00", "15:30");
-    expect(clockInNote(whole)).toBeNull();
-    expect(clockInNote({ ...whole, eligible: [{ start: "07:00", end: "12:00" }] })).toBe(
-      "Clock in 07:00–12:00",
-    );
-    expect(
-      clockInNote({
-        ...whole,
-        eligible: [
-          { start: "07:00", end: "09:00" },
-          { start: "11:00", end: "15:30" },
-        ],
-      }),
-    ).toBe("Clock in 07:00–09:00, 11:00–15:30");
-    expect(clockInNote({ ...whole, eligible: null })).toBe(
-      "Overlaps another shift; nothing decided",
-    );
-  });
-});
-
 describe("overlapsWith", () => {
   const morning = shift(1, ana, kitchen, MON, "07:00", "12:00");
   const late = shift(2, ana, porch, MON, "13:00", "17:00");
@@ -141,81 +115,19 @@ describe("overlapsWith", () => {
   });
 });
 
-describe("previewDay", () => {
-  const morning = shift(1, ana, kitchen, MON, "07:00", "15:30");
-  const late = { id: id(200), jobId: porch.id, start: "12:00", end: "17:00" };
-
-  it("shows who clocks in where once a decision is made", () => {
-    const preview = previewDay(
-      late,
-      [morning],
-      [{ holderId: morning.id, yieldingId: late.id }],
-    );
-    expect(preview).toEqual({
-      ok: true,
-      timeline: [
-        { start: "07:00", end: "15:30", shiftId: morning.id, jobId: kitchen.id },
-        { start: "15:30", end: "17:00", shiftId: late.id, jobId: porch.id },
-      ],
-    });
-  });
-
-  it("answers the server's own issues when the day would not stand", () => {
-    expect(previewDay(late, [morning], [])).toMatchObject({
-      ok: false,
-      issues: [{ code: "missing_decision", start: "12:00", end: "15:30" }],
-    });
-    const inside = { id: id(201), jobId: porch.id, start: "09:00", end: "11:00" };
-    expect(
-      previewDay(inside, [morning], [{ holderId: morning.id, yieldingId: inside.id }]),
-    ).toMatchObject({
-      ok: false,
-      issues: [{ code: "no_eligible_time", shiftId: inside.id }],
-    });
-  });
-
-  it("replaces the shift being changed, by its id, with its new hours", () => {
-    const preview = previewDay(
-      { id: morning.id, jobId: kitchen.id, start: "08:00", end: "10:00" },
-      [morning],
-      [],
-    );
-    expect(preview).toMatchObject({
-      ok: true,
-      timeline: [{ start: "08:00", end: "10:00" }],
-    });
-  });
-});
-
 describe("a refusal in words", () => {
   it("names the shifts and the hours of each issue", () => {
     expect(
       issueText(
         {
-          code: "missing_decision",
+          code: "overlap",
           shiftIds: [id(101), id(102)],
           start: "12:00",
           end: "15:30",
         },
         label,
       ),
-    ).toBe(
-      "shift 101 and shift 102 overlap during 12:00–15:30 and nothing says which one holds that time.",
-    );
-    expect(
-      issueText(
-        {
-          code: "circular_precedence",
-          shiftIds: [id(101), id(102), id(103)],
-          start: "10:00",
-          end: "12:00",
-        },
-        label,
-      ),
-    ).toContain("in a circle during 10:00–12:00");
-    expect(issueText({ code: "no_eligible_time", shiftId: id(102) }, label)).toBe(
-      "shift 102 would have no time of its own to clock in on.",
-    );
+    ).toBe("shift 101 and shift 102 overlap during 12:00–15:30.");
     expect(
       issueText({ code: "duplicate_shift", shiftIds: [id(101), id(102)] }, label),
     ).toBe("That shift already exists.");
@@ -223,7 +135,7 @@ describe("a refusal in words", () => {
 
   it("says each refusal a write can answer", () => {
     expect(refusalText({ code: "locked" }, label)).toContain(
-      "Correct attendance in Labor",
+      "Correct attendance in Hours",
     );
     expect(refusalText({ code: "authorization", shiftId: id(101) }, label)).toContain(
       "already clocked in on shift 101",
@@ -240,13 +152,18 @@ describe("a refusal in words", () => {
           code: "schedule",
           issues: [
             { code: "duplicate_shift", shiftIds: [id(101), id(102)] },
-            { code: "no_eligible_time", shiftId: id(102) },
+            {
+              code: "overlap",
+              shiftIds: [id(101), id(102)],
+              start: "12:00",
+              end: "15:30",
+            },
           ],
         },
         label,
       ),
     ).toBe(
-      "That shift already exists. shift 102 would have no time of its own to clock in on.",
+      "That shift already exists. shift 101 and shift 102 overlap during 12:00–15:30.",
     );
   });
 });

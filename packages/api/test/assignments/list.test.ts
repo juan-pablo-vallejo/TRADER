@@ -2,7 +2,7 @@
 // inclusive range of days as written, with its filters — and assignment.mine — the caller's
 // own plans and nothing of anyone else's. Rolled-back transactions throughout. The clock-in
 // flag against a real push is authority.test.ts's.
-import { jobAssignments, jobs, shiftOverrides } from "@trader/db/schema";
+import { jobAssignments, jobs } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -274,7 +274,7 @@ describe("assignment.mine", () => {
 });
 
 describe("assignment.week", () => {
-  it("answers Monday to Sunday, each shift with the hours it is the one to clock in on", async () => {
+  it("answers Monday to Sunday, every shift of the company's week and no other", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, other, admin, ana, ben, stranger, put } = await office(tx);
       const c = day.companyId;
@@ -294,22 +294,12 @@ describe("assignment.week", () => {
         )[0]!.id;
       const morning = await row(ana.id, day.J, "2026-11-16", "07:00", "15:30");
       const late = await row(ana.id, day.K, "2026-11-16", "12:00", "17:00");
-      const [decided] = await tx
-        .insert(shiftOverrides)
-        .values({
-          companyId: c,
-          holderId: morning,
-          yieldingId: late,
-          reason: "Covering the afternoon",
-          createdBy: admin.id,
-        })
-        .returning({ id: shiftOverrides.id });
       const sunday = await row(ben.id, day.J, "2026-11-22", "08:00", "12:00");
       // Outside the week on both sides, and another company's inside it.
       await row(ben.id, day.J, "2026-11-15", "08:00", "12:00");
       await row(ben.id, day.J, "2026-11-23", "08:00", "12:00");
       await put(other.companyId, stranger.id, other.J, "2026-11-16");
-      // Two rows older than the validated writers: overlapping, nothing decided.
+      // Two rows older than the validated writers, overlapping: read like any other.
       const loose = await row(ben.id, day.J, "2026-11-18", "07:00", "12:00");
       const looser = await row(ben.id, day.K, "2026-11-18", "10:00", "14:00");
       // Ana clocked in on the morning shift at 07:10 in New York.
@@ -344,32 +334,22 @@ describe("assignment.week", () => {
       );
       expect(seen.get(morning)).toMatchObject({
         locked: true,
-        eligible: [{ start: "07:00", end: "15:30" }],
+        expectedStart: "07:00",
+        expectedEnd: "15:30",
         worker: { id: ana.id },
         job: { id: day.J },
       });
       expect(seen.get(late)).toMatchObject({
         locked: false,
-        eligible: [{ start: "15:30", end: "17:00" }],
+        expectedStart: "12:00",
+        expectedEnd: "17:00",
       });
       expect(seen.get(sunday)).toMatchObject({
         copyId: null,
         locked: false,
-        eligible: [{ start: "08:00", end: "12:00" }],
+        expectedStart: "08:00",
+        expectedEnd: "12:00",
       });
-      expect(seen.get(loose)?.eligible).toBeNull();
-      expect(seen.get(looser)?.eligible).toBeNull();
-      expect(week.overrides).toEqual([
-        {
-          id: decided!.id,
-          holderId: morning,
-          yieldingId: late,
-          reason: "Covering the afternoon",
-          // Written as a fixture, with no history: its author and its own stamp.
-          by: expect.stringContaining("admin"),
-          at: expect.any(Date),
-        },
-      ]);
     });
   });
 

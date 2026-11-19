@@ -2,12 +2,21 @@
 // pricing, V1-D14). A line's amount is its quantity times its unit price, rounded half-up to
 // the cent — what the database's own check computes (invoice_line_items, 0009) — worked in
 // integers: the quantity in thousandths, never a float. The subtotal is the sum of the
-// lines; the total adds the tax the admin entered. Nothing here knows a pay rate or a
-// receipt's cost: a price is whatever the admin typed. Pure. Consumed by draft.ts and
+// lines; the total adds the tax the admin entered. A price is whatever the admin typed. Pure. Consumed by draft.ts and
 // read.ts.
 import { z } from "zod";
 
-import { quantity } from "../materials/quantity";
+// A quantity at the API boundary: a decimal string with at most nine integer and three
+// fractional digits (numeric(12,3)) and above zero, rewritten as Postgres prints the column
+// ("2.5" becomes "2.500"), so equal quantities compare equal as text. Never a float.
+export const quantity = z
+  .string()
+  .regex(/^\d{1,9}(\.\d{1,3})?$/)
+  .transform((q) => {
+    const [whole, fraction = ""] = q.split(".");
+    return `${BigInt(whole!).toString()}.${fraction.padEnd(3, "0")}`;
+  })
+  .refine((q) => q !== "0.000", "quantity must be above zero");
 
 // What an `integer` column holds: the ceiling of every amount stored.
 export const MAX_CENTS = 2_147_483_647;
@@ -22,9 +31,6 @@ export const lineInput = z.strictObject({
   unit: z.string().trim().min(1).max(32).nullable(),
   // What the customer is charged for one unit: entered by the admin, never derived.
   unitPriceCents: cents,
-  // The receipt a line was drawn from, kept as provenance; its quantity and description
-  // were copied when the line was made and do not follow the receipt.
-  materialId: z.uuid().nullable(),
 });
 export const taxInput = cents;
 

@@ -7,22 +7,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
-import {
-  COSTS,
-  DEMO,
-  EXPECTED,
-  EXPECTED_AUDIT,
-  EXPECTED_PERIODS,
-  PEOPLE,
-  RECEIPTS,
-  SCENARIOS,
-  workDays,
-} from "../../src/demo/content";
+import { DEMO, EXPECTED, PEOPLE, SCENARIOS, workDays } from "../../src/demo/content";
 import { runDemo, type Step, type Summary } from "../../src/demo/run";
 import { prepareTarget, type Target } from "../../src/demo/target";
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
-import { auditCounts, counts, MIGRATIONS, spyOnQueries, uniqueDemoName } from "./helpers";
+import { counts, MIGRATIONS, spyOnQueries, uniqueDemoName } from "./helpers";
 import { quietReporter, REQUEST_ID } from "../helpers";
 
 const ANCHOR = "2026-10-19";
@@ -83,20 +73,6 @@ describe("the demo run", () => {
     expect(await counts(target.owner)).toEqual(EXPECTED);
   });
 
-  it("left an audit row for each audited write, and for nothing else it did", async () => {
-    // The run goes through crews, customers, jobs, pushes, closeouts, corrections and
-    // sign-ins as well: any of them writing a row would add to a count or add an action.
-    const performed = Object.fromEntries(
-      Object.entries(EXPECTED_AUDIT).filter(([, n]) => n > 0),
-    );
-    expect(await auditCounts(target.owner)).toEqual(performed);
-    // Every row's actor is the demo admin: the one caller of the audited procedures.
-    const { rows } = await target.owner.execute<{ email: string }>(sql`
-      select distinct u.email from audit_log a join users u on u.id = a.actor_user_id
-    `);
-    expect(rows).toEqual([{ email: DEMO.adminEmail }]);
-  });
-
   it("let the owner write the bootstrap and nothing else", () => {
     const body = ownerStatements
       .map((s) => s.toLowerCase())
@@ -126,45 +102,6 @@ describe("the demo run", () => {
     }
   });
 
-  // The run holds J1 and two days of hours to the plan itself (its last step). J2, worked out
-  // here: Omar's nine approved days at 2700 (9 × 21600), his user-timed last day waiting;
-  // Marcus and Elena have no rate, so his ten days and her nine are unrated, and her last,
-  // 8.50 h with the office's correction, waits unrated. Receipts: the amended one is priced
-  // and counts while its amend waits; the primer is unpriced; the late one waits, unpriced.
-  it("reads the other crew's job cost as the plan works it out", async () => {
-    const jobs = await admin().job.list();
-    const j2 = jobs.find((j) => j.name === "Harbor View unit 4B")!;
-    const { labor, materials, total, job } = await admin().job.cost({ jobId: j2.id });
-    const { lines, ...figures } = labor;
-    expect(job.name).toBe("Harbor View unit 4B");
-    expect(lines).toHaveLength(9 + 10 + 9);
-    expect(figures).toEqual({
-      approvedHundredths: 28 * 800,
-      totals: [{ currency: "USD", cents: 9 * 21600 }],
-      unrated: { hundredths: 19 * 800, lines: 19 },
-      pending: {
-        hundredths: 800 + 850,
-        sessions: 2,
-        totals: [{ currency: "USD", cents: 21600 }],
-        unratedHundredths: 850,
-      },
-      rejectedSessions: 0,
-      openSessions: 0,
-    });
-    expect(materials).toEqual({
-      totals: [{ currency: "USD", cents: 17196 }],
-      receipts: 1,
-      unpriced: 1,
-      pending: { totals: [], receipts: 1, unpriced: 1 },
-      rejected: 0,
-      voided: 0,
-    });
-    expect(total).toEqual([{ currency: "USD", cents: 9 * 21600 + 17196 }]);
-    // A job nobody worked costs nothing.
-    const j3 = jobs.find((j) => j.name === "Greenfield hallway repaint")!;
-    expect((await admin().job.cost({ jobId: j3.id })).total).toEqual([]);
-  });
-
   it("shows the office what the plan says", async () => {
     const roster = await admin().roster.list();
     expect(roster).toHaveLength(EXPECTED.users);
@@ -172,7 +109,6 @@ describe("the demo run", () => {
     expect(byEmail.get("priya.shah@demo.invalid")!.deactivatedAt).not.toBeNull();
     expect(byEmail.get("marcus.bell@demo.invalid")!.role).toBe("worker");
     expect(byEmail.get("sam.carter@demo.invalid")!.invited).toBe(true);
-    expect(byEmail.get("ana.ruiz@demo.invalid")!.currentRate?.hourlyRateCents).toBe(3000);
 
     const crews = await admin().crew.list();
     expect(
@@ -202,50 +138,9 @@ describe("the demo run", () => {
     const queue = await admin().approval.queue({ limit: 100 });
     expect(queue.items).toHaveLength(EXPECTED.approvals - EXPECTED.decided);
     const reasons = new Set(queue.items.flatMap((i) => i.reasons));
-    for (const r of [
-      "offline",
-      "user_timed",
-      "location",
-      "clock_skewed",
-      "after_closeout",
-      "corrected",
-    ]) {
+    for (const r of ["offline", "user_timed", "location", "clock_skewed", "corrected"]) {
       expect(reasons.has(r as never)).toBe(true);
     }
-  });
-
-  it("shows the office its receipts: three it priced, one it entered, the rest to price", async () => {
-    const all = await admin().material.list({ show: "all" });
-    expect(all.items).toHaveLength(EXPECTED.materials);
-    expect(
-      all.items
-        .filter((m) => m.cost !== null)
-        .map((m) => [m.original.description, m.cost])
-        .sort(),
-    ).toEqual(
-      [
-        ...COSTS.map((c) => [
-          RECEIPTS[c.receipt].description,
-          { cents: c.cents, currency: c.currency },
-        ]),
-        [SCENARIOS.officeReceipt.description, SCENARIOS.officeReceipt.cost],
-      ].sort(),
-    );
-    // One receipt is the office's own, by the admin, waiting for an admin who is not them.
-    expect(
-      all.items
-        .filter((m) => m.enteredByOffice)
-        .map((m) => [m.original.description, m.loggedBy.name, m.accounting]),
-    ).toEqual([[SCENARIOS.officeReceipt.description, DEMO.adminName, "pending"]]);
-    const unpriced = await admin().material.list({});
-    expect(unpriced.items).toHaveLength(EXPECTED.materials - EXPECTED.pricedMaterials);
-    expect(unpriced.items.every((m) => m.cost === null)).toBe(true);
-    // The late receipt waits for the office; pricing it does not depend on that.
-    expect(unpriced.items.map((m) => m.accounting).sort()).toEqual([
-      "eligible",
-      "eligible",
-      "pending",
-    ]);
   });
 
   it("shows the office the corrected day through the worker's ledger", async () => {
@@ -265,8 +160,6 @@ describe("the demo run", () => {
       workDate: day,
       complete: true,
       corrected: true,
-      // The last recorded day: the one day of the ten with no closeout.
-      closedOut: false,
       accounting: "pending",
     });
     // The clock-out as the phone recorded it stays beside the office's correction of it.
@@ -296,54 +189,6 @@ describe("the demo run", () => {
       }),
     ).rejects.toThrow(/superuser|bypasses row-level security/);
     expect(await counts(target.owner)).toEqual(before);
-  });
-
-  it("shows the office its pay periods: week one closed as it stood, week two carrying the late day", async () => {
-    const { periods, timezone } = await admin().payPeriod.list();
-    expect(timezone).toBe(DEMO.timezone);
-    // Newest first: week two open, week one closed by the demo admin.
-    expect(periods.map((p) => [p.startsOn, p.endsOn, p.closed === null])).toEqual([
-      ["2026-10-26", "2026-11-01", true],
-      [ANCHOR, "2026-10-25", false],
-    ]);
-    const [open, closed] = periods as [(typeof periods)[0], (typeof periods)[0]];
-    expect(closed.closed).toMatchObject({
-      by: { name: DEMO.adminName },
-      unresolved: EXPECTED_PERIODS.closed.acknowledged,
-    });
-
-    // Week one is what its close stored: Priya's Wednesday is in none of its lines, though
-    // it has been approved since.
-    const one = await admin().payPeriod.read({ periodId: closed.id });
-    expect(one.approved.cells).toHaveLength(EXPECTED_PERIODS.closed.lines);
-    expect(one.approved.total).toBe(EXPECTED_PERIODS.closed.hundredths);
-    expect(new Set(one.approved.cells.map((c) => c.hundredths))).toEqual(new Set([800]));
-    expect(
-      one.approved.cells.filter(
-        (c) => c.worker.name === "Priya Shah" && c.workDate === "2026-10-21",
-      ),
-    ).toEqual([]);
-    expect(one.adjustments).toEqual({ lines: [], total: 0, carriedBy: null });
-    expect(one.unresolved).toEqual({ cells: [], pendingSessions: 0, openSessions: 0 });
-    const { rows } = await target.owner.execute<{ n: number; total: number }>(sql`
-      select count(*)::int as n, sum(hundredths)::int as total from pay_period_lines
-    `);
-    expect(rows).toEqual([
-      { n: EXPECTED_PERIODS.closed.lines, total: EXPECTED_PERIODS.closed.hundredths },
-    ]);
-
-    // Week two would carry it, apart from its own hours.
-    const two = await admin().payPeriod.read({ periodId: open.id });
-    expect(two.approved.total).toBe(EXPECTED_PERIODS.open.hundredths);
-    expect(
-      two.adjustments.lines.map((l) => [l.worker.name, l.workDate, l.hundredths]),
-    ).toEqual([
-      ["Priya Shah", "2026-10-21", EXPECTED_PERIODS.open.adjustment.hundredths],
-    ]);
-    expect(two.unresolved).toMatchObject(EXPECTED_PERIODS.open.unresolved);
-    // Luis's rejected day is listed apart with the four that wait.
-    expect(two.unresolved.cells).toHaveLength(5);
-    expect(two.unresolved.cells.filter((c) => c.rejectedSessions === 1)).toHaveLength(1);
   });
 
   it("names its scenarios' people", () => {

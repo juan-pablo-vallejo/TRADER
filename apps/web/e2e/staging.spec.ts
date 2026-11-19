@@ -191,7 +191,7 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
   adminCompany = await companyOf(context);
   expect(adminCompany, "the admin's company is the browser suite's").toBe(COMPANY_ID);
 
-  await page.goto("/roster");
+  await page.goto("/people");
   await expect(page.getByRole("table")).toBeVisible();
 
   await page.goto("/customers");

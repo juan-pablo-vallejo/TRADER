@@ -50,7 +50,7 @@ export async function judgeStart(
   if (at === undefined) throw new Error("the caller's company is not visible");
   await lockPersonDays(tx, workerId, [at.day]);
   const day = await loadDay(tx, workerId, at.day);
-  const resolved = resolveDay(day.shifts, day.overrides);
+  const resolved = resolveDay(day.shifts);
   if (resolved.result !== "resolved") return { admitted: false };
   const admission = admitStart(resolved, at.minute);
   if (admission.result === "none" || admission.jobId !== jobId)

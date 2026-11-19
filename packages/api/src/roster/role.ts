@@ -8,7 +8,6 @@ import { userRole, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { readRosterUser, rosterUser, type RosterUser } from "./list";
@@ -53,11 +52,5 @@ export async function setRole(
     return { result: "rejected", code: "last_admin" };
   }
   await tx.update(users).set({ role: input.role }).where(eq(users.id, target.id));
-  await recordAudit(tx, user, {
-    action: "users.set_role",
-    entityId: target.id,
-    before: { role: target.role },
-    after: { role: input.role },
-  });
   return answerWith(tx, "updated", target.id);
 }

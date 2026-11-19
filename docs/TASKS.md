@@ -87,7 +87,7 @@ you find under "Found along the way". Never reorder, never add scope.
       event. `audit.yml` stays. Update `.claude/skills/staging-status` to the new job. Done
       when a push to `main` runs `check` then `deploy`, staging answers ready on that
       commit, and the smoke test is green.
-- [ ] 3. **Delete what the MVP doesn't have.** From the API, the office, the phone and the
+- [x] 3. **Delete what the MVP doesn't have.** From the API, the office, the phone and the
       tests: materials and their corrections, photos, day closeout, pay periods and pay
       rates, job cost, the overview, the developer console, refusals and sync diagnostics,
       the audit log, credit memos, shift overrides (an overlapping shift is simply

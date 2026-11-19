@@ -1,26 +1,21 @@
-// One person's scheduled day as the writers and push see it (ARCHITECTURE, 2026-11-15 shift
-// rules; TASKS S3, S4): its shifts, the overlap overrides among them, and — for a shift a
-// clock-in has locked — the minute that clock-in was recorded at, on the company's wall
-// clock. Every write to a day and every start judged against one holds that day's lock, so
-// the day a writer validated is the day it writes and the day a start was admitted on is the
-// day it locked.
+// One person's scheduled day as the writers and push see it: its shifts and, for a shift a
+// clock-in has locked, the minute that clock-in was recorded at, on the company's wall clock.
+// Every write to a day and every start judged against one holds that day's lock, so the day
+// a writer validated is the day it writes and the day a start was admitted on is the day it
+// locked.
 //
-// `judgeDay` is the whole rule a write must pass: the day resolves (eligibility.ts: no
-// undecided overlap, no circle, no shift left without time), and every start already admitted
-// would still be admitted on the same shift (a shift is locked by its punch: "nor may any
-// other write … alter what authorized that start"). The database holds only what one row can
-// prove (migration 0041); this is where the rest is held.
+// `judgeDay` is the whole rule a write must pass: the day resolves (eligibility.ts: no two
+// shifts overlap), and every start already admitted would still be admitted on the same
+// shift. The database holds only what one row can prove; this is where the rest is held. A
+// writer of job_assignments that skips `lockPersonDays` breaks the rule silently.
 //
 // Lock order: a day's lock is taken after any row lock on jobs, users or companies and after
-// the field-write and worker locks, and before any job_assignments or shift_overrides row.
-// Several days are taken in day order. Consumed by write.ts, copy.ts, list.ts and
-// sync/schedule.ts.
-import { shiftOverrideHistory } from "@trader/db/schema";
+// the field-write and worker locks, and before any job_assignments row. Several days are
+// taken in day order. Consumed by write.ts, copy.ts and sync/schedule.ts.
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
-import type { AppUser } from "../core/resolve-user";
 import { admitStart, type Issue, type ResolvedDay, resolveDay } from "./eligibility";
 
 export type DayShift = {
@@ -33,18 +28,10 @@ export type DayShift = {
   lockedStart: string | null;
 };
 
-export type DayOverride = {
-  id: string;
-  holderId: string;
-  yieldingId: string;
-  reason: string;
-};
-
 export type Day = {
   userId: string;
   workDate: string;
   shifts: DayShift[];
-  overrides: DayOverride[];
 };
 
 // Exclusive, to the end of the transaction, in day order. Keyed on the person, whose id is
@@ -90,7 +77,7 @@ export async function loadDays(
     const key = dayKey(userId, workDate);
     let day = days.get(key);
     if (day === undefined) {
-      day = { userId, workDate, shifts: [], overrides: [] };
+      day = { userId, workDate, shifts: [] };
       days.set(key, day);
     }
     return day;
@@ -124,34 +111,11 @@ export async function loadDays(
       lockedStart: r.locked_start,
     });
   }
-  const overrides = await tx.execute<{
-    id: string;
-    user_id: string;
-    work_date: string;
-    holder_id: string;
-    yielding_id: string;
-    reason: string;
-  }>(sql`
-    select o.id, a.user_id, a.work_date::text as work_date, o.holder_id, o.yielding_id,
-      o.reason
-    from shift_overrides o
-    join job_assignments a on a.id = o.holder_id
-    where a.work_date between ${from} and ${to} ${people}
-    order by o.id
-  `);
-  for (const r of overrides.rows) {
-    at(r.user_id, r.work_date).overrides.push({
-      id: r.id,
-      holderId: r.holder_id,
-      yieldingId: r.yielding_id,
-      reason: r.reason,
-    });
-  }
   return days;
 }
 
 export const dayOf = (days: Map<string, Day>, userId: string, workDate: string): Day =>
-  days.get(dayKey(userId, workDate)) ?? { userId, workDate, shifts: [], overrides: [] };
+  days.get(dayKey(userId, workDate)) ?? { userId, workDate, shifts: [] };
 
 export async function loadDay(tx: Tx, userId: string, workDate: string): Promise<Day> {
   return dayOf(await loadDays(tx, workDate, workDate, [userId]), userId, workDate);
@@ -166,8 +130,8 @@ export type DayRefusal =
 export type DayJudgement =
   { ok: true; resolved: ResolvedDay } | { ok: false; refusal: DayRefusal };
 
-export function judgeDay(day: Pick<Day, "shifts" | "overrides">): DayJudgement {
-  const resolved = resolveDay(day.shifts, day.overrides);
+export function judgeDay(day: Pick<Day, "shifts">): DayJudgement {
+  const resolved = resolveDay(day.shifts);
   if (resolved.result === "rejected") {
     return { ok: false, refusal: { code: "schedule", issues: resolved.issues } };
   }
@@ -181,47 +145,6 @@ export function judgeDay(day: Pick<Day, "shifts" | "overrides">): DayJudgement {
   return { ok: true, resolved };
 }
 
-// Both are HH:MM, so text order is time order; the end is excluded.
-export const overlaps = (
-  a: { start: string; end: string },
-  b: { start: string; end: string },
-) => a.start < b.end && b.start < a.end;
-
-// One entry of an override's history, with both shifts as they stand in `shifts`
-// (ARCHITECTURE, 2026-11-15, overlap overrides keep a history). In the caller's transaction:
-// a rolled-back write leaves none.
-export async function recordOverrideHistory(
-  tx: Tx,
-  user: AppUser,
-  action: "created" | "changed" | "removed",
-  day: Pick<Day, "userId" | "workDate">,
-  override: DayOverride,
-  shifts: ReadonlyMap<string, DayShift>,
-) {
-  const holder = shifts.get(override.holderId);
-  const yielding = shifts.get(override.yieldingId);
-  if (holder === undefined || yielding === undefined) {
-    throw new Error("an override's history names two shifts of its day");
-  }
-  await tx.insert(shiftOverrideHistory).values({
-    companyId: user.companyId,
-    overrideId: override.id,
-    action,
-    actorUserId: user.id,
-    reason: override.reason,
-    userId: day.userId,
-    workDate: day.workDate,
-    holderShiftId: holder.id,
-    holderJobId: holder.jobId,
-    holderStart: holder.start,
-    holderEnd: holder.end,
-    yieldingShiftId: yielding.id,
-    yieldingJobId: yielding.jobId,
-    yieldingStart: yielding.start,
-    yieldingEnd: yielding.end,
-  });
-}
-
 const time = z.string();
 const pair = z.tuple([z.uuid(), z.uuid()]);
 
@@ -231,25 +154,11 @@ export const issueSchema = z.discriminatedUnion("code", [
   z.strictObject({ code: z.literal("invalid_interval"), shiftId: z.uuid() }),
   z.strictObject({ code: z.literal("duplicate_shift"), shiftIds: pair }),
   z.strictObject({
-    code: z.literal("override_unknown_shift"),
-    holderId: z.uuid(),
-    yieldingId: z.uuid(),
-  }),
-  z.strictObject({ code: z.literal("override_conflict"), shiftIds: pair }),
-  z.strictObject({ code: z.literal("override_not_overlapping"), shiftIds: pair }),
-  z.strictObject({
-    code: z.literal("missing_decision"),
+    code: z.literal("overlap"),
     shiftIds: pair,
     start: time,
     end: time,
   }),
-  z.strictObject({
-    code: z.literal("circular_precedence"),
-    shiftIds: z.tuple([z.uuid(), z.uuid(), z.uuid()]),
-    start: time,
-    end: time,
-  }),
-  z.strictObject({ code: z.literal("no_eligible_time"), shiftId: z.uuid() }),
 ]);
 
 export const refusalSchema = [

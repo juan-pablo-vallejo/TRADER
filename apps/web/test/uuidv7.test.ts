@@ -1,4 +1,4 @@
-// The browser's id for an office closeout (src/app/uuidv7.ts): the shape the API's
+// The browser's id for a record it creates (src/app/uuidv7.ts): the shape the API's
 // `z.uuid({ version: "v7" })` and the table's CHECK admit, carrying the time it was minted.
 import { describe, expect, it } from "vitest";
 

@@ -79,10 +79,6 @@ export default function Week() {
                 {dayName(day, language)}
               </Text>
               {shifts.map((shift, i) => {
-                const whole =
-                  shift.eligible?.length === 1 &&
-                  shift.eligible[0]!.start === shift.start &&
-                  shift.eligible[0]!.end === shift.end;
                 return (
                   <View key={shift.id} testID={`week-shift-${d}-${i}`} style={styles.row}>
                     <Text style={text.bodyStrong}>{shift.job.name}</Text>
@@ -91,19 +87,6 @@ export default function Week() {
                     </Text>
                     {shift.job.address !== null && (
                       <Text style={text.secondary}>{shift.job.address}</Text>
-                    )}
-                    {shift.eligible === null ? (
-                      <Text style={text.attention}>{t.week.undecided}</Text>
-                    ) : (
-                      !whole &&
-                      shift.eligible.map((w) => (
-                        <Text key={w.start} style={text.secondary}>
-                          {t.week.clockInFrom(
-                            wallTime(w.start, language),
-                            wallTime(w.end, language),
-                          )}
-                        </Text>
-                      ))
                     )}
                   </View>
                 );

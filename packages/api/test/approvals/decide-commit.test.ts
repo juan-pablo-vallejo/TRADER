@@ -9,24 +9,18 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { localDirectory } from "../../src/core/identity";
 import { createContext, type Tx } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
-import { lockCompanyFieldWrites } from "../../src/labor/timeline";
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";
 import {
   boundIn,
-  correctionIn,
   crewDayIn,
   disposableDb,
   eventIn,
-  auditRow,
-  auditRows,
-  lateReceiptIn,
   outcome,
   pendingApproval,
   waitForLockWait,
   quietReporter,
   REQUEST_ID,
-  withoutAuditInsert,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -58,7 +52,7 @@ const decide = (
     decision,
   });
 
-// Committed: two admins, and one pending approval of each subject.
+// Committed: two admins, and one pending labor approval.
 async function world() {
   return D.owner.transaction(async (tx) => {
     const d = await crewDayIn(tx);
@@ -71,9 +65,7 @@ async function world() {
       client: "2026-10-05T12:00:00Z",
     });
     const labor = await pendingApproval(tx, d.companyId, { eventId });
-    const receipt = await lateReceiptIn(tx, d);
-    const correction = await correctionIn(tx, d, receipt.materialId, d.foremanId);
-    return { d, x, y, labor, receipt, correction };
+    return { d, x, y, labor };
   });
 }
 
@@ -129,35 +121,9 @@ describe("approval.decide — real commits", () => {
       result: "decided",
       approval: { id: w.labor, decision: row.decision, decidedAt: row.decidedAt },
     });
-    // One audit row, the winner's: the caller answered `decided`, with their decision.
+    // The caller answered `decided` is the one the row names as its decider.
     const actor = results[0]!.result === "decided" ? w.x.id : w.y.id;
     expect(row.decidedByUserId).toBe(actor);
-    expect(await auditRows(D.owner, w.d.companyId)).toEqual([
-      auditRow(w.d.companyId, actor, "approvals.decide", w.labor, {
-        before: { decision: null },
-        after: { decision: row.decision },
-      }),
-    ]);
-  });
-
-  it("decides nothing when its audit row cannot be written, then commits both together", async () => {
-    const w = await world();
-    const subjects = [w.labor, w.receipt.approvalId, w.correction.approvalId];
-    await withoutAuditInsert(D.owner, async () => {
-      for (const id of subjects) {
-        expect(await outcome(decide(w.x.who, id, "approved"))).toBe(
-          "INTERNAL_SERVER_ERROR",
-        );
-        expect((await stored(id)).decision).toBeNull();
-      }
-    });
-    expect(await auditRows(D.owner, w.d.companyId)).toEqual([]);
-    for (const id of subjects) {
-      expect((await decide(w.x.who, id, "approved")).result).toBe("decided");
-    }
-    expect(
-      (await auditRows(D.owner, w.d.companyId)).map((r) => [r.actorUserId, r.entityId]),
-    ).toEqual(subjects.map((id) => [w.x.id, id]));
   });
 
   it("refuses an admin demoted while the decision waited, and decides nothing", async () => {
@@ -187,39 +153,5 @@ describe("approval.decide — real commits", () => {
     await h.release();
     expect(await call).toBe("UNAUTHORIZED");
     expect((await stored(w.labor)).decision).toBeNull();
-  });
-
-  it("decides a correction behind its material's row lock; labor and receipts do not wait", async () => {
-    const w = await world();
-    const h = hold((tx) =>
-      tx.execute(
-        sql`select 1 from materials where id = ${w.receipt.materialId} for update`,
-      ),
-    );
-    await h.held;
-    // Neither takes the material lock, the receipt's own decision included.
-    expect((await decide(w.x.who, w.labor, "approved")).result).toBe("decided");
-    expect((await decide(w.x.who, w.receipt.approvalId, "approved")).result).toBe(
-      "decided",
-    );
-    const correction = decide(w.x.who, w.correction.approvalId, "approved");
-    await waitForLockWait(D.owner, '%from "materials"%for no key update%');
-    await h.release();
-    expect((await correction).result).toBe("decided");
-  });
-
-  it("decides a correction only once a closeout's exclusive field-write lock is gone", async () => {
-    const w = await world();
-    const h = hold(async (tx) => {
-      await tx.execute(sql`select set_config('app.company_id', ${w.d.companyId}, true)`);
-      await lockCompanyFieldWrites(tx, "exclusive");
-    });
-    await h.held;
-    const correction = decide(w.x.who, w.correction.approvalId, "rejected");
-    await waitForLockWait(D.owner, "%pg_advisory_xact_lock_shared%", {
-      waitEvent: "advisory",
-    });
-    await h.release();
-    expect((await correction).result).toBe("decided");
   });
 });

@@ -165,9 +165,7 @@ export default function Today() {
                       offer.next.shift.job.name,
                       wallTime(offer.next.start, language),
                     )
-                : offer.kind === "undecided"
-                  ? t.today.undecided
-                  : t.today.noShift}
+                : t.today.noShift}
           </Text>
         )}
 

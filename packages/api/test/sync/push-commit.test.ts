@@ -6,10 +6,7 @@
 import {
   approvals,
   crewMembers,
-  dayCloseouts,
   jobs,
-  materials,
-  syncDiagnostics,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
@@ -20,9 +17,7 @@ import { localDirectory } from "../../src/core/identity";
 import { createContext } from "../../src/core/context";
 import type { ErrorReporter } from "../../src/core/report";
 import type { VerifiedIdentity } from "../../src/core/identity";
-import { lockCompanyFieldWrites } from "../../src/labor/timeline";
 import { appRouter } from "../../src/router";
-import { PRUNE_BATCH, RETENTION_DAYS, USER_DAILY_CAP } from "../../src/sync/diagnostics";
 import { pushRecords, type RunRecord } from "../../src/sync/push";
 import {
   createCallerFactory,
@@ -33,18 +28,12 @@ import {
   boundIn,
   crewDayIn,
   disposableDb,
-  http,
-  rejection,
   rolledBack,
-  sqlstateOf,
   uuidv7,
   waitForLockWait,
-  type CrewDay,
   quietReporter,
   REQUEST_ID,
   recordingReporter,
-  rejectingReporter,
-  throwingReporter,
 } from "../helpers";
 
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -123,23 +112,6 @@ function labor(
   };
 }
 
-function receipt(jobId: string, o: Record<string, unknown> = {}, id = uuidv7()) {
-  return {
-    id,
-    kind: "material" as const,
-    schemaVersion: 1,
-    payload: {
-      jobId,
-      description: "Primer",
-      quantity: "1",
-      unit: "gal",
-      loggedAt: new Date("2026-10-05T15:00:00Z"),
-      capturedOffline: false,
-      ...o,
-    },
-  };
-}
-
 const push = (
   who: VerifiedIdentity,
   records: unknown[],
@@ -152,16 +124,6 @@ const push = (
     records,
   });
 
-// A company's diagnostic lines (sync/diagnostics.ts), oldest first, without id and time.
-const lines = async (companyId: string) =>
-  (
-    await D.owner
-      .select()
-      .from(syncDiagnostics)
-      .where(eq(syncDiagnostics.companyId, companyId))
-      .orderBy(syncDiagnostics.id)
-  ).map(({ id: _id, createdAt: _at, companyId: _c, ...line }) => line);
-
 const eventIds = async (ids: string[]) =>
   (
     await D.owner
@@ -169,23 +131,6 @@ const eventIds = async (ids: string[]) =>
       .from(workSessionEvents)
       .where(inArray(workSessionEvents.id, ids))
   ).map((r) => r.id);
-
-// The company's field-write lock, held by a transaction of its own on another connection until
-// `release` — a closeout in flight, as far as every writer can tell.
-async function holdFieldWrites(d: CrewDay, mode: "exclusive" | "shared") {
-  let release!: () => void;
-  const released = new Promise<void>((r) => (release = r));
-  let ready!: () => void;
-  const held = new Promise<void>((r) => (ready = r));
-  const done = rolledBack(D.owner, async (tx) => {
-    await tx.execute(sql`select set_config('app.company_id', ${d.companyId}, true)`);
-    await lockCompanyFieldWrites(tx, mode);
-    ready();
-    await released;
-  });
-  await held;
-  return { release: async () => (release(), await done) };
-}
 
 describe("sync.push — commits, record by record", () => {
   it("keeps A committed when B throws, writes nothing of B, and leaves C out", async () => {
@@ -227,21 +172,14 @@ describe("sync.push — commits, record by record", () => {
       .from(approvals)
       .where(inArray(approvals.eventId, [a.id, b.id, c.id]));
     expect(approvalRows).toEqual([{ eventId: a.id }]);
-    // V1-D04: B, which threw, and C behind it each leave a line under the request's id, the
-    // one the report carries; A, accepted, leaves none.
+    // The report carries the request's id.
     expect(events[0]?.requestId).toBe(REQUEST_ID);
-    const left = { userId: d.foremanId, requestId: REQUEST_ID, outcome: "omitted" };
-    expect(await lines(d.companyId)).toEqual([
-      { ...left, recordId: b.id, recordKind: "labor_event", code: "record_failed" },
-      { ...left, recordId: c.id, recordKind: "labor_event", code: "not_attempted" },
-    ]);
   });
 
   it("answers a resent batch after a dropped response with the original acknowledgements", async () => {
     const d = await world();
     const batch = [
       labor(d.w.id, d.J, { capturedOffline: true }),
-      receipt(d.J, { capturedOffline: true }),
       labor(d.w.id, d.J, {
         type: "ended",
         clientTimestamp: new Date("2026-10-05T16:00:00Z"),
@@ -259,10 +197,6 @@ describe("sync.push — commits, record by record", () => {
         .where(eq(workSessionEvents.companyId, d.companyId))
         .orderBy(workSessionEvents.id);
     const first = await push(d.w.who, sent); // the response the device never saw
-    const noted = await D.owner
-      .select()
-      .from(syncDiagnostics)
-      .where(eq(syncDiagnostics.companyId, d.companyId));
     const before = await D.owner
       .select()
       .from(approvals)
@@ -276,10 +210,10 @@ describe("sync.push — commits, record by record", () => {
     );
     expect(
       first.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
-    ).toEqual(["accepted", "accepted", "accepted", "time_in_future"]);
+    ).toEqual(["accepted", "accepted", "time_in_future"]);
     // The end claims an online capture in October: flagged at its receipt, and the resend
     // answers from the stored row, never judging it again.
-    expect(first.results[2]).toMatchObject({
+    expect(first.results[1]).toMatchObject({
       ack: { clockSkewed: true, reasons: ["clock_skewed"] },
     });
     expect(
@@ -287,16 +221,6 @@ describe("sync.push — commits, record by record", () => {
     ).toEqual(before);
     expect(await ledger()).toEqual(rows);
     expect(await eventIds(sent.map((r) => r.id))).toHaveLength(2);
-    // V1-D04: the refusal left one line; refused again on the resend, it leaves no second.
-    expect(noted).toMatchObject([
-      { recordId: future.id, outcome: "rejected", code: "time_in_future" },
-    ]);
-    expect(
-      await D.owner
-        .select()
-        .from(syncDiagnostics)
-        .where(eq(syncDiagnostics.companyId, d.companyId)),
-    ).toEqual(noted);
   });
 });
 
@@ -304,7 +228,7 @@ describe("sync.push — commits, record by record", () => {
 // (relaxed by 0032) meet a flagged event with no approvals row at a true commit. A rolled-back
 // test only fires them by hand.
 describe("sync.push — an admin's own labor at commit", () => {
-  it("commits an admin's flagged event with no approval, and their receipt with one", async () => {
+  it("commits an admin's flagged event with no approval", async () => {
     const d = await world();
     const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
     const event = labor(admin.id, d.K, {
@@ -312,24 +236,21 @@ describe("sync.push — an admin's own labor at commit", () => {
       timeSetByUser: true,
       location: null,
     });
-    const bought = receipt(d.K, { capturedOffline: true });
-    const answer = await push(admin.who, [event, bought]);
+    const answer = await push(admin.who, [event]);
     expect(answer.results).toMatchObject([
       { id: event.id, result: "accepted", ack: { reasons: [] } },
-      { id: bought.id, result: "accepted", ack: { reasons: ["offline"] } },
     ]);
     expect(await eventIds([event.id])).toEqual([event.id]);
     const rows = await D.owner
-      .select({ eventId: approvals.eventId, materialId: approvals.materialId })
+      .select({ eventId: approvals.eventId })
       .from(approvals)
       .where(eq(approvals.companyId, d.companyId));
-    expect(rows).toEqual([{ eventId: null, materialId: bought.id }]);
+    expect(rows).toEqual([]);
     // The resend answers from what was stored.
     const again = await push(admin.who, [event]);
     expect(again.results).toMatchObject([
       { id: event.id, result: "duplicate", ack: { reasons: [] } },
     ]);
-    expect(await lines(d.companyId)).toEqual([]);
   });
 });
 
@@ -378,179 +299,6 @@ describe("sync.push — concurrency on real locks", () => {
     expect(results[0]).toMatchObject({ ack: (results[1] as { ack: unknown }).ack });
     expect(await eventIds([r.id])).toEqual([r.id]);
   });
-
-  it("linearizes with a closeout queued first: the late record is after_closeout", async () => {
-    const d = await world();
-    const review = await caller(d.who).closeout.review({
-      jobId: d.J,
-      workDate: "2026-10-05",
-    });
-    const holder = await holdFieldWrites(d, "exclusive");
-    const closeoutId = uuidv7();
-    const closeout = caller(d.who).closeout.submit({
-      id: closeoutId,
-      jobId: d.J,
-      workDate: "2026-10-05",
-      jobStatus: "open",
-      note: null,
-      clientTimestamp: new Date(),
-      reviewFingerprint: review.fingerprint,
-    });
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock(%", {
-      n: 1,
-      waitEvent: "advisory",
-    });
-    // The receipt first: its transaction begins before the closeout commits and waits on it.
-    const lateReceipt = receipt(d.J);
-    const lateEvent = labor(d.w.id, d.J);
-    const late = push(d.w.who, [lateReceipt, lateEvent]);
-    // The closeout already holds the job's row (it locks scope before the field-write lock):
-    // the push waits there, behind it, and sees it committed.
-    await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
-    await holder.release();
-    const closed = await closeout;
-    expect(closed.result).toBe("accepted");
-    const answer = await late;
-    // Both records waited behind the closeout and are stamped after it, compared in the
-    // database at full precision: the event by its receipt stamp; the receipt by one stamp read
-    // after its locks, in created_at and updated_at alike, never the transaction's start.
-    const { rows } = await D.owner.execute<Record<string, boolean>>(sql`
-      select m.created_at = m.updated_at as receipt_stamps_equal,
-        m.created_at > c.server_timestamp as receipt_after_closeout,
-        e.server_timestamp > c.server_timestamp as event_after_closeout
-      from materials m, work_session_events e, day_closeouts c
-      where m.id = ${lateReceipt.id} and e.id = ${lateEvent.id} and c.id = ${closeoutId}
-    `);
-    expect(rows).toEqual([
-      {
-        receipt_stamps_equal: true,
-        receipt_after_closeout: true,
-        event_after_closeout: true,
-      },
-    ]);
-    expect(answer.results.map((r) => r.result)).toEqual(["accepted", "accepted"]);
-    expect(
-      answer.results.map((r) =>
-        r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
-      ),
-      // The event claims an online capture on the closed day, weeks before its receipt: it is
-      // flagged and judged on the day it claims (V1-D01). Receipts are not compared.
-    ).toEqual([["after_closeout"], ["clock_skewed", "after_closeout"]]);
-  });
-
-  it("linearizes with a push queued first: the closeout sees it and refuses", async () => {
-    const d = await world();
-    const review = await caller(d.who).closeout.review({
-      jobId: d.J,
-      workDate: "2026-10-05",
-    });
-    const holder = await holdFieldWrites(d, "exclusive");
-    const early = push(d.w.who, [labor(d.w.id, d.J, { capturedOffline: true })]);
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock_shared(%", {
-      n: 1,
-      waitEvent: "advisory",
-    });
-    const closeout = caller(d.who).closeout.submit({
-      id: uuidv7(),
-      jobId: d.J,
-      workDate: "2026-10-05",
-      jobStatus: "open",
-      note: null,
-      clientTimestamp: new Date(),
-      reviewFingerprint: review.fingerprint,
-    });
-    // The push holds the job's row FOR SHARE: the closeout queues on it, behind the push.
-    await waitForLockWait(D.owner, '%from "jobs"%for no key update%', { n: 1 });
-    await holder.release();
-    expect((await early).results[0]).toMatchObject({
-      result: "accepted",
-      ack: { reasons: ["offline"] },
-    });
-    // Covered, never ignored: the open session it started refuses the closeout.
-    expect(await closeout).toMatchObject({ result: "rejected", code: "sessions_open" });
-  });
-
-  // TASKS, Stage 4 (V1-D08): the same two orders with the closeout an admin's. The push is
-  // never lost: it waits and is judged after the closeout, or it lands first and is covered.
-  it("linearizes with an admin's closeout queued first: the late record is after_closeout", async () => {
-    const d = await world();
-    const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
-    const review = await caller(admin.who).closeout.review({
-      jobId: d.J,
-      workDate: "2026-10-05",
-    });
-    const holder = await holdFieldWrites(d, "exclusive");
-    const closeoutId = uuidv7();
-    const closeout = caller(admin.who).closeout.submit({
-      id: closeoutId,
-      jobId: d.J,
-      workDate: "2026-10-05",
-      jobStatus: "open",
-      note: null,
-      clientTimestamp: new Date(),
-      reviewFingerprint: review.fingerprint,
-    });
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock(%", {
-      n: 1,
-      waitEvent: "advisory",
-    });
-    const lateReceipt = receipt(d.J);
-    const lateEvent = labor(d.w.id, d.J);
-    const late = push(d.w.who, [lateReceipt, lateEvent]);
-    // The admin's closeout holds the job's row as the foreman's does: the push waits there.
-    await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
-    await holder.release();
-    expect(await closeout).toMatchObject({
-      result: "accepted",
-      closeout: { id: closeoutId },
-    });
-    const answer = await late;
-    expect(
-      answer.results.map((r) =>
-        r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
-      ),
-    ).toEqual([["after_closeout"], ["clock_skewed", "after_closeout"]]);
-    expect(await eventIds([lateEvent.id])).toEqual([lateEvent.id]);
-    const { rows } = await D.owner.execute<{ submitter: string; members: number }>(sql`
-      select c.submitted_by_user_id as submitter,
-        (select count(*)::int from day_closeout_materials m where m.closeout_id = c.id)
-          + c.worker_mark_count as members
-      from day_closeouts c where c.id = ${closeoutId}
-    `);
-    // Neither late record is inside the closeout it waited for.
-    expect(rows).toEqual([{ submitter: admin.id, members: 0 }]);
-  });
-
-  it("linearizes with a push queued before an admin's closeout: the closeout sees it", async () => {
-    const d = await world();
-    const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
-    const review = await caller(admin.who).closeout.review({
-      jobId: d.J,
-      workDate: "2026-10-05",
-    });
-    const holder = await holdFieldWrites(d, "exclusive");
-    const early = push(d.w.who, [labor(d.w.id, d.J, { capturedOffline: true })]);
-    await waitForLockWait(D.owner, "select pg_advisory_xact_lock_shared(%", {
-      n: 1,
-      waitEvent: "advisory",
-    });
-    const closeout = caller(admin.who).closeout.submit({
-      id: uuidv7(),
-      jobId: d.J,
-      workDate: "2026-10-05",
-      jobStatus: "open",
-      note: null,
-      clientTimestamp: new Date(),
-      reviewFingerprint: review.fingerprint,
-    });
-    await waitForLockWait(D.owner, '%from "jobs"%for no key update%', { n: 1 });
-    await holder.release();
-    expect((await early).results[0]).toMatchObject({
-      result: "accepted",
-      ack: { reasons: ["offline"] },
-    });
-    expect(await closeout).toMatchObject({ result: "rejected", code: "sessions_open" });
-  });
 });
 
 describe("sync.push — bounded waits", () => {
@@ -572,17 +320,6 @@ describe("sync.push — bounded waits", () => {
     });
     expect(await outcome).toBe("INTERNAL_SERVER_ERROR");
     expect(await eventIds([r.id])).toEqual([]);
-    // V1-D04: nothing ran, so the call failed as a whole: one line, naming no record.
-    expect(await lines(d.companyId)).toEqual([
-      {
-        userId: d.w.id,
-        requestId: REQUEST_ID,
-        recordId: null,
-        recordKind: null,
-        outcome: "request_failed",
-        code: "internal_server_error",
-      },
-    ]);
   }, 15_000);
 });
 
@@ -599,7 +336,7 @@ describe("sync.push — bounded waits before resolution", () => {
     let outcome!: Promise<string | undefined>;
     await rolledBack(D.owner, async (tx) => {
       await tx.execute(sql`select 1 from users where id = ${invited!.id} for update`);
-      outcome = push(who, [receipt(d.J)]).then(
+      outcome = push(who, [labor(invited!.id, d.J)]).then(
         () => "answered",
         (e: { code?: string }) => e.code,
       );
@@ -633,7 +370,8 @@ describe("sync.push — transaction boundaries", () => {
     await D.owner.transaction(async (tx) => {
       // Record 2's job, held: record 2 waits on its row, before any lock of its own beyond it.
       await tx.execute(sql`select 1 from jobs where id = ${d.J2} for no key update`);
-      running = push(d.w.who, [labor(d.w.id, d.J), receipt(d.J2)]);
+      // The foreman's push: w's start on J, then their own on J2.
+      running = push(d.who, [labor(d.w.id, d.J), labor(d.foremanId, d.J2)]);
       await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
       // Record 1 has committed: its worker and field-write locks are gone, and the rows it
       // held FOR SHARE are free (row locks live in the tuples; NOWAIT finds them).
@@ -661,7 +399,10 @@ describe("sync.push — transaction boundaries", () => {
   it("returns what committed when the caller is deactivated between records", async () => {
     const d = await world();
     const first = labor(d.w.id, d.J);
-    const second = receipt(d.J);
+    const second = labor(d.w.id, d.J, {
+      type: "ended",
+      clientTimestamp: new Date("2026-10-05T16:00:00Z"),
+    });
     const run = barrierRun(d.w.who, async () => {
       await D.owner
         .update(users)
@@ -673,17 +414,17 @@ describe("sync.push — transaction boundaries", () => {
       run,
     );
     expect(answer.results.map((r) => r.id)).toEqual([first.id]);
-    expect(
-      await D.owner.select().from(materials).where(eq(materials.id, second.id)),
-    ).toEqual([]);
+    expect(await eventIds([second.id])).toEqual([]);
     // And from then on, nothing: not even its own acknowledged record.
     await expect(push(d.w.who, [first])).rejects.toMatchObject({ code: "UNAUTHORIZED" });
   });
 
   it("re-reads the caller under its row lock: a deactivation committed while it waited", async () => {
     const d = await world();
-    const first = receipt(d.J2);
-    const second = labor(d.w.id, d.J);
+    const first = labor(d.w.id, d.J2);
+    const second = labor(d.w.id, d.J, {
+      clientTimestamp: new Date("2026-10-05T12:05:00Z"),
+    });
     let running!: ReturnType<typeof push>;
     await D.owner.transaction(async (tx) => {
       // Record 2's job, held so record 2 resolves (active) and then waits on it.
@@ -698,452 +439,5 @@ describe("sync.push — transaction boundaries", () => {
     const answer = await running;
     expect(answer.results.map((r) => r.id)).toEqual([first.id]);
     expect(await eventIds([second.id])).toEqual([]);
-  });
-});
-
-describe("sync.push — a closeout id another tenant holds", () => {
-  const DAY = "2026-10-05";
-
-  // A's closeout of J on DAY under `id`, reviewed now, as the field app sends it.
-  async function closeoutRecord(d: World, id = uuidv7()) {
-    const review = await caller(d.who).closeout.review({ jobId: d.J, workDate: DAY });
-    return {
-      id,
-      kind: "closeout" as const,
-      schemaVersion: 1,
-      payload: {
-        jobId: d.J,
-        workDate: DAY,
-        jobStatus: "open",
-        note: null,
-        clientTimestamp: new Date("2026-10-05T21:00:00Z"),
-        reviewFingerprint: review.fingerprint,
-      },
-    };
-  }
-
-  // An empty closeout row of d's J on DAY, as the owner writes it.
-  const closeoutRow = (d: World, id: string) => ({
-    id,
-    companyId: d.companyId,
-    jobId: d.J,
-    workDate: DAY,
-    timezone: "America/New_York",
-    jobStatus: "open" as const,
-    jobStatusApplied: false,
-    submittedByUserId: d.foremanId,
-    clientTimestamp: new Date(),
-    serverTimestamp: new Date(),
-    workerMarkCount: 0,
-    materialCount: 0,
-  });
-
-  // `row` inserted on another connection and held uncommitted until the test ends it, committed
-  // or rolled back: another writer of that key, in flight.
-  async function holdCloseout(row: ReturnType<typeof closeoutRow>) {
-    const ROLLBACK = Symbol("rollback");
-    let finish!: (commit: boolean) => void;
-    const decided = new Promise<boolean>((r) => (finish = r));
-    let ready!: () => void;
-    const held = new Promise<void>((r) => (ready = r));
-    const done = D.owner
-      .transaction(async (tx) => {
-        await tx.insert(dayCloseouts).values(row);
-        ready();
-        if (!(await decided)) throw ROLLBACK;
-      })
-      .catch((error: unknown) => {
-        if (error !== ROLLBACK) throw error;
-      });
-    await Promise.race([held, done]);
-    return { end: async (commit: boolean) => (finish(commit), await done) };
-  }
-
-  const closeoutsOf = async (d: World) =>
-    (
-      await D.owner
-        .select({ id: dayCloseouts.id })
-        .from(dayCloseouts)
-        .where(eq(dayCloseouts.companyId, d.companyId))
-    ).map((r) => r.id);
-
-  const waitOnInsert = () =>
-    waitForLockWait(D.owner, 'insert into "day_closeouts"%', {
-      waitEvent: "transactionid",
-    });
-
-  it("answers it id_conflict on every resend after a dropped response, and goes on", async () => {
-    const theirs = await world();
-    const held = await closeoutRecord(theirs);
-    const accepted = await push(theirs.who, [held]);
-    expect(accepted.results).toMatchObject([{ result: "accepted" }]);
-
-    const d = await world();
-    const batch = [
-      await closeoutRecord(d, held.id),
-      labor(d.w.id, d.J, { clientTimestamp: new Date("2026-10-06T12:00:00Z") }),
-    ];
-    const first = await push(d.who, batch); // the response the device never saw
-    expect(first.results).toEqual([
-      { id: held.id, kind: "closeout", result: "rejected", code: "id_conflict" },
-      expect.objectContaining({ id: batch[1]!.id, result: "accepted" }),
-    ]);
-    const again = await push(d.who, batch);
-    expect(again.results).toEqual([
-      first.results[0],
-      { ...first.results[1], result: "duplicate" },
-    ]);
-    expect(await closeoutsOf(d)).toEqual([]);
-    // Their own resend is still their acknowledgement.
-    expect((await push(theirs.who, [held])).results).toEqual([
-      { ...accepted.results[0], result: "duplicate" },
-    ]);
-  });
-
-  it("waits on their uncommitted insert: id_conflict once it commits", async () => {
-    const theirs = await world();
-    const d = await world();
-    const r = await closeoutRecord(d);
-    const holder = await holdCloseout(closeoutRow(theirs, r.id));
-    const running = push(d.who, [r]);
-    await waitOnInsert();
-    await holder.end(true);
-    expect((await running).results).toEqual([
-      { id: r.id, kind: "closeout", result: "rejected", code: "id_conflict" },
-    ]);
-    expect(await closeoutsOf(d)).toEqual([]);
-  });
-
-  it("waits on their uncommitted insert: accepted once it rolls back", async () => {
-    const theirs = await world();
-    const d = await world();
-    const r = await closeoutRecord(d);
-    const holder = await holdCloseout(closeoutRow(theirs, r.id));
-    const running = push(d.who, [r]);
-    await waitOnInsert();
-    await holder.end(false);
-    expect((await running).results).toMatchObject([{ id: r.id, result: "accepted" }]);
-    expect(await closeoutsOf(d)).toEqual([r.id]);
-  });
-
-  it("leaves it out when the wait passes the lock timeout, writing nothing; the resend lands", async () => {
-    const theirs = await world();
-    const d = await world();
-    const before = labor(d.w.id, d.J, {
-      clientTimestamp: new Date("2026-10-06T12:00:00Z"),
-    });
-    const r = await closeoutRecord(d);
-    const holder = await holdCloseout(closeoutRow(theirs, r.id));
-    // Held past the 2 s lock_timeout: a transient failure, retried, never a rejection.
-    const answer = await push(d.who, [before, r]);
-    expect(answer.results.map((x) => [x.id, x.result])).toEqual([
-      [before.id, "accepted"],
-    ]);
-    expect(await closeoutsOf(d)).toEqual([]);
-    await holder.end(false);
-    expect((await push(d.who, [before, r])).results.map((x) => x.result)).toEqual([
-      "duplicate",
-      "accepted",
-    ]);
-  }, 15_000);
-
-  it("throws a natural-key conflict met at the insert; the retry is already_submitted", async () => {
-    const d = await world();
-    const r = await closeoutRecord(d);
-    // A writer that skipped the job's lock: its row for the same job and day, under another id,
-    // commits after this submission's own already_submitted check.
-    const rival = uuidv7();
-    const holder = await holdCloseout(closeoutRow(d, rival));
-    const submit = () =>
-      caller(d.who).closeout.submit({ id: r.id, ...r.payload } as never);
-    const running = rejection(submit());
-    await waitOnInsert();
-    await holder.end(true);
-    expect(sqlstateOf(await running)).toBe("23505");
-    expect(await submit()).toEqual({
-      result: "rejected",
-      code: "already_submitted",
-      conflictingId: rival,
-    });
-    expect(await closeoutsOf(d)).toEqual([rival]);
-  });
-});
-
-// V1-D04 (ARCHITECTURE, Sync protocol: rejected-record diagnostics). What a push leaves in
-// sync_diagnostics, written after every record's own transaction: proven on real commits,
-// because a line must survive the call and must never be what changes it.
-describe("sync.push — rejected-record diagnostics", () => {
-  const whole = { recordId: null, recordKind: null, outcome: "request_failed" };
-  const expired = (d: { companyId: string }, userId: string, n: number, days: number) =>
-    D.owner.execute(sql`
-      insert into sync_diagnostics (company_id, user_id, request_id, outcome, code, created_at)
-      select ${d.companyId}, ${userId}, gen_random_uuid(), 'request_failed', 'bad_request',
-        now() - make_interval(days => ${days})
-      from generate_series(1, ${n})
-    `);
-  const count = async (companyId: string) => (await lines(companyId)).length;
-
-  it("leaves one line for each refused record, and none for an accepted one", async () => {
-    const d = await world();
-    const requestId = crypto.randomUUID();
-    const kept = receipt(d.J, { capturedOffline: true });
-    const future = labor(d.w.id, d.J, {
-      clientTimestamp: new Date(Date.now() + 3_600_000),
-    });
-    // A worker recording another worker's labor: refused by scope.
-    const others = labor(d.w1, d.J, { capturedOffline: true });
-    const malformed = { id: uuidv7(), kind: "material", schemaVersion: 1, payload: {} };
-    const answer = await push(
-      d.w.who,
-      [kept, future, others, malformed],
-      undefined,
-      requestId,
-    );
-    expect(
-      answer.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
-    ).toEqual(["accepted", "time_in_future", "not_permitted", "invalid_record"]);
-    const line = { userId: d.w.id, requestId, outcome: "rejected" };
-    expect(await lines(d.companyId)).toEqual(
-      expect.arrayContaining([
-        {
-          ...line,
-          recordId: future.id,
-          recordKind: "labor_event",
-          code: "time_in_future",
-        },
-        {
-          ...line,
-          recordId: others.id,
-          recordKind: "labor_event",
-          code: "not_permitted",
-        },
-        {
-          ...line,
-          recordId: malformed.id,
-          recordKind: "material",
-          code: "invalid_record",
-        },
-      ]),
-    );
-    expect(await count(d.companyId)).toBe(3);
-    // A refusal writes nothing to the ledger; the line is not a ledger write.
-    expect(await eventIds([future.id, others.id])).toEqual([]);
-  });
-
-  it("leaves no record id for a record whose id it could not read, and a line for each behind it", async () => {
-    const d = await world();
-    const unreadable = {
-      id: "not-an-id",
-      kind: "material",
-      schemaVersion: 1,
-      payload: {},
-    };
-    const behind = receipt(d.J, { capturedOffline: true });
-    // Behind the stop and itself unreadable: nothing identifies it, so nothing is claimed.
-    const nameless = { payload: { note: "no id here" } };
-    const answer = await push(d.w.who, [unreadable, behind, nameless]);
-    expect(answer.results).toEqual([]);
-    const line = { userId: d.w.id, requestId: REQUEST_ID, outcome: "omitted" };
-    expect(await lines(d.companyId)).toEqual([
-      { ...line, recordId: null, recordKind: "material", code: "unreadable_record" },
-      { ...line, recordId: behind.id, recordKind: "material", code: "not_attempted" },
-    ]);
-    expect(
-      await D.owner.select().from(materials).where(eq(materials.id, behind.id)),
-    ).toEqual([]);
-  });
-
-  it("leaves a line for a record of a version this server does not know", async () => {
-    const d = await world();
-    const newer = { ...receipt(d.J), schemaVersion: 2 };
-    expect((await push(d.w.who, [newer])).results).toEqual([]);
-    expect(await lines(d.companyId)).toMatchObject([
-      { recordId: newer.id, outcome: "omitted", code: "unknown_schema_version" },
-    ]);
-  });
-
-  it("holds nothing of a record but its id and kind: no payload, place, time or text", async () => {
-    const d = await world();
-    const at = new Date(Date.now() + 7_200_000);
-    const { reporter, events } = recordingReporter();
-    await push(
-      d.w.who,
-      [
-        labor(d.w.id, d.J, {
-          clientTimestamp: at,
-          location: { lat: 12.345678, lng: -98.765432, accuracyM: 7 },
-        }),
-        {
-          id: uuidv7(),
-          kind: "material",
-          schemaVersion: 1,
-          payload: { description: "MARKER-TEXT", secret: "MARKER-TOKEN" },
-        },
-        { id: "MARKER-ID", kind: "MARKER-KIND", payload: "MARKER-PAYLOAD" },
-      ],
-      reporter,
-    );
-    const rows = await D.owner
-      .select()
-      .from(syncDiagnostics)
-      .where(eq(syncDiagnostics.companyId, d.companyId));
-    expect(rows).toHaveLength(3);
-    const text = JSON.stringify([rows, events]);
-    for (const secret of [
-      "MARKER",
-      "12.345678",
-      "98.765432",
-      at.toISOString(),
-      d.w.who.email,
-      d.w.who.subject,
-    ]) {
-      expect(text).not.toContain(secret);
-    }
-    // The only time in a line is the database's, at the write: never the record's own.
-    for (const row of rows) {
-      expect(Math.abs(row.createdAt.getTime() - Date.now())).toBeLessThan(60_000);
-    }
-  });
-
-  it("leaves one line for a call that failed as a whole, and none for a caller it cannot resolve", async () => {
-    const d = await world();
-    const bad = { protocolVersion: 2, deviceNow: new Date(), records: [receipt(d.J)] };
-    await expect(caller(d.w.who).sync.push(bad as never)).rejects.toMatchObject({
-      code: "BAD_REQUEST",
-    });
-    expect(await lines(d.companyId)).toEqual([
-      { ...whole, userId: d.w.id, requestId: REQUEST_ID, code: "bad_request" },
-    ]);
-    // Nobody: no identity, an unknown one, and an invitation never signed in with.
-    const tag = uuidv7();
-    const email = `invite-${tag}@co.test`;
-    const [invited] = await D.owner
-      .insert(users)
-      .values({ companyId: d.companyId, email, name: "Invited" })
-      .returning({ id: users.id });
-    const stranger = { subject: `sub-${uuidv7()}`, email: "nobody@co.test" };
-    for (const who of [
-      { ...stranger, emailVerified: true as const },
-      { subject: `sub-${tag}`, email, emailVerified: true as const },
-    ]) {
-      // A bad request from someone a caller transaction never resolved.
-      await caller(who)
-        .sync.push(bad as never)
-        .catch(() => undefined);
-    }
-    expect(await count(d.companyId)).toBe(1);
-    // The diagnostics write is never what signs someone in.
-    const [row] = await D.owner
-      .select({ subject: users.identitySubject })
-      .from(users)
-      .where(eq(users.id, invited!.id));
-    expect(row).toEqual({ subject: null });
-  });
-
-  it("carries the HTTP request's id, one per request, shared by its calls", async () => {
-    const d = await world();
-    const call = () => ({
-      path: "sync.push",
-      mutation: true,
-      input: {
-        protocolVersion: 1,
-        deviceNow: new Date(),
-        records: [
-          labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-        ],
-      },
-    });
-    const first = await http(app, d.w.who, [call(), call()], { router: appRouter });
-    const second = await http(app, d.w.who, [call()], { router: appRouter });
-    expect((await lines(d.companyId)).map((l) => l.requestId)).toEqual([
-      first.requestId,
-      first.requestId,
-      second.requestId,
-    ]);
-    expect(first.requestId).not.toBe(second.requestId);
-  });
-
-  it("changes no answer and no commit when the lines cannot be written", async () => {
-    const d = await world();
-    const batch = () => [
-      receipt(d.J, { capturedOffline: true }),
-      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-    ];
-    const shape = (a: Awaited<ReturnType<typeof push>>) =>
-      a.results.map((r) => [r.kind, r.result === "rejected" ? r.code : r.result]);
-    const working = await push(d.w.who, batch());
-    const before = await count(d.companyId);
-    await D.owner.execute(sql`revoke insert on sync_diagnostics from trader_app`);
-    try {
-      const { reporter, events } = recordingReporter();
-      const sent = batch();
-      const broken = await push(d.w.who, sent, reporter);
-      expect(shape(broken)).toEqual(shape(working));
-      // The accepted record committed before the write was tried, and stays committed.
-      expect(
-        await D.owner.select().from(materials).where(eq(materials.id, sent[0]!.id)),
-      ).toHaveLength(1);
-      expect(events).toMatchObject([
-        {
-          source: "diagnostics",
-          path: "sync.push",
-          requestId: REQUEST_ID,
-          sqlstate: "42501",
-        },
-      ]);
-      expect(JSON.stringify(events)).not.toContain(d.companyId);
-      // A reporter that fails as well changes nothing either.
-      for (const failing of [throwingReporter, rejectingReporter]) {
-        expect(shape(await push(d.w.who, batch(), failing))).toEqual(shape(working));
-      }
-      expect(await count(d.companyId)).toBe(before);
-    } finally {
-      await D.owner.execute(sql`grant insert on sync_diagnostics to trader_app`);
-    }
-  });
-
-  it("deletes the company's expired lines at its next write, and no other company's", async () => {
-    const d = await world();
-    const other = await world();
-    await expired(d, d.w.id, 3, RETENTION_DAYS + 1);
-    await expired(d, d.w.id, 2, RETENTION_DAYS - 1);
-    await expired(other, other.w.id, 4, RETENTION_DAYS + 1);
-    await push(d.w.who, [
-      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-    ]);
-    // Counted by the owner, past row-level security: gone from the table, not hidden.
-    expect(await count(d.companyId)).toBe(3);
-    // A company that writes nothing keeps its expired lines until something deletes them
-    // (ARCHITECTURE: the daily delete is Stage 6's).
-    expect(await count(other.companyId)).toBe(4);
-  });
-
-  it("deletes a backlog of expired lines a bounded number at a time", async () => {
-    const d = await world();
-    await expired(d, d.w.id, PRUNE_BATCH + 20, RETENTION_DAYS + 5);
-    const refuse = () =>
-      push(d.w.who, [
-        labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-      ]);
-    await refuse();
-    expect(await count(d.companyId)).toBe(20 + 1);
-    await refuse();
-    expect(await count(d.companyId)).toBe(2);
-  });
-
-  it("stops writing a caller's lines at the daily cap", async () => {
-    const d = await world();
-    await expired(d, d.w.id, USER_DAILY_CAP - 1, 0);
-    const answer = await push(d.w.who, [
-      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-    ]);
-    // Both refused and both answered; one line fits under the cap, and then none.
-    expect(answer.results).toHaveLength(2);
-    expect(await count(d.companyId)).toBe(USER_DAILY_CAP);
-    await push(d.w.who, [
-      labor(d.w.id, d.J, { clientTimestamp: new Date(Date.now() + 3_600_000) }),
-    ]);
-    expect(await count(d.companyId)).toBe(USER_DAILY_CAP);
   });
 });

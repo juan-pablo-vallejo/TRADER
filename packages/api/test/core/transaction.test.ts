@@ -252,7 +252,7 @@ describe("over HTTP", () => {
   });
 });
 
-// The harness the closeout tests stand on (helpers.ts, "Rolled-back calls"): a protected call
+// The harness the rolled-back tests stand on (helpers.ts, "Rolled-back calls"): a protected call
 // run inside an owner transaction that is always rolled back.
 describe("a rolled-back call", () => {
   it("runs as trader_app in a savepoint, its writes visible to the outer transaction", async () => {

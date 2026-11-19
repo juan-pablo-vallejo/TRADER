@@ -9,7 +9,6 @@ import { users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { recordAudit } from "../core/audit";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { rosterUser } from "./list";
@@ -45,12 +44,6 @@ export async function deactivate(
     .returning({ deactivatedAt: users.deactivatedAt });
   if (written?.deactivatedAt == null)
     throw new Error("a locked users row was not updated");
-  await recordAudit(tx, user, {
-    action: "users.deactivate",
-    entityId: target.id,
-    before: { deactivated_at: null },
-    after: { deactivated_at: written.deactivatedAt.toISOString() },
-  });
   return answerWith(tx, "updated", target.id);
 }
 
@@ -62,11 +55,5 @@ export async function reactivate(
   const { target } = await lockRosterRows(tx, user, input.userId);
   if (target.deactivatedAt === null) return answerWith(tx, "unchanged", target.id);
   await tx.update(users).set({ deactivatedAt: null }).where(eq(users.id, target.id));
-  await recordAudit(tx, user, {
-    action: "users.reactivate",
-    entityId: target.id,
-    before: { deactivated_at: target.deactivatedAt.toISOString() },
-    after: { deactivated_at: null },
-  });
   return answerWith(tx, "updated", target.id);
 }

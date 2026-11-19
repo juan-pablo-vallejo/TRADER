@@ -17,14 +17,13 @@ import {
   approvalReason,
   approvals,
   companies,
-  dayCloseouts,
   jobs,
   jobStatus,
   userRole,
   users,
   workSessionEvents,
 } from "@trader/db/schema";
-import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
 import { workDay } from "../assignments/write";
@@ -108,8 +107,6 @@ const session = z.strictObject({
   eligibleWorkedMs: z.number().int(),
   // A source in effect is a correction.
   corrected: z.boolean(),
-  // A closeout holds this session's job on its start's day, in the closeout's own zone.
-  closedOut: z.boolean(),
   // By recorded time, then receipt, then id.
   events: z.array(event),
 });
@@ -235,27 +232,6 @@ export async function workerLedger(
   const jobNames = new Map(jobRows.map((j) => [j.id, j.name]));
   const jobStatusOf = new Map(jobRows.map((j) => [j.id, j.status]));
 
-  // Closeouts that could hold a kept session: the day in a closeout's own zone is within one
-  // day of the day in the company's. The exact test is closedOn's (closeout/day.ts), in code.
-  const sessionJobs = [...new Set(kept.map((d) => d.s.jobId))];
-  const closeouts =
-    sessionJobs.length === 0
-      ? []
-      : await tx
-          .select({
-            jobId: dayCloseouts.jobId,
-            workDate: dayCloseouts.workDate,
-            timezone: dayCloseouts.timezone,
-          })
-          .from(dayCloseouts)
-          .where(
-            and(
-              inArray(dayCloseouts.jobId, sessionJobs),
-              gte(dayCloseouts.workDate, sql`${input.from}::date - 1`),
-              lte(dayCloseouts.workDate, sql`${input.to}::date + 1`),
-            ),
-          );
-
   const corrections = new Set(
     ledger.filter((e) => e.correctsEventId !== null).map((e) => e.id),
   );
@@ -313,9 +289,6 @@ export async function workerLedger(
       accounting: counted.accounting,
       eligibleWorkedMs: counted.eligibleWorkedMs,
       corrected: s.eventSourceIds.some((id) => corrections.has(id)),
-      closedOut: closeouts.some(
-        (c) => c.jobId === s.jobId && workDate(s.startedAt, c.timezone) === c.workDate,
-      ),
       events,
     };
   });

@@ -1,18 +1,12 @@
 import { approvalRouter } from "./routers/approval";
 import { assignmentRouter } from "./routers/assignment";
-import { closeoutRouter } from "./routers/closeout";
 import { crewRouter } from "./routers/crew";
 import { customerRouter } from "./routers/customer";
-import { developerRouter } from "./routers/developer";
-import { diagnosticRouter } from "./routers/diagnostic";
 import { invoiceRouter } from "./routers/invoice";
 import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
-import { materialRouter } from "./routers/material";
 import { meRouter } from "./routers/me";
-import { payPeriodRouter } from "./routers/pay-period";
 import { rosterRouter } from "./routers/roster";
-import { overviewRouter } from "./routers/overview";
 import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
 import { router } from "./core/trpc";
@@ -20,19 +14,13 @@ import { router } from "./core/trpc";
 export const appRouter = router({
   approval: approvalRouter,
   assignment: assignmentRouter,
-  closeout: closeoutRouter,
   crew: crewRouter,
   customer: customerRouter,
-  developer: developerRouter,
-  diagnostic: diagnosticRouter,
   invoice: invoiceRouter,
   job: jobRouter,
   labor: laborRouter,
-  material: materialRouter,
   me: meRouter,
-  payPeriod: payPeriodRouter,
   roster: rosterRouter,
-  overview: overviewRouter,
   status: statusRouter,
   sync: syncRouter,
 });

@@ -3,12 +3,11 @@
 // number, an issued one has, a void one has a void stamp. Totals are sums of the stored
 // line amounts and the stored tax, added here and never rounded again.
 //
-// `suggest` offers what a draft's lines may be drawn from — the job's approved hours, one
-// line a work date, and its receipts that count — as words and quantities only. It carries
-// no price, no pay rate and no receipt cost: what the customer is charged is entered by the
-// admin on every line (V1-D14). The hours are the one labor derivation's figures (jobs/
-// cost.ts): a day's quantity is the sum of that day's rounded figures, added and never
-// rounded again. Consumed by routers/invoice.ts.
+// `suggest` shows the job's hours beside a draft, one figure a work date, every worker's
+// together. It carries no price: what the customer is charged is typed by the admin on every
+// line. The hours are the one labor derivation's figures (labor/day-hours.ts): a day's
+// quantity is the sum of that day's rounded cells, added and never rounded again. Consumed
+// by routers/invoice.ts.
 import {
   customers,
   invoiceLineItems,
@@ -17,6 +16,7 @@ import {
   invoices,
   jobs,
   users,
+  workSessionEvents,
 } from "@trader/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -25,8 +25,7 @@ import { z } from "zod";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
-import { jobCost } from "../jobs/cost";
-import { listMaterials } from "../materials/list";
+import { companyZone, readDayHours } from "../labor/day-hours";
 import { hoursQuantity, totals } from "./lines";
 
 const named = z.strictObject({ id: z.uuid(), name: z.string() });
@@ -70,7 +69,6 @@ export const readOutput = z.strictObject({
       unit: z.string().nullable(),
       unitPriceCents: z.number().int(),
       amountCents: z.number().int(),
-      materialId: z.uuid().nullable(),
     }),
   ),
   // The customer's address on file, offered as where to send the page; the admin may type
@@ -112,17 +110,9 @@ export const suggestOutput = z.strictObject({
   labor: z.array(
     z.strictObject({
       workDate: z.iso.date(),
-      // Approved hours on the job that day, every worker's together.
+      // Hours that count on the job that day, every worker's together.
       hundredths: z.number().int().positive(),
       quantity: z.string(),
-    }),
-  ),
-  materials: z.array(
-    z.strictObject({
-      materialId: z.uuid(),
-      description: z.string(),
-      quantity: z.string(),
-      unit: z.string(),
     }),
   ),
 });
@@ -236,7 +226,6 @@ export async function readInvoice(
       unit: invoiceLineItems.unit,
       unitPriceCents: invoiceLineItems.unitPriceCents,
       amountCents: invoiceLineItems.amountCents,
-      materialId: invoiceLineItems.materialId,
     })
     .from(invoiceLineItems)
     .where(eq(invoiceLineItems.invoiceId, row.id))
@@ -299,26 +288,23 @@ export async function suggestLines(
     .from(invoices)
     .where(eq(invoices.id, input.invoiceId));
   if (invoice === undefined) throw forbidden();
-  const cost = await jobCost(tx, user, { jobId: invoice.jobId });
+  const timezone = await companyZone(tx, user.companyId);
+  const workers = await tx
+    .selectDistinct({ id: workSessionEvents.workerId })
+    .from(workSessionEvents)
+    .where(eq(workSessionEvents.jobId, invoice.jobId));
+  const cells = await readDayHours(
+    tx,
+    workers.map((w) => w.id),
+    timezone,
+  );
   const byDay = new Map<string, number>();
-  for (const line of cost.labor.lines) {
-    byDay.set(line.workDate, (byDay.get(line.workDate) ?? 0) + line.hundredths);
+  for (const cell of cells) {
+    if (cell.jobId !== invoice.jobId) continue;
+    byDay.set(cell.workDate, (byDay.get(cell.workDate) ?? 0) + cell.approvedHundredths);
   }
-  const receipts = [];
-  let after: string | undefined;
-  // Every receipt of the job, a page at a time: the list is bounded per page, not in all.
-  do {
-    const page = await listMaterials(tx, user, {
-      jobId: invoice.jobId,
-      show: "all",
-      limit: 100,
-      after,
-    });
-    receipts.push(...page.items);
-    after = page.next ?? undefined;
-  } while (after !== undefined);
   return {
-    timezone: cost.timezone,
+    timezone,
     labor: [...byDay]
       .filter(([, hundredths]) => hundredths > 0)
       .sort(([a], [b]) => (a < b ? -1 : 1))
@@ -326,15 +312,6 @@ export async function suggestLines(
         workDate,
         hundredths,
         quantity: hoursQuantity(hundredths),
-      })),
-    materials: receipts
-      // What counts: approved or needing no approval, and not voided.
-      .filter((r) => r.accounting === "eligible")
-      .map((r) => ({
-        materialId: r.id,
-        description: r.effective.description,
-        quantity: r.effective.quantity,
-        unit: r.effective.unit,
       })),
   };
 }

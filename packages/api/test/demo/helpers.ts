@@ -74,33 +74,17 @@ export async function counts(db: Db) {
     jobs,
     crews,
     crewMembers,
-    payRates,
     events,
-    materials,
-    priced,
-    corrections,
-    closeouts,
     approvals,
     decided,
     assignments,
-    payPeriods,
-    payPeriodLines,
   ] = await Promise.all([
     count(db, "users"),
     count(db, "customers"),
     count(db, "jobs"),
     count(db, "crews"),
     count(db, "crew_members"),
-    count(db, "pay_rates"),
     count(db, "work_session_events"),
-    count(db, "materials"),
-    db
-      .execute<{ n: number }>(
-        sql`select count(*)::int as n from materials where cost_cents is not null`,
-      )
-      .then((r) => r.rows[0]!.n),
-    count(db, "material_corrections"),
-    count(db, "day_closeouts"),
     count(db, "approvals"),
     db
       .execute<{ n: number }>(
@@ -108,8 +92,6 @@ export async function counts(db: Db) {
       )
       .then((r) => r.rows[0]!.n),
     count(db, "job_assignments"),
-    count(db, "pay_periods"),
-    count(db, "pay_period_lines"),
   ]);
   return {
     users,
@@ -117,24 +99,9 @@ export async function counts(db: Db) {
     jobs,
     crews,
     crewMembers,
-    payRates,
     events,
-    materials,
-    pricedMaterials: priced,
-    materialCorrections: corrections,
-    closeouts,
     approvals,
     decided,
     assignments,
-    payPeriods,
-    payPeriodLines,
   };
-}
-
-// The audit rows by action, as the owner reads them: an action nobody performed is absent.
-export async function auditCounts(db: Db): Promise<Record<string, number>> {
-  const { rows } = await db.execute<{ action: string; n: number }>(
-    sql`select action, count(*)::int as n from audit_log group by action`,
-  );
-  return Object.fromEntries(rows.map((r) => [r.action, r.n]));
 }

@@ -10,20 +10,14 @@
 // the ledger, materials, closeouts and their fingerprints stay as they are, and what counts is
 // derived (labor/approval.ts, materials/approval.ts). A recorded decision leaves one audit row
 // (core/audit.ts); a duplicate and a refusal leave none. Consumed by routers/approval.ts.
-import {
-  approvals,
-  materialCorrections,
-  materials,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { approvals, workSessionEvents } from "@trader/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 
-import { recordAudit } from "../core/audit";
 import { lockActiveSelf } from "../core/locks";
 import type { Tx } from "../core/context";
 import { serverClock } from "../core/clock";
-import { assertReadCommitted, lockCompanyFieldWrites } from "../labor/timeline";
+import { assertReadCommitted } from "../labor/timeline";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 
@@ -70,55 +64,24 @@ export async function decideApproval(
   // 1. The approval's subject, unlocked: 0020 fixes it, so only the decision can move under
   // this read. One FORBIDDEN for an id that is missing or another tenant's (invisible).
   const [seen] = await tx
-    .select({
-      eventId: approvals.eventId,
-      materialId: approvals.materialId,
-      materialCorrectionId: approvals.materialCorrectionId,
-    })
+    .select({ eventId: approvals.eventId })
     .from(approvals)
     .where(eq(approvals.id, input.approvalId));
-  if (seen === undefined) throw forbidden();
+  // Only a labor event's approval is decided: receipts left with the materials screens.
+  if (seen === undefined || seen.eventId === null) throw forbidden();
+  const eventId = seen.eventId;
 
   // 2. The caller, re-read under a lock held to commit (users rows come first in the lock
   // order): a demotion or deactivation either committed first and is seen, or waits.
   await lockActiveSelf(tx, user, "admin");
 
-  // 3. Whose entry it is, from immutable columns. A correction's decision takes
-  // material.correct's locks, in its order (ARCHITECTURE row 200): the field-write lock shared,
-  // then the material row, so a correction of the same material is serialized with it.
-  let party: string;
-  if (seen.materialCorrectionId !== null) {
-    const [correction] = await tx
-      .select({
-        materialId: materialCorrections.materialId,
-        submittedByUserId: materialCorrections.submittedByUserId,
-      })
-      .from(materialCorrections)
-      .where(eq(materialCorrections.id, seen.materialCorrectionId));
-    if (correction === undefined)
-      throw new Error("an approval's correction is not visible");
-    await lockCompanyFieldWrites(tx, "shared");
-    await tx
-      .select({ id: materials.id })
-      .from(materials)
-      .where(eq(materials.id, correction.materialId))
-      .for("no key update");
-    party = correction.submittedByUserId;
-  } else if (seen.materialId !== null) {
-    const [receipt] = await tx
-      .select({ loggedByUserId: materials.loggedByUserId })
-      .from(materials)
-      .where(eq(materials.id, seen.materialId));
-    if (receipt === undefined) throw new Error("an approval's receipt is not visible");
-    party = receipt.loggedByUserId;
-  } else {
-    const [event] = await tx
-      .select({ workerId: workSessionEvents.workerId })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.id, seen.eventId!));
-    if (event === undefined) throw new Error("an approval's event is not visible");
-    party = event.workerId;
-  }
+  // 3. Whose entry it is, from immutable columns.
+  const [event] = await tx
+    .select({ workerId: workSessionEvents.workerId })
+    .from(workSessionEvents)
+    .where(eq(workSessionEvents.id, eventId));
+  if (event === undefined) throw new Error("an approval's event is not visible");
+  const party = event.workerId;
 
   // 4. The approval row, last in the lock order: a second decider waits here, then reads the
   // first one's commit (READ COMMITTED reads afresh per statement).
@@ -169,13 +132,6 @@ export async function decideApproval(
     .where(and(eq(approvals.id, input.approvalId), isNull(approvals.decision)))
     .returning({ decision: approvals.decision, decidedAt: approvals.decidedAt });
   if (written === undefined) throw new Error("the approval was decided under its lock");
-  // 9. The decision's audit row, in this transaction. The row itself keeps who and when.
-  await recordAudit(tx, user, {
-    action: "approvals.decide",
-    entityId: input.approvalId,
-    before: { decision: null },
-    after: { decision: input.decision },
-  });
   return {
     result: "decided",
     approval: {

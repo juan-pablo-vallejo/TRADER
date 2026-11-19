@@ -117,7 +117,7 @@ export function wallClock(
 
 type Shift = PullOutput["shifts"][number];
 
-// The server admits a start up to this many minutes before a shift's eligible time
+// The server admits a start up to this many minutes before a shift's start
 // (eligibility.ts, EARLY_MINUTES). Restated: the phone only shows what to expect.
 export const EARLY_MINUTES = 15;
 
@@ -127,20 +127,17 @@ const minutes = (wall: string) =>
 export type Offer =
   // A shift the server would admit a start on now.
   | { kind: "eligible"; shift: Shift }
-  // Shifts today, none of them now: the next one's eligible start, if any is left.
+  // Shifts today, none of them now: the next one's start, if any is left.
   | { kind: "later"; next: { shift: Shift; start: string } | null }
-  // Today's overlapping shifts are not decided: nothing is admitted until the office does.
-  | { kind: "undecided" }
   | { kind: "none" };
 
 // Under enforcement, what the clock offers at this minute of the company's day.
 export function offerAt(shifts: readonly Shift[], day: string, minute: string): Offer {
   const today = shifts.filter((s) => s.workDate === day);
   if (today.length === 0) return { kind: "none" };
-  if (today.some((s) => s.eligible === null)) return { kind: "undecided" };
   const at = minutes(minute);
   const windows = today
-    .flatMap((shift) => (shift.eligible ?? []).map((w) => ({ shift, ...w })))
+    .map((shift) => ({ shift, start: shift.start, end: shift.end }))
     .sort((a, b) => minutes(a.start) - minutes(b.start));
   const inside = windows.find((w) => minutes(w.start) <= at && at < minutes(w.end));
   if (inside !== undefined) return { kind: "eligible", shift: inside.shift };

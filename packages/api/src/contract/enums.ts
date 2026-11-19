@@ -19,6 +19,7 @@ export const APPROVAL_REASONS = [
   "user_timed",
   "location",
   "clock_skewed",
+  // Nothing computes it since day closeout left; the label leaves with the baseline.
   "after_closeout",
   "unscheduled",
 ] as const;

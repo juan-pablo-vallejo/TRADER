@@ -1,5 +1,5 @@
-// TASKS R7: invoice.recordPayment, reversePayment, what an invoice owes, the void rule and
-// invoice.exportCsv. A payment changes no invoice row; payments never total more than the
+// TASKS R7: invoice.recordPayment, reversePayment, what an invoice owes and the void rule.
+// A payment changes no invoice row; payments never total more than the
 // invoice; a void invoice takes no payment; another company's invoice is FORBIDDEN.
 // Rolled-back transactions; the database's own guards are the db suite's
 // (billing/invoice-payments.test.ts).
@@ -8,7 +8,6 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
-import { INVOICE_COLUMNS, invoicesCsv } from "../../src/invoices/export";
 import {
   appCallerIn,
   becomeApp,
@@ -57,7 +56,6 @@ async function office(tx: Tx) {
           quantity: "8",
           unit: "h",
           unitPriceCents: 6500,
-          materialId: null,
         },
       ],
     });
@@ -261,95 +259,7 @@ describe("another company's invoice and payments", () => {
       const id = await o.invoice();
       for (const who of [o.worker.who, o.day.who]) {
         expect(await outcome(o.as(who).recordPayment(pay(id, 100)))).toBe("FORBIDDEN");
-        expect(await outcome(o.as(who).exportCsv())).toBe("FORBIDDEN");
       }
     });
-  });
-});
-
-describe("invoice.exportCsv", () => {
-  it("lists every invoice that has a number, with the list's own figures", async () => {
-    await rolledBack(owner, async (tx) => {
-      const o = await office(tx);
-      const paid = await o.invoice({ taxCents: 3640 });
-      await o.bill.recordPayment(pay(paid, 20000));
-      const voided = await o.invoice();
-      await o.bill.void({ invoiceId: voided });
-      await o.invoice({ issue: false });
-      const file = await o.bill.exportCsv();
-      expect(file.invoices).toBe(2);
-      expect(file.filename).toMatch(/^invoices-\d{4}-\d{2}-\d{2}\.csv$/);
-      const rows = file.csv
-        .trimEnd()
-        .split("\r\n")
-        .map((r) => r.split(","));
-      expect(rows[0]).toEqual([...INVOICE_COLUMNS]);
-      expect(rows.slice(1).map((r) => [r[0], ...r.slice(4)])).toEqual([
-        ["1042", "USD", "520.00", "36.40", "556.40", "200.00", "356.40", "issued"],
-        ["1043", "USD", "520.00", "0.00", "520.00", "0.00", "0.00", "void"],
-      ]);
-      // The file's totals are the list's.
-      const listed = (await o.bill.list()).filter((i) => i.number !== null);
-      const sum = (column: number) =>
-        rows.slice(1).reduce((n, r) => n + Math.round(Number(r[column]) * 100), 0);
-      expect(sum(7)).toBe(listed.reduce((n, i) => n + i.totalCents, 0));
-      expect(sum(9)).toBe(listed.reduce((n, i) => n + i.owedCents, 0));
-    });
-  });
-});
-
-describe("overview.get", () => {
-  it("counts the issued invoices with something still owed, and no other", async () => {
-    await rolledBack(owner, async (tx) => {
-      const o = await office(tx);
-      const count = async () =>
-        (await appCallerIn(tx, o.admin.who).overview.get()).invoicesOwed;
-      expect(await count()).toBe(0);
-      const partly = await o.invoice();
-      await o.bill.recordPayment(pay(partly, 100));
-      const full = await o.invoice();
-      const whole = pay(full, 52000);
-      await o.bill.recordPayment(whole);
-      const voided = await o.invoice();
-      await o.bill.void({ invoiceId: voided });
-      await o.invoice({ issue: false });
-      // The other company's issued invoice owes its own company, not this one.
-      expect(await count()).toBe(1);
-      // The full payment reversed: that invoice is owed again.
-      await o.bill.reversePayment({ id: uuidv7(), paymentId: whole.id, note: null });
-      expect(await count()).toBe(2);
-    });
-  });
-});
-
-describe("invoicesCsv", () => {
-  it("writes the issue day in the company's zone and keeps a name with a comma whole", () => {
-    const at = new Date("2026-11-03T03:30:00Z"); // still Nov 2 in New York
-    const row = {
-      id: uuidv7(),
-      state: "issued" as const,
-      number: 7,
-      customer: { id: uuidv7(), name: "Whitmore, J." },
-      job: { id: uuidv7(), name: "=Porch" },
-      currency: "USD",
-      createdAt: at,
-      issuedAt: at,
-      voidedAt: null,
-      subtotalCents: 100,
-      taxCents: 5,
-      totalCents: 105,
-      paidCents: 0,
-      owedCents: 105,
-    };
-    const draft = {
-      ...row,
-      id: uuidv7(),
-      number: null,
-      issuedAt: null,
-      state: "draft" as const,
-    };
-    expect(invoicesCsv([draft, row], "America/New_York").split("\r\n")[1]).toBe(
-      `7,2026-11-02,"Whitmore, J.",'=Porch,USD,1.00,0.05,1.05,0.00,1.05,issued`,
-    );
   });
 });
