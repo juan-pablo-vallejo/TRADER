@@ -201,7 +201,8 @@ each Android user.
 ### Found along the way
 
 - [ ] The deploy job spends most of its time installing a browser for the smoke test
-      (`playwright install --with-deps chromium`, about ten minutes a run). Cache it.
+      (`playwright install --with-deps chromium`: 21 s to 8 m 47 s over the seven deploy
+      runs up to `f070c5d`). Cache it.
 - [ ] OWNER: `STAGING_MIGRATOR_URL` in `.env.staging` ends in a cut-off query parameter
       (`&ch`); the value in GitHub's `staging` environment is whole. Fix the file's copy.
 - [ ] OWNER: the `staging` environment variable `E2E_COMPANY_ID` is no longer read; delete it.
@@ -227,6 +228,13 @@ each Android user.
       (`provider_refused`). The owner corrected the staging Vercel project's mail variables;
       after a redeploy the third send went. Item 16 still waits on the owner seeing it
       arrive.
+- [ ] `apps/web/vercel.json` turns off Vercel's own deployments for `main` only. Once the
+      production project exists, Vercel will also build a push to `production` by itself,
+      without waiting for the deploy job's migration. Add `"production": false` before
+      item 20.
+- [ ] OWNER: `pnpm --filter @trader/db onboard` and `pnpm db:migrate` fall back to the local
+      database when `DATABASE_URL` is given empty, as an unset `$OWNER_URL` makes it. Decide
+      whether `run-onboard.ts` should refuse a blank `DATABASE_URL`.
 
 ## After MVP
 
