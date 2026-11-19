@@ -216,6 +216,13 @@ each Android user.
       cannot sign in to staging's office by hand with a fixture number; the smoke test uses
       single-use tickets. OWNER: turn the development instance's test mode on, or accept
       tickets as the only way in.
+- [ ] The phone has still never signed in to staging. A development build pointed at
+      staging reaches Clerk and gets to the code step for a fixture number, and the fixed
+      test code is refused there too, so item 11's phone steps were seen against the local
+      server only. Blocked on the Clerk item above, then items 12 and 13.
+- [ ] An entry the office adds from "Add missing hours" is flagged `user_timed` and
+      `location` (it has no location stamp), never `corrected`. Decide whether an office
+      entry should carry `location` at all.
 
 ## After MVP
 

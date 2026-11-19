@@ -423,7 +423,7 @@ export const strings = {
     "This session's hours will no longer count. The session and its entries stay on record.",
   addMissingHours: "Add missing hours",
   missingHoursExplain:
-    "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once and are flagged as edited.",
+    "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once, flagged as time set by user.",
   missingClockIn: "Clock in",
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
