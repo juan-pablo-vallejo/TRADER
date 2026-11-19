@@ -4,7 +4,7 @@
 // after that lock. With `after`, the stamp is floored at `after` + 1 ms, so a series of
 // stamps rises in acceptance order even when the clock steps back. Epoch milliseconds cross
 // the driver as text; the columns hold milliseconds (precision 3). Consumed by
-// labor/timeline.ts, closeout/submit.ts, approvals/decide.ts and materials/correct.ts.
+// labor/timeline.ts.
 import { sql } from "drizzle-orm";
 
 import type { Tx } from "./context";

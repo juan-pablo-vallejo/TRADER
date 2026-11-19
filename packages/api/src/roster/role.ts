@@ -1,9 +1,8 @@
-// roster.setRole (PRD, Access: roles are a deliberate roster action). One user's role, judged
+// roster.setRole: a role changes only by a deliberate roster action. One user's role, judged
 // under lock.ts's locks: demoting the last active admin is `rejected` `last_admin`, so a
 // company can never lose its last admin to a demotion, two admins racing included. An admin may
 // demote themself while another remains; their call commits and the next is FORBIDDEN. The
-// same role again is `unchanged` and writes nothing. A change leaves one audit row
-// (core/audit.ts). Consumed by routers/roster.ts.
+// same role again is `unchanged` and writes nothing. Consumed by routers/roster.ts.
 import { ROLES } from "../contract/enums";
 import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";

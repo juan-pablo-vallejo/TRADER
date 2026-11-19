@@ -83,8 +83,8 @@ export async function lockExclusive(tx: Tx, tables: string[]) {
   throw new Error(`could not lock ${tables.join(", ")}`);
 }
 
-// Becomes the runtime role for the rest of the transaction, optionally bound to a tenant, as
-// Stage 3's request context will. SET LOCAL ROLE needs no password and ends with the
+// Becomes the runtime role for the rest of the transaction, optionally bound to a tenant.
+// SET LOCAL ROLE needs no password and ends with the
 // transaction; set_config(…, true) is SET LOCAL that takes a bind parameter.
 export async function asApp(tx: Tx, companyId?: string) {
   await tx.execute(sql`set local role trader_app`);
@@ -101,7 +101,7 @@ export function one<T>(rows: T[]): T {
 
 export const company = { name: "Invariant Co", timezone: "America/New_York" };
 
-// What the device will do in Stage 5: 48 bits of milliseconds, version 7, variant 10, random.
+// An id as a device would send it: 48 bits of milliseconds, version 7, variant 10, random.
 export function uuidv7(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   const ms = BigInt(Date.now());

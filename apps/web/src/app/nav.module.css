@@ -23,11 +23,6 @@
 .open {
   display: block;
 }
-.group {
-  margin: 0;
-  padding: var(--space-4) var(--space-4) var(--space-1);
-  color: var(--ink-secondary);
-}
 .list {
   list-style: none;
   margin: 0;

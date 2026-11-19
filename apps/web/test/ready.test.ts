@@ -1,4 +1,4 @@
-// Release 0.1 R3: the readiness check, against the migrated compose database. A login as
+// The readiness check, against the migrated compose database. A login as
 // trader_app cannot be made here (the role has no password), so the deployed case is a
 // transaction whose session authorization is trader_app, which is what a login sets.
 import type { Db } from "@trader/db";

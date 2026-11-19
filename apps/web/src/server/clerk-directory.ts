@@ -10,9 +10,9 @@
 // `form_data_missing`, because the instance requires a number.
 //
 // "Already admitted" is success, and silent: a second invitation of the same number — a
-// retry, another company's — must neither fail nor say that the number is known (ARCHITECTURE,
-// phone identity). The number is what must end up with a login, so when only the email is
-// held by an existing user the person is created by number alone.
+// retry, another company's — must neither fail nor say that the number is known. The number
+// is what must end up with a login, so when only the email is held by an existing user the
+// person is created by number alone.
 //
 // Nothing of a response is kept or thrown: it names the person. An error carries the HTTP
 // status and Clerk's error codes, no more.

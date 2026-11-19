@@ -1,4 +1,4 @@
-// TASKS, Stage 4: labor repair from the ledger screen and the hours it leaves, over
+// Labor repair from the Hours screen and the hours it leaves, over
 // the real transport — the route module as Next calls it, the bodies in superjson's envelope,
 // and the repair sets built by the screen's own builder (src/app/hours/repair-set.ts) from
 // what `labor.ledger` answered. The rules of a repair are the api suite's
@@ -35,8 +35,8 @@ import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
 
 type Out = inferRouterOutputs<AppRouter>;
 
-// A database of its own: a ledger row and an audit row are
-// append-only and reference their company and people, so nothing written here could be
+// A database of its own: a ledger row is
+// append-only and references its company and people, so nothing written here could be
 // deleted again.
 let D: Awaited<ReturnType<typeof disposableDb>>;
 let owner: Db;

@@ -1,4 +1,4 @@
-// TASKS:43: development sign-in fails closed — 404 wherever the development identity is off —
+// Development sign-in fails closed — 404 wherever the development identity is off —
 // and, where it is on, sets one cookie that the identity seam bridges to the api adapter.
 // Signing in twice with the same email binds once: the subject is derived from the email.
 import { users } from "@trader/db/schema";

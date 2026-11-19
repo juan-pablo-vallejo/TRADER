@@ -1,4 +1,4 @@
-// The content security policy of a built app (ARCHITECTURE, Before the first deployment).
+// The content security policy of a built app.
 // One policy, built per request in proxy.ts with a fresh nonce: Next reads the nonce from the
 // request's own Content-Security-Policy header and puts it on every script it renders, which
 // it can do because every page here is rendered per request (layout.tsx).

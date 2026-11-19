@@ -1,4 +1,4 @@
-// TASKS:48: a complete demo run into a database of its own, at a pinned anchor. The owner wrote
+// A complete demo run into a database of its own, at a pinned anchor. The owner wrote
 // the bootstrap only; every other row came through a procedure under trader_app; every persona
 // who called is bound to the development subject; what the office screens will read is there.
 import { seed } from "@trader/db";

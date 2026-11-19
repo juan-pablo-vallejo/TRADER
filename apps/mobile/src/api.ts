@@ -1,4 +1,4 @@
-// The API client (ARCHITECTURE, apps/mobile): tRPC over HTTP to the same route the office
+// The API client: tRPC over HTTP to the same route the office
 // calls. The router is imported as a type alone — a value import would bundle the server
 // into the app, and lint refuses it; what the phone needs as values comes from
 // `@trader/api/contract`.

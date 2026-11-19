@@ -1,4 +1,4 @@
-// Stage 2 line 8: the seed, run as CI runs everything here — as the owner, in rolled-back
+// The seed, run as CI runs everything here — as the owner, in rolled-back
 // transactions (helpers.ts), so it leaves no rows for other tests. The tests assume no
 // committed rows in SEED.companyId beyond the seed's own; CI never has any.
 import { eq } from "drizzle-orm";

@@ -7,7 +7,7 @@ import { useSync } from "../sync/provider";
 import { color, size, space } from "../theme";
 import { text } from "./controls";
 
-// The server tolerates five minutes of skew before it flags an entry (ARCHITECTURE).
+// The server tolerates five minutes of skew before it flags an entry.
 const SKEW_MS = 5 * 60_000;
 
 export function SyncBanner() {

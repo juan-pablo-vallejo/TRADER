@@ -1,6 +1,6 @@
 "use client";
 
-// The invoice list (DESIGN, Data table; PRD, Invoicing and exports): every invoice, issued
+// The invoice list: every invoice, issued
 // ones by number, newest first, each row a link to the invoice. The header's action starts a
 // draft for a jobsite — its customer is the jobsite's — under an id minted here, so a start
 // sent again is the same draft, and opens it.

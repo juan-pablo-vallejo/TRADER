@@ -1,4 +1,4 @@
-// TASKS R6, on real commits: fifty invoices issued at once take fifty consecutive numbers
+// On real commits: fifty invoices issued at once take fifty consecutive numbers
 // with no gap and no duplicate, and one invoice issued twice at once takes one. In a
 // disposable database (helpers.ts): an issued invoice can never be deleted.
 import { invoiceCounters, invoiceLineItems, invoices } from "@trader/db/schema";

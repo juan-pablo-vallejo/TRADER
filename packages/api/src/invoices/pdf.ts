@@ -1,5 +1,4 @@
-// invoice.pdf: an issued invoice as a PDF, made when asked and stored nowhere (ARCHITECTURE,
-// system diagram: "PDF on demand"; PRD, Invoicing and exports; TASKS R7). The figures are
+// invoice.pdf: an issued invoice as a PDF, made when asked and stored nowhere. The figures are
 // `invoice.read`'s own — the stored line amounts, the stored tax, what is paid and owed —
 // so the page says what the screen says, and nothing is computed again here. A draft has no
 // PDF: it has no number and may still change. A void one has, and says VOID across its head.

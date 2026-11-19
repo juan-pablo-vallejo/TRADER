@@ -1,6 +1,6 @@
 "use client";
 
-// The customers screen (PRD, Target users: the admin's customers; DESIGN, Data table). The
+// The customers screen. The
 // list is one query; every mutation invalidates it. The page header's action opens the create
 // form. Each row is text plus one Edit toggle; the editor row beneath holds the fields with
 // Save and, last, the deactivation. A `rejected` answer reads

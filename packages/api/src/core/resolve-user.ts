@@ -1,6 +1,6 @@
-// Identity → user row, select-first, on the caller's transaction (ARCHITECTURE invariant 6).
+// Identity → user row, select-first, on the caller's transaction.
 // Runs with the identity settings set and the tenant unset, so only the identity policies
-// apply (0015, 0038): the caller sees its own bound row, or unbound invitations to its
+// apply: the caller sees its own bound row, or unbound invitations to its
 // verified email or its verified phone number.
 // First sign-in binds the one invitation; nothing is ever inserted, and nothing but
 // identity_subject is ever written (users_identity_guard refuses anything else).
@@ -59,7 +59,7 @@ export async function resolveUser(
   tx: Tx,
   identity: VerifiedIdentity,
 ): Promise<AppUser | null> {
-  // 1. Every request after the first. Deactivated resolves to no user (TASKS, Stage 3).
+  // 1. Every request after the first. Deactivated resolves to no user.
   const bound = await bySubject(tx, identity.subject);
   if (bound !== undefined) return active(bound);
 

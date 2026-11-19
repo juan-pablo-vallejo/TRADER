@@ -1,4 +1,4 @@
-// The result note (DESIGN, UI components): one `secondary` line beneath the control that caused
+// The result note: one `secondary` line beneath the control that caused
 // it, announced to a screen reader. "Saved." reads in `synced`, "No change." in
 // `ink-secondary`, an informational line in `ink`; anything else is a refusal or a failure, in
 // `attention` and announced at once. Consumed by every office screen.

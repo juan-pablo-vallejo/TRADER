@@ -1,4 +1,4 @@
-// TASKS:50: the kill switch's state, pure. The most restrictive verdict wins; a fault is never
+// The kill switch's state, pure. The most restrictive verdict wins; a fault is never
 // `normal`; configuration errors name variables, never values; reports are latched.
 import { describe, expect, it } from "vitest";
 

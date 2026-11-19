@@ -1,4 +1,4 @@
-// The weekly schedule (PRD, Weekly schedule; V1-D07). The writers and the office reads are
+// The weekly schedule. The writers and the office reads are
 // admin only, at the gate. What a shift
 // may name is judged inside each writer. `mine` admits
 // any active user and takes no person: it answers with the caller's own shifts.

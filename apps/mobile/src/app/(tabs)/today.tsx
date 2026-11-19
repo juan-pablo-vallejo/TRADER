@@ -1,9 +1,9 @@
-// Today: the clock (PRD, Time tracking; TASKS R5, S7). What it shows comes from the phone's
+// Today: the clock. What it shows comes from the phone's
 // own store — the last pull and the entries captured since — so it opens and works with no
 // signal. A tap writes to the store and returns; sending is the sync layer's. Without the
 // weekly schedule the person picks a jobsite of theirs; under it the clock offers the one
 // shift the schedule makes eligible now, or says to call the office. The server decides what
-// counts either way, and an entry it stored for review or refused is shown as what it is.
+// counts either way, and an entry it refused is shown as what it is.
 import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
 

@@ -1,6 +1,5 @@
 // invoice.send: an issued invoice's PDF sent to the customer by email when an admin chooses,
-// and each send recorded (PRD, Invoicing and exports; ARCHITECTURE, Payments and delivery;
-// TASKS R7). The page is `invoice.pdf`'s own, made for this send and stored nowhere. The
+// and each send recorded. The page is `invoice.pdf`'s own, made for this send and stored nowhere. The
 // record is append-only: a send that failed is a row that says so with a short code, and
 // sending again is another row under another id. The id is the browser's, so one request
 // sent twice is one message: the second answers what the first did, and the mail service is

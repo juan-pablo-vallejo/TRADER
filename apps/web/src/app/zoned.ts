@@ -1,8 +1,8 @@
-// Wall time in a named zone, to the minute, and back (DESIGN, Typography: times through the
-// platform formatter in the company's timezone). A `datetime-local` control reads and writes
+// Wall time in a named zone, to the minute, and back: times go through the
+// platform formatter in the company's timezone. A `datetime-local` control reads and writes
 // "YYYY-MM-DDTHH:MM" with no zone and the browser would take it as its own; the office enters
 // a repaired time as the company's clock read it, so the conversion is done here, on `Intl`
-// alone. Consumed by the ledger screen's repair editors.
+// alone. Consumed by hours/repair-set.ts.
 
 const WALL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 

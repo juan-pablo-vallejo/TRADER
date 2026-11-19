@@ -1,4 +1,4 @@
-// Every code a labor record can be refused with (ARCHITECTURE, Sync protocol): what the phone
+// Every code a labor record can be refused with: what the phone
 // keeps a record under when the server will never take it. Restated here because the
 // contract imports nothing of the server; a type test holds the list to the server's own
 // union (test/contract/contract.test.ts). A code this list does not know is still a refusal:

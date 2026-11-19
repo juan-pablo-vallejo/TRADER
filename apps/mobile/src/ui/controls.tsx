@@ -1,5 +1,5 @@
-// The phone app's controls (DESIGN, UI components): a primary button 56 pt tall and full
-// width, one a screen; a secondary one 48 pt. Every control carries a `testID` (RULES): a
+// The phone app's controls: a primary button 56 pt tall and full
+// width, one a screen; a secondary one 48 pt. Every control carries a `testID`: a
 // Maestro flow selects by it, never by text, which is in two languages.
 import { Pressable, StyleSheet, Text, type TextStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

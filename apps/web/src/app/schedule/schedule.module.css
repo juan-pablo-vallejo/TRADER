@@ -1,4 +1,4 @@
-/* The Weekly Schedule (DESIGN, Weekly Schedule, Shift card): the week bar, the grid of seven
+/* The Weekly Schedule: the week bar, the grid of seven
    days, the shift card, and the drawer its forms open in. The grid reads the content column's
    width (shell.module.css sets the container), not the viewport's: under 720 it shows one
    day, chosen from the day buttons. */

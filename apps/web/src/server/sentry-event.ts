@@ -1,11 +1,10 @@
-// What this server may send to Sentry, and nothing else (ARCHITECTURE, error reporting: the
-// minimized event). Sentry's SDK collects a request's headers, cookies, body and user by
+// What this server may send to Sentry, and nothing else (the minimized event). Sentry's SDK collects a request's headers, cookies, body and user by
 // default and attaches the machine's name and an error's message; here that is all switched
 // off (`sentryInitOptions`) and then, as the net under it, every outgoing event is rebuilt
 // from an allow-list (`scrubEvent`), so a field this file does not name is never sent,
 // whatever a later SDK version starts collecting.
 // An error's message is never sent: a DrizzleQueryError's holds the statement and its
-// parameters (MEMORY). What is sent of an error is its class and where it was thrown.
+// parameters. What is sent of an error is its class and where it was thrown.
 // Pure, and free of the SDK at run time, so the tests state the output byte for byte.
 import type { ErrorReport } from "@trader/api";
 import type { ErrorEvent, Event, NodeOptions } from "@sentry/nextjs";

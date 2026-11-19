@@ -1,5 +1,5 @@
 // The Drizzle client behind the driver seam. The driver comes from DATABASE_DRIVER (see
-// env.ts); `pg` is the only branch until Neon's first consumer (Stage 6) adds the second.
+// env.ts); `pg` is the only branch, deployed as well.
 // Lazy by design: nothing connects or validates at module load, so importing the package
 // never fails in a process that merely wants the types.
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -12,7 +12,7 @@ import { parseDatabaseEnv } from "./env";
 export const CONNECTION_TIMEOUT_MS = 5_000;
 
 // What an idle client's failure leaves in the log: the error's class and SQLSTATE, never its
-// message (RULES: a driver message can carry SQL and parameters).
+// message (a driver message can carry SQL and parameters).
 export function describePoolError(error: unknown): string {
   const name = error instanceof Error ? error.name : "unknown";
   const code = (error as { code?: unknown } | null)?.code;

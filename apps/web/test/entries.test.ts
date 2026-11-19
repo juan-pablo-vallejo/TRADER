@@ -1,4 +1,4 @@
-// TASKS, Stage 4: the worker ledger read over the real transport — the route module as Next
+// The worker ledger read over the real transport — the route module as Next
 // calls it. The admin reads a person of their own company; nobody else may, and another
 // company's person is refused. No labor is committed here: a ledger row can never be removed,
 // and what the read derives from one is the api suite's (labor/ledger.test.ts).

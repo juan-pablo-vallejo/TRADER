@@ -4,7 +4,7 @@ import { check, pgTable, text, unique, uuid } from "drizzle-orm/pg-core";
 import { companies } from "./companies";
 import { createdAt, deactivatedAt, id, updatedAt } from "./shared";
 
-// The contractor's customers. Jobs belong to one (PRD, Jobs and location); invoices (line 5)
+// The contractor's customers. Jobs belong to one; invoices
 // reference one.
 export const customers = pgTable(
   "customers",

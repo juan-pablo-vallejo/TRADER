@@ -1,4 +1,4 @@
-// Release 0.1 R3: what reaches Sentry. The allow-list and the reporter are tested as pure
+// What reaches Sentry. The allow-list and the reporter are tested as pure
 // code; the last suite runs the real SDK with these options and a transport that records
 // the bytes it would have sent, and searches them for what must never leave.
 import * as Sentry from "@sentry/nextjs";

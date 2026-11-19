@@ -1,10 +1,10 @@
 "use client";
 
-// The roster screen (PRD, Target users: the admin's roster; DESIGN, Data table). The list is
+// The People screen: the admin's roster. The list is
 // one query; every mutation invalidates it, so the table refetches and nothing is edited in
 // the cache by hand. The page header's action opens the invite form. Each row is text plus one
-// Edit toggle; the editor row beneath holds the role, the pay rate and, last, the deactivation. A `rejected` answer reads beneath the form it came
-// from. Consumed by page.tsx.
+// Edit toggle; the editor row beneath holds the role and, last, the deactivation. A
+// `rejected` answer reads beneath the form it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState, type FormEvent } from "react";
 
@@ -37,7 +37,7 @@ function useRoster() {
   return useQuery(trpc.roster.list.queryOptions());
 }
 
-// The invalidation every writer runs: the list, and the open editor's rate history.
+// The invalidation every writer runs: the list.
 function useRefresh() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();

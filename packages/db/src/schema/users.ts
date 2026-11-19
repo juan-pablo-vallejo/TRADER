@@ -16,10 +16,10 @@ export const users = pgTable(
       .references(() => companies.id),
     // What the identity adapter hands the API: the provider's subject, not a Clerk id. NULL
     // until the invited person first signs in. Globally unique, so one login is one company and
-    // the tenant is resolved from this single lookup (invariant 6); a person at two contractors
+    // the tenant is resolved from this single lookup; a person at two contractors
     // is two logins, and relaxing this is a constraint drop and a decision.
     identitySubject: text("identity_subject"),
-    // An invitation join key (PRD, Access: invitation-only): the address a one-time code is
+    // An invitation join key: the address a one-time code is
     // sent to. Unique per company without regard to case; stored as given. NULL for a person
     // invited by number alone, as workers are; users_sign_in_address_present keeps one of the
     // two on every row.
@@ -28,7 +28,7 @@ export const users = pgTable(
     // Contact data the person writes themselves (me.update); it identifies nobody.
     phone: text("phone"),
     // The second invitation join key: the mobile number a one-time code is sent to, E.164,
-    // United States and Canada only (ARCHITECTURE, 2026-11-12 Release 0.1 sign-in). Written by
+    // United States and Canada only. Written by
     // roster.invite and by nothing else. Unique per company, as the email is.
     signInPhone: text("sign_in_phone"),
     role: userRole("role").notNull().default("worker"),
@@ -37,7 +37,7 @@ export const users = pgTable(
     updatedAt,
   },
   (t) => [
-    // Line 7's RLS and every composite foreign key that carries company_id rest on this pair.
+    // Every composite foreign key that carries company_id rests on this pair.
     unique("users_company_id_id_unique").on(t.companyId, t.id),
     unique("users_identity_subject_unique").on(t.identitySubject),
     uniqueIndex("users_company_id_lower_email_idx").on(

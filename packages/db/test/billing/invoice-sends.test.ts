@@ -1,4 +1,4 @@
-// TASKS R7, recorded sends: the invoice_sends table (0048, 0049), asserted against the
+// Recorded sends: the invoice_sends table, asserted against the
 // migrated container. Rolled-back transactions throughout; see helpers.ts. The catalog side
 // — FORCE, the policy, the grant matrix — is row-level-security.test.ts's and
 // app-role.test.ts's.

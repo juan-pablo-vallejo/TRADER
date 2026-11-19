@@ -1,4 +1,4 @@
-// A sign-in number as the roster holds it (ARCHITECTURE, phone identity): E.164, `+1` and
+// A sign-in number as the roster holds it: E.164, `+1` and
 // ten digits. People type it with spaces, dashes, brackets, with or without the 1.
 export function signInPhone(typed: string): string | null {
   const digits = typed.replace(/[\s().-]/g, "");

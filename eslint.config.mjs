@@ -70,7 +70,7 @@ export default tseslint.config(
     // The phone bundles what it imports as a value. Of the server it may import values
     // from `@trader/api/contract` and `@trader/api/eligibility` alone — zod and pure rules;
     // everything else of `@trader/api` is a type to it, and the database package is
-    // nothing to it at all (TASKS R4; ARCHITECTURE, folder tree).
+    // nothing to it at all.
     files: ["apps/mobile/**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-restricted-imports": [
@@ -93,12 +93,6 @@ export default tseslint.config(
         },
       ],
     },
-  },
-  {
-    // The scripts a workflow step runs with plain Node. No globals package is installed, so
-    // the two they read are named.
-    files: [".github/scripts/**/*.mjs"],
-    languageOptions: { globals: { console: "readonly", process: "readonly" } },
   },
   prettier,
 );

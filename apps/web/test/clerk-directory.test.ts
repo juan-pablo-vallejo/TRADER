@@ -1,4 +1,4 @@
-// TASKS, R2: an invitation admits the person at Clerk. Clerk's API is a fake `fetch` here,
+// An invitation admits the person at Clerk. Clerk's API is a fake `fetch` here,
 // answering what the development instance was seen to answer (clerk-directory.ts): what is
 // tested is which call is made, which answers are an admission, and that nothing of the
 // person is carried in a failure.

@@ -1,6 +1,5 @@
-// `work_date` (RULES: derived in `companies.timezone`, never stored). Pure. Consumed by
-// closeout (per job and work date), approvals and the Stage 4 payroll export; an event's pay
-// period is derived from its session's work date (ARCHITECTURE row 151).
+// `work_date`: derived in `companies.timezone`, never stored. Pure. Consumed by
+// labor/hours.ts, labor/ledger.ts, sync/pull.ts and invoices/pdf.ts.
 import { foldSessions, type LaborEvent, type Session } from "./fold";
 
 // The calendar date of `instant` in the IANA zone, as YYYY-MM-DD. Through the zone's rules,
@@ -26,7 +25,7 @@ export function workDate(instant: Date, timeZone: string): string {
 
 export type DerivedSession = Session & { workDate: string };
 
-// A session belongs wholly to the date of its effective start (decision D2): a shift from
+// A session belongs wholly to the date of its effective start: a shift from
 // 22:00 to 02:00 is four hours on the first day. Every event of the session takes that date.
 export function deriveSessions(
   events: readonly LaborEvent[],

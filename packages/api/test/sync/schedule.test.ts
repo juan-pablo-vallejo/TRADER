@@ -1,8 +1,8 @@
-// TASKS S4: a clock-in judged by the weekly schedule, behind the enforcement switch
-// (sync/schedule.ts, sync/labor.ts; ARCHITECTURE, 2026-11-15). Rolled-back transactions: the
+// A clock-in judged by the weekly schedule, behind the enforcement switch
+// (sync/schedule.ts, sync/labor.ts). Rolled-back transactions: the
 // fixtures are the owner's, the pushes trader_app's under the day's tenant. `judgeStart` is
 // asked at fixed instants, since the schedule's own answer needs no clock. A push is judged
-// against the database's clock as well (MEMORY: an online capture more than five minutes old
+// against the database's clock as well (an online capture more than five minutes old
 // is `clock_skewed`), so a push at a fixed past instant is sent as captured offline, and a
 // push captured online is timed now. The two commit orders of an edit against a start are
 // schedule-commit.test.ts's; the rules themselves eligibility.test.ts's.
@@ -557,7 +557,7 @@ describe("sync.pull", () => {
     });
   });
 
-  // TASKS S7: the caller's own shifts. The window is counted from the company's today, so
+  // The caller's own shifts. The window is counted from the company's today, so
   // these fixtures are dated from the pull's own clock.
   const dayFrom = (day: string, n: number) =>
     new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);

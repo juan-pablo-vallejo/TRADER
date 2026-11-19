@@ -1,4 +1,4 @@
-// /api/trpc, the one HTTP entry point of the API (ARCHITECTURE, Web + API). On the Node
+// /api/trpc, the one HTTP entry point of the API. On the Node
 // runtime, because the pool and `pg` need it; dynamic, because every answer is per request.
 import { getDb } from "../../../../server/db";
 import { webDirectory } from "../../../../server/directory";

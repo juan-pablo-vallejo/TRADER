@@ -1,4 +1,4 @@
-// TASKS:45: me.update — any active role edits its own name and phone, those two columns only,
+// me.update — any active role edits its own name and phone, those two columns only,
 // and nothing else about the row moves; a deactivated or anonymous caller is UNAUTHORIZED.
 import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";

@@ -1,5 +1,5 @@
-// The sync cycle under failure (RULES: dropped responses, duplicate pushes, a backlog; TASKS
-// R5, outbox and sync states). The server here is a stand-in that keeps what it accepted by
+// The sync cycle under failure (dropped responses, duplicate pushes, a backlog).
+// The server here is a stand-in that keeps what it accepted by
 // id, as the real one does, and can be told to lose a response, stop part-way, refuse a
 // record or change the service's state.
 import type { PullOutput, ServiceState } from "@trader/api/contract";
@@ -198,7 +198,7 @@ describe("a cycle", () => {
     expect(p.store.rows).toMatchObject([
       { id, standing: "settled", reasons: ["offline", "unscheduled"] },
     ]);
-    // Pulled: nothing waits on the office, so the copy goes and the snapshot says the flags.
+    // Pulled: the copy goes and the snapshot says the flags.
     p.srv.pullDown = false;
     await p.cycle();
     expect(p.srv.pushes).toEqual([[id]]);

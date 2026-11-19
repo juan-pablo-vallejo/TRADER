@@ -1,4 +1,4 @@
-/* The roster screen's own layout: the invite form's grid and the editor's two columns on wide.
+/* The People screen's own layout: the invite form's grid and the editor's two columns on wide.
    The data table itself is table.module.css. */
 .editorGrid {
   display: grid;

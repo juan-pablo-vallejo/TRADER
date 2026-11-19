@@ -1,4 +1,4 @@
-// TASKS:45: roster.list — every user of the caller's company and none of another's, ordered
+// roster.list — every user of the caller's company and none of another's, ordered
 // by name, with invited and deactivated state; admin only, through the real gates.
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 

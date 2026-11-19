@@ -1,4 +1,4 @@
-// Stage 3 line 1b: me.get, the first procedure on the app router, through the package's own
+// me.get, the first procedure on the app router, through the package's own
 // entry point.
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 

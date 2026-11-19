@@ -1,9 +1,9 @@
 "use client";
 
-// The schedule's drawer (DESIGN, Weekly Schedule: "an open drawer's overlay covers the whole
-// page behind it, the navigation included"). A native modal <dialog>: the browser puts it in
+// The schedule's drawer: an open drawer's overlay covers the whole
+// page behind it, the navigation included. A native modal <dialog>: the browser puts it in
 // the top layer over everything, its backdrop is the overlay, focus stays inside it, Escape
-// closes it and focus returns to what opened it. Decided in S6's plan: wide, a panel on the
+// closes it and focus returns to what opened it. Wide, a panel on the
 // right; narrow, the whole screen. Consumed by shift-dialog.tsx and copy-dialog.tsx.
 import { useEffect, useId, useRef, type ReactNode } from "react";
 

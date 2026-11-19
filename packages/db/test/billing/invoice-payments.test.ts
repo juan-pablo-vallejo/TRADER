@@ -1,4 +1,4 @@
-// TASKS R7, recorded payments: the invoice_payments table (0044, 0045), asserted against
+// Recorded payments: the invoice_payments table, asserted against
 // the migrated container. Rolled-back transactions throughout; see helpers.ts. The catalog
 // side — FORCE, the policy, the grant matrix — is row-level-security.test.ts's and
 // app-role.test.ts's.

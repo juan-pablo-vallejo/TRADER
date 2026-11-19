@@ -7,10 +7,10 @@ import { EmptyState } from "../../empty-state";
 import { strings } from "../../strings";
 import styles from "./sign-in.module.css";
 
-// Office sign-in (DESIGN, Sign-in): Clerk's own form — a code sent to the person's mobile
+// Office sign-in: Clerk's own form — a code sent to the person's mobile
 // number or email, nothing else — in the theme's colours. There is no sign-up: a person
 // exists at Clerk because roster.invite admitted them. The route answers 404 where the
-// development identity is this server's (RULES: a switched-off route), as /dev-signin does
+// development identity is this server's, as /dev-signin does
 // everywhere else; a server with no Clerk keys says so instead of drawing a form that could
 // not work. The catch-all segment is Clerk's: its form walks its steps under this path.
 export const dynamic = "force-dynamic";

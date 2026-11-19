@@ -20,6 +20,6 @@ export const updatedAt = timestamp("updated_at", { withTimezone: true })
   .defaultNow()
   .$onUpdate(() => new Date());
 
-// Roster state. "Active" is `deactivated_at IS NULL`: derived, never stored as a flag
-// (invariant 7). PRD deletion is deactivate-and-pseudonymize, so nothing is deleted.
+// Roster state. "Active" is `deactivated_at IS NULL`: derived, never stored as a flag.
+// Nothing is deleted.
 export const deactivatedAt = timestamp("deactivated_at", { withTimezone: true });

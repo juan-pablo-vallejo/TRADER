@@ -1,10 +1,10 @@
 // Each time an issued invoice's PDF was sent to the customer by email, and how it went
-// (PRD, Invoicing and exports; ARCHITECTURE, Payments and delivery; TASKS R7). Append-only:
+// Append-only:
 // a send that failed is a row that says so, and sending again is another row. The id is the
 // browser's, so a request sent twice is one send. `recipient` is the address it went to,
 // as typed that time; `provider_message_id` is the mail service's own name for an accepted
 // message; `failure` is a short code, never the service's message. Guards and tenancy are
-// in the migration beside this table's (drizzle-kit never sees them).
+// hand-written in the baseline migration (drizzle-kit never sees them).
 import { sql } from "drizzle-orm";
 import {
   check,

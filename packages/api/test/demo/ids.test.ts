@@ -1,4 +1,4 @@
-// TASKS:48: the demo's ids and clock arithmetic are deterministic and well formed.
+// The demo's ids and clock arithmetic are deterministic and well formed.
 import { describe, expect, it } from "vitest";
 
 import {

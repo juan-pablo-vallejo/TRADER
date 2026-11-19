@@ -1,4 +1,4 @@
-// Release 0.1 R3: the environment a deployment may start with (deploy-env.ts), and the
+// The environment a deployment may start with (deploy-env.ts), and the
 // start-up hook that enforces it (instrumentation.ts). Pure: no database, no network.
 import { afterEach, describe, expect, it, vi } from "vitest";
 

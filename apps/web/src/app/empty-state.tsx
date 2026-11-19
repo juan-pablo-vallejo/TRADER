@@ -1,4 +1,4 @@
-// The empty state (DESIGN, UI components): one sentence and at most one action. Its own
+// The empty state: one sentence and at most one action. Its own
 // file so failure.tsx and clerk-session.tsx can both draw it without importing each other.
 import controls from "./controls.module.css";
 

@@ -1,9 +1,9 @@
 "use client";
 
-// The signed-in person in the header (DESIGN, Layout): their name, linking to the profile, and
+// The signed-in person in the header: their name, linking to the profile, and
 // Sign out. `me.get` is the one query every role may call; while it is pending or refused the
 // name is absent. Sign-out is the identity's own: the development route's form where that
-// route answers (ARCHITECTURE, development sign-in), Clerk's where Clerk's provider is around
+// route answers, Clerk's where Clerk's provider is around
 // the office (clerk-session.tsx), and absent on a server with neither. Consumed by header.tsx.
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";

@@ -1,4 +1,4 @@
-// The mail seam (ARCHITECTURE: Email, invoice delivery only; RULES, thin seams). The API
+// The mail seam, for invoice delivery only. The API
 // knows a message and whether it went; which service carries it is the host's (apps/web,
 // server/mailer.ts). A mailer never throws: every way a send can fail is an answer with a
 // short code, which is what the send's record keeps — never the service's own message,

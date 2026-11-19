@@ -1,11 +1,11 @@
-// What the clock shows and what a tap on it records (PRD, Time tracking; ARCHITECTURE, Sync
-// protocol). Pure: the snapshot of the last pull, the records still on this phone, and the
+// What the clock shows and what a tap on it records.
+// Pure: the snapshot of the last pull, the records still on this phone, and the
 // time. The phone shows what follows from them; the server alone decides what counts.
 import type { LaborPayload, PullOutput } from "@trader/api/contract";
 
 import type { NewRecord, OutboxRecord } from "./types";
 
-// ARCHITECTURE, V1-D02: a capture is "online" only on a confirmed reading of the API no
+// A capture is "online" only on a confirmed reading of the API no
 // older than this. The cycle's timer runs every minute while the app is in front
 // (provider.tsx), so a fresh reading means at most one cycle was missed.
 export const READING_FRESH_MS = 2 * 60_000;
@@ -60,7 +60,7 @@ export type Capture = {
 // The records a tap writes, or none when the tap makes no sense from where the clock
 // stands — the button for it is not shown then, so this is the second line of defence.
 // A job switch is `ended` then `started`, minted and timed in that order: the server
-// validates each at its own place in the batch (ARCHITECTURE, sync.push).
+// validates each at its own place in the batch (sync.push).
 export function recordsFor(tap: Tap, state: ClockState, c: Capture): NewRecord[] {
   const event = (type: LaborPayload["type"], jobId: string, at: number): NewRecord => ({
     id: c.mint(at),

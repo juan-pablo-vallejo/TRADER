@@ -1,4 +1,4 @@
-// Stage 4, hours and cost aggregation (V1-D13): durations summed in milliseconds per worker,
+// Hours aggregation: durations summed in milliseconds per worker,
 // job and work date, the day's sum rounded once, half-up to 0.01 h. Pure: no database.
 import { describe, expect, it } from "vitest";
 

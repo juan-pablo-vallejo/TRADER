@@ -63,7 +63,7 @@ export function runtimeRoleChecked(db: Db): Promise<void> {
 // resolved (or bound) to an active user, the identity cleared and the
 // tenant set; then `body` runs in that transaction, which commits when it returns and rolls back
 // when it throws. The protected procedure runs it once per call; sync.push once per record
-// (ARCHITECTURE, sync.push), so a record's authority is re-read every time.
+// (sync/push.ts), so a record's authority is re-read every time.
 export type { CallerTimeouts };
 
 export async function inCallerTransaction<T>(
@@ -98,7 +98,7 @@ export async function inCallerTransaction<T>(
       `);
       const user = await resolveUser(tx, identity);
       if (user === null) throw unauthorized();
-      // Identity settings off before the tenant goes on: the guard (0015, 0038) refuses every
+      // Identity settings off before the tenant goes on: the guard (users_identity_guard) refuses every
       // update but the bind while any is present.
       await tx.execute(sql`
         select set_config('app.identity_subject', '', true),
@@ -114,8 +114,8 @@ export async function inCallerTransaction<T>(
   }
 }
 
-// Every protected call's waits are bounded: without a bound, one stalled writer holding the
-// company's field-write lock or a users row queues every later call until the pool is empty.
+// Every protected call's waits are bounded: without a bound, one stalled writer holding a
+// worker's timeline lock or a users row queues every later call until the pool is empty.
 // Generous beside sync's, because an office call is one person waiting at a screen, not a
 // device that retries: 5 s for a lock, 20 s on a statement. A call that times out fails as
 // an internal error and writes nothing.
@@ -146,7 +146,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 // caller transaction per record, and neither the pool nor the identity, removed by value as
 // in the protected procedure. A call without an identity is UNAUTHORIZED before anything runs.
 // Every record's transaction waits at most 2 s for a lock and 4 s on a statement, from its
-// first statement on, identity resolution included (ARCHITECTURE, sync.push): a record that
+// first statement on, identity resolution included: a record that
 // times out is left out and retried.
 export const SYNC_TIMEOUTS: CallerTimeouts = {
   lockTimeout: "2s",

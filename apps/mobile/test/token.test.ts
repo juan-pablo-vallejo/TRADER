@@ -1,4 +1,4 @@
-// TASKS, R5: the phone's token on every call. The provider is a stand-in: what is tested is
+// The phone's token on every call. The provider is a stand-in: what is tested is
 // which of its states becomes a header, which a call never made, and which a call with no
 // header, whose 401 is then the server's true answer.
 import { describe, expect, it } from "vitest";

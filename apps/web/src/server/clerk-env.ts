@@ -1,8 +1,8 @@
 // Clerk's part of the environment contract (.env.example), checked where it is read. Never
 // thrown from: a deployment without its keys has no Clerk, and every request is then refused
 // for want of an identity (identity.ts), which is what a missing secret should cost.
-// Checked by hand, three variables: apps/web has no zod of its own (RULES: a dependency needs
-// its TASKS line). Consumed by identity.ts, proxy.ts, the layout and the sign-in page.
+// Checked by hand, three variables: apps/web has no zod of its own. Consumed by identity.ts,
+// proxy.ts, the layout and the sign-in page.
 const PUBLISHABLE_KEY = /^pk_(test|live)_\S+$/;
 const SECRET_KEY = /^sk_(test|live)_\S+$/;
 

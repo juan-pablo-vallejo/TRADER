@@ -1,4 +1,4 @@
-// Stage 4: labor.ledger, the office's read of one worker's sessions and the events behind
+// labor.ledger, the office's read of one worker's sessions and the events behind
 // them, through the application's router under the runtime role in rolled-back transactions.
 // Fixtures are written by the owner; the one repair here goes through labor.repair itself, to
 // show the read hands it the ids it needs.

@@ -1,4 +1,4 @@
-// TASKS, dated worker-job assignments (V1-D07), over the real transport — the route module as
+// Dated worker-job assignments, over the real transport — the route module as
 // Next calls it, the development headers as the cookie bridge sets them: 401 anonymous, 403
 // as a worker on the office's procedures, an admin's week planned by POST and read by GET with
 // its clock-in flag, and a worker's own plans by GET.

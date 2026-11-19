@@ -1,8 +1,8 @@
-/* The office data table (DESIGN, Data table): sticky header, 44 px rows, numbers right aligned,
+/* The office data table: sticky header, 44 px rows, numbers right aligned,
    no zebra striping; status words in ink-secondary, an exception as a pill; an Edit toggle per
    row opening an editor row beneath it. Narrow: each row two lines — its name, then the other
    cells joined by a middle dot, an empty one omitted — the editor inside the card, every
-   stretching control full width — the destructive button never. Consumed by the roster,
+   stretching control full width — the destructive button never. Consumed by the people,
    customers and jobs screens through row-editor.tsx. */
 .table {
   width: 100%;
@@ -53,8 +53,8 @@
   min-height: var(--row);
 }
 
-/* A row's own buttons, where the row is acted on in place and not through an editor (the
-   approval queue): trailing, and wide enough for the sentence a destructive action shows. */
+/* A row's own buttons, where the row is acted on in place and not through an editor:
+   trailing, and wide enough for the sentence a destructive action shows. */
 .table td.act {
   width: 1%;
   min-width: 15rem;
@@ -65,7 +65,7 @@
   margin: 0;
 }
 
-/* Status pill (DESIGN): 24 pt, the tint plus the word. Office record states are words; only
+/* Status pill: 24 pt, the tint plus the word. Office record states are words; only
    an exception is a pill. */
 .pill {
   display: inline-block;
@@ -103,7 +103,7 @@
   color: var(--ink);
 }
 
-/* Rows the narrow way whenever the content column is under 720 px (DESIGN, Layout): every
+/* Rows the narrow way whenever the content column is under 720 px: every
    narrow viewport, and a wide one whose table would not fit beside the navigation. A container
    query cannot read a custom property either, so 720 is written here and nowhere else. The
    cells flow as one line of text after the row's name; the toggle sits at the row's right. */
@@ -199,7 +199,7 @@
     border: 0;
     padding: var(--space-4);
   }
-  /* The destructive button is never full width (DESIGN); the others stretch on narrow. */
+  /* The destructive button is never full width; the others stretch on narrow. */
   .stretch {
     width: 100%;
   }

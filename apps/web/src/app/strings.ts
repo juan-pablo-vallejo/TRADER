@@ -23,7 +23,7 @@ export const strings = {
   roster: "People",
   customers: "Customers",
   jobs: "Jobs",
-  // The Weekly Schedule screen (DESIGN, Weekly Schedule): a shift is a "Shift", a job a
+  // The Weekly Schedule screen: a shift is a "Shift", a job a
   // "Jobsite". One namespace, so its many words cannot collide with the flat keys above.
   schedule: {
     title: "Weekly Schedule",
@@ -122,7 +122,7 @@ export const strings = {
     },
   },
   profile: "Profile",
-  // Invoices (DESIGN, Invoice line): a draft priced by the admin, issued once, void once.
+  // Invoices: a draft priced by the admin, issued once, void once.
   invoices: {
     nav: "Invoices",
     title: "Invoices",
@@ -260,7 +260,7 @@ export const strings = {
     "Nothing was saved by the step that failed. Reload the page to carry on.",
   reload: "Reload",
   notFound: "There is no page at this address.",
-  goToOverview: "Go to the schedule",
+  goToSchedule: "Go to the schedule",
   cancel: "Cancel",
 
   // Editors and create forms
@@ -339,7 +339,7 @@ export const strings = {
   date: "Date",
   receivedAt: "Received",
 
-  // Labor ledger (DESIGN, Worker ledger)
+  // Labor ledger
   ledger: "A person's entries",
   ledgerExplain:
     "One person's recorded hours, day by day, with every entry behind them. Nothing here is erased: a correction is a new entry, and the entry it replaces stays on record.",
@@ -374,7 +374,6 @@ export const strings = {
     user_timed: "time set by user",
     location: "location",
     clock_skewed: "clock skew",
-    after_closeout: "after closeout",
     unscheduled: "not on the schedule",
   },
   reconExplain:
@@ -400,7 +399,7 @@ export const strings = {
   unresolvedState: "Why",
   sessionsOpen: (n: number) => `${n} still open`,
 
-  // Labor repair, on the ledger (PRD, Office review)
+  // Labor repair, on the ledger
   repair: "Repair",
   repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,
   repairExplain:
@@ -429,7 +428,7 @@ export const strings = {
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
   jobOptionArchived: (name: string) => `${name} · archived`,
-  // One sentence per answer of labor.repair (labor/repair.ts); the ledger screen holds this
+  // One sentence per answer of labor.repair (labor/repair.ts); hours/entries-screen.tsx holds this
   // list to the server's codes.
   repairRejected: {
     no_open_session:
@@ -463,7 +462,7 @@ export const strings = {
   },
 
   hours: "Hours",
-  closeoutZone: (zone: string) => `Times in ${zone}.`,
+  timesIn: (zone: string) => `Times in ${zone}.`,
   worked: "Worked",
   breaks: "Breaks",
   stillOpen: "Still open",

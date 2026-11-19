@@ -1,5 +1,5 @@
-/* The web's theme module (DESIGN.md): every token as a custom property, the type styles as
-   classes. A component names a token, never a color or a size. DESIGN measures in pt, which
+/* The web's theme module: every token as a custom property, the type styles as
+   classes. A component names a token, never a color or a size. The comments measure in pt, which
    on the web is the CSS px. */
 :root {
   /* Color palette */
@@ -35,7 +35,7 @@
   --header: 56px;
 }
 
-/* The one breakpoint (DESIGN, Layout): 768 px. Below it the office is narrow — one column,
+/* The one breakpoint: 768 px. Below it the office is narrow — one column,
    navigation in a menu, table rows stacked, targets 48 px; at or above it, wide — the 1280
    grid, left navigation, dense tables. Media queries cannot read a custom property, so each
    module writes `(min-width: 768px)` and this comment is the value's home in code. */
@@ -109,7 +109,7 @@ body {
   white-space: nowrap;
 }
 
-/* Keyboard focus (DESIGN, Layout): one outline for every control. */
+/* Keyboard focus: one outline for every control. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

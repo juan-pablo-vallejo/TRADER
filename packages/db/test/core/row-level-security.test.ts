@@ -1,4 +1,4 @@
-// Row-level security on every tenant table (ARCHITECTURE invariant 5),
+// Row-level security on every tenant table (invariant 5),
 // asserted against the migrated container. Rolled-back transactions throughout; see
 // helpers.ts. Fixtures are written as the owner, which bypasses RLS; every assertion after
 // asApp() runs as trader_app, the role the policies name.

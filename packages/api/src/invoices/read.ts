@@ -1,5 +1,4 @@
-// invoice.list, invoice.read and invoice.suggest (PRD, Invoicing and exports; DESIGN, Invoice
-// line). Plain reads under RLS. An invoice's state is derived, never stored: a draft has no
+// invoice.list, invoice.read and invoice.suggest. Plain reads under RLS. An invoice's state is derived, never stored: a draft has no
 // number, an issued one has, a void one has a void stamp. Totals are sums of the stored
 // line amounts and the stored tax, added here and never rounded again.
 //

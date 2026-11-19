@@ -1,6 +1,6 @@
 "use client";
 
-// The Weekly Schedule (DESIGN, Weekly Schedule; PRD, Weekly schedule; TASKS S6). One week,
+// The Weekly Schedule. One week,
 // Monday to Sunday, by employee or by jobsite; planned shifts only — nothing here is hours, a
 // total or a status of work. Wide, the seven days side by side with their headings held in
 // view; narrow, one day at a time, chosen from seven day buttons. The employee filter reaches

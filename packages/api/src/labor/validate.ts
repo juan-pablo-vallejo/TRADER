@@ -1,4 +1,4 @@
-// Two-sided transition validation (ARCHITECTURE, Sync protocol): an incoming event is legal
+// Two-sided transition validation: an incoming event is legal
 // only if the whole timeline, with it inserted at its own position, stays legal: what came
 // before and what comes after. Pure; the caller supplies the worker's locked timeline and
 // stamps from loadWorkerTimeline (timeline.ts). Consumed by sync.push and labor.repair (a set of
@@ -63,7 +63,7 @@ export function validateEvent(
   return validateEvents(ctx, existing, [candidate]);
 }
 
-// A set of candidates validated as one timeline (ARCHITECTURE row 187: an office repair that
+// A set of candidates validated as one timeline (an office repair that
 // needs two events at once): legal only if the whole timeline with every candidate in place is
 // legal, whatever an intermediate state would be. The single-event check above is its
 // one-element case, so push and the office repair run one algorithm. A rejection names the
@@ -108,7 +108,7 @@ function judgeCandidate(
   const root = candidate.correctsEventId;
   if (root !== null) {
     // A legal replay does not mean the candidate is in effect: a batch-mate with the same
-    // stamp and a higher id beats it (decision D3).
+    // stamp and a higher id beats it.
     const winner = after.winners.get(root);
     if (winner !== candidate.id) return at("correction_superseded", winner);
     if (candidate.type !== "started") {
@@ -120,7 +120,7 @@ function judgeCandidate(
     }
   } else if (candidate.type !== "started" && candidate.type !== "voided") {
     // Only an ordinary event is held to its session's job, and only now: a later start
-    // correction re-attributes the session and never re-judges it (decision D5).
+    // correction re-attributes the session and never re-judges it.
     const session = after.sessions.find(
       (s) => s.rootEventId === after.sessionOf.get(candidate.id),
     );

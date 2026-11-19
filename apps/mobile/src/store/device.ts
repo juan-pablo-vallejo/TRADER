@@ -1,4 +1,4 @@
-// The phone's store (ARCHITECTURE: Drizzle on expo-sqlite, storage only — the sync layer is
+// The phone's store (Drizzle on expo-sqlite, storage only — the sync layer is
 // ours). Two tables: the outbox, a row a captured record, and a small key-value table for
 // the last pull's snapshot, the reachability reading, the language and who is signed in.
 // Capture writes here and nowhere else, so it works with no signal and no session. The

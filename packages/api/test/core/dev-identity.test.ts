@@ -1,4 +1,4 @@
-// Stage 3 line 1b: the development identity adapter. Off by default, on only under an
+// The development identity adapter. Off by default, on only under an
 // allowlisted NODE_ENV, refusing loudly anywhere else.
 import { describe, expect, it } from "vitest";
 
@@ -124,7 +124,7 @@ describe("development identity adapter", () => {
   });
 });
 
-// Stage 4 line 1: the one predicate a route uses to answer 404 instead of serving. True only
+// The one predicate a route uses to answer 404 instead of serving. True only
 // where `identify` would trust the headers; never throws, so a wrongly enabled deployment
 // answers 404 from its routes and refuses from its adapter.
 describe("devIdentityEnabled", () => {

@@ -1,6 +1,6 @@
-// The readiness check (ARCHITECTURE, Before the first deployment: "a readiness check that
-// touches the database and the role"). One transaction on one pooled connection: it reaches
-// the database, and it holds that connection to the rule every protected call is held to.
+// The readiness check: it touches the database and the role. One transaction on one pooled
+// connection: it reaches the database, and it holds that connection to the rule the server
+// is held to before it serves a protected call (api trpc.ts).
 // On a deployment that rule is the login itself (db guard.ts, assertLoginRole): trader_app,
 // no superuser, no BYPASSRLS, every tenant table forced. Development and the tests reach
 // trader_app by a startup option over the compose superuser (db.ts), so there it is the
@@ -10,8 +10,8 @@
 // in a response anyone can read. The commit is the platform's own variable, a public
 // repository's public fact; the deploy job reads it to know which revision is serving
 // (.github/workflows/ci.yml). Anything that is not a full commit id is
-// answered as null. Each probe is one cheap query; rate limits are the edge's (TASKS,
-// Stage 6).
+// answered as null. Each probe is one cheap query; rate limits are the firewall's
+// (edge.ts).
 // Dependencies are passed in, as in handler.ts; the route wires the real ones.
 import { randomUUID } from "node:crypto";
 

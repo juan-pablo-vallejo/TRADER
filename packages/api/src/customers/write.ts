@@ -1,5 +1,5 @@
-// customer.create, update, deactivate and reactivate (PRD, Jobs and location: jobs belong to a
-// customer). Contact fields are free text, blank
+// customer.create, update, deactivate and reactivate: jobs belong to a
+// customer. Contact fields are free text, blank
 // stored as NULL; nothing is unique but the id. A customer with a job not yet archived cannot
 // be deactivated (`jobs_unarchived`): a customer with live work is not retired, and a complete
 // job still awaits invoicing. Judged under the customer row FOR NO KEY UPDATE, which a job

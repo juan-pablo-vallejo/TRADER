@@ -1,4 +1,4 @@
-/* The invoice screens (DESIGN, Invoice line): the list's sentence, and one invoice — its
+/* The invoice screens: the list's sentence, and one invoice — its
    lines as rows of fields while a draft, as a plain table once issued — with its totals. */
 .explain {
   margin: 0 0 var(--space-4);

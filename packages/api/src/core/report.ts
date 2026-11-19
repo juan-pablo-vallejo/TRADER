@@ -1,17 +1,17 @@
-// The error-reporting seam (RULES: three thin seams; ARCHITECTURE, error reporting). A reporter
+// The error-reporting seam. A reporter
 // receives a minimized event, never the thrown value: a Drizzle query error's message holds the
 // SQL and its parameters (emails, subjects, company ids, coordinates), so no message, input,
 // context or header is ever copied. Reporting can never change an answer: building, minimizing
 // and sending run inside one guard, a returned promise is never awaited and its rejection is
 // swallowed. Consumed by routers/sync.ts (push records), routers/status.ts (configuration) and
-// the route handler (Stage 4) through `reportingOnError`; Sentry (Stage 6) implements
-// ErrorReporter.
+// the route handler through `reportingOnError`; the deployed reporter (apps/web,
+// server/reporter.ts) implements ErrorReporter.
 import { TRPCError } from "@trpc/server";
 
 export type ErrorReport = {
-  source: "request" | "push_record" | "diagnostics" | "config";
-  // The HTTP request's id (apps/web handler): random, made by the server, naming nobody. It
-  // ties this event to that request's sync_diagnostics lines. Null where no request is known.
+  source: "request" | "push_record" | "config";
+  // The HTTP request's id (apps/web handler): random, made by the server, naming nobody.
+  // Null where no request is known.
   requestId: string | null;
   path: string | null;
   type: "query" | "mutation" | "subscription" | "unknown";
@@ -20,7 +20,7 @@ export type ErrorReport = {
   // The first SQLSTATE on the chain: a schema-level code, never row data.
   sqlstate: string | null;
   // No stack frames: a stack is free text that any code, or a forged value, can fill, so no
-  // filter over it is a guarantee. Sentry (Stage 6) decides frames under its own scrubbing.
+  // filter over it is a guarantee. Sentry decides frames under its own scrubbing.
   // Configuration only: the names of invalid variables, never their values.
   invalid?: string[];
 };
@@ -28,7 +28,7 @@ export type ErrorReport = {
 export type ErrorReporter = { report(event: ErrorReport): void | Promise<void> };
 
 export type ReportWhere = {
-  source: "request" | "push_record" | "diagnostics";
+  source: "request" | "push_record";
   path: string | null | undefined;
   type: string | undefined;
   requestId?: string | null | undefined;
@@ -152,7 +152,7 @@ export function reportConfigFault(
   }));
 }
 
-// Until Sentry (Stage 6): one JSON line on stderr, which the platform's logs keep. Safe to log
+// One JSON line on stderr, which the platform's logs keep. Safe to log
 // because an event holds no message, input or identity.
 export const logReporter: ErrorReporter = {
   report(event) {
@@ -160,7 +160,7 @@ export const logReporter: ErrorReporter = {
   },
 };
 
-// The fetch adapter's `onError` (Stage 4's route handler). tRPC calls it after the call has
+// The fetch adapter's `onError` (the route handler's). tRPC calls it after the call has
 // settled, so a protected call's transaction has already rolled back, and calls it with no
 // guard of its own, so this one never throws. `requestId` is the handler's, made before the
 // context is: a request whose context could not be built is still reported under its id.

@@ -1,4 +1,4 @@
-// TASKS R6, invoices: invoice.create, save, remove, issue, void, list, read and suggest. A
+// Invoices: invoice.create, save, remove, issue, void, list, read and suggest. A
 // draft's lines are snapshots priced by the admin alone; an issue takes the next number of
 // the company's series and freezes the invoice; a void is the one change after it; a retry
 // answers what the first call did; another company's invoice is one FORBIDDEN on every

@@ -1,4 +1,4 @@
-// TASKS R7: invoice.recordPayment, reversePayment, what an invoice owes and the void rule.
+// invoice.recordPayment, reversePayment, what an invoice owes and the void rule.
 // A payment changes no invoice row; payments never total more than the
 // invoice; a void invoice takes no payment; another company's invoice is FORBIDDEN.
 // Rolled-back transactions; the database's own guards are the db suite's

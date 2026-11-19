@@ -1,7 +1,7 @@
 // The signed-in caller's own record: the first consumer of the protected procedure. `get`
 // takes no input, so nothing a client sends can name whose record it reads. The output is
 // validated and narrowed: no identity subject, no deactivation state (a deactivated caller
-// never reaches here). `update` (ARCHITECTURE, own profile) writes the caller's `name` and
+// never reaches here). `update` writes the caller's `name` and
 // `phone` and nothing else: email, role, company and identity are not in its input and are
 // never self-written; an email changes through the identity provider's verified flow.
 // `signInPhone` is the number the roster invited (users.ts): read here, written by no one

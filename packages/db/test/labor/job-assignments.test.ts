@@ -1,4 +1,4 @@
-// Stage 4, dated worker-job assignments (V1-D07): the job_assignments table, asserted against
+// Dated worker-job assignments: the job_assignments table, asserted against
 // the migrated container. Rolled-back transactions throughout; see helpers.ts. The catalog
 // side — FORCE, the policy, the grant matrix — is row-level-security.test.ts's and
 // app-role.test.ts's.

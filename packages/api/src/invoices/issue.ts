@@ -1,8 +1,7 @@
-// invoice.issue and invoice.void (PRD, Invoicing and exports: draft → issued → void;
-// ARCHITECTURE, Invoice pricing, Credit and void; TASKS R6). Issue is one UPDATE of the
+// invoice.issue and invoice.void: draft → issued → void. Issue is one UPDATE of the
 // draft: the database assigns the next number of the company's series under the counter
 // row's lock, so concurrent issues take consecutive numbers and a rolled-back one leaves no
-// gap, and from then the row and its lines are frozen (0010, 0043). Sent again, an issue
+// gap, and from then the row and its lines are frozen. Sent again, an issue
 // answers the number the invoice already has: a retry never spends a second number. A void
 // is the one later change, once, touching nothing else; it takes no number.
 //
@@ -87,7 +86,7 @@ export async function voidInvoice(
   if (invoice === undefined) throw forbidden();
   if (invoice.issuedAt === null) return { result: "rejected", code: "not_issued" };
   if (invoice.voidedAt !== null) return { result: "duplicate" };
-  // Under the invoice's row lock, which a payment's insert takes too (0045): a payment and
+  // Under the invoice's row lock, which a payment's insert takes too: a payment and
   // a void of one invoice are judged one after the other.
   const { rows } = await tx.execute<{ standing: number }>(sql`
     select count(*)::int as standing from invoice_payments p

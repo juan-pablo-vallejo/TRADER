@@ -1,4 +1,4 @@
-// Copy Last Week (PRD, Weekly schedule; ARCHITECTURE, 2026-11-15, Copy Last Week; TASKS S5).
+// Copy Last Week.
 // The week before `weekStart` is the source; every shift of it is offered on the same weekday
 // of the target week, and each is either created or left out with its reason. Nothing is
 // written by the preview. A confirmation names the preview it saw by its fingerprint: under

@@ -1,4 +1,4 @@
-# The clock, with a connection (TASKS R5): clock in on a jobsite, switch to another, take a
+# The clock, with a connection: clock in on a jobsite, switch to another, take a
 # break, clock out, and everything sent. `suite.sh` then reads the server: six events, once
 # each, two sessions.
 appId: app.jpteq.trader

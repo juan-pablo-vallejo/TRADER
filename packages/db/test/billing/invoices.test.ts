@@ -1,4 +1,4 @@
-// Stage 2 line 5: invoices and the number counter, asserted against the migrated container.
+// Invoices and the number counter, asserted against the migrated container.
 // Rolled-back transactions throughout; see helpers.ts.
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";

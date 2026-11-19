@@ -1,4 +1,4 @@
-// Stage 4, hours and cost aggregation (V1-D13): labor.hours, the office's read of the hours
+// Hours aggregation: labor.hours, the office's read of the hours
 // that count per worker, job and work date, through the application's router under the
 // runtime role in rolled-back transactions. Fixtures are written by the owner; the replayed
 // pushes go through the push's own writer.

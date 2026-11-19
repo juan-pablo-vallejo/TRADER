@@ -1,4 +1,4 @@
-// sync.push (ARCHITECTURE, Sync protocol; sync.push of 2026-11-05): a device's outbox, oldest
+// sync.push: a device's outbox, oldest
 // first, each record in a caller transaction of its own, in batch order. A record answers
 // `accepted` or `duplicate` (success) or `rejected` (permanent); a record left out of the
 // answer is retried. The loop stops at the first record that throws — a timeout, a lost lock,
@@ -16,7 +16,7 @@ import { reportFailure, type ErrorReporter } from "../core/report";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
 
-// ARCHITECTURE, sync.push. A batch is the device's, so a cap protects the function, not the
+// A batch is the device's, so a cap protects the function, not the
 // device: what is left out comes back next cycle. Vercel Pro allows 300 s by default (checked
 // on vercel.com/docs/functions/configuring-functions/duration, 2026-11-05); a push stops
 // starting records after 8 s, and one record waits at most 2 s for a lock and 4 s on a
@@ -41,8 +41,7 @@ const addressable = z.object({ id: z.uuid({ version: "v7" }) });
 
 // Upcasters: each kind's payload at each version it was ever written in, to the current shape.
 // Version 1 is the current one of every kind; a later version adds its parser here and keeps
-// every older one, so an outbox written by an older build is accepted forever (ARCHITECTURE,
-// Sync protocol).
+// every older one, so an outbox written by an older build is accepted forever.
 const PAYLOADS = {
   labor_event: { 1: laborPayloadV1 },
 } as const satisfies Record<Kind, Record<number, z.ZodType>>;
@@ -151,7 +150,7 @@ async function runOne(tx: Tx, user: AppUser, r: Parsed, skew: Skew): Promise<Pus
 }
 
 // A record that throws after an earlier one committed is answered by omission, so no handler
-// sees it; this hands it to the reporter instead (ARCHITECTURE, error reporting), after that
+// sees it; this hands it to the reporter instead, after that
 // record's transaction rolled back and while the request goes on. reportFailure classifies it:
 // a mid-batch UNAUTHORIZED is an expected answer, never an incident.
 export const reportRecordFailure =
@@ -197,7 +196,7 @@ export async function pushRecords(
       answer(await run((tx, user) => runOne(tx, user, r, skew)));
       ran++;
     } catch (error) {
-      // A refusal in a delegate's scope: its transaction rolled back, the record is answered.
+      // A refusal: its transaction rolled back, the record is answered.
       if (error instanceof TRPCError && error.code === "FORBIDDEN") {
         answer(rejectedAs(r, "not_permitted"));
         ran++;

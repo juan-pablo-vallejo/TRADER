@@ -1,4 +1,4 @@
-// The identity adapter seam at the HTTP edge (RULES: three thin seams): Clerk's adapter
+// The identity adapter seam at the HTTP edge: Clerk's adapter
 // (clerk-identity.ts), or the development adapter where identity-mode.ts admits it;
 // packages/api never sees a token.
 import {
@@ -16,7 +16,7 @@ import { identityMode } from "./identity-mode";
 import { webReporter } from "./reporter";
 
 // The cookie POST /dev-signin sets. It carries the email only: the subject is derived, never
-// typed, because the first sign-in binds `identity_subject` for good (0015's guard), and a
+// typed, because the first sign-in binds `identity_subject` for good (a trigger's guard), and a
 // second sign-in with another subject would be refused.
 export const DEV_EMAIL_COOKIE = "trader-dev-email";
 export const devSubjectFor = (email: string) => `dev:${email.trim().toLowerCase()}`;
@@ -54,7 +54,7 @@ const clerkAdapter = createClerkIdentityAdapter({
     reportFailure(webReporter, error, { source: "request", path: null, type: undefined }),
 });
 
-// The mode is read per request, never at module load (RULES: guards fail closed at request
+// The mode is read per request, never at module load (guards fail closed at request
 // time). Without Clerk's keys no proxy ran and there is no session to read: the request has
 // no identity, and every protected call answers 401.
 export const webIdentity: IdentityAdapter = {

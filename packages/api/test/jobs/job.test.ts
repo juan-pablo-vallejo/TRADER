@@ -1,4 +1,4 @@
-// TASKS:46: job.list, create, update, setStatus — a job under an active customer, judged
+// job.list, create, update, setStatus — a job under an active customer, judged
 // under FOR SHARE; its customer immutable once invoiced; any status writable, archived
 // reversible, and leaving archived re-judging the customer so a deactivated one never regains
 // a live job; admin only, a missing or foreign id one FORBIDDEN; a caller deactivated mid-call

@@ -1,4 +1,4 @@
-// Release 0.1 R3: onboarding, run as the owner in rolled-back transactions (helpers.ts).
+// Onboarding, run as the owner in rolled-back transactions (helpers.ts).
 // The dry run is the one test on `db` itself: it must leave nothing, and says so.
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -34,7 +34,7 @@ const input: Onboarding = {
 const email = `owner-${run}@onboard.test`;
 
 describe("onboard", () => {
-  it("writes the company, both counters as stated and one unbound admin", async () => {
+  it("writes the company, its counter as stated and one unbound admin", async () => {
     await rolledBack(db, async (tx) => {
       const result = await onboard(tx, { ...input, adminEmail: email });
       expect(result).toEqual({

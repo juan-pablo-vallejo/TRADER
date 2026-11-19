@@ -1,4 +1,4 @@
-// Stage 3 line 7: sync.pull (sync/pull.ts) through the application's router, against Postgres,
+// sync.pull (sync/pull.ts) through the application's router, against Postgres,
 // in rolled-back owner transactions as trader_app under the tenant. What it must never hold:
 // another worker's labor, coordinates or contact details.
 import { jobs, users, workSessionEvents } from "@trader/db/schema";

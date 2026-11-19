@@ -1,5 +1,4 @@
-// Sign-in tickets for the staging browser suite (ARCHITECTURE, 2026-11-16, staging sign-in
-// by ticket). Clerk's fixed test code signs anyone in as any fictional number, and the
+// Sign-in tickets for the staging browser suite. Clerk's fixed test code signs anyone in as any fictional number, and the
 // suite's numbers are in this public repository; a ticket is made with the development
 // instance's secret key, for one named user, used once and dead in ten minutes. So the
 // suite keeps signing in unattended once the owner turns Clerk's test mode off.

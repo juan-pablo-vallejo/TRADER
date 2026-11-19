@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { signInPath } from "../../../server/identity-mode";
 import { InvoiceScreen } from "./invoice-screen";
 
-// One invoice (TASKS R6). An address that names no id at all is the not-found screen;
+// One invoice. An address that names no id at all is the not-found screen;
 // whether the id is an invoice the caller may read is the API's answer.
 export const dynamic = "force-dynamic";
 

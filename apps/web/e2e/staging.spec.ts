@@ -8,7 +8,7 @@
 // them) each person signs in with a single-use Clerk sign-in token, a made-up ticket is
 // seen refused and a used one seen dead; given none, by the number and Clerk's test code,
 // which works only while the development instance's test mode is on. The flow writes one customer row and
-// rewrites it on every run; it deletes nothing (RULES, Toolbox: cleanup is destructive).
+// rewrites it on every run; it deletes nothing (cleanup is destructive).
 // Staging's database holds more than one fixture company. The suite's company is the one
 // its signed-in admin belongs to, read from the API; its worker must be of the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
@@ -115,7 +115,7 @@ async function signIn(page: Page, phone: string, ticket: string): Promise<void> 
   // The field shows a country code of its own: type the national number.
   await identifier.fill(phone.replace(/^\+1/, ""));
   // Enter straight after the last digit is refused as an invalid identifier; the button a
-  // moment later is not (MEMORY, Notes).
+  // moment later is not.
   await page.waitForTimeout(500);
   await page.getByRole("button", { name: "Continue", exact: true }).click();
   const code = page.locator('input[autocomplete="one-time-code"]').first();

@@ -1,4 +1,4 @@
-// Stage 2 line 7: the runtime role and its grants (ARCHITECTURE invariant 5), asserted against
+// The runtime role and its grants (invariant 5), asserted against
 // the migrated container. Rolled-back transactions throughout; see helpers.ts. The catalog is
 // read as the owner; the refusals run as trader_app by SET LOCAL ROLE.
 import { sql } from "drizzle-orm";

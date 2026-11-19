@@ -1,4 +1,4 @@
-// The sync boundary (ARCHITECTURE, Sync protocol). `push` runs on the sync procedure: one
+// The sync boundary. `push` runs on the sync procedure: one
 // caller transaction per record, never one for the call (sync/push.ts). `pull` is an ordinary
 // protected query, open to every active role: it reads only the caller's own (sync/pull.ts).
 import { pullInput, pullOutput, pullSnapshot } from "../sync/pull";

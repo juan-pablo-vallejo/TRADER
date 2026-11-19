@@ -1,4 +1,4 @@
-// TASKS:43: the route handler as Next calls it. `status.get` answers with no identity, no
+// The route handler as Next calls it. `status.get` answers with no identity, no
 // database and `no-store`; a protected call without an identity is 401; a failing call
 // reaches the reporter once; a signed-in call runs under trader_app against the real pool.
 import { companies, users } from "@trader/db/schema";

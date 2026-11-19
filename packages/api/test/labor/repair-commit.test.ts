@@ -1,4 +1,4 @@
-// Stage 3 line 9: labor.repair against real commits, in a database of its own (helpers.ts,
+// labor.repair against real commits, in a database of its own (helpers.ts,
 // disposableDb). Rolled-back tests cannot show two connections serializing, a savepoint's
 // rollback surviving a commit, or a repair holding at a true COMMIT; these do. A holder
 // transaction takes a lock first; the calls are started against it, seen waiting in
@@ -211,7 +211,7 @@ describe("labor.repair — retries and ids, committed", () => {
     ).toBe(other.d.companyId);
   });
 
-  // No deferred check stands behind a repair any more (0050): what it wrote is committed
+  // No deferred check stands behind a repair: what it wrote is committed
   // with its flags and is in effect, for a worker's ledger and for the caller's own.
   it("commits a correction with its flags, in effect at once, on anyone's ledger", async () => {
     const x = await world();

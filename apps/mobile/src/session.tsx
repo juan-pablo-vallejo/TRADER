@@ -1,10 +1,10 @@
 // Who is signed in on this phone, and how a call says so. Screens ask `useSession()` and do
-// not know which identity it is. The provider's (TASKS R5) is a session it keeps in the
+// not know which identity it is. The provider's is a session it keeps in the
 // secure store, sent as its short-lived token on every call; the development one
 // (config.ts) is an email sent as the development headers, which the server honours only
 // where it is enabled and never in production. That somebody is signed in is kept in the
 // device's store, apart from the provider: the app opens on the clock with no network, and
-// a capture never waits on a session (ARCHITECTURE, Sync protocol). A token the provider
+// a capture never waits on a session. A token the provider
 // cannot give is a call with no identity, which the server answers 401; the sync layer
 // then says to sign in again and keeps every record.
 import {

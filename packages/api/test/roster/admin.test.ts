@@ -1,4 +1,4 @@
-// TASKS:45: roster.setRole, roster.deactivate, roster.reactivate — judged under one locking
+// roster.setRole, roster.deactivate, roster.reactivate — judged under one locking
 // statement; the last active admin is never demoted or deactivated, two admins racing to do it
 // to each other included; a deactivated account is no user and a reactivated one is itself
 // again; admin only, a missing or foreign target one FORBIDDEN.

@@ -17,10 +17,10 @@ import { createdAt, id, updatedAt } from "./shared";
 import { users } from "./users";
 import { workSessionEvents } from "./work-session-events";
 
-// A dated plan: this person is expected on this job, on this day, between these times
-// (PRD, Jobs and location; ARCHITECTURE, Office authority: dated assignments, V1-D07). It is
-// planning only. Nothing that judges or counts labor reads this table — not push authority,
-// validation, the fold or invoices, and a row here widens no read but one: the planned person sees that job's name and
+// A dated plan: this person is expected on this job, on this day, between these times.
+// Nothing that counts labor reads this table — not the fold or invoices; the push reads it
+// only where the company's schedule is enforced (api sync/schedule.ts). A row here widens no
+// read but one: the planned person sees that job's name and
 // address. Written by the office (api assignments/write.ts), read by `assignment.list` and
 // `assignment.mine`.
 //
@@ -32,7 +32,7 @@ import { workSessionEvents } from "./work-session-events";
 // kept and shown as written.
 //
 // Unlike a fact table a plan is edited and removed: updated_at, an UPDATE and a DELETE grant
-// (migration 0031), and no append-only guard — until a clock-in is admitted on it.
+// (the baseline migration), and no append-only guard — until a clock-in is admitted on it.
 //
 // A row is a shift. A person may have several in a day, on one job or several; only the
 // exact duplicate is refused here, and two that overlap are refused by the writers (api
@@ -59,7 +59,7 @@ export const jobAssignments = pgTable(
     updatedAt,
   },
   (t) => [
-    // Composite, so the person and the job belong to the row's company (invariant 4).
+    // Composite, so the person and the job belong to the row's company (invariant 5).
     foreignKey({
       name: "job_assignments_company_id_user_id_fk",
       columns: [t.companyId, t.userId],
@@ -71,7 +71,7 @@ export const jobAssignments = pgTable(
       foreignColumns: [jobs.companyId, jobs.id],
     }),
     unique("job_assignments_company_id_id_unique").on(t.companyId, t.id),
-    // The event that locked the shift belongs to the row's company (invariant 4).
+    // The event that locked the shift belongs to the row's company (invariant 5).
     foreignKey({
       name: "job_assignments_company_id_locked_by_event_id_fk",
       columns: [t.companyId, t.lockedByEventId],

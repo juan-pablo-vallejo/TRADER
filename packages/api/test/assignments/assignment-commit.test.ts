@@ -1,4 +1,4 @@
-// TASKS S3, the weekly schedule's writers: the writers against each other and against
+// The weekly schedule's writers: the writers against each other and against
 // the office's other writers, on real commits. In a disposable database (helpers.ts): two
 // connections must see the same rows, and the lock-wait probe reads every backend of its
 // database. Each test holds a row from the owner's transaction, lets the calls queue on it,

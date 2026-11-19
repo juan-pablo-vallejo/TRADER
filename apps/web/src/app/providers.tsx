@@ -1,7 +1,7 @@
 "use client";
 
-// The query client and the tRPC client for the office (ARCHITECTURE, office web client). The
-// transformer must match the server's: api trpc.ts is the home of that fact (JSON turns Dates
+// The query client and the tRPC client for the office. The
+// transformer must match the server's: api core/trpc.ts is the home of that fact (JSON turns Dates
 // into strings; superjson keeps them). A mismatch does not throw — it hands every screen a
 // string where a Date was sent — so if one side changes, change both. The browser calls the
 // same route handler the phone does, with its cookie; no server-side caller exists.
@@ -22,7 +22,7 @@ let browserQueryClient: QueryClient | undefined;
 
 function makeQueryClient() {
   // An answer of UNAUTHORIZED or FORBIDDEN is a state the screen shows, not a transient.
-  // `networkMode: "always"`: the office is online-only (DESIGN, Layout). The library's default
+  // `networkMode: "always"`: the office is online-only. The library's default
   // pauses a request while the browser reports offline and sends it on reconnect, so a write
   // pressed with no signal would land minutes later, unannounced. Here it fails at once and
   // the screen says so; nothing is queued.

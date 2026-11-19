@@ -1,4 +1,4 @@
-// customer.list (PRD, Target users: customers are the admin's). Every customer of the caller's
+// customer.list. Every customer of the caller's
 // company, deactivated ones included with their timestamp so the office can reactivate them,
 // ordered by name, each with the count of its jobs not yet archived — what `deactivate`
 // refuses on (write.ts). A plain read under RLS, no locks. Consumed by routers/customer.ts and

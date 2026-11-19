@@ -1,4 +1,4 @@
-// Stage 3 line 9: labor.repair through the application's router, under the runtime role in
+// labor.repair through the application's router, under the runtime role in
 // rolled-back transactions. Office repairs append, correct and void; a set is one timeline;
 // every event is written with its flags and takes effect at once; a rejection writes nothing.
 // Concurrency and commits are labor/repair-commit.test.ts's.

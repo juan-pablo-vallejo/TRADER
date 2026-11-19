@@ -1,8 +1,8 @@
-// The session fold (ARCHITECTURE invariant 7): one worker's work sessions, computed from the
+// The session fold (invariant 4): one worker's work sessions, computed from the
 // append-only `work_session_events` ledger and never stored. Pure: no database, no clock. The
 // state machine below is the only encoding of the transition rules; validation (validate.ts)
 // and derivation (work-date.ts) both run through `replay`, so they cannot drift apart.
-// Consumed by validate.ts, work-date.ts and, from Stage 3 on, sync, closeout and approvals.
+// Consumed by validate.ts, work-date.ts, accounting.ts, repair.ts and sync.
 import type { workSessionEvents } from "@trader/db/schema";
 
 type Row = typeof workSessionEvents.$inferSelect;
@@ -59,8 +59,8 @@ export class LedgerInconsistentError extends Error {
 }
 
 // One instant per event for ordering, intervals and work date: the time it was captured with,
-// flagged or not (V1-D01; ARCHITECTURE, Sync protocol). A suspicious time is reviewed by a
-// person through its approval, never replaced by the receipt.
+// flagged or not (invariant 3). A suspicious time is flagged for the office, never replaced
+// by the receipt.
 export const effectiveAt = (e: LaborEvent): Date => e.clientTimestamp;
 
 const compareIds = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -102,14 +102,13 @@ export type Session = {
   rootEventId: string;
   // The row supplying the start time and job: the root or its winning correction.
   startedSourceEventId: string;
-  // From the effective `started` only; other events' job ids are provenance
-  // (ARCHITECTURE, 2026-11-04, a session's job).
+  // From the effective `started` only; other events' job ids are provenance.
   jobId: string;
   startedAt: Date;
   endedAt: Date | null;
   complete: boolean;
   state: "working" | "paused" | "ended";
-  // Accounting-only (ARCHITECTURE, 2026-11-04, voids): hours are zero, the span stays on the timeline.
+  // Accounting-only: hours are zero, the span stays on the timeline.
   voided: boolean;
   // Elapsed milliseconds of closed working and paused intervals. An open session counts
   // closed intervals only: no clock is read here, so accrual for display is the caller's.
@@ -163,7 +162,7 @@ export function replay(events: readonly LaborEvent[]): Replay {
     if (target.type === "voided") return at("correction_of_void");
     if (target.type !== e.type) return at("correction_type_mismatch");
     // A correction of a pause, resume or end keeps its root's job as provenance; only a
-    // corrected start re-attributes the session (ARCHITECTURE, 2026-11-04, a session's job).
+    // corrected start re-attributes the session.
     if (e.type !== "started" && e.jobId !== target.jobId) {
       return at("correction_job_mismatch");
     }

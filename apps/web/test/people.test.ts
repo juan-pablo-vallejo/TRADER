@@ -1,4 +1,4 @@
-// TASKS:45: the roster over the real transport — the route module as Next calls it, the
+// The roster over the real transport — the route module as Next calls it, the
 // development headers as the cookie bridge sets them: 401 anonymous, 403 as a worker, and an
 // admin's invite answering `invited` then `email_taken` through POST, and an invitation by
 // mobile number that the number's own login then binds.

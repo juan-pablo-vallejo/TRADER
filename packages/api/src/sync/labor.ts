@@ -47,7 +47,7 @@ const rejected = (code: LaborRejection, conflictingId?: string): LaborResult => 
 
 // The same event: the caller as initiator and every column the device fixed, the schema
 // version it was written in included. Not the receipt stamp or the skew, which are the
-// server's (MEMORY: duplicates are push's).
+// server's.
 const same = (row: Prior, user: AppUser, r: LaborRecord) => {
   const p = r.payload;
   return (

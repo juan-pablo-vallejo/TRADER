@@ -1,4 +1,4 @@
-// The tRPC route handler both clients call (ARCHITECTURE, apps/web): one request becomes one
+// The tRPC route handler both clients call: one request becomes one
 // context through the identity adapter, each protected call then opens its own transaction
 // (api trpc.ts). `onError` is the error-reporting seam, called by tRPC after a call has
 // settled. Dependencies are passed in so tests hand it an unusable database or a recording

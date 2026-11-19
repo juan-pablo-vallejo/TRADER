@@ -1,8 +1,8 @@
-// DESIGN, Brand: the favicon is logo.png, the one master in assets/brand. It is read here at
+// The favicon is logo.png, the one master in assets/brand. It is read here at
 // request time rather than copied into this app, so the asset keeps one home; next.config.ts
 // traces it into the deployment. Cached for a day: the file changes only with a commit. The
 // path is relative to the working directory, this app's directory under `next` locally; on
-// Vercel the traced tree keeps the same shape (verified at Stage 6).
+// Vercel the traced tree keeps the same shape.
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 

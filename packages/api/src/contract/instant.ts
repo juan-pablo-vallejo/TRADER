@@ -1,5 +1,5 @@
-// An instant a client may send: any date Postgres can store (ARCHITECTURE, bounded client
-// instants). Part of the client-safe contract.
+// An instant a client may send: any date Postgres can store.
+// Part of the client-safe contract.
 import { z } from "zod";
 
 export const INSTANT_MIN = new Date("0001-01-01T00:00:00.000Z");

@@ -1,4 +1,4 @@
-/* The reconciliation screen's own layout: the range form, the lines above the hours, and
+/* The Hours screen's own layout: the range form, the lines above the hours, and
    the gaps between one person and the next. The tables themselves are table.module.css. */
 .lookupGrid {
   display: grid;

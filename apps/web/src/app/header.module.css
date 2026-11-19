@@ -1,4 +1,4 @@
-/* The office header (DESIGN, Layout): 56 pt, the mark and the wordmark on the left, the
+/* The office header: 56 pt, the mark and the wordmark on the left, the
    signed-in person and sign-out on the right, one hairline below. One row at every width. */
 .header {
   display: flex;

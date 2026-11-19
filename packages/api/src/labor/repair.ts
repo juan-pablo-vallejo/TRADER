@@ -41,7 +41,7 @@ const operation = z.discriminatedUnion("kind", [
     id: eventId,
     correctsEventId: z.uuid(),
     // The source the office saw in effect for the root: its precondition, never stored and
-    // never judged on a retry (as the review fingerprint, ARCHITECTURE row 198).
+    // never judged on a retry.
     replacesEventId: z.uuid(),
     type: positional,
     jobId: z.uuid(),

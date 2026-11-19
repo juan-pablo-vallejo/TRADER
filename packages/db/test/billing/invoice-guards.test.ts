@@ -1,4 +1,4 @@
-// The invoice lifecycle and gap-free numbering (ARCHITECTURE invariant 6): the invoice and
+// The invoice lifecycle and gap-free numbering (invariant 6): the invoice and
 // line triggers, asserted against the migrated container. Rolled-back
 // transactions throughout, except the two lock tests at the end, which need rows two
 // connections can both see and therefore commit a fixture and delete it after.
@@ -120,7 +120,7 @@ describe("issue", () => {
     });
   });
 
-  it("refuses an issue that changes anything else, or that is also a void (0043)", async () => {
+  it("refuses an issue that changes anything else, or that is also a void", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await billing(tx);
       const { invoiceId } = await draftInvoice(tx, refs);

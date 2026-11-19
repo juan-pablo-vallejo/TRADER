@@ -1,4 +1,4 @@
-// Which identity this server runs on (ARCHITECTURE, identity). One rule, read per request:
+// Which identity this server runs on. One rule, read per request:
 // the development identity only where its own flag and NODE_ENV admit it
 // (`devIdentityEnabled`: never under a production build), Clerk everywhere else. So a
 // production build never constructs, calls or links to the development adapter's sign-in,

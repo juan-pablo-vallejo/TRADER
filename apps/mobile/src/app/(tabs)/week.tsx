@@ -1,4 +1,4 @@
-// The worker's own schedule and hours (TASKS S8; DESIGN, Own history). Read-only, from the
+// The worker's own schedule and hours. Read-only, from the
 // last pull, and it says how old that pull is: a schedule the office changed while this
 // phone was offline is not known here until the next one, so an old one says it may be out
 // of date. The shifts are the caller's own for this week and the next; the hours are the

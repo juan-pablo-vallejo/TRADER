@@ -1,4 +1,4 @@
-// Stage 3 line 7: sync.push through the application's router (routers/sync.ts), against
+// sync.push through the application's router (routers/sync.ts), against
 // Postgres, in rolled-back owner transactions: each record's caller transaction is a savepoint
 // of it. What a commit proves is sync/push-commit.test.ts's; the loop's stop rules are also
 // proved here without a database, through pushRecords with a stand-in runner.
@@ -247,7 +247,7 @@ describe("sync.push — the day as the field sends it", () => {
         await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
         NY,
       );
-      // Effective instant is the device's 12:00, flagged; never the receipt (V1-D01).
+      // Effective instant is the device's 12:00, flagged; never the receipt.
       expect(session!.startedAt).toEqual(new Date("2026-10-05T12:00:00Z"));
     });
   });
@@ -303,7 +303,7 @@ describe("sync.push — the day as the field sends it", () => {
       );
       expect(reasons).toEqual(Array(8).fill(["offline"]));
 
-      // Delivered late, kept where it was captured (V1-D01): each day's session at its own
+      // Delivered late, kept where it was captured: each day's session at its own
       // times, in order, and nothing flagged for a delay alone.
       expect(
         answer.results.every(
@@ -580,7 +580,7 @@ describe("pushRecords — the loop, without a database", () => {
     expect(out.results).toHaveLength(2);
   });
 
-  // TASKS:50: what the loop swallows reaches the reporter; nothing else changes.
+  // What the loop swallows reaches the reporter; nothing else changes.
   const codes = (out: { results: PushResult[] }) =>
     out.results.map((r) => (r.result === "rejected" ? r.code : r.result));
   const recorded = () => {
@@ -679,7 +679,7 @@ describe("pushRecords — the loop, without a database", () => {
   });
 });
 
-// Who starts where (ARCHITECTURE, schedule authority), through the router: the five answers
+// Who starts where, through the router: the five answers
 // a start gets by the company's schedule switch, and the one a record for somebody else
 // gets. The rules' edges are sync/schedule.test.ts's and sync/labor.test.ts's.
 describe("sync.push — a start, by the schedule switch", () => {

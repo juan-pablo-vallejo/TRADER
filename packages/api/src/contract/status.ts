@@ -1,5 +1,5 @@
-// The service state a build asks for before it syncs, and what it sends to ask (ARCHITECTURE,
-// kill switch; Operational sync states). Part of the client-safe contract.
+// The service state a build asks for before it syncs, and what it sends to ask.
+// Part of the client-safe contract.
 import { z } from "zod";
 
 // In order of restriction. `read_only`: pull only. `paused`: no sync. `update_required`: this

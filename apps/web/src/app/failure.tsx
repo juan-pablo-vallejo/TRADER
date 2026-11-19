@@ -1,4 +1,4 @@
-// What a screen shows when its query fails (ARCHITECTURE, office web client): UNAUTHORIZED
+// What a screen shows when its query fails: UNAUTHORIZED
 // and FORBIDDEN are states, drawn as the empty state; anything else is the attention banner.
 // A refused caller is offered this server's sign-in (identity-mode.ts) — or, where a Clerk
 // session exists and the API still knows nobody, told so (clerk-session.tsx).

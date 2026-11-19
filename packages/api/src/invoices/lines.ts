@@ -1,6 +1,6 @@
-// An invoice's arithmetic (ARCHITECTURE, invariant 3: money is integer minor units; Invoice
-// pricing, V1-D14). A line's amount is its quantity times its unit price, rounded half-up to
-// the cent — what the database's own check computes (invoice_line_items, 0009) — worked in
+// An invoice's arithmetic (docs/ARCHITECTURE.md, invariant 6: money is whole cents).
+// A line's amount is its quantity times its unit price, rounded half-up to
+// the cent — what the database's own check computes (invoice_line_items) — worked in
 // integers: the quantity in thousandths, never a float. The subtotal is the sum of the
 // lines; the total adds the tax the admin entered. A price is whatever the admin typed. Pure. Consumed by draft.ts and
 // read.ts.

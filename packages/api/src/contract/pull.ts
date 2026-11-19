@@ -1,4 +1,4 @@
-// What a pull answers: the caller's own snapshot (ARCHITECTURE, sync.pull). Part of the
+// What a pull answers: the caller's own snapshot. Part of the
 // client-safe contract: the phone parses what it stored with the schema the server answers
 // with.
 import { z } from "zod";

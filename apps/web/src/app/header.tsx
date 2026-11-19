@@ -6,7 +6,7 @@ import { Account } from "./account";
 import styles from "./header.module.css";
 import { strings } from "./strings";
 
-// DESIGN, Layout and Brand: the office header is 56 pt — icon.png at 32 pt, the wordmark, and
+// The office header is 56 pt — icon.png at 32 pt, the wordmark, and
 // the signed-in person on the right. The asset is imported from its one home in assets/brand,
 // never copied. Which sign-in the person is sent to is this server's identity mode, read per
 // request (server/identity-mode.ts).

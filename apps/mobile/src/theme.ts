@@ -1,5 +1,5 @@
-// The phone app's tokens (DESIGN, Color palette, Typography, Layout and spacing). Light theme
-// only. Values are DESIGN's: change them there first. Its text is never under `secondary`
+// The phone app's tokens: color, type, layout and spacing. Light theme
+// only. Text is never under `secondary`
 // (15 pt), a target never under 48 pt, the primary button 56 pt.
 export const color = {
   ink: "#111827",

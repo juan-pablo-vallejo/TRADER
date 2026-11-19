@@ -1,4 +1,4 @@
-// Clerk behind the identity seam (ARCHITECTURE, identity; RULES: three thin seams). Clerk's
+// Clerk behind the identity seam. Clerk's
 // own code verifies the session token — in the proxy, before this runs — and this file only
 // maps what the verified token says onto the seam's shape. packages/api never sees a token.
 //

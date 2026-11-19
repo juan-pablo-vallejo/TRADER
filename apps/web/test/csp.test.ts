@@ -1,5 +1,5 @@
-// Release 0.1 R3: the content security policy as a string (server/csp.ts). What a browser
-// makes of it is checked on the deployment (TASKS, Stage 6, edge line).
+// The content security policy as a string (server/csp.ts). What a browser
+// makes of it is checked on the deployment.
 import { describe, expect, it } from "vitest";
 
 import { clerkFrontendApi, contentSecurityPolicy, createNonce } from "../src/server/csp";

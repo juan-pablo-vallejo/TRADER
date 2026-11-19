@@ -1,4 +1,4 @@
-// Jobs (PRD, Jobs and location). Admin only, at the gate; the customer and invoice rules
+// Jobs. Admin only, at the gate; the customer and invoice rules
 // and the target's visibility are judged inside each writer under its locks.
 import { listJobs, listOutput } from "../jobs/list";
 import {

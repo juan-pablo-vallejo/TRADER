@@ -1,4 +1,4 @@
-// UUIDv7 minted on the device that observed the event (RULES; ARCHITECTURE, ids). Ids from
+// UUIDv7 minted on the device that observed the event. Ids from
 // one minter never go backwards: within one millisecond the 12 bits after the version count
 // up, so the `ended` and the `started` of a job switch keep the order they were made in.
 // The random bytes are handed in: the phone's come from `expo-crypto`, a test's from a seed.

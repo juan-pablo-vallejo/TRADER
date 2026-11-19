@@ -16,20 +16,19 @@ import { invoices } from "./invoices";
 import { createdAt } from "./shared";
 import { users } from "./users";
 
-// What a customer paid against an issued invoice, as the office recorded it (PRD, Invoicing
-// and exports; ARCHITECTURE, Payments and delivery; TASKS R7). TRADER captures and processes
-// nothing: a row is a note that money arrived — how much, on what day, by what means. It
-// changes nothing on the invoice: what is owed, and whether the invoice is paid, are derived
-// from these rows and the invoice's total and never stored.
+// What a customer paid against an issued invoice, as the office recorded it. TRADER captures
+// and processes nothing: a row is a note that money arrived — how much, on what day, by what
+// means. It changes nothing on the invoice: what is owed, and whether the invoice is paid,
+// are derived from these rows and the invoice's total and never stored.
 //
-// Append-only (migration 0045, 0002's guard): no updated_at. A payment recorded by mistake
-// is not edited or deleted; a second row reverses it, naming it in reverses_payment_id, for
-// the same amount. A payment that has a reversal, and the reversal itself, count toward
-// nothing. The id is the browser's, so a record sent again is the same record.
+// Append-only (the baseline migration's reject_mutation triggers): no updated_at. A payment
+// recorded by mistake is not edited or deleted; a second row reverses it, naming it in
+// reverses_payment_id, for the same amount. A payment that has a reversal, and the reversal
+// itself, count toward nothing. The id is the browser's, so a record sent again is the same record.
 //
-// Guards the database holds (0045): the invoice is issued and not void; a reversal names a
-// payment of the same invoice that is not itself a reversal and has none yet, for its
-// amount; and the payments that stand never total more than the invoice — no overpayment.
+// Guards the database holds (a trigger in the baseline migration): the invoice is issued and
+// not void; a reversal names a payment of the same invoice that is not itself a reversal and
+// has none yet, for its amount; and the payments that stand never total more than the invoice — no overpayment.
 export const invoicePayments = pgTable(
   "invoice_payments",
   {

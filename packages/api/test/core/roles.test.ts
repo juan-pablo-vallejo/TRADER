@@ -1,4 +1,4 @@
-// Stage 3 line 2: role gates, against the real database as trader_app. A gate admits the roles
+// Role gates, against the real database as trader_app. A gate admits the roles
 // it lists and nothing else; a deactivated account is refused exactly like an anonymous caller,
 // before any gate runs; a denial is FORBIDDEN, rolls back, and names no role.
 import { users } from "@trader/db/schema";

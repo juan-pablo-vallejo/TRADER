@@ -15,7 +15,7 @@ import "./theme.css";
 
 export const metadata: Metadata = {
   title: "TRADER",
-  description: "Daily closeout and job costing for painting contractors",
+  description: "Time tracking, scheduling and invoicing for painting contractors",
 };
 
 // Clerk's provider is around the office only where Clerk is this server's identity and its

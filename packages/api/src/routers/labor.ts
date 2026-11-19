@@ -1,4 +1,4 @@
-// Office labor: the repair (ARCHITECTURE, 2026-11-05, office labor repairs), the read it
+// Office labor: the repair (labor/repair.ts), the read it
 // takes its event ids from (labor/ledger.ts), and the hours that count per worker, job and
 // work date (labor/day-hours.ts). Admin only, at the gate: the office client is
 // online, so there is no device retry to keep open across a demotion (unlike

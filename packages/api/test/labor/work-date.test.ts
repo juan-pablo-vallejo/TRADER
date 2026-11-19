@@ -91,7 +91,7 @@ describe("deriveSessions", () => {
     expect(s).toMatchObject({ workDate: "2026-10-31", workedMs: 3 * HOUR });
   });
 
-  it("dates a skewed start by its captured time, not its receipt (V1-D01)", () => {
+  it("dates a skewed start by its captured time, not its receipt", () => {
     const ev = builder();
     // The phone says 23:00 EDT on 4 October; the server received it at 09:00 EDT on 5 October.
     const start = ev("started", utc("2026-10-05T03:00:00"), {

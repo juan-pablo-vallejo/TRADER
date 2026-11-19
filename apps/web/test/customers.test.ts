@@ -1,4 +1,4 @@
-// TASKS:46: customers over the real transport — the route module as Next calls it, the
+// Customers over the real transport — the route module as Next calls it, the
 // development headers as the cookie bridge sets them: 401 anonymous, 403 as a worker, and an
 // admin's create, list and deactivation through POST and GET.
 import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";

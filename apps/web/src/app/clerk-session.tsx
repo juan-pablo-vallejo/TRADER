@@ -1,6 +1,6 @@
 "use client";
 
-// What the office shows of a Clerk session (DESIGN, Sign-in): Sign out, and what a person
+// What the office shows of a Clerk session: Sign out, and what a person
 // sees when the API refuses them. Rendered only inside Clerk's provider (layout.tsx), so
 // only where Clerk is this server's identity; account.tsx and failure.tsx choose by
 // `useClerkOn`. A person can hold a Clerk session and still be nobody here — their number is

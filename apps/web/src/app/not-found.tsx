@@ -1,4 +1,4 @@
-// An address with no screen (DESIGN, Empty state: one sentence and one action).
+// An address with no screen: the empty state, one sentence and one action.
 import Link from "next/link";
 
 import { EmptyState } from "./failure";
@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <EmptyState
       text={strings.notFound}
-      action={<Link href="/schedule">{strings.goToOverview}</Link>}
+      action={<Link href="/schedule">{strings.goToSchedule}</Link>}
     />
   );
 }

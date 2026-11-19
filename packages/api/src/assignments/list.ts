@@ -1,5 +1,4 @@
-// assignment.list and assignment.mine (PRD, Jobs and location; ARCHITECTURE, Office authority:
-// dated assignments, V1-D07; DESIGN, Assignment row).
+// assignment.list and assignment.mine.
 //
 // `list` is the office's: the company's plans over a range of days, each with whether the
 // planned person could clock in on that job as things stand now, and which fact stands in
@@ -14,8 +13,7 @@
 // stay where they were.
 //
 // Both ranges are inclusive calendar days, as written (schema, job-assignments.ts), and
-// bounded. Plain reads under RLS. Consumed by routers/assignment.ts; `ownAssignments` is also
-// what the pull extension reads (TASKS, Stage 5).
+// bounded. Plain reads under RLS. Consumed by routers/assignment.ts.
 import { companies, jobAssignments, jobs, jobStatus, users } from "@trader/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
@@ -157,7 +155,7 @@ export async function listAssignments(
   });
 }
 
-// The office's week: Monday to Sunday (ARCHITECTURE, 2026-11-15 shift rules), every shift
+// The office's week: Monday to Sunday, every shift
 // and whether a clock-in has locked it.
 const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
 

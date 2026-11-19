@@ -1,4 +1,4 @@
-// Stage 3 line 7: one labor event from a push (sync/labor.ts), against Postgres. Every test runs
+// One labor event from a push (sync/labor.ts), against Postgres. Every test runs
 // in an owner transaction that is always rolled back (labor events can never be deleted); each
 // record runs in a savepoint of it as trader_app under the day's tenant, as a record's own
 // transaction would. Commit independence is not provable here: the real-commit suite
@@ -102,7 +102,7 @@ async function dayFor(tx: Tx) {
 }
 
 const at = (iso: string) => new Date(iso);
-// Inside the receipt tolerance: a capture the server takes as made when it says (V1-D01). The
+// Inside the receipt tolerance: a capture the server takes as made when it says. The
 // default record's fixed October time is a backlog: pushed as captured online it is flagged
 // `clock_skewed`, so a test of a clean capture times its events with this.
 const ago = (seconds: number) => new Date(Date.now() - seconds * 1000);
@@ -330,7 +330,7 @@ describe("sync.push labor — flags", () => {
   });
 });
 
-describe("sync.push labor — the time an event claims, against its receipt (V1-D01)", () => {
+describe("sync.push labor — the time an event claims, against its receipt", () => {
   const HOUR = 3_600_000;
   const rowOf = (tx: Tx, d: WorkDay, id: string) =>
     asOwner(

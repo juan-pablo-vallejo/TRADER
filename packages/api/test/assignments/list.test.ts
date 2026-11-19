@@ -1,4 +1,4 @@
-// TASKS, dated worker-job assignments (V1-D07): assignment.list — the office's read over an
+// Dated worker-job assignments: assignment.list — the office's read over an
 // inclusive range of days as written, with its filters — and assignment.mine — the caller's
 // own plans and nothing of anyone else's. Rolled-back transactions throughout. The clock-in
 // flag against a real push is authority.test.ts's.

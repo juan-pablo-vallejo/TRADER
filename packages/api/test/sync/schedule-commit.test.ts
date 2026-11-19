@@ -1,4 +1,4 @@
-// TASKS S4, on real commits: a start and an office edit on one person's day, in both orders,
+// On real commits: a start and an office edit on one person's day, in both orders,
 // and the proof that a push never reads the schedule while enforcement is off. In a
 // disposable database (helpers.ts): a punch lock can never be removed, two connections must
 // see the same rows, and the lock-wait probe reads every backend of its database.
@@ -141,7 +141,7 @@ describe("with enforcement on", () => {
     expect(await pushed).toMatchObject({ result: "accepted" });
   });
 
-  it("an edit committed first: the start is judged against the edited day and stored for review", async () => {
+  it("an edit committed first: the start is judged against the edited day and stored and flagged", async () => {
     const d = await world(true);
     let pushed!: ReturnType<typeof start>;
     await D.owner.transaction(async (tx) => {

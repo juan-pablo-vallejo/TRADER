@@ -1,4 +1,4 @@
-// TASKS, dated worker-job assignments (V1-D07): a plan authorizes nothing by itself. A real
+// Dated worker-job assignments: a plan authorizes nothing by itself. A real
 // clock-in through push (sync/labor.ts) answers exactly as it did before the plan existed,
 // and the office read's flag says, case by case, what that push answers. Every test runs in
 // an owner transaction that is always rolled back, each record in a savepoint of it as

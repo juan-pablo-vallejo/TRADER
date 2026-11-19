@@ -1,4 +1,4 @@
-// TASKS:48 ("never the pilot's database"): the demo writes only into a database it created on
+// The demo writes only into a database it created on
 // the local compose server, named by the pattern; every other destination is refused before a
 // connection is opened, and the configured development database receives nothing but the
 // create and drop of that name.

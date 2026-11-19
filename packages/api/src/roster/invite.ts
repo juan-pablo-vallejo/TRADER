@@ -1,5 +1,5 @@
-// roster.invite (PRD, Access: invitation-only accounts; a new user starts as a worker, roles
-// are a deliberate roster action). An invitation is a users row with a sign-in address — the
+// roster.invite: accounts are by invitation only; a new user starts as a worker unless the
+// invitation names another role. An invitation is a users row with a sign-in address — the
 // mobile number, and an email when one is given — the name and the role, identity_subject
 // NULL: the first sign-in the provider verified for either address binds it
 // (resolve-user.ts). The person is then admitted at the identity provider (identity.ts,
@@ -8,8 +8,8 @@
 // (users.ts), so two unique indexes can refuse the insert and one ON CONFLICT target would
 // cover one of them: the statement names none, so no conflict is ever raised and the
 // transaction is never aborted, and a read then says which address is held. The id is the
-// database's own uuidv7(), so the only conflicts there can be are those two. An invitation
-// leaves one audit row (core/audit.ts). Consumed by routers/roster.ts.
+// database's own uuidv7(), so the only conflicts there can be are those two. Consumed by
+// routers/roster.ts.
 import { ROLES } from "../contract/enums";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -39,7 +39,7 @@ const invitedPhone = z
 
 // Each address validated as a sign-in address is, since that is what it will be matched
 // against. The number is required of every new invitation: the provider holds no login
-// without one (ARCHITECTURE, invitation at the provider). Rows invited by email alone
+// without one. Rows invited by email alone
 // before that stay as they are; the column's own rule is still one address of the two.
 export const inviteInput = z.strictObject({
   email: signInEmailSchema.optional(),
@@ -94,7 +94,7 @@ export async function rosterInvite(
   const invited = await readRosterUser(tx, inserted.id);
   if (invited === undefined) throw new Error("the invited row is not visible");
   // Last, so a refusal above never reaches the provider, and awaited inside the transaction,
-  // so a provider that cannot be told rolls the row and its audit row back. The reverse
+  // so a provider that cannot be told rolls the row back. The reverse
   // order of failure — the provider told, the commit lost — leaves a login that matches no
   // invitation and is refused; inviting again admits the same addresses and succeeds.
   await directory.admit({ email, phone });

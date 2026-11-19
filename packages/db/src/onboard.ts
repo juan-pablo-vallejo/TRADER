@@ -1,13 +1,12 @@
-// Onboarding (TASKS, Release 0.1 R3): a real company, its invoice number counter and its
-// first admin — the one person nobody exists to invite (PRD, Access). The owner runs it,
+// Onboarding: a real company, its invoice number counter and its
+// first admin — the one person nobody exists to invite. The owner runs it,
 // against a deployed database, through run-onboard.ts; the seed is the development fixture
 // and stays on the compose server. It runs as the owner for the seed's reasons (owner.ts).
 // Unlike the seed it is not idempotent and takes no id: the company's id is the database's
-// own, a second run is refused by the name, and both counters are stated, because a
+// own, a second run is refused by the name, and the counter is stated, because a
 // contractor's series continues from the numbers already issued on paper.
-// It tells no identity provider and writes no audit row (ARCHITECTURE, 2026-11-12
-// onboarding): the owner creates the admin's login at the provider with the same number,
-// and the first sign-in binds it.
+// It tells no identity provider: the owner creates the admin's login at the provider with
+// the same number, and the first sign-in binds it.
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -20,7 +19,7 @@ const counter = z.coerce.number().int().min(1).max(INT4_MAX);
 
 export const onboardingSchema = z.strictObject({
   companyName: text(200),
-  // An IANA zone this runtime knows; work_date is derived in it (RULES).
+  // An IANA zone this runtime knows; work_date is derived in it.
   timezone: z
     .string()
     .refine((zone) => Intl.supportedValuesOf("timeZone").includes(zone), {
@@ -28,9 +27,9 @@ export const onboardingSchema = z.strictObject({
     }),
   nextInvoiceNumber: counter,
   adminName: text(200),
-  // The binding key, E.164, United States and Canada only: users_sign_in_phone_e164 (0037)
+  // The binding key, E.164, United States and Canada only: users_sign_in_phone_e164
   // and the API's signInPhoneSchema hold the same pattern. Required, as roster.invite
-  // requires it (ARCHITECTURE, 2026-11-12 a sign-in number on every new invitation). Never
+  // requires it. Never
   // normalised here: a number is typed as it will be matched.
   adminPhone: z.string().regex(/^\+1[2-9][0-9]{9}$/, "not a +1 E.164 number"),
   adminEmail: z.email().max(320).optional(),
@@ -82,7 +81,7 @@ export async function onboard(
     throw new Error("refusing to onboard: a company of that name exists");
   }
   // A sign-in address is matched across every company and binds only when exactly one row
-  // holds it (ARCHITECTURE, phone identity): a second holder would lock both people out.
+  // holds it: a second holder would lock both people out.
   if (taken[0]?.address === true) {
     throw new Error(
       "refusing to onboard: the admin's number or email is already on a roster",

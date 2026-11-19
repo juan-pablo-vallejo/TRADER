@@ -1,4 +1,4 @@
-// Stage 3 line 1b: identity resolution and first-sign-in binding through the protected
+// Identity resolution and first-sign-in binding through the protected
 // procedure, against the real database as trader_app. Every failure is the same UNAUTHORIZED
 // and leaves every users row exactly as it was.
 import { users } from "@trader/db/schema";

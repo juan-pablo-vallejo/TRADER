@@ -1,4 +1,4 @@
-// Customers (PRD, Target users: the admin's). Admin only, at the gate; the target's visibility
+// Customers. Admin only, at the gate; the target's visibility
 // and the unarchived-jobs rule are judged inside each writer under its locks.
 import { listCustomers, listOutput } from "../customers/list";
 import {

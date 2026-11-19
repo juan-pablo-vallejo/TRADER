@@ -1,4 +1,4 @@
-// TASKS:50: the error-reporting seam, pure. A report is minimized — no message, params or
+// The error-reporting seam, pure. A report is minimized — no message, params or
 // identity reaches it, whatever was thrown — and reporting never throws, rejects or blocks.
 import { TRPCError } from "@trpc/server";
 import { DrizzleQueryError } from "drizzle-orm";

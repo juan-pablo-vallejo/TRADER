@@ -1,11 +1,11 @@
-// What the office's repair editors send to `labor.repair` (ARCHITECTURE, 2026-11-05, office
-// labor repairs), built from what `labor.ledger` showed and nothing else. Pure: no React, no
+// What the office's repair editors send to `labor.repair`,
+// built from what `labor.ledger` showed and nothing else. Pure: no React, no
 // request. A correction names its root — the entry with no `correctsEventId`, or the one a
 // correction names — and the entry the office saw in effect for it, which the server holds
 // it to (`repair_stale`); it keeps its entry's type, and only a start may move to another
 // job. An added entry goes on the session's job as the set leaves it. Times are entered as
 // the company's clock read them (zoned.ts); an entry whose time was not touched keeps its
-// instant to the millisecond. Consumed by ledger-screen.tsx.
+// instant to the millisecond. Consumed by entries-screen.tsx.
 import type { AppRouter } from "@trader/api";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 
@@ -125,7 +125,7 @@ export const voidOperation = (session: LedgerSession): Unminted => ({
   voidsEventId: session.rootEventId,
 });
 
-// Gives a set its ids (ARCHITECTURE invariant 2: UUIDv7 from the client that originates the
+// Gives a set its ids (UUIDv7, from the client that originates the
 // record), one millisecond apart in the set's order: two entries at the same time are placed
 // by id, so the ids must sort as the office listed them. The same set for the same person
 // gets the same ids again, so a send that was never answered is sent again as itself and

@@ -50,7 +50,6 @@ export type Catalog = {
   entry: {
     types: { started: string; paused: string; resumed: string; ended: string };
     unsent: string;
-    // The server stored it and the office has to approve it before it counts.
     refused: string;
     refusals: {
       not_scheduled: string;

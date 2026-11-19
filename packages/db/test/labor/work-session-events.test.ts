@@ -1,4 +1,4 @@
-// Stage 2 line 3: the labor ledger, asserted against the migrated container. Rolled-back
+// The labor ledger, asserted against the migrated container. Rolled-back
 // transactions throughout; see helpers.ts. The mutations are raw SQL on purpose: no Drizzle
 // update or delete against this table exists anywhere, tests included.
 import { sql } from "drizzle-orm";
@@ -329,7 +329,7 @@ describe("work_session_events", () => {
     });
   });
 
-  // 0050: an entry's flags are stored with it, and counting never reads them.
+  // An entry's flags are stored with it, and counting never reads them.
   it("defaults flags to none and stores the ones given, in their order", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);

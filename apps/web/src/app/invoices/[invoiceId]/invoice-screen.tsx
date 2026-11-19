@@ -375,7 +375,7 @@ function today(): string {
 
 const METHODS = ["check", "cash", "card", "bank_transfer", "other"] as const;
 
-// What the customer has paid, as the office recorded it (PRD, Invoicing and exports): what
+// What the customer has paid, as the office recorded it: what
 // is owed, every payment and reversal, and — while the invoice is issued and something is
 // owed — the form that records one. A payment is reversed, never edited or removed.
 function Payments({ invoice }: { invoice: Invoice }) {

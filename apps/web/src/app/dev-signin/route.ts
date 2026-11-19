@@ -1,6 +1,6 @@
 // Development sign-in: names an email and sets the cookie the identity seam bridges. It
 // asserts an identity rather than proving one, which is why it exists only where the
-// development adapter is on: switched off, it answers 404 by name (RULES), never 403, and a
+// development adapter is on: switched off, it answers 404, never 403, and a
 // built app (NODE_ENV=production) is always off. Plain Responses, so the module is callable
 // in tests as Next calls it.
 import { devIdentityEnabled, signInEmailSchema } from "@trader/api";

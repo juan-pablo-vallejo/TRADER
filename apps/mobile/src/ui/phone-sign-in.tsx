@@ -1,5 +1,5 @@
-// Sign-in by a code sent to the person's phone (ARCHITECTURE, 2026-11-12: SMS-code sign-in
-// for workers). The identity provider sends and checks the code; this screen
+// Sign-in by a code sent to the person's phone. The identity provider sends and checks the
+// code; this screen
 // only asks for the number and then the code. Nobody signs up here: a number the provider
 // does not know, or one no roster holds, is told to ask the office. Rendered only inside
 // the provider (app/_layout.tsx), in a build that has its key.

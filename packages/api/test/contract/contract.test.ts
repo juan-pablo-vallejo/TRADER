@@ -1,4 +1,4 @@
-// `@trader/api/contract` (TASKS R4): what the phone may import as values. Three things are
+// `@trader/api/contract`: what the phone may import as values. Three things are
 // held here. Each list the contract restates is the schema's own list, member for member and
 // in its order. The labor rejection codes are exactly the server's union — checked by the
 // compiler, both ways. And every file of the contract imports zod and its own siblings and

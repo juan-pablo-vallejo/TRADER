@@ -1,4 +1,4 @@
-// TASKS S5, Copy Last Week: assignment.copyPreview, copyConfirm and copyUndo (copy.ts). The
+// Copy Last Week: assignment.copyPreview, copyConfirm and copyUndo (copy.ts). The
 // preview writes nothing and says what will be created and what is left out and why; a
 // confirmation writes exactly the preview it names, or nothing and the new one; sent again it
 // creates nothing; undo removes the whole copy or none of it. Every

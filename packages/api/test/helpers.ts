@@ -474,7 +474,7 @@ type EventInput = {
   flags?: EntryFlag[];
 };
 
-// One ledger row, written as the owner (the API's writers are later lines).
+// One ledger row, written as the owner.
 export async function eventIn(tx: Tx, day: WorkDay, e: EventInput): Promise<string> {
   const server = new Date(e.server ?? e.client);
   const id = uuidv7(server.getTime());
@@ -543,7 +543,7 @@ export async function asTenant(tx: Tx, companyId: string) {
 
 export type HttpCall = { path: string; input?: unknown; mutation?: boolean };
 
-// One HTTP request through tRPC's fetch adapter: what the route handler (Stage 4) will do. One
+// One HTTP request through tRPC's fetch adapter: what the route handler does. One
 // call is sent unbatched, so `status` is that call's own; several are one batch, whose status
 // says nothing about any single result. `identify` turns the request's headers into the
 // identity, as an adapter does; by default every request carries `who`.
@@ -694,7 +694,7 @@ export async function workedDay(tx: Tx, d: WorkDay) {
 // (sync/push-commit.test.ts) run in a database of their own instead, made by the owner,
 // migrated through the whole journal — which also proves a fresh replay on every run — and
 // dropped afterwards with everything append-only that was committed in it. The compose and CI
-// user is a superuser (MEMORY), so it may CREATE DATABASE; if that ever stops holding, these
+// user is a superuser, so it may CREATE DATABASE; if that ever stops holding, these
 // suites fail, never skip.
 export async function disposableDb() {
   const name = `trader_t_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;

@@ -1,6 +1,6 @@
 // The mail service this server hands to invoice.send (packages/api, core/mailer.ts): Resend
-// over its HTTP API, read per call from the environment (ARCHITECTURE: Email, Resend,
-// invoice delivery only). No mail package: one POST.
+// over its HTTP API, read per call from the environment (invoice delivery
+// only). No mail package: one POST.
 //
 // Three variables (.env.example): `RESEND_API_KEY` and `MAIL_FROM` together make a mail
 // service; blank, every send fails closed as `mail_not_configured`. `INVOICE_EMAIL_ALLOWLIST`

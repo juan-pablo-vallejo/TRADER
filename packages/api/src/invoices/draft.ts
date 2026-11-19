@@ -4,7 +4,7 @@
 // (read.ts, suggest) holds that figure as it was then and never follows the hours.
 // `save` replaces the draft's lines whole, in the order sent, and sets its tax: what is
 // stored is what the admin saw. An issued invoice is not changed here at all — the database
-// refuses it as well (0010).
+// refuses it as well.
 //
 // Ids are the browser's: a `create` sent again answers `duplicate`. Lock order: the caller
 // re-read, then the invoice's row FOR UPDATE, which is what an issue takes, so a save and an

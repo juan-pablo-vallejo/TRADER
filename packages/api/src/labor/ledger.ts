@@ -1,17 +1,17 @@
-// labor.ledger (PRD, Office review: the office sees any worker's recorded day — sessions, the
-// events behind them, what is pending and why). One worker's sessions whose work date falls in
+// labor.ledger: the office sees any worker's recorded day — sessions and the events behind
+// them. One worker's sessions whose work date falls in
 // a range of days, each with every event behind it: the sources in effect, the ones a
 // correction replaced, and its void. Raw facts are the rows as stored; derived state is the
-// fold's (fold.ts) and the accounting's (approval.ts), computed here by the same functions the
-// approval queue uses and never a second way. It also carries what labor.repair names: a
+// fold's (fold.ts) and the accounting's (accounting.ts), computed here by the same functions
+// the hours read uses and never a second way. It also carries what labor.repair names: a
 // correction's root is the event with no `correctsEventId` (or the one a correction names),
 // the source it replaces is that root's event `in_effect`, and a void names `rootEventId`.
 //
-// Plain reads under RLS: no lock, no write, no audit row. The ledger and its decisions are one
-// statement, so a session's accounting is one committed state; names and closeouts are read
+// Plain reads under RLS: no lock, no write. The ledger is one
+// statement, so a session's accounting is one committed state; names are read
 // after and may be newer. The whole ledger is read whatever the range, because the fold is
 // defined over all of it; the range selects sessions, and there is no limit, so nothing in the
-// range is ever left out. No coordinates, cost, rate or rounded hours. Consumed by
+// range is ever left out. No coordinates or rounded hours. Consumed by
 // routers/labor.ts.
 import { ROLES } from "../contract/enums";
 import {

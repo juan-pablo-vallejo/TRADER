@@ -44,6 +44,55 @@ gh run list --branch main --limit 3
 gh run watch <run-id> --exit-status
 ```
 
+## Deployed databases
+
+Local development needs none of this. A deployed database has two connections:
+
+| Used for                            | Endpoint                    | Role                    |
+| ----------------------------------- | --------------------------- | ----------------------- |
+| Migrations, onboarding, `pg_dump`   | direct (no `-pooler`)       | the database's owner    |
+| The deployment's own `DATABASE_URL` | pooled (host has `-pooler`) | `trader_app`, its login |
+
+The pooled endpoint accepts no `SET`, no session advisory lock and no startup `options`; the
+application needs none of them, and migrations never go through it. `trader_app` is created
+by the migration itself, in SQL. Never create it, or any role the application uses, in
+Neon's console, CLI or API: a role made there can bypass row-level security.
+
+- **Before the first migration:** the project's Postgres is 18 (the schema uses
+  `uuidv7()`), `public` is empty (drop any sample table the console made), and the owner
+  role has `rolbypassrls` (it writes under forced row-level security).
+- **A deployed database is never migrated by accident.** With `DATABASE_URL` set, every
+  `drizzle-kit` command refuses to run unless `TRADER_MIGRATE_PURPOSE` says who is asking:
+  `deploy` (the deploy job) or `owner` (this runbook).
+- **Migrate first, then deploy.** The deploy job does it in that order. Pending migrations
+  run in one transaction: a failure leaves the database as it was. A wrong migration is
+  rolled forward with a new one; once production exists, a migration that has run is never
+  edited.
+- **A change that cannot ship in one step** (a rename, a narrowed type, a removed column)
+  is three: expand (add the new shape beside the old, written by both), move (the code uses
+  the new shape alone), contract (drop the old).
+- **The application role's password** is set once per database, after its first migration,
+  as the owner (`alter role trader_app password ...`, shown below). It lives in the
+  deployment's `DATABASE_URL` and nowhere else. `GET /api/ready` answers 200 only when the
+  connection logged in as `trader_app`, which is neither a superuser nor able to bypass
+  row-level security, and every company table has row-level security forced; pointed at
+  the owner's connection string it answers 503.
+- **Onboarding** writes a company, its invoice counter and its first admin in one script,
+  as the owner (the command is below). It is a dry run until `--apply` is added: every
+  statement runs and is rolled back, and it prints the database's name and the ids it would
+  have written. `--next-invoice` is where the contractor's own series continues and cannot
+  be lowered afterwards. It refuses a company name that exists and a number already on any
+  roster, and it tells Clerk nothing: create the admin there with the same number.
+- **To prove a database matches the journal**, migrate an empty local one and compare
+  schemas; nothing but comment lines naming the server version may differ.
+
+  ```sh
+  POSTGRES_DB=trader_schema_check DATABASE_URL= pnpm db:migrate   # after `create database`
+  pg_dump --schema-only --no-owner --no-privileges -d '<local trader_schema_check>' > local.sql
+  pg_dump --schema-only --no-owner --no-privileges -d '<direct endpoint, owner>' > deployed.sql
+  diff local.sql deployed.sql
+  ```
+
 ## Release to production (the owner)
 
 1. Open `https://github.com/juan-pablo-vallejo/TRADER/compare/production...main`, or ask

@@ -1,6 +1,6 @@
-// The synthetic company (TASKS, Stage 4: demo fixture), as data. A clean baseline that renders
-// well on every office screen, plus one instance of each abnormal scenario the Stage 4 screens
-// need, each stated with the answer and the approval reasons the API is expected to give.
+// The synthetic company, as data. A clean baseline that renders
+// well on every office screen, plus one instance of each abnormal scenario the office screens
+// need, each stated with the answer and the flags the API is expected to give.
 // Nothing here is a real person, address or domain: `.invalid` is reserved (RFC 2606), and the
 // coordinates are a point in Providence used only as a job's place. Consumed by demo/run.ts.
 import type { SeedCompany } from "@trader/db";
@@ -30,8 +30,8 @@ export type Persona = {
   job: "j1" | "j2" | null;
 };
 
-// Emails are lower case already: the development subject is `dev:` + the lower-cased email
-// (ARCHITECTURE, development sign-in), and the browser's sign-in must find the rows these
+// Emails are lower case already: the development subject is `dev:` + the lower-cased email,
+// and the browser's sign-in must find the rows these
 // callers bind.
 export const PEOPLE: readonly Persona[] = [
   {
@@ -221,15 +221,12 @@ export const BASELINE_TIMES = {
 // run.ts compares every acknowledgement to them exactly, so a drifted rule fails the run.
 export const SCENARIOS = {
   // The history is a backlog: every seeded clock event is delivered long after it was
-  // captured, so it says so — captured offline — and carries `offline` (V1-D01: an entry that
-  // claimed to be online that long ago would be flagged instead). The admin approves the
-  // ordinary ones in a step of their own; the scenarios below stay pending.
+  // captured, so it says so — captured offline — and carries `offline` (an entry that
+  // claimed to be online that long ago would be flagged `clock_skewed` instead).
   backlog: { reasons: ["offline"] as EntryFlag[] },
   // Luis's second Thursday reached the office claiming an online capture, days after the
   // fact: the server's receipt comparison flags every event of it, at the time it claims.
   lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as EntryFlag[] },
-  // Tom's last day is the one ordinary day the office has not approved yet.
-  offlineDay: { who: "tom", day: 9, reasons: ["offline"] as EntryFlag[] },
   // Omar forgot to clock out and set the time himself on the last day.
   userTimedEnd: {
     who: "omar",

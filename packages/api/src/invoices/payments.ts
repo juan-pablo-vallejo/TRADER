@@ -1,11 +1,11 @@
-// invoice.recordPayment and invoice.reversePayment (PRD, Invoicing and exports: the office
-// records the payments a customer makes; ARCHITECTURE, Payments and delivery; TASKS R7).
+// invoice.recordPayment and invoice.reversePayment: the office
+// records the payments a customer makes.
 // TRADER captures and processes nothing: a payment is a note of money that arrived — amount,
 // day, method, a note — against an issued invoice. It changes nothing on the invoice; what
 // is owed is derived (read.ts). A payment recorded by mistake is reversed by a second row,
 // never edited or removed; both then count toward nothing.
 //
-// The database judges each insert under the invoice's row lock (0045): the invoice is issued
+// The database judges each insert under the invoice's row lock: the invoice is issued
 // and not void, the payments that stand never total more than it, a reversal names a
 // standing payment of the same invoice for its amount. This module holds that row first,
 // so it can answer in words what the database would refuse, and names the database's own

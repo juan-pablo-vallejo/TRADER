@@ -1,4 +1,4 @@
-// TASKS:48, partial failure: full atomicity across procedures is impossible without bypassing
+// Partial failure: full atomicity across procedures is impossible without bypassing
 // one-transaction-per-call, so the demo database is the unit of atomicity. A failure before
 // anything commits leaves no database; a failure after N committed steps leaves exactly those
 // steps' rows, a plain re-run refuses, and `--reset` recovers.

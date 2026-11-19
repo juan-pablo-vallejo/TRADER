@@ -1,4 +1,4 @@
-// TASKS:46: customer.list, create, update, deactivate, reactivate — every customer of the
+// customer.list, create, update, deactivate, reactivate — every customer of the
 // caller's company with its unarchived-job count; blank optional text stored NULL; a customer
 // with a job not yet archived is never deactivated, judged under its row lock; admin only, a
 // missing or foreign id one FORBIDDEN; a caller deactivated mid-call UNAUTHORIZED.

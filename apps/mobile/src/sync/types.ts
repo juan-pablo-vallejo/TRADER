@@ -1,4 +1,4 @@
-// The outbox and what it is kept in (ARCHITECTURE, Sync protocol). A record is written once,
+// The outbox and what it is kept in. A record is written once,
 // at capture, and never changed after: only its standing moves — `pending` until a push
 // takes it, `syncing` while one is in the air, `settled` once the server has it, `rejected`
 // when the server never will. `Store` is what the sync cycle and the screens need of the
@@ -20,7 +20,7 @@ export type OutboxRecord = {
   syncingSince: number | null;
   // The server's refusal, for a rejected record.
   code: string | null;
-  // Why the server sent it to approval, for a settled one; empty when it counts as it is.
+  // What the server flagged it for, for a settled one; empty when it has no flag.
   reasons: string[];
 };
 

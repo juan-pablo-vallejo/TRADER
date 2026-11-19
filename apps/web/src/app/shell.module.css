@@ -1,4 +1,4 @@
-/* The office shell below the header (DESIGN, Layout; ARCHITECTURE, office web client). Narrow:
+/* The office shell below the header. Narrow:
    one column, the navigation above the content. Wide (768 px and up): the navigation on the
    left, the content in a column capped at the 1280 target. */
 .shell {

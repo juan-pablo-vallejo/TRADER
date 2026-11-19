@@ -1,4 +1,4 @@
-// Entry point for `pnpm demo` (TASKS, Stage 4: demo fixture): the synthetic company written into
+// Entry point for `pnpm demo`: the synthetic company written into
 // a demo database of its own on the local compose server, through the real procedures. It reads
 // the root .env as run-seed.ts does; shell variables win over it. Flags: --db <name> (default
 // trader_demo, must match the demo pattern), --anchor YYYY-MM-DD (a Monday; default two weeks

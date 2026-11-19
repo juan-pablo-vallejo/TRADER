@@ -1,8 +1,8 @@
-// The row editor (DESIGN, UI components): a table row's Edit toggle and the editor row that
+// The row editor: a table row's Edit toggle and the editor row that
 // opens beneath it, plus the two pieces every editor is built from — a section and the footer
 // where a destructive button stands last and alone — and the destructive action itself, which
-// says what it will do before it does it. Consumed by the roster, customers, jobs
-// and pay-periods screens.
+// says what it will do before it does it. Consumed by the people, customers, jobs,
+// hours, schedule and invoice screens.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
@@ -77,14 +77,14 @@ export function EditorFooter({ children }: { children: ReactNode }) {
   return <div className={table.footer}>{children}</div>;
 }
 
-// A destructive action (DESIGN, principle 5: ceremony matches consequence). The first press
+// A destructive action: ceremony matches consequence. The first press
 // only shows what will happen, in a sentence, with the action and a way out; the second does
 // it. Never a bare "Are you sure?". `quiet` is the text form, for removing one item of a list.
 // Focus moves to Cancel, the safe choice, so a held Enter cannot confirm; both buttons are
 // described by the sentence, so a screen reader reads the consequence with them; and focus
 // returns to the first button when the question closes. With `acknowledge`, the question
 // also holds a checkbox carrying that sentence, and the destructive button stays disabled
-// until it is ticked (DESIGN, Pay-period close): the tick is asked for again every time the
+// until it is ticked: the tick is asked for again every time the
 // question opens.
 export function DestructiveAction({
   label,

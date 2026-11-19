@@ -1,4 +1,4 @@
-// TASKS, Stage 4: the reconciliation's read over the real transport — the route module as
+// The Hours screen's read over the real transport — the route module as
 // Next calls it. `labor.hours` is the office's alone; a range with nothing in it answers
 // zeros in the shape the screen reads, and a range past 31 days is refused. No labor is
 // committed here: a ledger row can never be removed, and what the read derives from one is

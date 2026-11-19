@@ -1,4 +1,4 @@
-// Stage 2 line 7: the startup guard (ARCHITECTURE invariant 5), asserted against the migrated
+// The startup guard (invariant 5), asserted against the migrated
 // container. Rolled-back transactions throughout; see helpers.ts. Each refusal removes one
 // condition inside the transaction, so nothing outlives the test.
 import { sql } from "drizzle-orm";

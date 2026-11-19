@@ -1,4 +1,4 @@
-// The i18n layer (RULES; DESIGN, Localization): the language the phone is set to when it is
+// The i18n layer: the language the phone is set to when it is
 // English or Spanish, English otherwise, and whatever the person then chooses in Settings.
 // The choice is kept in the device's store, so it is still made the next time the app
 // opens. Screens read `useStrings()` and never hold a string of their own.

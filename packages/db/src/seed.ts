@@ -1,7 +1,7 @@
-// The seed (TASKS Stage 2): one company, its invoice number counter, and its first admin —
-// the one user nobody exists to invite (PRD, Access). A development and CI fixture with
+// The seed: one company, its invoice number counter, and its first admin —
+// the one user nobody exists to invite. A development and CI fixture with
 // placeholder values, never the pilot's onboarding. It runs as the owner: trader_app may
-// insert neither companies nor invoice_counters (0013), and FORCE (0014) denies every row to
+// insert neither companies nor invoice_counters, and FORCE denies every row to
 // a role with no policy that does not bypass row-level security, so the seed refuses any such
 // role, trader_app included, before its first write — the startup guard's inverse.
 // Raw SQL because the admin's conflict target is the expression index on lower(email), which
@@ -14,7 +14,7 @@ import { assertBypassingRole, type Executor } from "./owner";
 
 // What one bootstrap writes: the company, its counter and its first admin. The development
 // seed below is the default; the demo fixture (api demo/) hands in its own, so the three raw
-// statements have one home (ARCHITECTURE, seed decision) whichever company they bootstrap.
+// statements have one home whichever company they bootstrap.
 export type SeedCompany = {
   companyId: string;
   companyName: string;
@@ -24,9 +24,9 @@ export type SeedCompany = {
 };
 
 // Placeholders, never the partner's details. The id is fixed because companies has no
-// natural key and a re-run must find its row. America/New_York: the pilot is in RI/MA (PRD).
+// natural key and a re-run must find its row. America/New_York: the pilot is in RI/MA.
 // The email is the invitation key (users.ts); identity_subject stays NULL until the first
-// sign-in binds it (Stage 3).
+// sign-in binds it.
 export const SEED: SeedCompany = {
   companyId: "019a4a00-0000-7000-8000-000000000001",
   companyName: "Pilot Company",
@@ -61,7 +61,7 @@ export async function seed(
     VALUES (${company.companyId}, 1)
     ON CONFLICT (company_id) DO NOTHING
   `);
-  // The one statement allowed to write role on conflict (MEMORY): a request path never does.
+  // The one statement allowed to write role on conflict: a request path never does.
   // The WHERE keeps a re-run on an intact admin a no-op, so updated_at stays put.
   await executor.execute(sql`
     INSERT INTO users (company_id, email, name, role)

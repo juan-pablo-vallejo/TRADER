@@ -1,9 +1,8 @@
 name: Audit
 
-# Beside CI and never part of it (RULES, Git and CI): the required check stays `check`.
+# Beside CI and never part of it: the required check stays `check`.
 # Two readings of the tree with no secret and no write: known advisories against the
-# lockfile, and credentials committed by mistake. The release gate reads this run
-# (ARCHITECTURE, 2026-11-16, production and the release gate).
+# lockfile, and credentials committed by mistake.
 on:
   push:
     branches: [main]

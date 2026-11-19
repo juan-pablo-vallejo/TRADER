@@ -1,11 +1,11 @@
-// The demo run (TASKS, Stage 4: demo fixture): the synthetic company written through the real
+// The demo run: the synthetic company written through the real
 // procedures, as the office and the phones would write it, in a numbered sequence of steps.
 // Nothing here opens a transaction or names a table: every write is a call on `appRouter`
 // through a caller whose context holds the application-role pool (`app`), so the runtime guard
 // (db guard.ts) refuses an owner pool on the first call. The one owner write, the bootstrap of
 // company, counter and first admin, is handed in as `bootstrap` and is the seed's (db seed.ts).
-// Full atomicity is impossible without bypassing one-transaction-per-call (ARCHITECTURE,
-// 2026-11-04), so the database the caller prepared is the unit of atomicity: a failed step
+// Full atomicity is impossible without bypassing one-transaction-per-call,
+// so the database the caller prepared is the unit of atomicity: a failed step
 // throws DemoFailure naming the step and what answered, and target.ts's recovery drops that
 // database. Consumed by run-demo.ts and the demo tests.
 import { randomUUID } from "node:crypto";
@@ -59,7 +59,7 @@ export type RunOptions = {
 };
 
 // A step that did not answer as planned. The message names the step and the answer, never a
-// query or its parameters (MEMORY: DrizzleQueryError's message holds both).
+// query or its parameters (DrizzleQueryError's message holds both).
 export class DemoFailure extends Error {
   constructor(
     public readonly step: Step,
@@ -126,8 +126,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     return answer;
   };
 
-  // One caller per persona: the identity the development adapter would verify (ARCHITECTURE,
-  // development sign-in: the subject is `dev:` + the lower-cased email), so the browser's
+  // One caller per persona: the identity the development adapter would verify
+  // (the subject is `dev:` + the lower-cased email), so the browser's
   // sign-in later resolves the same bound rows.
   const callers = new Map<string, Caller>();
   const callerFor = (email: string): Caller => {

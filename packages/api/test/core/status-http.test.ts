@@ -1,4 +1,4 @@
-// TASKS:50: status.get through the fetch adapter, as the route handler will serve it. Public:
+// status.get through the fetch adapter, as the route handler will serve it. Public:
 // answered with no identity, a garbage one, and a database that fails on any use. Its answer
 // is exactly `{ version, state }`; malformed input is a 400 and never reported; an invalid
 // configuration pauses, reported once however many requests arrive.

@@ -1,10 +1,9 @@
-// roster.deactivate and roster.reactivate (ARCHITECTURE: deactivated_at, state derived). A
+// roster.deactivate and roster.reactivate (deactivated_at, state derived). A
 // deactivated account resolves to no user from its next call on (resolve-user.ts); its bound
 // identity_subject is kept, so reactivation — deactivated_at back to NULL and nothing else —
 // lets the same login in again, and an unbound invitation becomes the one invitation again.
 // Deactivating the last active admin is `rejected` `last_admin` under lock.ts's locks. Neither
-// pseudonymizes: PRD's account deletion is Stage 8's. Each change leaves one audit row
-// (core/audit.ts). Consumed by routers/roster.ts.
+// pseudonymizes. Consumed by routers/roster.ts.
 import { users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";

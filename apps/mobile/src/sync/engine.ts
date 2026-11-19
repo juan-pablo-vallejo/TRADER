@@ -1,5 +1,5 @@
-// One sync cycle, and the rule that two never run at once (ARCHITECTURE, Sync protocol;
-// Operational sync states). A cycle asks the service's state first; then, oldest first, it
+// One sync cycle, and the rule that two never run at once.
+// A cycle asks the service's state first; then, oldest first, it
 // pushes this person's pending records and reads each answer — `accepted` and `duplicate`
 // settle a record, `rejected` condemns it for good, and a record the answer leaves out goes
 // back to pending under the same id; then it pulls. A call that throws is the network, never
@@ -11,7 +11,7 @@ import superjson from "superjson";
 
 import type { Snapshot, Store, Transport } from "./types";
 
-// ARCHITECTURE, Sync protocol: a record stuck `syncing` is reclaimed after two minutes.
+// A record stuck `syncing` is reclaimed after two minutes.
 export const RECLAIM_MS = 2 * 60_000;
 // The server takes at most this many records in a push (its MAX_RECORDS).
 export const BATCH = 100;

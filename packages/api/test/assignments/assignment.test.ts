@@ -1,4 +1,4 @@
-// TASKS S3, the weekly schedule's writers: assignment.create, update and remove — an admin
+// The weekly schedule's writers: assignment.create, update and remove — an admin
 // schedules any active person of the company on any job of the company that is not
 // archived, whatever their role; the day and the times kept as written; ids the browser's,
 // a resend `duplicate`; an overlap refused, a day that would not resolve refused with its
@@ -90,7 +90,7 @@ async function shift(
 }
 
 // A clock-in of w1 on `job` at `at` (an instant; New York is UTC-5 that week), and the shift
-// locked by it — written as the owner, as push will under enforcement (TASKS S4).
+// locked by it — written as the owner, as push does where the schedule is enforced.
 async function punched(tx: Tx, day: WorkDay, shiftId: string, at: string, job = day.J) {
   await tx.execute(sql`reset role`);
   const eventId = await eventIn(tx, day, {

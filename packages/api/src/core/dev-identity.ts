@@ -3,9 +3,9 @@
 // why it is gated. Off unless TRADER_DEV_IDENTITY=enabled, and then only under an allowlisted
 // NODE_ENV; every deployed build and runtime is NODE_ENV=production, so a deployment cannot
 // accept a named identity. Nor is it trusted where DATABASE_URL is set: that is a deployed
-// database — the one development shares with staging — and a `dev:` sign-in would bind a
-// roster row there for good (ARCHITECTURE, 2026-11-16, shared database). The check runs per request, never at module load, so `next build`
-// never fails (RULES). Pure over the env record it is handed, like db/src/env.ts.
+// database, and a `dev:` sign-in would bind a
+// roster row there for good. The check runs per request, never at module load, so `next build`
+// never fails. Pure over the env record it is handed, like db/src/env.ts.
 import { DEV_EMAIL_HEADER, DEV_PHONE_HEADER, DEV_SUBJECT_HEADER } from "../contract/dev";
 import { z } from "zod";
 
@@ -30,7 +30,7 @@ const flagSchema = z.object({
 });
 
 // Whether the adapter would trust the headers: the flag, under an allowlisted NODE_ENV. A
-// route that exists only for development answers 404 on false (RULES: a switched-off route).
+// route that exists only for development answers 404 on false.
 // Never throws, so a wrongly enabled deployment hides its routes while the adapter refuses.
 export function devIdentityEnabled(env: Record<string, string | undefined>): boolean {
   const flag = flagSchema.safeParse(env);

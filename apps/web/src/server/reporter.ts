@@ -1,5 +1,5 @@
 // The error reporter of this server: the ErrorReporter seam's deployed implementation
-// (ARCHITECTURE, error reporting; RULES, the three thin seams). Every report is written to
+// (one of the three thin seams). Every report is written to
 // stderr as before, which the platform's logs keep; where a Sentry address is configured
 // the same minimized event is also sent there (sentry-event.ts). Sentry is one file's
 // concern: swapping the vendor is this file and instrumentation.ts.

@@ -1,4 +1,4 @@
-// Stage 2 line 5: invoice line items, asserted against the migrated container. Rolled-back
+// Invoice line items, asserted against the migrated container. Rolled-back
 // transactions throughout; see helpers.ts.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 

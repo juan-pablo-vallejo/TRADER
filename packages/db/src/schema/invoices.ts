@@ -41,20 +41,20 @@ export const invoiceCounters = pgTable(
   ],
 );
 
-// An invoice (PRD, Invoicing and exports): draft → issued → void. State is derived from the
-// timestamps, like closed_at and decision (invariant 7): draft is issued_at IS NULL; issued
+// An invoice: draft → issued → void. State is derived from the
+// timestamps: draft is issued_at IS NULL; issued
 // is issued_at set and voided_at NULL; void is voided_at set. No status enum, so no rule
 // below names an enum member. An office row, so the id defaults.
 //
-// Money (invariant 3): tax_cents is the one input — the admin enters tax per invoice and
+// Money (invariant 6): tax_cents is the one input — the admin enters tax per invoice and
 // TRADER does the arithmetic. The subtotal is the sum of the lines' amount_cents and the
 // total is that plus tax, both derived and stable because a trigger freezes the lines
 // and this row at issue. Every line carries the invoice's currency through
 // a foreign key over (company_id, id, currency), which also makes the currency immutable
 // once a line exists.
 //
-// Migration 0010 adds the lifecycle: every invoice is born a draft; issue assigns `number`
-// from invoice_counters; an issued row refuses every UPDATE except the single void and
+// The baseline migration adds the lifecycle: every invoice is born a draft; issue assigns
+// `number` from invoice_counters; an issued row refuses every UPDATE except the single void and
 // refuses DELETE; a draft may be deleted, cascading its lines.
 export const invoices = pgTable(
   "invoices",
@@ -66,9 +66,9 @@ export const invoices = pgTable(
     customerId: uuid("customer_id").notNull(),
     jobId: uuid("job_id").notNull(),
     // NULL while draft; assigned at issue by the trigger, never supplied. Unique per
-    // company: the series. The partner's format (prefix, padding) is presentation, Stage 7.
+    // company: the series. The partner's format (prefix, padding) is presentation.
     number: integer("number"),
-    // ISO 4217, upper case; no default (ARCHITECTURE decisions).
+    // ISO 4217, upper case; no default.
     currency: text("currency").notNull(),
     taxCents: integer("tax_cents").notNull(),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
@@ -84,7 +84,7 @@ export const invoices = pgTable(
     unique("invoices_company_id_id_currency_unique").on(t.companyId, t.id, t.currency),
     unique("invoices_company_id_number_unique").on(t.companyId, t.number),
     // Composite over jobs' (company_id, customer_id, id) unique, so the invoice is to the
-    // job's customer and both belong to the row's company (invariant 4) — and a job's
+    // job's customer and both belong to the row's company (invariant 5) — and a job's
     // customer is immutable once an invoice exists.
     foreignKey({
       name: "invoices_company_id_customer_id_job_id_fk",
@@ -101,7 +101,7 @@ export const invoices = pgTable(
       columns: [t.companyId, t.voidedByUserId],
       foreignColumns: [users.companyId, users.id],
     }),
-    // The invoice list and the drafts (Stage 7); a job's invoices; a customer's.
+    // The invoice list and the drafts; a job's invoices; a customer's.
     index("invoices_company_id_issued_at_idx").on(t.companyId, t.issuedAt),
     index("invoices_job_id_idx").on(t.jobId),
     index("invoices_customer_id_idx").on(t.customerId),

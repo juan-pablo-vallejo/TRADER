@@ -1,4 +1,4 @@
-// The ledger's repair editors enter a time as the company's clock read it: the conversion to
+// The Hours screen's repair editors enter a time as the company's clock read it: the conversion to
 // an instant and back, across both daylight-saving changes of America/New_York in 2026
 // (March 8, clocks skip 02:00–03:00; November 1, clocks repeat 01:00–02:00).
 import { describe, expect, it } from "vitest";

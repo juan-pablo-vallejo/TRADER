@@ -1,4 +1,4 @@
-// TASKS R7, invoice.send: an issued invoice's page sent by email, each send recorded. The
+// invoice.send: an issued invoice's page sent by email, each send recorded. The
 // mail service here is a stand-in that keeps what it was handed and answers as it is told;
 // the real adapter is apps/web's (server/mailer.ts). Rolled-back transactions; the table's
 // own guards are the db suite's (billing/invoice-sends.test.ts).

@@ -1,4 +1,4 @@
-// The roster (PRD, Target users: the admin's). Admin only, at the gate; the last-admin rule
+// The roster. Admin only, at the gate; the last-admin rule
 // and the target's visibility are judged inside each writer under its locks.
 import {
   deactivate,

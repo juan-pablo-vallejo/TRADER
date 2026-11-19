@@ -1,6 +1,6 @@
 "use client";
 
-// Copy Last Week (DESIGN, Copy Last Week): a preview first — how many shifts will be created
+// Copy Last Week: a preview first — how many shifts will be created
 // and each one left out with why — then one primary button that states the count. All are
 // created or none: the confirmation names the preview by its fingerprint, and the server
 // writes nothing unless that is still the plan (api assignments/copy.ts). The copy's id is

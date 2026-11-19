@@ -61,7 +61,7 @@ async function main() {
 // Not top-level await: tsx runs a package without "type": "module" as CommonJS.
 main().catch((error: unknown) => {
   // The message of a refusal is ours and names no value; a driver error's message can hold
-  // the statement and its parameters (MEMORY), so only its class and SQLSTATE are printed.
+  // the statement and its parameters, so only its class and SQLSTATE are printed.
   if (error instanceof Error && error.message.startsWith("refusing to onboard")) {
     console.error(error.message);
   } else {

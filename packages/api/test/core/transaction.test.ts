@@ -1,4 +1,4 @@
-// Stage 3 line 1b: the protected procedure's transaction. One per procedure call; settings
+// The protected procedure's transaction. One per procedure call; settings
 // established inside it whatever the pooled connection carries; the runtime role checked in
 // each; a failed procedure leaves nothing behind; the procedure sees no pool.
 import { sql } from "drizzle-orm";

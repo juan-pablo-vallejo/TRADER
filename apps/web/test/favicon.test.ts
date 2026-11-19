@@ -1,4 +1,4 @@
-// TASKS:44: /favicon.ico is served from assets/brand/logo.png, byte for byte, through the
+// /favicon.ico is served from assets/brand/logo.png, byte for byte, through the
 // route module as Next will call it.
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";

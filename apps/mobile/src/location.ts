@@ -1,4 +1,4 @@
-// The foreground location stamp (PRD, Time tracking; ARCHITECTURE, Sync protocol). A reading
+// The foreground location stamp. A reading
 // is taken while the app is in front and kept for a short while; a capture reads the one in
 // hand and never waits for another. Permission refused, a reading too old or none at all is
 // a record with no location, which the server flags for the office — never a blocked clock.

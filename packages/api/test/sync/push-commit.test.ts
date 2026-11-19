@@ -1,4 +1,4 @@
-// Stage 3 line 7: sync.push against real commits (ARCHITECTURE, sync.push). Rolled-back tests
+// sync.push against real commits. Rolled-back tests
 // cannot show that a record commits on its own, that a failed one leaves nothing, or that two
 // connections serialize; these do, in a database of their own (helpers.ts, disposableDb),
 // migrated through the whole journal and dropped at the end with everything committed in it.
@@ -181,7 +181,7 @@ describe("sync.push — commits, record by record", () => {
         clientTimestamp: new Date("2026-10-05T16:00:00Z"),
       }),
     ];
-    // Timed an hour ahead: refused, and refused again on the resend (V1-D01).
+    // Timed an hour ahead: refused, and refused again on the resend.
     const future = labor(d.w.id, d.J, {
       clientTimestamp: new Date(Date.now() + 3_600_000),
     });
@@ -220,7 +220,7 @@ describe("sync.push — commits, record by record", () => {
   });
 });
 
-// No deferred check stands behind a pushed event any more (0050): a flagged one commits with
+// No deferred check stands behind a pushed event: a flagged one commits with
 // its flags and nothing else, an admin's own like anyone's.
 describe("sync.push — a flagged event at commit", () => {
   it("commits an admin's flagged event with its flags", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-// The Profile form (DESIGN, UI components): name and contact phone as form fields; email
+// The Profile form: name and contact phone as form fields; email
 // read-only, captioned "Managed by your sign-in provider"; no role, company or identity
 // field. `me.get` fills it, `me.update` saves it and invalidates `me.get`. Consumed by
 // page.tsx.

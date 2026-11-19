@@ -1,5 +1,5 @@
 #!/bin/sh
-# The field app's flow suite on one device (TASKS, mobile flow suite; R5, S7, S8). Every
+# The field app's flow suite on one device. Every
 # flow that writes is followed by a read of the server's own tables. The demo database
 # `trader_demo_e2e` is rebuilt first, so a run starts from the same place every time; it is
 # a local database made for this and nothing else. The suite starts and stops `next dev`

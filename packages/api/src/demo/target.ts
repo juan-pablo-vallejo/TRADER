@@ -1,7 +1,7 @@
-// Where the demo fixture may write (TASKS, Stage 4: "never the pilot's database"). The demo
+// Where the demo fixture may write: never a deployed database. The demo
 // owns a database of its own on the local compose server and nothing else: a positive check,
 // failing closed. (1) `DATABASE_URL` must be unset — set, it is the deployed shape (db env.ts),
-// which is how the pilot's and production databases are reached. (2) The compose shape pins the
+// which is how the staging and production databases are reached. (2) The compose shape pins the
 // loopback host and port in env.ts; the configured development database is used for exactly
 // two statements, CREATE DATABASE and, under `reset`, DROP DATABASE, of a name this module has
 // matched against DEMO_DB_PATTERN. (3) An existing target is refused unless `reset` asked for
@@ -81,8 +81,7 @@ async function exists(admin: Db, name: string): Promise<boolean> {
 }
 
 // Waits until no backend is attached to the database, then drops it. pool.end() resolves before
-// the server's backends are gone, and dropping under them would kill them mid-close
-// (MEMORY: disposableDb).
+// the server's backends are gone, and dropping under them would kill them mid-close.
 async function dropDatabase(admin: Db, name: string): Promise<void> {
   for (let i = 0; i < 200; i++) {
     const { rows } = await admin.execute<{ n: number }>(

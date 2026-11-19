@@ -1,4 +1,4 @@
-// TASKS:45: own profile over the real transport — me.update by POST writes the caller's name
+// Own profile over the real transport — me.update by POST writes the caller's name
 // and phone and answers the narrowed record; 401 anonymous.
 import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
 import { users } from "@trader/db/schema";

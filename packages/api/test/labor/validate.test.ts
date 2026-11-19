@@ -160,7 +160,7 @@ describe("illegal transitions", () => {
     );
   });
 
-  it("judges a skewed candidate where it was captured, not where it arrived (V1-D01)", () => {
+  it("judges a skewed candidate where it was captured, not where it arrived", () => {
     const ev = builder();
     const day = [ev("started", at("08:00")), ev("ended", at("16:00"))];
     // Captured at 12:00 inside the session, flagged, received the next night: at its receipt
@@ -543,7 +543,7 @@ describe("two sources for one worker", () => {
   });
 });
 
-// An office repair set (ARCHITECTURE row 187): every candidate in place, one replay.
+// An office repair set: every candidate in place, one replay.
 const repair = (existing: readonly LaborEvent[], ...candidates: LaborEvent[]) =>
   validateEvents(ctxFor(existing), existing, candidates);
 const noAt = (eventId: string, code: string, conflictingEventId?: string) => ({

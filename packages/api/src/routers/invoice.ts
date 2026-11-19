@@ -1,4 +1,4 @@
-// Invoices (PRD, Invoicing and exports): admin only, at the gate. What a draft may hold and
+// Invoices: admin only, at the gate. What a draft may hold and
 // when an invoice may be issued or voided is judged inside each procedure.
 import { roleProcedure, router } from "../core/trpc";
 import {

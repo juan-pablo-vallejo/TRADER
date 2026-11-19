@@ -1,5 +1,4 @@
-// The Weekly Schedule screen's own arithmetic (DESIGN, Weekly Schedule, Shift card, Copy
-// Last Week): the week a day is in, the rows by employee and by jobsite, the overlaps a
+// The Weekly Schedule screen's own arithmetic: the week a day is in, the rows by employee and by jobsite, the overlaps a
 // change would make, and a refusal in words. The rules are the server's and are tested there
 // (api eligibility.test.ts); here only what the screen does with them.
 import { describe, expect, it } from "vitest";

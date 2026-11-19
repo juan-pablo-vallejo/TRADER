@@ -1,4 +1,4 @@
-// Stage 3 line 1a: identity binding on users (0015, and 0038 for the phone number). The
+// Identity binding on users. The
 // request context finds the caller's row before the tenant is known, through policies keyed
 // on app.identity_subject, app.identity_email and app.identity_phone, and binds an invitation
 // on first sign-in. The guard trigger makes the
@@ -81,7 +81,7 @@ async function twoCompanies(tx: Tx) {
   };
 }
 
-// As the request context will: the verified identity in three transaction-local settings.
+// As the request context does: the verified identity in three transaction-local settings.
 async function signIn(tx: Tx, subject = "", email = "", phone = "") {
   await tx.execute(sql`
     select set_config('app.identity_subject', ${subject}, true),

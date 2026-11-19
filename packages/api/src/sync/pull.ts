@@ -13,7 +13,7 @@ import { deriveSessions, workDate } from "../labor/work-date";
 import type { AppUser } from "../core/resolve-user";
 import type { PullOutput } from "../contract/pull";
 
-// ARCHITECTURE, sync.pull: today and the 13 days before it in the company's zone, plus any
+// Today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
 export const WINDOW_DAYS = 14;
 

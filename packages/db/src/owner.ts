@@ -1,8 +1,8 @@
-// What every owner-side writer checks before its first write: FORCE (0014) denies every row
+// What every owner-side writer checks before its first write: FORCE denies every row
 // to a role with no policy that does not bypass row-level security, and the attribute is
-// never inherited through membership (MEMORY), so it is read on the role itself. The seed
+// never inherited through membership, so it is read on the role itself. The seed
 // and the onboarding both write companies and invoice_counters, which trader_app may not
-// insert (0013): this is the startup guard's inverse.
+// insert: this is the startup guard's inverse.
 import { sql } from "drizzle-orm";
 
 import type { Db } from "./client";

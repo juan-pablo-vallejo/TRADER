@@ -1,6 +1,5 @@
-// The deployed environment, checked once when the server starts (instrumentation.ts;
-// ARCHITECTURE, Before the first deployment: "environment validated at start"). A request
-// path never throws for a missing variable (RULES: guards fail closed at request time), so
+// The deployed environment, checked once when the server starts (instrumentation.ts). A
+// request path never throws for a missing variable (guards fail closed at request time), so
 // without this a deployment missing its database or its keys starts, answers 401 and 500,
 // and looks merely broken. Here it refuses to start and says which variables, by name.
 // Composed from the validators each variable already has — the database's (packages/db),

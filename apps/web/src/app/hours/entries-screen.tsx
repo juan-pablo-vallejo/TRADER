@@ -244,7 +244,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
           strings.roles[r.worker.role],
           r.worker.active ? null : strings.deactivated,
           `${formatDay(asked.from)} – ${formatDay(asked.to)}`,
-          strings.closeoutZone(zone),
+          strings.timesIn(zone),
         ]
           .filter((part) => part !== null)
           .join(" · ")}

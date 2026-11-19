@@ -2,7 +2,7 @@
 // figure is never rounded or divided as a float on the way to the screen.
 import { describe, expect, it } from "vitest";
 
-import { hours, looksLikeSignInPhone, signedHours, signInPhone } from "../src/app/format";
+import { hours, looksLikeSignInPhone, signInPhone } from "../src/app/format";
 
 describe("a sign-in number", () => {
   it("is shown as it is said, and anything else as it is", () => {
@@ -50,17 +50,5 @@ describe("hours from hundredths", () => {
 
   it("keeps the sign of a figure below zero", () => {
     expect([-5, -850].map(hours)).toEqual(["-0.05", "-8.50"]);
-  });
-});
-
-describe("signed hours", () => {
-  it("always writes the sign of an adjustment, and none on zero", () => {
-    expect([650, 5, -50, -800, 0].map(signedHours)).toEqual([
-      "+6.50",
-      "+0.05",
-      "-0.50",
-      "-8.00",
-      "0.00",
-    ]);
   });
 });

@@ -157,7 +157,7 @@ describe("ordering", () => {
     expect(foldSessions([b, a])).toHaveLength(1);
   });
 
-  it("keeps a skewed event at its captured time, not its receipt (V1-D01)", () => {
+  it("keeps a skewed event at its captured time, not its receipt", () => {
     const ev = builder();
     const start = ev("started", at("08:00"));
     // Flagged and received a day later: the end still sits at the 16:00 it was captured with.

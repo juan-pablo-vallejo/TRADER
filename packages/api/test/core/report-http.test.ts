@@ -1,4 +1,4 @@
-// TASKS:50: reporting through the fetch adapter, as the route handler will wire it. A failed
+// Reporting through the fetch adapter, as the route handler will wire it. A failed
 // call is reported after its transaction rolled back, reports carry nothing of the request, and
 // a reporter that fails changes no answer and no commit. Expected answers are never reported.
 import { customers } from "@trader/db/schema";

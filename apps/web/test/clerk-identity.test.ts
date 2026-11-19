@@ -1,4 +1,4 @@
-// TASKS, R2: Clerk behind the identity seam. A session here is a fake handed to the adapter
+// Clerk behind the identity seam. A session here is a fake handed to the adapter
 // in place of Clerk's `auth()`: what is tested is everything on this side of Clerk's own
 // verification — which claims make an identity, that a session without an invitation binds
 // nothing, and that a production build never consults the development identity.

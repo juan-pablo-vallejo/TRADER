@@ -1,5 +1,5 @@
-// Deterministic ids and clock arithmetic for the demo fixture (TASKS, Stage 4: demo fixture).
-// Every demo record carries a UUIDv7 (ARCHITECTURE invariant 2) whose 48-bit time is the
+// Deterministic ids and clock arithmetic for the demo fixture.
+// Every demo record carries a UUIDv7 (docs/ARCHITECTURE.md, invariant 2) whose 48-bit time is the
 // record's own client time and whose 74 random bits come from a generator seeded by the run's
 // anchor, so one anchor yields one id set every run: a second run against the same database is
 // recognisable as duplicates, never as new rows. The test helpers' uuidv7 stays random, because
@@ -62,7 +62,7 @@ function zoneOffsetMs(utcMs: number, timeZone: string): number {
   return asUtc - utcMs;
 }
 
-// The instant at which a calendar day's wall-clock time occurs in a zone (DESIGN: times render
+// The instant at which a calendar day's wall-clock time occurs in a zone (times render
 // in the company's timezone; the demo states them that way too). Two passes settle an
 // instant on either side of a DST change; no demo time falls inside a transition gap.
 export function atZone(date: string, time: string, timeZone: string): Date {
@@ -91,7 +91,7 @@ export function addDays(date: string, days: number): string {
 }
 
 // The default anchor: the Monday two weeks before `now`'s date in the zone, so the office sees
-// recent, closed-out weeks and one week still open. ISO weekday arithmetic on the date only.
+// two recent recorded weeks and the week it is opened in. ISO weekday arithmetic on the date only.
 export function defaultAnchor(now: Date, timeZone: string): string {
   const today = dateIn(now, timeZone);
   const [y, m, d] = today.split("-").map(Number) as [number, number, number];

@@ -6,7 +6,7 @@ import type { entryFlag } from "@trader/db/schema";
 
 export type EntryFlag = (typeof entryFlag.enumValues)[number];
 
-// ARCHITECTURE, Sync protocol: device skew is |device_now − server_now| against a five-minute
+// Device skew is |device_now − server_now| against a five-minute
 // tolerance, measured once per push. Strictly beyond it is skewed: exactly five minutes is not.
 // One of the two sources of a labor event's `clock_skewed`; judgeEventTime below is the other.
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
@@ -19,13 +19,13 @@ export function measureSkew(deviceNow: Date, serverNow: Date): Skew {
   return { clockSkewMs, clockSkewed: Math.abs(clockSkewMs) > CLOCK_SKEW_TOLERANCE_MS };
 }
 
-// The server's own check on the time an event claims (V1-D01; ARCHITECTURE, Sync protocol),
+// The server's own check on the time an event claims (invariant 3),
 // against its receipt: the stamp the event is stored with (`server_timestamp`), so the verdict
 // can be read back off the row. `future`: later than the receipt by more than the tolerance,
 // whatever the event says of itself; it is refused. `skewed`: it claims an online capture at
 // the moment it carries — not captured offline, not timed by the user — yet precedes its
-// receipt by more than the tolerance; it is stored at that time, flagged, and a person
-// decides. An offline or user-timed event is already in approval for that, however old.
+// receipt by more than the tolerance; it is stored at that time and flagged for the
+// office. An offline or user-timed event already carries its own flag, however old.
 // Strict on both sides, as measureSkew is: exactly the tolerance is neither.
 export type EventTimeVerdict = "plausible" | "skewed" | "future";
 
@@ -59,9 +59,9 @@ export function haversineMeters(a: Point, b: Point): number {
 
 export type JobPlace = { lat: number; lng: number; radiusM: number } | null;
 
-// "Its location stamp is missing or outside the job's radius" (PRD). Stamps are taken at
+// Its location stamp is missing or outside the job's radius. Stamps are taken at
 // clock-in, clock-out and job switch — `started` and `ended` — so a pause or resume is never
-// flagged. Accuracy is not subtracted: an imprecise fix errs toward approval. A job with no
+// flagged. Accuracy is not subtracted: an imprecise fix errs toward the flag. A job with no
 // place can only flag a missing stamp (jobs.ts).
 export function locationFlagged(
   type: "started" | "paused" | "resumed" | "ended",
@@ -95,7 +95,7 @@ export function laborReasons(e: {
   stamp: Point | null;
   job: JobPlace;
   clockSkewed: boolean;
-  // A start the schedule did not admit, stored for review (sync/schedule.ts). Push alone
+  // A start the schedule did not admit, stored flagged (sync/schedule.ts). Push alone
   // says so: an office repair is never judged by the schedule.
   unscheduled?: boolean;
 }): EntryFlag[] {

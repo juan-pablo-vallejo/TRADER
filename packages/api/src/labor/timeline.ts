@@ -2,8 +2,7 @@
 // writer for that worker until the transaction ends. Every writer of labor events follows one
 // path — loadWorkerTimeline, validateEvent, insert, commit — in one transaction, so two
 // concurrent pushes for a worker cannot each validate against a timeline missing the other.
-// Consumed by sync.push (Stage 3) and every later writer of labor events, and — for the
-// company-wide lock — by closeout.submit.
+// Consumed by sync.push (sync/labor.ts) and labor.repair.
 import { workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -16,7 +15,7 @@ export type WorkerTimeline = {
   // The newest receipt stamp committed for the worker, or null for a worker with no events.
   baselineStamp: Date | null;
   // The receipt stamp this transaction writes, explicitly, on every event it accepts for the
-  // worker (decision D6). Read after the lock and floored at baseline + 1 ms, so a worker's
+  // worker. Read after the lock and floored at baseline + 1 ms, so a worker's
   // stamps rise in acceptance order even when this transaction began before one that
   // committed first (now() is transaction start) or the clock steps back.
   receivedAt: Date;
@@ -33,13 +32,11 @@ export async function assertReadCommitted(tx: Tx, who: string) {
   }
 }
 
-// The company's field-write lock. Every writer of field records takes it shared — labor
-// through loadWorkerTimeline, materials in their own writers — and the day closeout takes it
-// exclusive, so a closeout reads a company's labor and materials with no writer in flight: a
-// record either committed before the closeout's read or is written after its commit, and then
-// sees the closeout. Shared holders never block each other. Lock order: a transaction takes
+// The company's field-write lock. Every writer of labor events takes it shared, through
+// loadWorkerTimeline; no procedure takes it exclusive.
+// Shared holders never block each other. Lock order: a transaction takes
 // any row locks it needs on jobs, users or companies before this lock and none after
-// it (foreign-key checks take KEY SHARE, which no closeout lock conflicts with). Keyed on the
+// it. Keyed on the
 // request's tenant, so it fails closed without one: a NULL key would lock nothing.
 export async function lockCompanyFieldWrites(
   tx: Tx,
@@ -67,8 +64,7 @@ export async function loadWorkerTimeline(
 ): Promise<WorkerTimeline> {
   await assertReadCommitted(tx, "loadWorkerTimeline");
 
-  // Shared, before the worker's lock (the order every writer follows): a closeout holding it
-  // exclusive is waited out, and this writer is never part of a closeout's read.
+  // Shared, before the worker's lock (the order every writer follows).
   await lockCompanyFieldWrites(tx, "shared");
 
   // Its own statement, before the read. A transaction-level advisory lock needs no grant and
@@ -86,8 +82,8 @@ export async function loadWorkerTimeline(
   return { events, baselineStamp, receivedAt };
 }
 
-// One worker's whole ledger in the fold's shape, with no lock: callers hold whatever excludes
-// concurrent writers (the worker's lock above, or the closeout's exclusive field-write lock).
+// One worker's whole ledger in the fold's shape, with no lock: a caller that writes holds
+// what excludes concurrent writers (the worker's lock above).
 // Row-level security confines it to the request's tenant.
 export async function readWorkerEvents(tx: Tx, workerId: string): Promise<LaborEvent[]> {
   return tx
