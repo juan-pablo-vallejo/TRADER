@@ -51,7 +51,7 @@ read-only for you.
 3. `main` stays green: `pnpm check` before every commit.
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
    clock. Everything else gets ordinary tests.
-5. Every screen the crew sees exists in English and Spanish.
+5. Every screen exists in English and Spanish. An invoice to a customer is in English.
 6. Versions, prices and platform rules are looked up, never recalled.
 7. Commits are as large as the work needs; the message says what changed and why. Signed, no
    trailers.

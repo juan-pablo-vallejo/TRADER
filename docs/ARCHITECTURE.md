@@ -5,8 +5,8 @@ describes the target: where the code differs, the code is wrong.
 
 ## People and roles
 
-- Two roles: **worker** (phone) and **admin** (office web, plus the phone if they work a
-  shift).
+- Two roles: **worker** (phone) and **admin** (office web; on the phone, their own clock
+  when they work a shift, and the Crew tab).
 - One login per person, by office invitation, on their own mobile number. Sign-in is a
   texted code; an admin may also use an emailed code. No passwords.
 - A login belongs to exactly one company. New people start as workers; making an admin is a
@@ -14,7 +14,8 @@ describes the target: where the code differs, the code is wrong.
 - Worker can: see own week, clock in / switch / out on own shift, see own hours, edit own
   name and phone.
 - Worker cannot: see anyone else's hours or schedule, or change a recorded entry.
-- Admin can: everything in the office, for their company only.
+- Admin can: everything in the office, for their company only; on the phone, see today's
+  crew, call, add a shift for today, move someone to another job, set a jobsite's location.
 - Nobody, admin included, rewrites a recorded clock event or an issued invoice. A fix is a
   new correcting entry; a wrong invoice is voided and reissued.
 
@@ -32,7 +33,7 @@ SQLite + outbox                       |
 
 Beside it:  Clerk (sign-in codes)
             Resend (invoice email)
-            Sentry (errors)
+            Sentry (errors: office, API, phone)
 ```
 
 **Stack**

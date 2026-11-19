@@ -98,7 +98,8 @@ only the owner merges it.
    Claude to open the pull request.
 2. Read the commits and anything under `packages/db/migrations/`. Try staging.
 3. Merge with the admin bypass. The deploy job migrates production's database, then deploys
-   the office and the API. It does not build the phone app yet (TASKS 17 and 21).
+   the office and the API. It does not build the phone app yet ("Preview builds" and "The
+   release job builds the phone app" in `docs/TASKS.md`).
 4. Check `https://app.jpteq.app/api/ready` and one office screen.
 
 ### Undo a release
@@ -194,8 +195,9 @@ Once, in this order.
 
 - A worker's number changed. If they have signed in before, change it on their Clerk user:
   they keep working, and People goes on showing the old number, because the office cannot
-  edit a sign-in number yet (After MVP 2 in `docs/TASKS.md`). If they have never signed in,
-  deactivate them in People and invite them again with the new number.
+  edit a sign-in number yet ("Change a worker's sign-in number from the office", after MVP
+  in `docs/TASKS.md`). If they have never signed in, deactivate them in People and invite
+  them again with the new number.
 - "Where are my hours?": an entry lives on the phone until it syncs, and the phone shows
   what needs attention.
 

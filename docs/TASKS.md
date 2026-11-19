@@ -143,7 +143,7 @@ Android user.
 
 ### Release 1: the crew's first day
 
-- [ ] 1. **Documents follow this list.** `docs/ARCHITECTURE.md`, People and roles: the
+- [x] 1. **Documents follow this list.** `docs/ARCHITECTURE.md`, People and roles: the
       roles line reads "admin (office web; on the phone, their own clock when they work a
       shift, and the Crew tab)", and "Admin can" ends "; on the phone, see today's crew,
       call, add a shift for today, move someone to another job, set a jobsite's location".
