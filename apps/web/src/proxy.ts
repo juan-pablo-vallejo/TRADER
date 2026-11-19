@@ -5,7 +5,9 @@
 // Clerk's own redirect. It protects no route: the API's gates are the only authority, 401
 // and 403 from packages/api, and a page without a session draws its own empty state. Where
 // Clerk is not this server's identity — the development identity, or no keys, as in CI's
-// build — nothing of Clerk runs.
+// build — nothing of Clerk runs. Nor does it for a public page (sign-in-paths.ts): a
+// visitor to the homepage has no session to verify, and Clerk's check would send their
+// browser to Clerk's host and back (seen on staging, 2026-11-19).
 // The policy's: on a built app every response it passes carries the content security policy
 // (server/csp.ts) with a nonce made for that request, handed to the page render on the
 // request's headers, where Next looks for it. A development server gets none: it is never
@@ -22,6 +24,7 @@ import {
   NONCE_HEADER,
 } from "./server/csp";
 import { identityMode } from "./server/identity-mode";
+import { isPublicPath } from "./server/sign-in-paths";
 
 function pass(request: NextRequest, publishableKey: string | null): NextResponse {
   if (process.env.NODE_ENV !== "production") return NextResponse.next();
@@ -42,6 +45,8 @@ function pass(request: NextRequest, publishableKey: string | null): NextResponse
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
   const env = clerkEnv(process.env);
   if (identityMode(process.env) !== "clerk" || env === null) return pass(request, null);
+  // A public page: the policy and its nonce, with no Clerk host in it, and no session read.
+  if (isPublicPath(request.nextUrl.pathname)) return pass(request, null);
   // Clerk reads its two keys from the environment itself: handed over as options here, the
   // secret key would have to be encrypted on its way to `auth()` under a third key.
   // The origins a session token may name as its issuer's party: a token minted for another

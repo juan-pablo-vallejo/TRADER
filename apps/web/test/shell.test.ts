@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { officeHost } from "../src/server/environment";
-import { OFFICE_HOME } from "../src/server/sign-in-paths";
+import { isPublicPath, OFFICE_HOME, PUBLIC_PATHS } from "../src/server/sign-in-paths";
 
 const at = (path: string) =>
   fileURLToPath(new URL(`../src/app/${path}`, import.meta.url));
@@ -58,6 +58,39 @@ describe("the three layouts", () => {
     const order = [...nav.matchAll(/\{ href: "(\/[a-z]+)"/g)].map((m) => m[1]);
     expect(order).toEqual(["/schedule", "/hours", "/jobs", "/invoices", "/people"]);
     expect(nav).toContain('also: ["/customers"]');
+  });
+});
+
+describe("the public pages", () => {
+  it("are four exact addresses, and nothing of the office or the API", () => {
+    expect([...PUBLIC_PATHS]).toEqual(["/", "/get", "/privacy", "/terms"]);
+    for (const path of ["/", "/get", "/get/", "/privacy", "/terms"]) {
+      expect([path, isPublicPath(path)]).toEqual([path, true]);
+    }
+    for (const path of [
+      "/schedule",
+      "/sign-in",
+      "/api/trpc/me.get",
+      "/api/ready",
+      "/get/more",
+      "/terms/../schedule",
+      "/Terms",
+      "",
+    ]) {
+      expect([path, isPublicPath(path)]).toEqual([path, false]);
+    }
+  });
+
+  it("are passed by the proxy before Clerk's middleware is reached", () => {
+    const proxy = readFileSync(
+      fileURLToPath(new URL("../src/proxy.ts", import.meta.url)),
+      "utf8",
+    );
+    const skip = proxy.indexOf(
+      "if (isPublicPath(request.nextUrl.pathname)) return pass(request, null);",
+    );
+    expect(skip).toBeGreaterThan(0);
+    expect(skip).toBeLessThan(proxy.indexOf("return clerkMiddleware("));
   });
 });
 
