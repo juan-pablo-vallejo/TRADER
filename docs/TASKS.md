@@ -12,12 +12,17 @@ from the same record.
 
 **Twenty screens.** Four public, five on the phone, eleven in the office.
 
-**Public, on `jpteq.app`**
+**Public**
 
-- Home: D Sierra Painting's homepage. One page: their logo, what they do and where, call and
-  email, their own photos, Team sign-in, Get the app.
+- Home, at `dsierrapainting.jpteq.app`: D Sierra Painting's homepage. One page: their logo,
+  what they do and where, call and email, their own photos, Team sign-in, Get the app.
 - Get the app: where the invitation message points.
 - Privacy. Terms.
+
+**Addresses.** Everything of D Sierra's is at `dsierrapainting.jpteq.app`: the homepage at
+`/`, and their sign-in, office and public pages beside it. `app.jpteq.app` is the neutral
+address: the phone app's API, the Demo company, and the checks a release runs. `jpteq.app`
+and `www` only send a visitor to `app.jpteq.app`.
 
 **Phone, in English and Spanish, the language chosen in the app**
 
@@ -93,11 +98,21 @@ The phone app changes only with a new build; the office changes the moment a rel
    clock event is touched.
 5. The dashboard is TRADER's own data. Sentry reports errors from the office, the API and
    the phone; nothing measures usage.
-6. The product wears D Sierra's brand and `jpteq.app` opens on their homepage. Its words and
-   photos are theirs, kept in one file; nothing on it is invented.
+6. The product wears D Sierra's brand, and everything of theirs is at
+   `dsierrapainting.jpteq.app`. The homepage's words and photos are theirs, kept in one
+   file; nothing on it is invented. The homepage and the office share that address, so the
+   homepage never loads anything from another host: no analytics, no widget, no embed. A
+   `jpteq.app` address is only ever served by TRADER itself from the repository; a site a
+   contractor hosts or edits themselves goes on the contractor's own domain.
 7. What prints on an invoice is copied onto it at issue, so an issued invoice's page never
    changes. An invoice to a customer is in English.
 8. An entry the office writes is flagged `corrected` and never `location`.
+9. An address never decides whose data is shown: the signed-in person's company does. The
+   phone app and the release checks use `app.jpteq.app`, so no customer's name is built into
+   the phone app.
+10. In production the Demo company reaches nobody outside: its invoices are emailed only to
+    the deployment's allow-list, blank meaning nobody, and it can invite nobody. Its code is
+    shared by design, so whoever holds it must be harmless.
 
 ## The list
 
@@ -132,8 +147,10 @@ In the order they block. Each can be done ahead of its item.
    they own; their OK to publish them. The repository is public.
 7. Item 21: approve the privacy policy and the terms.
 8. Item 22: one iPhone and one Android phone.
-9. Item 23: production, by `README.md`; then D Sierra's details in Settings, and the
-   TestFlight and Play links for Get the app.
+9. Item 23: production, by `README.md`, which now carries D Sierra's address: its DNS
+   record in Cloudflare, its domain on the Vercel project, and its name in Clerk's allowed
+   subdomains. Then D Sierra's details in Settings, and the TestFlight and Play links for
+   Get the app.
 10. Items 25 and 34: the two releases.
 11. Item 30: confirm the invoice email arrived.
 
@@ -160,8 +177,13 @@ Android user.
 - [ ] 3. **The Demo sign-in without an SMS.** OWNER decides the way first, because it goes
       into Apple's beta review notes: read Clerk's, Apple's and Google's pages, put the
       options to the owner, then build the one chosen so that it admits only the Demo
-      company's people in production and the fixture numbers on staging. Done when
-      staging's phone flow signs in with no code sent.
+      company's people in production and the fixture numbers on staging. The code is
+      shared by design, so in production the company the door admits reaches nobody
+      outside: its invoices are emailed only to the deployment's allow-list, blank meaning
+      nobody, and `roster.invite` refuses it. Neither rule touches staging. `README.md` has
+      the owner invite Demo's people before the Demo pair is set. Done when staging's phone
+      flow signs in with no code sent, and tests show both refusals for the door's company
+      under `TRADER_ENVIRONMENT=production` and neither under `staging`.
 - [x] 4. **Loose ends.** Five small things the cut left, in one session. Cache the browser
       the deploy job installs for the smoke test (`playwright install --with-deps chromium`
       took 21 s to 8 m 47 s). Remove the company field-write lock
@@ -394,13 +416,23 @@ Android user.
   after its next pull.
 
 - [ ] 18. **D Sierra's homepage and Get the app.**
-  - `/` is D Sierra Painting's homepage, one page in English and Spanish: their logo, what
-    they do and where, Call and Email as plain links, their photos, then Team sign-in (to
-    the office's own origin) and Get the app. Its words and pictures are one content file,
-    and a part with no content draws nothing. Nothing on it is invented: no review, no
-    claim, no license number, no photo D Sierra did not supply. OWNER first, from D Sierra:
-    gate 6 above. Without it, build the page from what the repository already holds, the
-    name and the logo, with the two buttons.
+  - Addresses. `TRADER_HOME_HOST` names the host whose `/` is the homepage
+    (`dsierrapainting.jpteq.app` in production) and replaces `TRADER_OFFICE_HOST`. On that
+    host everything else answers as it does anywhere: sign-in, the office, the public pages,
+    the API. On any other host `/` goes to the office. Where the variable is blank, as on
+    staging and a development machine, `/` stays the homepage. Where
+    `CLERK_AUTHORIZED_PARTIES` is set, a page asked for on a host that is not one of its
+    origins is sent to the same path on the first of them, so the office is never drawn
+    under an address a session cannot belong to. Tests cover the home host, the neutral
+    host, an unlisted host, and no variable at all.
+  - The homepage is D Sierra Painting's, one page in English and Spanish: their logo, what
+    they do and where, Call and Email as plain links, their photos, then Team sign-in and
+    Get the app, both on the same host. Its words and pictures are one content file, and a
+    part with no content draws nothing. Nothing on it is invented: no review, no claim, no
+    license number, no photo D Sierra did not supply. It shares its address with the
+    office, so it loads nothing from another host, ever. OWNER first, from D Sierra: gate 6
+    above. Without it, build the page from what the repository already holds, the name and
+    the logo, with the two buttons.
   - `/get` is where the invitation message points. In the phone's language: one button for
     this phone (the TestFlight link on an iPhone, the Play testing link on Android, both on
     a desktop), read from two public variables added to `.env.example`. With a variable
@@ -408,7 +440,7 @@ Android user.
     person's Google account first.
 
   Done when both pages have been seen at 390 and 1280 in both languages on staging and
-  load nothing from another host.
+  load nothing from another host, and the address tests are green.
 
 - [ ] 19. **People, and the invitation message.** People on `DataTable`. A row opens the
       person in the side panel: role (making an admin asks first), location (as the company,
@@ -438,9 +470,11 @@ Android user.
       at a shift's start with the app closed; an admin moves the worker mid-day from the
       Crew tab and the worker's phone offers the second job; Call dials. Done when the
       office shows those hours once, per job, with their flags.
-- [ ] 23. **Production exists.** OWNER, by `README.md`, "Make production exist". Then, in
-      Settings as D Sierra's admin: the company's details, how to pay, the terms and the two
-      switches. And the two links for Get the app in the production project's variables.
+- [ ] 23. **Production exists.** OWNER, by `README.md`, "Make production exist", which now
+      carries D Sierra's address: the DNS record, the Vercel domain, Clerk's allowed
+      subdomains, both origins in `CLERK_AUTHORIZED_PARTIES`, and `TRADER_HOME_HOST`. Then,
+      in Settings as D Sierra's admin: the company's details, how to pay, the terms and the
+      two switches. And the two links for Get the app in the production project's variables.
 - [ ] 24. **The release job builds the phone app.** On a push to `production`: build with
       the production profile and send it to TestFlight and to Play's internal track, with
       the Expo token and the store credentials read from the `production` environment
@@ -590,9 +624,9 @@ Android user.
       and on staging for the homepage and the sign-in page; staging's office screens were
       walked by the smoke test's browser, not looked at by hand, because nobody can sign in
       to staging's office by hand yet (the Clerk entry above). Look once that is settled.
-- [ ] OWNER, with production: `TRADER_OFFICE_HOST=app.jpteq.app` in the production
-      project's variables, so `/` there opens the office and `/` on `jpteq.app` the
-      homepage (`README.md` lists it).
+- [ ] OWNER, with production: `TRADER_HOME_HOST=dsierrapainting.jpteq.app` and
+      `CLERK_AUTHORIZED_PARTIES=https://app.jpteq.app,https://dsierrapainting.jpteq.app` in
+      the production project's variables (`README.md` lists them, from item 18 on).
 - [ ] The Maestro suite's sign-in failed once in three runs on a fresh iPhone 17 simulator:
       the tap on Sign in never reached the API, and the same flow passed on the next two
       runs unchanged. If it recurs, wait for the keyboard before the tap

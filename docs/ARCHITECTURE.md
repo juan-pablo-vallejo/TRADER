@@ -103,8 +103,9 @@ Three, sharing nothing.
 **Production: the crew**
 
 - Runs `production`. Every release the owner merges deploys by itself, through the same job.
-- Vercel project "production" at `app.jpteq.app` (public pages on `jpteq.app`), Neon project
-  "production", Clerk production instance, TestFlight and Play internal builds.
+- Vercel project "production": the office at `app.jpteq.app`, everything of D Sierra's at
+  `dsierrapainting.jpteq.app`, and `jpteq.app` with `www` redirecting to the office.
+- Neon project "production", Clerk production instance, TestFlight and Play internal builds.
 - Two companies: D Sierra and Demo. The owner's alone.
 
 **Keys**
