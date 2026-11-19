@@ -96,7 +96,7 @@ you find under "Found along the way". Never reorder, never add scope.
       Jobs, Schedule, Hours, Invoices. Their tables stay in the schema until item 8. Done
       when none of those routers, screens or tests exist, nothing reads their tables, and
       `pnpm check` is green.
-- [ ] 4. **Hours without an approval queue.** Every accepted clock event counts toward hours
+- [x] 4. **Hours without an approval queue.** Every accepted clock event counts toward hours
       at once. The reasons `sync/reasons.ts` computes today (`offline`, `corrected`,
       `user_timed`, `location`, `clock_skewed`, `unscheduled`; `after_closeout` goes) are
       returned with each entry and shown as flags on the Hours screen. The `approvals`

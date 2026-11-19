@@ -2,16 +2,17 @@
 // job and work date, the day's sum rounded once, half-up to 0.01 h. Pure: no database.
 import { describe, expect, it } from "vitest";
 
-import { sessionApprovals, type Decision } from "../../src/labor/approval";
+import { sessionAccounting } from "../../src/labor/accounting";
 import type { LaborEvent } from "../../src/labor/fold";
 import { dayHours, HUNDREDTH_HOUR_MS, roundHours } from "../../src/labor/hours";
+import type { ApprovalReason } from "../../src/sync/reasons";
 import { at, builder, HOUR, JOB_A, JOB_B, MINUTE, WORKER } from "./events";
 
 const ZONE = "America/New_York";
-const decided = (...pairs: [LaborEvent, Decision][]) =>
-  new Map(pairs.map(([e, d]) => [e.id, d]));
-const cells = (ledger: LaborEvent[], decisions = new Map<string, Decision>()) =>
-  dayHours(WORKER, sessionApprovals(ledger, decisions), ZONE);
+const flagged = (...pairs: [LaborEvent, ApprovalReason[]][]) =>
+  new Map(pairs.map(([e, f]) => [e.id, f]));
+const cells = (ledger: LaborEvent[], flags = new Map<string, ApprovalReason[]>()) =>
+  dayHours(WORKER, sessionAccounting(ledger), ZONE, (id) => flags.get(id) ?? []);
 
 describe("roundHours", () => {
   it("rounds a half-way value up and anything under it down", () => {
@@ -52,10 +53,10 @@ describe("dayHours", () => {
       workerId: WORKER,
       jobId: JOB_A,
       workDate: "2026-10-05",
-      approvedMs: 3 * SPAN,
-      approvedHundredths: 101,
+      workedMs: 3 * SPAN,
+      hundredths: 101,
     });
-    expect(cell!.approvedHundredths).not.toBe(3 * roundHours(SPAN));
+    expect(cell!.hundredths).not.toBe(3 * roundHours(SPAN));
   });
 
   it("keeps two jobs on one day in two cells", () => {
@@ -66,12 +67,10 @@ describe("dayHours", () => {
       ev("started", at("14:00"), { job: JOB_B }),
       ev("ended", at("17:30"), { job: JOB_B }),
     ];
-    expect(cells(ledger).map((c) => [c.jobId, c.workDate, c.approvedHundredths])).toEqual(
-      [
-        [JOB_A, "2026-10-05", 200],
-        [JOB_B, "2026-10-05", 350],
-      ],
-    );
+    expect(cells(ledger).map((c) => [c.jobId, c.workDate, c.hundredths])).toEqual([
+      [JOB_A, "2026-10-05", 200],
+      [JOB_B, "2026-10-05", 350],
+    ]);
   });
 
   it("gives an overnight session wholly to the day it started, in the company's zone", () => {
@@ -84,7 +83,7 @@ describe("dayHours", () => {
       ev("started", at("01:00", "2026-10-07")),
       ev("ended", at("02:00", "2026-10-07")),
     ];
-    expect(cells(ledger).map((c) => [c.workDate, c.approvedHundredths])).toEqual([
+    expect(cells(ledger).map((c) => [c.workDate, c.hundredths])).toEqual([
       ["2026-10-05", 400],
       ["2026-10-06", 100],
     ]);
@@ -98,68 +97,48 @@ describe("dayHours", () => {
       ev("resumed", at("16:30")),
       ev("ended", at("20:30")),
     ];
-    expect(cells(ledger)[0]).toMatchObject({ approvedMs: 8 * HOUR });
+    expect(cells(ledger)[0]).toMatchObject({ workedMs: 8 * HOUR });
   });
 
-  it("keeps a pending session apart, with what the fold measures", () => {
+  it("drops a voided session the moment its void is written", () => {
     const ev = builder();
     const start = ev("started", at("12:00"));
-    const ledger = [
-      start,
-      ev("ended", at("14:00")),
-      ev("started", at("15:00")),
-      ev("ended", at("16:00")),
-    ];
-    expect(cells(ledger, decided([start, null]))).toEqual([
+    const end = ev("ended", at("14:00"));
+    expect(cells([start, end])[0]).toMatchObject({ hundredths: 200 });
+    const gone = ev("voided", at("15:00"), { voids: start.id });
+    expect(cells([start, end, gone])).toEqual([]);
+  });
+
+  it("counts a flagged session whole, and carries its entries' flags in the enum's order", () => {
+    const ev = builder();
+    const start = ev("started", at("12:00"));
+    const end = ev("ended", at("14:00"));
+    const later = ev("started", at("15:00"));
+    const ledger = [start, end, later, ev("ended", at("16:00"))];
+    expect(
+      cells(
+        ledger,
+        flagged(
+          [start, ["unscheduled", "offline"]],
+          [end, ["offline", "user_timed"]],
+          [later, ["location"]],
+        ),
+      ),
+    ).toEqual([
       {
         workerId: WORKER,
         jobId: JOB_A,
         workDate: "2026-10-05",
-        approvedMs: HOUR,
-        approvedHundredths: 100,
-        pendingMs: 2 * HOUR,
-        pendingHundredths: 200,
-        pendingSessions: 1,
-        rejectedSessions: 0,
+        workedMs: 3 * HOUR,
+        hundredths: 300,
         openSessions: 0,
+        flags: ["offline", "user_timed", "location", "unscheduled"],
       },
     ]);
-    expect(cells(ledger, decided([start, "approved"]))[0]).toMatchObject({
-      approvedHundredths: 300,
-      pendingSessions: 0,
-      pendingMs: 0,
-    });
+    expect(cells(ledger)[0]).toMatchObject({ hundredths: 300, flags: [] });
   });
 
-  it("counts a rejected session and none of its time", () => {
-    const ev = builder();
-    const start = ev("started", at("12:00"));
-    const ledger = [start, ev("ended", at("14:00"))];
-    expect(cells(ledger, decided([start, "rejected"]))[0]).toMatchObject({
-      approvedMs: 0,
-      pendingMs: 0,
-      rejectedSessions: 1,
-    });
-  });
-
-  it("drops a voided session, counts one whose void was rejected, withholds a pending void", () => {
-    const ev = builder();
-    const start = ev("started", at("12:00"));
-    const end = ev("ended", at("14:00"));
-    const gone = ev("voided", at("15:00"), { voids: start.id });
-    const ledger = [start, end, gone];
-    expect(cells(ledger)).toEqual([]);
-    expect(cells(ledger, decided([gone, "approved"]))).toEqual([]);
-    expect(cells(ledger, decided([gone, "rejected"]))[0]).toMatchObject({
-      approvedHundredths: 200,
-    });
-    expect(cells(ledger, decided([gone, null]))[0]).toMatchObject({
-      approvedMs: 0,
-      pendingSessions: 1,
-    });
-  });
-
-  it("adds nothing for a session that counts but is still open", () => {
+  it("adds nothing for a session that is still open", () => {
     const ev = builder();
     const ledger = [
       ev("started", at("12:00")),
@@ -168,10 +147,9 @@ describe("dayHours", () => {
       ev("paused", at("16:00")),
     ];
     expect(cells(ledger)[0]).toMatchObject({
-      approvedMs: HOUR,
-      approvedHundredths: 100,
+      workedMs: HOUR,
+      hundredths: 100,
       openSessions: 1,
-      pendingMs: 0,
     });
   });
 
@@ -180,12 +158,9 @@ describe("dayHours", () => {
     const start = ev("started", at("12:00"));
     const end = ev("ended", at("14:00"));
     const fixed = ev("ended", at("15:00"), { corrects: end.id, server: at("18:00") });
-    expect(cells([start, end, fixed])[0]).toMatchObject({ approvedHundredths: 300 });
-    // The correction waits: the whole session does, and the original is not counted beside it.
-    expect(cells([start, end, fixed], decided([fixed, null]))[0]).toMatchObject({
-      approvedMs: 0,
-      pendingSessions: 1,
-      pendingHundredths: 300,
-    });
+    // The correction counts as written; the entry it replaced lends neither time nor flags.
+    expect(
+      cells([start, end, fixed], flagged([end, ["offline"]], [fixed, ["corrected"]]))[0],
+    ).toMatchObject({ workedMs: 3 * HOUR, hundredths: 300, flags: ["corrected"] });
   });
 });

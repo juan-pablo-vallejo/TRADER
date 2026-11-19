@@ -3,22 +3,13 @@
 // record runs in a savepoint of it as trader_app under the day's tenant, as a record's own
 // transaction would. Commit independence is not provable here: the real-commit suite
 // (sync/push-commit.test.ts) proves it.
-import {
-  approvals,
-  crewMembers,
-  crews,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { crewMembers, crews, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import type { Tx } from "../../src/core/context";
 import type { AppUser } from "../../src/core/resolve-user";
-import { decideApproval } from "../../src/approvals/decide";
-import { approvalQueue } from "../../src/approvals/queue";
-import { sessionApprovals, type Decision } from "../../src/labor/approval";
+import { sessionAccounting } from "../../src/labor/accounting";
 import { readWorkerEvents } from "../../src/labor/timeline";
 import { deriveSessions } from "../../src/labor/work-date";
 import { pushLaborEvent, type LaborRecord } from "../../src/sync/labor";
@@ -99,9 +90,6 @@ const rowsOf = (tx: Tx, d: CrewDay) =>
         .from(workSessionEvents)
         .where(eq(workSessionEvents.companyId, d.companyId))
     ).length,
-    approvals: (
-      await tx.select().from(approvals).where(eq(approvals.companyId, d.companyId))
-    ).length,
   }));
 
 async function dayFor(tx: Tx) {
@@ -121,7 +109,7 @@ const at = (iso: string) => new Date(iso);
 const ago = (seconds: number) => new Date(Date.now() - seconds * 1000);
 
 describe("sync.push labor — a worker's own day", () => {
-  it("accepts a day in order, stamps rising, with no approval for a clean capture", async () => {
+  it("accepts a day in order, stamps rising, with no flag for a clean capture", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       const day = [
@@ -164,7 +152,7 @@ describe("sync.push labor — a worker's own day", () => {
       }
       expect([...stamps].sort((a, b) => a - b)).toEqual(stamps);
       expect(new Set(stamps).size).toBe(4);
-      expect(await rowsOf(tx, d)).toEqual({ events: 4, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 4 });
     });
   });
 
@@ -201,6 +189,7 @@ describe("sync.push labor — a worker's own day", () => {
         initiatorUserId: d.w1,
         voidsEventId: null,
         correctsEventId: null,
+        flags: ["clock_skewed"],
       });
       expect(answer).toEqual({
         result: "accepted",
@@ -252,13 +241,13 @@ describe("sync.push labor — a worker's own day", () => {
         code: "job_id_mismatch",
         conflictingId: first.id,
       });
-      expect(await rowsOf(tx, d)).toEqual({ events: 1, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 1 });
     });
   });
 });
 
-describe("sync.push labor — approval facts", () => {
-  it("writes one pending approval with every reason, offline from capture evidence alone", async () => {
+describe("sync.push labor — flags", () => {
+  it("stores every flag with the event, offline from capture evidence alone, and it counts at once", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       const cases: [Partial<Payload>, string[]][] = [
@@ -286,14 +275,14 @@ describe("sync.push labor — approval facts", () => {
           tx,
           d,
           async () =>
-            (await tx.select().from(approvals).where(eq(approvals.eventId, start.id)))[0],
+            (
+              await tx
+                .select({ flags: workSessionEvents.flags })
+                .from(workSessionEvents)
+                .where(eq(workSessionEvents.id, start.id))
+            )[0],
         );
-        expect(row).toMatchObject({
-          reasons,
-          decision: null,
-          materialCorrectionId: null,
-          materialId: null,
-        });
+        expect(row).toEqual({ flags: reasons });
         await push(
           tx,
           w1,
@@ -306,6 +295,13 @@ describe("sync.push labor — approval facts", () => {
         );
         n++;
       }
+      // Four flagged sessions, each counted whole: none waits on anyone.
+      const { byRoot } = sessionAccounting(await readWorkerEvents(tx, d.w1));
+      const counted = [...byRoot.values()];
+      expect(counted.map((c) => [c.accounting, c.complete])).toEqual(
+        cases.map(() => ["eligible", true]),
+      );
+      expect(counted.every((c) => c.eligibleWorkedMs > 0)).toBe(true);
     });
   });
 
@@ -348,7 +344,7 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
         )[0]!,
     );
 
-  it("flags a backdated event that claims an online capture, pending, at the time it carries", async () => {
+  it("flags a backdated event that claims an online capture, at the time it carries", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
       const claimed = new Date(Date.now() - HOUR);
@@ -366,15 +362,12 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
         clockSkewMs: 0,
         capturedOffline: false,
         timeSetByUser: false,
+        flags: ["clock_skewed"],
       });
       // The evidence is on the row: its receipt is more than the tolerance after its time.
       expect(row.serverTimestamp.getTime() - claimed.getTime()).toBeGreaterThan(
         HOUR - 60_000,
       );
-      const [approval] = await asOwner(tx, d, () =>
-        tx.select().from(approvals).where(eq(approvals.eventId, r.id)),
-      );
-      expect(approval).toMatchObject({ reasons: ["clock_skewed"], decision: null });
       // Kept, not replaced: the session starts when the event says it did.
       const [session] = deriveSessions(await readWorkerEvents(tx, d.w1), "UTC");
       expect(session!.startedAt).toEqual(claimed);
@@ -444,7 +437,7 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
           SKEWED,
         ),
       ).toEqual(refused);
-      expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 0 });
       // Inside the tolerance a slightly fast clock is taken as it is: accepted, unflagged.
       expect(
         await push(
@@ -480,7 +473,7 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
           record({ workerId: d.w1, jobId: d.J, type: "ended", clientTimestamp: future }),
         ),
       ).toEqual({ result: "rejected", code: "time_in_future" });
-      expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 0 });
     });
   });
 
@@ -497,7 +490,7 @@ describe("sync.push labor — the time an event claims, against its receipt (V1-
       const stored = await rowOf(tx, d, r.id);
       expect(await push(tx, w1, r, SKEWED)).toEqual({ ...first, result: "duplicate" });
       expect(await rowOf(tx, d, r.id)).toEqual(stored);
-      expect(await rowsOf(tx, d)).toEqual({ events: 1, approvals: 1 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 1 });
     });
   });
 });
@@ -652,7 +645,7 @@ describe("sync.push labor — who may push", () => {
       );
       const error = await rejection(push(tx, w1, record({ workerId: d.w1, jobId: d.J })));
       expect(error).toMatchObject({ code: "UNAUTHORIZED" });
-      expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 0 });
     });
   });
 
@@ -678,7 +671,7 @@ describe("sync.push labor — idempotency", () => {
       const first = await push(tx, w1, r);
       const again = await push(tx, w1, r, SKEWED);
       expect(again).toEqual({ ...first, result: "duplicate" });
-      expect(await rowsOf(tx, d)).toEqual({ events: 1, approvals: 1 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 1 });
     });
   });
 
@@ -726,7 +719,7 @@ describe("sync.push labor — idempotency", () => {
           code: "id_conflict",
         });
       }
-      expect(await rowsOf(tx, d)).toEqual({ events: 1, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 1 });
     });
   });
 
@@ -776,38 +769,38 @@ describe("sync.push labor — idempotency", () => {
         result: "rejected",
         code: "id_conflict",
       });
-      expect(await rowsOf(tx, d)).toEqual({ events: 0, approvals: 0 });
+      expect(await rowsOf(tx, d)).toEqual({ events: 0 });
     });
   });
 });
 
-// Stage 4 (V1-D10 as amended): an admin's own labor needs no approval. The worker's role is
-// read under the lock the scope takes, at this receipt; nothing is judged again afterwards.
-describe("sync.push labor — an admin's own labor (V1-D10 as amended)", () => {
+// An admin's own labor is flagged like anyone's. Flags are judged once, at receipt, and
+// nothing is judged again afterwards.
+describe("sync.push labor — an admin's own labor", () => {
   // Every reason a push can compute, and the reading that flags the clock.
   const FLAGGED = { capturedOffline: true, timeSetByUser: true, location: null } as const;
   const REASONS = ["offline", "user_timed", "location", "clock_skewed"];
 
-  const approvalsOf = (tx: Tx, d: CrewDay, eventId: string) =>
-    asOwner(tx, d, () =>
-      tx.select().from(approvals).where(eq(approvals.eventId, eventId)),
+  const flagsOf = (tx: Tx, d: CrewDay, eventId: string) =>
+    asOwner(
+      tx,
+      d,
+      async () =>
+        (
+          await tx
+            .select({ flags: workSessionEvents.flags })
+            .from(workSessionEvents)
+            .where(eq(workSessionEvents.id, eventId))
+        )[0]?.flags,
     );
 
   // How one worker's sessions count, by the accounting every reader uses.
   async function accounting(tx: Tx, d: CrewDay, workerId: string) {
-    return asOwner(tx, d, async () => {
-      const ledger = await readWorkerEvents(tx, workerId);
-      const rows = await tx
-        .select({ eventId: approvals.eventId, decision: approvals.decision })
-        .from(approvals)
-        .where(eq(approvals.companyId, d.companyId));
-      const decisions = new Map<string, Decision>(
-        rows.flatMap((r) => (r.eventId === null ? [] : [[r.eventId, r.decision]])),
-      );
-      return [...sessionApprovals(ledger, decisions).byRoot.values()].map(
+    return asOwner(tx, d, async () =>
+      [...sessionAccounting(await readWorkerEvents(tx, workerId)).byRoot.values()].map(
         (s) => s.accounting,
-      );
-    });
+      ),
+    );
   }
 
   async function adminIn(tx: Tx, d: CrewDay) {
@@ -815,16 +808,15 @@ describe("sync.push labor — an admin's own labor (V1-D10 as amended)", () => {
     return appUser(d, a.id, "admin");
   }
 
-  it("writes no approval for an admin's flagged event, keeps its evidence, and it counts", async () => {
+  it("flags an admin's event like anyone's, keeps its evidence, and it counts", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1, foreman } = await dayFor(tx);
       const admin = await adminIn(tx, d);
       const r = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
       expect(await push(tx, admin, r, SKEWED)).toMatchObject({
         result: "accepted",
-        ack: { id: r.id, clockSkewed: true, reasons: [] },
+        ack: { id: r.id, clockSkewed: true, reasons: REASONS },
       });
-      expect(await approvalsOf(tx, d, r.id)).toEqual([]);
       const [row] = await asOwner(tx, d, () =>
         tx.select().from(workSessionEvents).where(eq(workSessionEvents.id, r.id)),
       );
@@ -836,25 +828,24 @@ describe("sync.push labor — an admin's own labor (V1-D10 as amended)", () => {
         clockSkewed: true,
         clockSkewMs: SKEWED.clockSkewMs,
         locationLat: null,
+        flags: REASONS,
       });
       expect(await accounting(tx, d, admin.id)).toEqual(["eligible"]);
 
-      // The same event from a worker and from a foreman is pending, with every reason.
+      // The same event from a worker and from a foreman: the same flags, and it counts.
       for (const who of [w1, foreman]) {
         const theirs = record({ workerId: who.id, jobId: d.J, ...FLAGGED });
         expect(await push(tx, who, theirs, SKEWED)).toMatchObject({
           result: "accepted",
           ack: { reasons: REASONS },
         });
-        expect(await approvalsOf(tx, d, theirs.id)).toMatchObject([
-          { reasons: REASONS, decision: null },
-        ]);
-        expect(await accounting(tx, d, who.id)).toEqual(["pending"]);
+        expect(await flagsOf(tx, d, theirs.id)).toEqual(REASONS);
+        expect(await accounting(tx, d, who.id)).toEqual(["eligible"]);
       }
     });
   });
 
-  it("writes none for an admin's labor their foreman recorded", async () => {
+  it("flags an admin's labor their foreman recorded as it does any member's", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, foreman } = await dayFor(tx);
       const admin = await adminIn(tx, d);
@@ -863,68 +854,37 @@ describe("sync.push labor — an admin's own labor (V1-D10 as amended)", () => {
           .insert(crewMembers)
           .values({ companyId: d.companyId, crewId: d.crewId, userId: admin.id }),
       );
-      const r = record({ workerId: admin.id, jobId: d.J, ...FLAGGED });
-      expect(await push(tx, foreman, r)).toMatchObject({
-        result: "accepted",
-        ack: { reasons: [] },
-      });
-      expect(await approvalsOf(tx, d, r.id)).toEqual([]);
-      // The same push for a member who is no admin is pending.
-      const other = record({ workerId: d.w2, jobId: d.J, ...FLAGGED });
-      expect((await push(tx, foreman, other)).result).toBe("accepted");
-      expect(await approvalsOf(tx, d, other.id)).toHaveLength(1);
+      const flags = ["offline", "user_timed", "location"];
+      for (const workerId of [admin.id, d.w2]) {
+        const r = record({ workerId, jobId: d.J, ...FLAGGED });
+        expect(await push(tx, foreman, r)).toMatchObject({
+          result: "accepted",
+          ack: { reasons: flags },
+        });
+        expect(await flagsOf(tx, d, r.id)).toEqual(flags);
+      }
     });
   });
 
   it("moves nothing when the role changes after receipt", async () => {
     await rolledBack(owner, async (tx) => {
-      const { d, w1 } = await dayFor(tx);
+      const { d } = await dayFor(tx);
       const admin = await adminIn(tx, d);
-      const setRole = (id: string, role: AppUser["role"]) =>
-        asOwner(tx, d, () => tx.update(users).set({ role }).where(eq(users.id, id)));
+      const flags = ["offline", "user_timed", "location"];
 
-      // An admin's event, then a demotion: still no approval, and the retry answers as stored.
+      // An admin's event, then a demotion: the flags stand, and the retry answers as stored.
       const theirs = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
-      await push(tx, admin, theirs);
-      await setRole(admin.id, "worker");
-      expect(await push(tx, { ...admin, role: "worker" }, theirs)).toMatchObject({
-        result: "duplicate",
-        ack: { reasons: [] },
-      });
-      expect(await approvalsOf(tx, d, theirs.id)).toEqual([]);
-      expect(await accounting(tx, d, admin.id)).toEqual(["eligible"]);
-      // What they push from now on is a worker's: the resolved role the call carries is not
-      // what is read.
-      const later = record({
-        workerId: admin.id,
-        jobId: d.K,
-        type: "ended",
-        clientTimestamp: new Date("2026-10-05T16:00:00Z"),
-        ...FLAGGED,
-      });
-      expect((await push(tx, admin, later)).result).toBe("accepted");
-      expect(await approvalsOf(tx, d, later.id)).toHaveLength(1);
-
-      // A worker's event, then a promotion: the approval stays pending, it is still theirs
-      // not to decide, and the queue says so.
-      const mine = record({ workerId: d.w1, jobId: d.J, ...FLAGGED });
-      await push(tx, w1, mine);
-      await setRole(d.w1, "admin");
-      const [pending] = await approvalsOf(tx, d, mine.id);
-      expect(pending).toMatchObject({ decision: null });
-      const promoted = appUser(d, d.w1, "admin");
-      expect(
-        await tx.transaction((sp) =>
-          decideApproval(sp, promoted, { approvalId: pending!.id, decision: "approved" }),
-        ),
-      ).toEqual({ result: "rejected", code: "own_entry" });
-      const { items } = await tx.transaction((sp) =>
-        approvalQueue(sp, promoted, { limit: 50 }),
+      const first = await push(tx, admin, theirs);
+      expect(first).toMatchObject({ result: "accepted", ack: { reasons: flags } });
+      await asOwner(tx, d, () =>
+        tx.update(users).set({ role: "worker" }).where(eq(users.id, admin.id)),
       );
-      expect(
-        items.filter((i) => i.approvalId === pending!.id).map((i) => i.ownEntry),
-      ).toEqual([true]);
-      expect(await accounting(tx, d, d.w1)).toEqual(["pending"]);
+      expect(await push(tx, { ...admin, role: "worker" }, theirs)).toEqual({
+        ...first,
+        result: "duplicate",
+      });
+      expect(await flagsOf(tx, d, theirs.id)).toEqual(flags);
+      expect(await accounting(tx, d, admin.id)).toEqual(["eligible"]);
     });
   });
 });

@@ -52,11 +52,6 @@ export const es: Catalog = {
       ended: "Salida",
     },
     unsent: "Guardado en este teléfono. Se enviará cuando haya conexión.",
-    review: "Enviado. La oficina tiene que aprobarlo para que cuente.",
-    reviewUnscheduled:
-      "Enviado. Fue fuera de tu horario, así que la oficina tiene que aprobarlo para que cuente.",
-    reviewClock:
-      "Enviado. El reloj de este teléfono parecía estar mal, así que la oficina tiene que aprobarlo para que cuente.",
     refused: "El sistema de la oficina no aceptó este registro.",
     refusals: {
       not_scheduled:
@@ -100,7 +95,7 @@ export const es: Catalog = {
     hours: "Tus horas",
     noHours: "No hay horas en las últimas dos semanas.",
     open: "Trabajando",
-    waiting: "Esperando a la oficina",
+    unscheduled: "Fuera de tu horario. La oficina puede revisarlo.",
   },
   age: {
     justNow: "ahora mismo",

@@ -1,7 +1,7 @@
-// The approval rule's facts at push (PRD, Office approval; ARCHITECTURE, sync decisions of
-// 2026-11-05). Pure: no database, no clock. Every reason is computed here, in one place, and
-// written once with the entry it describes; the database requires the column-derived ones
-// (migrations 0022 and 0026). Consumed by sync/labor.ts and labor/repair.ts.
+// An entry's flags (offline, corrected, user-timed, location, clock skew, unscheduled). Pure:
+// no database, no clock. Every flag is computed here, in one place, and written once with
+// the entry it describes (work_session_events.flags). A flag is evidence for the office and
+// never keeps an entry from counting. Consumed by sync/labor.ts and labor/repair.ts.
 import type { approvalReason } from "@trader/db/schema";
 
 export type ApprovalReason = (typeof approvalReason.enumValues)[number];
@@ -73,18 +73,17 @@ export function locationFlagged(
   return job !== null && haversineMeters(stamp, job) > job.radiusM;
 }
 
-// Reasons in the enum's order, so equal facts give equal arrays.
+// The enum's order, so equal facts give equal arrays.
+export const REASON_ORDER: readonly ApprovalReason[] = [
+  "offline",
+  "corrected",
+  "user_timed",
+  "location",
+  "clock_skewed",
+  "unscheduled",
+];
 const ordered = (flags: Partial<Record<ApprovalReason, boolean>>): ApprovalReason[] =>
-  (
-    [
-      "offline",
-      "corrected",
-      "user_timed",
-      "location",
-      "clock_skewed",
-      "unscheduled",
-    ] as const
-  ).filter((r) => flags[r] === true);
+  REASON_ORDER.filter((r) => flags[r] === true);
 
 // `corrected` is a corrects_event_id or a void (enums.ts): only the office writes either
 // (labor.repair); a device push never does. A void carries no stamp and is never flagged for one.

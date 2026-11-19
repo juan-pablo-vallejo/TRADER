@@ -1,5 +1,5 @@
-# The connection is back: the server stored the start for the office to review, and the
-# phone says so beside it. The person is still on the clock.
+# The connection is back: the server stored the start, flagged as outside the schedule, and
+# it counts. The phone says so beside the hours. The person is still on the clock.
 appId: app.jpteq.trader
 ---
 - tapOn:
@@ -16,9 +16,12 @@ appId: app.jpteq.trader
     commands:
       - tapOn:
           id: "tab-today"
-- extendedWaitUntil:
-    visible:
-      id: "entry-review-0"
-    timeout: 60000
 - assertVisible:
     id: "clock-working"
+- tapOn:
+    id: "tab-week"
+- scrollUntilVisible:
+    element:
+      id: "hours-unscheduled-0"
+    direction: DOWN
+    timeout: 60000

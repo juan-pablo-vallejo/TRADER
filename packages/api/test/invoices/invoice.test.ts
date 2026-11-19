@@ -219,7 +219,7 @@ describe("invoice.save", () => {
 });
 
 describe("invoice.suggest", () => {
-  it("offers the job's approved hours a day, with no price", async () => {
+  it("offers the job's hours a day, with no price", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       await tx.execute(sql`reset role`);

@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
-import { attestationLevel, workSessionEventType } from "./enums";
+import { approvalReason, attestationLevel, workSessionEventType } from "./enums";
 import { jobs } from "./jobs";
 import { users } from "./users";
 
@@ -91,6 +91,13 @@ export const workSessionEvents = pgTable(
     // correction (PRD, Target users). worker_id stays whose labor it is. Added NOT NULL with no
     // default under the same empty-ledger condition as time_set_by_user.
     initiatorUserId: uuid("initiator_user_id").notNull(),
+    // Why the office should look at this entry, every reason that applies, judged once when
+    // the entry is received and written with it: the row is append-only, so they never move.
+    // An entry counts toward hours whatever it holds. Empty for rows older than the column.
+    flags: approvalReason("flags")
+      .array()
+      .notNull()
+      .default(sql`'{}'`),
   },
   (t) => [
     unique("work_session_events_company_id_id_unique").on(t.companyId, t.id),

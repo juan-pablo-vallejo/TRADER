@@ -28,10 +28,8 @@ function entryNote(record: OutboxRecord, t: Catalog["entry"]): string | null {
         : t.refusals.other(code);
     return `${t.refused} ${why}`;
   }
-  if (record.standing !== "settled") return t.unsent;
-  if (record.reasons.includes("unscheduled")) return t.reviewUnscheduled;
-  if (record.reasons.includes("clock_skewed")) return t.reviewClock;
-  return record.reasons.length > 0 ? t.review : null;
+  // Sent and accepted: it counts, and goes from this list with the next pull.
+  return record.standing === "settled" ? null : t.unsent;
 }
 
 export default function Today() {
@@ -110,16 +108,11 @@ export default function Today() {
 
   // Each with a testID numbered within its own kind: `entry-unsent-0` is the oldest entry
   // not sent, however many sent ones are listed before it.
-  const seen = { refused: 0, review: 0, unsent: 0 };
+  const seen = { refused: 0, unsent: 0 };
   const noted = records.flatMap((record) => {
     const note = entryNote(record, t.entry);
     if (note === null) return [];
-    const kind =
-      record.standing === "rejected"
-        ? "refused"
-        : record.standing === "settled"
-          ? "review"
-          : "unsent";
+    const kind = record.standing === "rejected" ? "refused" : "unsent";
     const testID = `entry-${kind}-${seen[kind]}`;
     seen[kind] += 1;
     return [{ record, note, testID }];

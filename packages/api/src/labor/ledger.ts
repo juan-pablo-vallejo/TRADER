@@ -15,7 +15,6 @@
 // routers/labor.ts.
 import {
   approvalReason,
-  approvals,
   companies,
   jobs,
   jobStatus,
@@ -29,7 +28,7 @@ import { z } from "zod";
 import { workDay } from "../assignments/write";
 import type { Tx } from "../core/context";
 import { forbidden } from "../core/trpc";
-import { eventEffect, sessionApprovals, type Decision } from "./approval";
+import { eventEffect, sessionAccounting } from "./accounting";
 import { workDate } from "./work-date";
 
 // The longest range one read covers: any month.
@@ -75,16 +74,8 @@ const event = z.strictObject({
   // Derived: the source in effect for its root, one a later correction replaced, or the
   // session's void.
   effect: z.enum(["in_effect", "superseded", "void"]),
-  // As stored; null is no approvals row, which is approved by default.
-  approval: z
-    .strictObject({
-      id: z.uuid(),
-      reasons: z.array(z.enum(approvalReason.enumValues)).min(1),
-      decision: z.enum(["pending", "approved", "rejected"]),
-      decidedAt: z.date().nullable(),
-      decidedBy: person.nullable(),
-    })
-    .nullable(),
+  // As stored with the entry: why the office should look at it. Empty when nothing applies.
+  flags: z.array(z.enum(approvalReason.enumValues)),
 });
 
 const session = z.strictObject({
@@ -103,7 +94,7 @@ const session = z.strictObject({
   // The fold's; an open session counts its closed intervals only.
   structuralWorkedMs: z.number().int(),
   breakMs: z.number().int(),
-  accounting: z.enum(["eligible", "pending", "rejected", "voided"]),
+  accounting: z.enum(["eligible", "voided"]),
   eligibleWorkedMs: z.number().int(),
   // A source in effect is a correction.
   corrected: z.boolean(),
@@ -165,21 +156,12 @@ export async function workerLedger(
   if (company === undefined) throw new Error("a user's company is not visible");
   const { timezone } = company;
 
-  // The ledger with each event's approval, in one statement.
-  const rows = await tx
-    .select({ event: workSessionEvents, approval: approvals })
+  const ledger = await tx
+    .select()
     .from(workSessionEvents)
-    .leftJoin(approvals, eq(approvals.eventId, workSessionEvents.id))
     .where(eq(workSessionEvents.workerId, worker.id));
-  const ledger = rows.map((r) => r.event);
-  const decisions = new Map<string, Decision>(
-    rows.flatMap((r) => (r.approval === null ? [] : [[r.event.id, r.approval.decision]])),
-  );
-  const approvalOf = new Map(
-    rows.flatMap((r) => (r.approval === null ? [] : [[r.event.id, r.approval]])),
-  );
 
-  const { structural, byRoot } = sessionApprovals(ledger, decisions);
+  const { structural, byRoot } = sessionAccounting(ledger);
   const dated = structural.sessions.map((s) => ({
     s,
     workDate: workDate(s.startedAt, timezone),
@@ -209,8 +191,6 @@ export async function workerLedger(
   for (const row of shown) {
     people.add(row.initiatorUserId);
     jobIds.add(row.jobId);
-    const decidedBy = approvalOf.get(row.id)?.decidedByUserId;
-    if (decidedBy != null) people.add(decidedBy);
   }
   const names = new Map(
     people.size === 0
@@ -246,7 +226,6 @@ export async function workerLedger(
           compareIds(a.row.id, b.row.id),
       )
       .map(({ row, effect }) => {
-        const a = approvalOf.get(row.id);
         return {
           id: row.id,
           type: row.type,
@@ -263,17 +242,7 @@ export async function workerLedger(
           correctsEventId: row.correctsEventId,
           voidsEventId: row.voidsEventId,
           effect: effect as LedgerEvent["effect"],
-          approval:
-            a === undefined
-              ? null
-              : {
-                  id: a.id,
-                  reasons: a.reasons,
-                  decision: a.decision ?? ("pending" as const),
-                  decidedAt: a.decidedAt,
-                  decidedBy:
-                    a.decidedByUserId === null ? null : named(names, a.decidedByUserId),
-                },
+          flags: row.flags,
         };
       });
     return {

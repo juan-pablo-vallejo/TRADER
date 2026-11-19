@@ -68,31 +68,16 @@ export async function count(db: Db, table: string): Promise<number> {
 }
 
 export async function counts(db: Db) {
-  const [
-    users,
-    customers,
-    jobs,
-    crews,
-    crewMembers,
-    events,
-    approvals,
-    decided,
-    assignments,
-  ] = await Promise.all([
-    count(db, "users"),
-    count(db, "customers"),
-    count(db, "jobs"),
-    count(db, "crews"),
-    count(db, "crew_members"),
-    count(db, "work_session_events"),
-    count(db, "approvals"),
-    db
-      .execute<{ n: number }>(
-        sql`select count(*)::int as n from approvals where decision is not null`,
-      )
-      .then((r) => r.rows[0]!.n),
-    count(db, "job_assignments"),
-  ]);
+  const [users, customers, jobs, crews, crewMembers, events, assignments] =
+    await Promise.all([
+      count(db, "users"),
+      count(db, "customers"),
+      count(db, "jobs"),
+      count(db, "crews"),
+      count(db, "crew_members"),
+      count(db, "work_session_events"),
+      count(db, "job_assignments"),
+    ]);
   return {
     users,
     customers,
@@ -100,8 +85,6 @@ export async function counts(db: Db) {
     crews,
     crewMembers,
     events,
-    approvals,
-    decided,
     assignments,
   };
 }

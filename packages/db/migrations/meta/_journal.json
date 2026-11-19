@@ -351,6 +351,13 @@
       "when": 1794794139391,
       "tag": "0049_invoice-send-guards",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1795050297390,
+      "tag": "0050_event-flags",
+      "breakpoints": true
     }
   ]
 }

@@ -59,8 +59,7 @@ async function main() {
     await target.close();
     console.log(
       `demo: done in ${summary.steps} steps — ${summary.users} users, ${summary.jobs} jobs, ` +
-        `${summary.events} labor events, ${summary.approvals} approvals ` +
-        `(${summary.decided} decided). Sign in as ${DEMO.adminEmail}.`,
+        `${summary.events} labor events. Sign in as ${DEMO.adminEmail}.`,
     );
   } catch (error) {
     if (committed === 0) {

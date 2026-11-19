@@ -1,8 +1,8 @@
 // Stage 4, hours and cost aggregation (V1-D13): labor.hours, the office's read of the hours
 // that count per worker, job and work date, through the application's router under the
 // runtime role in rolled-back transactions. Fixtures are written by the owner; the replayed
-// push goes through the push's own writer.
-import { approvals, companies, workSessionEvents } from "@trader/db/schema";
+// pushes go through the push's own writer.
+import { companies, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -20,7 +20,6 @@ import {
   eventIn,
   outcome,
   ownerDb,
-  pendingApproval,
   rolledBack,
   uuidv7,
   type CrewDay,
@@ -72,7 +71,7 @@ async function asOwner<T>(tx: Tx, body: () => Promise<T>) {
 }
 
 const figures = (answer: Awaited<ReturnType<typeof hours>>) =>
-  answer.cells.map((c) => [c.worker.id, c.job.id, c.workDate, c.approvedHundredths]);
+  answer.cells.map((c) => [c.worker.id, c.job.id, c.workDate, c.hundredths]);
 
 describe("labor.hours", () => {
   it("is the office's alone, and of the caller's company alone", async () => {
@@ -116,11 +115,9 @@ describe("labor.hours", () => {
           worker: { id: d.w1, name: "w1" },
           job: { id: d.J, name: "J" },
           workDate: DAY,
-          approvedHundredths: 101,
-          pendingHundredths: 0,
-          pendingSessions: 0,
-          rejectedSessions: 0,
+          hundredths: 101,
           openSessions: 0,
+          flags: [],
         },
       ]);
     });
@@ -222,35 +219,23 @@ describe("labor.hours", () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
       // w1: 2.00 h on J and 3.50 h on K on the 5th. w2: 8.00 h on the 5th and 1.25 h on the
-      // 6th, then a session that waits, one that was rejected and one still open.
+      // 6th, then a flagged session of 2.00 h that counts like any, and one still open.
       await shift(tx, d, d.w1, T("12:00"), T("14:00"));
       await shift(tx, d, d.w1, T("14:30"), T("18:00"), d.K);
       await shift(tx, d, d.w2, T("12:00"), T("20:00"));
       await shift(tx, d, d.w2, T("12:00", "2026-10-06"), T("13:15", "2026-10-06"));
-      const waits = await shift(
-        tx,
-        d,
-        d.w2,
-        T("14:00", "2026-10-06"),
-        T("16:00", "2026-10-06"),
-      );
-      await pendingApproval(tx, d.companyId, { eventId: waits.started });
-      const refused = await shift(
-        tx,
-        d,
-        d.w2,
-        T("12:00", "2026-10-07"),
-        T("13:00", "2026-10-07"),
-      );
-      const refusal = await pendingApproval(tx, d.companyId, { eventId: refused.ended });
-      await tx
-        .update(approvals)
-        .set({
-          decision: "rejected",
-          decidedAt: new Date(T("12:00")),
-          decidedByUserId: admin.id,
-        })
-        .where(eq(approvals.id, refusal));
+      for (const [type, client] of [
+        ["started", T("14:00", "2026-10-06")],
+        ["ended", T("16:00", "2026-10-06")],
+      ] as const) {
+        await eventIn(tx, d, {
+          worker: d.w2,
+          job: d.J,
+          type,
+          client,
+          flags: ["offline"],
+        });
+      }
       await eventIn(tx, d, {
         worker: d.w2,
         job: d.J,
@@ -260,32 +245,19 @@ describe("labor.hours", () => {
       await becomeApp(tx);
 
       const all = await hours(tx, admin.who);
-      const w1 = {
-        approvedHundredths: 550,
-        pendingHundredths: 0,
-        pendingSessions: 0,
-        rejectedSessions: 0,
-        openSessions: 0,
-      };
-      const w2 = {
-        approvedHundredths: 925,
-        pendingHundredths: 200,
-        pendingSessions: 1,
-        rejectedSessions: 1,
-        openSessions: 1,
-      };
+      const w1 = { hundredths: 550, openSessions: 0 };
+      const w2 = { hundredths: 1125, openSessions: 1 };
       // By name: w1 before w2.
       expect(all.workers).toEqual([
         { worker: { id: d.w1, name: "w1" }, ...w1 },
         { worker: { id: d.w2, name: "w2" }, ...w2 },
       ]);
-      expect(all.totals).toEqual({
-        approvedHundredths: 1475,
-        pendingHundredths: 200,
-        pendingSessions: 1,
-        rejectedSessions: 1,
-        openSessions: 1,
-      });
+      expect(all.totals).toEqual({ hundredths: 1675, openSessions: 1 });
+      expect(all.cells.map((c) => [c.workDate, c.hundredths, c.flags])).toContainEqual([
+        "2026-10-06",
+        325,
+        ["offline"],
+      ]);
       // Every sum is the sum of the cells answered with it, figure by figure.
       const keys = Object.keys(w1) as (keyof typeof w1)[];
       for (const answer of [
@@ -311,7 +283,7 @@ describe("labor.hours", () => {
       // Narrowed with the cells: one person, one job.
       expect((await hours(tx, admin.who, { workerId: d.w2 })).totals).toEqual(w2);
       expect((await hours(tx, admin.who, { jobId: d.K })).workers).toEqual([
-        { worker: { id: d.w1, name: "w1" }, ...w1, approvedHundredths: 350 },
+        { worker: { id: d.w1, name: "w1" }, ...w1, hundredths: 350 },
       ]);
     });
   });
@@ -328,9 +300,9 @@ describe("labor.hours", () => {
       }
       await becomeApp(tx);
       const answer = await hours(tx, admin.who);
-      expect(answer.cells.map((c) => c.approvedHundredths)).toEqual([34, 34]);
-      expect(answer.totals.approvedHundredths).toBe(68);
-      expect(answer.workers[0]?.approvedHundredths).toBe(68);
+      expect(answer.cells.map((c) => c.hundredths)).toEqual([34, 34]);
+      expect(answer.totals.hundredths).toBe(68);
+      expect(answer.workers[0]?.hundredths).toBe(68);
 
       expect(
         await hours(tx, admin.who, { from: "2026-09-01", to: "2026-09-07" }),
@@ -338,57 +310,12 @@ describe("labor.hours", () => {
         timezone: "America/New_York",
         cells: [],
         workers: [],
-        totals: {
-          approvedHundredths: 0,
-          pendingHundredths: 0,
-          pendingSessions: 0,
-          rejectedSessions: 0,
-          openSessions: 0,
-        },
+        totals: { hundredths: 0, openSessions: 0 },
       });
     });
   });
 
-  it("moves a session from pending to approved when it is decided, and never counts a rejected one", async () => {
-    await rolledBack(owner, async (tx) => {
-      const { d, admin } = await office(tx);
-      const a = await shift(tx, d, d.w1, T("12:00"), T("14:00"));
-      const b = await shift(tx, d, d.w1, T("15:00"), T("16:00"));
-      const waiting = await pendingApproval(tx, d.companyId, { eventId: a.started });
-      const refused = await pendingApproval(tx, d.companyId, { eventId: b.ended });
-      await becomeApp(tx);
-      const cell = async () => (await hours(tx, admin.who)).cells[0];
-
-      expect(await cell()).toMatchObject({
-        approvedHundredths: 0,
-        pendingHundredths: 300,
-        pendingSessions: 2,
-      });
-      const decide = (id: string, decision: "approved" | "rejected") =>
-        asOwner(tx, () =>
-          tx
-            .update(approvals)
-            .set({ decision, decidedAt: new Date(T("12:00")), decidedByUserId: admin.id })
-            .where(eq(approvals.id, id)),
-        );
-      await decide(waiting, "approved");
-      expect(await cell()).toMatchObject({
-        approvedHundredths: 200,
-        pendingHundredths: 100,
-        pendingSessions: 1,
-        rejectedSessions: 0,
-      });
-      await decide(refused, "rejected");
-      expect(await cell()).toMatchObject({
-        approvedHundredths: 200,
-        pendingHundredths: 0,
-        pendingSessions: 0,
-        rejectedSessions: 1,
-      });
-    });
-  });
-
-  it("counts an admin's own hours, which have no approval, and nothing of an open session", async () => {
+  it("counts an admin's own hours like anyone's, and nothing of an open session", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
       await shift(tx, d, admin.id, T("12:00"), T("15:00"));
@@ -407,63 +334,90 @@ describe("labor.hours", () => {
       await becomeApp(tx);
       const cells = (await hours(tx, admin.who)).cells;
       expect(cells.find((c) => c.worker.id === admin.id)).toMatchObject({
-        approvedHundredths: 300,
+        hundredths: 300,
         openSessions: 0,
       });
       expect(cells.find((c) => c.worker.id === d.w1)).toMatchObject({
-        approvedHundredths: 0,
-        pendingHundredths: 0,
+        hundredths: 0,
         openSessions: 1,
       });
+    });
+  });
+
+  // The push's own writer, as w1's phone sends a day it captured with no connection.
+  function offlineDay(tx: Tx, d: CrewDay) {
+    const now = new Date();
+    const skew = measureSkew(now, now);
+    const pusher = {
+      id: d.w1,
+      companyId: d.companyId,
+      role: "worker" as const,
+      name: "w1",
+      email: "w1@co.test",
+      phone: null,
+      signInPhone: null,
+    };
+    const record = (type: "started" | "ended", client: string): LaborRecord => ({
+      id: uuidv7(),
+      schemaVersion: 1,
+      payload: {
+        workerId: d.w1,
+        jobId: d.J,
+        type,
+        clientTimestamp: new Date(client),
+        attestationLevel: "biometric",
+        location: { lat: 41.824, lng: -71.4128, accuracyM: 8 },
+        timeSetByUser: false,
+        capturedOffline: true,
+      },
+    });
+    const records = [record("started", T("12:00")), record("ended", T("16:15"))];
+    return async () => {
+      await asTenant(tx, d.companyId);
+      const results = [];
+      for (const r of records) {
+        results.push(await tx.transaction((sp) => pushLaborEvent(sp, pusher, r, skew)));
+      }
+      return results;
+    };
+  }
+
+  it("counts a session captured offline as soon as it is pushed, and flags its cell", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin } = await office(tx);
+      const acks = await offlineDay(tx, d)();
+      expect(acks).toMatchObject([
+        { result: "accepted", ack: { reasons: ["offline"] } },
+        { result: "accepted", ack: { reasons: ["offline"] } },
+      ]);
+      // Nobody decided anything: 4 h 15 min is in the day's figure at once.
+      const answer = await hours(tx, admin.who);
+      expect(answer.cells).toEqual([
+        {
+          worker: { id: d.w1, name: "w1" },
+          job: { id: d.J, name: "J" },
+          workDate: DAY,
+          hundredths: 425,
+          openSessions: 0,
+          flags: ["offline"],
+        },
+      ]);
+      expect(answer.totals).toEqual({ hundredths: 425, openSessions: 0 });
     });
   });
 
   it("answers the same after a push is replayed", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
-      const now = new Date();
-      const skew = measureSkew(now, now);
-      const pusher = {
-        id: d.w1,
-        companyId: d.companyId,
-        role: "worker" as const,
-        name: "w1",
-        email: "w1@co.test",
-        phone: null,
-        signInPhone: null,
-      };
-      const record = (type: "started" | "ended", client: string): LaborRecord => ({
-        id: uuidv7(),
-        schemaVersion: 1,
-        payload: {
-          workerId: d.w1,
-          jobId: d.J,
-          type,
-          clientTimestamp: new Date(client),
-          attestationLevel: "biometric",
-          location: { lat: 41.824, lng: -71.4128, accuracyM: 8 },
-          timeSetByUser: false,
-          capturedOffline: true,
-        },
-      });
-      const records = [record("started", T("12:00")), record("ended", T("16:00"))];
-      const push = async () => {
-        await asTenant(tx, d.companyId);
-        const results = [];
-        for (const r of records) {
-          results.push(
-            (await tx.transaction((sp) => pushLaborEvent(sp, pusher, r, skew))).result,
-          );
-        }
-        return results;
-      };
+      const push = offlineDay(tx, d);
+      const results = async () => (await push()).map((r) => r.result);
 
-      expect(await push()).toEqual(["accepted", "accepted"]);
+      expect(await results()).toEqual(["accepted", "accepted"]);
       const first = await hours(tx, admin.who);
       expect(first.cells).toMatchObject([
-        { approvedHundredths: 0, pendingHundredths: 400, pendingSessions: 1 },
+        { hundredths: 425, openSessions: 0, flags: ["offline"] },
       ]);
-      expect(await push()).toEqual(["duplicate", "duplicate"]);
+      expect(await results()).toEqual(["duplicate", "duplicate"]);
       expect(await hours(tx, admin.who)).toEqual(first);
     });
   });
@@ -471,27 +425,27 @@ describe("labor.hours", () => {
   it("writes nothing and leaves every ledger row as it was", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
-      const { started } = await shift(tx, d, d.w1, T("12:00"), T("12:20"));
-      await pendingApproval(tx, d.companyId, { eventId: started });
+      await eventIn(tx, d, {
+        worker: d.w1,
+        job: d.J,
+        type: "started",
+        client: T("11:00"),
+        flags: ["offline"],
+      });
+      await eventIn(tx, d, { worker: d.w1, job: d.J, type: "ended", client: T("11:20") });
       await shift(tx, d, d.w2, T("12:00"), T("12:20"));
-      const state = async () => ({
-        events: await tx
+      const state = () =>
+        tx
           .select()
           .from(workSessionEvents)
           .where(eq(workSessionEvents.companyId, d.companyId))
-          .orderBy(asc(workSessionEvents.id)),
-        approvals: await tx
-          .select()
-          .from(approvals)
-          .where(eq(approvals.companyId, d.companyId))
-          .orderBy(asc(approvals.id)),
-      });
+          .orderBy(asc(workSessionEvents.id));
       const before = await state();
       await becomeApp(tx);
       await hours(tx, admin.who);
       const after = await asOwner(tx, state);
       expect(after).toEqual(before);
-      expect([before.events.length, before.approvals.length]).toEqual([4, 1]);
+      expect(before.map((e) => e.flags.length)).toEqual([1, 0, 0, 0]);
     });
   });
 });

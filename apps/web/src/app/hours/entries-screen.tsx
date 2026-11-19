@@ -1,21 +1,19 @@
 "use client";
 
-// The labor ledger (PRD, Office review: the office sees any worker's recorded day — sessions,
-// the events behind them, what is pending and why; DESIGN, Worker ledger). The office picks a
-// person and up to 31 days and reads their sessions by work date as the server derives them,
-// each with every entry behind it: the entries in effect, the ones a correction replaced, and
-// a void. Times are shown in the zone the work dates were judged in, never the browser's.
+// One person's entries: the office picks a person and up to 31 days and reads their sessions
+// by work date as the server derives them, each with every entry behind it and its flags:
+// the entries in effect, the ones a correction replaced, and a void. Times are shown in the
+// zone the work dates were judged in, never the browser's.
 //
-// It is also where the office repairs hours (PRD, Office review: it repairs them there with
-// correcting entries, which go through approval). A session opens an editor beneath it:
-// change the time of an entry in effect or the job of its clock in, add entries that are
-// missing, or void the session; above the days, hours nobody recorded are added whole. Each
-// save is one `labor.repair` set (repair-set.ts), written all or nothing, and what it wrote
-// is read back from the server — the screen never shows a repair the server has not
-// confirmed. Nothing here approves or rejects: that is the approval queue.
+// It is also where the office fixes a mistake, with a correcting entry. A session opens an
+// editor beneath it: change the time of an entry in effect or the job of its clock in, add
+// entries that are missing, or void the session; above the days, hours nobody recorded are
+// added whole. Each save is one `labor.repair` set (repair-set.ts), written all or nothing,
+// and it takes effect at once; what it wrote is read back from the server, so the screen
+// never shows a correction the server has not confirmed.
 //
 // The roster for the picker, `labor.ledger` once a lookup is asked for, and the jobs a
-// repair may name. Consumed by page.tsx.
+// correction may name. Consumed by page.tsx.
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 
@@ -83,9 +81,7 @@ const toggleId = (key: string) => `repair-toggle-${key}`;
 type JobOption = { id: string; name: string; archived: boolean };
 // What a repair did, said beneath the control that opened its editor.
 type Notice = { key: string; text: string; ok: boolean };
-// `counted`: saved with no approval written — the caller's own hours (V1-D10 as amended),
-// known from the server's answer and never from who the screen thinks is signed in.
-type Outcome = "saved" | "counted" | "changed";
+type Outcome = "saved" | "changed";
 
 export function EntriesSection({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
@@ -224,12 +220,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
     const written = outcome !== "changed";
     setNotice({
       key,
-      text:
-        outcome === "saved"
-          ? strings.repairSaved
-          : outcome === "counted"
-            ? strings.repairCounted
-            : strings.repairChanged,
+      text: outcome === "saved" ? strings.repairSaved : strings.repairChanged,
       ok: written,
     });
     if (written) {
@@ -309,25 +300,13 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                           : `${strings.breaks} ${duration(s.breakMs)}`,
                         s.job.status === "archived" ? strings.jobStatus.archived : null,
                         s.corrected ? strings.sessionEdited : null,
-                        s.accounting === "eligible" || s.accounting === "voided"
-                          ? strings.sessionCounts[s.accounting]
-                          : null,
+                        strings.sessionCounts[s.accounting],
                       ]
                         .filter((part) => part !== null)
                         .join(" · ")}
                     </span>
                     {!s.complete && (
                       <span className={table.pillAttention}>{strings.stillOpen}</span>
-                    )}
-                    {s.accounting === "pending" && (
-                      <span className={table.pillPending}>
-                        {strings.sessionCounts.pending}
-                      </span>
-                    )}
-                    {s.accounting === "rejected" && (
-                      <span className={table.pillAttention}>
-                        {strings.sessionCounts.rejected}
-                      </span>
                     )}
                   </p>
                   <table className={table.table}>
@@ -342,7 +321,6 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                         </th>
                         <th scope="col">{strings.enteredBy}</th>
                         <th scope="col">{strings.flags}</th>
-                        <th scope="col">{strings.approval}</th>
                         <th scope="col">{strings.entryId}</th>
                       </tr>
                     </thead>
@@ -352,18 +330,9 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                           e.initiator.id === r.worker.id
                             ? ""
                             : strings.enteredByName(e.initiator.name);
-                        const flags = (e.approval?.reasons ?? [])
+                        const flags = e.flags
                           .map((reason) => strings.reasonTags[reason])
                           .join(", ");
-                        const a = e.approval;
-                        const approval =
-                          a === null
-                            ? strings.approvedByDefault
-                            : a.decision === "pending"
-                              ? strings.approvalWaiting
-                              : a.decision === "approved"
-                                ? strings.approvedBy(a.decidedBy?.name ?? "")
-                                : strings.rejectedBy(a.decidedBy?.name ?? "");
                         const empty = (text: string) =>
                           text === "" ? { "data-empty": "" } : {};
                         return (
@@ -390,7 +359,6 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                             <td data-label={strings.flags} {...empty(flags)}>
                               {flags}
                             </td>
-                            <td data-label={strings.approval}>{approval}</td>
                             <td data-label={strings.entryId}>{e.id.slice(0, 8)}</td>
                           </tr>
                         );
@@ -446,12 +414,7 @@ function useRepair(workerId: string, onDone: (outcome: Outcome) => void) {
     const input: RepairInput = minter.current(workerId, operations);
     repair.mutate(input, {
       onSuccess: (answer) => {
-        if (answer.result !== "rejected") {
-          // No reasons on any entry is no approval written for the set.
-          return onDone(
-            answer.events.every((e) => e.reasons.length === 0) ? "counted" : "saved",
-          );
-        }
+        if (answer.result !== "rejected") return onDone("saved");
         if (answer.code === "repair_stale") return onDone("changed");
         // The ids are taken: the same set goes again under new ones.
         if (answer.code === "id_conflict") minter.current = createMinter();

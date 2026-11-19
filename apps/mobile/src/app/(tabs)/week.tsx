@@ -37,8 +37,10 @@ export default function Week() {
     ...(data?.shifts ?? []).map((s) => [s.job.id, s.job.name] as const),
     ...(data?.jobs ?? []).map((j) => [j.id, j.name] as const),
   ]);
-  const waiting = new Set(
-    (data?.events ?? []).filter((e) => e.approval === "pending").map((e) => e.id),
+  // Clock-ins the schedule did not allow when they arrived: they count, and the office sees
+  // the flag.
+  const unscheduled = new Set(
+    (data?.events ?? []).filter((e) => e.flags.includes("unscheduled")).map((e) => e.id),
   );
   const sessions = [...(data?.sessions ?? [])]
     .filter((s) => !s.voided)
@@ -114,9 +116,12 @@ export default function Week() {
                       {t.week.open}
                     </Text>
                   )}
-                  {waiting.has(s.rootEventId) && (
-                    <Text style={[text.secondary, { color: color.pending }]}>
-                      {t.week.waiting}
+                  {unscheduled.has(s.rootEventId) && (
+                    <Text
+                      testID={`hours-unscheduled-${i}`}
+                      style={[text.secondary, { color: color.pending }]}
+                    >
+                      {t.week.unscheduled}
                     </Text>
                   )}
                 </View>

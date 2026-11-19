@@ -69,12 +69,11 @@ export async function runCycle(
       const snapshot: Snapshot = { pulledAt: now(), data };
       await store.write(SNAPSHOT_KEY, superjson.stringify(snapshot));
       await reached();
-      // A settled record goes once the snapshot shows it — unless the office still has to
-      // decide it: the reasons it was sent to approval are only here, and the screen says
-      // them until it is decided.
+      // A settled record goes once the snapshot shows it: the entry counts, and its flags
+      // are the snapshot's from here on.
       await store.prune(
         data.me.id,
-        data.events.filter((e) => e.approval !== "pending").map((e) => e.id),
+        data.events.map((e) => e.id),
       );
       return data.me.id;
     } catch {

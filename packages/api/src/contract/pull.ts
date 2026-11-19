@@ -3,14 +3,12 @@
 // with.
 import { z } from "zod";
 
-import { JOB_STATUSES, LABOR_EVENT_TYPES, ROLES } from "./enums";
+import { APPROVAL_REASONS, JOB_STATUSES, LABOR_EVENT_TYPES, ROLES } from "./enums";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 
 export const pullInput = z.strictObject({
   protocolVersion: z.literal(SYNC_PROTOCOL_VERSIONS),
 });
-
-const approvalState = z.enum(["none", "pending", "approved", "rejected"]);
 
 // A time of day on the company's wall clock, `HH:MM`.
 const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -84,7 +82,8 @@ export const pullOutput = z.strictObject({
       clockSkewed: z.boolean(),
       correctsEventId: z.uuid().nullable(),
       voidsEventId: z.uuid().nullable(),
-      approval: approvalState,
+      // Why the office may look at the entry. It counts whatever it holds.
+      flags: z.array(z.enum(APPROVAL_REASONS)),
     }),
   ),
 });

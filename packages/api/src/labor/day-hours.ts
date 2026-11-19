@@ -1,20 +1,25 @@
-// The one place labor is aggregated from the database (ARCHITECTURE, Accounting and exports,
-// Rounding: one figure from one derivation), and labor.hours, the office's read of it.
+// The one place labor is aggregated from the database, and labor.hours, the office's read of
+// it.
 //
-// readDayHours folds the whole ledger of each worker named — the fold is defined over all of
-// it — with each event's approval, read in one statement, so a cell is one committed state;
-// the cells are labor/hours.ts's, computed there and nowhere else. Plain reads under RLS: no
-// lock, no write, no audit row, and no ledger row is touched.
+// readDayHours folds the whole ledger of each worker named (the fold is defined over all of
+// it), read in one statement, so a cell is one committed state; the cells are
+// labor/hours.ts's, computed there and nowhere else. Plain reads under RLS: no lock, no
+// write, and no ledger row is touched.
 //
 // labor.hours answers the cells of a range of work dates, for the company or one person,
-// optionally on one job: approved hours as rounded hundredths, with what is pending, rejected
-// or still open beside them and never inside, and the sums of those cells per worker and for
+// optionally on one job: hours as rounded hundredths with each cell's flags, sessions still
+// open counted beside them and never inside, and the sums of those cells per worker and for
 // the whole answer: a total is the sum of rounded cells and is never rounded again, so the
-// office's reconciliation and whatever exports it read one figure and add nothing themselves.
-// No cost and no rate (jobs/cost.ts). The range is refused past its bound, never truncated,
-// and there is no limit, so nothing in it is left out. Consumed by routers/labor.ts and
-// jobs/cost.ts.
-import { approvals, companies, jobs, users, workSessionEvents } from "@trader/db/schema";
+// Hours screen and whatever exports it read one figure and add nothing themselves. The range
+// is refused past its bound, never truncated, and there is no limit, so nothing in it is
+// left out. Consumed by routers/labor.ts and invoices/read.ts.
+import {
+  approvalReason,
+  companies,
+  jobs,
+  users,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -23,8 +28,7 @@ import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { readJob } from "../jobs/list";
-import { sessionApprovals, type Decision } from "./approval";
-import type { LaborEvent } from "./fold";
+import { sessionAccounting } from "./accounting";
 import { dayHours, type DayCell } from "./hours";
 import { RANGE_REFUSAL, rangeWithinBound } from "./ledger";
 
@@ -36,31 +40,17 @@ export async function readDayHours(
 ): Promise<DayCell[]> {
   if (workerIds.length === 0) return [];
   const rows = await tx
-    .select({
-      event: workSessionEvents,
-      decision: approvals.decision,
-      approvalId: approvals.id,
-    })
+    .select()
     .from(workSessionEvents)
-    .leftJoin(approvals, eq(approvals.eventId, workSessionEvents.id))
     .where(inArray(workSessionEvents.workerId, [...workerIds]));
 
-  const ledgers = new Map<
-    string,
-    { ledger: LaborEvent[]; decisions: Map<string, Decision> }
-  >();
+  const ledgers = new Map<string, typeof rows>();
   for (const r of rows) {
-    let w = ledgers.get(r.event.workerId);
-    if (w === undefined) {
-      w = { ledger: [], decisions: new Map() };
-      ledgers.set(r.event.workerId, w);
-    }
-    w.ledger.push(r.event);
-    // No approvals row is approved by default: absent from the map (approval.ts).
-    if (r.approvalId !== null) w.decisions.set(r.event.id, r.decision);
+    ledgers.set(r.workerId, [...(ledgers.get(r.workerId) ?? []), r]);
   }
-  return [...ledgers].flatMap(([workerId, w]) =>
-    dayHours(workerId, sessionApprovals(w.ledger, w.decisions), timeZone),
+  const flags = new Map(rows.map((r) => [r.id, r.flags]));
+  return [...ledgers].flatMap(([workerId, ledger]) =>
+    dayHours(workerId, sessionAccounting(ledger), timeZone, (id) => flags.get(id) ?? []),
   );
 }
 
@@ -84,33 +74,20 @@ export const hoursInput = z
 
 // The figures of a cell, and of any sum of cells: integer hundredths and counts.
 const figures = {
-  // Hundredths of an hour: the day's approved milliseconds, rounded once, half-up.
-  approvedHundredths: z.number().int(),
-  // Waiting for a decision; in no approved figure.
-  pendingHundredths: z.number().int(),
-  pendingSessions: z.number().int(),
-  rejectedSessions: z.number().int(),
-  // Sessions that count but have no clock-out yet: nothing of theirs is above.
+  // Hundredths of an hour: the day's milliseconds, rounded once, half-up.
+  hundredths: z.number().int(),
+  // Sessions with no clock-out yet: nothing of theirs is above.
   openSessions: z.number().int(),
 };
 type Figures = { [K in keyof typeof figures]: number };
 
-const NOTHING: Figures = {
-  approvedHundredths: 0,
-  pendingHundredths: 0,
-  pendingSessions: 0,
-  rejectedSessions: 0,
-  openSessions: 0,
-};
+const NOTHING: Figures = { hundredths: 0, openSessions: 0 };
 
 // The sum of cells' figures. Each cell was rounded once (hours.ts); nothing is rounded here.
 function sumOf(cells: readonly Figures[]): Figures {
   const sum = { ...NOTHING };
   for (const c of cells) {
-    sum.approvedHundredths += c.approvedHundredths;
-    sum.pendingHundredths += c.pendingHundredths;
-    sum.pendingSessions += c.pendingSessions;
-    sum.rejectedSessions += c.rejectedSessions;
+    sum.hundredths += c.hundredths;
     sum.openSessions += c.openSessions;
   }
   if (!Object.values(sum).every(Number.isSafeInteger)) {
@@ -129,6 +106,8 @@ export const hoursOutput = z.strictObject({
       job: z.strictObject({ id: z.uuid(), name: z.string() }),
       workDate: z.iso.date(),
       ...figures,
+      // Every flag of the entries behind the cell, in the enum's order.
+      flags: z.array(z.enum(approvalReason.enumValues)),
     }),
   ),
   // Each worker with a cell above and the sum of their cells, by name then id.
@@ -219,11 +198,9 @@ export async function listHours(
       worker: named(workerNames, c.workerId),
       job: named(jobNames, c.jobId),
       workDate: c.workDate,
-      approvedHundredths: c.approvedHundredths,
-      pendingHundredths: c.pendingHundredths,
-      pendingSessions: c.pendingSessions,
-      rejectedSessions: c.rejectedSessions,
+      hundredths: c.hundredths,
       openSessions: c.openSessions,
+      flags: c.flags,
     }));
   const workers = [...workerNames]
     .map(([id, name]) => ({

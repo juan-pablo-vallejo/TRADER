@@ -1,12 +1,10 @@
-// One labor event from a push (ARCHITECTURE, Sync protocol; sync.push of 2026-11-05), in the
-// record's own transaction: the caller's own id first; the scope under row locks; the worker's
-// timeline under its lock (loadWorkerTimeline, which takes the field-write lock shared first);
-// the id again; the time it claims against its receipt (V1-D01); two-sided validation; the
-// approval facts; the insert and, in the same transaction, its approval — none when the worker
-// is an admin, whose own labor needs no approval (V1-D10 as amended). Answers `accepted` or
-// `duplicate` with an acknowledgement of fixed facts only, or `rejected` with a code, writing nothing. Anything thrown is the loop's: the
-// record is omitted and retried. Consumed by sync/push.ts.
-import { approvals, workSessionEvents } from "@trader/db/schema";
+// One labor event from a push, in the record's own transaction: the caller's own id first;
+// the scope under row locks; the worker's timeline under its lock; the id again; the time it
+// claims against its receipt; two-sided validation; its flags; the insert, flags with it.
+// An accepted event counts toward hours at once. Answers `accepted` or `duplicate` with an
+// acknowledgement of fixed facts only, or `rejected` with a code, writing nothing. Anything
+// thrown is the loop's: the record is omitted and retried. Consumed by sync/push.ts.
+import { workSessionEvents } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { type z } from "zod";
 
@@ -76,31 +74,21 @@ async function byId(tx: Tx, id: string): Promise<Prior | undefined> {
   return row;
 }
 
-// The acknowledgement, as stored: the reasons are the approval's, fixed at write (0020).
-async function ack(
-  tx: Tx,
-  result: "accepted" | "duplicate",
-  row: Prior,
-): Promise<LaborResult> {
-  const [approval] = await tx
-    .select({ reasons: approvals.reasons })
-    .from(approvals)
-    .where(eq(approvals.eventId, row.id));
+// The acknowledgement, as stored: the flags are the row's own, fixed at write.
+function ack(result: "accepted" | "duplicate", row: Prior): LaborResult {
   return {
     result,
     ack: {
       id: row.id,
       serverTimestamp: row.serverTimestamp,
       clockSkewed: row.clockSkewed,
-      reasons: approval?.reasons ?? [],
+      reasons: row.flags,
     },
   };
 }
 
-const answerFor = (tx: Tx, row: Prior, user: AppUser, r: LaborRecord) =>
-  same(row, user, r)
-    ? ack(tx, "duplicate", row)
-    : Promise.resolve(rejected("id_conflict"));
+const answerFor = (row: Prior, user: AppUser, r: LaborRecord): LaborResult =>
+  same(row, user, r) ? ack("duplicate", row) : rejected("id_conflict");
 
 export async function pushLaborEvent(
   tx: Tx,
@@ -115,7 +103,7 @@ export async function pushLaborEvent(
   // the first push did. Another initiator's row is not revealed before the scope passes.
   const prior = await byId(tx, r.id);
   if (prior !== undefined && prior.initiatorUserId === user.id) {
-    return answerFor(tx, prior, user, r);
+    return answerFor(prior, user, r);
   }
 
   // 2. Authority, from rows locked now (sync/scope.ts). Whether the schedule decides a start
@@ -134,7 +122,7 @@ export async function pushLaborEvent(
   const again = await byId(tx, r.id);
   if (again !== undefined) {
     return again.initiatorUserId === user.id
-      ? answerFor(tx, again, user, r)
+      ? answerFor(again, user, r)
       : rejected("id_conflict");
   }
 
@@ -175,23 +163,21 @@ export async function pushLaborEvent(
   if (verdict.verdict === "rejected")
     return rejected(verdict.code, verdict.conflictingEventId);
 
-  // 6b. The schedule, for a start it decides, under the worker's day lock: after validation,
-  // so a start that is no start at all is named as that. Admitted, it will lock its shift.
-  // Not admitted and captured offline, it is stored under its own id at its recorded time
-  // for the office to approve, reject or repair: it counts toward nothing until then, and
-  // being stored, the pause, resume and end behind it are judged against it and not refused
-  // in a chain. Not for an admin worker, whose labor takes no approval and so could not
-  // wait for one. Any other start the schedule does not admit is refused and writes nothing.
+  // 6. The schedule, where the company enforces it. Admitted, the start will lock its shift.
+  // Not admitted and captured offline, it is stored under its own id at its recorded time,
+  // flagged `unscheduled`, and counts unless the office corrects it: the pause, resume and
+  // end behind it are judged against it and not refused in a chain. Any other start the
+  // schedule does not admit is refused and writes nothing.
   let admittedOn: string | null = null;
   let unscheduled = false;
   if (scheduled) {
     const start = await judgeStart(tx, p.workerId, p.jobId, p.clientTimestamp);
     if (start.admitted) admittedOn = start.shiftId;
-    else if (p.capturedOffline && !scope!.workerAdmin) unscheduled = true;
+    else if (p.capturedOffline) unscheduled = true;
     else return rejected("not_scheduled");
   }
 
-  // 7. The approval facts.
+  // 7. The entry's flags, written with it.
   const reasons: ApprovalReason[] = laborReasons({
     type: p.type,
     corrected: false,
@@ -228,30 +214,19 @@ export async function pushLaborEvent(
       timeSetByUser: p.timeSetByUser,
       capturedOffline: p.capturedOffline,
       initiatorUserId: user.id,
+      flags: reasons,
     })
     .onConflictDoNothing()
     .returning();
   if (inserted === undefined) {
     const raced = await byId(tx, r.id);
     return raced !== undefined && raced.initiatorUserId === user.id
-      ? answerFor(tx, raced, user, r)
+      ? answerFor(raced, user, r)
       : rejected("id_conflict");
   }
 
-  // 9. Its approval, pending, in the same transaction (0022 requires the column-derived
-  // reasons at commit). None for a worker who is an admin at this receipt, the role locked
-  // with the scope: the evidence columns above are stored all the same, 0032 stands 0022
-  // down for the event, and with no row it is approved by default (labor/approval.ts). A
-  // push for another person is a foreman's, never an admin's (scope.ts), so "the worker is an
-  // admin" is the whole rule here. The acknowledgement reads the stored row: no reasons.
-  if (reasons.length > 0 && !scope!.workerAdmin) {
-    await tx
-      .insert(approvals)
-      .values({ companyId: user.companyId, eventId: r.id, reasons });
-  }
-
-  // 10. The punch lock: the shift this start was admitted on keeps its job, day and times
+  // 9. The punch lock: the shift this start was admitted on keeps its job, day and times
   // from here, in the same transaction as the event that locked it.
   if (admittedOn !== null) await lockShift(tx, admittedOn, r.id);
-  return ack(tx, "accepted", inserted);
+  return ack("accepted", inserted);
 }

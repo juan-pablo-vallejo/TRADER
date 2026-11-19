@@ -51,11 +51,6 @@ export const en: Catalog = {
       ended: "Clock out",
     },
     unsent: "Saved on this phone. It will be sent when there is a connection.",
-    review: "Sent. The office has to approve it before it counts.",
-    reviewUnscheduled:
-      "Sent. It was outside your schedule, so the office has to approve it before it counts.",
-    reviewClock:
-      "Sent. This phone's clock looked wrong, so the office has to approve it before it counts.",
     refused: "The office's system did not accept this entry.",
     refusals: {
       not_scheduled:
@@ -96,7 +91,7 @@ export const en: Catalog = {
     hours: "Your hours",
     noHours: "No hours in the last two weeks.",
     open: "On the clock",
-    waiting: "Waiting for the office",
+    unscheduled: "Outside your schedule. The office may check it.",
   },
   age: {
     justNow: "just now",

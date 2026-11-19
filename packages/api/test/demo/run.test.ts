@@ -135,11 +135,12 @@ describe("the demo run", () => {
     ]);
     expect(jobs.filter((j) => j.crew === null)).toHaveLength(2);
 
-    const queue = await admin().approval.queue({ limit: 100 });
-    expect(queue.items).toHaveLength(EXPECTED.approvals - EXPECTED.decided);
-    const reasons = new Set(queue.items.flatMap((i) => i.reasons));
-    for (const r of ["offline", "user_timed", "location", "clock_skewed", "corrected"]) {
-      expect(reasons.has(r as never)).toBe(true);
+    // Every flag the plan's scenarios raise is on some day of the two weeks.
+    const days = workDays(ANCHOR);
+    const hours = await admin().labor.hours({ from: days[0]!, to: days.at(-1)! });
+    const flags = new Set(hours.cells.flatMap((c) => c.flags));
+    for (const f of ["offline", "user_timed", "location", "clock_skewed", "corrected"]) {
+      expect(flags.has(f as never)).toBe(true);
     }
   });
 
@@ -160,7 +161,7 @@ describe("the demo run", () => {
       workDate: day,
       complete: true,
       corrected: true,
-      accounting: "pending",
+      accounting: "eligible",
     });
     // The clock-out as the phone recorded it stays beside the office's correction of it.
     const ends = session.events.filter((e) => e.type === "ended");
@@ -169,14 +170,11 @@ describe("the demo run", () => {
     expect(correction).toMatchObject({
       correctsEventId: original!.id,
       initiator: { name: DEMO.adminName },
-      approval: { decision: "pending", reasons: s.reasons },
+      flags: s.reasons,
     });
+    // The correction counts at once: the session ends where the office put it.
     expect(session.endedAt).toEqual(correction!.clientTimestamp);
-    // What the admin approved in the backlog reads as decided, by name.
-    expect(original!.approval).toMatchObject({
-      decision: "approved",
-      decidedBy: { name: DEMO.adminName },
-    });
+    expect(original!.flags).toEqual(["offline"]);
   });
 
   it("refuses an owner pool as the application pool before writing anything", async () => {

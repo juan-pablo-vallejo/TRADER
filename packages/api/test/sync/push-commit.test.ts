@@ -3,13 +3,7 @@
 // connections serialize; these do, in a database of their own (helpers.ts, disposableDb),
 // migrated through the whole journal and dropped at the end with everything committed in it.
 // Every call runs as trader_app over the real caller transaction, one per record.
-import {
-  approvals,
-  crewMembers,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { crewMembers, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -167,11 +161,12 @@ describe("sync.push — commits, record by record", () => {
     expect(events).toMatchObject([{ source: "push_record", path: "sync.push" }]);
     expect(JSON.stringify(events)).not.toContain(d.w1);
     expect(JSON.stringify(events)).not.toContain(d.companyId);
-    const approvalRows = await D.owner
-      .select({ eventId: approvals.eventId })
-      .from(approvals)
-      .where(inArray(approvals.eventId, [a.id, b.id, c.id]));
-    expect(approvalRows).toEqual([{ eventId: a.id }]);
+    // A is committed with its flag; nothing of B or C is.
+    const stored = await D.owner
+      .select({ id: workSessionEvents.id, flags: workSessionEvents.flags })
+      .from(workSessionEvents)
+      .where(inArray(workSessionEvents.id, [a.id, b.id, c.id]));
+    expect(stored).toEqual([{ id: a.id, flags: ["offline"] }]);
     // The report carries the request's id.
     expect(events[0]?.requestId).toBe(REQUEST_ID);
   });
@@ -197,10 +192,6 @@ describe("sync.push — commits, record by record", () => {
         .where(eq(workSessionEvents.companyId, d.companyId))
         .orderBy(workSessionEvents.id);
     const first = await push(d.w.who, sent); // the response the device never saw
-    const before = await D.owner
-      .select()
-      .from(approvals)
-      .where(eq(approvals.companyId, d.companyId));
     const rows = await ledger();
     const again = await push(d.w.who, sent);
     expect(again.results).toEqual(
@@ -216,19 +207,22 @@ describe("sync.push — commits, record by record", () => {
     expect(first.results[1]).toMatchObject({
       ack: { clockSkewed: true, reasons: ["clock_skewed"] },
     });
-    expect(
-      await D.owner.select().from(approvals).where(eq(approvals.companyId, d.companyId)),
-    ).toEqual(before);
+    // The flags were written once, with the rows, and the resend moved neither.
+    expect(new Map(rows.map((r) => [r.id, r.flags]))).toEqual(
+      new Map([
+        [batch[0]!.id, ["offline"]],
+        [batch[1]!.id, ["clock_skewed"]],
+      ]),
+    );
     expect(await ledger()).toEqual(rows);
     expect(await eventIds(sent.map((r) => r.id))).toHaveLength(2);
   });
 });
 
-// V1-D10 as amended: an admin's own labor carries no approval, so the deferred checks of 0022
-// (relaxed by 0032) meet a flagged event with no approvals row at a true commit. A rolled-back
-// test only fires them by hand.
-describe("sync.push — an admin's own labor at commit", () => {
-  it("commits an admin's flagged event with no approval", async () => {
+// No deferred check stands behind a pushed event any more (0050): a flagged one commits with
+// its flags and nothing else, an admin's own like anyone's.
+describe("sync.push — a flagged event at commit", () => {
+  it("commits an admin's flagged event with its flags", async () => {
     const d = await world();
     const admin = await D.owner.transaction((tx) => boundIn(tx, d.companyId, "admin"));
     const event = labor(admin.id, d.K, {
@@ -236,20 +230,21 @@ describe("sync.push — an admin's own labor at commit", () => {
       timeSetByUser: true,
       location: null,
     });
+    const reasons = ["offline", "user_timed", "location"];
     const answer = await push(admin.who, [event]);
     expect(answer.results).toMatchObject([
-      { id: event.id, result: "accepted", ack: { reasons: [] } },
+      { id: event.id, result: "accepted", ack: { reasons } },
     ]);
     expect(await eventIds([event.id])).toEqual([event.id]);
     const rows = await D.owner
-      .select({ eventId: approvals.eventId })
-      .from(approvals)
-      .where(eq(approvals.companyId, d.companyId));
-    expect(rows).toEqual([]);
+      .select({ flags: workSessionEvents.flags })
+      .from(workSessionEvents)
+      .where(eq(workSessionEvents.id, event.id));
+    expect(rows).toEqual([{ flags: reasons }]);
     // The resend answers from what was stored.
     const again = await push(admin.who, [event]);
     expect(again.results).toMatchObject([
-      { id: event.id, result: "duplicate", ack: { reasons: [] } },
+      { id: event.id, result: "duplicate", ack: { reasons } },
     ]);
   });
 });

@@ -336,6 +336,40 @@ describe("work_session_events", () => {
     });
   });
 
+  // 0050: an entry's flags are stored with it, and counting never reads them.
+  it("defaults flags to none and stores the ones given, in their order", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const bare = started(refs);
+      const flagged = started(refs);
+      await tx.insert(workSessionEvents).values(bare);
+      await tx
+        .insert(workSessionEvents)
+        .values({ ...flagged, flags: ["offline", "unscheduled"] });
+      const rows = await tx.select().from(workSessionEvents);
+      expect(rows.find((r) => r.id === bare.id)?.flags).toEqual([]);
+      expect(rows.find((r) => r.id === flagged.id)?.flags).toEqual([
+        "offline",
+        "unscheduled",
+      ]);
+      // Not an approval reason: the column is the enum's array.
+      const code = await sqlstate(
+        tx.transaction((sp) =>
+          sp.execute(sql`
+            insert into work_session_events
+              (id, company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
+               clock_skew_ms, attestation_level, schema_version, time_set_by_user,
+               initiator_user_id, flags)
+            values (${uuidv7()}, ${refs.companyId}, ${refs.workerId}, ${refs.jobId},
+                    'started', now(), false, 0, 'none', 1, false, ${refs.workerId},
+                    '{late}')
+          `),
+        ),
+      );
+      expect(code).toBe("22P02");
+    });
+  });
+
   it("has no updated_at column", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute(sql`

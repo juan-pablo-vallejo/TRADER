@@ -1,4 +1,3 @@
-import { approvalRouter } from "./routers/approval";
 import { assignmentRouter } from "./routers/assignment";
 import { crewRouter } from "./routers/crew";
 import { customerRouter } from "./routers/customer";
@@ -12,7 +11,6 @@ import { syncRouter } from "./routers/sync";
 import { router } from "./core/trpc";
 
 export const appRouter = router({
-  approval: approvalRouter,
   assignment: assignmentRouter,
   crew: crewRouter,
   customer: customerRouter,

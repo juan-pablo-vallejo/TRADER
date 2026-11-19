@@ -2,7 +2,14 @@
 // caller's own entries and the reference data the push admits, never anyone else's labor. Devices hold only their user's own entries offline; crew views are online-only
 // (PRD, Sync and offline). One protected transaction; under READ COMMITTED each statement reads
 // its own committed state, so the snapshot may combine moments, and the next pull converges. Consumed by routers/sync.ts.
-import { approvals, companies, crewMembers, crews, jobs, users } from "@trader/db/schema";
+import {
+  companies,
+  crewMembers,
+  crews,
+  jobs,
+  users,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 
 import { loadDays } from "../assignments/day";
@@ -18,9 +25,6 @@ import type { PullOutput } from "../contract/pull";
 export const WINDOW_DAYS = 14;
 
 export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
-
-const stateOf = (decision: "approved" | "rejected" | null | undefined) =>
-  decision === undefined ? "none" : decision === null ? "pending" : decision;
 
 // The caller's shifts are read from the Monday of the current week for this many days: this
 // week whole, and the next, so Sunday evening already shows Monday.
@@ -129,19 +133,21 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
       (e.correctsEventId !== null && roots.has(e.correctsEventId)) ||
       (e.voidsEventId !== null && sessionRoots.has(e.voidsEventId)),
   );
-  const eventApprovals =
+
+  // Each entry's flags, as stored with it.
+  const flagRows =
     ownEvents.length === 0
       ? []
       : await tx
-          .select({ eventId: approvals.eventId, decision: approvals.decision })
-          .from(approvals)
+          .select({ id: workSessionEvents.id, flags: workSessionEvents.flags })
+          .from(workSessionEvents)
           .where(
             inArray(
-              approvals.eventId,
+              workSessionEvents.id,
               ownEvents.map((e) => e.id),
             ),
           );
-  const eventDecision = new Map(eventApprovals.map((a) => [a.eventId, a.decision]));
+  const flagsOf = new Map(flagRows.map((r) => [r.id, r.flags]));
 
   // The caller's own shifts and the hours each is the eligible one, a day at a time.
   const today = workDate(serverNow, company.timezone);
@@ -211,7 +217,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
       clockSkewed: e.clockSkewed,
       correctsEventId: e.correctsEventId,
       voidsEventId: e.voidsEventId,
-      approval: stateOf(eventDecision.get(e.id)),
+      flags: flagsOf.get(e.id) ?? [],
     })),
   };
 }

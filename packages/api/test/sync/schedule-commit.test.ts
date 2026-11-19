@@ -98,7 +98,7 @@ const start = (who: VerifiedIdentity, workerId: string, jobId: string) =>
     })
     .then((answer) => answer.results[0]!);
 
-// The approval reasons a labor acknowledgement carries.
+// The flags a labor acknowledgement carries.
 const reasonsOf = (answer: Awaited<ReturnType<typeof start>>) =>
   answer.result === "accepted" && "reasons" in answer.ack ? answer.ack.reasons : null;
 

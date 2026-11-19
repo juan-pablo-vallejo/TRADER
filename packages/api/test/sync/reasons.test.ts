@@ -1,4 +1,4 @@
-// The approval facts sync.push computes (sync/reasons.ts). Pure: no database.
+// The flags sync.push computes (sync/reasons.ts). Pure: no database.
 import { describe, expect, it } from "vitest";
 
 import {

@@ -29,8 +29,8 @@ function server() {
     state: "normal" as ServiceState,
     statusDown: false,
     pullDown: false,
-    // Ids the office has yet to decide, and why the server sent them there.
-    waiting: new Map<string, string[]>(),
+    // The flags the server judged for an id, written with the entry.
+    flagged: new Map<string, PullOutput["events"][number]["flags"]>(),
     // Applied to the next push only.
     dropResponse: false,
     failBefore: false,
@@ -56,7 +56,7 @@ function server() {
       clockSkewed: false,
       correctsEventId: null,
       voidsEventId: null,
-      approval: s.waiting.has(id) ? "pending" : "none",
+      flags: s.flagged.get(id) ?? [],
     })),
   });
   s.transport = {
@@ -78,7 +78,7 @@ function server() {
         return {
           id: r.id,
           result: seen ? "duplicate" : "accepted",
-          reasons: s.waiting.get(r.id) ?? [],
+          reasons: s.flagged.get(r.id) ?? [],
         };
       });
       if (s.dropResponse) {
@@ -189,19 +189,24 @@ describe("a cycle", () => {
     expect(p.store.rows.map((r) => r.id)).toEqual([ids[0]]);
   });
 
-  it("keeps a record the office has yet to decide, with why, until it is decided", async () => {
+  it("drops a flagged record like any other once the snapshot shows it, flags and all", async () => {
     const p = await phone();
     const [id] = await p.capture(1);
-    p.srv.waiting.set(id!, ["unscheduled", "offline"]);
+    p.srv.flagged.set(id!, ["offline", "unscheduled"]);
+    // Acknowledged but not yet pulled: the phone's copy holds why it was flagged.
+    p.srv.pullDown = true;
     await p.cycle();
     expect(p.store.rows).toMatchObject([
-      { id, standing: "settled", reasons: ["unscheduled", "offline"] },
+      { id, standing: "settled", reasons: ["offline", "unscheduled"] },
     ]);
+    // Pulled: nothing waits on the office, so the copy goes and the snapshot says the flags.
+    p.srv.pullDown = false;
     await p.cycle();
     expect(p.srv.pushes).toEqual([[id]]);
-    p.srv.waiting.clear();
-    await p.cycle();
     expect(p.store.rows).toEqual([]);
+    expect((await readSnapshot(p.store))?.data.events).toMatchObject([
+      { id, flags: ["offline", "unscheduled"] },
+    ]);
   });
 
   it("marks nothing rejected or lost when the network fails", async () => {

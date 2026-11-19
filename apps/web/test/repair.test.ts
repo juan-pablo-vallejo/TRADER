@@ -1,8 +1,8 @@
-// TASKS, Stage 4: labor repair from the ledger screen and the approval of what it wrote, over
+// TASKS, Stage 4: labor repair from the ledger screen and the hours it leaves, over
 // the real transport — the route module as Next calls it, the bodies in superjson's envelope,
 // and the repair sets built by the screen's own builder (src/app/hours/repair-set.ts) from
-// what `labor.ledger` answered. The rules of a repair and of a decision are the api suite's
-// (labor/repair*.test.ts, approvals/); this holds the screen's path through them together.
+// what `labor.ledger` answered. The rules of a repair are the api suite's
+// (labor/repair*.test.ts); this holds the screen's path through them together.
 import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
 import type { AppRouter } from "@trader/api";
 import type { Db } from "@trader/db";
@@ -35,7 +35,7 @@ import { disposableDb, invitation, type TrpcResult, jsonBody } from "./helpers";
 
 type Out = inferRouterOutputs<AppRouter>;
 
-// A database of its own: a ledger row, an approval's decision and an audit row are
+// A database of its own: a ledger row and an audit row are
 // append-only and reference their company and people, so nothing written here could be
 // deleted again.
 let D: Awaited<ReturnType<typeof disposableDb>>;
@@ -135,14 +135,8 @@ const ledger = (who: string) =>
     { workerId: who, from: DAY, to: DAY },
     me(),
   );
-const queue = () => call<Out["approval"]["queue"]>("approval.queue", { limit: 50 }, me());
-const decide = (approvalId: string, decision: "approved" | "rejected") =>
-  call<Out["approval"]["decide"]>(
-    "approval.decide",
-    { approvalId, decision },
-    me(),
-    true,
-  );
+const dayHours = (who: string) =>
+  call<Out["labor"]["hours"]>("labor.hours", { workerId: who, from: DAY, to: DAY }, me());
 // A day's hours for `who` as the "Add missing hours" form builds them: 7:00 to 3:30 Eastern.
 function hours(who: string) {
   const built = missingHours({ jobId, start: `${DAY}T07:00`, end: `${DAY}T15:30` }, NY);
@@ -166,7 +160,7 @@ describe("labor repair through the route handler", () => {
     expect((await ledger(workerId)).data?.sessions).toEqual([]);
   });
 
-  it("adds missing hours that wait, lets their writer approve them, and counts them", async () => {
+  it("adds missing hours that count at once, flagged as the office's entry", async () => {
     const set = hours(workerId);
     const first = await repair(set);
     // An office entry carries no location stamp, so the server flags that as well.
@@ -180,48 +174,40 @@ describe("labor repair through the route handler", () => {
     // The same set again, as after an answer that never arrived.
     expect((await repair(set)).data).toMatchObject({ result: "duplicate" });
 
-    const pending = (await ledger(workerId)).data!;
-    expect(pending.timezone).toBe(NY);
-    expect(pending.sessions).toMatchObject([
+    const read = (await ledger(workerId)).data!;
+    expect(read.timezone).toBe(NY);
+    const office = {
+      initiator: { id: admin.userId },
+      timeSetByUser: true,
+      flags: ["user_timed", "location"],
+    };
+    expect(read.sessions).toMatchObject([
       {
         workDate: DAY,
         job: { id: jobId },
         complete: true,
         structuralWorkedMs: 8.5 * 3_600_000,
-        accounting: "pending",
-        eligibleWorkedMs: 0,
+        accounting: "eligible",
+        eligibleWorkedMs: 8.5 * 3_600_000,
         events: [
-          { type: "started", initiator: { id: admin.userId }, timeSetByUser: true },
-          { type: "ended", initiator: { id: admin.userId }, timeSetByUser: true },
+          { type: "started", ...office },
+          { type: "ended", ...office },
         ],
       },
     ]);
-
-    const waiting = (await queue()).data!;
-    expect(waiting.timezone).toBe(NY);
-    expect(waiting.items.map((i) => [i.subject.kind, i.ownEntry, i.reasons])).toEqual([
-      ["labor_event", false, ["user_timed", "location"]],
-      ["labor_event", false, ["user_timed", "location"]],
-    ]);
-    for (const item of waiting.items) {
-      expect((await decide(item.approvalId, "approved")).data).toMatchObject({
-        result: "decided",
-      });
-    }
-    // The same press again is answered as itself; the other decision is refused.
-    const again = waiting.items[0]!.approvalId;
-    expect((await decide(again, "approved")).data).toMatchObject({
-      result: "duplicate",
+    // In the day's figure with nothing decided by anyone, its flags beside it.
+    expect((await dayHours(workerId)).data).toMatchObject({
+      cells: [
+        {
+          workDate: DAY,
+          job: { id: jobId },
+          hundredths: 850,
+          openSessions: 0,
+          flags: ["user_timed", "location"],
+        },
+      ],
+      totals: { hundredths: 850, openSessions: 0 },
     });
-    expect((await decide(again, "rejected")).data).toMatchObject({
-      result: "rejected",
-      code: "already_decided",
-    });
-
-    expect((await queue()).data?.items).toEqual([]);
-    expect((await ledger(workerId)).data?.sessions).toMatchObject([
-      { accounting: "eligible", eligibleWorkedMs: 8.5 * 3_600_000 },
-    ]);
   });
 
   it("corrects from what the ledger showed, and refuses a set built from an entry no longer in effect", async () => {
@@ -257,8 +243,19 @@ describe("labor repair through the route handler", () => {
         // 7:00 to 4:00 less the half-hour break.
         structuralWorkedMs: 8.5 * 3_600_000,
         breakMs: 30 * 60_000,
-        accounting: "pending",
+        // In effect as saved.
+        accounting: "eligible",
+        eligibleWorkedMs: 8.5 * 3_600_000,
       },
+    ]);
+    expect(
+      repaired[0]!.events.filter((e) => e.effect === "in_effect").map((e) => e.flags),
+    ).toEqual([
+      ["corrected", "user_timed", "location"],
+      // A pause and a resume are never judged for a stamp.
+      ["user_timed"],
+      ["user_timed"],
+      ["corrected", "user_timed", "location"],
     ]);
     expect(
       repaired[0]!.events.filter((e) => e.effect === "superseded").map((e) => e.type),
@@ -282,19 +279,31 @@ describe("labor repair through the route handler", () => {
     expect(
       (await repair(createMinter()(workerId, [voidOperation(repaired[0]!)]))).data,
     ).toMatchObject({ result: "rejected", code: "already_voided" });
+    // The void took effect when it was saved: nothing of the day counts.
+    expect((await ledger(workerId)).data!.sessions).toMatchObject([
+      { accounting: "voided", eligibleWorkedMs: 0 },
+    ]);
+    expect((await dayHours(workerId)).data).toMatchObject({
+      cells: [],
+      totals: { hundredths: 0 },
+    });
   });
 
-  // V1-D10 as amended: an admin's own labor needs no approval. The answer carries no
-  // reasons, which is what the screen's saved note reads.
-  it("counts an admin's own repaired hours at once, with nothing to decide", async () => {
+  // An admin's own ledger is repaired like anyone's: the same flags, which is what the
+  // screen's saved note reads.
+  it("counts an admin's own repaired hours at once, flagged like anyone's", async () => {
     const saved = (await repair(hours(admin.userId))).data;
+    const flags = ["user_timed", "location"];
     expect(saved).toMatchObject({
       result: "accepted",
-      events: [{ reasons: [] }, { reasons: [] }],
+      events: [{ reasons: flags }, { reasons: flags }],
     });
-    expect((await queue()).data!.items).toEqual([]);
     expect((await ledger(admin.userId)).data?.sessions).toMatchObject([
-      { accounting: "eligible", events: [{ approval: null }, { approval: null }] },
+      {
+        accounting: "eligible",
+        eligibleWorkedMs: 8.5 * 3_600_000,
+        events: [{ flags }, { flags }],
+      },
     ]);
   });
 

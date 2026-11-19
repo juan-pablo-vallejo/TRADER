@@ -1,16 +1,16 @@
 // Stage 3 line 9: labor.repair against real commits, in a database of its own (helpers.ts,
 // disposableDb). Rolled-back tests cannot show two connections serializing, a savepoint's
-// rollback surviving a commit, or a deferred check firing at COMMIT; these do. A holder
+// rollback surviving a commit, or a repair holding at a true COMMIT; these do. A holder
 // transaction takes a lock first; the calls are started against it, seen waiting in
 // pg_stat_activity (waitForLockWait, no sleeps), and the holder then ends.
-import { approvals, crewMembers, users, workSessionEvents } from "@trader/db/schema";
+import { crewMembers, users, workSessionEvents } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { localDirectory } from "../../src/core/identity";
 import { createContext, type Tx } from "../../src/core/context";
 import type { VerifiedIdentity } from "../../src/core/identity";
-import { sessionApprovals } from "../../src/labor/approval";
+import { sessionAccounting } from "../../src/labor/accounting";
 import { replay } from "../../src/labor/fold";
 import { readWorkerEvents } from "../../src/labor/timeline";
 import { appRouter } from "../../src/router";
@@ -21,9 +21,6 @@ import {
   disposableDb,
   eventIn,
   outcome,
-  pendingApproval,
-  rejection,
-  sqlstateOf,
   uuidv7,
   waitForLockWait,
   quietReporter,
@@ -91,7 +88,7 @@ const repair = (who: VerifiedIdentity, workerId: string, operations: Op[]) =>
   caller(who).labor.repair({ workerId, operations });
 
 // Committed: a crew day, two admins, a bound crew worker `w`, and w's day on J, 08:00–16:00
-// local (12:00–20:00 UTC), its end captured offline so it has a pending approval.
+// local (12:00–20:00 UTC).
 async function world() {
   return D.owner.transaction(async (tx) => {
     const d = await crewDayIn(tx);
@@ -113,9 +110,7 @@ async function world() {
       type: "ended",
       client: T("20:00"),
     });
-    const startApproval = await pendingApproval(tx, d.companyId, { eventId: start });
-    const endApproval = await pendingApproval(tx, d.companyId, { eventId: end });
-    return { d, admin, admin2, w, start, end, startApproval, endApproval };
+    return { d, admin, admin2, w, start, end };
   });
 }
 
@@ -157,36 +152,13 @@ async function counts(companyId: string) {
     .select({ n: sql<number>`count(*)::int` })
     .from(workSessionEvents)
     .where(eq(workSessionEvents.companyId, companyId));
-  const [a] = await D.owner
-    .select({ n: sql<number>`count(*)::int` })
-    .from(approvals)
-    .where(eq(approvals.companyId, companyId));
-  return { events: e!.n, approvals: a!.n };
+  return { events: e!.n };
 }
 
-const decide = (
-  who: VerifiedIdentity,
-  approvalId: string,
-  decision: "approved" | "rejected",
-) => caller(who).approval.decide({ approvalId, decision });
-
-const approvalIdOf = async (eventId: string) =>
-  (await D.owner.select().from(approvals).where(eq(approvals.eventId, eventId)))[0]!.id;
-
-// The committed A1 accounting of w's sessions, read as the owner.
+// The committed accounting of a worker's sessions, read as the owner.
 async function accounting(workerId: string) {
   const ledger = await D.owner.transaction((tx) => readWorkerEvents(tx, workerId));
-  const rows = await D.owner
-    .select({ eventId: approvals.eventId, decision: approvals.decision })
-    .from(approvals)
-    .where(
-      inArray(
-        approvals.eventId,
-        ledger.map((e) => e.id),
-      ),
-    );
-  const decisions = new Map(rows.map((r) => [r.eventId!, r.decision]));
-  return [...sessionApprovals(ledger, decisions).byRoot.values()];
+  return [...sessionAccounting(ledger).byRoot.values()];
 }
 
 describe("labor.repair — retries and ids, committed", () => {
@@ -209,10 +181,7 @@ describe("labor.repair — retries and ids, committed", () => {
     expect((second as { events: unknown }).events).toEqual(
       (first as { events: unknown }).events,
     );
-    expect(await counts(x.d.companyId)).toEqual({
-      events: before.events + 2,
-      approvals: before.approvals + 2,
-    });
+    expect(await counts(x.d.companyId)).toEqual({ events: before.events + 2 });
   });
 
   it("answers an id another tenant holds with id_conflict and commits nothing", async () => {
@@ -245,66 +214,37 @@ describe("labor.repair — retries and ids, committed", () => {
     ).toBe(other.d.companyId);
   });
 
-  it("fires 0026 at COMMIT for a correction written without its approval", async () => {
+  // No deferred check stands behind a repair any more (0050): what it wrote is committed
+  // with its flags and is in effect, for a worker's ledger and for the caller's own.
+  it("commits a correction with its flags, in effect at once, on anyone's ledger", async () => {
     const x = await world();
-    const error = await rejection(
-      D.owner.transaction(async (tx) => {
-        await eventIn(tx, x.d, {
-          worker: x.w.id,
-          job: x.d.J,
-          type: "ended",
-          client: T("19:00"),
-          corrects: x.end,
-        });
-      }),
-    );
-    expect(sqlstateOf(error) ?? (error as { code?: string }).code).toBe("23000");
-  });
+    const theirs = correct(x.end, "ended", x.d.J, "19:00");
+    expect((await repair(x.admin.who, x.w.id, [theirs])).result).toBe("accepted");
+    expect(await accounting(x.w.id)).toMatchObject([
+      { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },
+    ]);
 
-  // V1-D10 as amended: 0032 stands the deferred checks down for an admin's own labor, so a
-  // repair of the caller's own ledger commits with no approval; and for nothing else.
-  it("commits an admin's repair of their own ledger with no approval", async () => {
-    const x = await world();
     const start = append("started", x.d.J, "12:00");
     const end = append("ended", x.d.J, "20:00");
     expect((await repair(x.admin.who, x.admin.id, [start, end])).result).toBe("accepted");
     const fix = correct(end.id, "ended", x.d.J, "19:00");
     expect((await repair(x.admin.who, x.admin.id, [fix])).result).toBe("accepted");
-    const ledger = await readWorkerEvents(D.owner as unknown as Tx, x.admin.id);
-    expect(ledger.map((e) => e.id).sort()).toEqual([start.id, end.id, fix.id].sort());
-    expect(
-      await D.owner
-        .select({ id: approvals.id })
-        .from(approvals)
-        .where(
-          inArray(
-            approvals.eventId,
-            ledger.map((e) => e.id),
-          ),
-        ),
-    ).toEqual([]);
-    expect([...sessionApprovals(ledger, new Map()).byRoot.values()]).toMatchObject([
+    expect(await accounting(x.admin.id)).toMatchObject([
       { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },
     ]);
-  });
 
-  it("fires 0026 at COMMIT for one admin's correction of another's with no approval", async () => {
-    const x = await world();
-    const start = append("started", x.d.J, "12:00");
-    expect((await repair(x.admin.who, x.admin.id, [start])).result).toBe("accepted");
-    const error = await rejection(
-      D.owner.transaction(async (tx) => {
-        await eventIn(tx, x.d, {
-          worker: x.admin.id,
-          job: x.d.J,
-          type: "started",
-          client: T("13:00"),
-          corrects: start.id,
-          initiator: x.admin2.id,
-        });
-      }),
+    const stored = await D.owner
+      .select({ id: workSessionEvents.id, flags: workSessionEvents.flags })
+      .from(workSessionEvents)
+      .where(inArray(workSessionEvents.id, [theirs.id, start.id, end.id, fix.id]));
+    expect(new Map(stored.map((r) => [r.id, r.flags]))).toEqual(
+      new Map([
+        [theirs.id, ["corrected", "user_timed", "location"]],
+        [start.id, ["user_timed", "location"]],
+        [end.id, ["user_timed", "location"]],
+        [fix.id, ["corrected", "user_timed", "location"]],
+      ]),
     );
-    expect(sqlstateOf(error) ?? (error as { code?: string }).code).toBe("23000");
   });
 });
 
@@ -356,6 +296,10 @@ describe("labor.repair — concurrent repairs, committed", () => {
       .from(workSessionEvents)
       .where(eq(workSessionEvents.voidsEventId, x.start));
     expect(voids).toHaveLength(1);
+    // Committed, the void is in effect: nothing of the session counts.
+    expect(await accounting(x.w.id)).toMatchObject([
+      { accounting: "voided", eligibleWorkedMs: 0 },
+    ]);
   });
 
   // An open session from 21:00: the office appends its end at 22:00 while the phone pushes
@@ -434,80 +378,6 @@ describe("labor.repair — concurrent repairs, committed", () => {
       code: "breaks_following_event",
     });
     expect(await violationOf(x.w.id)).toBeNull();
-  });
-});
-
-describe("labor.repair — decisions in flight, committed", () => {
-  it("lets a decision on a source commit while a repair of it waits; the repair is valid", async () => {
-    const x = await world();
-    const h = holdWorker(x.w.id);
-    await h.held;
-    const fix = correct(x.end, "ended", x.d.J, "19:00");
-    const repaired = repair(x.admin.who, x.w.id, [fix]);
-    await workerWaiters(1);
-    // approval.decide takes no worker lock: it completes while the repair is blocked.
-    expect((await decide(x.admin2.who, x.endApproval, "rejected")).result).toBe(
-      "decided",
-    );
-    expect((await decide(x.admin2.who, x.startApproval, "approved")).result).toBe(
-      "decided",
-    );
-    await h.release();
-    expect((await repaired).result).toBe("accepted");
-    expect((await accounting(x.w.id))[0]).toMatchObject({ accounting: "pending" });
-    expect(
-      (await decide(x.admin2.who, await approvalIdOf(fix.id), "approved")).result,
-    ).toBe("decided");
-    expect((await accounting(x.w.id))[0]).toMatchObject({
-      accounting: "eligible",
-      eligibleWorkedMs: 7 * HOUR,
-    });
-    const [standing] = await D.owner
-      .select()
-      .from(approvals)
-      .where(eq(approvals.id, x.endApproval));
-    expect(standing!.decision).toBe("rejected");
-  });
-
-  it("commits a repair without waiting on a decision blocked at its approval row", async () => {
-    const x = await world();
-    const h = hold((tx) =>
-      tx.execute(sql`select 1 from approvals where id = ${x.endApproval} for update`),
-    );
-    await h.held;
-    const decision = decide(x.admin2.who, x.endApproval, "rejected");
-    await waitForLockWait(D.owner, '%from "approvals"%for no key update%');
-    const fix = correct(x.end, "ended", x.d.J, "19:00");
-    expect((await repair(x.admin.who, x.w.id, [fix])).result).toBe("accepted");
-    await h.release();
-    expect((await decision).result).toBe("decided");
-    await decide(x.admin2.who, x.startApproval, "approved");
-    await decide(x.admin2.who, await approvalIdOf(fix.id), "approved");
-    expect((await accounting(x.w.id))[0]).toMatchObject({
-      accounting: "eligible",
-      eligibleWorkedMs: 7 * HOUR,
-    });
-  });
-
-  it("voids a session while its start is being approved; the void decides the hours", async () => {
-    const x = await world();
-    const h = hold((tx) =>
-      tx.execute(sql`select 1 from approvals where id = ${x.startApproval} for update`),
-    );
-    await h.held;
-    const approving = decide(x.admin2.who, x.startApproval, "approved");
-    await waitForLockWait(D.owner, '%from "approvals"%for no key update%');
-    const v = voidOf(x.start);
-    expect((await repair(x.admin.who, x.w.id, [v])).result).toBe("accepted");
-    await h.release();
-    expect((await approving).result).toBe("decided");
-    await decide(x.admin2.who, x.endApproval, "approved");
-    expect((await accounting(x.w.id))[0]).toMatchObject({ accounting: "pending" });
-    await decide(x.admin2.who, await approvalIdOf(v.id), "approved");
-    expect((await accounting(x.w.id))[0]).toMatchObject({
-      accounting: "voided",
-      eligibleWorkedMs: 0,
-    });
   });
 });
 

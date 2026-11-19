@@ -1,25 +1,14 @@
-// labor.repair (PRD, Labor: no role edits a recorded event; corrections are new events that
-// reference the original. ARCHITECTURE rows 181, 182, 186, 187). An active admin repairs one
-// worker's ledger with a set of operations — `append` a missing event, `correct` one (a new
-// event naming its root), `void` a session — validated as one timeline (validateEvents), so a
-// repair needing two events at once is legal when the pair is, and written all or nothing.
-// Every new event gets its pending approval in the same transaction (0022, 0026) — except in
-// an admin's repair of their own ledger, which writes none: an admin's own labor needs no
-// approval (V1-D10 as amended; 0032). A repair of anyone else, another admin included, is
-// pending as before. Nothing here reads a decision, so a repair's validity never depends on
-// one (row 209). Answers mirror a
-// push record's: `accepted` or `duplicate` (both success) with acknowledgements in input order,
-// or `rejected` with a code, writing nothing, so the same ids may be sent again. Anything
-// thrown rolls the call back. An accepted repair leaves one audit row (core/audit.ts); a
-// duplicate and a rejection leave none. Consumed by routers/labor.ts.
-import {
-  approvalReason,
-  approvals,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
-import { inArray, eq, sql } from "drizzle-orm";
+// labor.repair: no role edits a recorded event; a fix is a new event that references the
+// original. An active admin repairs one worker's ledger with a set of operations: `append` a
+// missing event, `correct` one (a new event naming its root), `void` a session. The set is
+// validated as one timeline (validateEvents), so a repair needing two events at once is
+// legal when the pair is, and written all or nothing. Every new event carries its flags and
+// takes effect when it is written. Answers mirror a push record's: `accepted` or `duplicate`
+// (both success) with acknowledgements in input order, or `rejected` with a code, writing
+// nothing, so the same ids may be sent again. Anything thrown rolls the call back. Consumed
+// by routers/labor.ts.
+import { approvalReason, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { inArray, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { lockActiveSelf } from "../core/locks";
@@ -232,17 +221,12 @@ async function answerRecorded(
     // Part of a set: the rest was never written with it, so these ids are another write's.
     return rejected("id_conflict", { conflictingEventId: rows[0]!.id });
   }
-  const stored = await tx
-    .select({ eventId: approvals.eventId, reasons: approvals.reasons })
-    .from(approvals)
-    .where(inArray(approvals.eventId, ids));
-  const reasonsOf = new Map(stored.map((a) => [a.eventId, a.reasons]));
   return {
     result: "duplicate",
     events: input.operations.map((op) => ({
       id: op.id,
       serverTimestamp: byId.get(op.id)!.serverTimestamp,
-      reasons: reasonsOf.get(op.id) ?? [],
+      reasons: byId.get(op.id)!.flags,
     })),
   };
 }
@@ -254,11 +238,6 @@ class IdHeld extends Error {
     super("an id of the repair is held elsewhere");
   }
 }
-
-// Fired before the procedure returns, then deferred again (material.correct's pattern): a
-// rolled-back test never reaches the commit where they would otherwise run.
-const APPROVED = sql`set constraints work_session_events_approved, work_session_events_repair_approved immediate`;
-const DEFERRED = sql`set constraints work_session_events_approved, work_session_events_repair_approved deferred`;
 
 export async function repairLabor(
   tx: Tx,
@@ -364,18 +343,10 @@ export async function repairLabor(
     });
   }
 
-  // 9. The approval facts. None for the caller's own ledger: the
-  // caller is an admin under the lock of step 2, so the worker is an admin at this receipt
-  // and no different admin is writing — the whole of 0032's rule. Their events are stored
-  // with the same facts as anyone's and, with no approvals row, are approved by default.
-  const own = input.workerId === user.id;
+  // 9. Each entry's flags: an office entry is corrected or user-timed, and unstamped.
   const reasons: ApprovalReason[][] = [];
   for (const [i, op] of input.operations.entries()) {
     const c = candidates[i]!;
-    if (own) {
-      reasons.push([]);
-      continue;
-    }
     reasons.push(
       laborReasons({
         type: c.type,
@@ -389,7 +360,7 @@ export async function repairLabor(
     );
   }
 
-  // 10. Every event and its approval, all or nothing. No conflict on a visible id is possible
+  // 10. Every event with its flags, all or nothing. No conflict on a visible id is possible
   // here (step 5, under the lock); one held by an invisible row returns nothing for it.
   try {
     await tx.transaction(async (sp) => {
@@ -409,6 +380,7 @@ export async function repairLabor(
               voidsEventId: c.voidsEventId,
               correctsEventId: c.correctsEventId,
               initiatorUserId: user.id,
+              flags: reasons[i]!,
               ...officeFacts(op),
             };
           }),
@@ -419,17 +391,6 @@ export async function repairLabor(
         const written = new Set(inserted.map((r) => r.id));
         throw new IdHeld(candidates.find((c) => !written.has(c.id))!.id);
       }
-      if (!own) {
-        await sp.insert(approvals).values(
-          candidates.map((c, i) => {
-            if (reasons[i]!.length === 0) throw new Error("an office event has a reason");
-            return { companyId: user.companyId, eventId: c.id, reasons: reasons[i]! };
-          }),
-        );
-      }
-      // Fired for an own repair too: 0032 stands them down only for the events it names.
-      await sp.execute(APPROVED);
-      await sp.execute(DEFERRED);
     });
   } catch (error) {
     if (error instanceof IdHeld) {

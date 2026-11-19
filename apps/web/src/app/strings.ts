@@ -123,7 +123,6 @@ export const strings = {
       authorization: "someone has already clocked in that day",
     },
   },
-  approvals: "Approvals",
   profile: "Profile",
   // Invoices (DESIGN, Invoice line): a draft priced by the admin, issued once, void once.
   invoices: {
@@ -171,10 +170,10 @@ export const strings = {
     drawExplain:
       "Adds the words and the quantity as a line. The price is yours to enter: nothing here comes from what the job cost.",
     laborOn: (day: string) => `Labor, ${day}`,
-    hoursOf: (quantity: string) => `${quantity} h approved`,
+    hoursOf: (quantity: string) => `${quantity} h`,
     add: "Add",
     addOf: (label: string) => `Add ${label} as a line`,
-    nothingToDraw: "This job has no approved hours and no receipts that count yet.",
+    nothingToDraw: "This job has no hours yet.",
     issue: "Issue invoice",
     issueEffect: (total: string) =>
       `This invoice for ${total} takes the next number and can no longer be changed. Its lines and its tax are frozen as they are saved now.`,
@@ -373,7 +372,7 @@ export const strings = {
   // Labor ledger (DESIGN, Worker ledger)
   ledger: "A person's entries",
   ledgerExplain:
-    "One person's recorded hours, day by day, with every entry behind them. Nothing here is erased: a repair is a new entry that waits for approval, and the entry it replaces stays on record.",
+    "One person's recorded hours, day by day, with every entry behind them. Nothing here is erased: a correction is a new entry, and the entry it replaces stays on record.",
   showLedger: "Show ledger",
   ledgerRange: "Choose up to 31 days, the first no later than the last.",
   emptyLedger: "No hours are recorded for this person on these days.",
@@ -381,8 +380,6 @@ export const strings = {
     `A session started ${day} is still open. They cannot clock in again until it is ended or repaired.`,
   sessionCounts: {
     eligible: "Counts",
-    pending: "Waiting for approval",
-    rejected: "Rejected",
     voided: "Voided",
   },
   entry: "Entry",
@@ -391,7 +388,6 @@ export const strings = {
   // The cell says it whole: a narrow row shows no column heading.
   enteredByName: (name: string) => `Entered by ${name}`,
   flags: "Flags",
-  approval: "Approval",
   entryId: "Id",
   entryTypes: {
     started: "Clock in",
@@ -411,44 +407,35 @@ export const strings = {
     after_closeout: "after closeout",
     unscheduled: "not on the schedule",
   },
-  approvedByDefault: "Approved by default",
-  approvalWaiting: "Waiting",
-  approvedBy: (name: string) => `Approved by ${name}`,
-  rejectedBy: (name: string) => `Rejected by ${name}`,
   reconExplain:
-    "Each person's approved hours by day and job, for the pay period or the days you choose. Hours count once they are approved and the session has ended; a day's time on a job is added up first, then rounded to the hundredth of an hour.",
+    "Each person's hours by day and job, for the days you choose. Every entry counts; a flag says why you may want to look at it. A day's time on a job is added up first, then rounded to the hundredth of an hour.",
   showHours: "Show hours",
   workDatesIn: (zone: string) => `Work dates in ${zone}.`,
-  approvedHours: "Approved hours",
-  reconTotal: (hours: string) => `${hours} h approved on these days`,
+  hoursHeading: "Hours",
+  noHoursYet: "No hours have ended on these days yet.",
+  flagged: (flags: string) => flags,
+  reconTotal: (hours: string) => `${hours} h on these days`,
   hoursValue: (hours: string) => `${hours} h`,
-  noApprovedHours: "No hours are approved on these days yet.",
   emptyReconciliation: "No hours are recorded on these days.",
-  notInHours: "Not in these hours",
+  notInHours: "Still on the clock",
   notInHoursExplain:
-    "What waits for approval, was rejected or is still open. None of it is in the approved hours above.",
-  decideInApprovals: "Decide what waits in Approvals",
+    "Sessions with no clock-out yet. Their time is in no figure above until it arrives.",
   repairInLedger: "Correct hours in a person's entries",
-  waitingHours: "Waiting",
   unresolvedState: "Why",
-  sessionsWaiting: (n: number) => `${n} waiting for approval`,
-  sessionsRejected: (n: number) => `${n} rejected`,
   sessionsOpen: (n: number) => `${n} still open`,
 
   // Labor repair, on the ledger (PRD, Office review)
   repair: "Repair",
   repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,
   repairExplain:
-    "Change a time or the job, or add an entry that is missing. Each change is a new entry that waits for approval.",
+    "Change a time or the job, or add an entry that is missing. Each change is a new entry and counts at once.",
   repairTimes: "Times",
   repairAdded: "Entries to add",
   addEntry: "Add an entry",
   addedEntryType: (n: number) => `Entry ${n}`,
   addedEntryTime: (n: number) => `Entry ${n} time`,
   saveRepair: "Save repair",
-  repairSaved: "Saved. The new entries wait for approval.",
-  // An admin's own hours need no approval (PRD, Office approval).
-  repairCounted: "Saved. These are your own hours, so they count without approval.",
+  repairSaved: "Saved.",
   repairBadTime:
     "Enter a date and a time. A time the clocks skipped that day cannot be used.",
   repairTooMany: "At most 20 changes at a time. Save some, then make the rest.",
@@ -458,10 +445,10 @@ export const strings = {
     "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
   voidSession: "Void session",
   voidSessionEffect:
-    "This session's hours will no longer count. The session and its entries stay on record, and the void waits for approval.",
+    "This session's hours will no longer count. The session and its entries stay on record.",
   addMissingHours: "Add missing hours",
   missingHoursExplain:
-    "Hours nobody recorded: a clock in and, when it is known, the clock out. They wait for approval like every entry the office writes.",
+    "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once and are flagged as edited.",
   missingClockIn: "Clock in",
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
@@ -499,32 +486,7 @@ export const strings = {
       "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
   },
 
-  // Approvals (DESIGN, Approval row)
-  approvalsExplain:
-    "Entries that wait for the office before they count, oldest first. Approving keeps an entry as it was recorded; rejecting leaves it out. A decision cannot be changed: hours that are wrong are repaired from the labor ledger.",
-  emptyApprovals: "Nothing is waiting for approval.",
-  who: "Who",
-  time: "Time",
   hours: "Hours",
-  decision: "Decision",
-  approve: "Approve",
-  reject: "Reject",
-  showMore: "Show more",
-  whoEnteredBy: (who: string, by: string) => `${who}, entered by ${by}`,
-  recordedAt: (when: string) => `Recorded ${when}`,
-  receivedWhen: (when: string) => `Received ${when}`,
-  ownEntry: "Your own entry. Another admin decides it.",
-  alreadyDecided: {
-    approved: "Someone else already approved this. Their decision stands.",
-    rejected: "Someone else already rejected this. Their decision stands.",
-  },
-  rejectEffect: {
-    labor:
-      "These hours will be left out until the office repairs them from the labor ledger. A decision cannot be changed.",
-    superseded:
-      "A later correction replaced this entry, so rejecting it changes no hours. A decision cannot be changed.",
-    void: "The session will stay as recorded and its hours will not be voided. A decision cannot be changed.",
-  },
   closeoutZone: (zone: string) => `Times in ${zone}.`,
   worked: "Worked",
   breaks: "Breaks",
@@ -539,6 +501,4 @@ export const strings = {
   signInNumberCaption: "Your sign-in code is sent here. The office changes it.",
   save: "Save",
   saved: "Saved.",
-  approved: "Approved.",
-  rejected: "Rejected.",
 } as const;

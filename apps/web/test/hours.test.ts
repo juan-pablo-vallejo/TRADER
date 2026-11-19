@@ -60,13 +60,7 @@ describe("hours for the reconciliation through the route handler", () => {
       timezone: "America/New_York",
       cells: [],
       workers: [],
-      totals: {
-        approvedHundredths: 0,
-        pendingHundredths: 0,
-        pendingSessions: 0,
-        rejectedSessions: 0,
-        openSessions: 0,
-      },
+      totals: { hundredths: 0, openSessions: 0 },
     });
     const month = await query(GET, "labor.hours", {
       input: { from: "2026-10-01", to: "2026-10-31" },

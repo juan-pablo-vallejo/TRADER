@@ -155,11 +155,9 @@ sleep 135
 flow schedule-stale-capture resume
 api_up
 flow schedule-stale-review resume
-expect "the start is stored and waits for the office, as unscheduled" \
+expect "the start is stored, flagged as unscheduled" \
   "select count(*) from work_session_events e
    join users u on u.id = e.worker_id
-   join approvals p on p.event_id = e.id
-   where u.email = '$ANA' and e.captured_offline and p.decision is null
-     and 'unscheduled' = any (p.reasons)" 1
+   where u.email = '$ANA' and e.captured_offline and 'unscheduled' = any (e.flags)" 1
 
 echo "all flows green on $platform"

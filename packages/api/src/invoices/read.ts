@@ -301,7 +301,7 @@ export async function suggestLines(
   const byDay = new Map<string, number>();
   for (const cell of cells) {
     if (cell.jobId !== invoice.jobId) continue;
-    byDay.set(cell.workDate, (byDay.get(cell.workDate) ?? 0) + cell.approvedHundredths);
+    byDay.set(cell.workDate, (byDay.get(cell.workDate) ?? 0) + cell.hundredths);
   }
   return {
     timezone,

@@ -9,7 +9,6 @@ import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
 import {
-  approvals,
   companies,
   crewMembers,
   crews,
@@ -487,6 +486,8 @@ type EventInput = {
   voids?: string;
   // Who recorded it; defaults to the worker.
   initiator?: string;
+  // As its writer would have stored them; none by default.
+  flags?: ApprovalReason[];
 };
 
 // One ledger row, written as the owner (the API's writers are later lines).
@@ -510,6 +511,7 @@ export async function eventIn(tx: Tx, day: CrewDay, e: EventInput): Promise<stri
     initiatorUserId: e.initiator ?? e.worker,
     voidsEventId: e.voids ?? null,
     correctsEventId: e.corrects ?? null,
+    flags: e.flags ?? [],
   });
   return id;
 }
@@ -745,22 +747,4 @@ export async function disposableDb() {
     await admin.$client.end();
   };
   return { name, owner, app, drop };
-}
-
-// --- Approvals ---------------------------------------------------------------------------
-
-type Subject = { eventId: string };
-
-// A pending approval of one labor event, written by the owner as its writer would.
-export async function pendingApproval(
-  tx: Tx,
-  companyId: string,
-  subject: Subject,
-  reasons: ApprovalReason[] = ["offline"],
-): Promise<string> {
-  const [row] = await tx
-    .insert(approvals)
-    .values({ companyId, ...subject, reasons })
-    .returning({ id: approvals.id });
-  return row!.id;
 }

@@ -190,7 +190,7 @@ describe("the clock's state", () => {
           clockSkewed: false,
           correctsEventId: null,
           voidsEventId: null,
-          approval: "none",
+          flags: [],
         },
       ],
     });

@@ -40,7 +40,7 @@ function event(
     correctsEventId: null,
     voidsEventId: null,
     effect: "in_effect",
-    approval: null,
+    flags: [],
     ...over,
   };
 }

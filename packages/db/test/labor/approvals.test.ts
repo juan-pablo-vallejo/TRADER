@@ -128,7 +128,7 @@ describe("approvals", () => {
 });
 
 // Stage 3 line 7 (0021, 0022): an original receipt as a third subject, the NULL-reason ban on
-// every row, and the deferred rule that an entry its own columns flag has its approval.
+// every row, and the deferred rule that a receipt its own columns flag has its approval.
 async function receipt(
   tx: Tx,
   refs: Awaited<ReturnType<typeof fixture>>,
@@ -302,62 +302,6 @@ describe("approvals — receipts and approval facts", () => {
     });
   });
 
-  it("refuses a flagged event without an approval holding its reasons, at commit", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const flagged = (o: Partial<typeof workSessionEvents.$inferInsert>) => ({
-        ...started(refs),
-        ...o,
-      });
-      // Unflagged: nothing required.
-      await tx.transaction(async (sp) => {
-        await sp.insert(workSessionEvents).values(started(refs));
-        await fire(sp, "work_session_events_approved");
-      });
-      // Each column alone, with no approval and with one missing its reason.
-      for (const [o, reason] of [
-        [{ capturedOffline: true }, "offline"],
-        [{ timeSetByUser: true }, "user_timed"],
-        [{ clockSkewed: true, clockSkewMs: 600_000 }, "clock_skewed"],
-      ] as const) {
-        const bare = flagged(o);
-        expect(
-          await refusal(
-            tx.transaction(async (sp) => {
-              await sp.insert(workSessionEvents).values(bare);
-              await fire(sp, "work_session_events_approved");
-            }),
-          ),
-        ).toBe("23000 work_session_events_approved");
-        const wrong = flagged(o);
-        const other = "location" as const;
-        expect(
-          await refusal(
-            tx.transaction(async (sp) => {
-              await sp.insert(workSessionEvents).values(wrong);
-              await sp.insert(approvals).values({
-                companyId: refs.companyId,
-                eventId: wrong.id,
-                reasons: [other],
-              });
-              await fire(sp, "work_session_events_approved");
-            }),
-          ),
-        ).toBe("23000 work_session_events_approved");
-        const right = flagged(o);
-        await tx.transaction(async (sp) => {
-          await sp.insert(workSessionEvents).values(right);
-          await sp.insert(approvals).values({
-            companyId: refs.companyId,
-            eventId: right.id,
-            reasons: ["location", reason],
-          });
-          await fire(sp, "work_session_events_approved");
-        });
-      }
-    });
-  });
-
   it("refuses a flagged receipt without an approval holding its reasons, at commit", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
@@ -397,6 +341,22 @@ describe("approvals — receipts and approval facts", () => {
         .insert(approvals)
         .values({ companyId: refs.companyId, materialId, reasons: ["offline"] });
       await fire(tx, "materials_approved");
+    });
+  });
+
+  // An admin's receipt is flagged like anyone's: materials_approved knows no role.
+  it("still refuses a flagged receipt an admin logged", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const admin = await otherUser(tx, refs.companyId);
+      expect(
+        await refusal(
+          tx.transaction(async (sp) => {
+            await receipt(sp, { ...refs, workerId: admin }, { capturedOffline: true });
+            await fire(sp, "materials_approved");
+          }),
+        ),
+      ).toBe("23000 materials_approved");
     });
   });
 });
@@ -526,263 +486,6 @@ describe("approvals — labor events (0025)", () => {
       );
       await decide(office);
       expect(one(await tx.select().from(approvals)).decidedByUserId).toBe(office);
-    });
-  });
-});
-
-// Stage 3 line 9 (0026): an office repair — a correction or a void — has an approval holding
-// `corrected` at commit, the labor sibling of 0020's rule for material corrections.
-describe("approvals — labor repairs (0026)", () => {
-  const CHECK = "work_session_events_repair_approved";
-
-  it("refuses a correction or a void without an approval holding corrected", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const root = started(refs);
-      await tx.insert(workSessionEvents).values(root);
-      const correction = () => ({ ...started(refs), correctsEventId: root.id });
-      const voiding = () => ({
-        ...started(refs),
-        type: "voided" as const,
-        voidsEventId: root.id,
-      });
-      for (const make of [correction, voiding]) {
-        const bare = make();
-        expect(
-          await refusal(
-            tx.transaction(async (sp) => {
-              await sp.insert(workSessionEvents).values(bare);
-              await fire(sp, CHECK);
-            }),
-          ),
-        ).toBe(`23000 ${CHECK}`);
-        const wrong = make();
-        expect(
-          await refusal(
-            tx.transaction(async (sp) => {
-              await sp.insert(workSessionEvents).values(wrong);
-              await sp.insert(approvals).values({
-                companyId: refs.companyId,
-                eventId: wrong.id,
-                reasons: ["user_timed"],
-              });
-              await fire(sp, CHECK);
-            }),
-          ),
-        ).toBe(`23000 ${CHECK}`);
-        const right = make();
-        await tx.transaction(async (sp) => {
-          await sp.insert(workSessionEvents).values(right);
-          await sp.insert(approvals).values({
-            companyId: refs.companyId,
-            eventId: right.id,
-            reasons: ["corrected"],
-          });
-          await fire(sp, CHECK);
-        });
-      }
-    });
-  });
-
-  // Nothing of an ordinary event: the WHEN queues no deferred event for one, which
-  // work-session-events.test.ts proves by TRUNCATE answering 23000 after an ordinary insert
-  // (a queued event would make it 55006).
-  it("requires nothing of an ordinary event", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      await tx.transaction(async (sp) => {
-        await sp.insert(workSessionEvents).values(started(refs));
-        await fire(sp, CHECK);
-      });
-    });
-  });
-
-  it("checks a repair's approval under the runtime role in its tenant", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const root = started(refs);
-      await tx.insert(workSessionEvents).values(root);
-      await asApp(tx, refs.companyId);
-      const correction = { ...started(refs), correctsEventId: root.id };
-      await tx.insert(workSessionEvents).values(correction);
-      await tx.insert(approvals).values({
-        companyId: refs.companyId,
-        eventId: correction.id,
-        reasons: ["corrected"],
-      });
-      await fire(tx, CHECK);
-    });
-  });
-});
-
-// Stage 4 (0032, V1-D10 as amended): an admin's own labor needs no approval, so 0022's and
-// 0026's checks stand down for an event whose worker is an admin unless a different admin
-// wrote it. Everything else is refused as before.
-describe("approvals — an admin's own labor (0032)", () => {
-  const FLAGS = "work_session_events_approved";
-  const REPAIR = "work_session_events_repair_approved";
-  type Refs = Awaited<ReturnType<typeof fixture>>;
-
-  async function person(tx: Tx, companyId: string, role: "admin" | "foreman" | "worker") {
-    return one(
-      await tx
-        .insert(users)
-        .values({ companyId, email: `${role}-${uuidv7()}@co.test`, name: role, role })
-        .returning({ id: users.id }),
-    ).id;
-  }
-
-  // One event of each kind the two checks cover, for `worker`, written by `initiator`.
-  const kinds = (refs: Refs, rootId: string, worker: string, initiator: string) => {
-    const base = () => ({
-      ...started(refs),
-      workerId: worker,
-      initiatorUserId: initiator,
-    });
-    return [
-      [FLAGS, () => ({ ...base(), capturedOffline: true })],
-      [FLAGS, () => ({ ...base(), timeSetByUser: true })],
-      [FLAGS, () => ({ ...base(), clockSkewed: true, clockSkewMs: 600_000 })],
-      [REPAIR, () => ({ ...base(), correctsEventId: rootId })],
-      [REPAIR, () => ({ ...base(), type: "voided" as const, voidsEventId: rootId })],
-    ] as const;
-  };
-
-  // A root for `worker` to correct or void, itself needing nothing.
-  async function rootOf(tx: Tx, refs: Refs, worker: string) {
-    const root = { ...started(refs), workerId: worker, initiatorUserId: worker };
-    await tx.insert(workSessionEvents).values(root);
-    return root.id;
-  }
-
-  const bare = (tx: Tx, check: string, row: typeof workSessionEvents.$inferInsert) =>
-    tx.transaction(async (sp) => {
-      await sp.insert(workSessionEvents).values(row);
-      await fire(sp, check);
-    });
-
-  it("requires no approval of an admin's own event, flagged, correcting or voiding", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      const root = await rootOf(tx, refs, admin);
-      for (const [check, make] of kinds(refs, root, admin, admin)) {
-        await bare(tx, check, make());
-      }
-      expect(await tx.select().from(approvals)).toEqual([]);
-    });
-  });
-
-  it("requires none of an admin's flagged event a foreman recorded", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      const foreman = await person(tx, refs.companyId, "foreman");
-      const root = await rootOf(tx, refs, admin);
-      for (const [check, make] of kinds(refs, root, admin, foreman).slice(0, 3)) {
-        await bare(tx, check, make());
-      }
-    });
-  });
-
-  it("still refuses an admin's event that another admin wrote", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      const other = await person(tx, refs.companyId, "admin");
-      const root = await rootOf(tx, refs, admin);
-      for (const [check, make] of kinds(refs, root, admin, other)) {
-        expect(await refusal(bare(tx, check, make()))).toBe(`23000 ${check}`);
-      }
-    });
-  });
-
-  it("still refuses a worker's and a foreman's, whoever wrote it", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      for (const role of ["worker", "foreman"] as const) {
-        const who = await person(tx, refs.companyId, role);
-        const root = await rootOf(tx, refs, who);
-        for (const initiator of [who, admin]) {
-          for (const [check, make] of kinds(refs, root, who, initiator)) {
-            expect(await refusal(bare(tx, check, make()))).toBe(`23000 ${check}`);
-          }
-        }
-      }
-    });
-  });
-
-  it("judges the role as it is when the check runs, not as it later becomes", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      const root = await rootOf(tx, refs, admin);
-      const [check, make] = kinds(refs, root, admin, admin)[0]!;
-      await bare(tx, check, make());
-      // Demoted afterwards: the stored event is not judged again, and the next one is.
-      await tx.update(users).set({ role: "worker" }).where(eq(users.id, admin));
-      expect(await refusal(bare(tx, check, make()))).toBe(`23000 ${check}`);
-    });
-  });
-
-  it("still accepts an approval for an admin's own event", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      const event = {
-        ...started(refs),
-        workerId: admin,
-        initiatorUserId: admin,
-        capturedOffline: true,
-      };
-      await tx.transaction(async (sp) => {
-        await sp.insert(workSessionEvents).values(event);
-        await sp
-          .insert(approvals)
-          .values({ companyId: refs.companyId, eventId: event.id, reasons: ["offline"] });
-        await fire(sp, FLAGS);
-      });
-    });
-  });
-
-  it("still refuses a flagged receipt an admin logged", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      expect(
-        await refusal(
-          tx.transaction(async (sp) => {
-            await receipt(sp, { ...refs, workerId: admin }, { capturedOffline: true });
-            await fire(sp, "materials_approved");
-          }),
-        ),
-      ).toBe("23000 materials_approved");
-    });
-  });
-
-  it("holds under trader_app in its tenant, and sees no admin without one", async () => {
-    await rolledBack(db, async (tx) => {
-      const refs = await fixture(tx);
-      const admin = await person(tx, refs.companyId, "admin");
-      const root = await rootOf(tx, refs, admin);
-      const asked = async () =>
-        (
-          await tx.execute<{ free: boolean }>(
-            sql`select labor_event_needs_no_approval(${refs.companyId}, ${admin}, ${admin}) as free`,
-          )
-        ).rows[0]!.free;
-      await asApp(tx);
-      expect(await asked()).toBe(false);
-      await asApp(tx, refs.companyId);
-      expect(await asked()).toBe(true);
-      for (const [check, make] of kinds(refs, root, admin, admin)) {
-        await bare(tx, check, make());
-      }
-      const worker = kinds(refs, root, refs.workerId, refs.workerId).slice(0, 3);
-      for (const [check, make] of worker) {
-        expect(await refusal(bare(tx, check, make()))).toBe(`23000 ${check}`);
-      }
     });
   });
 });

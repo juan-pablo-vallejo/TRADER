@@ -6,12 +6,7 @@
 // is `clock_skewed`), so a push at a fixed past instant is sent as captured offline, and a
 // push captured online is timed now. The two commit orders of an edit against a start are
 // schedule-commit.test.ts's; the rules themselves eligibility.test.ts's.
-import {
-  approvals,
-  companies,
-  jobAssignments,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { companies, jobAssignments, workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -362,7 +357,7 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
-  it("stores a start captured offline that the schedule does not admit, for the office to decide", async () => {
+  it("stores a start captured offline that the schedule does not admit, flagged unscheduled", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       // The phone's copy said J at 07:00; the office has since moved the day to K.
@@ -374,23 +369,20 @@ describe("sync.push with schedule enforcement on", () => {
         result: "accepted",
         reasons: ["offline", "location", "unscheduled"],
       });
-      // Stored under its own id at its recorded time, waiting; it locks nothing.
+      // Stored under its own id at its recorded time, with its flags; it locks nothing.
       await asOwner(tx);
       const [event] = await tx
         .select({
           clientTimestamp: workSessionEvents.clientTimestamp,
           jobId: workSessionEvents.jobId,
+          flags: workSessionEvents.flags,
         })
         .from(workSessionEvents)
         .where(eq(workSessionEvents.id, start.id));
-      expect(event).toEqual({ clientTimestamp: at("07:10"), jobId: d.J });
-      const [approval] = await tx
-        .select({ decision: approvals.decision, reasons: approvals.reasons })
-        .from(approvals)
-        .where(eq(approvals.eventId, start.id));
-      expect(approval).toEqual({
-        decision: null,
-        reasons: ["offline", "location", "unscheduled"],
+      expect(event).toEqual({
+        clientTimestamp: at("07:10"),
+        jobId: d.J,
+        flags: ["offline", "location", "unscheduled"],
       });
       expect(await lockOf(tx, id)).toBeNull();
       // Being stored, what follows it is judged against it and accepted — and never by the
@@ -421,8 +413,9 @@ describe("sync.push with schedule enforcement on", () => {
         offline: false,
         when: new Date(Date.now() - 1000),
       });
-      // No shift, no crew, no approval: an admin's own labor (V1-D10 as amended).
-      expect(start).toMatchObject({ result: "accepted", reasons: [] });
+      // No shift and no crew: the schedule does not judge an admin's own start, so it is
+      // never `unscheduled`. Its other flags are anyone's: this one carries no stamp.
+      expect(start).toMatchObject({ result: "accepted", reasons: ["location"] });
     });
   });
 
@@ -450,18 +443,18 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
-  it("refuses rather than stores an unscheduled offline start for an admin worker", async () => {
+  it("stores an unscheduled offline start for an admin worker too, flagged the same", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await crewDayIn(tx);
       // w1 becomes an admin and stays in the foreman's crew: a foreman's start for them.
       await asOwner(tx);
       await tx.execute(sql`update users set role = 'admin' where id = ${d.w1}`);
       await enforce(tx, d);
-      // An admin's labor takes no approval, so there would be nothing for it to wait on.
-      expect((await push(tx, d, who(d, d.foremanId, "foreman"), d.w1, d.J)).result).toBe(
-        "not_scheduled",
-      );
-      expect(await eventsOf(tx, d)).toBe(0);
+      expect(await push(tx, d, who(d, d.foremanId, "foreman"), d.w1, d.J)).toMatchObject({
+        result: "accepted",
+        reasons: ["offline", "location", "unscheduled"],
+      });
+      expect(await eventsOf(tx, d)).toBe(1);
     });
   });
 

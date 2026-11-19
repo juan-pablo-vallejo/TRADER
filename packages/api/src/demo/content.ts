@@ -313,24 +313,22 @@ export const EXPECTED = {
   // Six people for ten days and Priya for four, four events each; her late day of two; one
   // office correction.
   events: 6 * 10 * 4 + 4 * 4 + 2 + 1,
-  // Every pushed clock event and the correction.
-  approvals: 6 * 10 * 4 + 4 * 4 + 2 + 1,
-  // The ordinary backlog: every event flagged `offline` alone, Priya's late day included, but
-  // Tom's last day's four. Omar's user-timed end and Ana's out-of-radius start carry a second
-  // reason, Luis's claimed-online day is `clock_skewed`: they stay pending.
-  decided: 6 * 10 * 4 + 4 * 4 + 2 - 2 - 4 - 4,
   // One row per planned person, job and day.
   assignments: PLANS.reduce((n, p) => n + p.days.length, 0),
 } as const;
 
 // What the run's labor comes to, worked out by hand from the plan above; run.ts reads
-// `labor.hours` last and holds it to these, so a drifted rounding or approval rule fails the
-// run. An ordinary day is 5 h, lunch, 3 h: 8.00 h. Hours are hundredths.
-//
-// Two days read through `labor.hours`: Priya's late day, approved, 07:30 to 14:00; and
-// Elena's last, whose clock-out the office moved to 16:00 — 8.50 h, waiting with the
-// correction, and nothing of the day approved meanwhile.
+// `labor.hours` last and holds it to these, so a drifted rounding or flag rule fails the run.
+// An ordinary day is 5 h, lunch, 3 h: 8.00 h. Hours are hundredths. Priya's late day, 07:30
+// to 14:00; and Elena's last, whose clock-out the office moved to 16:00: 8.50 h, counted at
+// once, the correction's flags beside the day's own.
 export const EXPECTED_HOURS = [
-  { who: "priya", day: 2, job: "j1", approved: 650, pending: 0, pendingSessions: 0 },
-  { who: "elena", day: 9, job: "j2", approved: 0, pending: 850, pendingSessions: 1 },
+  { who: "priya", day: 2, job: "j1", hundredths: 650, flags: ["offline"] },
+  {
+    who: "elena",
+    day: 9,
+    job: "j2",
+    hundredths: 850,
+    flags: ["offline", "corrected", "user_timed", "location"],
+  },
 ] as const;

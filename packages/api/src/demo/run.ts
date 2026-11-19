@@ -48,8 +48,6 @@ export type Summary = {
   crews: number;
   crewMembers: number;
   events: number;
-  approvals: number;
-  decided: number;
   assignments: number;
 };
 
@@ -106,8 +104,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     crews: 0,
     crewMembers: 0,
     events: 0,
-    approvals: 0,
-    decided: 0,
     assignments: 0,
   };
 
@@ -195,7 +191,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
           );
         }
         summary.events++;
-        summary.approvals += reasons.length > 0 ? 1 : 0;
       });
     }
   };
@@ -431,44 +426,6 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         );
       }
       summary.events++;
-      summary.approvals++;
-    }
-  });
-
-  // The office works through the backlog: every clock event flagged `offline` and nothing
-  // else is approved, but the one day left for the office to look at (SCENARIOS.offlineDay).
-  await step("approve the ordinary backlog", async () => {
-    const held = new Set(
-      (["started", "paused", "resumed", "ended"] as const).map((type) =>
-        eventIds.get(`${SCENARIOS.offlineDay.who}:${SCENARIOS.offlineDay.day}:${type}`),
-      ),
-    );
-    const only = SCENARIOS.backlog.reasons.join(",");
-    let after: string | undefined;
-    for (;;) {
-      const page = await admin().approval.queue({
-        limit: 100,
-        ...(after === undefined ? {} : { after }),
-      });
-      for (const item of page.items) {
-        if (
-          item.subject.kind !== "labor_event" ||
-          item.reasons.join(",") !== only ||
-          held.has(item.subject.eventId)
-        ) {
-          continue;
-        }
-        expectResult(
-          await admin().approval.decide({
-            approvalId: item.approvalId,
-            decision: "approved",
-          }),
-          "decided",
-        );
-        summary.decided++;
-      }
-      if (page.next === null) break;
-      after = page.next;
     }
   });
 
@@ -538,9 +495,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         cells.length !== 1 ||
         cell === undefined ||
         cell.job.id !== jobIds.get(h.job) ||
-        cell.approvedHundredths !== h.approved ||
-        cell.pendingHundredths !== h.pending ||
-        cell.pendingSessions !== h.pendingSessions
+        cell.hundredths !== h.hundredths ||
+        cell.flags.join() !== h.flags.join()
       ) {
         fail(`${h.who} on ${day} read ${JSON.stringify(cells)}`);
       }

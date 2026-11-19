@@ -3,8 +3,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  approvedByPerson,
-  unresolved,
+  hoursByPerson,
+  stillOpen,
   type Cell,
   type Hours,
 } from "../src/app/hours/hours-view";
@@ -23,11 +23,9 @@ const cell = (
   worker,
   job,
   workDate,
-  approvedHundredths: 0,
-  pendingHundredths: 0,
-  pendingSessions: 0,
-  rejectedSessions: 0,
+  hundredths: 0,
   openSessions: 0,
+  flags: [],
   ...figures,
 });
 
@@ -36,79 +34,59 @@ const cell = (
 const answer: Hours = {
   timezone: "America/New_York",
   cells: [
-    cell(ana, J, "2026-10-05", { approvedHundredths: 200 }),
-    cell(ana, K, "2026-10-05", { approvedHundredths: 350, rejectedSessions: 1 }),
-    cell(tom, J, "2026-10-05", { approvedHundredths: 800 }),
-    cell(ana, J, "2026-10-06", { pendingHundredths: 850, pendingSessions: 1 }),
+    cell(ana, J, "2026-10-05", { hundredths: 200 }),
+    cell(ana, K, "2026-10-05", { hundredths: 350, openSessions: 1 }),
+    cell(tom, J, "2026-10-05", { hundredths: 800 }),
+    cell(ana, J, "2026-10-06", { hundredths: 850, flags: ["offline", "corrected"] }),
     cell(tom, J, "2026-10-06", { openSessions: 1 }),
   ],
   workers: [
-    {
-      worker: ana,
-      approvedHundredths: 550,
-      pendingHundredths: 850,
-      pendingSessions: 1,
-      rejectedSessions: 1,
-      openSessions: 0,
-    },
-    {
-      worker: tom,
-      approvedHundredths: 999,
-      pendingHundredths: 0,
-      pendingSessions: 0,
-      rejectedSessions: 0,
-      openSessions: 1,
-    },
+    { worker: ana, hundredths: 1400, openSessions: 1 },
+    { worker: tom, hundredths: 999, openSessions: 1 },
   ],
-  totals: {
-    approvedHundredths: 1549,
-    pendingHundredths: 850,
-    pendingSessions: 1,
-    rejectedSessions: 1,
-    openSessions: 1,
-  },
+  totals: { hundredths: 2399, openSessions: 2 },
 };
 
-describe("the reconciliation's layout", () => {
-  it("puts each person's cells with approved hours under them, with the server's total", () => {
-    const people = approvedByPerson(answer);
-    expect(people.map((p) => [p.worker.name, p.approvedHundredths])).toEqual([
-      ["Ana", 550],
+describe("the Hours screen's layout", () => {
+  it("puts each person's cells with hours under them, with the server's total", () => {
+    const people = hoursByPerson(answer);
+    expect(people.map((p) => [p.worker.name, p.hundredths])).toEqual([
+      ["Ana", 1400],
       ["Tom", 999],
     ]);
     expect(
-      people.map((p) =>
-        p.cells.map((c) => [c.workDate, c.job.name, c.approvedHundredths]),
-      ),
+      people.map((p) => p.cells.map((c) => [c.workDate, c.job.name, c.hundredths])),
     ).toEqual([
       [
         ["2026-10-05", "Kitchen", 200],
         ["2026-10-05", "Porch", 350],
+        ["2026-10-06", "Kitchen", 850],
       ],
       [["2026-10-05", "Kitchen", 800]],
     ]);
+    // A flagged day counts like any other, and its flags come through as answered.
+    expect(people[0]!.cells[2]!.flags).toEqual(["offline", "corrected"]);
   });
 
-  it("keeps a day with nothing approved out of the approved hours, and a person with none", () => {
-    const pendingOnly: Hours = {
+  it("keeps a day with no hours yet out of the hours, and a person with none", () => {
+    const openOnly: Hours = {
       ...answer,
-      cells: [answer.cells[3]!],
-      workers: [{ ...answer.workers[0]!, approvedHundredths: 0 }],
+      cells: [answer.cells[4]!],
+      workers: [{ ...answer.workers[1]!, hundredths: 0 }],
     };
-    expect(approvedByPerson(pendingOnly)).toEqual([]);
-    expect(unresolved(pendingOnly)).toEqual([answer.cells[3]]);
+    expect(hoursByPerson(openOnly)).toEqual([]);
+    expect(stillOpen(openOnly)).toEqual([answer.cells[4]]);
   });
 
-  it("lists apart every cell with something waiting, rejected or open, in the server's order", () => {
-    expect(
-      unresolved(answer).map((c) => [c.worker.name, c.job.name, c.workDate]),
-    ).toEqual([
-      ["Ana", "Porch", "2026-10-05"],
-      ["Ana", "Kitchen", "2026-10-06"],
-      ["Tom", "Kitchen", "2026-10-06"],
-    ]);
-    // A cell can be in both: its approved hours count, and a rejected session does not.
-    expect(approvedByPerson(answer)[0]!.cells).toContain(answer.cells[1]);
+  it("lists apart every cell with a session still open, in the server's order", () => {
+    expect(stillOpen(answer).map((c) => [c.worker.name, c.job.name, c.workDate])).toEqual(
+      [
+        ["Ana", "Porch", "2026-10-05"],
+        ["Tom", "Kitchen", "2026-10-06"],
+      ],
+    );
+    // A cell can be in both: its ended sessions count, and the open one does not yet.
+    expect(hoursByPerson(answer)[0]!.cells).toContain(answer.cells[1]);
   });
 
   it("is empty for an answer with no cells", () => {
@@ -116,9 +94,9 @@ describe("the reconciliation's layout", () => {
       ...answer,
       cells: [],
       workers: [],
-      totals: { ...answer.totals, approvedHundredths: 0 },
+      totals: { hundredths: 0, openSessions: 0 },
     };
-    expect(approvedByPerson(none)).toEqual([]);
-    expect(unresolved(none)).toEqual([]);
+    expect(hoursByPerson(none)).toEqual([]);
+    expect(stillOpen(none)).toEqual([]);
   });
 });

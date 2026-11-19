@@ -51,9 +51,6 @@ export type Catalog = {
     types: { started: string; paused: string; resumed: string; ended: string };
     unsent: string;
     // The server stored it and the office has to approve it before it counts.
-    review: string;
-    reviewUnscheduled: string;
-    reviewClock: string;
     refused: string;
     refusals: {
       not_scheduled: string;
@@ -87,7 +84,7 @@ export type Catalog = {
     hours: string;
     noHours: string;
     open: string;
-    waiting: string;
+    unscheduled: string;
   };
   age: {
     justNow: string;

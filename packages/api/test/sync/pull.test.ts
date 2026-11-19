@@ -1,14 +1,7 @@
 // Stage 3 line 7: sync.pull (sync/pull.ts) through the application's router, against Postgres,
 // in rolled-back owner transactions as trader_app under the tenant. What it must never hold:
 // another worker's labor, coordinates or contact details.
-import {
-  approvals,
-  crewMembers,
-  crews,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { crewMembers, crews, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -53,7 +46,14 @@ async function world(tx: Tx) {
 async function event(
   tx: Tx,
   d: { companyId: string },
-  e: { worker: string; job: string; type: "started" | "ended"; at: Date; by?: string },
+  e: {
+    worker: string;
+    job: string;
+    type: "started" | "ended";
+    at: Date;
+    by?: string;
+    flags?: (typeof workSessionEvents.$inferInsert)["flags"];
+  },
 ) {
   const id = uuidv7(e.at.getTime());
   await tx.insert(workSessionEvents).values({
@@ -73,6 +73,7 @@ async function event(
     timeSetByUser: false,
     capturedOffline: false,
     initiatorUserId: e.by ?? e.worker,
+    flags: e.flags ?? [],
   });
   return id;
 }
@@ -147,10 +148,10 @@ describe("sync.pull — own labor only", () => {
       expect(foremanSnap.events).toEqual([]);
       expect(Object.keys(snap.events[0]!).sort()).toEqual(
         [
-          "approval",
           "clientTimestamp",
           "clockSkewed",
           "correctsEventId",
+          "flags",
           "id",
           "jobId",
           "serverTimestamp",
@@ -187,34 +188,28 @@ describe("sync.pull — own labor only", () => {
     });
   });
 
-  it("tells each event's approval state", async () => {
+  it("tells each event's flags, as stored with it", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
-      const admin = await boundIn(tx, d.companyId, "admin");
-      const [a, b] = await session(tx, d, d.w.id, d.J, noonDaysAgo(1));
-      const [c, e] = await session(tx, d, d.w.id, d.J, noonDaysAgo(2));
-      for (const id of [b, c, e]) {
-        await tx
-          .insert(approvals)
-          .values({ companyId: d.companyId, eventId: id!, reasons: ["offline"] });
-      }
-      const decide = (id: string, decision: "approved" | "rejected") =>
-        tx
-          .update(approvals)
-          .set({ decision, decidedAt: new Date(), decidedByUserId: admin.id })
-          .where(eq(approvals.eventId, id));
-      await decide(c!, "approved");
-      await decide(e!, "rejected");
+      const a = await event(tx, d, {
+        worker: d.w.id,
+        job: d.J,
+        type: "started",
+        at: noonDaysAgo(1),
+        flags: ["offline", "unscheduled"],
+      });
+      const b = await event(tx, d, {
+        worker: d.w.id,
+        job: d.J,
+        type: "ended",
+        at: new Date(noonDaysAgo(1).getTime() + 3_600_000),
+      });
       await asTenant(tx, d.companyId);
-      const state = new Map(
-        (await pull(tx, d.w.who)).events.map((x) => [x.id, x.approval]),
-      );
-      expect([a, b, c, e].map((id) => state.get(id!))).toEqual([
-        "none",
-        "pending",
-        "approved",
-        "rejected",
-      ]);
+      const snap = await pull(tx, d.w.who);
+      const flags = new Map(snap.events.map((x) => [x.id, x.flags]));
+      expect([a, b].map((id) => flags.get(id))).toEqual([["offline", "unscheduled"], []]);
+      // Flagged, and counted all the same.
+      expect(snap.sessions[0]).toMatchObject({ state: "ended", workedMs: 3_600_000 });
     });
   });
 });

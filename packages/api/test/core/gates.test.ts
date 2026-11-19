@@ -34,8 +34,6 @@ type Gate = "public" | "protected" | readonly Role[];
 
 const ADMIN = ["admin"] as const;
 const EXPECTED: Record<string, Gate> = {
-  "approval.queue": ADMIN,
-  "approval.decide": ADMIN,
   "assignment.list": ADMIN,
   "assignment.mine": "protected",
   "assignment.create": ADMIN,
