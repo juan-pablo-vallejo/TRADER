@@ -33,6 +33,14 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
+  // This screen is shown to someone the app holds no session for. A session the provider
+  // still keeps on the phone is a stale one (its keychain outlives a cleared app, and an
+  // earlier sign-in may have stopped half-way): it goes first, or the provider refuses the
+  // new sign-in as "already signed in" (seen on staging, 2026-11-19).
+  const forgetStaleSession = async () => {
+    if (clerk.session !== null && clerk.session !== undefined) await clerk.signOut();
+  };
+
   const send = async () => {
     const number = signInPhone(phone);
     if (number === null) {
@@ -42,6 +50,7 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
     setBusy(true);
     setNote(null);
     try {
+      await forgetStaleSession();
       const started = await signIn.create({ identifier: number });
       if (started.error !== null) {
         // The provider does not say whether a number exists, and neither does this.
@@ -118,6 +127,7 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
         setNote(t.signIn.badDemo);
         return;
       }
+      await forgetStaleSession();
       const redeemed = await signIn.ticket({ ticket: answer.ticket });
       if (redeemed.error !== null || signIn.status !== "complete") {
         setNote(t.signIn.failed);

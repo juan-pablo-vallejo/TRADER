@@ -170,11 +170,11 @@ Android user.
       sign-in number" by title instead of "After MVP 2". `CLAUDE.md` rule 5 reads "Every
       screen exists in English and Spanish. An invoice to a customer is in English." Done
       when the four documents agree with the MVP above and `pnpm check` is green.
-- [ ] 2. **The origin rule fails closed.** An empty `CLERK_AUTHORIZED_PARTIES` refuses a
+- [x] 2. **The origin rule fails closed.** An empty `CLERK_AUTHORIZED_PARTIES` refuses a
       session token that names an origin (`apps/web/src/server/clerk-identity.ts`,
       `admitsParty`). Done when a test fails without the fix and staging signs in from the
       office and from a phone build.
-- [ ] 3. **The Demo sign-in without an SMS.** OWNER decides the way first, because it goes
+- [x] 3. **The Demo sign-in without an SMS.** OWNER decides the way first, because it goes
       into Apple's beta review notes: read Clerk's, Apple's and Google's pages, put the
       options to the owner, then build the one chosen so that it admits only the Demo
       company's people in production and the fixture numbers on staging. The code is
@@ -596,18 +596,18 @@ Android user.
       cannot sign in to staging's office by hand with a fixture number; the smoke test uses
       single-use tickets. OWNER: turn the development instance's test mode on, or accept
       tickets as the only way in.
-- [ ] The phone has still never signed in to staging. A development build pointed at
+- [x] The phone has still never signed in to staging. A development build pointed at
       staging reaches Clerk and gets to the code step for a fixture number, and the fixed
       test code is refused there too, so the phone was seen against the local server only.
       Blocked on the Clerk item above, then items 2 and 3.
 - [ ] OWNER: `pnpm --filter @trader/db onboard` and `pnpm db:migrate` fall back to the local
       database when `DATABASE_URL` is given empty, as an unset `$OWNER_URL` makes it. Decide
       whether `run-onboard.ts` should refuse a blank `DATABASE_URL`.
-- [ ] Item 2's fix is on staging and the office signs in there (the smoke test, by
+- [x] Item 2's fix is on staging and the office signs in there (the smoke test, by
       ticket). Its box waits on the other half of its "Done when": a phone build signing in
       to staging, which item 3's Demo sign-in now makes possible without Clerk's test mode,
       once the owner sets its two variables (next entry).
-- [ ] OWNER, item 3: the owner chose the way on 2026-11-19, a Demo code answered with a
+- [x] OWNER, item 3: the owner chose the way on 2026-11-19, a Demo code answered with a
       single-use sign-in ticket, and it is built: `demo.signIn`, and "I have a demo code" on
       the phone's sign-in. It admits only the people of the one company the deployment
       names. Staging has no door until the staging Vercel project is given
@@ -617,6 +617,11 @@ Android user.
       are ticked. What was read first: Apple asks for a demo account that never expires;
       Clerk's test numbers work in production only with Test mode on, which Clerk calls
       "highly discouraged"; a Clerk sign-in token is single use.
+- [x] Seen on 2026-11-19: a development build pointed at staging signed in through the
+      Demo door as the fixture worker, with no code sent, and opened on staging's own job.
+      The first tries were refused by Clerk as "already signed in": a session from an
+      earlier try was still in the simulator's keychain, which outlives a cleared app. The
+      sign-in screen now signs a stale session out before a new sign-in, by either way in.
 - [ ] `labor.repair`'s answer still calls an entry's flags `reasons`
       (`packages/api/src/labor/repair.ts`); item 4 named the push acknowledgement and the
       phone's outbox only. Rename it with item 16, which rebuilds its one screen.
