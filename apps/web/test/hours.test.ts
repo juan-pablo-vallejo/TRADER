@@ -73,4 +73,24 @@ describe("hours for the reconciliation through the route handler", () => {
     });
     expect(long.status).toBe(400);
   });
+
+  it("answers the payroll file for any range to an admin alone", async () => {
+    const year = { from: "2026-01-01", to: "2026-12-31" };
+    expect((await query(GET, "labor.export", { input: year })).status).toBe(401);
+    const file = await query(GET, "labor.export", {
+      input: year,
+      headers: as(admin.email),
+    });
+    expect(file.status).toBe(200);
+    expect(file.body.result?.data.json).toEqual({
+      filename: "payroll-hours-2026-01-01-to-2026-12-31.csv",
+      csv: "employee,employee_id,work_date,job,job_id,hours,flags\r\n",
+      hundredths: 0,
+    });
+    const backward = await query(GET, "labor.export", {
+      input: { from: "2026-10-02", to: "2026-10-01" },
+      headers: as(admin.email),
+    });
+    expect(backward.status).toBe(400);
+  });
 });

@@ -12,7 +12,7 @@
 // the whole answer: a total is the sum of rounded cells and is never rounded again, so the
 // Hours screen and whatever exports it read one figure and add nothing themselves. The range
 // is refused past its bound, never truncated, and there is no limit, so nothing in it is
-// left out. Consumed by routers/labor.ts and invoices/read.ts.
+// left out. Consumed by routers/labor.ts, labor/export.ts and invoices/read.ts.
 import {
   approvalReason,
   companies,
@@ -125,10 +125,17 @@ export type HoursOutput = z.infer<typeof hoursOutput>;
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
-export async function listHours(
+export const listHours = (
   tx: Tx,
   user: AppUser,
   input: z.infer<typeof hoursInput>,
+): Promise<HoursOutput> => readHours(tx, user, input);
+
+// The read itself, over any range: labor.hours bounds its own, the payroll export does not.
+export async function readHours(
+  tx: Tx,
+  user: AppUser,
+  input: { from: string; to: string; workerId?: string; jobId?: string },
 ): Promise<HoursOutput> {
   // A person or a job that is not visible (another tenant's, under RLS) is the one FORBIDDEN,
   // never an empty answer that could be read as "nothing recorded".

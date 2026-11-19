@@ -112,7 +112,7 @@ you find under "Found along the way". Never reorder, never add scope.
       schedule no longer allows on arrival is accepted and flagged `unscheduled`. An admin
       does everything in the office for their company. Done when no code names a foreman or
       a crew and tests cover those four cases.
-- [ ] 6. **Payroll hours by date range.** An admin export from Hours: CSV, one row per
+- [x] 6. **Payroll hours by date range.** An admin export from Hours: CSV, one row per
       worker, day and job, for any from-to range; hours rounded as today (the day's total
       per job, half-up to the hundredth); the entry's flags in a column. Done when the Hours
       screen downloads it and a test fixes the rounding.

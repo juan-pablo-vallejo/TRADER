@@ -7,13 +7,14 @@
 // Every figure is the server's: the cells, each person's sum and the totals are fields of
 // the answer (labor/day-hours.ts), formatted here and never added or rounded in the browser.
 // Consumed by page.tsx.
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import controls from "../controls.module.css";
 import { EmptyState, Failure } from "../failure";
 import { Field } from "../field";
+import { Note } from "../note";
 import { addDays, day as formatDay, hours, weekDay } from "../format";
 import { PageHeader } from "../page-header";
 import { strings } from "../strings";
@@ -93,8 +94,61 @@ function ByDates({ signInHref }: { signInHref: string }) {
           {strings.showHours}
         </button>
       </form>
+      <PayrollFile from={from} to={to} />
       {asked !== null && <Reconciliation asked={asked} signInHref={signInHref} />}
     </>
+  );
+}
+
+// Payroll hours for the dates in the form, as a file: its own named button, what the file
+// holds beneath it. Any range that runs forward, however long. Asked for when pressed, never
+// cached: the server builds it from the ledger as it stands (api labor/export.ts), and the
+// browser saves it as it came.
+function PayrollFile({ from, to }: Range) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const save = async () => {
+    setSaved(false);
+    if (from === "" || to === "" || from > to) {
+      setNote(strings.payrollRange);
+      return;
+    }
+    setBusy(true);
+    setNote(null);
+    try {
+      const file = await queryClient.fetchQuery(
+        trpc.labor.export.queryOptions({ from, to }, { staleTime: 0, gcTime: 0 }),
+      );
+      const url = URL.createObjectURL(new Blob([file.csv], { type: "text/csv" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = file.filename;
+      link.click();
+      URL.revokeObjectURL(url);
+      setSaved(true);
+      setNote(strings.payrollCsvSaved(file.filename, hours(file.hundredths)));
+    } catch {
+      setNote(strings.requestFailed);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className={styles.section}>
+      <button
+        type="button"
+        className={controls.secondary}
+        disabled={busy}
+        onClick={() => void save()}
+      >
+        {strings.payrollCsv}
+      </button>
+      <p className={`secondary ${styles.explain}`}>{strings.payrollCsvExplain}</p>
+      <Note text={note} tone={saved ? "saved" : undefined} />
+    </div>
   );
 }
 

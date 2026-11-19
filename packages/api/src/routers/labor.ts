@@ -4,6 +4,7 @@
 // online, so there is no device retry to keep open across a demotion (unlike
 // push), and one worker's evidence is not another worker's to list.
 import { hoursInput, hoursOutput, listHours } from "../labor/day-hours";
+import { exportHours, exportInput, exportOutput } from "../labor/export";
 import { ledgerInput, ledgerOutput, workerLedger } from "../labor/ledger";
 import { repairInput, repairLabor, repairOutput } from "../labor/repair";
 import { roleProcedure, router } from "../core/trpc";
@@ -13,6 +14,10 @@ export const laborRouter = router({
     .input(hoursInput)
     .output(hoursOutput)
     .query(({ ctx, input }) => listHours(ctx.tx, ctx.user, input)),
+  export: roleProcedure("admin")
+    .input(exportInput)
+    .output(exportOutput)
+    .query(({ ctx, input }) => exportHours(ctx.tx, ctx.user, input)),
   ledger: roleProcedure("admin")
     .input(ledgerInput)
     .output(ledgerOutput)

@@ -382,6 +382,12 @@ export const strings = {
   showHours: "Show hours",
   workDatesIn: (zone: string) => `Work dates in ${zone}.`,
   hoursHeading: "Hours",
+  payrollCsv: "Payroll hours (CSV)",
+  payrollCsvExplain:
+    "One row per person, day and job for the dates above, however many days, with each row's flags. Hours only: no rates and no pay.",
+  payrollCsvSaved: (filename: string, hours: string) =>
+    `Saved ${filename}: ${hours} h in all.`,
+  payrollRange: "Choose a first and a last day, the first no later than the last.",
   noHoursYet: "No hours have ended on these days yet.",
   flagged: (flags: string) => flags,
   reconTotal: (hours: string) => `${hours} h on these days`,
