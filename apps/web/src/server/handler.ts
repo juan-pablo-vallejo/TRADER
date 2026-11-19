@@ -9,6 +9,7 @@ import {
   appRouter,
   createContext,
   reportingOnError,
+  type DemoDoor,
   type ErrorReporter,
   type IdentityAdapter,
   type IdentityDirectory,
@@ -28,6 +29,8 @@ export type HandlerDependencies = {
   directory: IdentityDirectory;
   // The mail service for invoice.send (mailer.ts). Absent, every send fails closed.
   mailer?: Mailer;
+  // The Demo sign-in's door (clerk-demo.ts), read per request. Absent, there is no door.
+  demo?: () => DemoDoor | null;
   reporter: ErrorReporter;
   // What stands in front of the route (edge.ts). Absent, nothing is refused there: a test
   // of something else hands the handler none.
@@ -55,6 +58,7 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           identity,
           directory: deps.directory,
           ...(deps.mailer !== undefined && { mailer: deps.mailer }),
+          ...(deps.demo !== undefined && { demo: deps.demo() }),
           reporter: deps.reporter,
           requestId,
         });

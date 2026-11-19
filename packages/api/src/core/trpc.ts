@@ -132,7 +132,16 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     // identity are removed by value here, not only by type: a procedure has `tx` and nothing
     // that could open a connection outside this transaction.
     const result = await next({
-      ctx: { db: undefined, identity: undefined, waits: undefined, tx, user },
+      ctx: {
+        db: undefined,
+        identity: undefined,
+        waits: undefined,
+        // The Demo sign-in's door and its code are for a caller with no session
+        // (routers/demo.ts): a signed-in procedure holds neither.
+        demo: undefined,
+        tx,
+        user,
+      },
     });
     // A failed procedure comes back as { ok: false }, not a throw; returning it would let
     // Drizzle commit whatever the procedure wrote before it failed.
@@ -159,7 +168,13 @@ export const syncProcedure = t.procedure.use(({ ctx, next }) => {
   const runRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) =>
     inCallerTransaction(db, identity, body, waits ?? SYNC_TIMEOUTS);
   return next({
-    ctx: { db: undefined, identity: undefined, waits: undefined, runRecord },
+    ctx: {
+      db: undefined,
+      identity: undefined,
+      waits: undefined,
+      demo: undefined,
+      runRecord,
+    },
   });
 });
 

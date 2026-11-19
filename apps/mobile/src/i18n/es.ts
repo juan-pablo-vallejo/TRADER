@@ -17,6 +17,13 @@ export const es: Catalog = {
     submit: "Iniciar sesión",
     failed: "No funcionó. Revisa tu conexión e inténtalo de nuevo.",
     notOnRoster: "Nadie en una plantilla inicia sesión con eso. Pregunta en la oficina.",
+    demo: "Tengo un código de demostración",
+    demoHelp:
+      "Solo para la empresa de demostración. No se envía ningún mensaje de texto.",
+    demoCode: "Código de demostración",
+    demoSubmit: "Entrar a la demostración",
+    badDemo: "Ese número y ese código no son de una cuenta de demostración.",
+    back: "Atrás",
     unavailable: "El inicio de sesión todavía no es parte de esta versión.",
     developmentOnly: "Inicio de sesión de desarrollo. No está en una versión publicada.",
   },

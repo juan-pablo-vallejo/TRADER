@@ -3,6 +3,11 @@
 // only asks for the number and then the code. Nobody signs up here: a number the provider
 // does not know, or one no roster holds, is told to ask the office. Rendered only inside
 // the provider (app/_layout.tsx), in a build that has its key.
+//
+// One other way in, for the Demo company only: its person's number and the demo code, which
+// the API answers with a single-use ticket and no text message (packages/api,
+// core/demo-door.ts). It is what Apple's beta review is given. Everyone else is refused
+// there with one answer, and signs in by the texted code.
 import { useClerk, useSignIn } from "@clerk/expo";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -23,7 +28,8 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
   const router = useRouter();
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
-  const [step, setStep] = useState<"phone" | "code">("phone");
+  const [demoCode, setDemoCode] = useState("");
+  const [step, setStep] = useState<"phone" | "code" | "demo">("phone");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
@@ -56,6 +62,24 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
     }
   };
 
+  // The provider's sign-in is complete: make it the session, and ask the server whether a
+  // roster holds this person. The provider knows the number; that is the server's to say.
+  const enter = async () => {
+    await signIn.finalize();
+    try {
+      await createApi(apiUrl, bearer).me.get.query();
+    } catch (error) {
+      const refused =
+        (error as { data?: { code?: string } } | null)?.data?.code === "UNAUTHORIZED";
+      if (refused) await clerk.signOut();
+      setNote(refused ? t.signIn.notOnRoster : t.signIn.failed);
+      if (refused) setStep("phone");
+      return;
+    }
+    await keep({ kind: "clerk" });
+    router.replace("/today");
+  };
+
   const verify = async () => {
     if (code.trim() === "") return;
     setBusy(true);
@@ -66,20 +90,41 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
         setNote(t.signIn.badCode);
         return;
       }
-      await signIn.finalize();
-      // The provider knows the number; whether a roster does is the server's to say.
-      try {
-        await createApi(apiUrl, bearer).me.get.query();
-      } catch (error) {
-        const refused =
-          (error as { data?: { code?: string } } | null)?.data?.code === "UNAUTHORIZED";
-        if (refused) await clerk.signOut();
-        setNote(refused ? t.signIn.notOnRoster : t.signIn.failed);
-        if (refused) setStep("phone");
+      await enter();
+    } catch {
+      setNote(t.signIn.failed);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The Demo company's way in. The API's one refusal is shown as one sentence: it does not
+  // say which of the number and the code was wrong, and neither does this.
+  const demo = async () => {
+    const number = signInPhone(phone);
+    if (number === null) {
+      setNote(t.signIn.badPhone);
+      return;
+    }
+    if (demoCode.trim() === "") return;
+    setBusy(true);
+    setNote(null);
+    try {
+      const answer = await createApi(apiUrl, bearer).demo.signIn.mutate({
+        phone: number,
+        code: demoCode.trim(),
+      });
+      if (answer.result !== "ticket") {
+        setNote(t.signIn.badDemo);
         return;
       }
-      await keep({ kind: "clerk" });
-      router.replace("/today");
+      const redeemed = await signIn.ticket({ ticket: answer.ticket });
+      if (redeemed.error !== null || signIn.status !== "complete") {
+        setNote(t.signIn.failed);
+        return;
+      }
+      setDemoCode("");
+      await enter();
     } catch {
       setNote(t.signIn.failed);
     } finally {
@@ -110,6 +155,61 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
             label={busy ? t.loading : t.signIn.sendCode}
             disabled={busy}
             onPress={() => void send()}
+          />
+          <Button
+            testID="sign-in-demo"
+            kind="secondary"
+            label={t.signIn.demo}
+            disabled={busy}
+            onPress={() => {
+              setNote(null);
+              setStep("demo");
+            }}
+          />
+        </>
+      ) : step === "demo" ? (
+        <>
+          <Text style={text.body}>{t.signIn.demoHelp}</Text>
+          <Text style={text.label}>{t.signIn.phone}</Text>
+          <TextInput
+            testID="sign-in-demo-phone"
+            accessibilityLabel={t.signIn.phone}
+            style={styles.input}
+            value={phone}
+            onChangeText={setPhone}
+            keyboardType="phone-pad"
+            textContentType="telephoneNumber"
+            autoComplete="tel"
+          />
+          <Text style={text.label}>{t.signIn.demoCode}</Text>
+          <TextInput
+            testID="sign-in-demo-code"
+            accessibilityLabel={t.signIn.demoCode}
+            style={styles.input}
+            value={demoCode}
+            onChangeText={setDemoCode}
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry
+            returnKeyType="go"
+            onSubmitEditing={() => void demo()}
+          />
+          <Button
+            testID="sign-in-demo-submit"
+            label={busy ? t.loading : t.signIn.demoSubmit}
+            disabled={busy}
+            onPress={() => void demo()}
+          />
+          <Button
+            testID="sign-in-demo-back"
+            kind="secondary"
+            label={t.signIn.back}
+            disabled={busy}
+            onPress={() => {
+              setNote(null);
+              setDemoCode("");
+              setStep("phone");
+            }}
           />
         </>
       ) : (

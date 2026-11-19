@@ -155,17 +155,22 @@ Once, in this order.
    - `SENTRY_DSN`
    - `RESEND_API_KEY` and `MAIL_FROM`, both or neither. Leave `INVOICE_EMAIL_ALLOWLIST`
      blank: in production that means any customer may be emailed.
+   - `DEMO_SIGN_IN_CODE` and `DEMO_COMPANY_ID`, both or neither, after step 7: a code of
+     your own (`openssl rand -base64 24`) and the Demo company's id as onboarding printed
+     it. With them a Demo person signs in on the phone with their number and that code,
+     and no text message. Never D Sierra's id.
 
    The server refuses to start, naming the variable, when one of the first five lines is
-   missing or malformed, or the mail pair is half set. `/api/ready` answers 200 only when
-   the deployment is logged in as `trader_app` and every company table has row-level
-   security forced; pointed at the owner's connection string it answers 503.
+   missing or malformed, or the mail pair or the Demo pair is half set. `/api/ready` answers
+   200 only when the deployment is logged in as `trader_app` and every company table has
+   row-level security forced; pointed at the owner's connection string it answers 503.
 
 5. **GitHub.** The `production` environment's secrets: `PRODUCTION_MIGRATOR_URL` (the direct
    endpoint, as the owner), `PRODUCTION_DEPLOY_HOOK`, `PRODUCTION_URL`
    (`https://app.jpteq.app`). Later: the Expo token and the store credentials.
 6. **Apple and Google.** Apple: the app record, a TestFlight external group, a public link
-   capped at the crew's size, beta review notes with the Demo sign-in. Google: the app
+   capped at the crew's size, beta review notes with the Demo sign-in: a Demo person's
+   number and the demo code, entered under "I have a demo code". Google: the app
    record, the internal testing track, the tester list.
 7. **Onboard the two companies.** Each command is a dry run until `--apply` is added: every
    statement runs and is rolled back, and it prints the database it reached and the ids it

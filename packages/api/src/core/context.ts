@@ -8,6 +8,7 @@ import {
   type IdentityDirectory,
   type VerifiedIdentity,
 } from "./identity";
+import type { DemoDoor } from "./demo-door";
 import { type Mailer, unconfiguredMailer } from "./mailer";
 import type { ErrorReporter } from "./report";
 
@@ -26,6 +27,9 @@ export type Context = {
   // The mail service as invoice.send sees it (mailer.ts). A host that names none gets one
   // that sends nothing and says so.
   mailer: Mailer;
+  // The Demo sign-in's door (demo-door.ts), or null on a host that has none: then
+  // demo.signIn refuses everyone.
+  demo: DemoDoor | null;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -45,6 +49,7 @@ export function createContext(opts: {
   identity: unknown;
   directory: IdentityDirectory;
   mailer?: Mailer;
+  demo?: DemoDoor | null;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -55,6 +60,7 @@ export function createContext(opts: {
     identity: parsed.success ? parsed.data : null,
     directory: opts.directory,
     mailer: opts.mailer ?? unconfiguredMailer,
+    demo: opts.demo ?? null,
     reporter: opts.reporter,
     requestId: opts.requestId,
     ...(opts.waits !== undefined && { waits: opts.waits }),

@@ -254,6 +254,7 @@ const probe = router({
       keys: Object.keys(ctx).sort(),
       dbIsUndefined: ctx.db === undefined,
       identityIsUndefined: ctx.identity === undefined,
+      demoIsUndefined: ctx.demo === undefined,
     };
   }),
   customer: protectedProcedure

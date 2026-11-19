@@ -81,6 +81,7 @@ const EXPECTED: Record<string, Gate> = {
   "roster.deactivate": ADMIN,
   "roster.reactivate": ADMIN,
   "status.get": "public",
+  "demo.signIn": "public",
   "sync.pull": "protected",
   "sync.push": "protected",
 };

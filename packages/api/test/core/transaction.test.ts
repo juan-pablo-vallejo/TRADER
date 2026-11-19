@@ -57,8 +57,12 @@ describe("the procedure context", () => {
     // (identity.ts): it reaches no database and reads nothing back.
     // `mailer` is the mail service as invoice.send hands it a message (mailer.ts): it
     // reaches no database either, and answers only whether the message went.
+    // `demo` is present and undefined, like the pool: the Demo sign-in's door and its code
+    // are for a caller with no session, and a signed-in procedure holds neither.
+    expect(seen.demoIsUndefined).toBe(true);
     expect(seen.keys).toEqual([
       "db",
+      "demo",
       "directory",
       "identity",
       "mailer",

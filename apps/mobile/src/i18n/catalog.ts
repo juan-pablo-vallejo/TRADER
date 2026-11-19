@@ -19,6 +19,13 @@ export type Catalog = {
     submit: string;
     failed: string;
     notOnRoster: string;
+    // The Demo company's way in, with no text message (ui/phone-sign-in.tsx).
+    demo: string;
+    demoHelp: string;
+    demoCode: string;
+    demoSubmit: string;
+    badDemo: string;
+    back: string;
     // A build with no way to sign in yet: said, never an empty screen.
     unavailable: string;
     developmentOnly: string;

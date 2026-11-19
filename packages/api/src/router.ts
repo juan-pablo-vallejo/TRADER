@@ -1,6 +1,7 @@
 import { assignmentRouter } from "./routers/assignment";
 import { companyRouter } from "./routers/company";
 import { customerRouter } from "./routers/customer";
+import { demoRouter } from "./routers/demo";
 import { invoiceRouter } from "./routers/invoice";
 import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
@@ -14,6 +15,7 @@ export const appRouter = router({
   assignment: assignmentRouter,
   company: companyRouter,
   customer: customerRouter,
+  demo: demoRouter,
   invoice: invoiceRouter,
   job: jobRouter,
   labor: laborRouter,

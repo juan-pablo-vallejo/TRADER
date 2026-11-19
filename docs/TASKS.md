@@ -192,7 +192,7 @@ Android user.
   Done when tests cover each of those, staging's fixture companies keep their data through
   the migration, and `pnpm check` is green.
 
-- [ ] 6. **Ending a started shift early.** Today a shift someone clocked in on is locked
+- [x] 6. **Ending a started shift early.** Today a shift someone clocked in on is locked
       whole and an overlapping shift is refused, so under schedule enforcement nobody can be
       moved to another job mid-day. Change the lock by a new migration: a locked shift's end
       may move earlier, to any minute after the clock-in that locked it, and nothing else
@@ -571,15 +571,18 @@ Android user.
       whether `run-onboard.ts` should refuse a blank `DATABASE_URL`.
 - [ ] Item 2's fix is on staging and the office signs in there (the smoke test, by
       ticket). Its box waits on the other half of its "Done when": a phone build signing in
-      to staging, which waits on gate 1 and on item 3.
-- [ ] OWNER, item 3: choose the Demo sign-in. Read on 2026-11-19: Apple asks for a demo
-      account that never expires, or a built-in demo mode with its prior approval; Clerk's
-      test numbers (+1 XXX 555-0100 to 0199, code 424242, no SMS sent) work in production
-      only with Test mode on, which Clerk calls "highly discouraged"; a Clerk sign-in token
-      is single use and is redeemed with the `ticket` strategy the smoke test already uses.
-      The options: (a) a Demo code the app sends to the API, which answers a sign-in token
-      for a Demo person only; (b) Test mode on in production; (c) passwords for the Demo
-      people, which `docs/ARCHITECTURE.md` rules out today. Nothing is built until chosen.
+      to staging, which item 3's Demo sign-in now makes possible without Clerk's test mode,
+      once the owner sets its two variables (next entry).
+- [ ] OWNER, item 3: the owner chose the way on 2026-11-19, a Demo code answered with a
+      single-use sign-in ticket, and it is built: `demo.signIn`, and "I have a demo code" on
+      the phone's sign-in. It admits only the people of the one company the deployment
+      names. Staging has no door until the staging Vercel project is given
+      `DEMO_SIGN_IN_CODE` (16 characters or more, no space) and `DEMO_COMPANY_ID` (the
+      fixture company's id), which the session cannot set, and is redeployed. Then: a phone
+      build signs in to staging with a fixture number and no code sent, and items 2 and 3
+      are ticked. What was read first: Apple asks for a demo account that never expires;
+      Clerk's test numbers work in production only with Test mode on, which Clerk calls
+      "highly discouraged"; a Clerk sign-in token is single use.
 - [ ] `labor.repair`'s answer still calls an entry's flags `reasons`
       (`packages/api/src/labor/repair.ts`); item 4 named the push acknowledgement and the
       phone's outbox only. Rename it with item 16, which rebuilds its one screen.
