@@ -1,7 +1,6 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
 
-import logo from "../../../../../assets/brand/logo.png";
+import { Logo } from "../logo";
 import { SessionFrame } from "../session-frame";
 import styles from "../shell.module.css";
 
@@ -13,7 +12,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <SessionFrame>
       <main className={styles.alone}>
-        <Image src={logo} alt="D Sierra Painting" className={styles.logo} priority />
+        <Logo />
         {children}
       </main>
     </SessionFrame>

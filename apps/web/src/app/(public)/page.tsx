@@ -1,12 +1,11 @@
-import Image from "next/image";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import logo from "../../../../../assets/brand/logo.png";
 import { officeHost } from "../../server/environment";
 import { signInPath } from "../../server/identity-mode";
 import { OFFICE_HOME } from "../../server/sign-in-paths";
 import controls from "../controls.module.css";
+import { Logo } from "../logo";
 import styles from "../shell.module.css";
 import { strings } from "../strings";
 
@@ -21,7 +20,7 @@ export default async function Home() {
   if (officeHost(process.env, host)) redirect(OFFICE_HOME);
   return (
     <div className={styles.home}>
-      <Image src={logo} alt="D Sierra Painting" className={styles.logo} priority />
+      <Logo />
       <a className={controls.primary} href={signInPath(process.env)}>
         {strings.teamSignIn}
       </a>

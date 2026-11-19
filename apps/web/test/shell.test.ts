@@ -23,6 +23,16 @@ describe("the three layouts", () => {
     expect(read("layout.tsx")).not.toMatch(/from "@clerk|session-frame|providers/);
   });
 
+  it("writes no inline style on a public page, which its policy would refuse", () => {
+    for (const file of ["(public)/layout.tsx", "(public)/page.tsx", "logo.tsx"]) {
+      const source = read(file);
+      expect(source, file).not.toMatch(
+        /style=\{|<Image\b|from "next\/image";\nimport Image/,
+      );
+      expect(source, file).not.toMatch(/import Image from "next\/image"/);
+    }
+  });
+
   it("gives the office and sign-in the session frame, and only the office its menu", () => {
     const office = read("(office)/layout.tsx");
     const auth = read("(auth)/layout.tsx");
