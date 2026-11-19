@@ -204,7 +204,7 @@ Android user.
       a clock event. Done when tests show a started shift trimmed and a clock-in admitted on
       the second shift the same day, a trim to before the clock-in refused, and every other
       change to a locked shift still refused by the database.
-- [ ] 7. **The shell: D Sierra's brand, three layouts, laptop density.** The frame every
+- [x] 7. **The shell: D Sierra's brand, three layouts, laptop density.** The frame every
       later screen sits in. No screen's content is redesigned here.
   - Tokens. `apps/web/src/app/theme.css` and `apps/mobile/src/theme.ts` hold the same
     values, and a test fails when they differ. Ink `#111827`, secondary ink `#4B5563`,
@@ -586,6 +586,13 @@ Android user.
 - [ ] `labor.repair`'s answer still calls an entry's flags `reasons`
       (`packages/api/src/labor/repair.ts`); item 4 named the push acknowledgement and the
       phone's outbox only. Rename it with item 16, which rebuilds its one screen.
+- [ ] Item 7 was seen at 390, 768 and 1280 on every office screen against the demo data,
+      and on staging for the homepage and the sign-in page; staging's office screens were
+      walked by the smoke test's browser, not looked at by hand, because nobody can sign in
+      to staging's office by hand yet (the Clerk entry above). Look once that is settled.
+- [ ] OWNER, with production: `TRADER_OFFICE_HOST=app.jpteq.app` in the production
+      project's variables, so `/` there opens the office and `/` on `jpteq.app` the
+      homepage (`README.md` lists it).
 - [ ] The Maestro suite's sign-in failed once in three runs on a fresh iPhone 17 simulator:
       the tap on Sign in never reached the API, and the same flow passed on the next two
       runs unchanged. If it recurs, wait for the keyboard before the tap
