@@ -143,7 +143,7 @@ you find under "Found along the way". Never reorder, never add scope.
       the code changes, or you stop and ask. Update `.claude/skills/ui-check` to the six
       screens. Done when the four documents and `LICENSE` are the repository's only prose
       and each `README.md` command has run in this session.
-- [ ] 11. **Staging proven.** On staging, in a browser: sign in as an admin, add a customer
+- [x] 11. **Staging proven.** On staging, in a browser: sign in as an admin, add a customer
       and a job, schedule a shift, see hours with their flags, export the CSV, create and
       issue an invoice, send it to an allow-listed address, record a payment. On a
       simulator: sign in, see the week, clock in, switch job, clock out with the network
@@ -223,12 +223,10 @@ each Android user.
 - [ ] An entry the office adds from "Add missing hours" is flagged `user_timed` and
       `location` (it has no location stamp), never `corrected`. Decide whether an office
       entry should carry `location` at all.
-- [ ] OWNER: invoice email does not leave staging. A send of invoice 1 to the allow-listed
-      address passed the allow-list, reached Resend and was refused (`provider_refused`,
-      recorded on the invoice). The Resend key in `.env.staging` is accepted by Resend, so
-      the cause is in the staging Vercel project: its `RESEND_API_KEY` (an older key?) or
-      its `MAIL_FROM` (a domain Resend has not verified). Resend's log shows the reason.
-      Item 11's send step and item 16 wait on it.
+- [x] Invoice email did not leave staging: Resend refused two sends of invoice 1
+      (`provider_refused`). The owner corrected the staging Vercel project's mail variables;
+      after a redeploy the third send went. Item 16 still waits on the owner seeing it
+      arrive.
 
 ## After MVP
 
