@@ -5,7 +5,6 @@
 // a ledger that fails replay — because the records behind it may depend on it: a `started`
 // that failed transiently must not let its `ended` be rejected for good. Consumed by
 // routers/sync.ts.
-import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
@@ -196,12 +195,7 @@ export async function pushRecords(
       answer(await run((tx, user) => runOne(tx, user, r, skew)));
       ran++;
     } catch (error) {
-      // A refusal: its transaction rolled back, the record is answered.
-      if (error instanceof TRPCError && error.code === "FORBIDDEN") {
-        answer(rejectedAs(r, "not_permitted"));
-        ran++;
-        continue;
-      }
+      // A refusal is an answer, never a throw (sync/labor.ts returns `not_permitted`). So
       // UNAUTHORIZED (deactivated mid-batch) or anything thrown: this record and the rest are
       // left out and retried; what committed before is answered.
       if (ran === 0) throw error;

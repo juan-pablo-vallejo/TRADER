@@ -77,7 +77,7 @@ function server() {
         return {
           id: r.id,
           result: seen ? "duplicate" : "accepted",
-          reasons: s.flagged.get(r.id) ?? [],
+          flags: s.flagged.get(r.id) ?? [],
         };
       });
       if (s.dropResponse) {
@@ -196,7 +196,7 @@ describe("a cycle", () => {
     p.srv.pullDown = true;
     await p.cycle();
     expect(p.store.rows).toMatchObject([
-      { id, standing: "settled", reasons: ["offline", "unscheduled"] },
+      { id, standing: "settled", flags: ["offline", "unscheduled"] },
     ]);
     // Pulled: the copy goes and the snapshot says the flags.
     p.srv.pullDown = false;

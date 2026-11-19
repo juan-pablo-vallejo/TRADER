@@ -31,5 +31,5 @@ export const laborAck = z.strictObject({
   id: z.uuid(),
   serverTimestamp: z.date(),
   clockSkewed: z.boolean(),
-  reasons: z.array(z.enum(ENTRY_FLAGS)),
+  flags: z.array(z.enum(ENTRY_FLAGS)),
 });

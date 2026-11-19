@@ -125,7 +125,7 @@ async function push(
   return {
     id,
     result: answer.result === "rejected" ? answer.code : answer.result,
-    reasons: answer.result === "rejected" ? [] : answer.ack.reasons,
+    reasons: answer.result === "rejected" ? [] : answer.ack.flags,
   };
 }
 

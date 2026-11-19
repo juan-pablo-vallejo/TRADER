@@ -177,7 +177,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
             `record ${planned.kind} ${planned.id} answered ${r.result} ${"code" in r ? r.code : ""}`,
           );
         }
-        const reasons = "reasons" in r.ack ? r.ack.reasons : [];
+        const reasons = "flags" in r.ack ? r.ack.flags : [];
         if (reasons.join(",") !== planned.reasons.join(",")) {
           fail(
             `record ${planned.kind} ${planned.id} flagged [${reasons.join(", ")}], planned [${planned.reasons.join(", ")}]`,

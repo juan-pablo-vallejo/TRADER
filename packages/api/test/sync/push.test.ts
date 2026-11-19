@@ -241,7 +241,7 @@ describe("sync.push — the day as the field sends it", () => {
       expect(answer.clockSkewMs).toBeGreaterThan(599_000);
       expect(answer.clockSkewMs).toBeLessThan(601_000);
       expect(answer.results[0]).toMatchObject({
-        ack: { clockSkewed: true, reasons: ["clock_skewed"] },
+        ack: { clockSkewed: true, flags: ["clock_skewed"] },
       });
       const [session] = deriveSessions(
         await asOwner(tx, d.companyId, () => readWorkerEvents(tx, d.w.id)),
@@ -299,7 +299,7 @@ describe("sync.push — the day as the field sends it", () => {
         ...day("2026-10-06"),
       ]);
       const reasons = answer.results.map((r) =>
-        r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
+        r.result === "accepted" ? (r.ack as { flags: string[] }).flags : r,
       );
       expect(reasons).toEqual(Array(8).fill(["offline"]));
 
@@ -344,7 +344,7 @@ describe("sync.push — the day as the field sends it", () => {
       ]);
       expect(
         claimed.results.map((r) =>
-          r.result === "accepted" ? (r.ack as { reasons: string[] }).reasons : r,
+          r.result === "accepted" ? (r.ack as { flags: string[] }).flags : r,
         ),
       ).toEqual(Array(2).fill(["clock_skewed"]));
     });
@@ -439,7 +439,7 @@ describe("sync.push — the day as the field sends it", () => {
         batch.map((r) => ({
           id: r.id,
           result: "accepted",
-          ack: { clockSkewed: true, reasons: ["offline", "clock_skewed"] },
+          ack: { clockSkewed: true, flags: ["offline", "clock_skewed"] },
         })),
       );
       expect(
@@ -473,7 +473,7 @@ describe("sync.push — the day as the field sends it", () => {
       const answer = await push(tx, d.w.who, [start, end], deviceNow);
       expect(summary(answer.results)).toEqual(["accepted", "rejected:time_in_future"]);
       expect(answer.results[0]).toMatchObject({
-        ack: { clockSkewed: true, reasons: ["offline", "clock_skewed"] },
+        ack: { clockSkewed: true, flags: ["offline", "clock_skewed"] },
       });
       // The session stays open at its captured start until the office ends it.
       expect(
@@ -531,13 +531,17 @@ describe("pushRecords — the loop, without a database", () => {
     await expect(pushRecords(input(records(2)), fakeRun({ 0: boom }))).rejects.toBe(boom);
   });
 
-  it("answers FORBIDDEN not_permitted and goes on; UNAUTHORIZED stops, or throws first", async () => {
+  it("takes a thrown FORBIDDEN for a throw, not an answer; UNAUTHORIZED stops, or throws first", async () => {
+    // No record's path throws FORBIDDEN: a refusal is returned as `not_permitted`.
     const forbidden = new TRPCError({ code: "FORBIDDEN" });
     const unauthorized = new TRPCError({ code: "UNAUTHORIZED" });
-    const out = await pushRecords(input(records(3)), fakeRun({ 0: forbidden }));
-    expect(out.results.map((r) => (r.result === "rejected" ? r.code : r.result))).toEqual(
-      ["not_permitted", "r_1", "r_2"],
+    await expect(pushRecords(input(records(3)), fakeRun({ 0: forbidden }))).rejects.toBe(
+      forbidden,
     );
+    const stopped = await pushRecords(input(records(3)), fakeRun({ 1: forbidden }));
+    expect(
+      stopped.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
+    ).toEqual(["r_0"]);
     const partial = await pushRecords(input(records(3)), fakeRun({ 1: unauthorized }));
     expect(partial.results).toHaveLength(1);
     await expect(
@@ -615,13 +619,12 @@ describe("pushRecords — the loop, without a database", () => {
     expect(events).toHaveLength(1);
   });
 
-  it("reports no mid-batch UNAUTHORIZED and no FORBIDDEN", async () => {
+  it("reports no mid-batch UNAUTHORIZED", async () => {
     const { onFailure, events } = recorded();
     const unauthorized = new TRPCError({ code: "UNAUTHORIZED" });
-    const forbidden = new TRPCError({ code: "FORBIDDEN" });
     const partial = await pushRecords(
       input(records(3)),
-      fakeRun({ 0: forbidden, 2: unauthorized }),
+      fakeRun({ 2: unauthorized }),
       Date.now,
       onFailure,
     );
@@ -740,9 +743,7 @@ describe("sync.push — a start, by the schedule switch", () => {
   const one = async (tx: Tx, who: unknown, record: unknown) => {
     const [r] = (await push(tx, who, [record])).results;
     if (r === undefined) throw new Error("the record was left out");
-    return r.result === "rejected"
-      ? r.code
-      : { result: r.result, reasons: r.ack.reasons };
+    return r.result === "rejected" ? r.code : { result: r.result, reasons: r.ack.flags };
   };
 
   it("switch on, a shift of the worker's own admits it: accepted, and the shift is locked", async () => {

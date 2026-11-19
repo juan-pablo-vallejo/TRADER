@@ -144,7 +144,7 @@ describe("sync.push labor — a worker's own day", () => {
         const answer = await push(tx, w1, r);
         expect(answer).toMatchObject({
           result: "accepted",
-          ack: { id: r.id, clockSkewed: false, reasons: [] },
+          ack: { id: r.id, clockSkewed: false, flags: [] },
         });
         if (answer.result === "accepted")
           stamps.push(answer.ack.serverTimestamp.getTime());
@@ -195,7 +195,7 @@ describe("sync.push labor — a worker's own day", () => {
           id: r.id,
           serverTimestamp: row!.serverTimestamp,
           clockSkewed: true,
-          reasons: ["clock_skewed"],
+          flags: ["clock_skewed"],
         },
       });
     });
@@ -268,7 +268,7 @@ describe("sync.push labor — flags", () => {
           ...o,
         });
         const answer = await push(tx, w1, start);
-        expect(answer).toMatchObject({ result: "accepted", ack: { reasons } });
+        expect(answer).toMatchObject({ result: "accepted", ack: { flags: reasons } });
         const row = await asOwner(
           tx,
           d,
@@ -314,7 +314,7 @@ describe("sync.push labor — flags", () => {
       );
       const reasonsOf = async (o: Partial<Payload>) => {
         const answer = await push(tx, w1, record({ workerId: d.w1, jobId: d.J, ...o }));
-        return answer.result === "accepted" ? answer.ack.reasons : answer;
+        return answer.result === "accepted" ? answer.ack.flags : answer;
       };
       expect(await reasonsOf({ location: HERE, clientTimestamp: ago(240) })).toEqual([]);
       expect(
@@ -351,7 +351,7 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
       const answer = await push(tx, w1, r);
       expect(answer).toMatchObject({
         result: "accepted",
-        ack: { clockSkewed: true, reasons: ["clock_skewed"] },
+        ack: { clockSkewed: true, flags: ["clock_skewed"] },
       });
       const row = await rowOf(tx, d, r.id);
       expect(row).toMatchObject({
@@ -390,7 +390,7 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
         });
         expect(await push(tx, w1, start)).toMatchObject({
           result: "accepted",
-          ack: { clockSkewed: false, reasons },
+          ack: { clockSkewed: false, flags: reasons },
         });
         expect((await rowOf(tx, d, start.id)).clockSkewed).toBe(false);
         await push(
@@ -447,7 +447,7 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
             clientTimestamp: new Date(Date.now() + 120_000),
           }),
         ),
-      ).toMatchObject({ result: "accepted", ack: { clockSkewed: false, reasons: [] } });
+      ).toMatchObject({ result: "accepted", ack: { clockSkewed: false, flags: [] } });
     });
   });
 
@@ -484,7 +484,7 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
         clientTimestamp: new Date(Date.now() - HOUR),
       });
       const first = await push(tx, w1, r);
-      expect(first).toMatchObject({ ack: { reasons: ["clock_skewed"] } });
+      expect(first).toMatchObject({ ack: { flags: ["clock_skewed"] } });
       const stored = await rowOf(tx, d, r.id);
       expect(await push(tx, w1, r, SKEWED)).toEqual({ ...first, result: "duplicate" });
       expect(await rowOf(tx, d, r.id)).toEqual(stored);
@@ -778,7 +778,7 @@ describe("sync.push labor — an admin's own labor", () => {
       const r = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
       expect(await push(tx, admin, r, SKEWED)).toMatchObject({
         result: "accepted",
-        ack: { id: r.id, clockSkewed: true, reasons: REASONS },
+        ack: { id: r.id, clockSkewed: true, flags: REASONS },
       });
       const [row] = await asOwner(tx, d, () =>
         tx.select().from(workSessionEvents).where(eq(workSessionEvents.id, r.id)),
@@ -800,7 +800,7 @@ describe("sync.push labor — an admin's own labor", () => {
         const theirs = record({ workerId: who.id, jobId: d.J, ...FLAGGED });
         expect(await push(tx, who, theirs, SKEWED)).toMatchObject({
           result: "accepted",
-          ack: { reasons: REASONS },
+          ack: { flags: REASONS },
         });
         expect(await flagsOf(tx, d, theirs.id)).toEqual(REASONS);
         expect(await accounting(tx, d, who.id)).toEqual(["eligible"]);
@@ -817,7 +817,7 @@ describe("sync.push labor — an admin's own labor", () => {
       // An admin's event, then a demotion: the flags stand, and the retry answers as stored.
       const theirs = record({ workerId: admin.id, jobId: d.K, ...FLAGGED });
       const first = await push(tx, admin, theirs);
-      expect(first).toMatchObject({ result: "accepted", ack: { reasons: flags } });
+      expect(first).toMatchObject({ result: "accepted", ack: { flags: flags } });
       await asOwner(tx, d, () =>
         tx.update(users).set({ role: "worker" }).where(eq(users.id, admin.id)),
       );

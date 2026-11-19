@@ -189,8 +189,31 @@ jobs:
           echo "::error::the host did not serve $SHA within 15 minutes (last answered: commit '${commit:-none}', ready '${ready:-none}')"
           exit 1
 
-      - name: A browser for the smoke test
+      # The smoke test's browser, kept between runs: installing it took 21 s to 8 m 47 s.
+      # The key is Playwright's own version, which decides the browser's build, so a bump
+      # installs afresh. A restored browser skips the install whole, system libraries
+      # included: the ubuntu-24.04 image already carries every one `--with-deps` asks for
+      # (seen 2026-11-19, all "already the newest version"). If an image ever drops one, the
+      # smoke test fails naming it, and the fix is `playwright install-deps chromium` here.
+      - name: Playwright's version, for the browser cache's key
+        id: playwright
         if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        run: |
+          set -euo pipefail
+          version=$(pnpm --filter @trader/web exec playwright --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+          [ -n "$version" ] || { echo "::error::Playwright's version could not be read"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: Restore the browser
+        id: browser
+        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-ubuntu-24.04-chromium-${{ steps.playwright.outputs.version }}
+      - name: A browser for the smoke test
+        if: >-
+          env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded' &&
+          steps.browser.outputs.cache-hit != 'true'
         run: pnpm --filter @trader/web exec playwright install --with-deps chromium
 
       # Clerk's fixed test code is public, so the suite signs in with single-use tickets

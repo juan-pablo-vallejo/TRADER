@@ -32,40 +32,11 @@ export async function assertReadCommitted(tx: Tx, who: string) {
   }
 }
 
-// The company's field-write lock. Every writer of labor events takes it shared, through
-// loadWorkerTimeline; no procedure takes it exclusive.
-// Shared holders never block each other. Lock order: a transaction takes
-// any row locks it needs on jobs, users or companies before this lock and none after
-// it. Keyed on the
-// request's tenant, so it fails closed without one: a NULL key would lock nothing.
-export async function lockCompanyFieldWrites(
-  tx: Tx,
-  mode: "shared" | "exclusive",
-): Promise<string> {
-  const { rows } = await tx.execute<{ company_id: string | null }>(
-    sql`select public.app_company_id() as company_id`,
-  );
-  const companyId = rows[0]?.company_id ?? null;
-  if (companyId === null)
-    throw new Error("the field-write lock requires the request's tenant");
-  // A key space of its own: the prefix keeps it from ever equalling a worker's key.
-  const key = sql`hashtextextended(${`field-writes:${companyId}`}, 0)`;
-  await tx.execute(
-    mode === "shared"
-      ? sql`select pg_advisory_xact_lock_shared(${key})`
-      : sql`select pg_advisory_xact_lock(${key})`,
-  );
-  return companyId;
-}
-
 export async function loadWorkerTimeline(
   tx: Tx,
   workerId: string,
 ): Promise<WorkerTimeline> {
   await assertReadCommitted(tx, "loadWorkerTimeline");
-
-  // Shared, before the worker's lock (the order every writer follows).
-  await lockCompanyFieldWrites(tx, "shared");
 
   // Its own statement, before the read. A transaction-level advisory lock needs no grant and
   // ends with the transaction; a hash collision between two workers only serializes them.

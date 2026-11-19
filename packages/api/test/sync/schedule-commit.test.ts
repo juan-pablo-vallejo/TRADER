@@ -99,7 +99,7 @@ const start = (who: VerifiedIdentity, workerId: string, jobId: string) =>
 
 // The flags a labor acknowledgement carries.
 const reasonsOf = (answer: Awaited<ReturnType<typeof start>>) =>
-  answer.result === "accepted" && "reasons" in answer.ack ? answer.ack.reasons : null;
+  answer.result === "accepted" && "flags" in answer.ack ? answer.ack.flags : null;
 
 const shiftRow = async (id: string) =>
   (

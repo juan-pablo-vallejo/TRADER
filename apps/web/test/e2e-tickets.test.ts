@@ -343,7 +343,8 @@ describe("the workflows and the staging key", () => {
   it("skips the wait and the smoke test in a superseded run, and holds the smoke test to the commit", () => {
     const after = deploy.slice(deploy.indexOf('echo "result=called"'));
     const steps = after.split(STEP).slice(1);
-    expect(steps).toHaveLength(4);
+    // The wait, then the browser (its version, its cache, its install), the tickets, the test.
+    expect(steps).toHaveLength(6);
     for (const step of steps) {
       expect(step).toContain("steps.hook.outputs.result != 'superseded'");
     }

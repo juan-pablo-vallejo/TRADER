@@ -386,8 +386,8 @@ describe("labor.hours", () => {
       const { d, admin } = await office(tx);
       const acks = await offlineDay(tx, d)();
       expect(acks).toMatchObject([
-        { result: "accepted", ack: { reasons: ["offline"] } },
-        { result: "accepted", ack: { reasons: ["offline"] } },
+        { result: "accepted", ack: { flags: ["offline"] } },
+        { result: "accepted", ack: { flags: ["offline"] } },
       ]);
       // Nobody decided anything: 4 h 15 min is in the day's figure at once.
       const answer = await hours(tx, admin.who);

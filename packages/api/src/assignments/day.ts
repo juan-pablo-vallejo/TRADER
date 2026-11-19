@@ -10,7 +10,7 @@
 // writer of job_assignments that skips `lockPersonDays` breaks the rule silently.
 //
 // Lock order: a day's lock is taken after any row lock on jobs, users or companies and after
-// the field-write and worker locks, and before any job_assignments row. Several days are
+// the worker's lock, and before any job_assignments row. Several days are
 // taken in day order. Consumed by write.ts, copy.ts and sync/schedule.ts.
 import { sql } from "drizzle-orm";
 import { z } from "zod";

@@ -103,7 +103,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               : {
                   id: r.id,
                   result: r.result,
-                  reasons: r.kind === "labor_event" ? r.ack.reasons : [],
+                  flags: r.kind === "labor_event" ? r.ack.flags : [],
                 },
           ),
         };

@@ -38,7 +38,7 @@ const kept = (
   standing,
   syncingSince: null,
   code: null,
-  reasons: [],
+  flags: [],
 });
 const snapshot = (over: Partial<PullOutput> = {}): PullOutput => ({
   serverNow: new Date(T0),

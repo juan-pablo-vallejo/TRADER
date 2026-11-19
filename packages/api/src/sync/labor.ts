@@ -81,7 +81,7 @@ function ack(result: "accepted" | "duplicate", row: Prior): LaborResult {
       id: row.id,
       serverTimestamp: row.serverTimestamp,
       clockSkewed: row.clockSkewed,
-      reasons: row.flags,
+      flags: row.flags,
     },
   };
 }
@@ -175,7 +175,7 @@ export async function pushLaborEvent(
   }
 
   // 7. The entry's flags, written with it.
-  const reasons: EntryFlag[] = laborReasons({
+  const flags: EntryFlag[] = laborReasons({
     type: p.type,
     corrected: false,
     capturedOffline: p.capturedOffline,
@@ -210,7 +210,7 @@ export async function pushLaborEvent(
       timeSetByUser: p.timeSetByUser,
       capturedOffline: p.capturedOffline,
       initiatorUserId: user.id,
-      flags: reasons,
+      flags,
     })
     .onConflictDoNothing()
     .returning();

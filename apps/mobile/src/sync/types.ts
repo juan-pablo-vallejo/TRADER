@@ -21,7 +21,7 @@ export type OutboxRecord = {
   // The server's refusal, for a rejected record.
   code: string | null;
   // What the server flagged it for, for a settled one; empty when it has no flag.
-  reasons: string[];
+  flags: string[];
 };
 
 export type NewRecord = Pick<OutboxRecord, "id" | "ownerId" | "payload">;
@@ -34,7 +34,7 @@ export interface Store {
   claim(ids: string[], at: number): Promise<void>;
   release(ids: string[]): Promise<void>;
   reclaim(startedBefore: number): Promise<void>;
-  settle(id: string, reasons: string[]): Promise<void>;
+  settle(id: string, flags: string[]): Promise<void>;
   reject(id: string, code: string): Promise<void>;
   // Every record of one person, oldest first.
   records(ownerId: string): Promise<OutboxRecord[]>;
@@ -45,7 +45,7 @@ export interface Store {
 }
 
 export type PushAnswer =
-  | { id: string; result: "accepted" | "duplicate"; reasons: string[] }
+  | { id: string; result: "accepted" | "duplicate"; flags: string[] }
   | { id: string; result: "rejected"; code: string };
 
 // The three calls a cycle makes. Any of them may throw: that is the network, never a verdict.

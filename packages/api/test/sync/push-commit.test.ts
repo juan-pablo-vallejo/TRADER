@@ -206,7 +206,7 @@ describe("sync.push — commits, record by record", () => {
     // The end claims an online capture in October: flagged at its receipt, and the resend
     // answers from the stored row, never judging it again.
     expect(first.results[1]).toMatchObject({
-      ack: { clockSkewed: true, reasons: ["clock_skewed"] },
+      ack: { clockSkewed: true, flags: ["clock_skewed"] },
     });
     // The flags were written once, with the rows, and the resend moved neither.
     expect(new Map(rows.map((r) => [r.id, r.flags]))).toEqual(
@@ -234,7 +234,7 @@ describe("sync.push — a flagged event at commit", () => {
     const reasons = ["offline", "user_timed", "location"];
     const answer = await push(admin.who, [event]);
     expect(answer.results).toMatchObject([
-      { id: event.id, result: "accepted", ack: { reasons } },
+      { id: event.id, result: "accepted", ack: { flags: reasons } },
     ]);
     expect(await eventIds([event.id])).toEqual([event.id]);
     const rows = await D.owner
@@ -245,7 +245,7 @@ describe("sync.push — a flagged event at commit", () => {
     // The resend answers from what was stored.
     const again = await push(admin.who, [event]);
     expect(again.results).toMatchObject([
-      { id: event.id, result: "duplicate", ack: { reasons } },
+      { id: event.id, result: "duplicate", ack: { flags: reasons } },
     ]);
   });
 });
@@ -383,7 +383,7 @@ describe("sync.push — transaction boundaries", () => {
         }),
       ]);
       await waitForLockWait(D.owner, '%from "jobs"%for share%', { n: 1 });
-      // Records 1 and 2 have committed: their worker and field-write locks are gone, and the rows it
+      // Records 1 and 2 have committed: their worker locks are gone, and the rows it
       // held FOR SHARE are free (row locks live in the tuples; NOWAIT finds them).
       const { rows } = await D.owner.execute<{ n: number }>(sql`
         select count(*)::int as n from pg_locks

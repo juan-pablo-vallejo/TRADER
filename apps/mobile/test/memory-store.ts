@@ -22,7 +22,7 @@ export function memoryStore(): Store & { rows: OutboxRecord[]; kv: Map<string, s
           standing: "pending",
           syncingSince: null,
           code: null,
-          reasons: [],
+          flags: [],
         });
       }
       return Promise.resolve();
@@ -57,10 +57,10 @@ export function memoryStore(): Store & { rows: OutboxRecord[]; kv: Map<string, s
       }
       return Promise.resolve();
     },
-    settle(id, reasons) {
+    settle(id, flags) {
       const r = byId(id);
       if (r !== undefined)
-        Object.assign(r, { standing: "settled", syncingSince: null, reasons });
+        Object.assign(r, { standing: "settled", syncingSince: null, flags });
       return Promise.resolve();
     },
     reject(id, code) {

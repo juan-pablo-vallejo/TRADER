@@ -116,7 +116,7 @@ export async function runCycle(
         await store.reject(result.id, result.code);
         rejected += 1;
       } else {
-        await store.settle(result.id, result.reasons);
+        await store.settle(result.id, result.flags);
         settled += 1;
       }
     }
