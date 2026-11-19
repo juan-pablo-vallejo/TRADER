@@ -9,6 +9,7 @@ import {
   appRouter,
   createContext,
   reportingOnError,
+  type ClosedCompany,
   type DemoDoor,
   type ErrorReporter,
   type IdentityAdapter,
@@ -31,6 +32,8 @@ export type HandlerDependencies = {
   mailer?: Mailer;
   // The Demo sign-in's door (clerk-demo.ts), read per request. Absent, there is no door.
   demo?: () => DemoDoor | null;
+  // The company that reaches nobody outside, read per request. Absent, there is none.
+  closed?: () => ClosedCompany | null;
   reporter: ErrorReporter;
   // What stands in front of the route (edge.ts). Absent, nothing is refused there: a test
   // of something else hands the handler none.
@@ -59,6 +62,7 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           directory: deps.directory,
           ...(deps.mailer !== undefined && { mailer: deps.mailer }),
           ...(deps.demo !== undefined && { demo: deps.demo() }),
+          ...(deps.closed !== undefined && { closed: deps.closed() }),
           reporter: deps.reporter,
           requestId,
         });

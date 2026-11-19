@@ -54,9 +54,11 @@ export const inviteOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("invited"), user: rosterUser }),
   // Another user of this company already has that address, active or not. Nothing is
   // written. When both are held, the email is the one named.
+  // `company_closed`: this company invites nobody on this deployment (the Demo company in
+  // production; core/demo-door.ts, routers/roster.ts). Nothing is written.
   z.strictObject({
     result: z.literal("rejected"),
-    code: z.enum(["email_taken", "phone_taken"]),
+    code: z.enum(["email_taken", "phone_taken", "company_closed"]),
   }),
 ]);
 

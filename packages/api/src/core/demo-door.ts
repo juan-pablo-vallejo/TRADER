@@ -34,6 +34,17 @@ export type DemoDoor = {
   ticket(phone: string): Promise<string | null>;
 };
 
+// The company that reaches nobody outside this deployment: the door's company, in
+// production (the host says when: apps/web, clerk-demo.ts). Its code is shared by design,
+// so whoever holds it can sign in as any of its people, its admin included, and must be
+// harmless: its invoices are emailed only to `allowed` (the deployment's allow-list;
+// blank is nobody), and it invites nobody (roster/invite.ts), since an invitation makes a
+// login for any number. Null everywhere else, staging included: no rule changes there.
+export type ClosedCompany = { companyId: string; allowed: readonly string[] };
+
+export const isClosed = (closed: ClosedCompany | null, companyId: string): boolean =>
+  closed !== null && closed.companyId === companyId;
+
 export const demoSignInInput = z.strictObject({
   phone: signInPhoneSchema,
   code: z.string().min(1).max(128),

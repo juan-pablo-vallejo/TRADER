@@ -39,6 +39,8 @@ import {
   suggestLines,
   suggestOutput,
 } from "../invoices/read";
+import { isClosed } from "../core/demo-door";
+import { restrictedTo } from "../core/mailer";
 import { sendInput, sendInvoice, sendOutput } from "../invoices/send";
 
 const admin = roleProcedure("admin");
@@ -88,5 +90,16 @@ export const invoiceRouter = router({
   send: admin
     .input(sendInput)
     .output(sendOutput)
-    .mutation(({ ctx, input }) => sendInvoice(ctx.tx, ctx.user, input, ctx.mailer)),
+    .mutation(({ ctx, input }) =>
+      sendInvoice(
+        ctx.tx,
+        ctx.user,
+        input,
+        // The closed company's invoices go to the deployment's allow-list and nowhere
+        // else, blank being nobody (core/demo-door.ts); the service is not even asked.
+        isClosed(ctx.closed, ctx.user.companyId)
+          ? restrictedTo(ctx.closed!.allowed, ctx.mailer)
+          : ctx.mailer,
+      ),
+    ),
 });

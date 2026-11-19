@@ -156,11 +156,12 @@ Once, in this order.
    - `TRADER_OFFICE_HOST=app.jpteq.app`, so `/` there opens the office and `/` on
      `jpteq.app` opens the homepage
    - `RESEND_API_KEY` and `MAIL_FROM`, both or neither. Leave `INVOICE_EMAIL_ALLOWLIST`
-     blank: in production that means any customer may be emailed.
+     blank: in production that means any customer may be emailed, except by the Demo
+     company, which then emails nobody.
    - `DEMO_SIGN_IN_CODE` and `DEMO_COMPANY_ID`, both or neither, after step 7: a code of
      your own (`openssl rand -base64 24`) and the Demo company's id as onboarding printed
      it. With them a Demo person signs in on the phone with their number and that code,
-     and no text message. Never D Sierra's id.
+     and no text message. Never D Sierra's id. From then the Demo company can invite nobody.
 
    The server refuses to start, naming the variable, when one of the first five lines is
    missing or malformed, or the mail pair or the Demo pair is half set. `/api/ready` answers
@@ -195,6 +196,9 @@ Once, in this order.
    ```sql
    update companies set schedule_enforced = true where name = 'D Sierra Painting';
    ```
+
+   Then, before the Demo pair is set: sign in as the Demo admin by texted code and invite
+   Demo's workers.
 
    Last, `unset OWNER_URL`.
 

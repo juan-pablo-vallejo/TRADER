@@ -60,7 +60,10 @@ describe("the procedure context", () => {
     // `demo` is present and undefined, like the pool: the Demo sign-in's door and its code
     // are for a caller with no session, and a signed-in procedure holds neither.
     expect(seen.demoIsUndefined).toBe(true);
+    // `closed` names the company that reaches nobody outside, or is null (demo-door.ts):
+    // a company's id and a list of addresses, no secret and no connection.
     expect(seen.keys).toEqual([
+      "closed",
       "db",
       "demo",
       "directory",

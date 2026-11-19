@@ -6,6 +6,7 @@ import {
   reactivateOutput,
   targetInput,
 } from "../roster/deactivation";
+import { isClosed } from "../core/demo-door";
 import { inviteInput, inviteOutput, rosterInvite } from "../roster/invite";
 import { listOutput, rosterList } from "../roster/list";
 import { setLocation, setLocationInput, setLocationOutput } from "../roster/location";
@@ -19,7 +20,13 @@ export const rosterRouter = router({
   invite: roleProcedure("admin")
     .input(inviteInput)
     .output(inviteOutput)
-    .mutation(({ ctx, input }) => rosterInvite(ctx.tx, ctx.user, input, ctx.directory)),
+    .mutation(({ ctx, input }) =>
+      // The closed company invites nobody (core/demo-door.ts): refused before a row is
+      // written or the identity provider is told of a number.
+      isClosed(ctx.closed, ctx.user.companyId)
+        ? ({ result: "rejected", code: "company_closed" } as const)
+        : rosterInvite(ctx.tx, ctx.user, input, ctx.directory),
+    ),
   setRole: roleProcedure("admin")
     .input(setRoleInput)
     .output(changeOutput)

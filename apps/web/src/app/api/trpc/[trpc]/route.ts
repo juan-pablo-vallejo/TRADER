@@ -1,6 +1,6 @@
 // /api/trpc, the one HTTP entry point of the API. On the Node
 // runtime, because the pool and `pg` need it; dynamic, because every answer is per request.
-import { webDemo } from "../../../../server/clerk-demo";
+import { webClosed, webDemo } from "../../../../server/clerk-demo";
 import { getDb } from "../../../../server/db";
 import { webDirectory } from "../../../../server/directory";
 import { originsFrom } from "../../../../server/edge";
@@ -18,6 +18,7 @@ const handler = createTrpcHandler({
   directory: webDirectory,
   mailer: webMailer,
   demo: webDemo,
+  closed: webClosed,
   reporter: webReporter,
   edge: { authorizedOrigins: originsFrom(process.env) },
 });

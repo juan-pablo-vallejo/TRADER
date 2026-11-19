@@ -11,9 +11,11 @@
 // DEMO_COMPANY_ID (.env.example). Blank, there is no door and demo.signIn refuses everyone.
 // Nothing of a response is kept, logged or thrown: it names a person. An error carries the
 // call and the HTTP status, no more.
-import type { DemoDoor } from "@trader/api";
+import type { ClosedCompany, DemoDoor } from "@trader/api";
 
 import { clerkEnv } from "./clerk-env";
+import { traderEnvironment } from "./environment";
+import { allowList } from "./mailer";
 
 type Env = Record<string, string | undefined>;
 
@@ -128,3 +130,17 @@ export function webDemo(): DemoDoor | null {
   if (demo === null || clerk === null) return null;
   return createClerkDemoDoor({ ...demo, secretKey: clerk.secretKey, fetch });
 }
+
+// The company that reaches nobody outside (packages/api, core/demo-door.ts): the door's
+// company, in TRADER's own production and nowhere else. There its invoices are emailed
+// only to INVOICE_EMAIL_ALLOWLIST, blank meaning nobody (for every other company in
+// production blank means anyone), and it invites nobody. Staging's fixture company, the
+// door's company there, is not closed: staging mails only its allow-list as it is, and its
+// people are invited freely. Pure, and read per request by the route.
+export function closedCompany(env: Env): ClosedCompany | null {
+  const demo = demoEnv(env);
+  if (demo === null || traderEnvironment(env) !== "production") return null;
+  return { companyId: demo.companyId, allowed: allowList(env) };
+}
+
+export const webClosed = (): ClosedCompany | null => closedCompany(process.env);

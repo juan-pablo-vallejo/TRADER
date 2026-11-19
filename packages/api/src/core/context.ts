@@ -8,7 +8,7 @@ import {
   type IdentityDirectory,
   type VerifiedIdentity,
 } from "./identity";
-import type { DemoDoor } from "./demo-door";
+import type { ClosedCompany, DemoDoor } from "./demo-door";
 import { type Mailer, unconfiguredMailer } from "./mailer";
 import type { ErrorReporter } from "./report";
 
@@ -30,6 +30,9 @@ export type Context = {
   // The Demo sign-in's door (demo-door.ts), or null on a host that has none: then
   // demo.signIn refuses everyone.
   demo: DemoDoor | null;
+  // The company that reaches nobody outside (demo-door.ts), or null: only a production
+  // host with a Demo door names one.
+  closed: ClosedCompany | null;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -50,6 +53,7 @@ export function createContext(opts: {
   directory: IdentityDirectory;
   mailer?: Mailer;
   demo?: DemoDoor | null;
+  closed?: ClosedCompany | null;
   reporter: ErrorReporter;
   requestId: string;
   waits?: CallerWaits;
@@ -61,6 +65,7 @@ export function createContext(opts: {
     directory: opts.directory,
     mailer: opts.mailer ?? unconfiguredMailer,
     demo: opts.demo ?? null,
+    closed: opts.closed ?? null,
     reporter: opts.reporter,
     requestId: opts.requestId,
     ...(opts.waits !== undefined && { waits: opts.waits }),

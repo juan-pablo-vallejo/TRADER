@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   ClerkDemoError,
+  closedCompany,
   createClerkDemoDoor,
   demoEnv,
   demoEnvFaults,
@@ -143,6 +144,26 @@ describe("the Demo pair in the environment", () => {
       // A deployment refuses to start on it, by name.
       expect(deployEnvFaults(env)).toEqual(expect.arrayContaining(faults));
     }
+  });
+
+  it("closes the door's company to the outside in production, and nowhere else", () => {
+    const production = { ...pair, TRADER_ENVIRONMENT: "production" };
+    // Blank list: the Demo company emails nobody, and it invites nobody.
+    expect(closedCompany(production)).toEqual({ companyId: COMPANY, allowed: [] });
+    expect(
+      closedCompany({
+        ...production,
+        INVOICE_EMAIL_ALLOWLIST: " Owner@jpteq.test , second@jpteq.test",
+      }),
+    ).toEqual({ companyId: COMPANY, allowed: ["owner@jpteq.test", "second@jpteq.test"] });
+    // Staging's door admits the fixture company, and neither rule touches it.
+    expect(closedCompany({ ...pair, TRADER_ENVIRONMENT: "staging" })).toBeNull();
+    expect(closedCompany(pair)).toBeNull();
+    // No door, no closed company: production's other companies are untouched.
+    expect(closedCompany({ TRADER_ENVIRONMENT: "production" })).toBeNull();
+    expect(
+      closedCompany({ TRADER_ENVIRONMENT: "production", DEMO_SIGN_IN_CODE: CODE }),
+    ).toBeNull();
   });
 
   it("opens on a host only with the pair and Clerk's keys", () => {

@@ -18,6 +18,7 @@ import {
   recordingReporter,
   REQUEST_ID,
   testPhone,
+  userCount,
   world,
   type World,
 } from "../helpers";
@@ -81,6 +82,57 @@ function signIn(demo: DemoDoor | null, reporter = recordingReporter()) {
     reports: reporter.events,
   };
 }
+
+// The same caller as an admin of company `a`, on a host that names a closed company or none.
+function office(who: unknown, closed: { companyId: string; allowed: string[] } | null) {
+  const directory = { admitted: [] as string[] };
+  const caller = createCallerFactory(appRouter)(
+    createContext({
+      directory: {
+        admit: (person) => {
+          directory.admitted.push(person.phone);
+          return Promise.resolve();
+        },
+      },
+      db: app,
+      identity: who,
+      closed,
+      reporter: recordingReporter().reporter,
+      requestId: REQUEST_ID,
+    }),
+  );
+  return { caller, admitted: directory.admitted };
+}
+
+describe("the closed company: the door's, in production", () => {
+  it("invites nobody: refused before a row is written or the provider is told", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const before = await userCount(owner, [w.a.companyId]);
+    const closed = office(admin.who, { companyId: w.a.companyId, allowed: [] });
+    expect(
+      await closed.caller.roster.invite({ phone: testPhone(), name: "Anyone" }),
+    ).toEqual({ result: "rejected", code: "company_closed" });
+    expect(closed.admitted).toEqual([]);
+    expect(await userCount(owner, [w.a.companyId])).toEqual(before);
+  });
+
+  it("leaves every other company, and a host with no closed company, inviting as before", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    // Staging, a development machine: nobody is closed.
+    const open = office(admin.who, null);
+    const first = testPhone();
+    expect(await open.caller.roster.invite({ phone: first, name: "One" })).toMatchObject({
+      result: "invited",
+    });
+    // Production, where the closed company is another one: D Sierra invites freely.
+    const other = office(admin.who, { companyId: w.b.companyId, allowed: [] });
+    const second = testPhone();
+    expect(
+      await other.caller.roster.invite({ phone: second, name: "Two" }),
+    ).toMatchObject({ result: "invited" });
+    expect([...open.admitted, ...other.admitted]).toEqual([first, second]);
+  });
+});
 
 describe("demo.signIn", () => {
   it("answers a ticket for a Demo person's number and the code, with no session", async () => {

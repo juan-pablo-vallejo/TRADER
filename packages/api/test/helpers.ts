@@ -501,11 +501,18 @@ export async function eventIn(tx: Tx, day: WorkDay, e: EventInput): Promise<stri
 }
 
 // The application's own router, called inside a rolled-back transaction.
-export const appCallerIn = (tx: Tx, who: unknown, mailer?: Mailer) =>
+export const appCallerIn = (
+  tx: Tx,
+  who: unknown,
+  mailer?: Mailer,
+  // The company that reaches nobody outside on this host (core/demo-door.ts), if any.
+  closed?: { companyId: string; allowed: string[] },
+) =>
   createCallerFactory(appRouter)(
     createContext({
       directory: localDirectory,
       ...(mailer !== undefined && { mailer }),
+      ...(closed !== undefined && { closed }),
       db: txAsDb(tx),
       identity: who,
       reporter: quietReporter,

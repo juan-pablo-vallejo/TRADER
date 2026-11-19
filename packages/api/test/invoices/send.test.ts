@@ -90,8 +90,62 @@ async function office(tx: Tx) {
     await tx.execute(sql`select set_config('app.company_id', ${day.companyId}, true)`);
     return found;
   };
-  return { day, admin, worker, foreign, as, bill, invoiceId, rows };
+  return { day, other, admin, worker, foreign, as, bill, invoiceId, rows };
 }
+
+describe("invoice.send, for the closed company: the Demo door's, in production", () => {
+  it("emails only the deployment's allow-list, blank meaning nobody, and asks the service nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const o = await office(tx);
+      await o.bill.issue({ invoiceId: o.invoiceId });
+      const { sent, mailer } = recordingMailer();
+      const closedTo = (allowed: string[]) =>
+        appCallerIn(tx, o.admin.who, mailer, { companyId: o.day.companyId, allowed })
+          .invoice;
+      // No list: nobody, though the same deployment lets every other company mail anyone.
+      expect(
+        await closedTo([]).send({ id: uuidv7(), invoiceId: o.invoiceId, to: TO }),
+      ).toEqual({ result: "failed", failure: "recipient_not_allowed" });
+      // A list that does not name the address: still nobody.
+      expect(
+        await closedTo(["owner@jpteq.test"]).send({
+          id: uuidv7(),
+          invoiceId: o.invoiceId,
+          to: TO,
+        }),
+      ).toEqual({ result: "failed", failure: "recipient_not_allowed" });
+      expect(sent).toEqual([]);
+      // On the list: sent.
+      expect(
+        await closedTo([TO]).send({ id: uuidv7(), invoiceId: o.invoiceId, to: TO }),
+      ).toEqual({ result: "sent" });
+      expect(sent.map((m) => m.to)).toEqual([TO]);
+    });
+  });
+
+  it("touches no other company, and nothing where no company is closed, as on staging", async () => {
+    await rolledBack(owner, async (tx) => {
+      const o = await office(tx);
+      await o.bill.issue({ invoiceId: o.invoiceId });
+      const { sent, mailer } = recordingMailer();
+      // Production, the closed company being another one: this one mails anyone.
+      const beside = appCallerIn(tx, o.admin.who, mailer, {
+        companyId: o.other.companyId,
+        allowed: [],
+      }).invoice;
+      expect(await beside.send({ id: uuidv7(), invoiceId: o.invoiceId, to: TO })).toEqual(
+        { result: "sent" },
+      );
+      // Staging: no company is closed, and the host's own mailer is the whole rule.
+      expect(
+        await o
+          .as(o.admin.who, mailer)
+          .send({ id: uuidv7(), invoiceId: o.invoiceId, to: "second@customer.test" }),
+      ).toEqual({ result: "sent" });
+      expect(sent.map((m) => m.to)).toEqual([TO, "second@customer.test"]);
+    });
+  });
+});
 
 describe("invoice.send", () => {
   it("sends the issued invoice's page to the address given and records the send", async () => {

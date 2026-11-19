@@ -107,9 +107,11 @@ function InviteForm({ onDone }: { onDone: () => void }) {
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
           setNote(
-            answer.code === "phone_taken"
-              ? { under: "phone", text: strings.phoneTaken }
-              : { under: "email", text: strings.emailTaken },
+            answer.code === "company_closed"
+              ? { under: "phone", text: strings.companyClosed }
+              : answer.code === "phone_taken"
+                ? { under: "phone", text: strings.phoneTaken }
+                : { under: "email", text: strings.emailTaken },
           );
           return;
         }

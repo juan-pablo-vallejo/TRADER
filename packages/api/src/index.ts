@@ -1,5 +1,5 @@
 export { createContext, type Context } from "./core/context";
-export type { DemoDoor } from "./core/demo-door";
+export type { ClosedCompany, DemoDoor } from "./core/demo-door";
 export {
   createDevIdentityAdapter,
   DEV_EMAIL_HEADER,

@@ -286,6 +286,8 @@ export const strings = {
   close: "Close",
   emailTaken: "Someone on this roster already has that email.",
   phoneTaken: "Someone on this roster already has that mobile number.",
+  // The Demo company in production (packages/api, core/demo-door.ts).
+  companyClosed: "This demo company cannot invite anyone.",
   mobileNumber: "Mobile number",
   signInAddress: "Sign-in",
   mobileNumberNeeded: "Enter a mobile number.",
