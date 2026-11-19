@@ -132,7 +132,7 @@ you find under "Found along the way". Never reorder, never add scope.
       signed-in user, not a stored id. Needs `STAGING_MIGRATOR_URL` in `.env.staging`: if
       it is missing, stop and ask. Done when a fresh database has exactly eleven tables,
       staging answers ready, and the smoke test is green on the new schema.
-- [ ] 9. **The role check runs once per server start.** `assertRuntimeRole` leaves the
+- [x] 9. **The role check runs once per server start.** `assertRuntimeRole` leaves the
       per-request transaction. A server instance's first database use checks the role and
       forced row-level security once, remembers a pass, and refuses to serve on a fail.
       `/api/ready` keeps its own check. Done when a request after the first makes no

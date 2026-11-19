@@ -7,6 +7,8 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { companies, customers, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 
+import type { Db } from "@trader/db";
+
 import {
   appDb,
   becomeApp,
@@ -147,23 +149,69 @@ describe("the runtime role", () => {
     expect(await userRow(owner, w.a.inviteId)).toMatchObject({ identity_subject: null });
   });
 
-  it("is checked in every transaction, not once per pool", async () => {
+  // Every statement a pool's connections send, by wrapping the clients it hands out:
+  // Drizzle's transactions run on a client from `connect()`, never through `pool.query`.
+  function watching(db: Db) {
+    const sent: string[] = [];
+    const pool = db.$client;
+    const connect = pool.connect.bind(pool);
+    const patched = new WeakSet<object>();
+    (pool as { connect: unknown }).connect = async () => {
+      const client = await connect();
+      if (!patched.has(client)) {
+        patched.add(client);
+        const query = client.query.bind(client) as (...args: unknown[]) => unknown;
+        (client as { query: unknown }).query = (...args: unknown[]) => {
+          const first = args[0] as string | { text: string };
+          sent.push(typeof first === "string" ? first : first.text);
+          return query(...args);
+        };
+      }
+      return client;
+    };
+    const catalog = () => sent.filter((q) => q.includes("pg_roles")).length;
+    return { sent, catalog };
+  }
+
+  it("is checked once per server instance: a later request makes no catalog query", async () => {
     const single = appDb({ max: 1 });
     try {
+      const seen = watching(single);
       expect(await outcome(caller(single, asA()).probe.inside())).toBe("OK");
-      // The same physical connection, now the owner again (NONE: RESET would restore the
-      // startup role).
-      await single.execute(sql`set role none`);
-      expect(
-        await outcome(
-          caller(single, identity(`sub-new-${w.run}`, w.a.inviteEmail)).probe.inside(),
-        ),
-      ).toBe("INTERNAL_SERVER_ERROR");
+      expect(seen.catalog()).toBe(1);
+      const after = seen.sent.length;
+      expect(await outcome(caller(single, asA()).probe.inside())).toBe("OK");
+      // The later requests ran statements of their own, and none of them read the catalog.
+      expect(seen.sent.length).toBeGreaterThan(after);
+      expect(seen.catalog()).toBe(1);
+    } finally {
+      await single.$client.end();
+    }
+  });
+
+  it("refuses a role that bypasses row-level security, every time, and remembers no failure", async () => {
+    // The owner pool is the compose superuser: it bypasses row-level security.
+    const bypassing = ownerDb();
+    try {
+      const seen = watching(bypassing);
+      for (let attempt = 0; attempt < 2; attempt++) {
+        expect(
+          await outcome(
+            caller(
+              bypassing,
+              identity(`sub-new-${w.run}`, w.a.inviteEmail),
+            ).probe.inside(),
+          ),
+        ).toBe("INTERNAL_SERVER_ERROR");
+      }
+      // Asked again on the second request: a refusal is never the remembered answer.
+      expect(seen.catalog()).toBe(2);
+      // Nobody was resolved or bound on the way.
       expect(await userRow(owner, w.a.inviteId)).toMatchObject({
         identity_subject: null,
       });
     } finally {
-      await single.$client.end();
+      await bypassing.$client.end();
     }
   });
 });

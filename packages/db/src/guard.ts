@@ -1,10 +1,10 @@
-// The startup guard (ARCHITECTURE invariant 5): refuses to serve under a role that bypasses
-// row-level security, or a database where a tenant table lacks ENABLE and FORCE. One round
-// trip, run on every call. The API runs it in every protected transaction, before the
-// identity or the tenant is set: a pool's connections are each checked, none is trusted
-// because another passed. Never at module load, so `next build` never connects (RULES).
-// The check is on current_user, so production must log in as trader_app: a SET ROLE could be
-// reset. assertLoginRole, below, is the check of the login itself.
+// The startup check (invariant 5): refuses to serve under a role that bypasses row-level
+// security, or a database where a company table lacks ENABLE and FORCE. One round trip. The
+// API runs it once per server instance, on that instance's first database use, and remembers
+// a pass (api core/trpc.ts); the readiness route runs it on every call. Never at module
+// load, so `next build` never connects. The check is on current_user, so production must log
+// in as trader_app: a SET ROLE could be reset. assertLoginRole, below, is the check of the
+// login itself.
 import { sql } from "drizzle-orm";
 
 import type { Db } from "./client";
@@ -51,7 +51,7 @@ export async function assertRuntimeRole(executor: Executor): Promise<void> {
   }
 }
 
-// The deployed check (TASKS, Release 0.1 R3): the connection logged in as trader_app itself.
+// The deployed check: the connection logged in as trader_app itself.
 // assertRuntimeRole reads current_user, which a startup option or SET ROLE can make
 // trader_app over a login that bypasses row-level security, and RESET ROLE undoes it; a
 // login role cannot be reset. Local development and the tests reach trader_app by that

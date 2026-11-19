@@ -41,8 +41,26 @@ export const router = t.router;
 export const createCallerFactory = t.createCallerFactory;
 export const publicProcedure = t.procedure;
 
-// The protected sequence, in one transaction of its own: settings cleared, the runtime role
-// checked, the identity resolved (or bound) to an active user, the identity cleared and the
+// Invariant 5: the server checks its database role once when it starts and refuses to serve
+// if that role could get around row-level security. "Starts" is a server instance's first
+// database use: the check (db guard.ts: not a superuser, no BYPASSRLS, every company table
+// forced) runs in a transaction of its own, a pass is remembered for that pool, and a fail
+// is not, so the instance refuses every call until the role is right and asks again each
+// time. Never at module load, so a build never connects. /api/ready keeps a check of its own.
+const roleChecked = new WeakMap<Db, Promise<void>>();
+
+export function runtimeRoleChecked(db: Db): Promise<void> {
+  let check = roleChecked.get(db);
+  if (check === undefined) {
+    check = db.transaction((tx) => assertRuntimeRole(tx));
+    roleChecked.set(db, check);
+    check.catch(() => roleChecked.delete(db));
+  }
+  return check;
+}
+
+// The protected sequence, in one transaction of its own: settings cleared, the identity
+// resolved (or bound) to an active user, the identity cleared and the
 // tenant set; then `body` runs in that transaction, which commits when it returns and rolls back
 // when it throws. The protected procedure runs it once per call; sync.push once per record
 // (ARCHITECTURE, sync.push), so a record's authority is re-read every time.
@@ -54,6 +72,7 @@ export async function inCallerTransaction<T>(
   body: (tx: Tx, user: AppUser) => Promise<T>,
   waits: CallerWaits,
 ): Promise<T> {
+  await runtimeRoleChecked(db);
   try {
     return await db.transaction(async (tx) => {
       // First statement: a pooled connection may carry session-level values; these
@@ -72,8 +91,6 @@ export async function inCallerTransaction<T>(
             set_config('statement_timeout', ${waits.statementTimeout}, true)
         `);
       }
-      // Every transaction: a pool's connections are checked one by one, not once per process.
-      await assertRuntimeRole(tx);
       await tx.execute(sql`
         select set_config('app.identity_subject', ${identity.subject}, true),
           set_config('app.identity_email', ${identity.email ?? ""}, true),
