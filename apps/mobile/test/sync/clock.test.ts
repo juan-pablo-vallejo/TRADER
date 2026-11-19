@@ -43,8 +43,9 @@ const kept = (
 const snapshot = (over: Partial<PullOutput> = {}): PullOutput => ({
   serverNow: new Date(T0),
   me: { id: ME, role: "worker", name: "Luis" },
-  company: { name: "Co", timezone: "America/New_York" },
+  company: { name: "Co", timezone: "America/New_York", phone: null },
   scheduleEnforced: false,
+  locationStamps: true,
   shifts: [],
   jobs: [],
   sessions: [],
@@ -220,7 +221,7 @@ describe("the schedule's offer", () => {
     workDate,
     start,
     end,
-    job: { id: J, name: "Elm St", address: null },
+    job: { id: J, name: "Elm St", address: null, notes: null },
     locked: false,
   });
   const morning = shift("s1", "07:00", "11:00");

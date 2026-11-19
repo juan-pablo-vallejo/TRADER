@@ -236,10 +236,10 @@ describe("labor.repair — retries and ids, committed", () => {
       .where(inArray(workSessionEvents.id, [theirs.id, start.id, end.id, fix.id]));
     expect(new Map(stored.map((r) => [r.id, r.flags]))).toEqual(
       new Map([
-        [theirs.id, ["corrected", "user_timed", "location"]],
-        [start.id, ["user_timed", "location"]],
-        [end.id, ["user_timed", "location"]],
-        [fix.id, ["corrected", "user_timed", "location"]],
+        [theirs.id, ["corrected", "user_timed"]],
+        [start.id, ["corrected", "user_timed"]],
+        [end.id, ["corrected", "user_timed"]],
+        [fix.id, ["corrected", "user_timed"]],
       ]),
     );
   });

@@ -23,6 +23,7 @@ export const createInput = z.strictObject({
   customerId: z.uuid(),
   name: z.string().trim().min(1).max(200),
   address: optionalText(500),
+  notes: optionalText(2000),
   location: locationInput.nullable().default(null),
 });
 
@@ -34,6 +35,7 @@ export const updateInput = z.strictObject({
   customerId: z.uuid(),
   name: z.string().trim().min(1).max(200),
   address: optionalText(500),
+  notes: optionalText(2000),
   location: locationInput.nullable().default(null),
 });
 
@@ -126,6 +128,7 @@ export async function createJob(tx: Tx, user: AppUser, input: CreateInput) {
       customerId: input.customerId,
       name: input.name,
       address: input.address,
+      notes: input.notes,
       ...locationColumns(input.location),
     })
     .returning({ id: jobs.id });
@@ -151,6 +154,7 @@ export async function updateJob(tx: Tx, user: AppUser, input: UpdateInput) {
       customerId: input.customerId,
       name: input.name,
       address: input.address,
+      notes: input.notes,
       ...locationColumns(input.location),
     })
     .where(eq(jobs.id, target.id));

@@ -63,4 +63,5 @@ export type Transport = {
   pull(): Promise<PullOutput>;
 };
 
-export type Snapshot = { pulledAt: number; data: PullOutput };
+// `shape` is SNAPSHOT_SHAPE (engine.ts) as it was when the snapshot was stored.
+export type Snapshot = { shape: number; pulledAt: number; data: PullOutput };

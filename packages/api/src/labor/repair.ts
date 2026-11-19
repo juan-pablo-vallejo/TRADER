@@ -341,16 +341,18 @@ export async function repairLabor(
     });
   }
 
-  // 9. Each entry's flags: an office entry is corrected or user-timed, and unstamped.
+  // 9. Each entry's flags: an entry the office writes is `corrected`, added hours
+  // included, and never `location`: nobody stood anywhere to write it.
   const reasons: EntryFlag[][] = [];
   for (const [i, op] of input.operations.entries()) {
     const c = candidates[i]!;
     reasons.push(
       laborReasons({
         type: c.type,
-        corrected: op.kind !== "append",
+        corrected: true,
         capturedOffline: false,
         timeSetByUser: op.kind !== "void",
+        stamped: false,
         stamp: null,
         job: null,
         clockSkewed: false,

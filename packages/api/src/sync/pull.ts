@@ -2,7 +2,7 @@
 // admits, never anyone else's labor. One protected transaction; under READ COMMITTED each
 // statement reads its own committed state, so the snapshot may combine moments, and the next
 // pull converges. Consumed by routers/sync.ts.
-import { companies, jobs, workSessionEvents } from "@trader/db/schema";
+import { companies, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, inArray, ne } from "drizzle-orm";
 
 import { loadDays } from "../assignments/day";
@@ -12,6 +12,7 @@ import { readWorkerEvents } from "../labor/timeline";
 import { deriveSessions, workDate } from "../labor/work-date";
 import type { AppUser } from "../core/resolve-user";
 import type { PullOutput } from "../contract/pull";
+import { stampsOn } from "./scope";
 
 // Today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
@@ -37,16 +38,29 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
       name: companies.name,
       timezone: companies.timezone,
       scheduleEnforced: companies.scheduleEnforced,
+      phone: companies.phone,
+      locationStamps: companies.locationStamps,
     })
     .from(companies)
     .where(eq(companies.id, user.companyId));
   if (company === undefined) throw new Error("the caller's company is not visible");
+  const [self] = await tx
+    .select({ locationStamps: users.locationStamps })
+    .from(users)
+    .where(eq(users.id, user.id));
+  if (self === undefined) throw new Error("the caller's own row is not visible");
   const from = daysBefore(workDate(serverNow, company.timezone), WINDOW_DAYS - 1);
 
   // Every job a start may name: not archived. Under the schedule the phone offers the
   // shift's own job; without it, the person picks from these.
   const jobRows = await tx
-    .select({ id: jobs.id, name: jobs.name, address: jobs.address, status: jobs.status })
+    .select({
+      id: jobs.id,
+      name: jobs.name,
+      address: jobs.address,
+      notes: jobs.notes,
+      status: jobs.status,
+    })
     .from(jobs)
     .where(ne(jobs.status, "archived"))
     .orderBy(asc(jobs.id));
@@ -99,7 +113,12 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     shiftJobIds.length === 0
       ? []
       : await tx
-          .select({ id: jobs.id, name: jobs.name, address: jobs.address })
+          .select({
+            id: jobs.id,
+            name: jobs.name,
+            address: jobs.address,
+            notes: jobs.notes,
+          })
           .from(jobs)
           .where(inArray(jobs.id, shiftJobIds));
   const shiftJob = new Map(shiftJobs.map((j) => [j.id, j]));
@@ -128,8 +147,9 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   return {
     serverNow,
     me: { id: user.id, role: user.role, name: user.name },
-    company: { name: company.name, timezone: company.timezone },
+    company: { name: company.name, timezone: company.timezone, phone: company.phone },
     scheduleEnforced: company.scheduleEnforced,
+    locationStamps: stampsOn(self.locationStamps, company.locationStamps),
     shifts,
     jobs: jobRows,
     sessions: kept.map((s) => ({

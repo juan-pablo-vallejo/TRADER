@@ -17,6 +17,11 @@ export const RECLAIM_MS = 2 * 60_000;
 export const BATCH = 100;
 
 export const SNAPSHOT_KEY = "snapshot";
+// The pull's shape as this build reads it. Raise it in the commit that changes what a pull
+// answers (packages/api, contract/pull.ts): a snapshot stored under another number is
+// thrown away and pulled again, so no screen ever reads a field an older build never
+// stored. 2: the company's phone, `locationStamps`, each job's notes (2026-11-19).
+export const SNAPSHOT_SHAPE = 2;
 export const READING_KEY = "reachability";
 
 export type CycleResult =
@@ -36,7 +41,27 @@ export type CycleResult =
 
 export async function readSnapshot(store: Store): Promise<Snapshot | null> {
   const raw = await store.read(SNAPSHOT_KEY);
-  return raw === null ? null : superjson.parse<Snapshot>(raw);
+  if (raw === null) return null;
+  let kept: Partial<Snapshot> | null = null;
+  try {
+    kept = superjson.parse<Partial<Snapshot> | null>(raw);
+  } catch {
+    // Not a snapshot at all: gone, like one of another shape.
+  }
+  if (
+    kept === null ||
+    typeof kept !== "object" ||
+    kept.shape !== SNAPSHOT_SHAPE ||
+    typeof kept.pulledAt !== "number" ||
+    typeof kept.data !== "object" ||
+    kept.data === null
+  ) {
+    // An older build's, or unreadable. The outbox is another table and is not touched:
+    // nothing captured is lost, and the next cycle pulls afresh.
+    await store.write(SNAPSHOT_KEY, null);
+    return null;
+  }
+  return kept as Snapshot;
 }
 
 export async function runCycle(
@@ -66,7 +91,7 @@ export async function runCycle(
   const pull = async (): Promise<string | null> => {
     try {
       const data = await transport.pull();
-      const snapshot: Snapshot = { pulledAt: now(), data };
+      const snapshot: Snapshot = { shape: SNAPSHOT_SHAPE, pulledAt: now(), data };
       await store.write(SNAPSHOT_KEY, superjson.stringify(snapshot));
       await reached();
       // A settled record goes once the snapshot shows it: the entry counts, and its flags

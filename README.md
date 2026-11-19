@@ -21,7 +21,7 @@ database.
   also serves the API at `/api/trpc` and the readiness check at `/api/ready`. `e2e/` is the
   staging smoke test.
 - `packages/api`: the tRPC API, one folder per domain. `src/demo/` builds the demo company.
-- `packages/db`: the schema (eleven tables), its one migration, the seed and the onboarding
+- `packages/db`: the schema (eleven tables), its migrations, the seed and the onboarding
   script.
 - `.github/workflows`: `ci.yml` runs `check`, then `deploy`. `audit.yml` reads the lockfile
   for advisories and every commit for a leaked secret.

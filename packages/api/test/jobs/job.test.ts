@@ -92,6 +92,7 @@ describe("job.list", () => {
       id: open,
       name: "zebra",
       address: null,
+      notes: null,
       location: { lat: 41.8, lng: -71.4, radiusM: 150 },
       status: "open",
       customer: { id: w.a.customerId, name: "Customer a" },
@@ -164,6 +165,36 @@ describe("job.create", () => {
       );
     }
     expect(await owner.$count(jobs, eq(jobs.companyId, w.a.companyId))).toBe(before);
+  });
+});
+
+describe("a job's notes", () => {
+  it("are written by create and update, blank as NULL, and listed", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const created = await job(admin.who).create({
+      customerId: w.a.customerId,
+      name: "Porch",
+      notes: " Gate code 4411. Park on the street. ",
+    });
+    if (created.result !== "created") throw new Error("the job was not created");
+    expect(created.job.notes).toBe("Gate code 4411. Park on the street.");
+    expect(
+      (await job(admin.who).list()).find((j) => j.id === created.job.id),
+    ).toMatchObject({
+      notes: "Gate code 4411. Park on the street.",
+    });
+    const facts = { jobId: created.job.id, customerId: w.a.customerId, name: "Porch" };
+    expect(
+      await job(admin.who).update({ ...facts, notes: "Dog in the yard." }),
+    ).toMatchObject({ result: "updated", job: { notes: "Dog in the yard." } });
+    // A whole-record replace, as the address is: left out, the notes go.
+    expect(await job(admin.who).update({ ...facts, notes: "  " })).toMatchObject({
+      result: "updated",
+      job: { notes: null },
+    });
+    expect(
+      await outcome(job(admin.who).update({ ...facts, notes: "x".repeat(2001) })),
+    ).toBe("BAD_REQUEST");
   });
 });
 

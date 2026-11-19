@@ -355,7 +355,7 @@ describe("labor.ledger", () => {
         correctsEventId: ended,
         initiator: { id: admin.id },
         timeSetByUser: true,
-        flags: ["corrected", "user_timed", "location"],
+        flags: ["corrected", "user_timed"],
       });
 
       // A second correction names the same root and replaces the first.

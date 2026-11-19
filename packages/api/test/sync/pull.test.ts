@@ -1,7 +1,13 @@
 // sync.pull (sync/pull.ts) through the application's router, against Postgres,
 // in rolled-back owner transactions as trader_app under the tenant. What it must never hold:
 // another worker's labor, coordinates or contact details.
-import { jobs, users, workSessionEvents } from "@trader/db/schema";
+import {
+  companies,
+  jobAssignments,
+  jobs,
+  users,
+  workSessionEvents,
+} from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -239,7 +245,13 @@ describe("sync.pull — reference data", () => {
         expect(await jobIds(who)).not.toContain(other.J);
       }
       const [job] = (await pull(tx, d.w.who)).jobs;
-      expect(Object.keys(job!).sort()).toEqual(["address", "id", "name", "status"]);
+      expect(Object.keys(job!).sort()).toEqual([
+        "address",
+        "id",
+        "name",
+        "notes",
+        "status",
+      ]);
     });
   });
 
@@ -253,11 +265,60 @@ describe("sync.pull — reference data", () => {
       expect(snap.company).toEqual({
         name: expect.stringMatching(/^Rolled Co /),
         timezone: NY,
+        phone: null,
       });
       expect((await pull(tx, admin.who)).me).toMatchObject({
         id: admin.id,
         role: "admin",
       });
+    });
+  });
+
+  it("tells the phone the office's number, each job's notes, and whether its own taps are stamped", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      await tx
+        .update(companies)
+        .set({ phone: "401-555-0100" })
+        .where(eq(companies.id, d.companyId));
+      await tx.update(jobs).set({ notes: "Gate code 4411." }).where(eq(jobs.id, d.J));
+      await tx.insert(jobAssignments).values({
+        companyId: d.companyId,
+        userId: d.w.id,
+        jobId: d.J,
+        workDate: workDate(new Date(), NY),
+        expectedStart: "07:00",
+        expectedEnd: "15:30",
+      });
+      const stamps = async (company: boolean, person: boolean | null) => {
+        await tx.execute(sql`reset role`);
+        await tx
+          .update(companies)
+          .set({ locationStamps: company })
+          .where(eq(companies.id, d.companyId));
+        await tx
+          .update(users)
+          .set({ locationStamps: person })
+          .where(eq(users.id, d.w.id));
+        await asTenant(tx, d.companyId);
+        return (await pull(tx, d.w.who)).locationStamps;
+      };
+      // As the company, until the person has a setting of their own; then theirs.
+      expect(await stamps(true, null)).toBe(true);
+      expect(await stamps(false, null)).toBe(false);
+      expect(await stamps(false, true)).toBe(true);
+      expect(await stamps(true, false)).toBe(false);
+      const snap = await pull(tx, d.w.who);
+      expect(snap.company.phone).toBe("401-555-0100");
+      expect(snap.jobs.find((j) => j.id === d.J)).toMatchObject({
+        notes: "Gate code 4411.",
+      });
+      expect(snap.jobs.find((j) => j.id === d.K)).toMatchObject({ notes: null });
+      expect(snap.shifts.map((s) => s.job)).toEqual([
+        expect.objectContaining({ id: d.J, notes: "Gate code 4411." }),
+      ]);
+      // Another person's setting is their own.
+      expect((await pull(tx, d.who)).locationStamps).toBe(true);
     });
   });
 });

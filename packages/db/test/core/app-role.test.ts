@@ -13,7 +13,7 @@ const PRIVILEGES: Privilege[] = ["SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCA
 // What the baseline grants, table by table. Every table in public must appear here, and
 // every entry must be a table in public: a table added without stated grants fails the matrix.
 const GRANTS: Record<string, Privilege[]> = {
-  // UPDATE is held on three columns only, never on the table: its own test, below.
+  // UPDATE is held on named columns only, never on the table: its own test, below.
   companies: ["SELECT"],
   invoice_counters: ["SELECT", "UPDATE"],
   users: ["SELECT", "INSERT", "UPDATE"],
@@ -80,7 +80,7 @@ describe("trader_app", () => {
     });
   });
 
-  it("holds column privileges on companies only, and only UPDATE of three columns", async () => {
+  it("holds column privileges on companies only, and only UPDATE of the columns Settings writes", async () => {
     await rolledBack(db, async (tx) => {
       // The grants stated on a column itself; a table's grant is not one of them.
       const { rows } = await tx.execute<{ grant: string }>(sql`
@@ -93,14 +93,21 @@ describe("trader_app", () => {
         order by 1
       `);
       expect(rows.map((r) => r.grant)).toEqual([
+        "companies.address UPDATE",
+        "companies.email UPDATE",
+        "companies.invoice_terms_days UPDATE",
+        "companies.location_stamps UPDATE",
         "companies.name UPDATE",
+        "companies.payment_instructions UPDATE",
+        "companies.phone UPDATE",
+        "companies.schedule_enforced UPDATE",
         "companies.timezone UPDATE",
         "companies.updated_at UPDATE",
       ]);
     });
   });
 
-  it("may update a company's name and zone and never its enforcement switch (42501)", async () => {
+  it("may update what Settings writes, the two switches included, and no other column (42501)", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ column_name: string }>(sql`
         select column_name from information_schema.column_privileges
@@ -108,7 +115,18 @@ describe("trader_app", () => {
           and table_name = 'companies' and privilege_type = 'UPDATE'
         order by column_name
       `);
-      expect(rows.map((r) => r.column_name)).toEqual(["name", "timezone", "updated_at"]);
+      expect(rows.map((r) => r.column_name)).toEqual([
+        "address",
+        "email",
+        "invoice_terms_days",
+        "location_stamps",
+        "name",
+        "payment_instructions",
+        "phone",
+        "schedule_enforced",
+        "timezone",
+        "updated_at",
+      ]);
       const company = one(
         (
           await tx.execute<{ id: string }>(sql`
@@ -118,20 +136,35 @@ describe("trader_app", () => {
         ).rows,
       ).id;
       await asApp(tx, company);
-      const renamed = await tx.execute(sql`update companies set name = 'Switch Co 2'`);
-      expect(renamed.rowCount).toBe(1);
+      const written = await tx.execute(sql`
+        update companies set name = 'Switch Co 2', schedule_enforced = true,
+          location_stamps = false, invoice_terms_days = 30, phone = '401-555-0100'
+      `);
+      expect(written.rowCount).toBe(1);
+      // The row's identity and its creation are nobody's to rewrite through the application.
+      for (const column of [sql`id = gen_random_uuid()`, sql`created_at = now()`]) {
+        expect(
+          await sqlstate(
+            tx.transaction((sp: Tx) => sp.execute(sql`update companies set ${column}`)),
+          ),
+        ).toBe("42501");
+      }
+      // The terms are held to a year by the table itself.
       expect(
         await sqlstate(
           tx.transaction((sp: Tx) =>
-            sp.execute(sql`update companies set schedule_enforced = true`),
+            sp.execute(sql`update companies set invoice_terms_days = 366`),
           ),
         ),
-      ).toBe("42501");
+      ).toBe("23514");
       await tx.execute(sql`reset role`);
-      const after = await tx.execute<{ schedule_enforced: boolean }>(
-        sql`select schedule_enforced from companies where id = ${company}`,
+      const after = await tx.execute(
+        sql`select schedule_enforced, location_stamps, invoice_terms_days
+            from companies where id = ${company}`,
       );
-      expect(after.rows).toEqual([{ schedule_enforced: false }]);
+      expect(after.rows).toEqual([
+        { schedule_enforced: true, location_stamps: false, invoice_terms_days: 30 },
+      ]);
     });
   });
 

@@ -47,18 +47,25 @@ const rejected = (code: LaborRejection, conflictingId?: string): LaborResult => 
 
 // The same event: the caller as initiator and every column the device fixed, the schema
 // version it was written in included. Not the receipt stamp or the skew, which are the
-// server's.
+// server's. A row stored with no location matches whatever location is sent: where the
+// stamps were off the server dropped it (step 7), and the switch may have moved since, so
+// the resend cannot be re-judged; a row stored with one must be sent the same one.
 const same = (row: Prior, user: AppUser, r: LaborRecord) => {
   const p = r.payload;
+  const unstamped =
+    row.locationLat === null &&
+    row.locationLng === null &&
+    row.locationAccuracyM === null;
   return (
     row.initiatorUserId === user.id &&
     row.workerId === p.workerId &&
     row.jobId === p.jobId &&
     row.type === p.type &&
     row.clientTimestamp.getTime() === p.clientTimestamp.getTime() &&
-    row.locationLat === (p.location?.lat ?? null) &&
-    row.locationLng === (p.location?.lng ?? null) &&
-    row.locationAccuracyM === (p.location?.accuracyM ?? null) &&
+    (unstamped ||
+      (row.locationLat === (p.location?.lat ?? null) &&
+        row.locationLng === (p.location?.lng ?? null) &&
+        row.locationAccuracyM === (p.location?.accuracyM ?? null))) &&
     row.timeSetByUser === p.timeSetByUser &&
     row.capturedOffline === p.capturedOffline &&
     row.schemaVersion === r.schemaVersion
@@ -174,13 +181,16 @@ export async function pushLaborEvent(
     else return rejected("not_scheduled");
   }
 
-  // 7. The entry's flags, written with it.
+  // 7. The entry's flags, written with it. Where this person's stamps are off, a location
+  // the phone sent all the same is not kept, and its absence is no flag.
+  const stamp = scope!.stamps ? p.location : null;
   const flags: EntryFlag[] = laborReasons({
     type: p.type,
     corrected: false,
     capturedOffline: p.capturedOffline,
     timeSetByUser: p.timeSetByUser,
-    stamp: p.location,
+    stamped: scope!.stamps,
+    stamp,
     job: scope!.place,
     clockSkewed,
     unscheduled,
@@ -203,9 +213,9 @@ export async function pushLaborEvent(
       // The per-push reading alone, signed; the receipt comparison's evidence is the row's
       // own two timestamps.
       clockSkewMs: skew.clockSkewMs,
-      locationLat: p.location?.lat ?? null,
-      locationLng: p.location?.lng ?? null,
-      locationAccuracyM: p.location?.accuracyM ?? null,
+      locationLat: stamp?.lat ?? null,
+      locationLng: stamp?.lng ?? null,
+      locationAccuracyM: stamp?.accuracyM ?? null,
       schemaVersion: r.schemaVersion,
       timeSetByUser: p.timeSetByUser,
       capturedOffline: p.capturedOffline,

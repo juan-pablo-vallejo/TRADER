@@ -33,6 +33,8 @@ export const jobs = pgTable(
     locationLat: doublePrecision("location_lat"),
     locationLng: doublePrecision("location_lng"),
     locationRadiusM: integer("location_radius_m"),
+    // The office's notes for the crew: the phone shows them on the job, from the last pull.
+    notes: text("notes"),
     status: jobStatus("status").notNull().default("open"),
     createdAt,
     updatedAt,

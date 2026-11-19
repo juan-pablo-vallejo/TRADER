@@ -248,12 +248,12 @@ export const SCENARIOS = {
     reasons: ["offline"] as EntryFlag[],
   },
   // The office corrects Elena's last clock-out from 15:30 to 16:00: an office event is
-  // user-timed and unstamped, so it carries those reasons with `corrected`.
+  // `corrected` and user-timed, and never flagged for a location.
   repairedEnd: {
     who: "elena",
     day: 9,
     time: "16:00",
-    reasons: ["corrected", "user_timed", "location"] as EntryFlag[],
+    reasons: ["corrected", "user_timed"] as EntryFlag[],
   },
   // Priya leaves after week one; Marcus joins the office as a second admin.
   deactivatedWorker: "priya",
@@ -307,6 +307,6 @@ export const EXPECTED_HOURS = [
     day: 9,
     job: "j2",
     hundredths: 850,
-    flags: ["offline", "corrected", "user_timed", "location"],
+    flags: ["offline", "corrected", "user_timed"],
   },
 ] as const;

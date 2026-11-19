@@ -20,6 +20,8 @@ export const rosterUser = z.strictObject({
   // The number the person signs in with (users.ts), or null: invited by email alone.
   signInPhone: z.string().nullable(),
   role: z.enum(ROLES),
+  // Whether their clock taps are stamped with a location; null is "as the company".
+  locationStamps: z.boolean().nullable(),
   invited: z.boolean(),
   deactivatedAt: z.date().nullable(),
 });
@@ -35,6 +37,7 @@ const columns = {
   phone: users.phone,
   signInPhone: users.signInPhone,
   role: users.role,
+  locationStamps: users.locationStamps,
   bound: sql<boolean>`${users.identitySubject} is not null`,
   deactivatedAt: users.deactivatedAt,
 };
@@ -46,6 +49,7 @@ type Row = {
   phone: string | null;
   signInPhone: string | null;
   role: RosterUser["role"];
+  locationStamps: boolean | null;
   bound: boolean;
   deactivatedAt: Date | null;
 };
@@ -57,6 +61,7 @@ const toUser = (row: Row): RosterUser => ({
   phone: row.phone,
   signInPhone: row.signInPhone,
   role: row.role,
+  locationStamps: row.locationStamps,
   invited: !row.bound,
   deactivatedAt: row.deactivatedAt,
 });

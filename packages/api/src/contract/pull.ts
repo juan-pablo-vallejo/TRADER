@@ -20,10 +20,19 @@ export const pullOutput = z.strictObject({
     role: z.enum(ROLES),
     name: z.string(),
   }),
-  company: z.strictObject({ name: z.string(), timezone: z.string() }),
+  // The phone is the office's number: what "Call the office" dials.
+  company: z.strictObject({
+    name: z.string(),
+    timezone: z.string(),
+    phone: z.string().nullable(),
+  }),
   // Whether a clock-in is judged by the weekly schedule (sync/schedule.ts). The phone shows
   // what follows from it; the server alone decides.
   scheduleEnforced: z.boolean(),
+  // Whether the caller's own taps are stamped with a location: their setting, else the
+  // company's. Off, the phone neither asks for a location nor sends one; the server drops
+  // one sent all the same (sync/labor.ts).
+  locationStamps: z.boolean(),
   // The caller's own shifts, from the Monday of the company's current week for fourteen days
   // each with its jobsite. Nobody else's shift.
   shifts: z.array(
@@ -36,6 +45,8 @@ export const pullOutput = z.strictObject({
         id: z.uuid(),
         name: z.string(),
         address: z.string().nullable(),
+        // The office's notes for the crew.
+        notes: z.string().nullable(),
       }),
       locked: z.boolean(),
     }),
@@ -46,6 +57,7 @@ export const pullOutput = z.strictObject({
       id: z.uuid(),
       name: z.string(),
       address: z.string().nullable(),
+      notes: z.string().nullable(),
       status: z.enum(JOB_STATUSES),
     }),
   ),

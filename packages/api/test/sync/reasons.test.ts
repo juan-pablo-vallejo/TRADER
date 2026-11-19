@@ -22,6 +22,7 @@ const plain = {
   corrected: false,
   capturedOffline: false,
   timeSetByUser: false,
+  stamped: true,
   stamp: north(0),
   job: JOB,
   clockSkewed: false,
@@ -138,18 +139,30 @@ describe("laborReasons", () => {
     expect(laborReasons({ ...plain, corrected: true })).toEqual(["corrected"]);
   });
 
-  it("tags an office repair corrected, and never flags a void's missing stamp", () => {
-    // labor.repair's office events: user-timed, unstamped.
-    const office = { ...plain, timeSetByUser: true, stamp: null };
-    expect(laborReasons({ ...office, corrected: true })).toEqual([
+  it("tags an entry the office wrote corrected, and never location", () => {
+    // labor.repair's office events: corrected, user-timed, and no stamp asked of them.
+    const office = {
+      ...plain,
+      corrected: true,
+      timeSetByUser: true,
+      stamped: false,
+      stamp: null,
+    };
+    for (const type of ["started", "paused", "resumed", "ended"] as const) {
+      expect(laborReasons({ ...office, type })).toEqual(["corrected", "user_timed"]);
+    }
+    expect(laborReasons({ ...office, type: "voided", timeSetByUser: false })).toEqual([
       "corrected",
-      "user_timed",
-      "location",
     ]);
-    expect(laborReasons({ ...office, type: "paused" })).toEqual(["user_timed"]);
-    expect(
-      laborReasons({ ...office, type: "voided", corrected: true, timeSetByUser: false }),
-    ).toEqual(["corrected"]);
+  });
+
+  it("flags no location where the stamps are off, sent or not, near or far", () => {
+    const off = { ...plain, stamped: false };
+    expect(laborReasons({ ...off, stamp: null })).toEqual([]);
+    expect(laborReasons({ ...off, stamp: north(5000) })).toEqual([]);
+    expect(laborReasons({ ...off, type: "ended", stamp: null })).toEqual([]);
+    // On, the same facts are flagged.
+    expect(laborReasons({ ...plain, stamp: north(5000) })).toEqual(["location"]);
   });
 
   it("takes offline from capture evidence alone, never from a delay", () => {

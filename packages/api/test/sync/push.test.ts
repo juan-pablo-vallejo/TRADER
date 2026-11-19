@@ -746,6 +746,117 @@ describe("sync.push — a start, by the schedule switch", () => {
     return r.result === "rejected" ? r.code : { result: r.result, reasons: r.ack.flags };
   };
 
+  const stampOf = (tx: Tx, d: Day, id: string) =>
+    asOwner(
+      tx,
+      d.companyId,
+      async () =>
+        (
+          await tx
+            .select({
+              lat: workSessionEvents.locationLat,
+              lng: workSessionEvents.locationLng,
+              accuracyM: workSessionEvents.locationAccuracyM,
+              flags: workSessionEvents.flags,
+            })
+            .from(workSessionEvents)
+            .where(eq(workSessionEvents.id, id))
+        )[0],
+    );
+
+  it("stamps off for the company: stored with no location though one was sent, never flagged for it", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      await asOwner(tx, d.companyId, () =>
+        tx
+          .update(companies)
+          .set({ locationStamps: false })
+          .where(eq(companies.id, d.companyId)),
+      );
+      const sent = offline(d.w.id, d.J);
+      expect(sent.payload.location).not.toBeNull();
+      expect(await one(tx, d.w.who, sent)).toEqual({
+        result: "accepted",
+        reasons: ["offline"],
+      });
+      expect(await stampOf(tx, d, sent.id)).toEqual({
+        lat: null,
+        lng: null,
+        accuracyM: null,
+        flags: ["offline"],
+      });
+      // The same record again, location and all, is the same event: a duplicate, not a
+      // conflict, even once the switch is back on.
+      expect(await one(tx, d.w.who, sent)).toEqual({
+        result: "duplicate",
+        reasons: ["offline"],
+      });
+      await asOwner(tx, d.companyId, () =>
+        tx
+          .update(companies)
+          .set({ locationStamps: true })
+          .where(eq(companies.id, d.companyId)),
+      );
+      expect(await one(tx, d.w.who, sent)).toEqual({
+        result: "duplicate",
+        reasons: ["offline"],
+      });
+      // None sent: no flag either, where on it would be one.
+      const end = offline(d.w.id, d.J, {
+        type: "ended",
+        clientTimestamp: at("09:00"),
+        location: null,
+      });
+      expect(await one(tx, d.w.who, end)).toEqual({
+        result: "accepted",
+        reasons: ["offline", "location"],
+      });
+    });
+  });
+
+  it("a person's own setting wins over the company's, both ways", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await world(tx);
+      const person = (value: boolean | null) =>
+        asOwner(tx, d.companyId, () =>
+          tx.update(users).set({ locationStamps: value }).where(eq(users.id, d.w.id)),
+        );
+      const company = (value: boolean) =>
+        asOwner(tx, d.companyId, () =>
+          tx
+            .update(companies)
+            .set({ locationStamps: value })
+            .where(eq(companies.id, d.companyId)),
+        );
+      // Off for the person, on for the company: nothing kept, nothing flagged.
+      await person(false);
+      const start = offline(d.w.id, d.J, { location: null });
+      expect(await one(tx, d.w.who, start)).toEqual({
+        result: "accepted",
+        reasons: ["offline"],
+      });
+      // On for the person, off for the company: kept, and a missing one is flagged.
+      await company(false);
+      await person(true);
+      const end = offline(d.w.id, d.J, { type: "ended", clientTimestamp: at("09:00") });
+      expect(await one(tx, d.w.who, end)).toEqual({
+        result: "accepted",
+        reasons: ["offline"],
+      });
+      expect(await stampOf(tx, d, end.id)).toMatchObject({
+        lat: end.payload.location!.lat,
+      });
+      const again = offline(d.w.id, d.J, {
+        clientTimestamp: at("10:00"),
+        location: null,
+      });
+      expect(await one(tx, d.w.who, again)).toEqual({
+        result: "accepted",
+        reasons: ["offline", "location"],
+      });
+    });
+  });
+
   it("switch on, a shift of the worker's own admits it: accepted, and the shift is locked", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);

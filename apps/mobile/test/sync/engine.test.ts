@@ -3,6 +3,7 @@
 // id, as the real one does, and can be told to lose a response, stop part-way, refuse a
 // record or change the service's state.
 import type { PullOutput, ServiceState } from "@trader/api/contract";
+import superjson from "superjson";
 import { describe, expect, it } from "vitest";
 
 import { createMinter } from "../../src/ids";
@@ -13,6 +14,8 @@ import {
   readSnapshot,
   RECLAIM_MS,
   runCycle,
+  SNAPSHOT_KEY,
+  SNAPSHOT_SHAPE,
 } from "../../src/sync/engine";
 import type { PushAnswer, Transport } from "../../src/sync/types";
 import { memoryStore } from "../memory-store";
@@ -41,8 +44,9 @@ function server() {
   const snapshot = (): PullOutput => ({
     serverNow: new Date(T0),
     me: { id: ME, role: "worker", name: "Luis" },
-    company: { name: "Co", timezone: "America/New_York" },
+    company: { name: "Co", timezone: "America/New_York", phone: null },
     scheduleEnforced: false,
+    locationStamps: true,
     shifts: [],
     jobs: [],
     sessions: [],
@@ -186,6 +190,31 @@ describe("a cycle", () => {
     await p.cycle();
     expect(p.srv.pushes).toEqual([ids]);
     expect(p.store.rows.map((r) => r.id)).toEqual([ids[0]]);
+  });
+
+  it("throws away a snapshot an older build stored, or one it cannot read, and pulls again", async () => {
+    const p = await phone();
+    const [id] = await p.capture(1);
+    await p.cycle();
+    const fresh = await readSnapshot(p.store);
+    expect(fresh).toMatchObject({ shape: SNAPSHOT_SHAPE });
+    // As a build before 2026-11-19 stored it: no shape, and none of the newer fields.
+    const { shape: _shape, ...older } = fresh!;
+    for (const stored of [
+      superjson.stringify(older),
+      superjson.stringify({ ...fresh, shape: SNAPSHOT_SHAPE - 1 }),
+      superjson.stringify(null),
+      "not json at all",
+    ]) {
+      await p.store.write(SNAPSHOT_KEY, stored);
+      expect(await readSnapshot(p.store)).toBeNull();
+      // Gone from the store too, so every later read agrees.
+      expect(await p.store.read(SNAPSHOT_KEY)).toBeNull();
+      // The next cycle pulls afresh, and the entry already sent is not sent again.
+      await p.cycle();
+      expect(await readSnapshot(p.store)).toMatchObject({ shape: SNAPSHOT_SHAPE });
+    }
+    expect((await readSnapshot(p.store))?.data.events.map((e) => e.id)).toEqual([id]);
   });
 
   it("drops a flagged record like any other once the snapshot shows it, flags and all", async () => {

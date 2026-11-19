@@ -8,6 +8,7 @@ import {
 } from "../roster/deactivation";
 import { inviteInput, inviteOutput, rosterInvite } from "../roster/invite";
 import { listOutput, rosterList } from "../roster/list";
+import { setLocation, setLocationInput, setLocationOutput } from "../roster/location";
 import { changeOutput, setRole, setRoleInput } from "../roster/role";
 import { roleProcedure, router } from "../core/trpc";
 
@@ -23,6 +24,10 @@ export const rosterRouter = router({
     .input(setRoleInput)
     .output(changeOutput)
     .mutation(({ ctx, input }) => setRole(ctx.tx, ctx.user, input)),
+  setLocation: roleProcedure("admin")
+    .input(setLocationInput)
+    .output(setLocationOutput)
+    .mutation(({ ctx, input }) => setLocation(ctx.tx, ctx.user, input)),
   deactivate: roleProcedure("admin")
     .input(targetInput)
     .output(changeOutput)

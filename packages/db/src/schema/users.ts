@@ -1,5 +1,13 @@
 import { sql } from "drizzle-orm";
-import { check, pgTable, text, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import {
+  boolean,
+  check,
+  pgTable,
+  text,
+  unique,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
 import { userRole } from "./enums";
@@ -32,6 +40,9 @@ export const users = pgTable(
     // roster.invite and by nothing else. Unique per company, as the email is.
     signInPhone: text("sign_in_phone"),
     role: userRole("role").notNull().default("worker"),
+    // Whether this person's clock taps are stamped with a location. NULL is "as the
+    // company" (companies.location_stamps). Written by roster.setLocation and nothing else.
+    locationStamps: boolean("location_stamps"),
     deactivatedAt,
     createdAt,
     updatedAt,

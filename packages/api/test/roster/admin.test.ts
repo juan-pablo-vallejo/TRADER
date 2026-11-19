@@ -39,6 +39,48 @@ afterAll(async () => {
 const roster = (who: unknown) => appCaller(app, who).roster;
 const me = (who: unknown) => appCaller(app, who).me.get();
 
+describe("roster.setLocation", () => {
+  it("sets a person's stamps on, off, or back to the company's, and says unchanged", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const worker = await member(owner, w, "a", "worker");
+    expect(await userRow(owner, worker.id)).toMatchObject({ location_stamps: null });
+    for (const locationStamps of [false, true, null]) {
+      expect(
+        await roster(admin.who).setLocation({ userId: worker.id, locationStamps }),
+      ).toMatchObject({ result: "updated", user: { id: worker.id, locationStamps } });
+      expect(await userRow(owner, worker.id)).toMatchObject({
+        location_stamps: locationStamps,
+      });
+      expect(
+        await roster(admin.who).setLocation({ userId: worker.id, locationStamps }),
+      ).toMatchObject({ result: "unchanged", user: { locationStamps } });
+    }
+  });
+
+  it("is the admin's alone, and never reaches another company's person", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const worker = await member(owner, w, "a", "worker");
+    const other = await member(owner, w, "b", "worker");
+    const off = { locationStamps: false };
+    expect(
+      await outcome(roster(worker.who).setLocation({ userId: worker.id, ...off })),
+    ).toBe("FORBIDDEN");
+    expect(await outcome(roster(null).setLocation({ userId: worker.id, ...off }))).toBe(
+      "UNAUTHORIZED",
+    );
+    expect(
+      await outcome(roster(admin.who).setLocation({ userId: other.id, ...off })),
+    ).toBe("FORBIDDEN");
+    expect(
+      await outcome(
+        roster(admin.who).setLocation({ userId: crypto.randomUUID(), ...off }),
+      ),
+    ).toBe("FORBIDDEN");
+    expect(await userRow(owner, worker.id)).toMatchObject({ location_stamps: null });
+    expect(await userRow(owner, other.id)).toMatchObject({ location_stamps: null });
+  });
+});
+
 describe("roster.setRole", () => {
   it("changes a role, answers unchanged for the same one, and shows the row", async () => {
     const admin = await member(owner, w, "a", "admin");

@@ -235,7 +235,7 @@ describe("labor.repair — append, correct, void", () => {
       const r = await repair(tx, admin.who, d.w1, [end]);
       expect(r).toMatchObject({
         result: "accepted",
-        events: [{ id: end.id, reasons: ["user_timed", "location"] }],
+        events: [{ id: end.id, reasons: ["corrected", "user_timed"] }],
       });
       const [row] = await tx
         .select()
@@ -255,7 +255,7 @@ describe("labor.repair — append, correct, void", () => {
         schemaVersion: 1,
         correctsEventId: null,
         voidsEventId: null,
-        flags: ["user_timed", "location"],
+        flags: ["corrected", "user_timed"],
       });
       expect(row!.serverTimestamp).toEqual(
         r.result === "accepted" ? r.events[0]!.serverTimestamp : null,
@@ -281,9 +281,9 @@ describe("labor.repair — append, correct, void", () => {
       const r = await repair(tx, admin.who, d.w1, [c]);
       expect(r).toMatchObject({
         result: "accepted",
-        events: [{ id: c.id, reasons: ["corrected", "user_timed", "location"] }],
+        events: [{ id: c.id, reasons: ["corrected", "user_timed"] }],
       });
-      expect(await flagsOf(tx, c.id)).toEqual(["corrected", "user_timed", "location"]);
+      expect(await flagsOf(tx, c.id)).toEqual(["corrected", "user_timed"]);
       const ledger = await readWorkerEvents(tx, d.w1);
       const { structural } = sessionAccounting(ledger);
       expect(structural.winners.get(end)).toBe(c.id);
@@ -495,7 +495,7 @@ describe("labor.repair — append, correct, void", () => {
       const same = correct(start, "started", d.J, "08:00");
       expect(await repair(tx, admin.who, d.w1, [same])).toMatchObject({
         result: "accepted",
-        events: [{ id: same.id, reasons: ["corrected", "user_timed", "location"] }],
+        events: [{ id: same.id, reasons: ["corrected", "user_timed"] }],
       });
       expect(await counts(tx, d)).toEqual({ events: before.events + 1 });
       expect((await accounting(tx, d.w1))[0]).toMatchObject({
@@ -524,8 +524,8 @@ describe("labor.repair — the caller's own ledger", () => {
       expect(first).toMatchObject({
         result: "accepted",
         events: [
-          { id: start.id, reasons: ["user_timed", "location"] },
-          { id: end.id, reasons: ["user_timed", "location"] },
+          { id: start.id, reasons: ["corrected", "user_timed"] },
+          { id: end.id, reasons: ["corrected", "user_timed"] },
         ],
       });
       const [row] = await tx
@@ -538,7 +538,7 @@ describe("labor.repair — the caller's own ledger", () => {
         timeSetByUser: true,
         capturedOffline: false,
         locationLat: null,
-        flags: ["user_timed", "location"],
+        flags: ["corrected", "user_timed"],
       });
       expect(await accounting(tx, admin.id)).toMatchObject([
         { accounting: "eligible", eligibleWorkedMs: 8 * HOUR },
@@ -553,7 +553,7 @@ describe("labor.repair — the caller's own ledger", () => {
       const fix = correct(end.id, "ended", d.J, "15:00");
       expect(await repair(tx, admin.who, admin.id, [fix])).toMatchObject({
         result: "accepted",
-        events: [{ id: fix.id, reasons: ["corrected", "user_timed", "location"] }],
+        events: [{ id: fix.id, reasons: ["corrected", "user_timed"] }],
       });
       expect(await accounting(tx, admin.id)).toMatchObject([
         { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },

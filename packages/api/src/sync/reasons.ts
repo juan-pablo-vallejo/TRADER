@@ -85,13 +85,17 @@ export const REASON_ORDER: readonly EntryFlag[] = [
 const ordered = (flags: Partial<Record<EntryFlag, boolean>>): EntryFlag[] =>
   REASON_ORDER.filter((r) => flags[r] === true);
 
-// `corrected` is a corrects_event_id or a void (enums.ts): only the office writes either
-// (labor.repair); a device push never does. A void carries no stamp and is never flagged for one.
+// `corrected` is an entry the office wrote (labor.repair): a correction, a void, or hours
+// it added. A device push never is. `stamped` is whether a location is asked of the entry at
+// all: never of one the office wrote, and not of a tap where the company's switch or the
+// person's has the stamps off (sync/scope.ts). Not asked, it is never flagged `location`.
+// A void carries no stamp and is never flagged for one.
 export function laborReasons(e: {
   type: "started" | "paused" | "resumed" | "ended" | "voided";
   corrected: boolean;
   capturedOffline: boolean;
   timeSetByUser: boolean;
+  stamped: boolean;
   stamp: Point | null;
   job: JobPlace;
   clockSkewed: boolean;
@@ -103,7 +107,7 @@ export function laborReasons(e: {
     offline: e.capturedOffline,
     corrected: e.corrected,
     user_timed: e.timeSetByUser,
-    location: e.type !== "voided" && locationFlagged(e.type, e.stamp, e.job),
+    location: e.stamped && e.type !== "voided" && locationFlagged(e.type, e.stamp, e.job),
     clock_skewed: e.clockSkewed,
     unscheduled: e.unscheduled === true,
   });

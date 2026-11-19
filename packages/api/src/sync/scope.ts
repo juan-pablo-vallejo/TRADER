@@ -3,8 +3,9 @@
 // caller's users row FOR SHARE, so an archival or a deactivation in flight waits for this
 // push and a later push sees it. A caller deactivated meanwhile is UNAUTHORIZED, as at
 // resolution; every other refusal is one `not_permitted` that says nothing of which check
-// failed. Consumed by sync/labor.ts.
-import { jobs, users } from "@trader/db/schema";
+// failed. The same rows say whether this person's taps are stamped with a location: their
+// own setting, else the company's. Consumed by sync/labor.ts and sync/pull.ts.
+import { companies, jobs, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 
 import type { Tx } from "../core/context";
@@ -19,7 +20,13 @@ export type PushScope = {
   role: Role;
   jobArchived: boolean;
   place: JobPlace;
+  // Off: the event is stored with no location even if one was sent, and never flagged for it.
+  stamps: boolean;
 };
+
+// A person's own setting wins where it is set; NULL is "as the company".
+export const stampsOn = (person: boolean | null, company: boolean): boolean =>
+  person ?? company;
 
 export async function lockPushScope(
   tx: Tx,
@@ -37,18 +44,34 @@ export async function lockPushScope(
     .where(eq(jobs.id, jobId))
     .for("share");
   const [self] = await tx
-    .select({ role: users.role, deactivatedAt: users.deactivatedAt })
+    .select({
+      role: users.role,
+      deactivatedAt: users.deactivatedAt,
+      locationStamps: users.locationStamps,
+    })
     .from(users)
     .where(eq(users.id, user.id))
     .for("share");
   if (self === undefined || self.deactivatedAt !== null) throw unauthorized();
   // Invisible (another tenant's, under RLS) or missing: nothing to say about it.
   if (job === undefined) return null;
+  // The company's switch, read with no lock in this record's transaction: a change counts
+  // for the records after it (company/settings.ts).
+  const [company] = await tx
+    .select({ locationStamps: companies.locationStamps })
+    .from(companies)
+    .where(eq(companies.id, user.companyId));
+  if (company === undefined) throw new Error("the caller's company is not visible");
   const place =
     job.lat !== null && job.lng !== null && job.radiusM !== null
       ? { lat: job.lat, lng: job.lng, radiusM: job.radiusM }
       : null;
-  return { role: self.role, jobArchived: job.status === "archived", place };
+  return {
+    role: self.role,
+    jobArchived: job.status === "archived",
+    place,
+    stamps: stampsOn(self.locationStamps, company.locationStamps),
+  };
 }
 
 // A person's own event, on a job of their company. A start needs a job that is not

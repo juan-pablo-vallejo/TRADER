@@ -52,6 +52,7 @@ describe("roster.list", () => {
       phone: null,
       signInPhone: null,
       role: "worker",
+      locationStamps: null,
       invited: true,
       deactivatedAt: null,
     });

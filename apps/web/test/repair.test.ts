@@ -167,8 +167,8 @@ describe("labor repair through the route handler", () => {
     expect(first.data).toMatchObject({
       result: "accepted",
       events: [
-        { id: set.operations[0]!.id, reasons: ["user_timed", "location"] },
-        { id: set.operations[1]!.id, reasons: ["user_timed", "location"] },
+        { id: set.operations[0]!.id, reasons: ["corrected", "user_timed"] },
+        { id: set.operations[1]!.id, reasons: ["corrected", "user_timed"] },
       ],
     });
     // The same set again, as after an answer that never arrived.
@@ -179,7 +179,7 @@ describe("labor repair through the route handler", () => {
     const office = {
       initiator: { id: admin.userId },
       timeSetByUser: true,
-      flags: ["user_timed", "location"],
+      flags: ["corrected", "user_timed"],
     };
     expect(read.sessions).toMatchObject([
       {
@@ -203,7 +203,7 @@ describe("labor repair through the route handler", () => {
           job: { id: jobId },
           hundredths: 850,
           openSessions: 0,
-          flags: ["user_timed", "location"],
+          flags: ["corrected", "user_timed"],
         },
       ],
       totals: { hundredths: 850, openSessions: 0 },
@@ -251,11 +251,11 @@ describe("labor repair through the route handler", () => {
     expect(
       repaired[0]!.events.filter((e) => e.effect === "in_effect").map((e) => e.flags),
     ).toEqual([
-      ["corrected", "user_timed", "location"],
-      // A pause and a resume are never judged for a stamp.
-      ["user_timed"],
-      ["user_timed"],
-      ["corrected", "user_timed", "location"],
+      ["corrected", "user_timed"],
+      // Every entry the office writes is `corrected`, a pause and a resume included.
+      ["corrected", "user_timed"],
+      ["corrected", "user_timed"],
+      ["corrected", "user_timed"],
     ]);
     expect(
       repaired[0]!.events.filter((e) => e.effect === "superseded").map((e) => e.type),
@@ -293,7 +293,7 @@ describe("labor repair through the route handler", () => {
   // screen's saved note reads.
   it("counts an admin's own repaired hours at once, flagged like anyone's", async () => {
     const saved = (await repair(hours(admin.userId))).data;
-    const flags = ["user_timed", "location"];
+    const flags = ["corrected", "user_timed"];
     expect(saved).toMatchObject({
       result: "accepted",
       events: [{ reasons: flags }, { reasons: flags }],

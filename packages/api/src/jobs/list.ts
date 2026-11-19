@@ -24,6 +24,8 @@ export const job = z.strictObject({
   id: z.uuid(),
   name: z.string(),
   address: z.string().nullable(),
+  // The office's notes for the crew: the phone shows them on the job.
+  notes: z.string().nullable(),
   // All three or none (jobs.ts): a job without a location can only flag a missing stamp.
   location: location.nullable(),
   status: z.enum(jobStatus.enumValues),
@@ -38,6 +40,7 @@ const columns = {
   id: jobs.id,
   name: jobs.name,
   address: jobs.address,
+  notes: jobs.notes,
   lat: jobs.locationLat,
   lng: jobs.locationLng,
   radiusM: jobs.locationRadiusM,
@@ -50,6 +53,7 @@ type Row = {
   id: string;
   name: string;
   address: string | null;
+  notes: string | null;
   lat: number | null;
   lng: number | null;
   radiusM: number | null;
@@ -62,6 +66,7 @@ const toJob = (row: Row): Job => ({
   id: row.id,
   name: row.name,
   address: row.address,
+  notes: row.notes,
   location:
     row.lat !== null && row.lng !== null && row.radiusM !== null
       ? { lat: row.lat, lng: row.lng, radiusM: row.radiusM }
