@@ -127,8 +127,8 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
               <tbody>
                 {list.data.map((i) => (
                   <tr key={i.id}>
-                    <td className={table.rowLink}>
-                      <Link href={`/invoices/${i.id}`}>
+                    <td>
+                      <Link href={`/invoices/${i.id}`} className={table.rowLink}>
                         {i.number === null ? s.states.draft : s.invoiceNo(i.number)}
                       </Link>
                     </td>

@@ -44,7 +44,9 @@
   background: var(--canvas);
 }
 
-/* A row's name as a link to that record's own page: the whole row height is its target. */
+/* A row's name as a link to that record's own page: the whole row height is its target.
+   The class goes on the link, never on the cell: a cell drawn as a flex box stops being a
+   table cell, and the row's hairline broke under it (seen on staging, 2026-11-19). */
 .rowLink {
   /* A block-level box: an inline one would sit on the text baseline and make the row taller. */
   display: flex;

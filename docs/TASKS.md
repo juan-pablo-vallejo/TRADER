@@ -625,10 +625,12 @@ Android user.
 - [ ] `labor.repair`'s answer still calls an entry's flags `reasons`
       (`packages/api/src/labor/repair.ts`); item 4 named the push acknowledgement and the
       phone's outbox only. Rename it with item 16, which rebuilds its one screen.
-- [ ] Item 7 was seen at 390, 768 and 1280 on every office screen against the demo data,
-      and on staging for the homepage and the sign-in page; staging's office screens were
-      walked by the smoke test's browser, not looked at by hand, because nobody can sign in
-      to staging's office by hand yet (the Clerk entry above). Look once that is settled.
+- [x] Item 7 on staging by eye, 2026-11-19: every office screen at 390, 768 and 1280, in a
+      session made by a single-use ticket and signed out after. Nothing scrolls sideways,
+      the console is clean, the company's name and the account menu are in the header. One
+      flaw found, older than the shell and unseen locally because the demo has no invoice:
+      on Invoices the row's hairline broke under the number, because the link's style sat
+      on the cell. Fixed.
 - [ ] OWNER, with production: `TRADER_HOME_HOST=dsierrapainting.jpteq.app` and
       `CLERK_AUTHORIZED_PARTIES=https://app.jpteq.app,https://dsierrapainting.jpteq.app` in
       the production project's variables (`README.md` lists them, from item 18 on).
