@@ -16,7 +16,7 @@ try {
 
 const USAGE =
   "usage: onboard --company <name> --timezone <IANA zone> --next-invoice <n> " +
-  "--next-credit-memo <n> --admin-name <name> --admin-phone <+1XXXXXXXXXX> " +
+  "--admin-name <name> --admin-phone <+1XXXXXXXXXX> " +
   "[--admin-email <address>] [--apply]";
 
 async function main() {
@@ -25,7 +25,6 @@ async function main() {
       company: { type: "string" },
       timezone: { type: "string" },
       "next-invoice": { type: "string" },
-      "next-credit-memo": { type: "string" },
       "admin-name": { type: "string" },
       "admin-phone": { type: "string" },
       "admin-email": { type: "string" },
@@ -36,7 +35,6 @@ async function main() {
     companyName: values.company,
     timezone: values.timezone,
     nextInvoiceNumber: values["next-invoice"],
-    nextCreditMemoNumber: values["next-credit-memo"],
     adminName: values["admin-name"],
     adminPhone: values["admin-phone"],
     ...(values["admin-email"] !== undefined && { adminEmail: values["admin-email"] }),

@@ -48,7 +48,6 @@ async function world(n: number) {
     await tx.insert(invoiceCounters).values({
       companyId: d.companyId,
       nextInvoiceNumber: 1042,
-      nextCreditMemoNumber: 1,
     });
     const ids = Array.from({ length: n }, () => uuidv7());
     await tx.insert(invoices).values(

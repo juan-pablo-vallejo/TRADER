@@ -27,7 +27,6 @@ export const onboardingSchema = z.strictObject({
       message: "not an IANA time zone",
     }),
   nextInvoiceNumber: counter,
-  nextCreditMemoNumber: counter,
   adminName: text(200),
   // The binding key, E.164, United States and Canada only: users_sign_in_phone_e164 (0037)
   // and the API's signInPhoneSchema hold the same pattern. Required, as roster.invite
@@ -98,8 +97,8 @@ export async function onboard(
   const row = created[0];
   if (row === undefined) throw new Error("onboard: the company insert returned no row");
   await executor.execute(sql`
-    INSERT INTO invoice_counters (company_id, next_invoice_number, next_credit_memo_number)
-    VALUES (${row.id}, ${company.nextInvoiceNumber}, ${company.nextCreditMemoNumber})
+    INSERT INTO invoice_counters (company_id, next_invoice_number)
+    VALUES (${row.id}, ${company.nextInvoiceNumber})
   `);
   const { rows: admins } = await executor.execute<{ id: string }>(sql`
     INSERT INTO users (company_id, email, sign_in_phone, name, role)

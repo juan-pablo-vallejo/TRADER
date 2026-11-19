@@ -1,10 +1,9 @@
 "use client";
 
-// One invoice (DESIGN, Invoice line; PRD, Invoicing and exports). A draft: its lines as rows
-// of fields — description, quantity, unit and the price the admin enters — with what the
-// job offers to draw a line from, the tax, and the totals as they would be saved. A line
-// drawn from labor or a receipt arrives with its words and quantity and an empty price; the
-// job's cost is shown beside the invoice for reference and never inside a price field.
+// One invoice. A draft: its lines as rows of fields (description, quantity, unit and the
+// price the admin types) with the job's hours by day beside them, the tax, and the totals
+// as they would be saved. A day's hours can be copied into a new line's quantity; its price
+// field arrives empty, and no price is ever suggested.
 // Issuing asks first and says what it does; an issued invoice shows no field at all, and the
 // one thing left to do with it is to void it. The amounts on screen are worked out as the
 // server works them out (api invoices/lines.ts) and stored by the server alone.

@@ -28,7 +28,6 @@ const input: Onboarding = {
   companyName: `Onboard Co ${run}`,
   timezone: "America/New_York",
   nextInvoiceNumber: 1043,
-  nextCreditMemoNumber: 8,
   adminName: "First Admin",
   adminPhone: `+1401555${String(parseInt(run.slice(0, 4), 16) % 10000).padStart(4, "0")}`,
 };
@@ -54,7 +53,7 @@ describe("onboard", () => {
             .from(invoiceCounters)
             .where(eq(invoiceCounters.companyId, result.companyId)),
         ),
-      ).toMatchObject({ nextInvoiceNumber: 1043, nextCreditMemoNumber: 8 });
+      ).toMatchObject({ nextInvoiceNumber: 1043 });
       const roster = await tx
         .select()
         .from(users)
@@ -131,7 +130,7 @@ describe("onboard", () => {
     ["adminPhone", { adminPhone: "+440205550123" }],
     ["adminPhone", { adminPhone: "+1 401 555 0123" }],
     ["nextInvoiceNumber", { nextInvoiceNumber: 0 }],
-    ["nextCreditMemoNumber", { nextCreditMemoNumber: 1.5 }],
+    ["nextInvoiceNumber", { nextInvoiceNumber: 1.5 }],
     ["companyName", { companyName: "   " }],
     ["adminName", { adminName: "" }],
     ["adminEmail", { adminEmail: "not an address" }],
@@ -150,7 +149,6 @@ describe("onboard", () => {
       "adminName",
       "adminPhone",
       "companyName",
-      "nextCreditMemoNumber",
       "nextInvoiceNumber",
       "timezone",
     ]);

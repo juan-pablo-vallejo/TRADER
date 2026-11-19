@@ -32,8 +32,9 @@ export const invoiceCounters = pgTable(
       .primaryKey()
       .references(() => companies.id),
     nextInvoiceNumber: integer("next_invoice_number").notNull(),
-    // Credit memos have their own series: QuickBooks numbers them as their own document.
-    nextCreditMemoNumber: integer("next_credit_memo_number").notNull(),
+    // Unused since credit memos left the MVP; defaulted so nothing names it, and dropped
+    // with the baseline.
+    nextCreditMemoNumber: integer("next_credit_memo_number").notNull().default(1),
     createdAt,
     updatedAt,
   },

@@ -116,7 +116,7 @@ you find under "Found along the way". Never reorder, never add scope.
       worker, day and job, for any from-to range; hours rounded as today (the day's total
       per job, half-up to the hundredth); the entry's flags in a column. Done when the Hours
       screen downloads it and a test fixes the rounding.
-- [ ] 7. **Invoices trimmed.** Lines are typed by the admin. The draft screen shows the
+- [x] 7. **Invoices trimmed.** Lines are typed by the admin. The draft screen shows the
       job's hours beside them and may copy hours into a line's quantity, never a price. No
       materials on lines, no credit memos. Draft, issue, void, numbering, PDF, email and
       payments stay as built. Done when `pnpm check` is green and no invoice code names a

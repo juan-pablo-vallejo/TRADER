@@ -39,7 +39,6 @@ async function office(tx: Tx, counter = true) {
     await tx.insert(invoiceCounters).values({
       companyId: day.companyId,
       nextInvoiceNumber: 1042,
-      nextCreditMemoNumber: 1,
     });
   }
   const [foreign] = await tx

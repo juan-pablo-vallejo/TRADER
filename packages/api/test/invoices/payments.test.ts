@@ -32,9 +32,7 @@ async function office(tx: Tx) {
   const theirAdmin = await boundIn(tx, other.companyId, "admin");
   const worker = await boundIn(tx, day.companyId, "worker");
   for (const companyId of [day.companyId, other.companyId]) {
-    await tx
-      .insert(invoiceCounters)
-      .values({ companyId, nextInvoiceNumber: 1042, nextCreditMemoNumber: 1 });
+    await tx.insert(invoiceCounters).values({ companyId, nextInvoiceNumber: 1042 });
   }
   await becomeApp(tx);
   const as = (who: unknown) => appCallerIn(tx, who).invoice;

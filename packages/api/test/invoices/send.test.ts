@@ -54,7 +54,6 @@ async function office(tx: Tx) {
   await tx.insert(invoiceCounters).values({
     companyId: day.companyId,
     nextInvoiceNumber: 1042,
-    nextCreditMemoNumber: 1,
   });
   await becomeApp(tx);
   const as = (who: unknown, mailer?: Mailer) => appCallerIn(tx, who, mailer).invoice;

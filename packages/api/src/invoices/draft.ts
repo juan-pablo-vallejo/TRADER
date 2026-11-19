@@ -1,15 +1,14 @@
-// invoice.create, save and remove: a draft and its lines (PRD, Invoicing and exports;
-// ARCHITECTURE, Invoice pricing, V1-D14; TASKS R6). A draft belongs to a job and so to that
+// invoice.create, save and remove: a draft and its lines. A draft belongs to a job and so to that
 // job's customer. Its lines are snapshots: each holds its own description, quantity and unit,
-// and the price the admin entered; a line drawn from labor or a receipt (read.ts, suggest)
-// copied those words and figures when it was made and never follows what it was drawn from.
+// and the price the admin typed; a line whose quantity was copied from the job's hours
+// (read.ts, suggest) holds that figure as it was then and never follows the hours.
 // `save` replaces the draft's lines whole, in the order sent, and sets its tax: what is
 // stored is what the admin saw. An issued invoice is not changed here at all — the database
 // refuses it as well (0010).
 //
 // Ids are the browser's: a `create` sent again answers `duplicate`. Lock order: the caller
 // re-read, then the invoice's row FOR UPDATE, which is what an issue takes, so a save and an
-// issue of one draft never interleave. No audit row (V1-D20's inventory is closed): who
+// issue of one draft never interleave. Who
 // issued and who voided an invoice are on its row. Consumed by routers/invoice.ts.
 import { invoiceLineItems, invoices, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
