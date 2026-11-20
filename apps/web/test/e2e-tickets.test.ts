@@ -290,9 +290,54 @@ describe("the workflows and the staging key", () => {
     expect(job("check")).not.toMatch(/secrets\.|environment:/);
     expect(deploy).toMatch(/\n {4}needs: check\n/);
     expect(deploy).toMatch(/\n {4}if: github\.event_name == 'push'\n/);
+    // Beside it, the two phone workflows, each with its own named secrets and no other
+    // (the owner's amendment of 2026-11-20). Every other workflow holds none.
     for (const file of files) {
-      if (file !== "ci.yml") expect(text(file), file).not.toMatch(/secrets\./);
+      if (!["ci.yml", "preview-phone.yml", "release-phone.yml"].includes(file)) {
+        expect(text(file), file).not.toMatch(/secrets\./);
+      }
     }
+  });
+
+  const secretsIn = (file: string) =>
+    [
+      ...new Set([...text(file).matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1])),
+    ].sort();
+
+  it("builds a preview by hand alone, with staging's Expo token and no store key", () => {
+    const preview = text("preview-phone.yml");
+    expect(secretsIn("preview-phone.yml")).toEqual(["EXPO_TOKEN", "STAGING_URL"]);
+    expect(preview).toMatch(/\non:\n {2}workflow_dispatch:\n\npermissions:/);
+    expect(preview).toContain("\n    environment: staging\n");
+    expect(preview).toContain("--profile preview");
+    expect(preview).not.toMatch(/submit|production/);
+  });
+
+  it("releases the phone app on a push to production alone, with the five secrets", () => {
+    const release = text("release-phone.yml");
+    expect(secretsIn("release-phone.yml")).toEqual([
+      "ASC_API_KEY_ID",
+      "ASC_API_KEY_ISSUER_ID",
+      "ASC_API_KEY_P8",
+      "EXPO_TOKEN",
+      "GOOGLE_SERVICE_ACCOUNT_KEY",
+    ]);
+    expect(release).toMatch(
+      /\non:\n {2}push:\n {4}branches: \[production\]\n\npermissions:/,
+    );
+    expect(release).not.toMatch(
+      /workflow_dispatch|workflow_run|pull_request_target|issue_comment|environment: staging/,
+    );
+    expect(release).toContain("\n    environment: production\n");
+    // Creating the branch is a push too, and releases nothing.
+    expect(release).toContain("\n    if: github.event.created != true\n");
+    // Every secret is checked before anything is installed or Expo is called.
+    const checked = release.indexOf("not set in the production environment");
+    expect(checked).toBeGreaterThan(0);
+    expect(checked).toBeLessThan(release.indexOf("pnpm install"));
+    expect(checked).toBeLessThan(release.indexOf("eas-cli"));
+    // ci.yml's deploy, run again on production, starts nothing of the phone's.
+    expect(ci).not.toMatch(/eas|expo/i);
   });
 
   it("is started by a push or a pull request and by nothing else", () => {
@@ -310,9 +355,15 @@ describe("the workflows and the staging key", () => {
     expect(deploy).toContain(`\n      TARGET: \${{ ${PRODUCTION_ONLY} }}\n`);
     expect(deploy).toMatch(/\n {6}cancel-in-progress: false\n/);
     // Nothing else in any workflow names the environment or the branch's ref.
+    // and the phone's release, which is production's alone by its trigger.
     for (const file of files) {
       const rest = text(file).split(PRODUCTION_ONLY).join("");
-      expect(rest, file).not.toMatch(/environment: production|refs\/heads\/production/);
+      expect(rest, file).not.toMatch(/refs\/heads\/production/);
+      if (file === "release-phone.yml") {
+        expect(rest.match(/environment: production/g), file).toHaveLength(1);
+      } else {
+        expect(rest, file).not.toMatch(/environment: production/);
+      }
     }
   });
 

@@ -30,6 +30,8 @@ export default tseslint.config(
     "apps/mobile/ios/**",
     "apps/mobile/android/**",
     "apps/mobile/expo-env.d.ts",
+    // Metro loads its configuration as CommonJS; six lines, none of them the app's.
+    "apps/mobile/metro.config.js",
   ]),
   js.configs.recommended,
   ...tseslint.configs.recommended,

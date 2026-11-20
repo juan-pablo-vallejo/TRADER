@@ -24,7 +24,9 @@ database.
 - `packages/db`: the schema (eleven tables), its migrations, the seed and the onboarding
   script.
 - `.github/workflows`: `ci.yml` runs `check`, then `deploy`. `audit.yml` reads the lockfile
-  for advisories and every commit for a leaked secret.
+  for advisories and every commit for a leaked secret. `preview-phone.yml` builds a preview
+  of the phone app for a commit, when started by hand. `release-phone.yml` builds and
+  submits the phone app on a release.
 - `.env.example`: every environment variable and what reads it.
 
 ## Run it on a new machine
@@ -98,8 +100,9 @@ only the owner merges it.
    Claude to open the pull request.
 2. Read the commits and anything under `packages/db/migrations/`. Try staging.
 3. Merge with the admin bypass. The deploy job migrates production's database, then deploys
-   the office and the API. It does not build the phone app yet ("Preview builds" and "The
-   release job builds the phone app" in `docs/TASKS.md`).
+   the office and the API. The same merge starts "Release the phone app"
+   (`.github/workflows/release-phone.yml`), which builds the phone app with the production
+   profile and sends it to TestFlight and to Play's internal track.
 4. Check `https://app.jpteq.app/api/ready`, one office screen, and D Sierra's homepage at
    `https://dsierrapainting.jpteq.app`.
 

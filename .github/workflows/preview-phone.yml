@@ -1,0 +1,68 @@
+name: Preview builds
+
+# A preview build of the phone app for one commit, for both platforms: internal
+# distribution (an ad hoc iPhone build and an Android APK), pointed at staging. Started by
+# hand and by nothing else: every build is drawn from the Expo account's monthly allowance,
+# which is the owner's money to spend.
+#
+#   Actions, Preview builds, Run workflow, and the branch or tag to build.
+#
+# What the build is told (staging's API, Clerk's publishable key, the Sentry DSN) lives in
+# EAS's `preview` environment and never in this repository: staging's address is not
+# public. The Sentry upload token is there too. The signing credentials are EAS's own, made
+# once by the owner with one build of this profile run by hand on each platform; until
+# they exist this workflow fails at Expo, saying which is missing.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One at a time for a ref: a second request for the same commit waits for nothing new.
+concurrency:
+  group: preview-phone-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-24.04
+    # The Expo token is the `staging` environment's. It can start a build; it holds no
+    # store credential, because none is kept at Expo (release-phone.yml).
+    environment: staging
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Before Expo is called: with no token there is nothing to try.
+      - name: The Expo token is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::EXPO_TOKEN is not set in the staging environment"; exit 1
+          fi
+
+      # EAS CLI at a stated version, like every other tool here (eas.json asks for this one
+      # or newer). `--no-wait`: the build runs on Expo's machines for twenty minutes or
+      # more, and its page says how it ended. EAS names the variables it loads and not
+      # their values; staging's address is handed to this step all the same, so that the
+      # runner masks it should a later CLI ever print one. This log is public.
+      - name: Build the preview profile for both platforms
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          npx --yes eas-cli@27.10.0 build --profile preview --platform all \
+            --non-interactive --no-wait --message "preview $SHA"
+          echo "- preview builds started for \`$SHA\`: see the project's Builds page at expo.dev" >> "$GITHUB_STEP_SUMMARY"

@@ -14,10 +14,12 @@
   "dependencies": {
     "@clerk/expo": "^4.16.1",
     "@expo/vector-icons": "^15.1.1",
+    "@sentry/react-native": "~8.28.1",
     "@trader/api": "workspace:*",
     "@trpc/client": "11.23.0",
     "drizzle-orm": "^0.45.4",
     "expo": "~58.0.25",
+    "expo-application": "~58.1.2",
     "expo-constants": "~58.0.16",
     "expo-crypto": "~58.0.8",
     "expo-dev-client": "~58.0.20",

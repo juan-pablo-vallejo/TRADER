@@ -68,6 +68,9 @@ export async function runCycle(
   store: Store,
   transport: Transport,
   now: () => number,
+  // Told of every call that threw, for the error report (sync/failures.ts). What a cycle
+  // does about a thrown call does not depend on it.
+  failed: (stage: "status" | "push" | "pull", error: unknown) => void = () => undefined,
 ): Promise<CycleResult> {
   await store.reclaim(now() - RECLAIM_MS);
   // The last time the API answered at all: what a capture reads to say it was online.
@@ -76,7 +79,8 @@ export async function runCycle(
   let state: ServiceState;
   try {
     state = await transport.status();
-  } catch {
+  } catch (error) {
+    failed("status", error);
     return { outcome: "unreachable" };
   }
   await reached();
@@ -101,7 +105,8 @@ export async function runCycle(
         data.events.map((e) => e.id),
       );
       return data.me.id;
-    } catch {
+    } catch (error) {
+      failed("pull", error);
       return null;
     }
   };
@@ -124,7 +129,8 @@ export async function runCycle(
           payload: r.payload,
         })),
       });
-    } catch {
+    } catch (error) {
+      failed("push", error);
       // The server may have written them; the resend answers `duplicate`.
       await store.release(ids);
       drained = false;

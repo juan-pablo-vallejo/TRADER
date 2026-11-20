@@ -892,6 +892,64 @@ Android user.
 - [ ] Item 33: the header's button reads "Ctrl K" on every machine; on a Mac Cmd+K works
       too and is not named.
 
+- [ ] Items 12, 13 and 24, built on 2026-11-20 as far as they go without a key.
+      `apps/mobile/eas.json`: development, preview and production profiles, the build number
+      EAS's own (the remote version source, `autoIncrement`), read back in the app through
+      `expo-application`. Sentry in the phone app (`apps/mobile/src/report.ts`): silent with
+      no DSN, errors only, every event rebuilt from an allow-list, a failed sync call
+      reported once. "Preview builds" and "Release the phone app" as two workflows. None
+      has run against Expo. Item 12 waits on a preview build to throw its error in; item
+      13 on the owner's first preview builds by hand; item 24 on the app's Apple ID (next
+      entry) and on being read in the release's pull request.
+- [ ] OWNER, item 24: `eas.json` has no `submit.production.ios.ascAppId`, and the release
+      workflow stops before Expo without it: EAS refuses a submission run by a machine
+      unless it is told the app's Apple ID, the number App Store Connect shows once the app
+      record exists (`README.md`, "Make production exist", step 6). It is public: give it
+      and it goes into `eas.json`.
+- [ ] OWNER, item 24: what signs a build is kept at Expo, as the preview's is: the iOS
+      distribution certificate with its App Store profile and the Android upload keystore.
+      A build run by a machine cannot make them, so the first build of the production
+      profile for each platform is run by hand, once, as the preview's is. The session is
+      blocked from running it.
+- [ ] Item 24, read in EAS CLI 27.10.0's own code (`build/submit`): a key named by a file in
+      `eas.json` is read on the runner and handed to EAS Submit with that one submission; it
+      is not saved among the account's credentials. Expo's machines do the upload, so they
+      hold it for as long as the submission runs.
+- [ ] OWNER, item 13: EAS's `preview` environment still needs its three plain-text
+      variables, `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` and
+      `EXPO_PUBLIC_SENTRY_DSN`. The session was blocked from creating them and from reading
+      `.env.staging` for the first two. `eas env:create` is deprecated in the CLI installed
+      here (27.10.0) in favour of `eas env:set`, which takes the same flags.
+- [ ] Item 12: `@sentry/react-native` 8.28 and `expo-application` are native packages, so a
+      development build made before 2026-11-20 must be rebuilt. `@sentry/cli`'s install
+      script is allowed in `pnpm-workspace.yaml`. A crash in native code is reported by the
+      platform's own SDK and does not pass the JavaScript allow-list; it carries the
+      device's model and system version, and nothing the app holds.
+- [ ] Item 13, on the owner's word: `ios.config.usesNonExemptEncryption` is `false`. Apple's
+      page (Complying with Encryption Export Regulations, read 2026-11-20) says to set NO
+      where an app "only uses forms of encryption that are exempt", and names HTTPS through
+      the system as typically exempt. That fits: the app's only encryption is the system's
+      HTTPS and keychain; SQLite is not encrypted and nothing brings an algorithm of its
+      own. The same page notes that an app using exempt encryption may still owe the U.S.
+      government a year-end self-classification report: the owner's to check.
+- [ ] `expo-doctor` reports two things older than this work: `@expo/vector-icons` wants
+      `expo-font` installed beside it, and TypeScript is 5.9 where SDK 58 names 6.0. The
+      icons have drawn on both simulators without it.
+
+- [ ] The amendment of 2026-11-20 on staging, seen and not seen. Seen: the deploy of
+      `015950f` green with its smoke test, migration 0005 applied (six in staging's journal),
+      and all four of staging's issued invoices holding the customer's and the job's name
+      (Neon's read-only connector). Not seen by eye: the invoice's page after a rename, and a
+      shift removed with one press and brought back by Undo. This session could not use
+      `.env.staging` in any form, so it had no address for staging and no sign-in ticket;
+      the tests hold both, and the next session with staging's keys looks.
+- [ ] OWNER, the amendment's F, not done for the same reason. The owner's own login on
+      staging: not invited (it needs a signed-in admin's session on staging). Clerk's lock
+      on the development instance: not proved from a user's side (it needs a fixture
+      person's signed-in session). `STAGING_MIGRATOR_URL` in `.env.staging` and the staging
+      variable `E2E_COMPANY_ID`: neither checked; the two entries at the top of this list
+      stay open.
+
 ## After MVP
 
 In the order it would come back. The owner reorders at will.

@@ -7,9 +7,13 @@ packages:
 # a message (read 2026-11-15), so they are denied by name and build nothing.
 # `expo install` rewrites this file with a placeholder for a package whose install script it
 # will not run: read the file's diff after any `expo install`.
+# @sentry/cli arrives with @sentry/react-native and uploads the phone build's source maps on
+# EAS; its install script checks for the platform's binary and fetches it when the optional
+# package did not bring it, so it is allowed.
 # @clerk/expo also brings react-dom through @clerk/react; apps/mobile pins it to its own
 # React, or the bundle stops at "Incompatible React versions".
 allowBuilds:
+  "@sentry/cli": true
   browser-tabs-lock: false
   core-js: false
   esbuild: true

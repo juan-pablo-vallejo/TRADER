@@ -19,6 +19,7 @@ import { createApi } from "../api";
 import { apiUrl, BUILD } from "../config";
 import { createMinter } from "../ids";
 import { locationStamp, refreshLocation } from "../location";
+import { reportSyncFailure } from "../report";
 import { headersFor, useSession } from "../session";
 import { deviceStore } from "../store/device";
 import { clockState, recordsFor, type ClockState, type Tap } from "./clock";
@@ -29,6 +30,7 @@ import {
   runCycle,
   type CycleResult,
 } from "./engine";
+import { createFailureLog } from "./failures";
 import { stampsOn } from "./today";
 import type { OutboxRecord, Snapshot, Transport } from "./types";
 
@@ -111,6 +113,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       },
       pull: () => seen(api.sync.pull.query({ protocolVersion: 1 })),
     };
+    const failures = createFailureLog(reportSyncFailure);
     return createSyncer(async () => {
       setSyncing(true);
       try {
@@ -120,7 +123,11 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         if (stampsOn((await readSnapshot(deviceStore))?.data ?? null)) {
           void refreshLocation();
         }
-        const result = await runCycle(deviceStore, transport, Date.now);
+        const result = await runCycle(deviceStore, transport, Date.now, failures.note);
+        // A whole cycle went through: a failure that comes back after this is news again.
+        if (result.outcome === "synced" && result.drained && result.pulled) {
+          failures.cleared();
+        }
         const kept = await refresh();
         // The first pull is where the phone learns it: ask then, not a cycle later.
         if (stampsOn(kept?.data ?? null)) void refreshLocation();

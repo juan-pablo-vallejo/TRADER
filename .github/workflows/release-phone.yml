@@ -1,0 +1,110 @@
+name: Release the phone app
+
+# On a release (a push to `production`, which only the owner's merge of a pull request can
+# make): build the phone app with the production profile and send it to TestFlight and to
+# Play's internal track.
+#
+# A workflow of its own, never a job of ci.yml: the owner runs ci.yml's deploy job again on
+# `production` while production is being made (README.md, "Make production exist"), and
+# that must never build or submit the phone app. Creating the `production` branch is a push
+# too, and is passed over here: there is nothing to release before the first release.
+#
+# The five secrets are the `production` environment's, which hands them to runs on the
+# `production` branch alone. No store credential is kept at Expo: the App Store Connect key
+# and the Google service account key are written to this runner's own disk for the one
+# command and removed after it, and EAS Submit is handed them with that one submission
+# (eas.json names the files by variable). So no token of staging's can submit. What is kept
+# at Expo is what signs a build, the iOS distribution certificate with its profile and the
+# Android upload keystore, which the owner makes once with one production build by hand.
+on:
+  push:
+    branches: [production]
+
+permissions:
+  contents: read
+
+# One release at a time; a second waits for the first and is never cancelled part-way.
+concurrency:
+  group: release-phone
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.event.created != true
+    runs-on: ubuntu-24.04
+    environment: production
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      # Before anything is installed and before Expo is called: every secret by name, and
+      # the one public number the submission needs. A missing one stops the run here.
+      - name: The five secrets and the App Store app's id are set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_KEY_ISSUER_ID: ${{ secrets.ASC_API_KEY_ISSUER_ID }}
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          set -euo pipefail
+          missing=""
+          for name in EXPO_TOKEN ASC_API_KEY_ID ASC_API_KEY_ISSUER_ID ASC_API_KEY_P8 GOOGLE_SERVICE_ACCOUNT_KEY; do
+            if [ -z "${!name}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::not set in the production environment:$missing"; exit 1
+          fi
+          # Without it a submission run by a machine is refused: EAS will not look the app
+          # up in App Store Connect unasked. It is the app's Apple ID, a public number.
+          if ! jq -e '.submit.production.ios.ascAppId | strings | test("^[0-9]+$")' apps/mobile/eas.json > /dev/null; then
+            echo "::error::apps/mobile/eas.json has no submit.production.ios.ascAppId (the app's Apple ID from App Store Connect)"; exit 1
+          fi
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # The two keys as files, readable by this user alone, outside the checkout so that
+      # nothing EAS uploads of the project can carry them.
+      - name: The store keys, on this runner's disk for one command
+        env:
+          ASC_API_KEY_P8: ${{ secrets.ASC_API_KEY_P8 }}
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p "$RUNNER_TEMP/store-keys"
+          printf '%s\n' "$ASC_API_KEY_P8" > "$RUNNER_TEMP/store-keys/asc.p8"
+          printf '%s' "$GOOGLE_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/store-keys/google.json"
+          jq -e '.client_email | strings' "$RUNNER_TEMP/store-keys/google.json" > /dev/null \
+            || { echo "::error::GOOGLE_SERVICE_ACCOUNT_KEY is not a service account's JSON key"; exit 1; }
+          grep -q 'BEGIN PRIVATE KEY' "$RUNNER_TEMP/store-keys/asc.p8" \
+            || { echo "::error::ASC_API_KEY_P8 is not the text of a .p8 key"; exit 1; }
+
+      # One command builds both platforms and, as each build ends, submits it with the
+      # `production` submit profile: iOS to TestFlight, Android to Play's internal track.
+      # EAS CLI at a stated version (eas.json asks for this one or newer).
+      - name: Build with the production profile and submit to both stores
+        working-directory: apps/mobile
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          ASC_API_KEY_ID: ${{ secrets.ASC_API_KEY_ID }}
+          ASC_API_KEY_ISSUER_ID: ${{ secrets.ASC_API_KEY_ISSUER_ID }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          export ASC_API_KEY_PATH="$RUNNER_TEMP/store-keys/asc.p8"
+          export GOOGLE_SERVICE_ACCOUNT_KEY_PATH="$RUNNER_TEMP/store-keys/google.json"
+          npx --yes eas-cli@27.10.0 build --profile production --platform all \
+            --non-interactive --auto-submit --wait --message "release $SHA"
+          echo "- built \`$SHA\` with the production profile and submitted it to TestFlight and Play internal" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove the store keys
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/store-keys"

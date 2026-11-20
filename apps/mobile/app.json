@@ -10,7 +10,10 @@
     "ios": {
       "bundleIdentifier": "app.jpteq.trader",
       "supportsTablet": false,
-      "infoPlist": {}
+      "infoPlist": {},
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "app.jpteq.trader",
@@ -49,6 +52,14 @@
         "expo-notifications",
         {
           "enableRemoteNotifications": false
+        }
+      ],
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "organization": "jpteq",
+          "project": "trader-phone"
         }
       ]
     ],
