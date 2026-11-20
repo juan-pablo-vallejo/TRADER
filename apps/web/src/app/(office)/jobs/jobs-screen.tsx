@@ -3,9 +3,9 @@
 // The Jobs screen: jobs belong to a customer, and each stands with its status, the hours
 // recorded on it this week and to date (`job.list` answers them from the one labor
 // derivation; nothing is added here), and its address. Open, Complete and Archived are
-// presets in the address, open by default. A job's name opens it in the side panel, and
-// which job is in the address: its details with Save, and its status with Set status, two
-// procedures and two answers.
+// presets in the address, open by default. A job's name goes to its own page; Edit opens
+// it in the side panel, and which job is in the address: its details with Save, and its
+// status with Set status, two procedures and two answers.
 //
 // The create form picks a customer or adds one in place: the customer is made first, then
 // the job under it. A job's notes are one field, said to be what the crew sees on their
@@ -14,6 +14,7 @@
 // set it from the phone's Crew tab, standing at the jobsite. A `rejected` answer reads
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
@@ -214,8 +215,12 @@ function JobsTable({ rows, onOpen }: { rows: Rows; onOpen: (jobId: string) => vo
     {
       key: "job",
       header: t.job,
-      cell: (row) => row.name,
-      open: (row) => ({ label: t.jobForm.open(row.name), onOpen: () => onOpen(row.id) }),
+      // A job's name, anywhere in the office, goes to its own page.
+      cell: (row) => (
+        <Link href={`/jobs/${row.id}`} aria-label={t.jobPage.openJob(row.name)}>
+          {row.name}
+        </Link>
+      ),
     },
     { key: "customer", header: t.customer, cell: (row) => row.customer.name },
     {
@@ -242,6 +247,12 @@ function JobsTable({ rows, onOpen }: { rows: Rows; onOpen: (jobId: string) => vo
       header: t.address,
       empty: (row) => row.address === null,
       cell: (row) => row.address ?? "",
+    },
+    {
+      key: "edit",
+      header: t.jobPage.edit,
+      cell: () => t.jobForm.editShort,
+      open: (row) => ({ label: t.jobForm.open(row.name), onOpen: () => onOpen(row.id) }),
     },
   ];
   return (

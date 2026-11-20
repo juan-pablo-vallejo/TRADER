@@ -41,7 +41,6 @@ const SAME = new Set([
   "schedule.openShift",
   "invoices.total",
   "invoices.subtotal",
-  "invoices.forCustomer",
   "invoices.paymentLine",
   "invoices.hoursOf",
   "invoices.laborOn",

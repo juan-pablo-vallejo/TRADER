@@ -14,6 +14,7 @@
 // A cell opens that person's day in the side panel (day-panel.tsx), and which panel is open
 // is in the address too. Consumed by page.tsx.
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
@@ -277,7 +278,11 @@ function Shown({
 
   const listColumns: Column<Cell>[] = [
     { key: "date", header: t.date, cell: (c) => f.weekDay(c.workDate) },
-    { key: "job", header: t.job, cell: (c) => c.job.name },
+    {
+      key: "job",
+      header: t.job,
+      cell: (c) => <Link href={`/jobs/${c.job.id}`}>{c.job.name}</Link>,
+    },
     {
       key: "hours",
       header: t.hours,

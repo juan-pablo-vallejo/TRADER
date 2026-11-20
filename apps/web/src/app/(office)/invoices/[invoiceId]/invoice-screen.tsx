@@ -838,7 +838,8 @@ export function InvoiceScreen({
         }
       />
       <p className={`body ${styles.meta}`}>
-        {s.forCustomer(invoice.customer.name, invoice.job.name)} ·{" "}
+        {invoice.customer.name} ·{" "}
+        <Link href={`/jobs/${invoice.job.id}`}>{invoice.job.name}</Link> ·{" "}
         {s.states[invoice.state]}
       </p>
       {invoice.issuedAt !== null && invoice.issuedBy !== null && (

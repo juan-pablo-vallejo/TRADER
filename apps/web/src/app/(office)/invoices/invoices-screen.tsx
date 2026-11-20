@@ -134,7 +134,9 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
                       </Link>
                     </td>
                     <td>{i.customer.name}</td>
-                    <td>{i.job.name}</td>
+                    <td>
+                      <Link href={`/jobs/${i.job.id}`}>{i.job.name}</Link>
+                    </td>
                     <td className={table.status}>{s.states[i.state]}</td>
                     <td className={table.number}>{f.money(i.totalCents, i.currency)}</td>
                     <td className={table.number}>

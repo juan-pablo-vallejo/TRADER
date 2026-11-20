@@ -1,0 +1,88 @@
+/* The job page's own layout: the head, the row of four steps with its one action, and the
+   details as a list of names and values. Its tables are table.module.css. */
+.back {
+  margin: 0 0 var(--space-2);
+}
+.back a,
+.details a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.head h1 {
+  margin: 0;
+}
+.line {
+  margin: var(--space-1) 0 var(--space-4);
+  color: var(--ink-secondary);
+}
+.part {
+  margin: 0 0 var(--space-6);
+}
+.part h2 {
+  margin: 0 0 var(--space-2);
+}
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+/* A step's words may take a second line before the row outgrows a narrow screen. */
+.steps li,
+.steps span {
+  max-width: 100%;
+  white-space: normal;
+}
+.action {
+  margin: 0 0 var(--space-2);
+}
+.action a {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.details {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+}
+.details dt {
+  color: var(--ink-secondary);
+}
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.notes {
+  white-space: pre-wrap;
+}
+@media (max-width: 479px) {
+  .details {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .details dd {
+    margin-bottom: var(--space-2);
+  }
+}
