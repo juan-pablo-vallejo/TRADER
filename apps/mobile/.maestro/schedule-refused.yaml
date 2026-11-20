@@ -8,6 +8,8 @@ appId: app.jpteq.trader
     id: "offer-eligible"
 - tapOn:
     id: "clock-in"
+- runFlow:
+    file: parts/reminders.yaml
 - extendedWaitUntil:
     visible:
       id: "sync-attention"

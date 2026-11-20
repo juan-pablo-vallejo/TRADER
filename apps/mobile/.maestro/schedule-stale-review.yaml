@@ -4,6 +4,14 @@ appId: app.jpteq.trader
 ---
 - tapOn:
     id: "sync-pending|sync-synced|sync-attention"
+# The chip changes its word as entries go; a tap that lands mid-change opens nothing.
+- runFlow:
+    when:
+      notVisible:
+        id: "sync-now"
+    commands:
+      - tapOn:
+          id: "sync-pending|sync-synced|sync-attention"
 - tapOn:
     id: "sync-now"
 - tapOn:

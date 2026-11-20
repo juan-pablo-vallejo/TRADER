@@ -134,6 +134,24 @@ export type Catalog = {
       clock_skewed: string;
     };
   };
+  // Shift reminders: the phone's own notifications (reminders.tsx).
+  reminders: {
+    // One sentence of why, before the system's own question.
+    why: string;
+    turnOn: string;
+    notNow: string;
+    // In Me.
+    label: string;
+    on: string;
+    off: string;
+    refused: string;
+    // Android's name for the kind of notification, in the system's settings.
+    channel: string;
+    startTitle: (job: string) => string;
+    startBody: (time: string) => string;
+    endTitle: (job: string) => string;
+    endBody: (time: string) => string;
+  };
   age: {
     justNow: string;
     minutes: (n: number) => string;

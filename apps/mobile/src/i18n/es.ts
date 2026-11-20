@@ -143,6 +143,21 @@ export const es: Catalog = {
       clock_skewed: "El reloj de este teléfono parecía estar mal.",
     },
   },
+  reminders: {
+    why: "TRADER puede avisarte cuando empieza un turno y no has marcado entrada, y cuando termina y sigues con la entrada marcada.",
+    turnOn: "Activar avisos",
+    notNow: "Ahora no",
+    label: "Avisos de turno",
+    on: "Activados",
+    off: "Desactivados",
+    refused:
+      "Este teléfono no deja que TRADER envíe notificaciones. Permítelas en los ajustes del teléfono.",
+    channel: "Avisos de turno",
+    startTitle: (job) => `Tu turno en ${job} está empezando`,
+    startBody: (time) => `Empieza a las ${time}. Marca entrada cuando llegues.`,
+    endTitle: (job) => `Tu turno en ${job} terminó`,
+    endBody: (time) => `Terminó a las ${time} y sigues con la entrada marcada.`,
+  },
   age: {
     justNow: "ahora mismo",
     minutes: (n) => (n === 1 ? "hace 1 minuto" : `hace ${n} minutos`),

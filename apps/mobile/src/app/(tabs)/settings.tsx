@@ -11,6 +11,7 @@ import { Keyboard, ScrollView, StyleSheet, Text, TextInput, View } from "react-n
 import { createApi } from "../../api";
 import { apiUrl, BUILD } from "../../config";
 import { useStrings } from "../../i18n";
+import { useReminders } from "../../reminders";
 import { headersFor, useSession } from "../../session";
 import { useSync } from "../../sync/provider";
 import { color, size, space, type } from "../../theme";
@@ -33,6 +34,8 @@ export default function Me() {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<"saved" | "failed" | null>(null);
+  const reminders = useReminders();
+  const [remindersRefused, setRemindersRefused] = useState(false);
 
   // The name comes with the pull; the contact phone only from the server, when reachable.
   useEffect(() => {
@@ -91,6 +94,8 @@ export default function Me() {
         contentContainerStyle={styles.page}
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
+        // The page scrolls clear of the keyboard, so Save is never under it.
+        automaticallyAdjustKeyboardInsets
       >
         <Text style={text.label}>{t.settings.language}</Text>
         <View style={styles.pair}>
@@ -155,6 +160,36 @@ export default function Me() {
             }
           >
             {note === "saved" ? t.settings.saved : t.settings.saveFailed}
+          </Text>
+        )}
+
+        <Text style={text.label}>{t.reminders.label}</Text>
+        <View style={styles.pair}>
+          <View style={styles.fill}>
+            <Button
+              testID="reminders-on"
+              kind={reminders.setting === "on" ? "primary" : "secondary"}
+              label={t.reminders.on}
+              onPress={() =>
+                void reminders.turnOn().then((granted) => setRemindersRefused(!granted))
+              }
+            />
+          </View>
+          <View style={styles.fill}>
+            <Button
+              testID="reminders-off"
+              kind={reminders.setting === "on" ? "secondary" : "primary"}
+              label={t.reminders.off}
+              onPress={() => {
+                setRemindersRefused(false);
+                void reminders.turnOff();
+              }}
+            />
+          </View>
+        </View>
+        {remindersRefused && (
+          <Text testID="reminders-refused" style={text.attention}>
+            {t.reminders.refused}
           </Text>
         )}
 

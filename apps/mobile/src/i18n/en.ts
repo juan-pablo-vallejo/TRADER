@@ -137,6 +137,21 @@ export const en: Catalog = {
       clock_skewed: "This phone's clock looked wrong.",
     },
   },
+  reminders: {
+    why: "TRADER can remind you when a shift starts and you have not clocked in, and when it ends and you are still on the clock.",
+    turnOn: "Turn on reminders",
+    notNow: "Not now",
+    label: "Shift reminders",
+    on: "On",
+    off: "Off",
+    refused:
+      "This phone is not letting TRADER send notifications. Allow them in the phone's settings.",
+    channel: "Shift reminders",
+    startTitle: (job) => `Your shift at ${job} is starting`,
+    startBody: (time) => `It starts at ${time}. Clock in when you are there.`,
+    endTitle: (job) => `Your shift at ${job} has ended`,
+    endBody: (time) => `It ended at ${time} and you are still on the clock.`,
+  },
   age: {
     justNow: "just now",
     minutes: (n) => (n === 1 ? "1 minute ago" : `${n} minutes ago`),

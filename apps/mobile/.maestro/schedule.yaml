@@ -12,6 +12,8 @@ appId: app.jpteq.trader
 - takeScreenshot: today-shift
 - tapOn:
     id: "clock-in"
+- runFlow:
+    file: parts/reminders.yaml
 - assertVisible:
     id: "clock-working"
 - extendedWaitUntil:

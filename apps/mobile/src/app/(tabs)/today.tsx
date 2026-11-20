@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { dayName, duration, timeOfDay, wallTime } from "../../format";
 import { useStrings } from "../../i18n";
+import { useReminders } from "../../reminders";
 import { offerAt, type Tap, wallClock } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
 import { fromEarlierDay, sessionWorkedMs, telLink, timer } from "../../sync/today";
@@ -38,6 +39,8 @@ export default function Today() {
   const [asking, setAsking] = useState<"clock-out" | "switch" | null>(null);
   const [opened, setOpened] = useState<string | null>(null);
   const [captured, setCaptured] = useState(false);
+  const { setting: remindersSetting, turnOn, turnOff } = useReminders();
+  const [askReminders, setAskReminders] = useState(false);
   const capturedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The second moves the timer while the clock runs; the minute moves the offer and the
   // hours otherwise. Nothing else on the screen needs a clock.
@@ -127,6 +130,8 @@ export default function Today() {
   // Neither waits on the network, and a phone with no haptics simply stays quiet.
   const capture = async (what: Tap) => {
     if (!(await tap(what))) return;
+    // Asked once, after the first clock-in: the moment a reminder first makes sense.
+    if (what.action === "start" && remindersSetting === null) setAskReminders(true);
     setCaptured(true);
     if (capturedTimer.current !== null) clearTimeout(capturedTimer.current);
     capturedTimer.current = setTimeout(() => setCaptured(false), CAPTURED_MS);
@@ -416,6 +421,39 @@ export default function Today() {
       </Sheet>
 
       <JobSheet job={sheetJob} onClose={() => setOpened(null)} />
+
+      {/* One sentence of why, before the system's own question. Either answer is kept, so
+          this is never asked again; Me has the switch. */}
+      <Sheet
+        visible={askReminders}
+        onClose={() => {
+          setAskReminders(false);
+          void turnOff();
+        }}
+        title={t.reminders.label}
+        testID="reminders-sheet"
+      >
+        <Text testID="reminders-why" style={text.body}>
+          {t.reminders.why}
+        </Text>
+        <Button
+          testID="reminders-turn-on"
+          label={t.reminders.turnOn}
+          onPress={() => {
+            setAskReminders(false);
+            void turnOn();
+          }}
+        />
+        <Button
+          testID="reminders-not-now"
+          kind="secondary"
+          label={t.reminders.notNow}
+          onPress={() => {
+            setAskReminders(false);
+            void turnOff();
+          }}
+        />
+      </Sheet>
     </Screen>
   );
 }

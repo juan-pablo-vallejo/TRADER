@@ -5,6 +5,7 @@ import { Redirect, Tabs } from "expo-router";
 import type { ColorValue } from "react-native";
 
 import { useStrings } from "../../i18n";
+import { RemindersProvider } from "../../reminders";
 import { useSession } from "../../session";
 import { SyncProvider } from "../../sync/provider";
 import { color } from "../../theme";
@@ -27,39 +28,41 @@ export default function TabsLayout() {
   if (session === null) return <Redirect href="/sign-in" />;
   return (
     <SyncProvider>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: color.accent,
-          tabBarInactiveTintColor: color.inkSecondary,
-          tabBarLabelStyle: { fontSize: 13, fontWeight: "600" },
-        }}
-      >
-        <Tabs.Screen
-          name="today"
-          options={{
-            title: t.tabs.today,
-            tabBarButtonTestID: "tab-today",
-            tabBarIcon: icon("time-outline"),
+      <RemindersProvider>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: color.accent,
+            tabBarInactiveTintColor: color.inkSecondary,
+            tabBarLabelStyle: { fontSize: 13, fontWeight: "600" },
           }}
-        />
-        <Tabs.Screen
-          name="week"
-          options={{
-            title: t.tabs.week,
-            tabBarButtonTestID: "tab-week",
-            tabBarIcon: icon("calendar-outline"),
-          }}
-        />
-        <Tabs.Screen
-          name="settings"
-          options={{
-            title: t.tabs.settings,
-            tabBarButtonTestID: "tab-settings",
-            tabBarIcon: icon("person-outline"),
-          }}
-        />
-      </Tabs>
+        >
+          <Tabs.Screen
+            name="today"
+            options={{
+              title: t.tabs.today,
+              tabBarButtonTestID: "tab-today",
+              tabBarIcon: icon("time-outline"),
+            }}
+          />
+          <Tabs.Screen
+            name="week"
+            options={{
+              title: t.tabs.week,
+              tabBarButtonTestID: "tab-week",
+              tabBarIcon: icon("calendar-outline"),
+            }}
+          />
+          <Tabs.Screen
+            name="settings"
+            options={{
+              title: t.tabs.settings,
+              tabBarButtonTestID: "tab-settings",
+              tabBarIcon: icon("person-outline"),
+            }}
+          />
+        </Tabs>
+      </RemindersProvider>
     </SyncProvider>
   );
 }

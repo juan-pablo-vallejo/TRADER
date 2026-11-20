@@ -300,7 +300,7 @@ Android user.
 
   Done when each screen has been seen on both simulators in both languages.
 
-- [ ] 10. **Phone: shift reminders.** Notifications the phone schedules for itself from the
+- [x] 10. **Phone: shift reminders.** Notifications the phone schedules for itself from the
       shifts in the last pull: at a shift's start when nobody has clocked in on it, and at
       its end while the clock is still running. A tap opens Today. No server, no push token,
       no location in the background.
@@ -650,6 +650,27 @@ Android user.
       the tap on Sign in never reached the API, and the same flow passed on the next two
       runs unchanged. If it recurs, wait for the keyboard before the tap
       (`apps/mobile/.maestro/parts/sign-in.yaml`).
+
+- [ ] Item 10, for the signing in item 13: `expo-notifications`' config plugin adds the push
+      entitlement (`aps-environment`) to the iOS build by default. It is switched off in
+      `apps/mobile/app.json` (`enableRemoteNotifications: false`), and the generated
+      entitlements file carries no such line: the reminders never leave the phone, so the
+      App ID needs no Push Notifications capability. On Android the build declares
+      `POST_NOTIFICATIONS` and `RECEIVE_BOOT_COMPLETED` (reminders survive a restart) and no
+      exact-alarm permission.
+- [ ] Item 10, seen on the emulator: without an exact alarm Android delivered a reminder
+      one to two minutes late; the iPhone was on time. A pull in that gap used to cancel
+      the reminder as past, so none arrived at all; one whose time has come is now left
+      pending for fifteen minutes and never set twice
+      (`apps/mobile/src/sync/reminders.ts`). The sentence states the shift's own time, so
+      a late one still reads true.
+- [ ] Item 10, not seen: a tap on a reminder opening Today on the iPhone. It was seen on
+      Android. On the simulator the tap was driven through Maestro, whose driver crashed
+      the app (`XCTAutomationSupport`, not the app's own code); try it by hand on the first
+      TestFlight build.
+- [ ] The Android emulator's keyboard opens a "Try out your stylus" tutorial over a text
+      field and fails the Me flow. Once per emulator:
+      `adb shell settings put secure stylus_handwriting_enabled 0`.
 
 ## After MVP
 
