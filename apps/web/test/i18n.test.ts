@@ -36,7 +36,7 @@ const SAME = new Set([
   "languages.en",
   "languages.es",
   "none",
-  "entryId",
+  "dayOf",
   "duration",
   "hoursValue",
   "schedule.weekOf",

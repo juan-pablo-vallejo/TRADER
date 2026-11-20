@@ -12,6 +12,8 @@ import {
   voidOperation,
   type LedgerEvent,
   type LedgerSession,
+  missingPreview,
+  previewOf,
 } from "../src/app/(office)/hours/repair-set";
 
 const NY = "America/New_York";
@@ -243,5 +245,99 @@ describe("a set's ids", () => {
     expect(other.operations[0]!.id).not.toBe(first.operations[0]!.id);
     const changed = minted("someone-else", two().slice(0, 1));
     expect(changed.operations[0]!.id).not.toBe(other.operations[0]!.id);
+  });
+});
+
+describe("the hours a draft would give, as the times are typed", () => {
+  const at = (hhmm: string) => new Date(`2026-10-05T${hhmm}:00-04:00`);
+  const H = 3_600_000;
+
+  it("is the time between clock in and clock out, breaks left out", () => {
+    expect(
+      previewOf([
+        { type: "started", at: at("07:00") },
+        { type: "ended", at: at("15:30") },
+      ]),
+    ).toEqual({ workedMs: 8.5 * H, open: false });
+    expect(
+      previewOf([
+        { type: "started", at: at("07:00") },
+        { type: "paused", at: at("12:00") },
+        { type: "resumed", at: at("12:30") },
+        { type: "ended", at: at("15:30") },
+      ]),
+    ).toEqual({ workedMs: 8 * H, open: false });
+  });
+
+  it("reads the entries by their times, however they were listed", () => {
+    expect(
+      previewOf([
+        { type: "ended", at: at("15:30") },
+        { type: "resumed", at: at("12:30") },
+        { type: "started", at: at("07:00") },
+        { type: "paused", at: at("12:00") },
+      ]),
+    ).toEqual({ workedMs: 8 * H, open: false });
+  });
+
+  it("counts closed time only while the session is still open, and says so", () => {
+    expect(previewOf([{ type: "started", at: at("07:00") }])).toEqual({
+      workedMs: 0,
+      open: true,
+    });
+    expect(
+      previewOf([
+        { type: "started", at: at("07:00") },
+        { type: "paused", at: at("12:00") },
+      ]),
+    ).toEqual({ workedMs: 5 * H, open: true });
+    // Clocked out from a break: the break is not work.
+    expect(
+      previewOf([
+        { type: "started", at: at("07:00") },
+        { type: "paused", at: at("12:00") },
+        { type: "ended", at: at("12:45") },
+      ]),
+    ).toEqual({ workedMs: 5 * H, open: false });
+  });
+
+  it("guesses nothing: a missing time or an order no session can have is no figure", () => {
+    expect(previewOf([])).toBeNull();
+    expect(
+      previewOf([
+        { type: "started", at: at("07:00") },
+        { type: "ended", at: null },
+      ]),
+    ).toBeNull();
+    // A clock out before the clock in.
+    expect(
+      previewOf([
+        { type: "started", at: at("15:30") },
+        { type: "ended", at: at("07:00") },
+      ]),
+    ).toBeNull();
+    // A break end with no break start.
+    expect(
+      previewOf([
+        { type: "started", at: at("07:00") },
+        { type: "resumed", at: at("12:00") },
+        { type: "ended", at: at("15:30") },
+      ]),
+    ).toBeNull();
+  });
+
+  it("follows a session's draft and the missing-hours form, in the company's zone", () => {
+    expect(
+      missingPreview({ start: "2026-10-05T07:00", end: "2026-10-05T15:30" }, NY),
+    ).toEqual({ workedMs: 8.5 * H, open: false });
+    expect(missingPreview({ start: "2026-10-05T07:00", end: "" }, NY)).toEqual({
+      workedMs: 0,
+      open: true,
+    });
+    expect(missingPreview({ start: "", end: "2026-10-05T15:30" }, NY)).toBeNull();
+    // A time the clocks skipped that day (2:30 on the spring change) is no time.
+    expect(
+      missingPreview({ start: "2026-03-08T02:30", end: "2026-03-08T10:00" }, NY),
+    ).toBeNull();
   });
 });

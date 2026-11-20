@@ -140,7 +140,7 @@ export function EditShift({
         </p>
         <p className="secondary">{s.lockedExplain}</p>
         <p className={styles.link}>
-          <Link href="/hours#entries">{s.correctInLabor}</Link>
+          <Link href="/hours">{s.correctInLabor}</Link>
         </p>
       </Drawer>
     );

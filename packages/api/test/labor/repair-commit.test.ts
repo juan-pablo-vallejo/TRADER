@@ -245,6 +245,42 @@ describe("labor.repair — retries and ids, committed", () => {
   });
 });
 
+describe("labor.repair — what a correction leaves behind", () => {
+  it("leaves the corrected entry's original event exactly as it was, column for column", async () => {
+    const x = await world();
+    const row = async (id: string) =>
+      (
+        await D.owner.select().from(workSessionEvents).where(eq(workSessionEvents.id, id))
+      )[0];
+    const original = await row(x.end);
+    expect(original).toBeDefined();
+
+    // Corrected, and corrected again: the original is replaced twice over.
+    const first = correct(x.end, "ended", x.d.J, "19:00");
+    expect((await repair(x.admin.who, x.w.id, [first])).result).toBe("accepted");
+    const second = {
+      ...correct(x.end, "ended", x.d.J, "18:30"),
+      replacesEventId: first.id,
+    };
+    expect((await repair(x.admin.who, x.w.id, [second])).result).toBe("accepted");
+
+    // Every column of the original, its time and its flags among them, reads as before.
+    expect(await row(x.end)).toEqual(original);
+    // And so does the first correction, once the second replaced it.
+    expect(await row(first.id)).toMatchObject({
+      correctsEventId: x.end,
+      flags: ["corrected", "user_timed"],
+    });
+    // The hours follow the correction in effect; the two it replaced are still rows.
+    expect(await accounting(x.w.id)).toMatchObject([{ eligibleWorkedMs: 6.5 * HOUR }]);
+    const kept = await D.owner
+      .select({ id: workSessionEvents.id })
+      .from(workSessionEvents)
+      .where(inArray(workSessionEvents.id, [x.end, first.id, second.id]));
+    expect(kept).toHaveLength(3);
+  });
+});
+
 describe("labor.repair — concurrent repairs, committed", () => {
   it("serializes two admins correcting one root: the second is repair_stale", async () => {
     const x = await world();

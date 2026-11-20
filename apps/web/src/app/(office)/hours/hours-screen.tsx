@@ -11,8 +11,8 @@
 // rounded in the browser. The dates and the presets live in the address
 // (use-url-filters.ts), so a reload or a pasted link shows the same thing.
 //
-// A cell opens that person's entries for that day, beneath (entries-screen.tsx reads the
-// same address). Consumed by page.tsx.
+// A cell opens that person's day in the side panel (day-panel.tsx), and which panel is open
+// is in the address too. Consumed by page.tsx.
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
@@ -27,12 +27,14 @@ import { PageHeader } from "../../page-header";
 import { FlagBadges, StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import { useUrlFilters } from "../../use-url-filters";
-import { ENTRIES_FILTERS } from "./entries-screen";
+import { DayPanel } from "./day-panel";
 import {
+  DAY_FILTERS,
   daysIn,
   HOURS_FILTERS,
   isWeek,
   listRows,
+  panelOf,
   rangeOf,
   stillOpen,
   weekOf,
@@ -56,7 +58,8 @@ function today(): string {
 export function HoursScreen({ signInHref }: { signInHref: string }) {
   const { t, f } = useStrings();
   const [filters, setFilters] = useUrlFilters(HOURS_FILTERS);
-  const [, setEntries] = useUrlFilters(ENTRIES_FILTERS);
+  const [dayFilters, setDay] = useUrlFilters(DAY_FILTERS);
+  const panel = panelOf(dayFilters);
   const range = rangeOf(filters, today());
   const flagged = filters.flagged === "1";
   // The dates in the form: the range on screen until someone types others.
@@ -165,10 +168,17 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
           said={said(range)}
           flagged={flagged}
           signInHref={signInHref}
-          onOpen={(workerId, day) => {
-            setEntries({ who: workerId, day });
-            document.getElementById("entries")?.scrollIntoView();
-          }}
+          onOpen={(workerId, day) => setDay({ who: workerId, day })}
+        />
+      )}
+      {panel !== null && (
+        <DayPanel
+          // Another person or day is another panel, with its own editors.
+          key={`${panel.workerId}-${panel.day}`}
+          workerId={panel.workerId}
+          day={panel.day}
+          signInHref={signInHref}
+          onClose={() => setDay({ who: "", day: "" })}
         />
       )}
     </>

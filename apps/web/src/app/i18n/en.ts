@@ -323,7 +323,6 @@ export const en = {
   deactivateCustomerEffect:
     "No new job can be added for this customer. Its past jobs stay.",
 
-  choosePerson: "Choose a person",
   remove: "Remove",
 
   // Jobs
@@ -352,13 +351,8 @@ export const en = {
   planFrom: "From",
   planThrough: "Through",
   date: "Date",
-  receivedAt: "Received",
 
   // Labor ledger
-  ledger: "A person's entries",
-  ledgerExplain:
-    "One person's recorded hours, day by day, with every entry behind them. Nothing here is erased: a correction is a new entry, and the entry it replaces stays on record.",
-  showLedger: "Show ledger",
   ledgerRange: "Choose up to 31 days, the first no later than the last.",
   emptyLedger: "No hours are recorded for this person on these days.",
   ledgerOpenSession: (day: string) =>
@@ -367,13 +361,8 @@ export const en = {
     eligible: "Counts",
     voided: "Voided",
   },
-  entry: "Entry",
-  recorded: "Recorded",
-  enteredBy: "Entered by",
   // The cell says it whole: a narrow row shows no column heading.
-  enteredByName: (name: string) => `Entered by ${name}`,
   flags: "Flags",
-  entryId: "Id",
   entryTypes: {
     started: "Clock in",
     paused: "Break start",
@@ -381,7 +370,17 @@ export const en = {
     ended: "Clock out",
     voided: "Void",
   },
-  entryReplaced: "Replaced",
+  // The day panel: a person's day, entry by entry.
+  dayOf: (name: string, day: string) => `${name}, ${day}`,
+  entryWas: (time: string) => `Was ${time}`,
+  entryBy: (name: string) => `Recorded by ${name}`,
+  entryReceived: (when: string) => `received ${when}`,
+  noLocation: "No location",
+  offSite: "Off-site",
+  previewWorked: (worked: string) => `These times give ${worked} worked.`,
+  previewOpen: (worked: string) =>
+    `These times give ${worked} worked so far, with no clock out.`,
+  previewNone: "Enter every time, in order, to see the hours they give.",
   entryVoids: "Voids this session",
   reasonTags: {
     offline: "offline",
@@ -400,8 +399,8 @@ export const en = {
   emptyReconciliation: "No hours are recorded on these days.",
 
   // Labor repair, on the ledger
-  repair: "Repair",
-  repairOf: (job: string, started: string) => `Repair ${job}, ${started}`,
+  repair: "Correct",
+  repairOf: (job: string, started: string) => `Correct ${job}, ${started}`,
   repairExplain:
     "Change a time or the job, or add an entry that is missing. Each change is a new entry and counts at once.",
   repairTimes: "Times",
@@ -409,7 +408,7 @@ export const en = {
   addEntry: "Add an entry",
   addedEntryType: (n: number) => `Entry ${n}`,
   addedEntryTime: (n: number) => `Entry ${n} time`,
-  saveRepair: "Save repair",
+  saveRepair: "Save correction",
   repairSaved: "Saved.",
   repairBadTime:
     "Enter a date and a time. A time the clocks skipped that day cannot be used.",
@@ -428,7 +427,7 @@ export const en = {
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
   jobOptionArchived: (name: string) => `${name} · archived`,
-  // One sentence per answer of labor.repair (labor/repair.ts); hours/entries-screen.tsx holds this
+  // One sentence per answer of labor.repair (labor/repair.ts); hours/day-panel.tsx holds this
   // list to the server's codes.
   repairRejected: {
     no_open_session:

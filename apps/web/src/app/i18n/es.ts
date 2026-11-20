@@ -304,7 +304,6 @@ export const es: Catalog = {
   deactivateCustomerEffect:
     "No se podrá agregar ninguna obra nueva para este cliente. Sus obras anteriores se conservan.",
 
-  choosePerson: "Elige una persona",
   remove: "Quitar",
 
   emptyJobs: "No hay obras que mostrar.",
@@ -332,12 +331,7 @@ export const es: Catalog = {
   planFrom: "Desde",
   planThrough: "Hasta",
   date: "Fecha",
-  receivedAt: "Recibido",
 
-  ledger: "Los registros de una persona",
-  ledgerExplain:
-    "Las horas registradas de una persona, día por día, con cada registro que hay detrás. Aquí nada se borra: una corrección es un registro nuevo, y el que reemplaza se conserva.",
-  showLedger: "Mostrar registros",
   ledgerRange: "Elige hasta 31 días, el primero no después del último.",
   emptyLedger: "No hay horas registradas para esta persona en estos días.",
   ledgerOpenSession: (day) =>
@@ -346,12 +340,7 @@ export const es: Catalog = {
     eligible: "Cuenta",
     voided: "Anulada",
   },
-  entry: "Registro",
-  recorded: "Registrado",
-  enteredBy: "Lo anotó",
-  enteredByName: (name) => `Lo anotó ${name}`,
   flags: "Avisos",
-  entryId: "Id",
   entryTypes: {
     started: "Entrada",
     paused: "Inicio de descanso",
@@ -359,7 +348,16 @@ export const es: Catalog = {
     ended: "Salida",
     voided: "Anulación",
   },
-  entryReplaced: "Reemplazado",
+  dayOf: (name, day) => `${name}, ${day}`,
+  entryWas: (time) => `Antes: ${time}`,
+  entryBy: (name) => `Lo anotó ${name}`,
+  entryReceived: (when) => `recibido el ${when}`,
+  noLocation: "Sin ubicación",
+  offSite: "Fuera de la obra",
+  previewWorked: (worked) => `Estas horas dan ${worked} trabajadas.`,
+  previewOpen: (worked) =>
+    `Estas horas dan ${worked} trabajadas hasta ahora, sin salida.`,
+  previewNone: "Escribe todas las horas, en orden, para ver cuánto dan.",
   entryVoids: "Anula esta sesión",
   reasonTags: {
     offline: "sin conexión",

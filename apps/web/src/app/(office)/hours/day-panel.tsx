@@ -1,20 +1,23 @@
 "use client";
 
-// One person's entries: the office picks a person and up to 31 days and reads their sessions
-// by work date as the server derives them, each with every entry behind it and its flags:
-// the entries in effect, the ones a correction replaced, and a void. Times are shown in the
-// zone the work dates were judged in, never the browser's.
+// A person's day, in the side panel a cell of the Hours week opens: each session of that
+// work date as the server derives it, and under it each entry with its time, who recorded
+// it and its flags. A correction stands beside the entry it replaced, both values shown:
+// nothing here is erased. Times are in the zone the work dates were judged in, never the
+// browser's.
 //
-// It is also where the office fixes a mistake, with a correcting entry. A session opens an
-// editor beneath it: change the time of an entry in effect or the job of its clock in, add
-// entries that are missing, or void the session; above the days, hours nobody recorded are
-// added whole. Each save is one `labor.repair` set (repair-set.ts), written all or nothing,
-// and it takes effect at once; what it wrote is read back from the server, so the screen
-// never shows a correction the server has not confirmed.
+// It is also where the office fixes a mistake, and the action is named Correct, never
+// Edit: nothing is edited. A session opens its editor inside the panel: change the time
+// of an entry in effect or the job of its clock in, add entries that are missing, or void
+// the session; above the sessions, hours nobody recorded are added whole. As the times
+// are typed the hours they would give are shown, a preview only (repair-set.ts). Each save
+// is one `labor.repair` set, written all or nothing, taking effect at once; what it wrote
+// is read back from the server, so the panel never shows a correction the server has not
+// confirmed, and the week behind it is read again.
 //
-// The roster for the picker, `labor.ledger` once a lookup is asked for, and the jobs a
-// correction may name. Consumed by page.tsx.
-import { useMutation, useQuery } from "@tanstack/react-query";
+// Which person and day is the address's to say (hours-view.ts, DAY_FILTERS), so a panel
+// can be linked. Consumed by hours-screen.tsx.
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 
 import type { AppRouter } from "@trader/api";
@@ -23,40 +26,32 @@ import type { inferRouterOutputs } from "@trpc/server";
 import controls from "../../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../../failure";
 import { Field } from "../../field";
-import { addDays } from "../../format";
 import { Note } from "../../note";
 import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor";
 import { useStrings } from "../../i18n";
-import table from "../../table.module.css";
+import { SidePanel } from "../../side-panel";
+import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
-import { useUrlFilters } from "../../use-url-filters";
-import styles from "./entries.module.css";
+import styles from "./day-panel.module.css";
 import {
   createMinter,
   draftOf,
   inEffect,
   missingHours,
+  missingPreview,
   sessionOperations,
+  sessionPreview,
   voidOperation,
   type AddedType,
+  type LedgerEvent,
   type LedgerSession,
+  type Preview,
   type RepairInput,
   type SessionDraft,
   type Unminted,
 } from "./repair-set";
 
 type Lookup = { workerId: string; from: string; to: string };
-
-// The longest range the server reads at once (labor/ledger.ts).
-const MAX_RANGE_DAYS = 31;
-
-// Today as the browser's calendar day, YYYY-MM-DD, built from parts: `toISOString` is UTC,
-// which is tomorrow in the evening in Eastern.
-function today(): string {
-  const now = new Date();
-  const two = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
-}
 
 // Every answer `labor.repair` refuses with has a sentence: a code added on the server fails
 // to compile here until it has one.
@@ -78,117 +73,127 @@ type JobOption = { id: string; name: string; archived: boolean };
 type Notice = { key: string; text: string; ok: boolean };
 type Outcome = "saved" | "changed";
 
-// A person and a day in the address: what a cell of the week table opens. Both or
-// neither; with both, this section shows that person's entries of that day.
-export const ENTRIES_FILTERS = { who: "", day: "" };
-
-export function EntriesSection({ signInHref }: { signInHref: string }) {
-  const { t } = useStrings();
+export function DayPanel({
+  workerId,
+  day,
+  signInHref,
+  onClose,
+}: {
+  workerId: string;
+  day: string;
+  signInHref: string;
+  onClose: () => void;
+}) {
+  const { t, f } = useStrings();
   const trpc = useTRPC();
-  const roster = useQuery(trpc.roster.list.queryOptions());
-  const [linked] = useUrlFilters(ENTRIES_FILTERS);
-  const [workerId, setWorkerId] = useState("");
-  const [to, setTo] = useState(today);
-  const [from, setFrom] = useState(() => addDays(today(), -6));
-  const [asked, setAsked] = useState<Lookup | null>(null);
-  const [rangeError, setRangeError] = useState(false);
-  // The address names a person and a day: the form and the entries follow it, once per
-  // change of address, and the form stays free to ask for something else after.
-  const [followed, setFollowed] = useState("");
-  const link = `${linked.who}|${linked.day}`;
-  if (link !== followed) {
-    setFollowed(link);
-    if (/^[0-9a-f-]{36}$/.test(linked.who) && /^\d{4}-\d{2}-\d{2}$/.test(linked.day)) {
-      setWorkerId(linked.who);
-      setFrom(linked.day);
-      setTo(linked.day);
-      setRangeError(false);
-      setAsked({ workerId: linked.who, from: linked.day, to: linked.day });
+  const asked: Lookup = { workerId, from: day, to: day };
+  // The same read the ledger below makes: here only for the person's name in the title.
+  const ledger = useQuery(
+    trpc.labor.ledger.queryOptions(asked, { refetchOnWindowFocus: false }),
+  );
+  const title =
+    ledger.data === undefined
+      ? f.weekDay(day)
+      : t.dayOf(ledger.data.worker.name, f.weekDay(day));
+  return (
+    <SidePanel title={title} onClose={onClose} wide>
+      <Ledger asked={asked} signInHref={signInHref} />
+    </SidePanel>
+  );
+}
+
+// An entry's flags as badges. A `location` flag says which it is: no stamp was recorded,
+// or one was and it is off the jobsite.
+function EntryFlags({ entry }: { entry: LedgerEvent }) {
+  const { t } = useStrings();
+  if (entry.flags.length === 0) return null;
+  return (
+    <span className={styles.badges}>
+      {entry.flags.map((flag) => (
+        <StatusBadge
+          key={flag}
+          tone="attention"
+          label={
+            flag === "location"
+              ? entry.hasLocation
+                ? t.offSite
+                : t.noLocation
+              : t.reasonTags[flag]
+          }
+        />
+      ))}
+    </span>
+  );
+}
+
+// A session's entries: one line per entry in effect, in the order they happened, and
+// under each the entries a correction replaced, with what they said. A void is a line of
+// its own, last.
+function Entries({ session, zone }: { session: LedgerSession; zone: string }) {
+  const { t, f } = useStrings();
+  const byRoot = new Map<string, LedgerEvent[]>();
+  const voids: LedgerEvent[] = [];
+  for (const e of session.events) {
+    if (e.type === "voided") voids.push(e);
+    else {
+      const root = e.correctsEventId ?? e.id;
+      byRoot.set(root, [...(byRoot.get(root) ?? []), e]);
     }
   }
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (workerId === "" || from === "" || to === "") return;
-    const bad = from > to || to > addDays(from, MAX_RANGE_DAYS - 1);
-    setRangeError(bad);
-    if (!bad) setAsked({ workerId, from, to });
-  };
+  const rows = [...byRoot.values()]
+    .map((list) => ({
+      now: list.find((e) => e.effect === "in_effect") ?? list.at(-1)!,
+      before: list.filter((e) => e.effect === "superseded"),
+    }))
+    .sort((a, b) => a.now.clientTimestamp.getTime() - b.now.clientTimestamp.getTime());
+  const by = (e: LedgerEvent) =>
+    `${t.entryBy(e.initiator.name)} · ${t.entryReceived(f.stamp(e.serverTimestamp, zone))}`;
   return (
-    <section id="entries" aria-labelledby="entries-heading">
-      <h2 id="entries-heading" className="heading">
-        {t.ledger}
-      </h2>
-      {roster.isPending ? (
-        <p className="body">{t.loading}</p>
-      ) : roster.isError ? (
-        <Failure
-          error={roster.error}
-          signInHref={signInHref}
-          onRetry={() => void roster.refetch()}
-        />
-      ) : (
-        <>
-          <p className={`secondary ${styles.explain}`}>{t.ledgerExplain}</p>
-          <form aria-label={t.ledger} className={controls.card} onSubmit={submit}>
-            <div className={styles.lookupGrid}>
-              <Field id="ledger-person" label={t.person}>
-                <select
-                  id="ledger-person"
-                  className={controls.select}
-                  required
-                  value={workerId}
-                  onChange={(e) => setWorkerId(e.target.value)}
-                >
-                  <option value="">{t.choosePerson}</option>
-                  {roster.data.map((person) => (
-                    <option key={person.id} value={person.id}>
-                      {person.deactivatedAt === null
-                        ? person.name
-                        : `${person.name} · ${t.deactivated.toLowerCase()}`}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field id="ledger-from" label={t.planFrom}>
-                <input
-                  id="ledger-from"
-                  className={controls.input}
-                  type="date"
-                  required
-                  value={from}
-                  onChange={(e) => setFrom(e.target.value)}
-                />
-              </Field>
-              <Field id="ledger-to" label={t.planThrough}>
-                <input
-                  id="ledger-to"
-                  className={controls.input}
-                  type="date"
-                  required
-                  value={to}
-                  aria-invalid={rangeError}
-                  aria-describedby={rangeError ? "ledger-range" : undefined}
-                  onChange={(e) => setTo(e.target.value)}
-                />
-                {rangeError && (
-                  <p
-                    id="ledger-range"
-                    className={`secondary ${controls.error}`}
-                    role="alert"
-                  >
-                    {t.ledgerRange}
-                  </p>
-                )}
-              </Field>
-            </div>
-            <button type="submit" className={controls.primary}>
-              {t.showLedger}
-            </button>
-          </form>
-          {asked !== null && <Ledger asked={asked} signInHref={signInHref} />}
-        </>
-      )}
-    </section>
+    <ul className={styles.entries}>
+      {rows.map(({ now, before }) => (
+        <li key={now.id}>
+          <p className={styles.entry}>
+            <span className="body-strong">{t.entryTypes[now.type]}</span>
+            <span className={styles.time}>{f.stamp(now.clientTimestamp, zone)}</span>
+            <EntryFlags entry={now} />
+          </p>
+          {before.map((was) => (
+            <p key={was.id} className={`secondary ${styles.was}`}>
+              <span>
+                {t.entryWas(f.stamp(was.clientTimestamp, zone))}
+                {was.job.id !== now.job.id && ` · ${was.job.name}`}
+              </span>
+              <EntryFlags entry={was} />
+              <span>{by(was)}</span>
+            </p>
+          ))}
+          <p className="secondary">{by(now)}</p>
+        </li>
+      ))}
+      {voids.map((e) => (
+        <li key={e.id}>
+          <p className={styles.entry}>
+            <span className="body-strong">{t.entryVoids}</span>
+            <span className={styles.time}>{f.stamp(e.serverTimestamp, zone)}</span>
+          </p>
+          <p className="secondary">{t.entryBy(e.initiator.name)}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// The hours a draft would give, said beneath its times as they are typed.
+function PreviewLine({ preview }: { preview: Preview }) {
+  const { t, f } = useStrings();
+  return (
+    <p className={`secondary ${styles.preview}`} role="status">
+      {preview === null
+        ? t.previewNone
+        : preview.open
+          ? t.previewOpen(f.duration(preview.workedMs))
+          : t.previewWorked(f.duration(preview.workedMs))}
+    </p>
   );
 }
 
@@ -201,6 +206,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
     trpc.labor.ledger.queryOptions(asked, { refetchOnWindowFocus: false }),
   );
   const jobs = useQuery(trpc.job.list.queryOptions());
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   if (ledger.isPending) return <p className="body">{t.loading}</p>;
@@ -215,7 +221,6 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   }
   const r = ledger.data;
   const zone = r.timezone;
-  const days = [...new Set(r.sessions.map((s) => s.workDate))];
   const openElsewhere =
     r.openSession !== null &&
     !r.sessions.some((s) => s.rootEventId === r.openSession?.rootEventId);
@@ -244,6 +249,8 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
       document.getElementById(toggleId(key))?.focus();
     }
     void ledger.refetch();
+    // The week behind the panel shows the hours as they are now.
+    void queryClient.invalidateQueries(trpc.labor.hours.queryFilter());
   };
   const noteFor = (key: string) => (
     <Note
@@ -254,14 +261,8 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
 
   return (
     <section aria-label={r.worker.name}>
-      <h2 className={`heading ${styles.heading}`}>{r.worker.name}</h2>
       <p className={`secondary ${styles.line}`}>
-        {[
-          t.roles[r.worker.role],
-          r.worker.active ? null : t.deactivated,
-          `${f.day(asked.from)} – ${f.day(asked.to)}`,
-          t.timesIn(zone),
-        ]
+        {[t.roles[r.worker.role], r.worker.active ? null : t.deactivated, t.timesIn(zone)]
           .filter((part) => part !== null)
           .join(" · ")}
       </p>
@@ -296,116 +297,52 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
       {r.sessions.length === 0 ? (
         <EmptyState text={t.emptyLedger} />
       ) : (
-        days.map((workDate) => (
-          <div key={workDate} className={styles.day}>
-            <h3 className="heading">{f.weekDay(workDate)}</h3>
-            {r.sessions
-              .filter((s) => s.workDate === workDate)
-              .map((s) => (
-                <div key={s.rootEventId} className={styles.session}>
-                  <h4 className="body-strong">
-                    {s.job.name} · {f.clock(s.startedAt, zone)} –{" "}
-                    {s.endedAt === null ? "" : f.clock(s.endedAt, zone)}
-                  </h4>
-                  <p className={`secondary ${styles.line} ${styles.flags}`}>
-                    <span>
-                      {[
-                        `${t.worked} ${f.duration(s.structuralWorkedMs)}`,
-                        s.breakMs === 0 ? null : `${t.breaks} ${f.duration(s.breakMs)}`,
-                        s.job.status === "archived" ? t.jobStatus.archived : null,
-                        s.corrected ? t.sessionEdited : null,
-                        t.sessionCounts[s.accounting],
-                      ]
-                        .filter((part) => part !== null)
-                        .join(" · ")}
-                    </span>
-                    {!s.complete && (
-                      <span className={table.pillAttention}>{t.stillOpen}</span>
-                    )}
-                  </p>
-                  <table className={table.table}>
-                    <thead>
-                      <tr>
-                        <th scope="col">{t.entry}</th>
-                        <th scope="col" className={table.number}>
-                          {t.recorded}
-                        </th>
-                        <th scope="col" className={table.number}>
-                          {t.receivedAt}
-                        </th>
-                        <th scope="col">{t.enteredBy}</th>
-                        <th scope="col">{t.flags}</th>
-                        <th scope="col">{t.entryId}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {s.events.map((e) => {
-                        const by =
-                          e.initiator.id === r.worker.id
-                            ? ""
-                            : t.enteredByName(e.initiator.name);
-                        const flags = e.flags
-                          .map((reason) => t.reasonTags[reason])
-                          .join(", ");
-                        const empty = (text: string) =>
-                          text === "" ? { "data-empty": "" } : {};
-                        return (
-                          <tr
-                            key={e.id}
-                            className={
-                              e.effect === "superseded" ? styles.replaced : undefined
-                            }
-                          >
-                            <td data-label={t.entry} className="body-strong">
-                              {t.entryTypes[e.type]}
-                              {e.effect === "superseded" && ` (${t.entryReplaced})`}
-                              {e.effect === "void" && ` (${t.entryVoids})`}
-                            </td>
-                            <td data-label={t.recorded} className={table.number}>
-                              {f.stamp(e.clientTimestamp, zone)}
-                            </td>
-                            <td data-label={t.receivedAt} className={table.number}>
-                              {f.stamp(e.serverTimestamp, zone)}
-                            </td>
-                            <td data-label={t.enteredBy} {...empty(by)}>
-                              {by}
-                            </td>
-                            <td data-label={t.flags} {...empty(flags)}>
-                              {flags}
-                            </td>
-                            <td data-label={t.entryId}>{e.id.slice(0, 8)}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                  <div className={styles.actions}>
-                    <button
-                      id={toggleId(s.rootEventId)}
-                      type="button"
-                      className={controls.textAction}
-                      aria-expanded={open === s.rootEventId}
-                      aria-controls={`repair-${s.rootEventId}`}
-                      aria-label={t.repairOf(s.job.name, f.stamp(s.startedAt, zone))}
-                      onClick={() => toggle(s.rootEventId)}
-                    >
-                      {t.repair}
-                    </button>
-                    {noteFor(s.rootEventId)}
-                  </div>
-                  {open === s.rootEventId && (
-                    <SessionRepair
-                      // A ledger read again is a new draft: the entries in effect may differ.
-                      key={ledger.dataUpdatedAt}
-                      session={s}
-                      workerId={r.worker.id}
-                      zone={zone}
-                      jobs={jobOptions}
-                      onDone={settle(s.rootEventId)}
-                    />
-                  )}
-                </div>
-              ))}
+        r.sessions.map((s) => (
+          <div key={s.rootEventId} className={styles.session}>
+            <h3 className="body-strong">
+              {s.job.name} · {f.clock(s.startedAt, zone)} –{" "}
+              {s.endedAt === null ? "" : f.clock(s.endedAt, zone)}
+            </h3>
+            <p className={`secondary ${styles.line} ${styles.flags}`}>
+              <span>
+                {[
+                  `${t.worked} ${f.duration(s.structuralWorkedMs)}`,
+                  s.breakMs === 0 ? null : `${t.breaks} ${f.duration(s.breakMs)}`,
+                  s.job.status === "archived" ? t.jobStatus.archived : null,
+                  s.corrected ? t.sessionEdited : null,
+                  t.sessionCounts[s.accounting],
+                ]
+                  .filter((part) => part !== null)
+                  .join(" · ")}
+              </span>
+              {!s.complete && <StatusBadge tone="active" label={t.stillOpen} />}
+            </p>
+            <Entries session={s} zone={zone} />
+            <div className={styles.actions}>
+              <button
+                id={toggleId(s.rootEventId)}
+                type="button"
+                className={controls.textAction}
+                aria-expanded={open === s.rootEventId}
+                aria-controls={`repair-${s.rootEventId}`}
+                aria-label={t.repairOf(s.job.name, f.stamp(s.startedAt, zone))}
+                onClick={() => toggle(s.rootEventId)}
+              >
+                {t.repair}
+              </button>
+              {noteFor(s.rootEventId)}
+            </div>
+            {open === s.rootEventId && (
+              <SessionRepair
+                // A ledger read again is a new draft: the entries in effect may differ.
+                key={ledger.dataUpdatedAt}
+                session={s}
+                workerId={r.worker.id}
+                zone={zone}
+                jobs={jobOptions}
+                onDone={settle(s.rootEventId)}
+              />
+            )}
           </div>
         ))
       )}
@@ -601,6 +538,7 @@ function SessionRepair({
           />
         </div>
       </EditorSection>
+      <PreviewLine preview={sessionPreview(session, draft, zone)} />
       <EditorSection heading={t.repairAdded}>
         {draft.added.map((added, i) => {
           const set = (patch: Partial<SessionDraft["added"][number]>) =>
@@ -741,6 +679,7 @@ function MissingHours({
           onChange={(end) => change({ end })}
         />
       </div>
+      <PreviewLine preview={missingPreview(draft, zone)} />
       <button
         type="submit"
         className={controls.secondary}

@@ -24,6 +24,19 @@ export const MAX_RANGE_DAYS = 31;
 export const HOURS_FILTERS = { range: "this", from: "", to: "", flagged: "" };
 export type HoursFilters = typeof HOURS_FILTERS;
 
+// A person and a day in the address: the day panel a cell opens. Both or neither.
+export const DAY_FILTERS = { who: "", day: "" };
+
+// The panel the address asks for, or null: a person's id and a date, both well formed.
+export function panelOf(
+  filters: typeof DAY_FILTERS,
+): { workerId: string; day: string } | null {
+  return /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(filters.who) &&
+    isDay(filters.day)
+    ? { workerId: filters.who, day: filters.day }
+    : null;
+}
+
 export type Range = { from: string; to: string };
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

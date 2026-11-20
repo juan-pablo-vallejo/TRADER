@@ -5,7 +5,7 @@
 // it to (`repair_stale`); it keeps its entry's type, and only a start may move to another
 // job. An added entry goes on the session's job as the set leaves it. Times are entered as
 // the company's clock read them (zoned.ts); an entry whose time was not touched keeps its
-// instant to the millisecond. Consumed by entries-screen.tsx.
+// instant to the millisecond. Consumed by day-panel.tsx.
 import type { AppRouter } from "@trader/api";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 
@@ -119,6 +119,65 @@ export function missingHours(
   }
   return { ok: true, operations };
 }
+
+// The time worked a draft would give, breaks left out, as the times are typed: a preview
+// beside the editor and never a figure of record (the server folds the ledger and rounds;
+// labor/fold.ts, labor/hours.ts). The entries in effect at their typed times and the added
+// ones, in time order, walked as the fold walks them: working from a clock in or a break
+// end, stopped by a break start or the clock out. Null while a time is missing or
+// impossible, or the order is not one a session can have: nothing is guessed. `open` says
+// the last entry leaves the session on the clock, so the figure is of closed time only.
+export type Preview = { workedMs: number; open: boolean } | null;
+
+type Mark = { type: Positional; at: Date | null };
+
+export function previewOf(marks: readonly Mark[]): Preview {
+  if (marks.length === 0 || marks.some((m) => m.at === null)) return null;
+  // Stable by time: two entries at one minute keep the order they were listed in.
+  const ordered = marks
+    .map((m, index) => ({ type: m.type, at: (m.at as Date).getTime(), index }))
+    .sort((a, b) => a.at - b.at || a.index - b.index);
+  let state: "idle" | "working" | "paused" | "ended" = "idle";
+  let since = 0;
+  let workedMs = 0;
+  for (const m of ordered) {
+    if (m.type === "started" && state === "idle") state = "working";
+    else if (m.type === "paused" && state === "working") {
+      workedMs += m.at - since;
+      state = "paused";
+    } else if (m.type === "resumed" && state === "paused") state = "working";
+    else if (m.type === "ended" && (state === "working" || state === "paused")) {
+      if (state === "working") workedMs += m.at - since;
+      state = "ended";
+    } else return null;
+    since = m.at;
+  }
+  return { workedMs, open: state !== "ended" };
+}
+
+export const sessionPreview = (
+  session: LedgerSession,
+  draft: SessionDraft,
+  timeZone: string,
+): Preview =>
+  previewOf([
+    ...inEffect(session).map((e) => ({
+      type: e.type,
+      at: wallToInstant(draft.times[e.id] ?? "", timeZone),
+    })),
+    ...draft.added.map((a) => ({ type: a.type, at: wallToInstant(a.at, timeZone) })),
+  ]);
+
+export const missingPreview = (
+  draft: { start: string; end: string },
+  timeZone: string,
+): Preview =>
+  previewOf([
+    { type: "started", at: wallToInstant(draft.start, timeZone) },
+    ...(draft.end === ""
+      ? []
+      : [{ type: "ended" as const, at: wallToInstant(draft.end, timeZone) }]),
+  ]);
 
 export const voidOperation = (session: LedgerSession): Unminted => ({
   kind: "void",

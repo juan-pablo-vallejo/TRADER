@@ -385,7 +385,7 @@ Android user.
   reload keeps the range, and each of the six flags has been seen as a badge in both
   languages.
 
-- [ ] 16. **Hours: the day panel and corrections.** `SidePanel`: the schedule's drawer
+- [x] 16. **Hours: the day panel and corrections.** `SidePanel`: the schedule's drawer
       (`schedule/drawer.tsx`) lifted to a shared piece, still a native `<dialog>`, focus
       returned to what opened it, and its state in the address so a panel can be linked. A
       cell of the week table opens that person's day in it, from `labor.ledger`: each
@@ -704,6 +704,19 @@ Android user.
       sideways. Under 720 a row stacks, one line per day.
 - [ ] Item 15: with Flagged only on, the strip of open sessions lists only those whose
       cell is flagged, since the strip reads the same answer as the table.
+
+- [ ] Item 16, seen and not seen. Worked by keyboard alone, in English at 1280 and Spanish
+      at 390 on the demo: Tab to a cell, Enter, the panel, Correct, a time typed with the
+      preview following it, Save, Escape, and focus back on the cell. Add missing hours and
+      Void are the editors the entries section had, now inside the panel; they were not
+      exercised again in this pass.
+- [ ] Item 16: the hours shown as times are typed are a preview worked out in the browser
+      (`hours/repair-set.ts`, previewOf). They are whole minutes of worked time, not the
+      rounded hundredths the server answers once the correction is saved.
+- [ ] Item 16: a `location` flag reads "No location" or "Off-site" in the day panel, where
+      each entry says whether a stamp was recorded. In the week table a day's badge still
+      reads "location": a day's flags are a sum over entries and `labor.hours` does not
+      say which kind.
 
 ## After MVP
 

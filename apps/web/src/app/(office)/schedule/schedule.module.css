@@ -177,35 +177,6 @@
   }
 }
 
-/* The drawer: a native modal dialog. Wide, a panel on the right; narrow, the whole screen.
-   Its backdrop covers the page behind it, the navigation included. */
-.drawer {
-  box-sizing: border-box;
-  width: min(32rem, 100vw);
-  max-width: 100vw;
-  height: 100dvh;
-  max-height: 100dvh;
-  margin: 0 0 0 auto;
-  padding: var(--space-4);
-  overflow-y: auto;
-  color: var(--ink);
-  background: var(--surface);
-  border: 0;
-  border-left: var(--hairline) solid var(--border);
-}
-.drawer::backdrop {
-  background: color-mix(in srgb, var(--ink) 45%, transparent);
-}
-.drawerHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-4);
-}
-.drawerHead h2 {
-  margin: 0;
-}
 .form {
   display: grid;
   gap: 0;
@@ -252,10 +223,4 @@
   display: inline-block;
   min-height: var(--target);
   line-height: var(--target);
-}
-@media (max-width: 767px) {
-  .drawer {
-    width: 100vw;
-    border-left: 0;
-  }
 }
