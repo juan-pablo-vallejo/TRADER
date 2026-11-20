@@ -75,7 +75,8 @@ export function DataTable<Row>({
   const hasTotals = columns.some((c) => c.total !== undefined);
 
   const drawn = (
-    <table className={lines ? `${table.table} ${table.lines}` : table.table}>
+    // `data-keys`: the arrow keys and J and K move through these rows (keyboard-rows.tsx).
+    <table className={lines ? `${table.table} ${table.lines}` : table.table} data-keys>
       <caption className="visually-hidden">{caption}</caption>
       <thead>
         <tr>

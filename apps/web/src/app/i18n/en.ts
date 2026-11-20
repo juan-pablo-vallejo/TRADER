@@ -29,6 +29,25 @@ export const en = {
   },
   // The header's menu behind the person's name.
   account: "Your account",
+  // The keys of the tables and the schedule (keyboard-rows.tsx).
+  keys: {
+    title: "Keyboard",
+    open: "Keyboard shortcuts",
+    explain:
+      "In any table and in the schedule. A key does nothing while you are typing in a field. Everything here can also be done with the pointer or with Tab.",
+    // What each key does. The keys' own names are not words of a language
+    // (keyboard-rows.tsx), but for the space bar.
+    space: "Space",
+    does: {
+      next: "Next row. From anywhere on the screen, J goes to the first row.",
+      previous: "Previous row.",
+      along: "Along the row: the next cell of the week in Hours and in the schedule.",
+      open: "Open the row's panel or page.",
+      close: "Close the panel. The focus goes back to where it was.",
+      tab: "The next control, as everywhere.",
+      help: "This list.",
+    },
+  },
   // The two tabs of one place: a job belongs to a customer.
   jobsTabs: "Jobs and customers",
   // Said to a screen reader while a list's first rows are on their way.

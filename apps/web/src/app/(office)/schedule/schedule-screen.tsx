@@ -121,7 +121,8 @@ function Grid({
   const { t, f } = useStrings();
   const s = t.schedule;
   return (
-    <table className={styles.grid}>
+    // `data-keys`: the keys move through the grid's cards and cells (keyboard-rows.tsx).
+    <table className={styles.grid} data-keys>
       <thead>
         <tr>
           <th scope="col" className="label">

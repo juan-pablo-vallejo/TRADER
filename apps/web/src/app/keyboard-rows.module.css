@@ -1,0 +1,28 @@
+/* The list of keys: each key as a key, and what it does beside it. */
+.keys {
+  margin: var(--space-4) 0 0;
+}
+.keys > div {
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-top: var(--hairline) solid var(--border);
+}
+.keys dt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+.keys dd {
+  margin: 0;
+}
+.keys kbd {
+  padding: 0 var(--space-2);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-control, 6px);
+}

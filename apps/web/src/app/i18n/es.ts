@@ -29,6 +29,23 @@ export const es: Catalog = {
     home: "Volver a la página principal",
   },
   account: "Tu cuenta",
+  keys: {
+    title: "Teclado",
+    open: "Atajos de teclado",
+    explain:
+      "En cualquier tabla y en el horario. Una tecla no hace nada mientras escribes en un campo. Todo esto también se puede hacer con el puntero o con Tab.",
+    space: "Espacio",
+    does: {
+      next: "Fila siguiente. Desde cualquier parte de la pantalla, J va a la primera fila.",
+      previous: "Fila anterior.",
+      along:
+        "A lo largo de la fila: la siguiente celda de la semana en Horas y en el horario.",
+      open: "Abrir el panel o la página de la fila.",
+      close: "Cerrar el panel. El foco vuelve a donde estaba.",
+      tab: "El siguiente control, como en todas partes.",
+      help: "Esta lista.",
+    },
+  },
   jobsTabs: "Obras y clientes",
   loadingRows: "Cargando",
   language: "Idioma",

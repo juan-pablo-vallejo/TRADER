@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Header } from "../header";
+import { KeyboardRows } from "../keyboard-rows";
 import { Nav } from "../nav";
 import { SessionFrame } from "../session-frame";
 import styles from "../shell.module.css";
@@ -17,6 +18,7 @@ export default function OfficeLayout({ children }: { children: ReactNode }) {
         <Nav />
         <main className={styles.main}>{children}</main>
       </div>
+      <KeyboardRows />
     </SessionFrame>
   );
 }

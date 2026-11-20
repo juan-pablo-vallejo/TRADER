@@ -15,6 +15,7 @@ import controls from "./controls.module.css";
 import styles from "./account.module.css";
 import { useClerkOn } from "./providers";
 import { useStrings } from "./i18n";
+import { KEYS_HELP_EVENT } from "./keyboard-rows";
 import { LANGUAGES } from "./i18n/language";
 import { useTRPC } from "./trpc";
 
@@ -75,6 +76,17 @@ export function Account({ signInHref }: { signInHref: string }) {
             {t.languages[l]}
           </button>
         ))}
+        <button
+          type="button"
+          className={controls.textAction}
+          onClick={(e) => {
+            const menu = e.currentTarget.closest("details");
+            if (menu !== null) menu.open = false;
+            document.dispatchEvent(new Event(KEYS_HELP_EVENT));
+          }}
+        >
+          {t.keys.open}
+        </button>
         {clerk && <ClerkSignOut />}
         {devSignIn && (
           <form method="post" action={DEV_SIGN_IN_PATH}>
