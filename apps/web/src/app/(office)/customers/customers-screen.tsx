@@ -1,30 +1,28 @@
 "use client";
 
-// The customers screen. The
-// list is one query; every mutation invalidates it. The page header's action opens the create
-// form. Each row is text plus one Edit toggle; the editor row beneath holds the fields with
-// Save and, last, the deactivation. A `rejected` answer reads
-// beneath the control it came from. Consumed by page.tsx.
+// The customers screen, on the shared table. The list is one query; every mutation
+// invalidates it. The page header's action opens the create form. A customer's name opens
+// them in the side panel, and which customer is in the address: the fields with Save and,
+// last, the deactivation. A `rejected` answer reads beneath the control it came from.
+// Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
-import { EmptyState, Failure } from "../../failure";
+import { DataTable, type Column } from "../../data-table";
+import { Failure } from "../../failure";
 import { Field } from "../../field";
 import { Note } from "../../note";
-import {
-  DestructiveAction,
-  EditorFooter,
-  EditorRow,
-  EditorSection,
-  RowToggle,
-} from "../../row-editor";
+import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor";
+import { SidePanel } from "../../side-panel";
+import { StatusBadge } from "../../status-badge";
 import { JobsTabs } from "../../jobs-tabs";
 import { PageHeader, CREATE_FORM_ID } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
+import { useUrlFilters } from "../../use-url-filters";
 import styles from "./customers.module.css";
 
 type Rows = NonNullable<ReturnType<typeof useCustomers>["data"]>;
@@ -58,10 +56,15 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.customer.pathFilter());
 }
 
+// The customer whose panel is open, in the address.
+const CUSTOMER_FILTERS = { customer: "" };
+
 export function CustomersScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const list = useCustomers();
   const [adding, setAdding] = useState(false);
+  const [filters, setFilters] = useUrlFilters(CUSTOMER_FILTERS);
+  const opened = list.data?.find((row) => row.id === filters.customer);
   const ready = list.isSuccess;
   return (
     <>
@@ -89,10 +92,14 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
       ) : (
         <>
           {adding && <CreateForm onDone={() => setAdding(false)} />}
-          {list.data.length === 0 ? (
-            <EmptyState text={t.emptyCustomers} />
-          ) : (
-            <CustomersTable rows={list.data} />
+          <CustomersTable
+            rows={list.data}
+            onOpen={(id) => setFilters({ customer: id })}
+          />
+          {opened !== undefined && (
+            <SidePanel title={opened.name} onClose={() => setFilters({ customer: "" })}>
+              <Editor key={opened.id} row={opened} />
+            </SidePanel>
           )}
         </>
       )}
@@ -190,69 +197,59 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function CustomersTable({ rows }: { rows: Rows }) {
+function CustomersTable({
+  rows,
+  onOpen,
+}: {
+  rows: Rows;
+  onOpen: (customerId: string) => void;
+}) {
   const { t } = useStrings();
-  const [editing, setEditing] = useState<string | null>(null);
+  const columns: Column<Row>[] = [
+    {
+      key: "name",
+      header: t.name,
+      cell: (row) => row.name,
+      open: (row) => ({ label: t.jobForm.open(row.name), onOpen: () => onOpen(row.id) }),
+    },
+    {
+      key: "address",
+      header: t.address,
+      empty: (row) => row.address === null,
+      cell: (row) => row.address ?? "",
+    },
+    {
+      key: "phone",
+      header: t.phone,
+      empty: (row) => row.phone === null,
+      cell: (row) => row.phone ?? "",
+    },
+    {
+      key: "email",
+      header: t.email,
+      empty: (row) => row.email === null,
+      cell: (row) => row.email ?? "",
+    },
+    { key: "jobs", header: t.jobs, number: true, cell: (row) => row.unarchivedJobs },
+    {
+      key: "status",
+      header: t.status,
+      cell: (row) =>
+        row.deactivatedAt === null ? (
+          <StatusBadge tone="done" label={t.active} />
+        ) : (
+          <StatusBadge tone="neutral" label={t.deactivated} />
+        ),
+    },
+  ];
   return (
-    <table className={table.table}>
-      <thead>
-        <tr>
-          <th scope="col">{t.name}</th>
-          <th scope="col">{t.address}</th>
-          <th scope="col">{t.phone}</th>
-          <th scope="col">{t.email}</th>
-          <th scope="col" className={table.number}>
-            {t.jobs}
-          </th>
-          <th scope="col">{t.status}</th>
-          <th scope="col">
-            <span className="visually-hidden">{t.edit}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const open = editing === row.id;
-          return (
-            <Fragment key={row.id}>
-              <tr>
-                <td data-label={t.name} className="body-strong">
-                  {row.name}
-                </td>
-                <td
-                  data-label={t.address}
-                  data-empty={row.address === null ? "" : undefined}
-                >
-                  {row.address ?? t.none}
-                </td>
-                <td data-label={t.phone} data-empty={row.phone === null ? "" : undefined}>
-                  {row.phone ?? t.none}
-                </td>
-                <td data-label={t.email} data-empty={row.email === null ? "" : undefined}>
-                  {row.email ?? t.none}
-                </td>
-                <td data-label={t.jobs} className={table.number}>
-                  {row.unarchivedJobs}
-                </td>
-                <td data-label={t.status} className={table.status}>
-                  {row.deactivatedAt === null ? t.active : t.deactivated}
-                </td>
-                <RowToggle
-                  rowId={row.id}
-                  open={open}
-                  onToggle={() => setEditing(open ? null : row.id)}
-                />
-              </tr>
-              {open ? (
-                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={7}>
-                  <Editor row={row} />
-                </EditorRow>
-              ) : null}
-            </Fragment>
-          );
-        })}
-      </tbody>
-    </table>
+    <DataTable
+      caption={t.customers}
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row.id}
+      empty={t.emptyCustomers}
+    />
   );
 }
 

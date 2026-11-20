@@ -32,10 +32,8 @@ const counted = (leaf: Leaf, n: number) =>
 // The same in both languages on purpose: the product's name, each language under its own
 // name, a dash for nothing, an id's label, and patterns that are only their blanks.
 const SAME = new Set([
-  "wordmark",
   "languages.en",
   "languages.es",
-  "none",
   "dayOf",
   "duration",
   "hoursValue",

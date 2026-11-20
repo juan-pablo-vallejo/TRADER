@@ -3,7 +3,6 @@
 // `as const`: a sentence is a string in the shape, so another language's sentence fits it.
 // The phone app's strings are its own two catalogs (apps/mobile/src/i18n).
 export const en = {
-  wordmark: "TRADER",
   devSignIn: "Development sign-in",
   devSignInBadEmail: "Enter an email address.",
   email: "Email",
@@ -420,7 +419,6 @@ export const en = {
 
   // Editors and create forms
   details: "Details",
-  location: "Location (optional)",
 
   // Roster
   emptyRoster: "Nobody is on the roster yet.",
@@ -441,7 +439,6 @@ export const en = {
   mobileNumberInvalid: "Enter a ten-digit United States or Canada number.",
   inviteAddressHint:
     "The sign-in code is sent to this mobile number. An email is optional: the office can also sign in with a code sent to it.",
-  saveRole: "Save role",
   deactivate: "Deactivate",
   reactivate: "Reactivate",
   lastAdmin: "This is the last admin. Make someone else an admin first.",
@@ -489,7 +486,6 @@ export const en = {
   address: "Address",
   phone: "Phone",
   notes: "Notes",
-  none: "—",
   jobsUnarchived: (n: number) =>
     `${n === 1 ? "1 of this customer's jobs is" : `${n} of this customer's jobs are`} not archived. Archive ${n === 1 ? "it" : "them"} first.`,
   deactivateCustomerEffect:
@@ -498,15 +494,36 @@ export const en = {
   remove: "Remove",
 
   // Jobs
+  jobForm: {
+    open: (name: string) => `Open ${name}`,
+    added: (name: string) => `${name} added.`,
+    newCustomer: "+ A new customer",
+    newCustomerName: "New customer's name",
+    hoursWeek: "Hours this week",
+    hoursToDate: "Hours to date",
+    notes: "Notes for the crew",
+    notesHint: "The crew sees these on their phones, on the job's card.",
+    location: "Location (optional)",
+    locationHint:
+      "Paste the coordinates from a map, like 41.8240, -71.4128, or a maps address that shows them.",
+    locationFromCrew:
+      "An admin can also set it from the phone's Crew tab, standing at the jobsite.",
+    locationProblem: {
+      empty: "Paste the coordinates, or leave the location empty.",
+      short_link:
+        "A short maps link hides the coordinates. Open it, press and hold the place on the map, and copy the two numbers it shows.",
+      unreadable:
+        "That is not a pair of coordinates or a maps address that shows them. It looks like 41.8240, -71.4128.",
+      out_of_range: "Those numbers are not a place: check the coordinates.",
+    },
+    badRadius: "Enter the radius in whole meters, from 1 to 100000.",
+  },
   emptyJobs: "No jobs to show.",
   addJob: "Add job",
   job: "Job",
   customer: "Customer",
   chooseCustomer: "Choose a customer",
-  latitude: "Latitude",
-  longitude: "Longitude",
   radiusM: "Radius (m)",
-  locationAllOrNone: "Enter all three or none.",
   show: "Show",
   allJobs: "All",
   jobStatus: { open: "Open", complete: "Complete", archived: "Archived" },

@@ -96,6 +96,7 @@ describe("job.list", () => {
       location: { lat: 41.8, lng: -71.4, radiusM: 150 },
       status: "open",
       customer: { id: w.a.customerId, name: "Customer a" },
+      hours: { week: 0, toDate: 0 },
     });
     expect(rows[1]).toMatchObject({ status: "complete", location: null });
   });

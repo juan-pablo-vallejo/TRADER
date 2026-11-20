@@ -1,6 +1,6 @@
 // Jobs. Admin only, at the gate; the customer and invoice rules
 // and the target's visibility are judged inside each writer under its locks.
-import { listJobs, listOutput } from "../jobs/list";
+import { listJobsWithHours, listWithHoursOutput } from "../jobs/hours";
 import {
   createInput,
   createJob,
@@ -16,8 +16,8 @@ import { roleProcedure, router } from "../core/trpc";
 
 export const jobRouter = router({
   list: roleProcedure("admin")
-    .output(listOutput)
-    .query(({ ctx }) => listJobs(ctx.tx)),
+    .output(listWithHoursOutput)
+    .query(({ ctx }) => listJobsWithHours(ctx.tx, ctx.user)),
   create: roleProcedure("admin")
     .input(createInput)
     .output(createOutput)

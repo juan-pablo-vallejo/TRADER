@@ -1,6 +1,16 @@
-/* The jobs screen's own layout: the form's grid (the three location fields in one row on
-   wide), the editor's sections and the status filter. The data table itself is
-   table.module.css. */
+/* The jobs screen's own layout: the status presets, and the form's grid with the location
+   and its radius on one row. The data table itself is table.module.css. */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+.presets button[aria-pressed="true"] {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}
 .formGrid {
   display: grid;
   gap: 0 var(--space-3);
@@ -8,21 +18,7 @@
 .locationGrid {
   display: grid;
   gap: 0 var(--space-3);
-}
-.location summary {
-  padding: var(--space-4) 0;
-  color: var(--accent);
-  cursor: pointer;
-}
-.location {
-  margin-bottom: var(--space-3);
-}
-.editorGrid {
-  display: grid;
-  gap: var(--space-6);
-}
-.filter {
-  margin-bottom: var(--space-4);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
 }
 
 @media (min-width: 768px) {
@@ -31,14 +27,5 @@
   }
   .formGrid .wide {
     grid-column: 1 / -1;
-  }
-  .filter {
-    max-width: var(--nav);
-  }
-  .locationGrid {
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-  .editorGrid {
-    grid-template-columns: 2fr 1fr;
   }
 }

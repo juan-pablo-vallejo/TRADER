@@ -5,7 +5,6 @@
 import type { Catalog } from "./en";
 
 export const es: Catalog = {
-  wordmark: "TRADER",
   devSignIn: "Inicio de sesión de desarrollo",
   devSignInBadEmail: "Escribe un correo electrónico.",
   email: "Correo electrónico",
@@ -401,7 +400,6 @@ export const es: Catalog = {
   cancel: "Cancelar",
 
   details: "Datos",
-  location: "Ubicación (opcional)",
 
   emptyRoster: "Todavía no hay nadie en la plantilla.",
   addPerson: "Agregar una persona",
@@ -420,7 +418,6 @@ export const es: Catalog = {
   mobileNumberInvalid: "Escribe un número de diez dígitos de Estados Unidos o Canadá.",
   inviteAddressHint:
     "El código para iniciar sesión se envía a este número de celular. El correo es opcional: la oficina también puede iniciar sesión con un código enviado ahí.",
-  saveRole: "Guardar rol",
   deactivate: "Desactivar",
   reactivate: "Reactivar",
   lastAdmin: "Es el último administrador. Primero haz administrador a alguien más.",
@@ -465,7 +462,6 @@ export const es: Catalog = {
   address: "Dirección",
   phone: "Teléfono",
   notes: "Notas",
-  none: "—",
   jobsUnarchived: (n) =>
     `${n === 1 ? "1 obra de este cliente no está archivada" : `${n} obras de este cliente no están archivadas`}. ${n === 1 ? "Archívala" : "Archívalas"} primero.`,
   deactivateCustomerEffect:
@@ -473,15 +469,36 @@ export const es: Catalog = {
 
   remove: "Quitar",
 
+  jobForm: {
+    open: (name) => `Abrir ${name}`,
+    added: (name) => `Se agregó ${name}.`,
+    newCustomer: "+ Un cliente nuevo",
+    newCustomerName: "Nombre del cliente nuevo",
+    hoursWeek: "Horas esta semana",
+    hoursToDate: "Horas hasta hoy",
+    notes: "Notas para la cuadrilla",
+    notesHint: "La cuadrilla las ve en su teléfono, en la tarjeta de la obra.",
+    location: "Ubicación (opcional)",
+    locationHint:
+      "Pega las coordenadas de un mapa, como 41.8240, -71.4128, o una dirección de mapas que las muestre.",
+    locationFromCrew:
+      "Un administrador también puede fijarla desde la pestaña Cuadrilla del teléfono, estando en la obra.",
+    locationProblem: {
+      empty: "Pega las coordenadas, o deja la ubicación vacía.",
+      short_link:
+        "Un enlace corto de mapas esconde las coordenadas. Ábrelo, mantén presionado el lugar en el mapa y copia los dos números que muestra.",
+      unreadable:
+        "Eso no es un par de coordenadas ni una dirección de mapas que las muestre. Se ve así: 41.8240, -71.4128.",
+      out_of_range: "Esos números no son un lugar: revisa las coordenadas.",
+    },
+    badRadius: "Escribe el radio en metros enteros, de 1 a 100000.",
+  },
   emptyJobs: "No hay obras que mostrar.",
   addJob: "Agregar obra",
   job: "Obra",
   customer: "Cliente",
   chooseCustomer: "Elige un cliente",
-  latitude: "Latitud",
-  longitude: "Longitud",
   radiusM: "Radio (m)",
-  locationAllOrNone: "Escribe los tres o ninguno.",
   show: "Mostrar",
   allJobs: "Todas",
   jobStatus: { open: "Abierta", complete: "Terminada", archived: "Archivada" },

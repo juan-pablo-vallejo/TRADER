@@ -68,7 +68,10 @@ describe("jobs through the route handler", () => {
     });
     const list = await query(GET, "job.list", { headers: as(admin.email) });
     expect(list.status).toBe(200);
-    expect(list.body.result?.data.json).toEqual([job]);
+    // The list answers each job with its hours beside it: none recorded here.
+    expect(list.body.result?.data.json).toEqual([
+      { ...job, hours: { week: 0, toDate: 0 } },
+    ]);
     for (const status of ["archived", "open"]) {
       const r = await mutate(POST, "job.setStatus", {
         input: { jobId: job.id, status },
