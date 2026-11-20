@@ -817,6 +817,24 @@ Android user.
 - [ ] Item 29: Paid this month counts payments by the day the office typed as paid, in the
       company's calendar month, not by the day they were recorded.
 
+- [ ] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
+      send one invoice from staging to an allow-listed inbox (invoice 4 is ready: open it,
+      Send) and confirm it arrived with its PDF. Seen on staging: Settings filled with
+      fictional words and terms of 15 days, invoice 4 issued after and printing the
+      company's block, How to pay and who to ask, due 15 days on; invoice 3, issued before,
+      downloaded again and still the page it was; invoice 2 with PAID across its head and
+      its two payments listed.
+- [ ] Item 30: migration 0004 gave invoices already issued the company's words as they
+      stood at the migration, since until then the page read them live. Like 0003's
+      backfill it rewrote staging and development rows only.
+- [ ] Item 30: the customer's name and address on the page are still read live from the
+      customer, and the job's name from the job. The item names only the company's block
+      and how to pay as the copy taken at issue. OWNER: say whether the customer's block
+      should be copied at issue too.
+- [ ] The status line on the PDF ("Status: Overdue") is as of the moment the file is made,
+      like the amount due and the payments; the same invoice downloaded on a later day can
+      say something else. The copy taken at issue never changes.
+
 ## After MVP
 
 In the order it would come back. The owner reorders at will.
