@@ -19,6 +19,7 @@ import { signInPhone } from "../phone";
 import { bearer, useSession } from "../session";
 import { color, size, space, type } from "../theme";
 import { Button, Screen, text } from "./controls";
+import { Mark } from "./mark";
 
 export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
   const { t } = useStrings();
@@ -144,6 +145,7 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
 
   return (
     <Screen testID="sign-in">
+      <Mark />
       <Text style={text.title}>{t.signIn.title}</Text>
       {step === "phone" ? (
         <>
@@ -151,7 +153,8 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
           <TextInput
             testID="sign-in-phone"
             accessibilityLabel={t.signIn.phone}
-            style={styles.input}
+            style={[styles.input, styles.large]}
+            autoFocus
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
@@ -229,7 +232,11 @@ export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
           <TextInput
             testID="sign-in-code"
             accessibilityLabel={t.signIn.code}
-            style={styles.input}
+            // The texted code is offered above the keyboard, and one tap fills it: iOS by
+            // `oneTimeCode`, Android by `sms-otp`.
+            style={[styles.input, styles.large, styles.code]}
+            autoFocus
+            maxLength={8}
             value={code}
             onChangeText={setCode}
             keyboardType="number-pad"
@@ -270,10 +277,13 @@ const styles = StyleSheet.create({
     minHeight: size.target,
     paddingHorizontal: space[3],
     borderRadius: size.radiusCard,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
+    borderWidth: 1,
+    borderColor: color.controlBorder,
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: type.body.fontSize,
   },
+  // The one field the screen is for: large enough to read at arm's length.
+  large: { minHeight: 64, fontSize: 24, fontVariant: ["tabular-nums"] },
+  code: { letterSpacing: 4, textAlign: "center" },
 });

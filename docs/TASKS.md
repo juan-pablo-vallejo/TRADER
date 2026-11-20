@@ -288,7 +288,7 @@ Android user.
   Done when the screen has been seen in each of those states on an iOS simulator and an
   Android emulator, and the Maestro flows follow the new screen.
 
-- [ ] 9. **Phone: sign-in, Week and Me.**
+- [x] 9. **Phone: sign-in, Week and Me.**
   - Sign-in (`src/ui/phone-sign-in.tsx`): the mark, one large number field, then the code
     field, which takes the texted code from the keyboard's suggestion. Clerk's hooks stay
     as built. Clerk's prebuilt native screens are not used: they are in beta, and the
@@ -642,6 +642,10 @@ Android user.
       (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`); there is
       no other JDK. A freshly installed Android development build opens Expo's developer
       menu over the app on its first relaunch; `offline-capture.yaml` puts it away.
+- [ ] Item 9's screens were seen on the iPhone simulator and the Android emulator in both
+      languages, the texted-code sign-in in a build pointed at staging, with one gap: the
+      Android capture of Week in Spanish fired before the tab had changed. Week in Spanish
+      was seen on the iPhone, and Week in English on Android.
 - [ ] The Maestro suite's sign-in failed once in three runs on a fresh iPhone 17 simulator:
       the tap on Sign in never reached the API, and the same flow passed on the next two
       runs unchanged. If it recurs, wait for the keyboard before the tap

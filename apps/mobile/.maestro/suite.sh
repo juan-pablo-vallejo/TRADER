@@ -92,6 +92,8 @@ api_up
 
 echo "— smoke"
 flow smoke
+expect "Me saved the contact phone, and left the sign-in address alone" \
+  "select phone || ' ' || email from users where email = '$LUIS'" "4015550177 $LUIS"
 
 echo "— clock, with a connection"
 flow clock

@@ -15,6 +15,17 @@ appId: app.jpteq.trader
     id: "tab-settings"
 - assertVisible:
     id: "settings-name"
+# Me: the person's own contact phone, saved through the server (suite.sh reads it back).
+- tapOn:
+    id: "settings-phone"
+- inputText: "4015550177"
+- tapOn:
+    id: "settings-save"
+- extendedWaitUntil:
+    visible:
+      id: "settings-saved"
+    timeout: 15000
+- takeScreenshot: me
 - tapOn:
     id: "language-es"
 - tapOn:

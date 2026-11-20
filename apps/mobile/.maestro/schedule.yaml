@@ -22,6 +22,15 @@ appId: app.jpteq.trader
     id: "tab-week"
 - assertVisible:
     id: "week-shift-0-0"
+- takeScreenshot: week
+# A shift opens the same job sheet as Today.
+- tapOn:
+    id: "week-shift-0-0"
+- assertVisible:
+    id: "job-notes"
+- takeScreenshot: week-job-sheet
+- tapOn:
+    id: "job-close"
 - assertVisible:
     id: "week-age"
 - tapOn:

@@ -27,7 +27,7 @@ export const es: Catalog = {
     unavailable: "El inicio de sesión todavía no es parte de esta versión.",
     developmentOnly: "Inicio de sesión de desarrollo. No está en una versión publicada.",
   },
-  tabs: { today: "Hoy", week: "Horario", settings: "Ajustes" },
+  tabs: { today: "Hoy", week: "Semana", settings: "Yo" },
   today: {
     title: "Hoy",
     jobs: "Tus obras",
@@ -123,7 +123,7 @@ export const es: Catalog = {
     close: "Cerrar",
   },
   week: {
-    title: "Horario",
+    title: "Semana",
     updated: (age) => `Actualizado ${age}.`,
     never: "Todavía no se ha cargado en este teléfono.",
     stale: "Puede estar desactualizado. Conéctate para revisarlo.",
@@ -134,6 +134,14 @@ export const es: Catalog = {
     noHours: "No hay horas en las últimas dos semanas.",
     open: "Trabajando",
     unscheduled: "Fuera de tu horario. La oficina puede revisarlo.",
+    dayTotal: (hours) => `${hours} en total`,
+    flags: {
+      offline: "Guardado sin conexión.",
+      corrected: "La oficina lo editó.",
+      user_timed: "La hora se puso a mano.",
+      location: "Sin ubicación, o lejos de la obra.",
+      clock_skewed: "El reloj de este teléfono parecía estar mal.",
+    },
   },
   age: {
     justNow: "ahora mismo",
@@ -142,8 +150,7 @@ export const es: Catalog = {
     days: (n) => (n === 1 ? "hace 1 día" : `hace ${n} días`),
   },
   settings: {
-    title: "Ajustes",
-    signedInAs: (name) => `Sesión iniciada como ${name}`,
+    title: "Yo",
     language: "Idioma",
     english: "English",
     spanish: "Español",
@@ -152,5 +159,13 @@ export const es: Catalog = {
       count === 1
         ? "1 registro no se ha enviado. Se queda en este teléfono y se envía cuando inicies sesión de nuevo."
         : `${count} registros no se han enviado. Se quedan en este teléfono y se envían cuando inicies sesión de nuevo.`,
+    name: "Tu nombre",
+    phone: "Teléfono de contacto",
+    phoneHelp:
+      "Donde la oficina puede llamarte. No es el número con el que inicias sesión.",
+    save: "Guardar",
+    saved: "Guardado.",
+    saveFailed: "No se guardó. Revisa tu conexión e inténtalo de nuevo.",
+    build: (build) => `Versión ${build}`,
   },
 };

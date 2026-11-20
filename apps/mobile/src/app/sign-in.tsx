@@ -12,6 +12,7 @@ import { useStrings } from "../i18n";
 import { useSession } from "../session";
 import { color, size, space, type } from "../theme";
 import { Button, Screen, text } from "../ui/controls";
+import { Mark } from "../ui/mark";
 import { PhoneSignIn } from "../ui/phone-sign-in";
 
 export default function SignIn() {
@@ -51,6 +52,7 @@ export default function SignIn() {
   };
   return (
     <Screen testID="sign-in">
+      <Mark />
       <Text style={text.title}>{t.signIn.title}</Text>
       <Text style={text.secondary}>{t.signIn.developmentOnly}</Text>
       <Text style={text.label}>{t.signIn.email}</Text>

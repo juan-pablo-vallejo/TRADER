@@ -34,6 +34,11 @@ appId: app.jpteq.trader
       - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081"
       # Without the link's other parts a freshly installed development build opens its own
       # menu over the app: put it away. It is the tool's, and has no test id of ours.
+      # It comes up once the bundle has loaded, so it is waited for; it may never come.
+      - extendedWaitUntil:
+          visible: "Toggle performance monitor"
+          timeout: 20000
+          optional: true
       - runFlow:
           when:
             visible: "Toggle performance monitor"

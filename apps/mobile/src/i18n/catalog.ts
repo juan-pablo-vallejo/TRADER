@@ -123,6 +123,16 @@ export type Catalog = {
     noHours: string;
     open: string;
     unscheduled: string;
+    // A day's total beside its name.
+    dayTotal: (hours: string) => string;
+    // Why the office may look at an entry, in words; `unscheduled` is above.
+    flags: {
+      offline: string;
+      corrected: string;
+      user_timed: string;
+      location: string;
+      clock_skewed: string;
+    };
   };
   age: {
     justNow: string;
@@ -132,12 +142,19 @@ export type Catalog = {
   };
   settings: {
     title: string;
-    signedInAs: (name: string) => string;
     language: string;
     english: string;
     spanish: string;
     signOut: string;
     unsentKept: (count: number) => string;
+    // Me: the person's own name and contact phone, and the build they are on.
+    name: string;
+    phone: string;
+    phoneHelp: string;
+    save: string;
+    saved: string;
+    saveFailed: string;
+    build: (build: string) => string;
   };
 };
 

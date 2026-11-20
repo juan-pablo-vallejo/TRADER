@@ -43,7 +43,7 @@ describe("the catalogs", () => {
   });
 
   it("carry a name through a sentence built from one", () => {
-    expect(en.settings.signedInAs("Ana Ruiz")).toContain("Ana Ruiz");
-    expect(es.settings.signedInAs("Ana Ruiz")).toContain("Ana Ruiz");
+    expect(en.today.clockInAt("Elm St porch")).toContain("Elm St porch");
+    expect(es.today.clockInAt("Elm St porch")).toContain("Elm St porch");
   });
 });

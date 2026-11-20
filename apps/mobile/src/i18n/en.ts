@@ -26,7 +26,7 @@ export const en: Catalog = {
     unavailable: "Sign-in is not part of this build yet.",
     developmentOnly: "Development sign-in. It is not in a release build.",
   },
-  tabs: { today: "Today", week: "Schedule", settings: "Settings" },
+  tabs: { today: "Today", week: "Week", settings: "Me" },
   today: {
     title: "Today",
     jobs: "Your jobsites",
@@ -117,7 +117,7 @@ export const en: Catalog = {
     close: "Close",
   },
   week: {
-    title: "Schedule",
+    title: "Week",
     updated: (age) => `Updated ${age}.`,
     never: "Not loaded on this phone yet.",
     stale: "This may be out of date. Connect to check it.",
@@ -128,6 +128,14 @@ export const en: Catalog = {
     noHours: "No hours in the last two weeks.",
     open: "On the clock",
     unscheduled: "Outside your schedule. The office may check it.",
+    dayTotal: (hours) => `${hours} in all`,
+    flags: {
+      offline: "Saved with no connection.",
+      corrected: "The office edited this.",
+      user_timed: "The time was entered by hand.",
+      location: "No location, or away from the jobsite.",
+      clock_skewed: "This phone's clock looked wrong.",
+    },
   },
   age: {
     justNow: "just now",
@@ -136,8 +144,7 @@ export const en: Catalog = {
     days: (n) => (n === 1 ? "1 day ago" : `${n} days ago`),
   },
   settings: {
-    title: "Settings",
-    signedInAs: (name) => `Signed in as ${name}`,
+    title: "Me",
     language: "Language",
     english: "English",
     spanish: "Español",
@@ -146,5 +153,12 @@ export const en: Catalog = {
       count === 1
         ? "1 entry has not been sent. It stays on this phone and is sent when you sign in again."
         : `${count} entries have not been sent. They stay on this phone and are sent when you sign in again.`,
+    name: "Your name",
+    phone: "Contact phone",
+    phoneHelp: "Where the office can call you. It is not the number you sign in with.",
+    save: "Save",
+    saved: "Saved.",
+    saveFailed: "That did not save. Check your connection and try again.",
+    build: (build) => `Build ${build}`,
   },
 };

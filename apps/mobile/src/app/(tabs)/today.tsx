@@ -13,42 +13,22 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { dayName, duration, timeOfDay, wallTime } from "../../format";
 import { useStrings } from "../../i18n";
 import { offerAt, type Tap, wallClock } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
-import {
-  fromEarlierDay,
-  mapsLink,
-  sessionWorkedMs,
-  telLink,
-  timer,
-} from "../../sync/today";
+import { fromEarlierDay, sessionWorkedMs, telLink, timer } from "../../sync/today";
 import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
+import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { Sheet } from "../../ui/sheet";
 import { SyncChip } from "../../ui/sync-chip";
 
 // How long the check mark stays after a tap was saved.
 const CAPTURED_MS = 1600;
-
-type JobFacts = {
-  id: string;
-  name: string;
-  address: string | null;
-  notes: string | null;
-};
 
 export default function Today() {
   const { t, language } = useStrings();
@@ -435,54 +415,7 @@ export default function Today() {
         />
       </Sheet>
 
-      {/* The job, from the last pull: its address and the office's notes work offline. */}
-      <Sheet
-        visible={sheetJob !== null}
-        onClose={() => setOpened(null)}
-        title={sheetJob?.name ?? ""}
-        testID="job-sheet"
-      >
-        {sheetJob !== null && (
-          <>
-            <Text style={text.label}>{t.today.job.address}</Text>
-            {sheetJob.address === null ? (
-              <Text testID="job-no-address" style={text.secondary}>
-                {t.today.job.noAddress}
-              </Text>
-            ) : (
-              <>
-                <Text testID="job-address" style={text.body} selectable>
-                  {sheetJob.address}
-                </Text>
-                <Button
-                  testID="job-maps"
-                  kind="secondary"
-                  label={t.today.job.openMaps}
-                  onPress={() =>
-                    void Linking.openURL(mapsLink(sheetJob.address!, Platform.OS)).catch(
-                      () => undefined,
-                    )
-                  }
-                />
-              </>
-            )}
-            <Text style={text.label}>{t.today.job.notes}</Text>
-            <Text
-              testID="job-notes"
-              style={sheetJob.notes === null ? text.secondary : text.body}
-              selectable
-            >
-              {sheetJob.notes ?? t.today.job.noNotes}
-            </Text>
-          </>
-        )}
-        <Button
-          testID="job-close"
-          kind="secondary"
-          label={t.today.job.close}
-          onPress={() => setOpened(null)}
-        />
-      </Sheet>
+      <JobSheet job={sheetJob} onClose={() => setOpened(null)} />
     </Screen>
   );
 }

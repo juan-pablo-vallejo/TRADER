@@ -25,3 +25,4 @@ appId: app.jpteq.trader
       id: "hours-unscheduled-0"
     direction: DOWN
     timeout: 60000
+- takeScreenshot: week-hours-flagged
