@@ -353,7 +353,7 @@ Android user.
       token in GitHub's `staging` environment, the iOS ad hoc credentials with the test
       iPhone registered, the Android keystore and its fingerprint at Clerk. Done when one
       commit has an Android build and an iOS build that sign in to staging.
-- [ ] 14. **The office in English and Spanish.** `apps/web/src/app/strings.ts` becomes two
+- [x] 14. **The office in English and Spanish.** `apps/web/src/app/strings.ts` becomes two
       typed catalogs, as the phone's are (`apps/mobile/src/i18n`): a key missing from one
       fails `pnpm typecheck`, and nothing falls back to English at run time. A person's
       choice is made from the header and from Settings, starts from the browser's language,
@@ -683,6 +683,17 @@ Android user.
       would close it.
 - [ ] Item 11: the demo's second admin (Marcus Bell) has no shift, so the app opens on
       Crew for him; the stamps-off flow goes to Today by its tab.
+
+- [ ] OWNER, item 14: read the office's Spanish once on staging (gate 5). It is in
+      `apps/web/src/app/i18n/es.ts`; the language is behind your name in the header.
+- [ ] Item 14: on Clerk's development instance the sign-in form shows Clerk's own
+      "Secured by" and "Development mode" marks in English beside its Spanish. They are
+      Clerk's, not the office's, and a production instance does not draw the second.
+- [ ] Item 14: `@clerk/localizations` is pinned at 4.24.6, the release built on the
+      `@clerk/shared` that `@clerk/nextjs` 7.9.25 uses. Move the two together.
+- [ ] Item 14, at 390 wide in Spanish: the Schedule's seven day buttons take two rows and
+      "Esta semana" two lines, where English takes one. Nothing is cut. Item 17 rebuilds
+      that screen.
 
 ## After MVP
 
