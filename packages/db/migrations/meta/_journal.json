@@ -29,6 +29,13 @@
       "when": 1795160090145,
       "tag": "0003_invoice_due_date",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795160707183,
+      "tag": "0004_invoice_print_copy",
+      "breakpoints": true
     }
   ]
 }

@@ -165,8 +165,13 @@ describe("invoice.send", () => {
       expect(mail.to).toBe(TO);
       expect(mail.idempotencyKey).toBe(id);
       expect(mail.subject).toMatch(/^Invoice 1042 from /);
-      expect(mail.text.join(" ")).toContain("Total: 556.40 USD");
-      expect(mail.text.join(" ")).toContain("Amount owed: 556.40 USD");
+      // The first lines say what the page opens with: the amount, the day, the number.
+      const due = (await o.bill.read({ invoiceId: o.invoiceId })).dueOn;
+      expect(mail.text.slice(0, 3)).toEqual([
+        "Amount due: 556.40 USD",
+        `Due: ${due}`,
+        expect.stringMatching(/^Invoice 1042 from .+ \(Issued; total 556\.40 USD\)$/),
+      ]);
       // The attachment is the page invoice.pdf answers, byte for byte.
       const page = await o.bill.pdf({ invoiceId: o.invoiceId });
       if (page.result !== "rendered") throw new Error("not rendered");

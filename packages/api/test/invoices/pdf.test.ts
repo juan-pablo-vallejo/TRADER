@@ -1,7 +1,6 @@
 // The invoice page itself (invoices/pdf.ts): no database. What it is asked to draw is on
 // the page, in the figures it was given; text Helvetica cannot draw does not fail it; a
 // long invoice runs onto more pages; the same description is the same bytes.
-import { inflateSync } from "node:zlib";
 
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { describe, expect, it, vi } from "vitest";
@@ -15,9 +14,17 @@ import {
   renderInvoice,
   wrap,
 } from "../../src/invoices/pdf";
+import { drawn } from "./drawn";
 
 const page = (over: Partial<InvoicePage> = {}): InvoicePage => ({
-  company: "D Sierra Painting",
+  company: {
+    name: "D Sierra Painting",
+    address: "200 Broad St, Providence, RI 02903",
+    phone: "401-555-0142",
+    email: "office@dsierra.test",
+  },
+  howToPay: "Check payable to D Sierra Painting LLC.\nZelle: pay@dsierra.test",
+  payments: [{ paidOn: "2026-11-18", method: "check", amountCents: 20000 }],
   number: 1042,
   issuedOn: "2026-11-15",
   dueOn: "2026-11-30",
@@ -51,31 +58,6 @@ const page = (over: Partial<InvoicePage> = {}): InvoicePage => ({
   stamp: new Date("2026-11-15T15:00:00Z"),
   ...over,
 });
-
-// The text a page draws, read back out of its content streams: each is deflated, and
-// pdf-lib writes each string in it as hex.
-function drawn(bytes: Uint8Array): string {
-  const file = Buffer.from(bytes);
-  const text: string[] = [];
-  let at = 0;
-  for (;;) {
-    const start = file.indexOf("stream\n", at, "latin1");
-    if (start === -1) break;
-    const end = file.indexOf("endstream", start, "latin1");
-    // Past the word itself: `endstream` ends in `stream` too.
-    at = end + "endstream".length;
-    let content: string;
-    try {
-      content = inflateSync(file.subarray(start + 7, end)).toString("latin1");
-    } catch {
-      continue;
-    }
-    for (const m of content.matchAll(/<([0-9A-F]+)> Tj/g)) {
-      text.push(Buffer.from(m[1]!, "hex").toString("latin1"));
-    }
-  }
-  return text.join("\n");
-}
 
 describe("money", () => {
   it("writes cents as a decimal with thousands apart", () => {
@@ -128,6 +110,20 @@ describe("renderInvoice", () => {
       "D Sierra Painting",
       "INVOICE",
       "Invoice 1042",
+      // What a customer looks for: the amount, the day and the instructions.
+      "Amount due: 404.55 USD",
+      "Due 2026-11-30",
+      "Status: Issued",
+      "200 Broad St, Providence, RI 02903",
+      "401-555-0142",
+      "office@dsierra.test",
+      "Payments received",
+      "2026-11-18, check",
+      "Balance",
+      "How to pay",
+      "Check payable to D Sierra Painting LLC.",
+      "Zelle: pay@dsierra.test",
+      "Questions about this invoice: 401-555-0142 or office@dsierra.test",
       "Issued 2026-11-15",
       "Whitmore Family",
       "14 Elmgrove Ave, Providence, RI",
@@ -144,11 +140,54 @@ describe("renderInvoice", () => {
       "604.55",
       "200.00",
       "404.55",
-      "Amount owed",
     ]) {
       expect([said, text.includes(said)]).toEqual([said, true]);
     }
     expect(text).not.toContain("VOID");
+    expect(text).not.toContain("PAID");
+    // It opens with the amount due, the due date and the number, in that order, before
+    // anything else on the page.
+    const first = text.split("\n");
+    expect(first[0]).toBe("Amount due: 404.55 USD");
+    expect(first.indexOf("Due 2026-11-30")).toBeLessThan(first.indexOf("From"));
+    expect(first.indexOf("Invoice 1042")).toBeLessThan(first.indexOf("From"));
+    expect(first.indexOf("How to pay")).toBeGreaterThan(first.indexOf("Balance"));
+  });
+
+  it("says PAID across the head when nothing is owed", async () => {
+    const text = drawn(
+      await renderInvoice(
+        page({
+          paidCents: 60455,
+          owedCents: 0,
+          status: "Paid",
+          payments: [
+            { paidOn: "2026-11-18", method: "check", amountCents: 20000 },
+            { paidOn: "2026-11-25", method: "cash", amountCents: 40455 },
+          ],
+        }),
+      ),
+    );
+    expect(text.split("\n")).toContain("PAID");
+    expect(text).toContain("Amount due: 0.00 USD");
+    expect(text).toContain("2026-11-25, cash");
+    expect(text.split("\n")).not.toContain("INVOICE");
+  });
+
+  it("leaves out what the company never filled in", async () => {
+    const text = drawn(
+      await renderInvoice(
+        page({
+          company: { name: "D Sierra Painting", address: null, phone: null, email: " " },
+          howToPay: null,
+          payments: [],
+        }),
+      ),
+    );
+    expect(text).not.toContain("How to pay");
+    expect(text).not.toContain("Questions about");
+    expect(text).not.toContain("Payments received");
+    expect(text).toContain("Balance");
   });
 
   it("keeps a description clear of the widest quantity a line can carry", async () => {
@@ -185,8 +224,10 @@ describe("renderInvoice", () => {
   it("says VOID on a void invoice and leaves out what is paid and owed", async () => {
     const text = drawn(await renderInvoice(page({ void: true })));
     expect(text).toContain("VOID");
-    expect(text).not.toContain("Amount owed");
+    expect(text).not.toContain("Balance");
     expect(text).not.toContain("Paid");
+    expect(text).not.toContain("PAID");
+    expect(text).not.toContain("How to pay");
   });
 
   it("is the same bytes for the same invoice", async () => {
@@ -223,6 +264,7 @@ describe("renderInvoice", () => {
     const text = drawn(bytes);
     for (const l of lines) expect(text).toContain(l.description);
     expect(text).toContain("Invoice 1042, continued");
-    expect(text).toContain("Amount owed");
+    expect(text).toContain("Balance");
+    expect(text).toContain("Zelle: pay@dsierra.test");
   });
 });

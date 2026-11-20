@@ -75,6 +75,13 @@ export const invoices = pgTable(
     // The day it is due: a calendar day. A draft may name it; at issue the trigger fills
     // it from the company's terms when the draft did not, and it is frozen with the rest.
     dueOn: date("due_on", { mode: "string" }),
+    // What prints, copied from the company at issue by the trigger and frozen with the
+    // rest: an issued invoice's page never changes when Settings do. Null on a draft.
+    printedCompanyName: text("printed_company_name"),
+    printedCompanyAddress: text("printed_company_address"),
+    printedCompanyPhone: text("printed_company_phone"),
+    printedCompanyEmail: text("printed_company_email"),
+    printedPaymentInstructions: text("printed_payment_instructions"),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     issuedByUserId: uuid("issued_by_user_id"),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
@@ -133,6 +140,11 @@ export const invoices = pgTable(
     check(
       "invoices_issued_has_due",
       sql`${t.issuedAt} IS NULL OR ${t.dueOn} IS NOT NULL`,
+    ),
+    // And always carries the name it printed under.
+    check(
+      "invoices_issued_has_print",
+      sql`${t.issuedAt} IS NULL OR ${t.printedCompanyName} IS NOT NULL`,
     ),
   ],
 );

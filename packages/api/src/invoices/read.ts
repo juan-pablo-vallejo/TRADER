@@ -79,6 +79,16 @@ export const readOutput = z.strictObject({
       amountCents: z.number().int(),
     }),
   ),
+  // What prints, as copied from the company at issue; null on a draft, which prints nothing.
+  printed: z
+    .strictObject({
+      companyName: z.string(),
+      companyAddress: z.string().nullable(),
+      companyPhone: z.string().nullable(),
+      companyEmail: z.string().nullable(),
+      howToPay: z.string().nullable(),
+    })
+    .nullable(),
   // The customer's address on file, offered as where to send the page; the admin may type
   // another.
   customerEmail: z.string().nullable(),
@@ -312,7 +322,17 @@ export async function readInvoice(
   const issuer = alias(users, "issuer");
   const voider = alias(users, "voider");
   const [row] = await tx
-    .select({ ...columns, issuedBy: issuer.name, voidedBy: voider.name, paidCents: PAID })
+    .select({
+      ...columns,
+      issuedBy: issuer.name,
+      voidedBy: voider.name,
+      paidCents: PAID,
+      printedCompanyName: invoices.printedCompanyName,
+      printedCompanyAddress: invoices.printedCompanyAddress,
+      printedCompanyPhone: invoices.printedCompanyPhone,
+      printedCompanyEmail: invoices.printedCompanyEmail,
+      printedPaymentInstructions: invoices.printedPaymentInstructions,
+    })
     .from(invoices)
     .innerJoin(customers, eq(customers.id, invoices.customerId))
     .innerJoin(jobs, eq(jobs.id, invoices.jobId))
@@ -369,6 +389,16 @@ export async function readInvoice(
   const reversedIds = new Set(recorded.map((p) => p.reversesPaymentId));
   return {
     ...headerOf(row, totals(lines, row.taxCents).subtotalCents, row.paidCents, today),
+    printed:
+      row.printedCompanyName === null
+        ? null
+        : {
+            companyName: row.printedCompanyName,
+            companyAddress: row.printedCompanyAddress,
+            companyPhone: row.printedCompanyPhone,
+            companyEmail: row.printedCompanyEmail,
+            howToPay: row.printedPaymentInstructions,
+          },
     issuedBy: row.issuedBy,
     voidedBy: row.voidedBy,
     lines,

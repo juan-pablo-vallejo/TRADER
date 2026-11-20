@@ -11,7 +11,7 @@
 // and gives up at its own 5 s lock_timeout. Where a deployment names an allow-list, a recipient outside
 // it is a failed send that asked the service nothing (mailer.ts, restrictedTo).
 // Consumed by routers/invoice.ts.
-import { companies, invoiceSends } from "@trader/db/schema";
+import { invoiceSends } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -46,6 +46,36 @@ export const sendOutput = z.discriminatedUnion("result", [
   }),
 ]);
 
+// The email's words, pure. Its first lines say the three things the page opens with: the
+// amount due, the day it is due and the invoice's number. Then how to pay and the number
+// to call. Plain text, in English.
+export function invoiceEmail(m: {
+  company: string;
+  phone: string | null;
+  number: number;
+  currency: string;
+  owedCents: number;
+  totalCents: number;
+  dueOn: string;
+  status: string;
+  howToPay: string | null;
+}): string[] {
+  const said = (v: string | null) => v !== null && v.trim() !== "";
+  return [
+    `Amount due: ${money(m.owedCents)} ${m.currency}`,
+    `Due: ${m.dueOn}`,
+    `Invoice ${m.number} from ${m.company} (${m.status}; total ${money(m.totalCents)} ${m.currency})`,
+    ...(said(m.howToPay)
+      ? [
+          "How to pay:",
+          ...m.howToPay!.split(/\r?\n/).filter((line) => line.trim() !== ""),
+        ]
+      : []),
+    ...(said(m.phone) ? [`Questions? Call ${m.company} at ${m.phone!.trim()}.`] : []),
+    "The invoice is attached as a PDF.",
+  ];
+}
+
 export async function sendInvoice(
   tx: Tx,
   user: AppUser,
@@ -77,17 +107,24 @@ export async function sendInvoice(
   if (file.result !== "rendered" || invoice.number === null) {
     throw new Error("an issued invoice has no page");
   }
-  const [company] = await tx.select({ name: companies.name }).from(companies);
-  if (company === undefined) throw new Error("the caller's company is not visible");
+  // The copy taken at issue, as on the page: never the company as it stands today.
+  const printed = invoice.printed;
+  if (printed === null) throw new Error("an issued invoice has no printed copy");
 
   const answer = await mailer.send({
     to: input.to,
-    subject: `Invoice ${invoice.number} from ${company.name}`,
-    text: [
-      `Invoice ${invoice.number} from ${company.name} is attached.`,
-      `Total: ${money(invoice.totalCents)} ${invoice.currency}. Amount owed: ${money(invoice.owedCents)} ${invoice.currency}.`,
-      `Due ${invoice.dueOn ?? ""}. Status: ${INVOICE_STATUS_WORDS[invoice.status]}.`,
-    ],
+    subject: `Invoice ${invoice.number} from ${printed.companyName}`,
+    text: invoiceEmail({
+      company: printed.companyName,
+      phone: printed.companyPhone,
+      number: invoice.number,
+      currency: invoice.currency,
+      owedCents: invoice.owedCents,
+      totalCents: invoice.totalCents,
+      dueOn: invoice.dueOn ?? "",
+      status: INVOICE_STATUS_WORDS[invoice.status],
+      howToPay: printed.howToPay,
+    }),
     attachment: { filename: file.filename, content: Buffer.from(file.pdf, "base64") },
     idempotencyKey: input.id,
   });
