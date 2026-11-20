@@ -14,8 +14,8 @@ Not in production yet: `main` runs on staging. What it is and what is left to bu
 One TypeScript monorepo: a phone app and an office web app over one API and one Postgres
 database.
 
-- `apps/mobile`: the phone app (Expo, React Native). Sign-in, Today (the clock), Schedule and
-  Settings, in English and Spanish, over a local SQLite store and its outbox. `.maestro/`
+- `apps/mobile`: the phone app (Expo, React Native). Sign-in, Today (the clock), Week, Crew
+  for an admin and Me, in English and Spanish, over a local SQLite store and its outbox. `.maestro/`
   holds the phone flows.
 - `apps/web`: the office (Next.js). People, Customers, Jobs, Schedule, Hours and Invoices. It
   also serves the API at `/api/trpc` and the readiness check at `/api/ready`. `e2e/` is the

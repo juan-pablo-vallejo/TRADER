@@ -1,0 +1,60 @@
+# The Crew tab, signed in as the demo admin, who has no shift today: the app opens on Crew.
+# The admin adds a shift today for a worker who had none, and sees them expected, by person
+# and by jobsite. People and jobsites are chosen by their names, which are the same in both
+# languages; everything else is chosen by id.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- assertVisible:
+    id: "tab-crew"
+- extendedWaitUntil:
+    visible:
+      id: "crew-count-expected"
+    timeout: 30000
+- takeScreenshot: crew
+- scrollUntilVisible:
+    element:
+      id: "crew-add"
+- tapOn:
+    id: "crew-add"
+- assertVisible:
+    id: "add-sheet"
+- scrollUntilVisible:
+    element: "Sam Carter"
+- tapOn: "Sam Carter"
+- scrollUntilVisible:
+    element: "Harbor View unit 4B"
+- tapOn: "Harbor View unit 4B"
+- scrollUntilVisible:
+    element:
+      id: "form-save"
+- takeScreenshot: crew-add
+- tapOn:
+    id: "form-save"
+- extendedWaitUntil:
+    visible:
+      id: "crew-note"
+    timeout: 30000
+- scrollUntilVisible:
+    element: "Sam Carter, .*"
+- tapOn: "Sam Carter, .*"
+- assertVisible:
+    id: "person-status-expected"
+- assertVisible:
+    id: "person-shift-0"
+- takeScreenshot: crew-person
+- scrollUntilVisible:
+    element:
+      id: "person-close"
+- tapOn:
+    id: "person-close"
+- scrollUntilVisible:
+    element:
+      id: "crew-view-job"
+    direction: UP
+- tapOn:
+    id: "crew-view-job"
+- assertVisible:
+    id: "crew-job-0"
+- takeScreenshot: crew-by-job

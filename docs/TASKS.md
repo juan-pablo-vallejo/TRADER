@@ -317,7 +317,7 @@ Android user.
   Done when a development build has shown both reminders on both simulators, in the
   language chosen in the app, and the function's tests are green.
 
-- [ ] 11. **Phone: the Crew tab.** A fourth tab for admins, by `me.role` in the pull. A
+- [x] 11. **Phone: the Crew tab.** A fourth tab for admins, by `me.role` in the pull. A
       worker never sees it. Online only: with no connection it says so, and shows nothing
       old as current.
   - `overview.today`, admin only. For the company's today: each person with a shift or a
@@ -671,6 +671,18 @@ Android user.
 - [ ] The Android emulator's keyboard opens a "Try out your stylus" tutorial over a text
       field and fails the Me flow. Once per emulator:
       `adb shell settings put secure stylus_handwriting_enabled 0`.
+
+- [ ] Item 11, seen and not seen. Seen on the iPhone simulator in English and Spanish and
+      on the Android emulator in English: the tab by person and by jobsite, a person's
+      sheet, Add a shift. Seen on the iPhone only: Move, Set the jobsite's location, and
+      the tab with no connection. Not seen anywhere: Call dialing, since a simulator has
+      no phone.
+- [ ] Item 11: Set the jobsite's location sends the job's other facts back as it read them
+      a moment before, because `job.update` replaces the whole record. An office edit in
+      that same second would be overwritten; a procedure that writes the location alone
+      would close it.
+- [ ] Item 11: the demo's second admin (Marcus Bell) has no shift, so the app opens on
+      Crew for him; the stamps-off flow goes to Today by its tab.
 
 ## After MVP
 

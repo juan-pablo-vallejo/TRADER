@@ -6,6 +6,7 @@ import { invoiceRouter } from "./routers/invoice";
 import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
 import { meRouter } from "./routers/me";
+import { overviewRouter } from "./routers/overview";
 import { rosterRouter } from "./routers/roster";
 import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
@@ -20,6 +21,7 @@ export const appRouter = router({
   job: jobRouter,
   labor: laborRouter,
   me: meRouter,
+  overview: overviewRouter,
   roster: rosterRouter,
   status: statusRouter,
   sync: syncRouter,

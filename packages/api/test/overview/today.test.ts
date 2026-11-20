@@ -1,0 +1,433 @@
+// overview.today: the company's today for an admin. Who is listed and who is not, each
+// shift and whether somebody clocked in on it, the clock's state and since when, the time
+// worked so far, the sessions left open from an earlier day, the jobs named, the gate, and
+// the tenant wall. Every test runs in an owner transaction that is always rolled back,
+// each read as trader_app.
+import { jobAssignments, jobs, users } from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { afterAll, describe, expect, it } from "vitest";
+
+import { crewStatus } from "../../src/contract";
+import type { Tx } from "../../src/core/context";
+import type { AppUser } from "../../src/core/resolve-user";
+import { overviewToday } from "../../src/overview/today";
+import {
+  appCallerIn,
+  asTenant,
+  boundIn,
+  eventIn,
+  outcome,
+  ownerDb,
+  rolledBack,
+  uuidv7,
+  workDayIn,
+} from "../helpers";
+
+const owner = ownerDb();
+afterAll(async () => {
+  await owner.$client.end();
+});
+
+// A Monday in New York's winter (UTC-5), and the Sunday before it.
+const DAY = "2026-11-16";
+const EVE = "2026-11-15";
+const at = (wall: string, day = DAY) => `${day}T${wall}:00-05:00`;
+
+async function world(tx: Tx) {
+  const d = await workDayIn(tx);
+  const admin = await boundIn(tx, d.companyId, "admin");
+  const adminUser: AppUser = {
+    id: admin.id,
+    companyId: d.companyId,
+    role: "admin",
+    name: "n",
+    email: "admin@co.test",
+    phone: null,
+    signInPhone: null,
+  };
+  const shift = async (
+    userId: string,
+    jobId: string,
+    start: string,
+    end: string,
+    workDate = DAY,
+  ) => {
+    const id = uuidv7();
+    await tx.insert(jobAssignments).values({
+      id,
+      companyId: d.companyId,
+      userId,
+      jobId,
+      workDate,
+      expectedStart: start,
+      expectedEnd: end,
+    });
+    return id;
+  };
+  const read = async (wall: string) => {
+    await asTenant(tx, d.companyId);
+    const answer = await overviewToday(tx, adminUser, new Date(at(wall)));
+    await tx.execute(sql`reset role`);
+    return answer;
+  };
+  return { ...d, admin, adminUser, shift, read };
+}
+
+const of = (answer: Awaited<ReturnType<typeof overviewToday>>, id: string) =>
+  answer.people.find((p) => p.person.id === id);
+
+describe("overview.today", () => {
+  it("answers an empty day as empty, with the company's date and zone", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      const answer = await w.read("09:00");
+      expect(answer).toEqual({
+        timezone: "America/New_York",
+        today: DAY,
+        asOf: new Date(at("09:00")),
+        people: [],
+        earlier: [],
+        jobs: [],
+      });
+      // The date is the company's, not UTC's: at 23:30 in New York, UTC is already tomorrow.
+      expect((await w.read("23:30")).today).toBe(DAY);
+    });
+  });
+
+  it("lists a person with a shift today and nobody whose shift is another day", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      const first = await w.shift(w.w1, w.J, "07:00", "11:00");
+      const second = await w.shift(w.w1, w.K, "12:00", "15:30");
+      await w.shift(w.w2, w.J, "07:00", "15:30", EVE);
+      const answer = await w.read("06:00");
+      expect(answer.people.map((p) => p.person.id)).toEqual([w.w1]);
+      expect(of(answer, w.w1)).toEqual({
+        person: { id: w.w1, name: "w1", phone: null },
+        shifts: [
+          { id: first, jobId: w.J, start: "07:00", end: "11:00", clockedIn: false },
+          { id: second, jobId: w.K, start: "12:00", end: "15:30", clockedIn: false },
+        ],
+        clock: { status: "off" },
+        workedMs: 0,
+        workedJobIds: [],
+      });
+      expect(answer.jobs.map((j) => j.name)).toEqual(["J", "K"]);
+      expect(answer.earlier).toEqual([]);
+    });
+  });
+
+  it("follows one person through a day: expected, late, working, break, done", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      await w.shift(w.w1, w.J, "07:00", "15:30");
+      const status = async (wall: string) => {
+        const answer = await w.read(wall);
+        return crewStatus(of(answer, w.w1)!, wall);
+      };
+      expect(await status("07:10")).toBe("expected");
+      expect(await status("07:15")).toBe("late");
+
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "started",
+        client: at("07:20"),
+      });
+      let answer = await w.read("09:20");
+      expect(of(answer, w.w1)).toMatchObject({
+        clock: {
+          status: "working",
+          jobId: w.J,
+          since: new Date(at("07:20")),
+          sinceDay: DAY,
+        },
+        // Two hours running, none of it closed yet.
+        workedMs: 2 * 3_600_000,
+        workedJobIds: [w.J],
+      });
+      // No clock-in locked the shift here (the row was written directly): a session begun
+      // on its job today says the same.
+      expect(of(answer, w.w1)!.shifts[0]!.clockedIn).toBe(true);
+      expect(await status("09:20")).toBe("working");
+
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "paused",
+        client: at("11:20"),
+      });
+      answer = await w.read("11:50");
+      // A break stops the count where it began.
+      expect(of(answer, w.w1)).toMatchObject({
+        clock: { status: "paused", since: new Date(at("07:20")) },
+        workedMs: 4 * 3_600_000,
+      });
+      expect(await status("11:50")).toBe("break");
+
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "resumed",
+        client: at("12:00"),
+      });
+      answer = await w.read("13:00");
+      // Four hours before the break and one after: the forty minutes of break count nowhere.
+      expect(of(answer, w.w1)!.workedMs).toBe(5 * 3_600_000);
+
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "ended",
+        client: at("15:00"),
+      });
+      answer = await w.read("16:00");
+      expect(of(answer, w.w1)).toMatchObject({
+        clock: { status: "off" },
+        workedMs: 7 * 3_600_000,
+      });
+      expect(await status("16:00")).toBe("done");
+    });
+  });
+
+  it("marks a shift clocked in on by its lock, and leaves the other waiting", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      const morning = await w.shift(w.w1, w.J, "07:00", "11:00");
+      await w.shift(w.w1, w.K, "12:00", "15:30");
+      const start = await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "started",
+        client: at("07:00"),
+      });
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "ended",
+        client: at("11:00"),
+      });
+      await tx
+        .update(jobAssignments)
+        .set({ lockedAt: new Date(at("07:00")), lockedByEventId: start })
+        .where(eq(jobAssignments.id, morning));
+      const answer = await w.read("11:30");
+      expect(of(answer, w.w1)!.shifts.map((s) => s.clockedIn)).toEqual([true, false]);
+      expect(crewStatus(of(answer, w.w1)!, "11:30")).toBe("expected");
+      expect(crewStatus(of(answer, w.w1)!, "12:15")).toBe("late");
+    });
+  });
+
+  it("lists someone who worked today with no shift, and sums their sessions", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      await eventIn(tx, w, {
+        worker: w.w2,
+        job: w.J,
+        type: "started",
+        client: at("08:00"),
+      });
+      await eventIn(tx, w, {
+        worker: w.w2,
+        job: w.J,
+        type: "ended",
+        client: at("10:00"),
+      });
+      await eventIn(tx, w, {
+        worker: w.w2,
+        job: w.K,
+        type: "started",
+        client: at("10:30"),
+      });
+      const answer = await w.read("11:00");
+      expect(of(answer, w.w2)).toMatchObject({
+        shifts: [],
+        clock: { status: "working", jobId: w.K, since: new Date(at("10:30")) },
+        workedMs: 2.5 * 3_600_000,
+        workedJobIds: [w.J, w.K].sort(),
+      });
+    });
+  });
+
+  it("reads a corrected clock-in in its corrected form, and counts a voided session as nothing", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      const start = await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "started",
+        client: at("07:00"),
+      });
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "started",
+        client: at("08:00"),
+        server: at("09:00"),
+        corrects: start,
+        initiator: w.admin.id,
+      });
+      let answer = await w.read("10:00");
+      expect(of(answer, w.w1)).toMatchObject({
+        clock: { status: "working", since: new Date(at("08:00")) },
+        workedMs: 2 * 3_600_000,
+      });
+
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "ended",
+        client: at("10:00"),
+      });
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "voided",
+        client: at("10:30"),
+        voids: start,
+        initiator: w.admin.id,
+      });
+      answer = await w.read("11:00");
+      // Voided, the session is nobody's work today: with no shift either, they are not listed.
+      expect(of(answer, w.w1)).toBeUndefined();
+    });
+  });
+
+  it("names a session left open from an earlier day apart, however old", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      // Forgotten three weeks ago: no entry of theirs since.
+      await eventIn(tx, w, {
+        worker: w.w2,
+        job: w.K,
+        type: "started",
+        client: at("07:00", "2026-10-26"),
+      });
+      // Left open last night by someone with a shift today.
+      await w.shift(w.w1, w.J, "07:00", "15:30");
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "started",
+        client: at("16:00", EVE),
+      });
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "paused",
+        client: at("18:00", EVE),
+      });
+      const answer = await w.read("09:00");
+      expect(answer.earlier).toEqual([
+        {
+          person: { id: w.w2, name: "w2", phone: null },
+          jobId: w.K,
+          since: new Date(at("07:00", "2026-10-26")),
+          sinceDay: "2026-10-26",
+          state: "working",
+        },
+        {
+          person: { id: w.w1, name: "w1", phone: null },
+          jobId: w.J,
+          since: new Date(at("16:00", EVE)),
+          sinceDay: EVE,
+          state: "paused",
+        },
+      ]);
+      // w2 has nothing today and is listed only there. w1 has a shift: listed, with the
+      // clock as it stands and none of last night's time counted as today's.
+      expect(answer.people.map((p) => p.person.id)).toEqual([w.w1]);
+      expect(of(answer, w.w1)).toMatchObject({
+        clock: { status: "paused", sinceDay: EVE },
+        workedMs: 0,
+        workedJobIds: [],
+      });
+      expect(answer.jobs.map((j) => j.name)).toEqual(["J", "K"]);
+    });
+  });
+
+  it("does not list a session that began and ended on an earlier day", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "started",
+        client: at("07:00", EVE),
+      });
+      await eventIn(tx, w, {
+        worker: w.w1,
+        job: w.J,
+        type: "ended",
+        client: at("15:00", EVE),
+      });
+      const answer = await w.read("09:00");
+      expect(answer.people).toEqual([]);
+      expect(answer.earlier).toEqual([]);
+    });
+  });
+
+  it("gives Call the contact phone, else the sign-in number, and each job its facts", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      await tx
+        .update(users)
+        .set({ phone: "401-555-0100", signInPhone: "+14015550111" })
+        .where(eq(users.id, w.w1));
+      await tx
+        .update(users)
+        .set({ signInPhone: "+14015550122" })
+        .where(eq(users.id, w.w2));
+      await tx
+        .update(jobs)
+        .set({
+          address: "1 Main St",
+          notes: "Side door",
+          locationLat: 41.8,
+          locationLng: -71.4,
+          locationRadiusM: 200,
+        })
+        .where(eq(jobs.id, w.J));
+      await w.shift(w.w1, w.J, "07:00", "15:30");
+      await w.shift(w.w2, w.J, "07:00", "15:30");
+      const answer = await w.read("06:00");
+      expect(answer.people.map((p) => p.person.phone)).toEqual([
+        "401-555-0100",
+        "+14015550122",
+      ]);
+      expect(answer.jobs).toEqual([
+        {
+          id: w.J,
+          name: "J",
+          address: "1 Main St",
+          notes: "Side door",
+          location: { lat: 41.8, lng: -71.4, radiusM: 200 },
+          status: "open",
+          customer: { id: w.customerId, name: "Customer" },
+        },
+      ]);
+    });
+  });
+
+  it("is an admin's alone, and never shows another company's day", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      await w.shift(w.w1, w.J, "07:00", "15:30");
+      const other = await world(tx);
+      await other.shift(other.w1, other.J, "07:00", "15:30");
+
+      await asTenant(tx, w.companyId);
+      expect(await outcome(appCallerIn(tx, w.who).overview.today())).toBe("FORBIDDEN");
+      await tx.execute(sql`reset role`);
+      await asTenant(tx, w.companyId);
+      expect(await outcome(appCallerIn(tx, null).overview.today())).toBe("UNAUTHORIZED");
+      await tx.execute(sql`reset role`);
+
+      const mine = await w.read("09:00");
+      expect(mine.people.map((p) => p.person.id)).toEqual([w.w1]);
+      expect(mine.jobs.map((j) => j.id)).toEqual([w.J]);
+      const theirs = await other.read("09:00");
+      expect(theirs.people.map((p) => p.person.id)).toEqual([other.w1]);
+    });
+  });
+});

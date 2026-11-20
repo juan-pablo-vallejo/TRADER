@@ -6,6 +6,10 @@ appId: app.jpteq.trader
 ---
 - runFlow:
     file: parts/sign-in.yaml
+# This person is the demo's second admin and has no shift today, so the app opened on Crew
+# (suite.sh says so, as what the sign-in lands on). Their own clock is on Today.
+- tapOn:
+    id: "tab-today"
 - extendedWaitUntil:
     visible:
       id: "sync-synced"

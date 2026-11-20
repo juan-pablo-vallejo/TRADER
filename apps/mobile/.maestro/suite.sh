@@ -21,6 +21,7 @@ SAM=sam.carter@demo.invalid
 OMAR=omar.haddad@demo.invalid
 ELENA=elena.petrov@demo.invalid
 MARCUS=marcus.bell@demo.invalid
+OFFICE=office@demo.invalid
 api_pid=
 
 # One statement's answer, as the database's own superuser inside its container: the
@@ -152,7 +153,7 @@ expect "yesterday's session is closed, by one clock-out" \
 
 echo "— location stamps off for one person"
 sql "update users set location_stamps = false where email = '$MARCUS';"
-flow stamps-off fresh never $MARCUS
+flow stamps-off fresh never $MARCUS crew
 expect "two entries, neither with a location, neither flagged for one" \
   "select count(*) || ' ' || count(e.location_lat) || ' '
      || count(*) filter (where 'location' = any (e.flags))
@@ -192,5 +193,17 @@ expect "the start is stored, flagged as unscheduled" \
   "select count(*) from work_session_events e
    join users u on u.id = e.worker_id
    where u.email = '$ANA' and e.captured_offline and 'unscheduled' = any (e.flags)" 1
+
+echo "— the Crew tab, as the admin"
+sql "delete from job_assignments a using users u, companies c
+     where u.id = a.user_id and c.id = u.company_id and u.email = '$SAM'
+       and a.work_date = (now() at time zone c.timezone)::date and a.locked_at is null;"
+flow crew fresh allow $OFFICE crew
+expect "the shift the admin added is on the server, today, on that jobsite" \
+  "select count(*) from job_assignments a
+   join users u on u.id = a.user_id join companies c on c.id = u.company_id
+   join jobs j on j.id = a.job_id
+   where u.email = '$SAM' and j.name = 'Harbor View unit 4B'
+     and a.work_date = (now() at time zone c.timezone)::date" 1
 
 echo "all flows green on $platform"

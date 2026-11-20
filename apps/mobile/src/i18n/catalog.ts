@@ -30,7 +30,7 @@ export type Catalog = {
     unavailable: string;
     developmentOnly: string;
   };
-  tabs: { today: string; week: string; settings: string };
+  tabs: { today: string; week: string; crew: string; settings: string };
   today: {
     title: string;
     jobs: string;
@@ -151,6 +151,79 @@ export type Catalog = {
     startBody: (time: string) => string;
     endTitle: (job: string) => string;
     endBody: (time: string) => string;
+  };
+  // The Crew tab: admins only, online only.
+  crew: {
+    title: string;
+    offline: string;
+    empty: string;
+    refresh: string;
+    byPerson: string;
+    byJob: string;
+    status: {
+      working: string;
+      break: string;
+      late: string;
+      expected: string;
+      done: string;
+    };
+    noShift: string;
+    earlierTitle: string;
+    earlierRow: (job: string, day: string) => string;
+    addAny: string;
+    person: {
+      shifts: string;
+      noShifts: string;
+      at: (job: string) => string;
+      call: string;
+      noPhone: string;
+      add: string;
+      move: string;
+      close: string;
+    };
+    form: {
+      who: string;
+      job: string;
+      noJobs: string;
+      start: string;
+      end: string;
+      earlier: (what: string) => string;
+      later: (what: string) => string;
+      addTitle: string;
+      addSave: string;
+      added: string;
+      moveTitle: (name: string) => string;
+      moveFrom: (time: string) => string;
+      moveEndKept: (time: string) => string;
+      moveTell: string;
+      moveSave: string;
+      moved: string;
+      cancel: string;
+      pickPerson: string;
+      pickJob: string;
+    };
+    refusal: {
+      overlap: string;
+      inactive: string;
+      archived: string;
+      sameJob: string;
+      started: string;
+      failed: string;
+    };
+    job: {
+      here: string;
+      nobodyHere: string;
+      scheduled: string;
+      located: string;
+      notLocated: string;
+      setLocation: string;
+      confirmTitle: string;
+      confirmBody: (job: string) => string;
+      confirm: string;
+      locating: string;
+      noFix: string;
+      set: string;
+    };
   };
   age: {
     justNow: string;

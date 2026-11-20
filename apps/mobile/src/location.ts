@@ -56,3 +56,22 @@ export async function refreshLocation(): Promise<void> {
     asking = false;
   }
 }
+
+// Where the phone is now, asked for on purpose: the Crew tab's "Set the jobsite's location
+// here". A fresh GPS-grade fix or nothing: an old or coarse reading would put the jobsite
+// in the wrong place for every clock-in after. Permission is asked for if it can be.
+export async function currentFix(): Promise<{ lat: number; lng: number } | null> {
+  try {
+    let permission = await Location.getForegroundPermissionsAsync();
+    if (!permission.granted && permission.canAskAgain) {
+      permission = await Location.requestForegroundPermissionsAsync();
+    }
+    if (!permission.granted) return null;
+    const position = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.High,
+    });
+    return { lat: position.coords.latitude, lng: position.coords.longitude };
+  } catch {
+    return null;
+  }
+}
