@@ -1,5 +1,5 @@
-# The clock, with a connection: clock in on a jobsite, switch to another, take a
-# break, clock out, and everything sent. `suite.sh` then reads the server: six events, once
+# The clock, with a connection: clock in on a jobsite, open the job from its card, switch
+# to another, take a break, clock out (asked once), and everything sent. `suite.sh` then reads the server: six events, once
 # each, two sessions.
 appId: app.jpteq.trader
 ---
@@ -11,6 +11,7 @@ appId: app.jpteq.trader
     timeout: 30000
 - tapOn:
     id: "job-row-0"
+- takeScreenshot: today-off
 - tapOn:
     id: "clock-in"
 - assertVisible:
@@ -19,22 +20,44 @@ appId: app.jpteq.trader
     visible:
       id: "sync-synced"
     timeout: 30000
+- takeScreenshot: today-working
 - tapOn:
-    id: "job-row-1"
+    id: "job-card"
+- assertVisible:
+    id: "job-notes"
+- takeScreenshot: today-job-sheet
+- tapOn:
+    id: "job-close"
 - tapOn:
     id: "clock-switch"
+- takeScreenshot: today-switch-sheet
+- tapOn:
+    id: "switch-row-0"
 - assertVisible:
     id: "clock-working"
 - tapOn:
     id: "clock-pause"
 - assertVisible:
     id: "clock-paused"
+- takeScreenshot: today-break
 - tapOn:
     id: "clock-resume"
 - assertVisible:
     id: "clock-working"
 - tapOn:
     id: "clock-out"
+- assertVisible:
+    id: "clock-out-body"
+- takeScreenshot: today-clock-out-sheet
+# Asked once, and "Keep working" changes nothing.
+- tapOn:
+    id: "clock-out-cancel"
+- assertVisible:
+    id: "clock-working"
+- tapOn:
+    id: "clock-out"
+- tapOn:
+    id: "clock-out-confirm"
 - assertVisible:
     id: "clock-off"
 - extendedWaitUntil:

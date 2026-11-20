@@ -12,7 +12,7 @@ import { wallClock } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
 import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
-import { SyncBanner } from "../../ui/sync-banner";
+import { SyncChip } from "../../ui/sync-chip";
 
 // Older than this, the schedule on the phone is said to be possibly out of date.
 export const STALE_MS = 60 * 60_000;
@@ -50,7 +50,7 @@ export default function Week() {
     <Screen testID="week">
       <ScrollView contentContainerStyle={styles.page}>
         <Text style={text.title}>{t.week.title}</Text>
-        <SyncBanner />
+        <SyncChip />
         <Text testID="week-age" style={text.secondary}>
           {old === null ? t.week.never : t.week.updated(age(old, t.age))}
         </Text>

@@ -1,21 +1,22 @@
-# The API is back (suite.sh has started it): one request to send, and everything is sent.
+# The API is back (suite.sh has started it): Send now, behind the chip, and everything is
+# sent.
 appId: app.jpteq.trader
 ---
 - tapOn:
-    id: "tab-settings"
+    id: "sync-pending|sync-synced|sync-attention"
 - tapOn:
     id: "sync-now"
+- tapOn:
+    id: "sync-close"
+# The sheet's list shrinks as entries go, and a tap that lands mid-move closes nothing.
+- runFlow:
+    when:
+      visible:
+        id: "sync-close"
+    commands:
+      - tapOn:
+          id: "sync-close"
 - extendedWaitUntil:
     visible:
       id: "sync-synced"
     timeout: 60000
-- tapOn:
-    id: "tab-today"
-# A tap that lands while the tab bar redraws is lost: ask again if Today is not up.
-- runFlow:
-    when:
-      notVisible:
-        id: "clock-working|clock-paused|clock-off"
-    commands:
-      - tapOn:
-          id: "tab-today"

@@ -1,6 +1,7 @@
 # With the API unreachable (suite.sh has stopped it): the app is already signed in from the
 # flow before. A clock-in and a clock-out are captured, the clock follows them, and the
-# banner says they are saved on the phone. Nothing is lost by closing the app in between.
+# chip says they are saved on the phone and opens on each of them. Nothing is lost by
+# closing the app in between.
 appId: app.jpteq.trader
 ---
 - tapOn:
@@ -9,11 +10,13 @@ appId: app.jpteq.trader
     id: "clock-in"
 - assertVisible:
     id: "clock-working"
-# Below the jobsites on a short screen.
-- scrollUntilVisible:
-    element:
-      id: "entry-unsent-0"
-    direction: DOWN
+- takeScreenshot: today-saved-on-phone
+- tapOn:
+    id: "sync-pending"
+- assertVisible:
+    id: "entry-unsent-0"
+- tapOn:
+    id: "sync-close"
 - stopApp
 - launchApp:
     stopApp: false
@@ -29,18 +32,27 @@ appId: app.jpteq.trader
       true: ${LAUNCH == "adb"}
     commands:
       - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081"
+      # Without the link's other parts a freshly installed development build opens its own
+      # menu over the app: put it away. It is the tool's, and has no test id of ours.
+      - runFlow:
+          when:
+            visible: "Toggle performance monitor"
+          commands:
+            - back
 - extendedWaitUntil:
     visible:
       id: "clock-working"
     timeout: 120000
 - tapOn:
     id: "clock-out"
+- tapOn:
+    id: "clock-out-confirm"
 - assertVisible:
     id: "clock-off"
-- assertVisible:
+- tapOn:
     id: "sync-pending"
-# Below the jobsites on a short screen.
-- scrollUntilVisible:
-    element:
-      id: "entry-unsent-1"
-    direction: DOWN
+- assertVisible:
+    id: "entry-unsent-1"
+- takeScreenshot: today-waiting-sheet
+- tapOn:
+    id: "sync-close"

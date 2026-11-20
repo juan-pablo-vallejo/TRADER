@@ -48,6 +48,27 @@ export const en: Catalog = {
     noMoreShifts: "You have no more shifts today.",
     noShift: "You have no shift today. Call the office.",
     attention: "Needs attention",
+    shiftHours: (start, end) => `${start} – ${end}`,
+    onTheClock: "On the clock",
+    onBreak: "On a break",
+    since: (time) => `Since ${time}`,
+    switchJob: "Switch job",
+    switchTitle: "Switch to which jobsite?",
+    clockOutTitle: "Clock out?",
+    clockOutBody: (hours, job) => `${hours} worked at ${job}.`,
+    keepWorking: "Keep working",
+    earlier: (job, day) => `You are still on the clock at ${job} from ${day}.`,
+    clockOutNow: "Clock out now",
+    callOffice: "Call the office",
+    captured: "Saved",
+    job: {
+      address: "Address",
+      noAddress: "The office has not added an address.",
+      openMaps: "Open in maps",
+      notes: "Notes from the office",
+      noNotes: "No notes for this jobsite.",
+      close: "Close",
+    },
   },
   entry: {
     types: {
@@ -85,6 +106,15 @@ export const en: Catalog = {
     wrongClock:
       "This phone's clock looks wrong. Set the time automatically in the phone's settings.",
     now: "Send now",
+    chip: {
+      sent: "Sent",
+      saved: "Saved on phone",
+      sending: "Sending",
+      attention: "Needs attention",
+    },
+    waitingTitle: "Your entries",
+    nothingWaiting: "Nothing is waiting on this phone.",
+    close: "Close",
   },
   week: {
     title: "Schedule",

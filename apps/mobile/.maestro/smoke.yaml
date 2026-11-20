@@ -21,3 +21,16 @@ appId: app.jpteq.trader
     id: "tab-today"
 - assertVisible:
     id: "job-list"
+# In Spanish: the long label takes a second line, and is not cut.
+- tapOn:
+    id: "job-row-0"
+- assertVisible:
+    id: "job-card"
+- takeScreenshot: today-off-es
+- tapOn:
+    id: "sync-synced|sync-pending|sync-attention"
+- assertVisible:
+    id: "sync-now"
+- takeScreenshot: today-chip-sheet-es
+- tapOn:
+    id: "sync-close"

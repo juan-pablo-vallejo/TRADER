@@ -53,6 +53,32 @@ export type Catalog = {
     noMoreShifts: string;
     noShift: string;
     attention: string;
+    // The rebuilt screen (item 8): one card, one button.
+    shiftHours: (start: string, end: string) => string;
+    onTheClock: string;
+    onBreak: string;
+    since: (time: string) => string;
+    switchJob: string;
+    switchTitle: string;
+    // Clock out asks once, in a sheet that names the job and the time worked.
+    clockOutTitle: string;
+    clockOutBody: (hours: string, job: string) => string;
+    keepWorking: string;
+    // A session still open from an earlier day.
+    earlier: (job: string, day: string) => string;
+    clockOutNow: string;
+    callOffice: string;
+    // Said by a screen reader when a tap has been saved; the mark itself is a check.
+    captured: string;
+    // The job, opened from its card.
+    job: {
+      address: string;
+      noAddress: string;
+      openMaps: string;
+      notes: string;
+      noNotes: string;
+      close: string;
+    };
   };
   entry: {
     types: { started: string; paused: string; resumed: string; ended: string };
@@ -78,6 +104,12 @@ export type Catalog = {
     signInAgain: string;
     wrongClock: string;
     now: string;
+    // The chip under a screen's title: where this phone's entries stand, in a word.
+    chip: { sent: string; saved: string; sending: string; attention: string };
+    // The sheet the chip opens.
+    waitingTitle: string;
+    nothingWaiting: string;
+    close: string;
   };
   week: {
     title: string;

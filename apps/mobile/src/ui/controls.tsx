@@ -1,5 +1,6 @@
 // The phone app's controls: a primary button 56 pt tall and full
-// width, one a screen; a secondary one 48 pt. Every control carries a `testID`: a
+// width, one a screen; a secondary one 48 pt. A label too long for one line, as Spanish
+// often is, takes a second and the button grows with it: it is never cut short. Every control carries a `testID`: a
 // Maestro flow selects by it, never by text, which is in two languages.
 import { Pressable, StyleSheet, Text, type TextStyle } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -34,7 +35,10 @@ export function Button({
         disabled && primary && styles.disabled,
       ]}
     >
-      <Text style={[styles.buttonLabel, { color: primary ? color.onAccent : color.ink }]}>
+      <Text
+        numberOfLines={2}
+        style={[styles.buttonLabel, { color: primary ? color.onAccent : color.ink }]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -67,14 +71,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: size.radiusPrimary,
     paddingHorizontal: space[4],
+    paddingVertical: space[2],
   },
   primary: { minHeight: size.primary, backgroundColor: color.accent },
   secondary: {
     minHeight: size.target,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: color.border,
+    borderWidth: 1,
+    borderColor: color.controlBorder,
   },
   disabled: { backgroundColor: color.muted },
-  buttonLabel: { ...(type.bodyStrong as TextStyle) },
+  buttonLabel: { ...(type.bodyStrong as TextStyle), textAlign: "center" },
 });

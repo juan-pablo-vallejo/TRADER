@@ -1,47 +1,78 @@
-// Today: the clock. What it shows comes from the phone's
-// own store — the last pull and the entries captured since — so it opens and works with no
-// signal. A tap writes to the store and returns; sending is the sync layer's. Without the
-// weekly schedule the person picks a jobsite of theirs; under it the clock offers the one
-// shift the schedule makes eligible now, or says to call the office. The server decides what
-// counts either way, and an entry it refused is shown as what it is.
-import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
+// Today: the clock, around one button. What it shows comes from the phone's own store —
+// the last pull and the entries captured since — so it opens and works with no signal. A
+// tap writes to the store and returns; sending is the sync layer's.
+//
+// Off the clock: a card with the job, its address and the shift's hours, and one Clock in
+// button at the foot of the screen. Under the weekly schedule the card is the shift the
+// schedule makes eligible now and there is nothing to pick; with no such shift there is no
+// button, the reason, and Call the office. Without the schedule the person picks a jobsite
+// first. On the clock: the job, a running timer, Clock out as the main button, Start break
+// and Switch job beneath it. Clock out asks once; nothing else asks. A session left open
+// from an earlier day says so first. The server decides what counts either way, and an
+// entry it refused is shown behind the chip as what it is.
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { duration, timeOfDay, wallTime } from "../../format";
+import { dayName, duration, timeOfDay, wallTime } from "../../format";
 import { useStrings } from "../../i18n";
-import type { Catalog } from "../../i18n/catalog";
-import { offerAt, wallClock } from "../../sync/clock";
+import { offerAt, type Tap, wallClock } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
-import type { OutboxRecord } from "../../sync/types";
+import {
+  fromEarlierDay,
+  mapsLink,
+  sessionWorkedMs,
+  telLink,
+  timer,
+} from "../../sync/today";
 import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
-import { SyncBanner } from "../../ui/sync-banner";
+import { Sheet } from "../../ui/sheet";
+import { SyncChip } from "../../ui/sync-chip";
 
-// What an entry still on this phone needs said about it, or nothing when it simply counts.
-function entryNote(record: OutboxRecord, t: Catalog["entry"]): string | null {
-  if (record.standing === "rejected") {
-    const known = t.refusals as unknown as Record<string, string | undefined>;
-    const code = record.code ?? "";
-    const why =
-      code !== "other" && typeof known[code] === "string"
-        ? known[code]
-        : t.refusals.other(code);
-    return `${t.refused} ${why}`;
-  }
-  // Sent and accepted: it counts, and goes from this list with the next pull.
-  return record.standing === "settled" ? null : t.unsent;
-}
+// How long the check mark stays after a tap was saved.
+const CAPTURED_MS = 1600;
+
+type JobFacts = {
+  id: string;
+  name: string;
+  address: string | null;
+  notes: string | null;
+};
 
 export default function Today() {
   const { t, language } = useStrings();
   const { snapshot, records, clock, last, tap, sync } = useSync();
+  const insets = useSafeAreaInsets();
   const [picked, setPicked] = useState<string | null>(null);
-  // The minute moves the offer and the hours; nothing else on the screen needs a clock.
+  const [asking, setAsking] = useState<"clock-out" | "switch" | null>(null);
+  const [opened, setOpened] = useState<string | null>(null);
+  const [captured, setCaptured] = useState(false);
+  const capturedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The second moves the timer while the clock runs; the minute moves the offer and the
+  // hours otherwise. Nothing else on the screen needs a clock.
   const [now, setNow] = useState(() => Date.now());
+  const running = clock.status === "working";
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 20_000);
-    return () => clearInterval(timer);
-  }, []);
+    const tick = setInterval(() => setNow(Date.now()), running ? 1000 : 20_000);
+    return () => clearInterval(tick);
+  }, [running]);
+  useEffect(
+    () => () => {
+      if (capturedTimer.current !== null) clearTimeout(capturedTimer.current);
+    },
+    [],
+  );
 
   const data = snapshot?.data ?? null;
   const zone = data?.company.timezone ?? "UTC";
@@ -72,12 +103,13 @@ export default function Today() {
     );
   }
 
+  // Every job the last pull named, a shift's own included: what a card and a sheet show.
+  const facts = new Map<string, JobFacts>();
+  for (const s of data.shifts) facts.set(s.job.id, s.job);
+  for (const j of data.jobs) facts.set(j.id, j);
+  const nameOf = (jobId: string) => facts.get(jobId)?.name ?? "—";
+
   const jobs = data.jobs.filter((job) => job.status !== "archived");
-  const names = new Map<string, string>([
-    ...data.shifts.map((s) => [s.job.id, s.job.name] as const),
-    ...data.jobs.map((j) => [j.id, j.name] as const),
-  ]);
-  const nameOf = (jobId: string) => names.get(jobId) ?? "—";
   const offer = data.scheduleEnforced ? offerAt(data.shifts, at.day, at.minute) : null;
 
   // Where a start or a switch would go: the eligible shift's jobsite under the schedule,
@@ -91,130 +123,158 @@ export default function Today() {
         : null
       : (choices.find((job) => job.id === picked)?.id ??
         (choices.length === 1 && clock.status === "off" ? choices[0]!.id : null));
+  // Under the schedule a switch has one place to go; without it, the person chooses.
+  const switchTo: string[] =
+    offer !== null ? (target === null ? [] : [target]) : choices.map((job) => job.id);
 
-  const workedToday =
-    data.sessions
-      .filter((s) => s.workDate === at.day && !s.voided)
-      .reduce(
-        (sum, s) =>
-          sum +
-          s.workedMs +
-          // A session still open has kept working since the pull.
-          (s.endedAt === null && s.state === "working"
-            ? Math.max(0, now - snapshot!.pulledAt)
-            : 0),
-        0,
-      ) ?? 0;
+  const workedToday = data.sessions
+    .filter((s) => s.workDate === at.day && !s.voided)
+    .reduce(
+      (sum, s) =>
+        sum +
+        s.workedMs +
+        // A session still open has kept working since the pull.
+        (s.endedAt === null && s.state === "working"
+          ? Math.max(0, now - snapshot!.pulledAt)
+          : 0),
+      0,
+    );
+  const session = sessionWorkedMs(data, records, clock, now);
+  const earlier =
+    clock.status !== "off" && fromEarlierDay(wallClock(clock.since, zone).day, at.day);
 
-  // Each with a testID numbered within its own kind: `entry-unsent-0` is the oldest entry
-  // not sent, however many sent ones are listed before it.
-  const seen = { refused: 0, unsent: 0 };
-  const noted = records.flatMap((record) => {
-    const note = entryNote(record, t.entry);
-    if (note === null) return [];
-    const kind = record.standing === "rejected" ? "refused" : "unsent";
-    const testID = `entry-${kind}-${seen[kind]}`;
-    seen[kind] += 1;
-    return [{ record, note, testID }];
-  });
+  // One capture: written to the store, answered with a check mark and a short haptic.
+  // Neither waits on the network, and a phone with no haptics simply stays quiet.
+  const capture = async (what: Tap) => {
+    if (!(await tap(what))) return;
+    setCaptured(true);
+    if (capturedTimer.current !== null) clearTimeout(capturedTimer.current);
+    capturedTimer.current = setTimeout(() => setCaptured(false), CAPTURED_MS);
+    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
+      () => undefined,
+    );
+  };
+
+  // The card's job: the one the clock is on; else the one a start would go to.
+  const cardJob = current ?? target;
+  const card = cardJob === null ? null : (facts.get(cardJob) ?? null);
+  const shift =
+    offer?.kind === "eligible" && offer.shift.job.id === cardJob ? offer.shift : null;
+  const officeCall = telLink(data.company.phone);
+  const noShift = offer !== null && offer.kind !== "eligible" && clock.status === "off";
+  const sheetJob = opened === null ? null : (facts.get(opened) ?? null);
 
   return (
     <Screen testID="today">
-      <ScrollView contentContainerStyle={styles.page}>
+      <View style={styles.head}>
         <Text style={text.title}>{t.today.title}</Text>
-        <SyncBanner />
+        <SyncChip />
+      </View>
 
-        <View style={styles.card}>
-          <Text testID={`clock-${clock.status}`} style={text.heading}>
-            {clock.status === "off"
-              ? t.today.off
-              : clock.status === "paused"
-                ? t.today.paused(nameOf(clock.jobId))
-                : t.today.working(
-                    nameOf(clock.jobId),
-                    timeOfDay(clock.since, zone, language),
-                  )}
-          </Text>
-          <Text testID="today-hours" style={text.secondary}>
-            {t.today.hoursToday(duration(workedToday))}
-          </Text>
+      <ScrollView style={styles.fill} contentContainerStyle={styles.page}>
+        {clock.status !== "off" && earlier && (
+          <View testID="today-earlier" style={styles.earlier} accessibilityRole="alert">
+            <Ionicons name="alert-circle" size={20} color={color.attentionInk} />
+            <Text style={[text.body, styles.earlierText]}>
+              {t.today.earlier(
+                nameOf(clock.jobId),
+                dayName(wallClock(clock.since, zone).day, language),
+              )}
+            </Text>
+          </View>
+        )}
+
+        {card !== null && (
+          <Pressable
+            testID="job-card"
+            accessibilityRole="button"
+            onPress={() => setOpened(card.id)}
+            style={styles.card}
+          >
+            <View style={styles.cardHead}>
+              <Text style={[text.heading, styles.fill]}>{card.name}</Text>
+              <Ionicons name="chevron-forward" size={20} color={color.inkSecondary} />
+            </View>
+            {card.address !== null && <Text style={text.secondary}>{card.address}</Text>}
+            {shift !== null && clock.status === "off" && (
+              <Text testID="offer-eligible" style={text.bodyStrong}>
+                {t.today.shiftHours(
+                  wallTime(shift.start, language),
+                  wallTime(shift.end, language),
+                )}
+              </Text>
+            )}
+          </Pressable>
+        )}
+
+        <View style={styles.status}>
+          {clock.status === "off" ? (
+            <Text testID="clock-off" style={text.body}>
+              {t.today.off}
+            </Text>
+          ) : (
+            <>
+              <View style={styles.statusLine}>
+                <Ionicons
+                  name={clock.status === "paused" ? "pause-circle" : "time"}
+                  size={20}
+                  color={clock.status === "paused" ? color.attentionInk : color.activeInk}
+                />
+                <Text testID={`clock-${clock.status}`} style={text.bodyStrong}>
+                  {clock.status === "paused" ? t.today.onBreak : t.today.onTheClock}
+                </Text>
+                {!earlier && (
+                  <Text style={text.secondary}>
+                    {t.today.since(timeOfDay(clock.since, zone, language))}
+                  </Text>
+                )}
+              </View>
+              <Text
+                testID="clock-timer"
+                accessibilityRole="timer"
+                style={[styles.timer, clock.status === "paused" && styles.timerPaused]}
+              >
+                {timer(session)}
+              </Text>
+            </>
+          )}
+          <View style={styles.statusLine}>
+            <Text testID="today-hours" style={text.secondary}>
+              {t.today.hoursToday(duration(workedToday))}
+            </Text>
+            {captured && (
+              <View
+                testID="capture-saved"
+                accessibilityLiveRegion="polite"
+                accessibilityLabel={t.today.captured}
+                style={styles.statusLine}
+              >
+                <Ionicons name="checkmark-circle" size={20} color={color.doneInk} />
+                <Text style={[text.secondary, { color: color.doneInk }]}>
+                  {t.today.captured}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {offer !== null && clock.status === "off" && (
+        {noShift && offer !== null && (
           <Text
             testID={`offer-${offer.kind === "later" && offer.next === null ? "over" : offer.kind}`}
-            style={offer.kind === "eligible" ? text.body : text.attention}
+            style={text.body}
           >
-            {offer.kind === "eligible"
-              ? t.today.shiftNow(
-                  offer.shift.job.name,
-                  wallTime(offer.shift.start, language),
-                  wallTime(offer.shift.end, language),
-                )
-              : offer.kind === "later"
-                ? offer.next === null
-                  ? t.today.noMoreShifts
-                  : t.today.shiftLater(
-                      offer.next.shift.job.name,
-                      wallTime(offer.next.start, language),
-                    )
-                : t.today.noShift}
+            {offer.kind === "later"
+              ? offer.next === null
+                ? t.today.noMoreShifts
+                : t.today.shiftLater(
+                    offer.next.shift.job.name,
+                    wallTime(offer.next.start, language),
+                  )
+              : t.today.noShift}
           </Text>
         )}
 
-        {clock.status === "off" && (
-          <Button
-            testID="clock-in"
-            label={target === null ? t.today.clockIn : t.today.clockInAt(nameOf(target))}
-            disabled={target === null}
-            onPress={() => {
-              if (target !== null) void tap({ action: "start", jobId: target });
-            }}
-          />
-        )}
-        {clock.status === "working" && (
-          <>
-            <Button
-              testID="clock-out"
-              label={t.today.clockOut}
-              onPress={() => void tap({ action: "end" })}
-            />
-            <Button
-              testID="clock-pause"
-              kind="secondary"
-              label={t.today.pause}
-              onPress={() => void tap({ action: "pause" })}
-            />
-            {target !== null && (
-              <Button
-                testID="clock-switch"
-                kind="secondary"
-                label={t.today.switchTo(nameOf(target))}
-                onPress={() => {
-                  setPicked(null);
-                  void tap({ action: "switch", jobId: target });
-                }}
-              />
-            )}
-          </>
-        )}
-        {clock.status === "paused" && (
-          <>
-            <Button
-              testID="clock-resume"
-              label={t.today.resume}
-              onPress={() => void tap({ action: "resume" })}
-            />
-            <Button
-              testID="clock-out"
-              kind="secondary"
-              label={t.today.clockOut}
-              onPress={() => void tap({ action: "end" })}
-            />
-          </>
-        )}
-
-        {offer === null && clock.status !== "paused" && (
+        {offer === null && clock.status === "off" && (
           <>
             <Text style={text.label}>{t.today.jobs}</Text>
             {jobs.length === 0 ? (
@@ -224,22 +284,27 @@ export default function Today() {
             ) : (
               <View testID="job-list" style={styles.list}>
                 {jobs.map((job, index) => {
-                  const on = job.id === current;
                   const chosen = job.id === target;
                   return (
                     <Pressable
                       key={job.id}
                       testID={`job-row-${index}`}
                       accessibilityRole="radio"
-                      accessibilityState={{ selected: chosen, disabled: on }}
-                      disabled={on}
+                      accessibilityState={{ selected: chosen }}
                       onPress={() => setPicked(job.id)}
                       style={[styles.row, chosen && styles.chosen]}
                     >
-                      <Text style={text.bodyStrong}>{job.name}</Text>
-                      {job.address !== null && (
-                        <Text style={text.secondary}>{job.address}</Text>
-                      )}
+                      <Ionicons
+                        name={chosen ? "radio-button-on" : "radio-button-off"}
+                        size={22}
+                        color={chosen ? color.accent : color.controlBorder}
+                      />
+                      <View style={styles.fill}>
+                        <Text style={text.bodyStrong}>{job.name}</Text>
+                        {job.address !== null && (
+                          <Text style={text.secondary}>{job.address}</Text>
+                        )}
+                      </View>
                     </Pressable>
                   );
                 })}
@@ -247,55 +312,230 @@ export default function Today() {
             )}
           </>
         )}
+      </ScrollView>
 
-        {noted.length > 0 && (
+      {/* The foot of the screen: the one button, and what goes beneath it. */}
+      <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, space[2]) }]}>
+        {clock.status === "off" && !noShift && (
+          <Button
+            testID="clock-in"
+            label={target === null ? t.today.clockIn : t.today.clockInAt(nameOf(target))}
+            disabled={target === null}
+            onPress={() => {
+              if (target !== null) void capture({ action: "start", jobId: target });
+            }}
+          />
+        )}
+        {noShift && officeCall !== null && (
+          <Button
+            testID="call-office"
+            label={t.today.callOffice}
+            onPress={() => void Linking.openURL(officeCall).catch(() => undefined)}
+          />
+        )}
+        {clock.status === "working" && (
           <>
-            <Text style={text.label}>{t.today.attention}</Text>
-            <View style={styles.list}>
-              {noted.map(({ record, note, testID }) => (
-                <View key={record.id} testID={testID} style={styles.row}>
-                  <Text style={text.bodyStrong}>
-                    {t.entry.types[record.payload.type]} ·{" "}
-                    {timeOfDay(record.payload.clientTimestamp, zone, language)} ·{" "}
-                    {nameOf(record.payload.jobId)}
-                  </Text>
-                  <Text
-                    style={
-                      record.standing === "rejected" ? text.attention : text.secondary
-                    }
-                  >
-                    {note}
-                  </Text>
+            <Button
+              testID="clock-out"
+              label={earlier ? t.today.clockOutNow : t.today.clockOut}
+              onPress={() => setAsking("clock-out")}
+            />
+            <View style={styles.pair}>
+              <View style={styles.fill}>
+                <Button
+                  testID="clock-pause"
+                  kind="secondary"
+                  label={t.today.pause}
+                  onPress={() => void capture({ action: "pause" })}
+                />
+              </View>
+              {switchTo.length > 0 && (
+                <View style={styles.fill}>
+                  <Button
+                    testID="clock-switch"
+                    kind="secondary"
+                    label={t.today.switchJob}
+                    onPress={() => setAsking("switch")}
+                  />
                 </View>
-              ))}
+              )}
             </View>
           </>
         )}
-      </ScrollView>
+        {clock.status === "paused" && (
+          <>
+            <Button
+              testID="clock-resume"
+              label={t.today.resume}
+              onPress={() => void capture({ action: "resume" })}
+            />
+            <Button
+              testID="clock-out"
+              kind="secondary"
+              label={earlier ? t.today.clockOutNow : t.today.clockOut}
+              onPress={() => setAsking("clock-out")}
+            />
+          </>
+        )}
+      </View>
+
+      {/* Clock out asks once, naming the job and the time worked. */}
+      <Sheet
+        visible={asking === "clock-out" && clock.status !== "off"}
+        onClose={() => setAsking(null)}
+        title={t.today.clockOutTitle}
+        testID="clock-out-sheet"
+      >
+        {clock.status !== "off" && (
+          <Text testID="clock-out-body" style={text.body}>
+            {t.today.clockOutBody(duration(session), nameOf(clock.jobId))}
+          </Text>
+        )}
+        <Button
+          testID="clock-out-confirm"
+          label={t.today.clockOut}
+          onPress={() => {
+            setAsking(null);
+            void capture({ action: "end" });
+          }}
+        />
+        <Button
+          testID="clock-out-cancel"
+          kind="secondary"
+          label={t.today.keepWorking}
+          onPress={() => setAsking(null)}
+        />
+      </Sheet>
+
+      {/* Switch job: the choosing is the question; the tap on a jobsite is the answer. */}
+      <Sheet
+        visible={asking === "switch" && clock.status === "working"}
+        onClose={() => setAsking(null)}
+        title={t.today.switchTitle}
+        testID="switch-sheet"
+      >
+        {switchTo.map((jobId, index) => (
+          <Button
+            key={jobId}
+            testID={`switch-row-${index}`}
+            kind="secondary"
+            label={nameOf(jobId)}
+            onPress={() => {
+              setAsking(null);
+              setPicked(null);
+              void capture({ action: "switch", jobId });
+            }}
+          />
+        ))}
+        <Button
+          testID="switch-cancel"
+          kind="secondary"
+          label={t.today.job.close}
+          onPress={() => setAsking(null)}
+        />
+      </Sheet>
+
+      {/* The job, from the last pull: its address and the office's notes work offline. */}
+      <Sheet
+        visible={sheetJob !== null}
+        onClose={() => setOpened(null)}
+        title={sheetJob?.name ?? ""}
+        testID="job-sheet"
+      >
+        {sheetJob !== null && (
+          <>
+            <Text style={text.label}>{t.today.job.address}</Text>
+            {sheetJob.address === null ? (
+              <Text testID="job-no-address" style={text.secondary}>
+                {t.today.job.noAddress}
+              </Text>
+            ) : (
+              <>
+                <Text testID="job-address" style={text.body} selectable>
+                  {sheetJob.address}
+                </Text>
+                <Button
+                  testID="job-maps"
+                  kind="secondary"
+                  label={t.today.job.openMaps}
+                  onPress={() =>
+                    void Linking.openURL(mapsLink(sheetJob.address!, Platform.OS)).catch(
+                      () => undefined,
+                    )
+                  }
+                />
+              </>
+            )}
+            <Text style={text.label}>{t.today.job.notes}</Text>
+            <Text
+              testID="job-notes"
+              style={sheetJob.notes === null ? text.secondary : text.body}
+              selectable
+            >
+              {sheetJob.notes ?? t.today.job.noNotes}
+            </Text>
+          </>
+        )}
+        <Button
+          testID="job-close"
+          kind="secondary"
+          label={t.today.job.close}
+          onPress={() => setOpened(null)}
+        />
+      </Sheet>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { gap: space[4], paddingBottom: space[6] },
+  fill: { flex: 1 },
+  head: { gap: space[2] },
+  page: { gap: space[4], paddingBottom: space[4] },
+  earlier: {
+    flexDirection: "row",
+    gap: space[2],
+    padding: space[3],
+    borderRadius: size.radiusCard,
+    backgroundColor: color.attentionTint,
+  },
+  earlierText: { flex: 1, color: color.attentionInk },
   card: {
     gap: space[1],
     padding: space[4],
     borderRadius: size.radiusCard,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: color.border,
   },
+  cardHead: { flexDirection: "row", alignItems: "center", gap: space[2] },
+  status: { gap: space[1] },
+  statusLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[2],
+    flexWrap: "wrap",
+  },
+  timer: {
+    fontSize: 56,
+    lineHeight: 64,
+    fontWeight: "600",
+    color: color.ink,
+    fontVariant: ["tabular-nums"],
+  },
+  timerPaused: { color: color.inkSecondary },
   list: { gap: space[2] },
   row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space[3],
     minHeight: size.target,
-    justifyContent: "center",
-    gap: space[1],
     padding: space[3],
     borderRadius: size.radiusCard,
     backgroundColor: color.surface,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 1,
     borderColor: color.border,
   },
-  chosen: { borderWidth: 2, borderColor: color.accent },
+  chosen: { borderColor: color.accent, backgroundColor: color.accentTint },
+  foot: { gap: space[2] },
+  pair: { flexDirection: "row", gap: space[2] },
 });

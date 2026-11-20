@@ -3,19 +3,19 @@
 appId: app.jpteq.trader
 ---
 - tapOn:
-    id: "tab-settings"
+    id: "sync-pending|sync-synced|sync-attention"
 - tapOn:
     id: "sync-now"
 - tapOn:
-    id: "tab-today"
-# A tap that lands while the tab bar redraws is lost: ask again if Today is not up.
+    id: "sync-close"
+# The sheet's list shrinks as entries go, and a tap that lands mid-move closes nothing.
 - runFlow:
     when:
-      notVisible:
-        id: "clock-working|clock-paused|clock-off"
+      visible:
+        id: "sync-close"
     commands:
       - tapOn:
-          id: "tab-today"
+          id: "sync-close"
 - assertVisible:
     id: "clock-working"
 - tapOn:

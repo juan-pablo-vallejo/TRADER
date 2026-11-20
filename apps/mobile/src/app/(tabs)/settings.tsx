@@ -9,12 +9,12 @@ import { useSession } from "../../session";
 import { useSync } from "../../sync/provider";
 import { space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
-import { SyncBanner } from "../../ui/sync-banner";
+import { SyncChip } from "../../ui/sync-chip";
 
 export default function Settings() {
   const { t, language, setLanguage } = useStrings();
   const { signOut } = useSession();
-  const { snapshot, records, sync, syncing } = useSync();
+  const { snapshot, records } = useSync();
   const router = useRouter();
   const unsent = records.filter(
     (r) => r.standing === "pending" || r.standing === "syncing",
@@ -28,14 +28,7 @@ export default function Settings() {
             {t.settings.signedInAs(snapshot.data.me.name)}
           </Text>
         )}
-        <SyncBanner />
-        <Button
-          testID="sync-now"
-          kind="secondary"
-          label={syncing ? t.sync.working : t.sync.now}
-          disabled={syncing}
-          onPress={() => void sync()}
-        />
+        <SyncChip />
         <Text style={text.label}>{t.settings.language}</Text>
         <View style={{ gap: space[2] }}>
           <Button

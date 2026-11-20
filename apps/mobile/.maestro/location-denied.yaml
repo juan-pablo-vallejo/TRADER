@@ -16,6 +16,8 @@ appId: app.jpteq.trader
     id: "clock-working"
 - tapOn:
     id: "clock-out"
+- tapOn:
+    id: "clock-out-confirm"
 - assertVisible:
     id: "clock-off"
 - extendedWaitUntil:

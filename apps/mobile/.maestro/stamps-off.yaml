@@ -1,0 +1,32 @@
+# Location stamps off for this person (suite.sh set it): the app never asks the phone for
+# a location, so the system's sheet never shows, through sign-in, a clock-in and a
+# clock-out. Run with the permission unasked (`never`): parts/location.yaml then fails the
+# flow if the sheet appears.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- tapOn:
+    id: "job-row-0"
+- tapOn:
+    id: "clock-in"
+- assertVisible:
+    id: "clock-working"
+- runFlow:
+    file: parts/location.yaml
+- tapOn:
+    id: "clock-out"
+- tapOn:
+    id: "clock-out-confirm"
+- assertVisible:
+    id: "clock-off"
+- runFlow:
+    file: parts/location.yaml
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000

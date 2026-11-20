@@ -29,6 +29,7 @@ import {
   runCycle,
   type CycleResult,
 } from "./engine";
+import { stampsOn } from "./today";
 import type { OutboxRecord, Snapshot, Transport } from "./types";
 
 // While the app is in front. The reachability reading is fresh for two of these (clock.ts).
@@ -113,9 +114,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     return createSyncer(async () => {
       setSyncing(true);
       try {
-        void refreshLocation();
+        // A location is asked for only where the last pull says this person's taps are
+        // stamped (today.ts, stampsOn): off, or before the first pull, the app does not
+        // ask the phone, or the person, for one.
+        if (stampsOn((await readSnapshot(deviceStore))?.data ?? null)) {
+          void refreshLocation();
+        }
         const result = await runCycle(deviceStore, transport, Date.now);
-        await refresh();
+        const kept = await refresh();
+        // The first pull is where the phone learns it: ask then, not a cycle later.
+        if (stampsOn(kept?.data ?? null)) void refreshLocation();
         setLast(result);
       } finally {
         setSyncing(false);
@@ -172,7 +180,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         me,
         now,
         reading: reading === null ? null : Number(reading),
-        location: locationStamp(now),
+        // Off for this person: nothing is sent, whatever reading is in hand.
+        location: stampsOn(kept.data) ? locationStamp(now) : null,
         mint,
       });
       if (written.length === 0) return false;

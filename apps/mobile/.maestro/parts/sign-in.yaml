@@ -44,9 +44,19 @@ appId: app.jpteq.trader
     id: "sign-in-submit"
 - runFlow:
     file: location.yaml
+# Off the clock, unless the flow says the server already has this person on it (LANDS_ON).
+# The app asks for a location only once its first pull says this person's taps are stamped,
+# so the system's sheet comes a moment after sign-in: wait for it (it may never come: the
+# permission was answered before, or stamps are off), answer it, then look for Today.
+- extendedWaitUntil:
+    visible: "Allow While Using App|While using the app"
+    timeout: 6000
+    optional: true
+- runFlow:
+    file: location.yaml
 - extendedWaitUntil:
     visible:
-      id: "clock-off"
+      id: ${LANDS_ON}
     timeout: 30000
 - runFlow:
     file: location.yaml

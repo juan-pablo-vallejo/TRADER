@@ -1,14 +1,16 @@
-# Under the weekly schedule, a second person with no shift: the clock says to ask the
-# office and offers no start, and their schedule shows nothing of anybody else's.
+# Under the weekly schedule, a second person with no shift: no button to clock in, the
+# reason, and Call the office; and their schedule shows nothing of anybody else's.
 appId: app.jpteq.trader
 ---
 - runFlow:
     file: parts/sign-in.yaml
 - assertVisible:
     id: "offer-none"
-- assertVisible:
+- assertNotVisible:
     id: "clock-in"
-    enabled: false
+- assertVisible:
+    id: "call-office"
+- takeScreenshot: today-no-shift
 - tapOn:
     id: "tab-week"
 - assertVisible:

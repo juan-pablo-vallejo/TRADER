@@ -6,12 +6,12 @@
 # Start Metro plainly: with CI=1 it does not watch files and serves a stale bundle after an
 # edit. Use --clear when in doubt.
 #
-#   .maestro/run.sh ios <simulator udid> <flow> [fresh|resume] [allow|deny] [email]
-#   .maestro/run.sh android <emulator serial> <flow> [fresh|resume] [allow|deny] [email]
+#   .maestro/run.sh ios <simulator udid> <flow> [fresh|resume] [allow|deny|never] [email] [lands on]
+#   .maestro/run.sh android <emulator serial> <flow> [fresh|resume] [allow|deny|never] [email] [lands on]
 #
 # `fresh` starts the app with nothing kept and signs in (the flow runs parts/sign-in.yaml);
 # `resume` leaves the app as the flow before left it. `allow` or `deny` is the location
-# permission of a fresh start.
+# permission of a fresh start; `never` starts unasked and fails the flow if the app asks.
 set -eu
 platform=$1
 device=$2
@@ -19,6 +19,9 @@ flow=$3
 start=${4:-fresh}
 location=${5:-allow}
 email=${6:-luis.herrera@demo.invalid}
+# What Today shows once signed in: off the clock, unless the server already has this person
+# on it (earlier-day.yaml).
+lands=${7:-clock-off}
 here=$(dirname "$0")
 link='exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1'
 
@@ -36,9 +39,13 @@ case "$platform" in
       fi
     fi
     # Maestro's own words for the iOS location permission at launch.
-    if [ "$location" = allow ]; then ios_location=inuse; else ios_location=never; fi
+    case "$location" in
+      allow) ios_location=inuse ;;
+      never) ios_location=unset ;;
+      *) ios_location=never ;;
+    esac
     exec maestro --device "$device" test -e LAUNCH=maestro -e LOCATION="$location" \
-      -e IOS_LOCATION="$ios_location" \
+      -e IOS_LOCATION="$ios_location" -e LANDS_ON="$lands" \
       -e EMAIL="$email" "$here/$flow.yaml"
     ;;
   android)
@@ -68,7 +75,7 @@ case "$platform" in
       "$adb" -s "$device" shell am start -a android.intent.action.VIEW -d "'$link'" >/dev/null
     fi
     maestro --device "$device" test -e LAUNCH=adb -e LOCATION="$location" \
-      -e EMAIL="$email" "$here/$flow.yaml"
+      -e LANDS_ON="$lands" -e EMAIL="$email" "$here/$flow.yaml"
     ;;
   *)
     echo "usage: run.sh ios <udid> <flow> | run.sh android <serial> <flow>" >&2

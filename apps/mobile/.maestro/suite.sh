@@ -19,6 +19,8 @@ ANA=ana.ruiz@demo.invalid
 TOM=tom.nguyen@demo.invalid
 SAM=sam.carter@demo.invalid
 OMAR=omar.haddad@demo.invalid
+ELENA=elena.petrov@demo.invalid
+MARCUS=marcus.bell@demo.invalid
 api_pid=
 
 # One statement's answer, as the database's own superuser inside its container: the
@@ -82,6 +84,10 @@ events_of() {
 }
 
 (cd "$root" && pnpm demo --db $DB --reset >/dev/null)
+# What the office would have typed: its number, which "Call the office" dials, and notes on
+# every jobsite, which the job's sheet shows.
+sql "update companies set phone = '(401) 555-0142';
+     update jobs set notes = 'Gate code 4411. Park on the street.';"
 api_up
 
 echo "— smoke"
@@ -125,6 +131,31 @@ expect "the entries have no location" \
   "select count(*) || ' ' || count(e.location_lat) from work_session_events e
    join users u on u.id = e.worker_id where u.email = '$OMAR'
      and e.client_timestamp > now() - interval '1 hour'" "2 0"
+
+echo "— a session left open from an earlier day"
+sql "insert into work_session_events
+       (id, company_id, worker_id, job_id, type, client_timestamp, server_timestamp,
+        clock_skewed, clock_skew_ms, schema_version, time_set_by_user, captured_offline,
+        initiator_user_id)
+     select uuidv7(), u.company_id, u.id, j.id, 'started',
+       now() - interval '26 hours', now() - interval '26 hours', false, 0, 1, false, false, u.id
+     from users u join jobs j on j.company_id = u.company_id
+       and j.name = 'Whitmore exterior repaint'
+     where u.email = '$ELENA';"
+flow earlier-day fresh allow $ELENA clock-working
+expect "yesterday's session is closed, by one clock-out" \
+  "select count(*) from work_session_events e join users u on u.id = e.worker_id
+   where u.email = '$ELENA' and e.type = 'ended'
+     and e.client_timestamp > now() - interval '1 hour'" 1
+
+echo "— location stamps off for one person"
+sql "update users set location_stamps = false where email = '$MARCUS';"
+flow stamps-off fresh never $MARCUS
+expect "two entries, neither with a location, neither flagged for one" \
+  "select count(*) || ' ' || count(e.location_lat) || ' '
+     || count(*) filter (where 'location' = any (e.flags))
+   from work_session_events e join users u on u.id = e.worker_id
+   where u.email = '$MARCUS' and e.client_timestamp > now() - interval '1 hour'" "2 0 0"
 
 echo "— the weekly schedule, enforced"
 sql "update companies set schedule_enforced = true;"

@@ -50,6 +50,27 @@ export const es: Catalog = {
     noMoreShifts: "No tienes más turnos hoy.",
     noShift: "No tienes turno hoy. Llama a la oficina.",
     attention: "Requiere atención",
+    shiftHours: (start, end) => `De ${start} a ${end}`,
+    onTheClock: "Trabajando",
+    onBreak: "En descanso",
+    since: (time) => `Desde las ${time}`,
+    switchJob: "Cambiar de obra",
+    switchTitle: "¿A qué obra cambias?",
+    clockOutTitle: "¿Marcar salida?",
+    clockOutBody: (hours, job) => `${hours} trabajadas en ${job}.`,
+    keepWorking: "Seguir trabajando",
+    earlier: (job, day) => `Sigues con la entrada marcada en ${job} desde el ${day}.`,
+    clockOutNow: "Marcar salida ahora",
+    callOffice: "Llamar a la oficina",
+    captured: "Guardado",
+    job: {
+      address: "Dirección",
+      noAddress: "La oficina no ha puesto una dirección.",
+      openMaps: "Abrir en mapas",
+      notes: "Notas de la oficina",
+      noNotes: "No hay notas para esta obra.",
+      close: "Cerrar",
+    },
   },
   entry: {
     types: {
@@ -91,6 +112,15 @@ export const es: Catalog = {
     wrongClock:
       "El reloj de este teléfono parece estar mal. Pon la hora en automático en los ajustes del teléfono.",
     now: "Enviar ahora",
+    chip: {
+      sent: "Enviado",
+      saved: "Guardado en el teléfono",
+      sending: "Enviando",
+      attention: "Requiere atención",
+    },
+    waitingTitle: "Tus registros",
+    nothingWaiting: "No hay nada pendiente en este teléfono.",
+    close: "Cerrar",
   },
   week: {
     title: "Horario",

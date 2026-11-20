@@ -1,5 +1,6 @@
-# Under the weekly schedule, a person with a shift now: the clock offers that
-# jobsite alone, the start is taken, and the shift is on their schedule tab.
+# Under the weekly schedule, a person with a shift now: the card is that shift's jobsite
+# with its hours, there is nothing to pick, one tap starts, and the shift is on their
+# schedule tab.
 appId: app.jpteq.trader
 ---
 - runFlow:
@@ -8,6 +9,7 @@ appId: app.jpteq.trader
     id: "offer-eligible"
 - assertNotVisible:
     id: "job-list"
+- takeScreenshot: today-shift
 - tapOn:
     id: "clock-in"
 - assertVisible:
@@ -26,6 +28,8 @@ appId: app.jpteq.trader
     id: "tab-today"
 - tapOn:
     id: "clock-out"
+- tapOn:
+    id: "clock-out-confirm"
 - assertVisible:
     id: "clock-off"
 - extendedWaitUntil:

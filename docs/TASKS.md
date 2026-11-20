@@ -263,7 +263,7 @@ Android user.
   Done when every existing screen has been seen at 390, 768 and 1280 in the new frame, the
   smoke test follows the new routes, and nothing scrolls sideways.
 
-- [ ] 8. **Phone: Today, rebuilt around one button.**
+- [x] 8. **Phone: Today, rebuilt around one button.**
       `apps/mobile/src/app/(tabs)/today.tsx`, on item 7's tokens. The capture path is not
       touched: a tap still writes to the store and returns.
   - Off the clock: a card with the shift's job, its address and the shift's hours, and one
@@ -634,6 +634,14 @@ Android user.
 - [ ] OWNER, with production: `TRADER_HOME_HOST=dsierrapainting.jpteq.app` and
       `CLERK_AUTHORIZED_PARTIES=https://app.jpteq.app,https://dsierrapainting.jpteq.app` in
       the production project's variables (`README.md` lists them, from item 18 on).
+- [ ] Item 8 added two native packages to the phone, `expo-haptics` and
+      `@expo/vector-icons`, at the versions `expo install` names for SDK 58: a development
+      build made before 2026-11-19 has no haptics module and must be rebuilt. Neither adds
+      a permission or an entitlement.
+- [ ] The Android emulator on this Mac builds with Android Studio's own Java
+      (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"`); there is
+      no other JDK. A freshly installed Android development build opens Expo's developer
+      menu over the app on its first relaunch; `offline-capture.yaml` puts it away.
 - [ ] The Maestro suite's sign-in failed once in three runs on a fresh iPhone 17 simulator:
       the tap on Sign in never reached the API, and the same flow passed on the next two
       runs unchanged. If it recurs, wait for the keyboard before the tap

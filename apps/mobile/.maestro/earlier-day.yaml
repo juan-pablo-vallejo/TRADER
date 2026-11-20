@@ -1,0 +1,23 @@
+# A session left open from an earlier day (suite.sh wrote yesterday's clock-in): Today says
+# so first, and Clock out now ends it, asked once like any clock-out.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- assertVisible:
+    id: "today-earlier"
+- takeScreenshot: today-earlier-day
+- tapOn:
+    id: "clock-out"
+- assertVisible:
+    id: "clock-out-body"
+- tapOn:
+    id: "clock-out-confirm"
+- assertVisible:
+    id: "clock-off"
+- assertNotVisible:
+    id: "today-earlier"
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000

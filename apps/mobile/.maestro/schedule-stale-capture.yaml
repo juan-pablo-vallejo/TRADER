@@ -9,8 +9,9 @@ appId: app.jpteq.trader
     id: "clock-in"
 - assertVisible:
     id: "clock-working"
-# Below the jobsites on a short screen.
-- scrollUntilVisible:
-    element:
-      id: "entry-unsent-0"
-    direction: DOWN
+- tapOn:
+    id: "sync-pending"
+- assertVisible:
+    id: "entry-unsent-0"
+- tapOn:
+    id: "sync-close"
