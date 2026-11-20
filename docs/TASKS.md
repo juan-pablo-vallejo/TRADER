@@ -562,7 +562,7 @@ Android user.
   text and in the email, an invoice issued before a change to Settings prints as it did,
   and the owner has seen the email arrive.
 
-- [ ] 31. **Undo on schedule edits.** Moving, changing or removing a shift nobody has
+- [x] 31. **Undo on schedule edits.** Moving, changing or removing a shift nobody has
       clocked in on shows at once and offers Undo in a toast for a few seconds. The server
       still decides: a refusal puts the grid back as it was and says why, from the answer's
       own code. A started shift, Copy last week (which has its own undo) and everything
@@ -834,6 +834,22 @@ Android user.
 - [ ] The status line on the PDF ("Status: Overdue") is as of the moment the file is made,
       like the amount due and the payments; the same invoice downloaded on a later day can
       say something else. The copy taken at issue never changes.
+
+- [ ] Item 31, how it was seen on staging, with every answer held back a second and a half
+      so the grid could be read before the server spoke: a shift moved to another day and
+      undone; a shift's end changed and its toast gone by itself; a shift removed and
+      brought back by Undo; and a rollback, where a second page moved one shift onto a day
+      and the first page, not having heard, moved another onto the same hours: drawn at
+      once, then put back, with "This shift and Item 11 porch repaint 08:00–12:00 overlap
+      during 08:00–12:00" above the grid. The toast in Spanish at 390. The shifts planned
+      for the walk (the week of Dec 28) were removed after.
+- [ ] Item 31: Undo is the opposite change sent to the server, not a write held back, so
+      a tab closed while the toast shows loses nothing. A removed shift comes back under
+      its own id; if someone planned an overlapping shift in those seconds, Undo is refused
+      and says so.
+- [ ] Item 31: removing a shift still asks once before it is done (the two-step control
+      the office uses everywhere), and then also offers Undo. OWNER: say if the question
+      should go now that Undo exists.
 
 ## After MVP
 
