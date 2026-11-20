@@ -108,3 +108,36 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* The privacy policy and the terms: a column of text at a reading measure. */
+.legal {
+  max-width: 40rem;
+  margin: 0 auto;
+}
+.legal h1 {
+  margin: 0 0 var(--space-1);
+}
+.legal h2 {
+  margin: var(--space-6) 0 var(--space-2);
+}
+.legal p {
+  margin: 0 0 var(--space-3);
+}
+.draft {
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--attention-tint);
+  color: var(--attention-ink);
+}
+.legalLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-6);
+}
+.legalLinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}

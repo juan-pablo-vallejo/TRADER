@@ -61,7 +61,11 @@ export default async function Home() {
           {t.getApp}
         </a>
       </div>
-      <LanguageSwitch />
+      <p className={styles.legalLinks}>
+        <a href="/privacy">{t.legal.privacy}</a>
+        <a href="/terms">{t.legal.terms}</a>
+        <LanguageSwitch />
+      </p>
     </div>
   );
 }

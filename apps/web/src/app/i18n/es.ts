@@ -158,6 +158,18 @@ export const es: Catalog = {
       authorization: "alguien ya marcó entrada ese día",
     },
   },
+  legal: {
+    privacy: "Política de privacidad",
+    terms: "Términos de uso",
+    lastChanged: (day) => `Último cambio: ${day}`,
+    draft:
+      "Borrador. Este texto todavía no está aprobado y puede cambiar antes de que TRADER se publique.",
+    operator: "Quién opera TRADER",
+    operatorToCome:
+      "Falta agregar a este borrador el nombre legal de quien opera TRADER.",
+    contactToCome:
+      "Falta agregar a este borrador una dirección para preguntas sobre privacidad.",
+  },
   settings: {
     title: "Ajustes",
     company: "Empresa",

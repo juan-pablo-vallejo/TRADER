@@ -169,6 +169,18 @@ export const en = {
       authorization: "someone has already clocked in that day",
     },
   },
+  // The privacy policy's and the terms' own frame; their words are legal-content.ts.
+  legal: {
+    privacy: "Privacy policy",
+    terms: "Terms of use",
+    lastChanged: (day: string) => `Last changed ${day}`,
+    draft:
+      "Draft. These words have not been approved yet and may change before TRADER is released.",
+    operator: "Who operates TRADER",
+    operatorToCome: "The operator's legal name is still to be added to this draft.",
+    contactToCome:
+      "An address for questions about privacy is still to be added to this draft.",
+  },
   // Settings, behind the person's name: the company, the time clock, and Me.
   settings: {
     title: "Settings",

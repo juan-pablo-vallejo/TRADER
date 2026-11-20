@@ -450,7 +450,7 @@ Android user.
       their number on the admin's own phone, in English and Spanish, with the link to
       `/get`. On a desktop the same text is offered to copy. Done when a fixture person is
       invited on staging and the message opens on a phone.
-- [ ] 20. **Settings.** `/settings`, behind the person's name; `/profile` redirects to it.
+- [x] 20. **Settings.** `/settings`, behind the person's name; `/profile` redirects to it.
       Three parts. Company: name, address, phone, email, how to pay (a few lines that print
       on every invoice), payment terms in days, and the timezone, shown and not edited. Time
       clock: schedule enforcement and location stamps, each a switch that says in one
@@ -750,6 +750,19 @@ Android user.
       stays on staging's roster, invited.
 - [ ] Item 19: a person's week in Hours is `/hours?person=<id>`: Hours narrowed to one
       person, with the way back to everyone.
+
+- [ ] OWNER, item 21 (gate 7): the privacy policy and the terms are drafted and public on
+      staging at `/privacy` and `/terms`, in English and Spanish, each saying at its top
+      that it is a draft. Their words are one file,
+      `apps/web/src/app/(public)/legal-content.ts`. Three things in it are yours and were
+      not invented: the legal name of whoever operates TRADER (`OPERATOR`), an address for
+      privacy questions (`PRIVACY_CONTACT`), and any clause a lawyer wants, such as
+      liability or governing law, of which the draft has none. Approving is setting
+      `APPROVED` to true with the first two filled in; the box is yours to tick.
+- [ ] Item 21: the policy says error reports go to Sentry from the office and the phone.
+      The office's do today. The phone's begin with item 12, which waits on gate 3; the
+      policy should not be approved as it reads before that item lands, or the phone's
+      half of that sentence comes out until it does.
 
 ## After MVP
 
