@@ -205,16 +205,20 @@ test("an admin signs in, rewrites the fixture customer, and signs out", async ({
     await expect(row).toHaveCount(1);
   }
 
+  // A customer's name opens them in the side panel, and the address says which.
   const stamp = `e2e ${new Date().toISOString()}`;
-  await row.getByRole("button", { name: "Edit" }).click();
-  await page.getByLabel("Notes").fill(stamp);
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Saved.")).toBeVisible();
+  await row.getByRole("button", { name: `Open ${FIXTURE_CUSTOMER}` }).click();
+  const panel = page.getByRole("dialog");
+  await panel.getByLabel("Notes").fill(stamp);
+  await panel.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(panel.getByText("Saved.")).toBeVisible();
 
-  // Read back from the server, not from the form's own state.
+  // Read back from the server, not from the form's own state: the reload opens the same
+  // panel from the address.
   await page.reload();
-  await row.getByRole("button", { name: "Edit" }).click();
-  await expect(page.getByLabel("Notes")).toHaveValue(stamp);
+  await expect(page.getByRole("dialog").getByLabel("Notes")).toHaveValue(stamp);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 
   await signOut(page);
   const me = await context.request.get("/api/trpc/me.get");

@@ -499,7 +499,7 @@ Android user.
   Done when each kind of row has been seen on staging with its link landing on the matching
   list, and a clear day shows its one line.
 
-- [ ] 27. **Jobs and Customers.** Both on `DataTable`, as two tabs of one place.
+- [x] 27. **Jobs and Customers.** Both on `DataTable`, as two tabs of one place.
   - Jobs: status badges; Open, Complete and Archived as presets in the address; hours this
     week and to date beside each job, which `job.list` answers from the one labor
     derivation.
@@ -779,6 +779,20 @@ Android user.
 - [ ] Item 27 will find this: the Jobs editor's Save details sends no `notes`, and
       `job.update` replaces the whole record, so saving a job's details in the office
       clears the notes the crew sees. Fixed with item 27's notes field.
+
+- [ ] Item 27 turned `main` red for one commit (`90a403e`): the deploy's smoke test on
+      staging edits the fixture customer, and it still pressed the row's Edit button,
+      which the side panel replaced. `check` cannot see this: the smoke test runs only
+      after a deploy. A change to what Customers, People or the sign-out menu draw is run
+      against staging first, with tickets, as `pnpm --filter @trader/web e2e:staging`.
+- [ ] Item 27, how it was seen: on staging a job was created with a new customer in one
+      form, its location pasted as a maps address and read back as the pair with a 200 m
+      radius, the customer then on the Customers tab; Jobs in Spanish at 390. Staging keeps
+      that job and customer ("Item 27 fence", "Item 27 Customer", with the time in their
+      names).
+- [ ] Item 27: every reader of `job.list` now gets each job's hours, which folds the whole
+      ledger: the Schedule, Invoices and Hours screens ask for it only for the names. Fine
+      for a crew of ten; a `job.names` read would spare it if the ledger grows.
 
 ## After MVP
 
