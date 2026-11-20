@@ -88,7 +88,7 @@ describe("overview.today", () => {
         people: [],
         earlier: [],
         jobs: [],
-        money: { owed: [], drafts: 0, completeJobsNotInvoiced: 0 },
+        money: { owed: [], overdue: [], drafts: 0, completeJobsNotInvoiced: 0 },
       });
       // The date is the company's, not UTC's: at 23:30 in New York, UTC is already tomorrow.
       expect((await w.read("23:30")).today).toBe(DAY);
@@ -519,14 +519,31 @@ describe("overview.today", () => {
           { currency: "CAD", cents: 40_000, invoices: 1 },
           { currency: "USD", cents: 78_000 + 20_000, invoices: 2 },
         ],
+        // Issued today on terms of zero days, they are due today: nothing is overdue yet.
+        overdue: [],
         drafts: 3,
         completeJobsNotInvoiced: 2,
       });
       expect((await other.read("09:00")).money).toEqual({
         owed: [{ currency: "USD", cents: 777_700, invoices: 1 }],
+        overdue: [],
         drafts: 0,
         completeJobsNotInvoiced: 0,
       });
+      // The same invoices read a year on, with nothing done to them: what is owed is
+      // overdue, by the due date alone.
+      await asTenant(tx, w.companyId);
+      const later = await overviewToday(
+        tx,
+        w.adminUser,
+        new Date("2027-11-16T09:00:00-05:00"),
+      );
+      await tx.execute(sql`reset role`);
+      expect(later.money.overdue).toEqual(later.money.owed);
+      expect(later.money.owed).toEqual([
+        { currency: "CAD", cents: 40_000, invoices: 1 },
+        { currency: "USD", cents: 78_000 + 20_000, invoices: 2 },
+      ]);
     });
   });
 

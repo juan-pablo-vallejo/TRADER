@@ -1,5 +1,7 @@
-// invoice.list, invoice.read and invoice.suggest. Plain reads under RLS. An invoice's state is derived, never stored: a draft has no
-// number, an issued one has, a void one has a void stamp. Totals are sums of the stored
+// invoice.list, invoice.read, invoice.totals and invoice.suggest. Plain reads under RLS.
+// An invoice's state is derived, never stored: a draft has no number, an issued one has, a
+// void one has a void stamp. Its status (contract/invoice-status.ts) adds what the
+// payments and the due date say, against the company's today. Totals are sums of the stored
 // line amounts and the stored tax, added here and never rounded again.
 //
 // `suggest` shows the job's hours beside a draft, one figure a work date, every worker's
@@ -8,6 +10,7 @@
 // quantity is the sum of that day's rounded cells, added and never rounded again. Consumed
 // by routers/invoice.ts.
 import {
+  companies,
   customers,
   invoiceLineItems,
   invoicePayments,
@@ -24,7 +27,9 @@ import { z } from "zod";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
+import { INVOICE_STATUSES, invoiceStatus } from "../contract/invoice-status";
 import { companyZone, readDayHours } from "../labor/day-hours";
+import { workDate } from "../labor/work-date";
 import { hoursQuantity, totals } from "./lines";
 
 const named = z.strictObject({ id: z.uuid(), name: z.string() });
@@ -41,6 +46,10 @@ const amounts = {
 const header = {
   id: z.uuid(),
   state,
+  // Draft, Issued, Partly paid, Paid, Overdue or Void, as of the company's today.
+  status: z.enum(INVOICE_STATUSES),
+  // The day it is due. Null only on a draft that names none: issuing fills it.
+  dueOn: z.iso.date().nullable(),
   // Null until issued.
   number: z.number().int().nullable(),
   customer: named,
@@ -128,6 +137,7 @@ const columns = {
   number: invoices.number,
   currency: invoices.currency,
   taxCents: invoices.taxCents,
+  dueOn: invoices.dueOn,
   createdAt: invoices.createdAt,
   issuedAt: invoices.issuedAt,
   voidedAt: invoices.voidedAt,
@@ -142,6 +152,7 @@ type Row = {
   number: number | null;
   currency: string;
   taxCents: number;
+  dueOn: string | null;
   createdAt: Date;
   issuedAt: Date | null;
   voidedAt: Date | null;
@@ -162,9 +173,28 @@ const PAID = sql<number>`coalesce((
     and not exists (select 1 from invoice_payments r where r.reverses_payment_id = p.id)
 ), 0)::int`;
 
-const headerOf = (r: Row, subtotalCents: number, paidCents: number) => ({
+// The company's today, which an invoice's status is read against. Under RLS the one
+// company visible is the caller's.
+export async function invoiceToday(tx: Tx, now: Date = new Date()): Promise<string> {
+  const [company] = await tx.select({ timezone: companies.timezone }).from(companies);
+  if (company === undefined) throw new Error("the caller's company is not visible");
+  return workDate(now, company.timezone);
+}
+
+const headerOf = (r: Row, subtotalCents: number, paidCents: number, today: string) => ({
   id: r.id,
   state: stateOf(r),
+  status: invoiceStatus(
+    {
+      number: r.number,
+      voided: r.voidedAt !== null,
+      totalCents: subtotalCents + r.taxCents,
+      paidCents,
+      dueOn: r.dueOn,
+    },
+    today,
+  ),
+  dueOn: r.dueOn,
   number: r.number,
   customer: { id: r.customerId, name: r.customerName },
   job: { id: r.jobId, name: r.jobName },
@@ -180,7 +210,11 @@ const headerOf = (r: Row, subtotalCents: number, paidCents: number) => ({
 });
 
 // Newest first: drafts by when they were made, issued invoices by their number.
-export async function listInvoices(tx: Tx): Promise<z.infer<typeof listOutput>> {
+export async function listInvoices(
+  tx: Tx,
+  now: Date = new Date(),
+): Promise<z.infer<typeof listOutput>> {
+  const today = await invoiceToday(tx, now);
   const rows = await tx
     .select({
       ...columns,
@@ -198,13 +232,83 @@ export async function listInvoices(tx: Tx): Promise<z.infer<typeof listOutput>> 
       desc(invoices.id),
     )
     .limit(LIST_LIMIT);
-  return rows.map((r) => headerOf(r, r.subtotalCents, r.paidCents));
+  return rows.map((r) => headerOf(r, r.subtotalCents, r.paidCents, today));
+}
+
+// invoice.totals: the three figures above the list, each per currency and never added
+// across currencies. Outstanding is what issued invoices that stand still owe; overdue is
+// the part of that past its due date on the company's today; paid this month is the
+// payments that stand whose day paid falls in the company's current calendar month.
+const perCurrency = z.array(
+  z.strictObject({ currency: z.string(), cents: z.number().int().nonnegative() }),
+);
+export const totalsOutput = z.strictObject({
+  today: z.iso.date(),
+  outstanding: perCurrency,
+  overdue: perCurrency,
+  paidThisMonth: perCurrency,
+});
+
+export async function invoiceTotals(
+  tx: Tx,
+  now: Date = new Date(),
+): Promise<z.infer<typeof totalsOutput>> {
+  const today = await invoiceToday(tx, now);
+  const owed = await tx.execute<{
+    currency: string;
+    outstanding: string;
+    overdue: string;
+  }>(sql`
+    select x.currency,
+      sum(x.owed)::bigint as outstanding,
+      coalesce(sum(x.owed) filter (where x.due_on < ${today}::date), 0)::bigint as overdue
+    from (
+      select i.currency, i.due_on,
+        i.tax_cents
+          + coalesce((select sum(l.amount_cents) from invoice_line_items l
+              where l.invoice_id = i.id), 0)
+          - coalesce((select sum(p.amount_cents) from invoice_payments p
+              where p.invoice_id = i.id and p.reverses_payment_id is null
+                and not exists (select 1 from invoice_payments r
+                  where r.reverses_payment_id = p.id)), 0) as owed
+      from invoices i
+      where i.number is not null and i.voided_at is null
+    ) x
+    where x.owed > 0
+    group by x.currency
+    order by x.currency
+  `);
+  const paid = await tx.execute<{ currency: string; cents: string }>(sql`
+    select p.currency, sum(p.amount_cents)::bigint as cents
+    from invoice_payments p
+    where p.reverses_payment_id is null
+      and not exists (select 1 from invoice_payments r where r.reverses_payment_id = p.id)
+      and date_trunc('month', p.paid_on) = date_trunc('month', ${today}::date)
+    group by p.currency
+    order by p.currency
+  `);
+  return {
+    today,
+    outstanding: owed.rows.map((r) => ({
+      currency: r.currency,
+      cents: Number(r.outstanding),
+    })),
+    overdue: owed.rows
+      .map((r) => ({ currency: r.currency, cents: Number(r.overdue) }))
+      .filter((r) => r.cents > 0),
+    paidThisMonth: paid.rows.map((r) => ({
+      currency: r.currency,
+      cents: Number(r.cents),
+    })),
+  };
 }
 
 export async function readInvoice(
   tx: Tx,
   input: z.infer<typeof readInput>,
+  now: Date = new Date(),
 ): Promise<z.infer<typeof readOutput>> {
+  const today = await invoiceToday(tx, now);
   const issuer = alias(users, "issuer");
   const voider = alias(users, "voider");
   const [row] = await tx
@@ -264,7 +368,7 @@ export async function readInvoice(
     .where(eq(customers.id, row.customerId));
   const reversedIds = new Set(recorded.map((p) => p.reversesPaymentId));
   return {
-    ...headerOf(row, totals(lines, row.taxCents).subtotalCents, row.paidCents),
+    ...headerOf(row, totals(lines, row.taxCents).subtotalCents, row.paidCents, today),
     issuedBy: row.issuedBy,
     voidedBy: row.voidedBy,
     lines,

@@ -20,6 +20,8 @@ const page = (over: Partial<InvoicePage> = {}): InvoicePage => ({
   company: "D Sierra Painting",
   number: 1042,
   issuedOn: "2026-11-15",
+  dueOn: "2026-11-30",
+  status: "Issued",
   void: false,
   customer: { name: "Whitmore Family", address: "14 Elmgrove Ave, Providence, RI" },
   job: "Whitmore exterior repaint",

@@ -54,7 +54,7 @@ const today = (people: Person[], earlier: Today["earlier"] = []): Today => ({
   people,
   earlier,
   jobs: [],
-  money: { owed: [], drafts: 0, completeJobsNotInvoiced: 0 },
+  money: { owed: [], overdue: [], drafts: 0, completeJobsNotInvoiced: 0 },
 });
 const left = (n: number, name: string, sinceDay: string): Today["earlier"][number] => ({
   person: { id: id(n), name, phone: null },

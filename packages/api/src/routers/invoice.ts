@@ -38,6 +38,8 @@ import {
   suggestInput,
   suggestLines,
   suggestOutput,
+  invoiceTotals,
+  totalsOutput,
 } from "../invoices/read";
 import { isClosed } from "../core/demo-door";
 import { restrictedTo } from "../core/mailer";
@@ -47,6 +49,7 @@ const admin = roleProcedure("admin");
 
 export const invoiceRouter = router({
   list: admin.output(listOutput).query(({ ctx }) => listInvoices(ctx.tx)),
+  totals: admin.output(totalsOutput).query(({ ctx }) => invoiceTotals(ctx.tx)),
   read: admin
     .input(readInput)
     .output(readOutput)

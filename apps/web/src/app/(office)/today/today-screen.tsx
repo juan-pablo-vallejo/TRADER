@@ -236,6 +236,18 @@ function Shown({ today, now }: { today: Today; now: number }) {
               </li>
             ))
           )}
+          {today.money.overdue.map((o) => (
+            <li key={`overdue-${o.currency}`} data-kind="overdue">
+              <span className="body">
+                <StatusBadge
+                  tone="problem"
+                  label={s.overdue(f.money(o.cents, o.currency))}
+                />{" "}
+                {s.owedInvoices(o.invoices)}
+              </span>
+              <Link href="/invoices?show=overdue">{s.toInvoices}</Link>
+            </li>
+          ))}
           <li data-kind="drafts">
             <span className="body">{s.drafts(today.money.drafts)}</span>
             <Link href="/invoices">{s.toInvoices}</Link>

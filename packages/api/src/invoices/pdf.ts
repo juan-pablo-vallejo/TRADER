@@ -12,6 +12,7 @@ import { eq } from "drizzle-orm";
 import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import { z } from "zod";
 
+import { INVOICE_STATUS_WORDS } from "../contract/invoice-status";
 import type { Tx } from "../core/context";
 import { hoursText } from "../core/csv";
 import { workDate } from "../labor/work-date";
@@ -32,6 +33,9 @@ export type InvoicePage = {
   company: string;
   number: number;
   issuedOn: string;
+  // The day it is due, and its status in the customer's words (contract/invoice-status.ts).
+  dueOn: string;
+  status: string;
   void: boolean;
   customer: { name: string; address: string | null };
   job: string;
@@ -216,6 +220,11 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
     total("Paid", invoice.paidCents);
     total("Amount owed", invoice.owedCents, bold);
   }
+  y -= 4;
+  right(`Due ${invoice.dueOn}`, COLUMNS.amount);
+  y -= LEADING;
+  right(`Status: ${invoice.status}`, COLUMNS.amount, bold);
+  y -= LEADING;
   // No object streams and the dates above: the same invoice is the same bytes.
   return doc.save({ useObjectStreams: false });
 }
@@ -242,6 +251,9 @@ export async function invoicePdf(
     company: company.name,
     number: invoice.number,
     issuedOn: workDate(invoice.issuedAt, company.timezone),
+    // An issued invoice always has one (the database's own check).
+    dueOn: invoice.dueOn ?? workDate(invoice.issuedAt, company.timezone),
+    status: INVOICE_STATUS_WORDS[invoice.status],
     void: invoice.state === "void",
     customer: { name: invoice.customer.name, address: customer?.address ?? null },
     job: invoice.job.name,

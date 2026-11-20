@@ -78,7 +78,12 @@ const person = (
   workedMs: 0,
   workedJobIds: [],
 });
-const NO_MONEY: Crew["money"] = { owed: [], drafts: 0, completeJobsNotInvoiced: 0 };
+const NO_MONEY: Crew["money"] = {
+  owed: [],
+  overdue: [],
+  drafts: 0,
+  completeJobsNotInvoiced: 0,
+};
 const on = (jobId: string): CrewPerson["clock"] => ({
   status: "working",
   jobId,

@@ -101,6 +101,14 @@ export const todayOutput = z.strictObject({
         invoices: z.number().int().positive(),
       }),
     ),
+    // The part of that past its due date on the company's today.
+    overdue: z.array(
+      z.strictObject({
+        currency: z.string(),
+        cents: z.number().int().nonnegative(),
+        invoices: z.number().int().positive(),
+      }),
+    ),
     // Drafts: written, not issued.
     drafts: z.number().int().nonnegative(),
     // Jobs marked complete with no invoice that stands: no draft, and none issued that
@@ -275,10 +283,14 @@ export async function overviewToday(
     currency: string;
     cents: string;
     invoices: number;
+    overdue: string;
+    overdue_invoices: number;
   }>(sql`
-    select x.currency, sum(x.owed)::bigint as cents, count(*)::int as invoices
+    select x.currency, sum(x.owed)::bigint as cents, count(*)::int as invoices,
+      coalesce(sum(x.owed) filter (where x.due_on < ${today}::date), 0)::bigint as overdue,
+      (count(*) filter (where x.due_on < ${today}::date))::int as overdue_invoices
     from (
-      select i.currency,
+      select i.currency, i.due_on,
         i.tax_cents
           + coalesce((select sum(l.amount_cents) from invoice_line_items l
               where l.invoice_id = i.id), 0)
@@ -328,6 +340,13 @@ export async function overviewToday(
         cents: Number(r.cents),
         invoices: r.invoices,
       })),
+      overdue: owed.rows
+        .filter((r) => r.overdue_invoices > 0)
+        .map((r) => ({
+          currency: r.currency,
+          cents: Number(r.overdue),
+          invoices: r.overdue_invoices,
+        })),
       drafts: counts.rows[0]?.drafts ?? 0,
       completeJobsNotInvoiced: counts.rows[0]?.uninvoiced ?? 0,
     },

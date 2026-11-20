@@ -14,6 +14,7 @@ import { invoiceLineItems, invoices, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { workDay } from "../assignments/write";
 import type { Tx } from "../core/context";
 import { lockActiveSelf } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
@@ -33,6 +34,9 @@ export const createOutput = z.discriminatedUnion("result", [
 export const saveInput = z.strictObject({
   invoiceId: z.uuid(),
   taxCents: taxInput,
+  // The day it is due, when the draft names one; null leaves it to the company's terms,
+  // which issuing fills it from.
+  dueOn: workDay.nullable().default(null),
   lines: z
     .array(lineInput)
     .max(MAX_LINES)
@@ -146,7 +150,7 @@ export async function saveInvoice(
   }
   await tx
     .update(invoices)
-    .set({ taxCents: input.taxCents })
+    .set({ taxCents: input.taxCents, dueOn: input.dueOn })
     .where(eq(invoices.id, invoice.id));
   return { result: "saved" };
 }

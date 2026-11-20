@@ -15,6 +15,7 @@ import { companies, invoiceSends } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { INVOICE_STATUS_WORDS } from "../contract/invoice-status";
 import type { Tx } from "../core/context";
 import { lockActiveSelf } from "../core/locks";
 import { MAIL_FAILURES, type Mailer } from "../core/mailer";
@@ -85,6 +86,7 @@ export async function sendInvoice(
     text: [
       `Invoice ${invoice.number} from ${company.name} is attached.`,
       `Total: ${money(invoice.totalCents)} ${invoice.currency}. Amount owed: ${money(invoice.owedCents)} ${invoice.currency}.`,
+      `Due ${invoice.dueOn ?? ""}. Status: ${INVOICE_STATUS_WORDS[invoice.status]}.`,
     ],
     attachment: { filename: file.filename, content: Buffer.from(file.pdf, "base64") },
     idempotencyKey: input.id,

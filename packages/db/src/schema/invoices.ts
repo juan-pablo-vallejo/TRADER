@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  date,
   foreignKey,
   index,
   integer,
@@ -71,6 +72,9 @@ export const invoices = pgTable(
     // ISO 4217, upper case; no default.
     currency: text("currency").notNull(),
     taxCents: integer("tax_cents").notNull(),
+    // The day it is due: a calendar day. A draft may name it; at issue the trigger fills
+    // it from the company's terms when the draft did not, and it is frozen with the rest.
+    dueOn: date("due_on", { mode: "string" }),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     issuedByUserId: uuid("issued_by_user_id"),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
@@ -125,5 +129,10 @@ export const invoices = pgTable(
       sql`${t.voidedAt} IS NULL OR ${t.issuedAt} IS NOT NULL`,
     ),
     check("invoices_void_not_before_issue", sql`${t.voidedAt} >= ${t.issuedAt}`),
+    // An issued invoice always says when it is due.
+    check(
+      "invoices_issued_has_due",
+      sql`${t.issuedAt} IS NULL OR ${t.dueOn} IS NOT NULL`,
+    ),
   ],
 );

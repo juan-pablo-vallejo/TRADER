@@ -27,6 +27,7 @@ import { StatusBadge, type Tone } from "../../../status-badge";
 import { useTRPC } from "../../../trpc";
 import { uuidv7 } from "../../../uuidv7";
 import { locationText } from "../location";
+import { STATUS_TONES } from "../../invoices/invoices-screen";
 import styles from "./job.module.css";
 
 const STEPS = ["scheduled", "hoursRecorded", "invoiced", "paid"] as const;
@@ -35,11 +36,6 @@ const JOB_TONES: Record<"open" | "complete" | "archived", Tone> = {
   open: "active",
   complete: "done",
   archived: "neutral",
-};
-const INVOICE_TONES: Record<"draft" | "issued" | "void", Tone> = {
-  draft: "attention",
-  issued: "active",
-  void: "neutral",
 };
 
 export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: string }) {
@@ -156,9 +152,9 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
     },
     {
       key: "state",
-      header: t.invoices.state,
+      header: t.invoices.statusHeader,
       cell: (i) => (
-        <StatusBadge tone={INVOICE_TONES[i.state]} label={t.invoices.states[i.state]} />
+        <StatusBadge tone={STATUS_TONES[i.status]} label={t.invoices.status[i.status]} />
       ),
     },
     {

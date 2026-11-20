@@ -44,6 +44,16 @@ export function formatters(language: Language, t: Catalog) {
       }).format(new Date(y, m - 1, d));
     },
 
+    // The calendar day of an instant, as this browser's clock reads it: the day an
+    // invoice was issued.
+    dayOf(at: Date): string {
+      return new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }).format(at);
+    },
+
     // A work date with its weekday, as a plan is read: "Mon, Nov 16". From its parts.
     weekDay(iso: string): string {
       const [y, m, d] = iso.split("-").map(Number);

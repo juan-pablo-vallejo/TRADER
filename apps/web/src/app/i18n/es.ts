@@ -190,6 +190,7 @@ export const es: Catalog = {
     owed: (amount) => `Los clientes deben ${amount}`,
     owedInvoices: (n) => (n === 1 ? "en 1 factura" : `en ${n} facturas`),
     nothingOwed: "No se debe nada.",
+    overdue: (amount) => `${amount} vencido`,
     drafts: (n) =>
       n === 0
         ? "No hay borradores pendientes."
@@ -274,9 +275,38 @@ export const es: Catalog = {
     none: "Todavía no hay facturas.",
     number: "Número",
     customer: "Cliente",
-    state: "Estado",
     total: "Total",
     states: { draft: "Borrador", issued: "Emitida", void: "Anulada" },
+    status: {
+      draft: "Borrador",
+      issued: "Emitida",
+      partly_paid: "Pagada en parte",
+      paid: "Pagada",
+      overdue: "Vencida",
+      void: "Anulada",
+    },
+    statusHeader: "Estado",
+    issuedOn: "Emitida",
+    due: "Vence",
+    dueOn: (day) => `Vence el ${day}`,
+    balance: "Saldo",
+    presets: {
+      all: "Todas",
+      drafts: "Borradores",
+      outstanding: "Por cobrar",
+      overdue: "Vencidas",
+      paid: "Pagadas",
+    },
+    noneHere: "No hay facturas que mostrar.",
+    figures: {
+      outstanding: (amount) => `${amount} por cobrar`,
+      overdue: (amount) => `${amount} vencido`,
+      paidThisMonth: (amount) => `${amount} cobrado este mes`,
+      nothing: "Nada por cobrar, nada vencido, nada cobrado este mes.",
+    },
+    dueDate: "Fecha de vencimiento (opcional)",
+    dueDateHint:
+      "Si la dejas vacía, al emitir se fija según el plazo de pago de la empresa.",
     draftOf: (job) => `Borrador — ${job}`,
     invoiceNo: (n) => `Factura ${n}`,
     back: "Todas las facturas",
@@ -321,7 +351,7 @@ export const es: Catalog = {
       "Este borrador y sus líneas se borrarán. No tiene número, así que no se pierde ninguno.",
     removed: "Borrador borrado.",
     voidIt: "Anular factura",
-    pdf: "Guardar como PDF",
+    pdf: "Descargar PDF",
     sendHeading: "Enviar por correo al cliente",
     sendExplain:
       "Envía esta factura como PDF. Cada envío queda anotado aquí, haya salido o no.",

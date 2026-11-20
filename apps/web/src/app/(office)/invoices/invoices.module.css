@@ -107,3 +107,20 @@
   list-style: none;
   overflow-wrap: anywhere;
 }
+
+/* The list's three figures and its presets. */
+.figures {
+  margin: 0 0 var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+.presets button[aria-pressed="true"] {
+  background: var(--accent-tint);
+  border-color: var(--accent);
+  color: var(--accent);
+}

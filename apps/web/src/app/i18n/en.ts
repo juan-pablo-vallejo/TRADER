@@ -204,6 +204,7 @@ export const en = {
     owed: (amount: string) => `${amount} owed by customers`,
     owedInvoices: (n: number) => (n === 1 ? "on 1 invoice" : `on ${n} invoices`),
     nothingOwed: "Nothing is owed.",
+    overdue: (amount: string) => `${amount} overdue`,
     drafts: (n: number) =>
       n === 0
         ? "No drafts waiting."
@@ -289,9 +290,38 @@ export const en = {
     none: "No invoices yet.",
     number: "Number",
     customer: "Customer",
-    state: "State",
     total: "Total",
     states: { draft: "Draft", issued: "Issued", void: "Void" },
+    // An invoice's status, as contract/invoice-status.ts names it.
+    status: {
+      draft: "Draft",
+      issued: "Issued",
+      partly_paid: "Partly paid",
+      paid: "Paid",
+      overdue: "Overdue",
+      void: "Void",
+    },
+    statusHeader: "Status",
+    issuedOn: "Issued",
+    due: "Due",
+    dueOn: (day: string) => `Due ${day}`,
+    balance: "Balance",
+    presets: {
+      all: "All",
+      drafts: "Drafts",
+      outstanding: "Outstanding",
+      overdue: "Overdue",
+      paid: "Paid",
+    },
+    noneHere: "No invoices to show.",
+    figures: {
+      outstanding: (amount: string) => `${amount} outstanding`,
+      overdue: (amount: string) => `${amount} overdue`,
+      paidThisMonth: (amount: string) => `${amount} paid this month`,
+      nothing: "Nothing outstanding, nothing overdue, nothing paid this month.",
+    },
+    dueDate: "Due date (optional)",
+    dueDateHint: "Leave it empty and issuing sets it from the company's payment terms.",
     draftOf: (job: string) => `Draft — ${job}`,
     invoiceNo: (n: number) => `Invoice ${n}`,
     back: "All invoices",
@@ -336,7 +366,7 @@ export const en = {
       "This draft and its lines will be deleted. It has no number, so none is lost.",
     removed: "Draft deleted.",
     voidIt: "Void invoice",
-    pdf: "Save as PDF",
+    pdf: "Download PDF",
     sendHeading: "Email to the customer",
     sendExplain:
       "Sends this invoice as a PDF. Each send is kept here, whether it went or not.",

@@ -24,7 +24,10 @@ import { PageHeader } from "../../../page-header";
 import { DestructiveAction } from "../../../row-editor";
 import { useStrings } from "../../../i18n";
 import table from "../../../table.module.css";
+import { SidePanel } from "../../../side-panel";
+import { StatusBadge } from "../../../status-badge";
 import { useTRPC } from "../../../trpc";
+import { STATUS_TONES } from "../invoices-screen";
 import styles from "../invoices.module.css";
 
 type Invoice = inferRouterOutputs<AppRouter>["invoice"]["read"];
@@ -114,6 +117,8 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
     })),
   );
   const [tax, setTax] = useState(() => amount(invoice.taxCents));
+  // The day it is due, or empty: issuing then sets it from the company's terms.
+  const [dueOn, setDueOn] = useState(invoice.dueOn ?? "");
   // Whether what is on screen is what is stored: an issue freezes what is stored.
   const [dirty, setDirty] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -200,7 +205,12 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       sent.push(p);
     }
     if (taxCents === null) return fail(s.badTax);
-    save.mutate({ invoiceId: invoice.id, taxCents, lines: sent });
+    save.mutate({
+      invoiceId: invoice.id,
+      taxCents,
+      dueOn: dueOn === "" ? null : dueOn,
+      lines: sent,
+    });
   };
 
   return (
@@ -276,6 +286,25 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         <button type="button" className={controls.secondary} onClick={() => add({})}>
           {s.addLine}
         </button>
+      </section>
+
+      <section className={styles.section} aria-label={s.dueDate}>
+        <Field id="invoice-due" label={s.dueDate}>
+          <input
+            id="invoice-due"
+            className={controls.input}
+            type="date"
+            aria-describedby="invoice-due-hint"
+            value={dueOn}
+            onChange={(e) => {
+              setDueOn(e.target.value);
+              setDirty(true);
+            }}
+          />
+          <p id="invoice-due-hint" className={`secondary ${controls.caption}`}>
+            {s.dueDateHint}
+          </p>
+        </Field>
       </section>
 
       <section className={styles.section} aria-label={s.draw}>
@@ -393,6 +422,8 @@ function Payments({ invoice }: { invoice: Invoice }) {
   const [memo, setMemo] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const [tone, setTone] = useState<"saved" | "error">("error");
+  // The form is a dialog: opened by its button, closed by a payment that was recorded.
+  const [paying, setPaying] = useState(false);
   const fail = (text: string) => {
     setTone("error");
     setNote(text);
@@ -414,6 +445,8 @@ function Payments({ invoice }: { invoice: Invoice }) {
         setMemo("");
         setTone("saved");
         setNote(s.recorded);
+        // Recorded: the dialog closes, and the note stands beneath the button.
+        setPaying(false);
         await refresh();
       },
       onError: () => fail(t.requestFailed),
@@ -482,81 +515,95 @@ function Payments({ invoice }: { invoice: Invoice }) {
         </ul>
       )}
       {open && invoice.owedCents > 0 && (
-        <form
-          className={`${controls.card} ${styles.payForm}`}
-          aria-label={s.recordPayment}
-          onSubmit={(e) => {
-            e.preventDefault();
+        <button
+          type="button"
+          className={controls.primary}
+          onClick={() => {
             setNote(null);
-            const amountCents = cents(paid);
-            if (amountCents === null || amountCents === 0) return fail(s.badAmount);
-            record.mutate({
-              id,
-              invoiceId: invoice.id,
-              amountCents,
-              paidOn,
-              method,
-              note: memo.trim() === "" ? null : memo.trim(),
-            });
+            setPaying(true);
           }}
         >
-          <h3 className="body-strong">{s.recordPayment}</h3>
-          <p className={`secondary ${styles.explain}`}>{s.recordExplain}</p>
-          <div className={styles.payFields}>
-            <Field id="pay-amount" label={s.paymentAmount}>
-              <input
-                id="pay-amount"
-                className={controls.input}
-                inputMode="decimal"
-                value={paid}
-                onChange={(e) => setPaid(e.target.value)}
-              />
-            </Field>
-            <Field id="pay-day" label={s.paymentDay}>
-              <input
-                id="pay-day"
-                className={controls.input}
-                type="date"
-                required
-                value={paidOn}
-                onChange={(e) => setPaidOn(e.target.value)}
-              />
-            </Field>
-            <Field id="pay-method" label={s.paymentMethod}>
-              <select
-                id="pay-method"
-                className={controls.select}
-                value={method}
-                onChange={(e) => setMethod(e.target.value as (typeof METHODS)[number])}
+          {s.recordPayment}
+        </button>
+      )}
+      {!paying && <Note text={note} tone={tone} />}
+      {paying && (
+        <SidePanel title={s.recordPayment} onClose={() => setPaying(false)}>
+          <form
+            className={styles.payForm}
+            aria-label={s.recordPayment}
+            onSubmit={(e) => {
+              e.preventDefault();
+              setNote(null);
+              const amountCents = cents(paid);
+              if (amountCents === null || amountCents === 0) return fail(s.badAmount);
+              record.mutate({
+                id,
+                invoiceId: invoice.id,
+                amountCents,
+                paidOn,
+                method,
+                note: memo.trim() === "" ? null : memo.trim(),
+              });
+            }}
+          >
+            <p className={`secondary ${styles.explain}`}>{s.recordExplain}</p>
+            <div className={styles.payFields}>
+              <Field id="pay-amount" label={s.paymentAmount}>
+                <input
+                  id="pay-amount"
+                  className={controls.input}
+                  inputMode="decimal"
+                  value={paid}
+                  onChange={(e) => setPaid(e.target.value)}
+                />
+              </Field>
+              <Field id="pay-day" label={s.paymentDay}>
+                <input
+                  id="pay-day"
+                  className={controls.input}
+                  type="date"
+                  required
+                  value={paidOn}
+                  onChange={(e) => setPaidOn(e.target.value)}
+                />
+              </Field>
+              <Field id="pay-method" label={s.paymentMethod}>
+                <select
+                  id="pay-method"
+                  className={controls.select}
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value as (typeof METHODS)[number])}
+                >
+                  {METHODS.map((m) => (
+                    <option key={m} value={m}>
+                      {s.methods[m]}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field id="pay-note" label={s.paymentNote}>
+                <input
+                  id="pay-note"
+                  className={controls.input}
+                  maxLength={500}
+                  value={memo}
+                  onChange={(e) => setMemo(e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className={controls.actions}>
+              <button
+                type="submit"
+                className={controls.primary}
+                disabled={record.isPending}
               >
-                {METHODS.map((m) => (
-                  <option key={m} value={m}>
-                    {s.methods[m]}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            <Field id="pay-note" label={s.paymentNote}>
-              <input
-                id="pay-note"
-                className={controls.input}
-                maxLength={500}
-                value={memo}
-                onChange={(e) => setMemo(e.target.value)}
-              />
-            </Field>
-          </div>
-          <div className={controls.actions}>
-            <button
-              type="submit"
-              className={controls.primary}
-              disabled={record.isPending}
-            >
-              {s.record}
-            </button>
-          </div>
-          <Note text={note} tone={tone} />
-        </form>
+                {s.record}
+              </button>
+            </div>
+            <Note text={note} tone={tone} />
+          </form>
+        </SidePanel>
       )}
     </section>
   );
@@ -564,7 +611,7 @@ function Payments({ invoice }: { invoice: Invoice }) {
 
 // The invoice as a PDF, made by the server when asked and saved by the browser: the page
 // the customer is sent. Offered for an issued invoice and a void one; a draft has none.
-function PdfFile({ invoiceId }: { invoiceId: string }) {
+function PdfFile({ invoiceId, beside = false }: { invoiceId: string; beside?: boolean }) {
   const { t } = useStrings();
   const s = t.invoices;
   const trpc = useTRPC();
@@ -599,16 +646,29 @@ function PdfFile({ invoiceId }: { invoiceId: string }) {
       setBusy(false);
     }
   };
+  const button = (
+    <button
+      type="button"
+      className={controls.secondary}
+      disabled={busy}
+      onClick={() => void save()}
+    >
+      {busy ? t.loading : s.pdf}
+    </button>
+  );
+  // Beside Send, it is one of that form's two actions; alone (a void invoice has no
+  // Send), it is a section of its own.
+  if (beside) {
+    return (
+      <>
+        {button}
+        <Note text={note} tone={saved ? "saved" : undefined} />
+      </>
+    );
+  }
   return (
     <section className={styles.section} aria-label={s.pdf}>
-      <button
-        type="button"
-        className={controls.secondary}
-        disabled={busy}
-        onClick={() => void save()}
-      >
-        {busy ? t.loading : s.pdf}
-      </button>
+      {button}
       <Note text={note} tone={saved ? "saved" : undefined} />
     </section>
   );
@@ -695,6 +755,7 @@ function Sends({ invoice }: { invoice: Invoice }) {
             <button type="submit" className={controls.primary} disabled={send.isPending}>
               {send.isPending ? t.loading : s.send}
             </button>
+            <PdfFile invoiceId={invoice.id} beside />
           </div>
           <Note text={note} tone={sent ? "saved" : undefined} />
         </form>
@@ -765,7 +826,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
         />
       </section>
       <Payments invoice={invoice} />
-      <PdfFile invoiceId={invoice.id} />
+      {invoice.state !== "issued" && <PdfFile invoiceId={invoice.id} />}
       <Sends invoice={invoice} />
       {invoice.state === "issued" && invoice.number !== null && (
         <div className={styles.danger}>
@@ -839,8 +900,12 @@ export function InvoiceScreen({
       />
       <p className={`body ${styles.meta}`}>
         {invoice.customer.name} ·{" "}
-        <Link href={`/jobs/${invoice.job.id}`}>{invoice.job.name}</Link> ·{" "}
-        {s.states[invoice.state]}
+        <Link href={`/jobs/${invoice.job.id}`}>{invoice.job.name}</Link>{" "}
+        <StatusBadge
+          tone={STATUS_TONES[invoice.status]}
+          label={s.status[invoice.status]}
+        />
+        {invoice.dueOn !== null && ` ${s.dueOn(f.day(invoice.dueOn))}`}
       </p>
       {invoice.issuedAt !== null && invoice.issuedBy !== null && (
         <p className={`secondary ${styles.meta}`}>
