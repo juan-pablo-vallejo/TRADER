@@ -1,9 +1,9 @@
 "use client";
 
-// The Profile form: name and contact phone as form fields; email
-// read-only, captioned "Managed by your sign-in provider"; no role, company or identity
-// field. `me.get` fills it, `me.update` saves it and invalidates `me.get`. Consumed by
-// page.tsx.
+// Settings' third part, Me: name and contact phone as form fields, and the language;
+// email read-only, captioned "Managed by your sign-in provider"; no role, company or
+// identity field. `me.get` fills it, `me.update` saves it and invalidates `me.get`. The
+// language is kept on this browser and changes at once. Consumed by settings-screen.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
@@ -15,9 +15,9 @@ import { Note } from "../../note";
 import { useStrings } from "../../i18n";
 import { LANGUAGES, type Language } from "../../i18n/language";
 import { useTRPC } from "../../trpc";
-import styles from "./profile.module.css";
+import styles from "./settings.module.css";
 
-export function ProfileForm({ signInHref }: { signInHref: string }) {
+export function MeForm({ signInHref }: { signInHref: string }) {
   const { t, language, setLanguage } = useStrings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -45,8 +45,10 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
     save.mutate({ name, phone: phone === "" ? null : phone });
   };
   return (
-    <>
-      <h1 className="title">{t.profile}</h1>
+    <section aria-labelledby="settings-me" className={styles.part}>
+      <h2 id="settings-me" className="heading">
+        {t.settings.me}
+      </h2>
       {me.isPending ? (
         <p className="body">{t.loading}</p>
       ) : me.isError ? (
@@ -126,6 +128,6 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
           </button>
         </form>
       )}
-    </>
+    </section>
   );
 }

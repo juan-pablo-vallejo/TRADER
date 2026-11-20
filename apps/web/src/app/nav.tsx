@@ -3,7 +3,7 @@
 // The office navigation: five destinations, a left column when wide and a menu when narrow.
 // Schedule, Hours, Jobs, Invoices, People, in the order a week is worked; Today joins them
 // first when it exists. Customers is a tab beside Jobs (jobs-tabs.tsx), so Jobs stays marked
-// there. Static links: what a screen may do is the API's answer, not the menu's. The profile
+// there. Static links: what a screen may do is the API's answer, not the menu's. Settings
 // is behind the person's name in the header.
 //
 // A link fetches its screen's list when the pointer or the keyboard reaches it, so the rows

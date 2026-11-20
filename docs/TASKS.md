@@ -442,7 +442,7 @@ Android user.
   Done when both pages have been seen at 390 and 1280 in both languages on staging and
   load nothing from another host, and the address tests are green.
 
-- [ ] 19. **People, and the invitation message.** People on `DataTable`. A row opens the
+- [x] 19. **People, and the invitation message.** People on `DataTable`. A row opens the
       person in the side panel: role (making an admin asks first), location (as the company,
       on, or off: `roster.setLocation`), their numbers as links that dial, a link to their
       week in Hours, and Deactivate last. After an invitation, and again from the panel
@@ -741,6 +741,15 @@ Android user.
       deploy passed its smoke test under it, so staging's own address is one of the origins
       its `CLERK_AUTHORIZED_PARTIES` lists. A Vercel deployment's own `*.vercel.app` address
       now sends a page to the first listed origin; its `/api` still answers there.
+
+- [ ] Item 19, how it was seen: on staging, signed in by ticket in a browser that says it
+      is an iPhone, "Fixture Invitee" was invited on one of Clerk's fictional numbers
+      (+1 401 555 0150) and the page offered Send the invitation; that link, opened on the
+      iPhone simulator, is a new message with both languages written. A real phone was not
+      part of it, and an Android phone's messages were not opened. The fixture person
+      stays on staging's roster, invited.
+- [ ] Item 19: a person's week in Hours is `/hours?person=<id>`: Hours narrowed to one
+      person, with the way back to everyone.
 
 ## After MVP
 

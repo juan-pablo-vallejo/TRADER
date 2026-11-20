@@ -158,7 +158,50 @@ export const es: Catalog = {
       authorization: "alguien ya marcó entrada ese día",
     },
   },
-  profile: "Perfil",
+  settings: {
+    title: "Ajustes",
+    company: "Empresa",
+    companyExplain: "Estos datos se imprimen en todas las facturas.",
+    companyName: "Nombre de la empresa",
+    companyEmail: "Correo",
+    howToPay: "Cómo pagar",
+    howToPayHint:
+      "Unas pocas líneas, impresas tal como las escribas bajo “How to pay” en todas las facturas.",
+    terms: "Plazo de pago, en días",
+    termsHint:
+      "Días desde que se emite una factura hasta que vence. 0 es pago al recibirla.",
+    badTerms: "Escribe un número entero de días, de 0 a 365.",
+    timezone: "Zona horaria",
+    timezoneHint:
+      "Se muestra, no se cambia aquí: las horas ya registradas se ponen en sus días según ella.",
+    saveCompany: "Guardar empresa",
+    clock: "Reloj de horas",
+    on: "Sí",
+    off: "No",
+    enforcement: "Exigir el horario",
+    enforcementIs: {
+      on: "Sí: una persona marca entrada solo en un turno suyo, desde 15 minutos antes de que empiece.",
+      off: "No: una persona marca entrada en cualquier obra abierta, a cualquier hora.",
+    },
+    enforcementTurnOn: "Exigir el horario",
+    enforcementTurnOff: "Dejar de exigir el horario",
+    enforcementEffect: {
+      on: "Desde la próxima vez que cada teléfono sincronice, una persona podrá marcar entrada solo en un turno suyo. Quien no tenga turno hoy no podrá marcar entrada hasta que la oficina le agregue uno.",
+      off: "Desde la próxima vez que cada teléfono sincronice, cualquiera podrá marcar entrada en cualquier obra abierta a cualquier hora, con turno o sin él.",
+    },
+    stamps: "Ubicación al marcar",
+    stampsIs: {
+      on: "Sí: cada vez que alguien marca se anota dónde está el teléfono, y marcar lejos de la obra deja un aviso.",
+      off: "No: al marcar no se anota ninguna ubicación, y no queda ningún aviso por ella.",
+    },
+    stampsTurnOn: "Activar la ubicación al marcar",
+    stampsTurnOff: "Desactivar la ubicación al marcar",
+    stampsEffect: {
+      on: "Desde la próxima vez que cada teléfono sincronice, pedirá la ubicación del teléfono y la anotará cada vez que alguien marque. Quienes tengan No en su propia fila siguen sin ella.",
+      off: "Desde la próxima vez que cada teléfono sincronice, al marcar no se anotará ninguna ubicación. Quienes tengan Sí en su propia fila la siguen teniendo.",
+    },
+    me: "Yo",
+  },
   invoices: {
     nav: "Facturas",
     title: "Facturas",

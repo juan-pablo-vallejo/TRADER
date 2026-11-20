@@ -169,7 +169,50 @@ export const en = {
       authorization: "someone has already clocked in that day",
     },
   },
-  profile: "Profile",
+  // Settings, behind the person's name: the company, the time clock, and Me.
+  settings: {
+    title: "Settings",
+    company: "Company",
+    companyExplain: "These details print on every invoice.",
+    companyName: "Company name",
+    companyEmail: "Email",
+    howToPay: "How to pay",
+    howToPayHint: "A few lines, printed as typed under “How to pay” on every invoice.",
+    terms: "Payment terms, in days",
+    termsHint:
+      "Days from the day an invoice is issued to the day it is due. 0 is due on receipt.",
+    badTerms: "Enter a whole number of days from 0 to 365.",
+    timezone: "Timezone",
+    timezoneHint:
+      "Shown, not changed here: the hours already recorded are placed on their days by it.",
+    saveCompany: "Save company",
+    clock: "Time clock",
+    on: "On",
+    off: "Off",
+    enforcement: "Schedule enforcement",
+    enforcementIs: {
+      on: "On: a person clocks in only on a shift of theirs, from 15 minutes before it starts.",
+      off: "Off: a person clocks in on any open jobsite, at any time.",
+    },
+    enforcementTurnOn: "Turn enforcement on",
+    enforcementTurnOff: "Turn enforcement off",
+    enforcementEffect: {
+      on: "From the next time each phone syncs, a person can clock in only on a shift of theirs. Anyone with no shift today will not be able to start the clock until the office adds one.",
+      off: "From the next time each phone syncs, anyone can clock in on any open jobsite at any time, with or without a shift.",
+    },
+    stamps: "Location stamps",
+    stampsIs: {
+      on: "On: each clock tap records where the phone is, and a tap away from the jobsite is flagged.",
+      off: "Off: no clock tap records a location, and none is flagged for one.",
+    },
+    stampsTurnOn: "Turn location stamps on",
+    stampsTurnOff: "Turn location stamps off",
+    stampsEffect: {
+      on: "From the next time each phone syncs, it asks for the phone's location and records it at each clock tap. People set to Off on their own row stay off.",
+      off: "From the next time each phone syncs, no clock tap records a location. People set to On on their own row stay on.",
+    },
+    me: "Me",
+  },
   // Invoices: a draft priced by the admin, issued once, void once.
   invoices: {
     nav: "Invoices",

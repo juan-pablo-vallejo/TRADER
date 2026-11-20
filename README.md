@@ -200,11 +200,8 @@ Once, in this order.
 
    `--next-invoice` is where the contractor's own number series continues. Onboarding tells
    Clerk nothing: create each admin in Clerk with the same number, and their first sign-in
-   binds the two. Turn schedule enforcement on for D Sierra, as the database's owner:
-
-   ```sql
-   update companies set schedule_enforced = true where name = 'D Sierra Painting';
-   ```
+   binds the two. Schedule enforcement is a switch: D Sierra's admin turns it on in
+   Settings, under Time clock, where the company's details for its invoices are typed too.
 
    Then, before the Demo pair is set: sign in as the Demo admin by texted code and invite
    Demo's workers.

@@ -1,10 +1,6 @@
-import { ProfileForm } from "./profile-form";
-import { signInPath } from "../../../server/identity-mode";
+import { redirect } from "next/navigation";
 
-// Own profile: a dynamic server page rendering one client
-// component, which reads and writes the caller's own record through the route handler.
-export const dynamic = "force-dynamic";
-
+// The profile is a part of Settings now: an old link or bookmark lands there.
 export default function ProfilePage() {
-  return <ProfileForm signInHref={signInPath(process.env)} />;
+  redirect("/settings");
 }

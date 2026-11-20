@@ -1,7 +1,7 @@
 "use client";
 
 // The signed-in person in the header: their name, which opens a small menu with their
-// profile, the other language and Sign out. `me.get` is the one query every role may call; while it is pending or refused the
+// settings, the other language and Sign out. `me.get` is the one query every role may call; while it is pending or refused the
 // name is absent. Sign-out is the identity's own: the development route's form where that
 // route answers, Clerk's where Clerk's provider is around
 // the office (clerk-session.tsx), and absent on a server with neither. Consumed by header.tsx.
@@ -39,7 +39,7 @@ export function Account({ signInHref }: { signInHref: string }) {
       </div>
     );
   }
-  // The person's name opens what is theirs: the profile, and Sign out. A native
+  // The person's name opens what is theirs: Settings, and Sign out. A native
   // disclosure: it opens by pointer, Enter or Space, and Escape closes it with the focus
   // back on the name.
   return (
@@ -56,11 +56,11 @@ export function Account({ signInHref }: { signInHref: string }) {
       </summary>
       <div className={styles.menu}>
         <Link
-          href="/profile"
-          className={`${styles.item} ${path === "/profile" ? styles.current : ""}`}
-          aria-current={path === "/profile" ? "page" : undefined}
+          href="/settings"
+          className={`${styles.item} ${path === "/settings" ? styles.current : ""}`}
+          aria-current={path === "/settings" ? "page" : undefined}
         >
-          {t.profile}
+          {t.settings.title}
         </Link>
         {/* The other language, under its own name and marked as that language, so a
             person who cannot read this one still finds theirs. */}
