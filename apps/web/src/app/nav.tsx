@@ -1,8 +1,8 @@
 "use client";
 
-// The office navigation: five destinations, a left column when wide and a menu when narrow.
-// Schedule, Hours, Jobs, Invoices, People, in the order a week is worked; Today joins them
-// first when it exists. Customers is a tab beside Jobs (jobs-tabs.tsx), so Jobs stays marked
+// The office navigation: six destinations, a left column when wide and a menu when narrow.
+// Today first, then Schedule, Hours, Jobs, Invoices, People, in the order a week is
+// worked.
 // there. Static links: what a screen may do is the API's answer, not the menu's. Settings
 // is behind the person's name in the header.
 //
@@ -28,6 +28,7 @@ type Destination = {
 };
 
 const links: Destination[] = [
+  { href: "/today", label: "today" },
   { href: "/schedule", label: "schedule" },
   { href: "/hours", label: "hours" },
   { href: "/jobs", label: "jobs", also: ["/customers"] },

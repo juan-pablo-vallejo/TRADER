@@ -65,7 +65,7 @@ describe("/dev-signin", () => {
     vi.stubEnv("TRADER_DEV_IDENTITY", "enabled");
     const signedIn = await post({ email: fixture.email });
     expect(signedIn.status).toBe(303);
-    expect(signedIn.headers.get("location")).toBe("http://test/schedule");
+    expect(signedIn.headers.get("location")).toBe("http://test/today");
     const set = signedIn.headers.get("set-cookie")!;
     expect(set).toContain(`${DEV_EMAIL_COOKIE}=${encodeURIComponent(fixture.email)}`);
     for (const attribute of ["HttpOnly", "SameSite=Lax", "Path=/", "Max-Age=2592000"]) {

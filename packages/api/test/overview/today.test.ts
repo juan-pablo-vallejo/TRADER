@@ -3,7 +3,7 @@
 // worked so far, the sessions left open from an earlier day, the jobs named, the gate, and
 // the tenant wall. Every test runs in an owner transaction that is always rolled back,
 // each read as trader_app.
-import { jobAssignments, jobs, users } from "@trader/db/schema";
+import { invoiceCounters, jobAssignments, jobs, users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -88,6 +88,7 @@ describe("overview.today", () => {
         people: [],
         earlier: [],
         jobs: [],
+        money: { owed: [], drafts: 0, completeJobsNotInvoiced: 0 },
       });
       // The date is the company's, not UTC's: at 23:30 in New York, UTC is already tomorrow.
       expect((await w.read("23:30")).today).toBe(DAY);
@@ -406,6 +407,126 @@ describe("overview.today", () => {
           customer: { id: w.customerId, name: "Customer" },
         },
       ]);
+    });
+  });
+
+  it("says what customers owe, how many drafts wait and which complete jobs have no invoice", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      const other = await world(tx);
+      for (const c of [w, other]) {
+        await tx
+          .insert(invoiceCounters)
+          .values({ companyId: c.companyId, nextInvoiceNumber: 1 });
+      }
+      const bill = async (c: typeof w) => {
+        await asTenant(tx, c.companyId);
+        return appCallerIn(tx, c.admin.who).invoice;
+      };
+      const invoice = async (
+        c: typeof w,
+        jobId: string,
+        cents: number,
+        o: { tax?: number; currency?: string; issue?: boolean } = {},
+      ) => {
+        const id = uuidv7();
+        const office = await bill(c);
+        await office.create({ id, jobId, currency: o.currency ?? "USD" });
+        await office.save({
+          invoiceId: id,
+          taxCents: o.tax ?? 0,
+          lines: [
+            {
+              id: uuidv7(),
+              description: "Work",
+              quantity: "1",
+              unit: null,
+              unitPriceCents: cents,
+            },
+          ],
+        });
+        if (o.issue !== false) await office.issue({ invoiceId: id });
+        await tx.execute(sql`reset role`);
+        return id;
+      };
+      const pay = async (c: typeof w, invoiceId: string, amountCents: number) => {
+        const id = uuidv7();
+        await (
+          await bill(c)
+        ).recordPayment({
+          id,
+          invoiceId,
+          amountCents,
+          paidOn: DAY,
+          method: "check",
+          note: null,
+        });
+        await tx.execute(sql`reset role`);
+        return id;
+      };
+
+      // $1,000.00 and $80.00 tax, $300.00 paid: $780.00 owed.
+      const partly = await invoice(w, w.J, 100_000, { tax: 8_000 });
+      await pay(w, partly, 30_000);
+      // Paid in full: owes nothing, and is not counted.
+      const paid = await invoice(w, w.J, 50_000);
+      await pay(w, paid, 50_000);
+      // A payment reversed no longer counts: the whole $200.00 is owed again.
+      const reversed = await invoice(w, w.K, 20_000);
+      const mistake = await pay(w, reversed, 20_000);
+      await (
+        await bill(w)
+      ).reversePayment({
+        id: uuidv7(),
+        paymentId: mistake,
+        note: null,
+      });
+      await tx.execute(sql`reset role`);
+      // Void: owes nothing.
+      const voided = await invoice(w, w.K, 99_900);
+      await (await bill(w)).void({ invoiceId: voided });
+      await tx.execute(sql`reset role`);
+      // Another currency is its own line, never added in.
+      await invoice(w, w.K, 40_000, { currency: "CAD" });
+      // Two drafts.
+      await invoice(w, w.J, 10_000, { issue: false });
+      await invoice(w, w.K, 10_000, { issue: false });
+      // The other company's invoice is the other company's.
+      await invoice(other, other.J, 777_700);
+
+      // Complete jobs: one with nothing, one with only a voided invoice, one with a draft.
+      const job = async (name: string) =>
+        (
+          await tx
+            .insert(jobs)
+            .values({
+              companyId: w.companyId,
+              customerId: w.customerId,
+              name,
+              status: "complete",
+            })
+            .returning({ id: jobs.id })
+        )[0]!.id;
+      await job("Done, never billed");
+      const onlyVoid = await job("Done, its invoice voided");
+      const withDraft = await job("Done, a draft waiting");
+      await (await bill(w)).void({ invoiceId: await invoice(w, onlyVoid, 5_000) });
+      await tx.execute(sql`reset role`);
+      await invoice(w, withDraft, 5_000, { issue: false });
+
+      expect((await w.read("09:00")).money).toEqual({
+        owed: [
+          { currency: "CAD", cents: 40_000, invoices: 1 },
+          { currency: "USD", cents: 78_000 + 20_000, invoices: 2 },
+        ],
+        drafts: 3,
+        completeJobsNotInvoiced: 2,
+      });
+      expect((await other.read("09:00")).money).toEqual({
+        owed: [{ currency: "USD", cents: 777_700, invoices: 1 }],
+        drafts: 0,
+        completeJobsNotInvoiced: 0,
+      });
     });
   });
 

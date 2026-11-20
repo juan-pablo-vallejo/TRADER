@@ -78,6 +78,7 @@ const person = (
   workedMs: 0,
   workedJobIds: [],
 });
+const NO_MONEY: Crew["money"] = { owed: [], drafts: 0, completeJobsNotInvoiced: 0 };
 const on = (jobId: string): CrewPerson["clock"] => ({
   status: "working",
   jobId,
@@ -113,6 +114,7 @@ describe("the crew by job", () => {
       people: [dropIn, late, moved, working],
       earlier: [],
       jobs: [job(J, "J"), job(K, "K")],
+      money: NO_MONEY,
     };
     const groups = byJob(crew, "09:00");
     expect(
@@ -135,6 +137,7 @@ describe("the crew by job", () => {
       people: [],
       earlier: [],
       jobs: [job(J, "J")],
+      money: NO_MONEY,
     };
     expect(byJob(crew, "09:00")).toEqual([]);
   });

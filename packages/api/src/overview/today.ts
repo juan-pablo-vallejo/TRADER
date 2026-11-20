@@ -10,6 +10,9 @@
 // for a glance at the crew, never payroll's (labor/hours.ts rounds and counts ended
 // sessions only).
 //
+// It also answers what the office's Today says of money: what customers owe, how many
+// drafts wait, how many complete jobs have no invoice. Counts and sums, no list.
+//
 // What the answer means for a person (on the clock, late, done) is
 // contract/crew.ts's to name, from this answer and the minute. Consumed by
 // routers/overview.ts.
@@ -86,6 +89,24 @@ export const todayOutput = z.strictObject({
   // Every job named above, by name then id, with what `job.update` needs to write its
   // location back.
   jobs: z.array(job),
+  // What the office's Today says of money: counts and sums as the invoices stand, each
+  // behind a link to its own list. Whole cents; a currency is never added to another.
+  money: z.strictObject({
+    // What customers owe, per currency: issued invoices, not void, with something still
+    // owed after the payments that stand, and how many invoices that is.
+    owed: z.array(
+      z.strictObject({
+        currency: z.string(),
+        cents: z.number().int().nonnegative(),
+        invoices: z.number().int().positive(),
+      }),
+    ),
+    // Drafts: written, not issued.
+    drafts: z.number().int().nonnegative(),
+    // Jobs marked complete with no invoice that stands: no draft, and none issued that
+    // was not voided.
+    completeJobsNotInvoiced: z.number().int().nonnegative(),
+  }),
 });
 
 export type TodayOutput = z.infer<typeof todayOutput>;
@@ -248,6 +269,39 @@ export async function overviewToday(
     jobIds.size === 0 ? [] : (await listJobs(tx)).filter((j) => jobIds.has(j.id));
   if (listed.length !== jobIds.size) throw new Error("a referenced job is not visible");
 
+  // Money. What is owed is derived as the invoice list derives it (invoices/read.ts): the
+  // stored line amounts and tax, less the payments that stand.
+  const owed = await tx.execute<{
+    currency: string;
+    cents: string;
+    invoices: number;
+  }>(sql`
+    select x.currency, sum(x.owed)::bigint as cents, count(*)::int as invoices
+    from (
+      select i.currency,
+        i.tax_cents
+          + coalesce((select sum(l.amount_cents) from invoice_line_items l
+              where l.invoice_id = i.id), 0)
+          - coalesce((select sum(p.amount_cents) from invoice_payments p
+              where p.invoice_id = i.id and p.reverses_payment_id is null
+                and not exists (select 1 from invoice_payments r
+                  where r.reverses_payment_id = p.id)), 0) as owed
+      from invoices i
+      where i.number is not null and i.voided_at is null
+    ) x
+    where x.owed > 0
+    group by x.currency
+    order by x.currency
+  `);
+  const counts = await tx.execute<{ drafts: number; uninvoiced: number }>(sql`
+    select
+      (select count(*)::int from invoices i where i.number is null) as drafts,
+      (select count(*)::int from jobs j
+        where j.status = 'complete'
+          and not exists (select 1 from invoices i
+            where i.job_id = j.id and i.voided_at is null)) as uninvoiced
+  `);
+
   return {
     timezone,
     today,
@@ -268,5 +322,14 @@ export async function overviewToday(
       (a, b) =>
         compare(a.name.toLowerCase(), b.name.toLowerCase()) || compare(a.id, b.id),
     ),
+    money: {
+      owed: owed.rows.map((r) => ({
+        currency: r.currency,
+        cents: Number(r.cents),
+        invoices: r.invoices,
+      })),
+      drafts: counts.rows[0]?.drafts ?? 0,
+      completeJobsNotInvoiced: counts.rows[0]?.uninvoiced ?? 0,
+    },
   };
 }

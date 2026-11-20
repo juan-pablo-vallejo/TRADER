@@ -50,6 +50,7 @@ describe("the three layouts", () => {
       "customers",
       "invoices",
       "people",
+      "today",
       "settings",
       "profile",
     ]) {
@@ -64,10 +65,17 @@ describe("the three layouts", () => {
     expect(read("layout.tsx")).toContain("next/font/local");
   });
 
-  it("orders the menu as a week is worked, with Customers beside Jobs and not in it", () => {
+  it("opens the menu on Today, then as a week is worked, with Customers beside Jobs", () => {
     const nav = read("nav.tsx");
     const order = [...nav.matchAll(/\{ href: "(\/[a-z]+)"/g)].map((m) => m[1]);
-    expect(order).toEqual(["/schedule", "/hours", "/jobs", "/invoices", "/people"]);
+    expect(order).toEqual([
+      "/today",
+      "/schedule",
+      "/hours",
+      "/jobs",
+      "/invoices",
+      "/people",
+    ]);
     expect(nav).toContain('also: ["/customers"]');
   });
 });
@@ -144,7 +152,7 @@ describe("which address a page is served at", () => {
 
   it("the neutral host: `/` goes to the office, and everything else is served", () => {
     const neutral = "app.jpteq.app";
-    expect(at(PRODUCTION, neutral, "/")).toEqual(to("/schedule"));
+    expect(at(PRODUCTION, neutral, "/")).toEqual(to("/today"));
     for (const path of ["/get", "/sign-in", "/schedule", "/invoices/abc", "/terms"]) {
       expect([path, at(PRODUCTION, neutral, path)]).toEqual([path, SERVE]);
     }
@@ -163,7 +171,7 @@ describe("which address a page is served at", () => {
       to("https://app.jpteq.app/sign-in"),
     );
     // Sent on, it is then the neutral host's own `/`: two steps, never a loop.
-    expect(at(PRODUCTION, "app.jpteq.app", "/")).toEqual(to("/schedule"));
+    expect(at(PRODUCTION, "app.jpteq.app", "/")).toEqual(to("/today"));
     expect(at(PRODUCTION, "app.jpteq.app", "/schedule")).toEqual(SERVE);
   });
 
@@ -217,7 +225,7 @@ describe("which address a page is served at", () => {
     expect(decided).toBeLessThan(proxy.indexOf("if (isPublicPath("));
   });
 
-  it("sends a signed-in person to the schedule", () => {
-    expect(OFFICE_HOME).toBe("/schedule");
+  it("sends a signed-in person to Today", () => {
+    expect(OFFICE_HOME).toBe("/today");
   });
 });

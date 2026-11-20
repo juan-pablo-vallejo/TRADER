@@ -5,7 +5,7 @@ export const DEV_SIGN_IN_PATH = "/dev-signin";
 export const SIGN_IN_PATH = "/sign-in";
 
 // Where a signed-in person lands: the office's first screen. `/` is the public homepage.
-export const OFFICE_HOME = "/schedule";
+export const OFFICE_HOME = "/today";
 
 // The public pages, the `(public)` layout's: anyone may read them and nothing of Clerk
 // runs for them, not even in the proxy, whose session check on a development instance

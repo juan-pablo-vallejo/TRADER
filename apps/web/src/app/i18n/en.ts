@@ -42,6 +42,7 @@ export const en = {
   navigation: "Office",
   menu: "Menu",
   nav: {
+    today: "Today",
     people: "People",
     customers: "Customers",
     jobs: "Jobs",
@@ -168,6 +169,57 @@ export const en = {
       overlap: "would overlap",
       authorization: "someone has already clocked in that day",
     },
+  },
+  // A person's status on the company's today, as the phone's Crew tab words it.
+  crewStatus: {
+    working: "On the clock",
+    break: "On a break",
+    late: "Late",
+    expected: "Expected",
+    done: "Done",
+  },
+  // Today, where the office opens: three bands, rows and counts.
+  todayScreen: {
+    title: "Today",
+    attention: "Needs attention",
+    attentionClear: "Nothing needs attention.",
+    stillOpen: (name: string, job: string, day: string) =>
+      `${name} is still on the clock at ${job} since ${day}.`,
+    fix: "Fix",
+    fixOf: (name: string) => `Fix ${name}'s open session in Hours`,
+    late: (name: string, job: string, start: string) =>
+      `${name} is late for ${job}, which started at ${start}.`,
+    call: "Call",
+    callOf: (name: string) => `Call ${name}`,
+    noNumber: "No number",
+    more: (n: number) => (n === 1 ? "And 1 more" : `And ${n} more`),
+    onTheClock: "On the clock now",
+    nobodyWorking: "Nobody is on the clock.",
+    at: (job: string, since: string) => `${job}, since ${since}`,
+    onBreakAt: (job: string, since: string) => `On a break. ${job}, since ${since}`,
+    expected: "Expected",
+    expectedAt: (job: string, start: string) => `${job}, from ${start}`,
+    done: "Done for today",
+    worked: (hours: string) => `${hours} worked`,
+    money: "Money",
+    owed: (amount: string) => `${amount} owed by customers`,
+    owedInvoices: (n: number) => (n === 1 ? "on 1 invoice" : `on ${n} invoices`),
+    nothingOwed: "Nothing is owed.",
+    drafts: (n: number) =>
+      n === 0
+        ? "No drafts waiting."
+        : n === 1
+          ? "1 draft waiting to be issued"
+          : `${n} drafts waiting to be issued`,
+    notInvoiced: (n: number) =>
+      n === 0
+        ? "Every complete job has an invoice."
+        : n === 1
+          ? "1 complete job has no invoice"
+          : `${n} complete jobs have no invoice`,
+    toInvoices: "Invoices",
+    toJobs: "Jobs",
+    asOf: (time: string) => `As of ${time}`,
   },
   // The privacy policy's and the terms' own frame; their words are legal-content.ts.
   legal: {

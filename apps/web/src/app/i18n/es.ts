@@ -38,6 +38,7 @@ export const es: Catalog = {
   navigation: "Oficina",
   menu: "Menú",
   nav: {
+    today: "Hoy",
     people: "Personal",
     customers: "Clientes",
     jobs: "Obras",
@@ -157,6 +158,54 @@ export const es: Catalog = {
       overlap: "se cruzaría",
       authorization: "alguien ya marcó entrada ese día",
     },
+  },
+  crewStatus: {
+    working: "Trabajando",
+    break: "En descanso",
+    late: "Tarde",
+    expected: "Por llegar",
+    done: "Terminó",
+  },
+  todayScreen: {
+    title: "Hoy",
+    attention: "Requiere atención",
+    attentionClear: "Nada requiere atención.",
+    stillOpen: (name, job, day) =>
+      `${name} sigue con la entrada marcada en ${job} desde el ${day}.`,
+    fix: "Corregir",
+    fixOf: (name) => `Corregir en Horas la sesión abierta de ${name}`,
+    late: (name, job, start) => `${name} va tarde a ${job}, que empezó a las ${start}.`,
+    call: "Llamar",
+    callOf: (name) => `Llamar a ${name}`,
+    noNumber: "Sin número",
+    more: (n) => (n === 1 ? "Y 1 más" : `Y ${n} más`),
+    onTheClock: "Trabajando ahora",
+    nobodyWorking: "Nadie tiene la entrada marcada.",
+    at: (job, since) => `${job}, desde las ${since}`,
+    onBreakAt: (job, since) => `En descanso. ${job}, desde las ${since}`,
+    expected: "Por llegar",
+    expectedAt: (job, start) => `${job}, desde las ${start}`,
+    done: "Terminaron por hoy",
+    worked: (hours) => `${hours} trabajadas`,
+    money: "Dinero",
+    owed: (amount) => `Los clientes deben ${amount}`,
+    owedInvoices: (n) => (n === 1 ? "en 1 factura" : `en ${n} facturas`),
+    nothingOwed: "No se debe nada.",
+    drafts: (n) =>
+      n === 0
+        ? "No hay borradores pendientes."
+        : n === 1
+          ? "1 borrador pendiente de emitir"
+          : `${n} borradores pendientes de emitir`,
+    notInvoiced: (n) =>
+      n === 0
+        ? "Todas las obras terminadas tienen factura."
+        : n === 1
+          ? "1 obra terminada no tiene factura"
+          : `${n} obras terminadas no tienen factura`,
+    toInvoices: "Facturas",
+    toJobs: "Obras",
+    asOf: (time) => `A las ${time}`,
   },
   legal: {
     privacy: "Política de privacidad",
