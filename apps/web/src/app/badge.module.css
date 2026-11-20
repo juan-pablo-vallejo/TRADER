@@ -1,0 +1,45 @@
+/* A status as a badge: one of five tones, an ink on its tint (theme.css), always with an
+   icon and a word, never the color alone. 24 px tall, so a row of 44 holds one. Consumed
+   by status-badge.tsx. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 24px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-primary);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.badge svg {
+  flex: none;
+}
+.neutral {
+  background: var(--neutral-tint);
+  color: var(--neutral-ink);
+}
+.active {
+  background: var(--active-tint);
+  color: var(--active-ink);
+}
+.done {
+  background: var(--done-tint);
+  color: var(--done-ink);
+}
+.attention {
+  background: var(--attention-tint);
+  color: var(--attention-ink);
+}
+.problem {
+  background: var(--problem-tint);
+  color: var(--problem-ink);
+}
+/* Several badges in one cell: they wrap, a small gap between them. */
+.badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  vertical-align: middle;
+}

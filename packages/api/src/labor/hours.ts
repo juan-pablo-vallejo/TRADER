@@ -36,6 +36,9 @@ export type DayCell = {
   hundredths: number;
   // Sessions with no clock-out yet.
   openSessions: number;
+  // Entries in effect behind this cell's sessions that carry a flag: what the office may
+  // want to look at before it runs payroll. An entry is counted once, whatever it holds.
+  flaggedEntries: number;
   // Every flag of the entries in effect behind this cell's sessions, in the enum's order.
   flags: EntryFlag[];
 };
@@ -65,12 +68,17 @@ export function dayHours(
         workedMs: 0,
         hundredths: 0,
         openSessions: 0,
+        flaggedEntries: 0,
         flags: [],
         seen: new Set(),
       };
       cells.set(key, cell);
     }
-    for (const id of s.eventSourceIds) for (const f of flagsOf(id)) cell.seen.add(f);
+    for (const id of s.eventSourceIds) {
+      const held = flagsOf(id);
+      if (held.length > 0) cell.flaggedEntries++;
+      for (const f of held) cell.seen.add(f);
+    }
     if (!counted.complete) cell.openSessions++;
     else cell.workedMs += counted.eligibleWorkedMs;
   }

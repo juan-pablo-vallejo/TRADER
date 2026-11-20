@@ -371,25 +371,11 @@ export const es: Catalog = {
   },
   reconExplain:
     "Las horas de cada persona por día y obra, en los días que elijas. Todos los registros cuentan; un aviso dice por qué quizá quieras revisarlo. El tiempo de un día en una obra se suma primero y después se redondea a la centésima de hora.",
-  showHours: "Mostrar horas",
   workDatesIn: (zone) => `Fechas de trabajo en ${zone}.`,
-  hoursHeading: "Horas",
-  payrollCsv: "Horas para nómina (CSV)",
-  payrollCsvExplain:
-    "Una fila por persona, día y obra para las fechas de arriba, sean los días que sean, con los avisos de cada fila. Solo horas: sin tarifas y sin pagos.",
-  payrollCsvSaved: (filename, hours) => `Se guardó ${filename}: ${hours} h en total.`,
-  payrollRange: "Elige un primer y un último día, el primero no después del último.",
   noHoursYet: "Todavía no ha terminado ninguna hora en estos días.",
-  flagged: (flags) => flags,
   reconTotal: (hours) => `${hours} h en estos días`,
   hoursValue: (hours) => `${hours} h`,
   emptyReconciliation: "No hay horas registradas en estos días.",
-  notInHours: "Siguen con la entrada marcada",
-  notInHoursExplain:
-    "Sesiones que todavía no tienen salida. Su tiempo no está en ninguna cifra de arriba hasta que llegue.",
-  repairInLedger: "Corregir horas en los registros de una persona",
-  unresolvedState: "Por qué",
-  sessionsOpen: (n) => (n === 1 ? "1 sigue abierta" : `${n} siguen abiertas`),
 
   repair: "Corregir",
   repairOf: (job, started) => `Corregir ${job}, ${started}`,
@@ -448,6 +434,44 @@ export const es: Catalog = {
     time_in_future: "Una de estas horas todavía no ha pasado.",
     repair_stale:
       "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
+  },
+
+  week: {
+    thisWeek: "Esta semana",
+    lastWeek: "La semana pasada",
+    dates: "Fechas",
+    flaggedOnly: "Solo con avisos",
+    show: "Mostrar estas fechas",
+    caption: (range) => `Horas por persona y día, ${range}`,
+    listCaption: (range) => `Horas por persona, fecha y obra, ${range}`,
+    total: "Suma",
+    allPeople: "Todos",
+    openDay: (name, day) => `${name}, ${day}: abrir los registros`,
+    openHeading: "Siguen con la entrada marcada",
+    openSince: (name, job, day) => `${name} en ${job}, desde el ${day}`,
+    openExplain:
+      "Todavía no hay salida, así que este tiempo no está en ninguna cifra de abajo.",
+    stillOpenBadge: "sin salida",
+    emptyFlagged: "No hay avisos en estos días.",
+    export: "Exportar para nómina",
+    exportTitle: "Exportar horas para nómina",
+    exportTotal: (hours) => `${hours} h en total`,
+    exportFlagged: (n) =>
+      n === 0
+        ? "No hay registros con avisos."
+        : n === 1
+          ? "1 registro con aviso que quizá quieras revisar antes."
+          : `${n} registros con avisos que quizá quieras revisar antes.`,
+    exportOpen: (n) =>
+      n === 0
+        ? "Nadie sigue con la entrada marcada."
+        : n === 1
+          ? "1 sesión sigue abierta. Su tiempo no está en el archivo."
+          : `${n} sesiones siguen abiertas. Su tiempo no está en el archivo.`,
+    exportHolds:
+      "Una fila por persona, día y obra, con los avisos de cada fila. Solo horas: sin tarifas y sin pagos. Nada queda fijo: las mismas fechas más adelante dan las horas como estén entonces.",
+    download: "Descargar CSV",
+    downloaded: (filename) => `Se guardó ${filename}.`,
   },
 
   hours: "Horas",

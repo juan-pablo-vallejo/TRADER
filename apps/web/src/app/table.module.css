@@ -55,6 +55,55 @@
   min-height: var(--row);
 }
 
+/* A heading over a group of rows, the closing row of totals, and a cell that opens
+   something (data-table.tsx). The heading is a row of its own in the canvas's color; the
+   totals stand under one stronger line; a cell's button fills the cell, so the whole cell
+   is the target, and shows its focus inside the cell's own box. */
+.group th {
+  height: var(--row);
+  background: var(--canvas);
+  color: var(--ink);
+}
+.totals td {
+  border-top: 2px solid var(--border);
+  border-bottom: 0;
+}
+.cellOpen {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: inherit;
+  gap: var(--space-1) var(--space-2);
+  min-height: var(--row);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+.number .cellOpen {
+  justify-content: flex-end;
+}
+.scroll {
+  overflow-x: auto;
+}
+/* A table of figures by column carries a badge or three in each cell: tighter cells, and
+   a badge's words may take a second line before the table would outgrow its column. */
+.lines th,
+.lines td {
+  padding: 0 var(--space-2);
+}
+.lines td span {
+  white-space: normal;
+}
+.cellOpen:hover {
+  color: var(--accent);
+}
+
 /* A row's own buttons, where the row is acted on in place and not through an editor:
    trailing, and wide enough for the sentence a destructive action shows. */
 .table td.act {
@@ -201,6 +250,69 @@
     border: 0;
     padding: var(--space-4);
   }
+  /* A group's heading is a line of its own, not a card; the totals are a card like a
+     row, set apart; a cell's button is a line of the row's text with a full target. */
+  .table tbody tr.group {
+    border: 0;
+    background: none;
+    min-height: 0;
+    padding: var(--space-2) 0 0;
+    margin-bottom: var(--space-1);
+  }
+  .table tr.group th {
+    display: block;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .table tfoot,
+  .table tfoot tr {
+    display: block;
+  }
+  .table tfoot tr {
+    background: var(--surface);
+    border: var(--hairline) solid var(--border);
+    border-top: 2px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: var(--space-3) var(--space-4);
+  }
+  .cellOpen {
+    display: inline;
+    width: auto;
+    min-height: 0;
+    padding: var(--space-3) 0;
+    text-decoration: underline;
+  }
+  /* A table of figures by column (a week of days): in a narrow row each cell is a line
+     of its own, its column's name at the left and its figure at the right, where the
+     joined line of a plain table would run seven figures together. `important`: the
+     separator rules above are longer selectors and would put their dot back. */
+  .table.lines tbody tr:not(.editor):not(.group),
+  .table.lines tfoot tr {
+    padding-right: var(--space-4);
+  }
+  .table.lines tr:not(.editor) td:not(:first-child):not([data-empty]) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 32px;
+    font-variant-numeric: tabular-nums;
+  }
+  .table.lines tr:not(.editor) td:not(:first-child):not([data-empty])::before {
+    content: attr(data-label) !important;
+    flex: none;
+  }
+  .table.lines .cellOpen {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    padding: var(--space-1) 0;
+    text-decoration: none;
+    color: var(--ink);
+  }
+
   /* The destructive button is never full width; the others stretch on narrow. */
   .stretch {
     width: 100%;

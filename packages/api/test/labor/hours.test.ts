@@ -132,10 +132,17 @@ describe("dayHours", () => {
         workedMs: 3 * HOUR,
         hundredths: 300,
         openSessions: 0,
+        // Three entries carry a flag; the fourth carries none. Each is counted once,
+        // however many flags it holds.
+        flaggedEntries: 3,
         flags: ["offline", "user_timed", "location", "unscheduled"],
       },
     ]);
-    expect(cells(ledger)[0]).toMatchObject({ hundredths: 300, flags: [] });
+    expect(cells(ledger)[0]).toMatchObject({
+      hundredths: 300,
+      flaggedEntries: 0,
+      flags: [],
+    });
   });
 
   it("adds nothing for a session that is still open", () => {

@@ -37,7 +37,6 @@ const SAME = new Set([
   "languages.es",
   "none",
   "entryId",
-  "flagged",
   "duration",
   "hoursValue",
   "schedule.weekOf",
@@ -74,7 +73,8 @@ describe("the office's catalogs", () => {
       );
       expect(catalog.schedule.added(1)).toContain("1");
       expect(catalog.schedule.added(3)).toContain("3");
-      expect(catalog.sessionsOpen(1)).toContain("1");
+      expect(catalog.week.exportOpen(1)).toContain("1");
+      expect(catalog.week.exportFlagged(4)).toContain("4");
       expect(catalog.jobsUnarchived(2)).toContain("2");
     }
   });

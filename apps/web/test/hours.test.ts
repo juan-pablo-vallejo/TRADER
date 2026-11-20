@@ -60,7 +60,8 @@ describe("hours for the reconciliation through the route handler", () => {
       timezone: "America/New_York",
       cells: [],
       workers: [],
-      totals: { hundredths: 0, openSessions: 0 },
+      days: [],
+      totals: { hundredths: 0, openSessions: 0, flaggedEntries: 0 },
     });
     const month = await query(GET, "labor.hours", {
       input: { from: "2026-10-01", to: "2026-10-31" },
@@ -86,6 +87,8 @@ describe("hours for the reconciliation through the route handler", () => {
       filename: "payroll-hours-2026-01-01-to-2026-12-31.csv",
       csv: "employee,employee_id,work_date,job,job_id,hours,flags\r\n",
       hundredths: 0,
+      flaggedEntries: 0,
+      openSessions: 0,
     });
     const backward = await query(GET, "labor.export", {
       input: { from: "2026-10-02", to: "2026-10-01" },

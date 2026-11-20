@@ -38,7 +38,13 @@ const DAY = "2026-10-05";
 const T = (hhmm: string, day = DAY) => `${day}T${hhmm}:00.000Z`;
 const WEEK = { from: "2026-10-05", to: "2026-10-11" };
 
-type Filter = { from?: string; to?: string; workerId?: string; jobId?: string };
+type Filter = {
+  from?: string;
+  to?: string;
+  workerId?: string;
+  jobId?: string;
+  flagged?: boolean;
+};
 const hours = (tx: Tx, who: unknown, filter: Filter = {}) =>
   appCallerIn(tx, who).labor.hours({ ...WEEK, ...filter });
 
@@ -117,6 +123,7 @@ describe("labor.hours", () => {
           workDate: DAY,
           hundredths: 101,
           openSessions: 0,
+          flaggedEntries: 0,
           flags: [],
         },
       ]);
@@ -245,14 +252,38 @@ describe("labor.hours", () => {
       await becomeApp(tx);
 
       const all = await hours(tx, admin.who);
-      const w1 = { hundredths: 550, openSessions: 0 };
-      const w2 = { hundredths: 1125, openSessions: 1 };
+      const w1 = { hundredths: 550, openSessions: 0, flaggedEntries: 0 };
+      // The two entries captured offline on the 6th are the flagged ones.
+      const w2 = { hundredths: 1125, openSessions: 1, flaggedEntries: 2 };
       // By name: w1 before w2.
-      expect(all.workers).toEqual([
+      expect(all.workers.map(({ days: _, ...w }) => w)).toEqual([
         { worker: { id: d.w1, name: "w1" }, ...w1 },
         { worker: { id: d.w2, name: "w2" }, ...w2 },
       ]);
-      expect(all.totals).toEqual({ hundredths: 1675, openSessions: 1 });
+      expect(all.totals).toEqual({
+        hundredths: 1675,
+        openSessions: 1,
+        flaggedEntries: 2,
+      });
+      // A person's days: each the sum of that day's cells over every job, with the flags
+      // any of them holds. The 6th is 1.25 h and 2.00 h on one job; the 8th is still open.
+      expect(all.workers[1]!.days).toEqual([
+        { workDate: DAY, hundredths: 800, openSessions: 0, flaggedEntries: 0, flags: [] },
+        {
+          workDate: "2026-10-06",
+          hundredths: 325,
+          openSessions: 0,
+          flaggedEntries: 2,
+          flags: ["offline"],
+        },
+        {
+          workDate: "2026-10-08",
+          hundredths: 0,
+          openSessions: 1,
+          flaggedEntries: 0,
+          flags: [],
+        },
+      ]);
       expect(all.cells.map((c) => [c.workDate, c.hundredths, c.flags])).toContainEqual([
         "2026-10-06",
         325,
@@ -271,20 +302,51 @@ describe("labor.hours", () => {
             cells.reduce((sum, c) => sum + c[key], 0);
           expect(answer.totals[key]).toBe(of(answer.cells));
           for (const w of answer.workers) {
-            expect(w[key]).toBe(
-              of(answer.cells.filter((c) => c.worker.id === w.worker.id)),
+            const theirs = answer.cells.filter((c) => c.worker.id === w.worker.id);
+            expect(w[key]).toBe(of(theirs));
+            // A person's row: one figure per day, and the row adds up to the person.
+            for (const day of w.days) {
+              expect(day[key]).toBe(
+                of(theirs.filter((c) => c.workDate === day.workDate)),
+              );
+            }
+            expect(w.days.reduce((sum, day) => sum + day[key], 0)).toBe(w[key]);
+          }
+          // The closing row: one figure per day, and it adds up to the whole.
+          for (const day of answer.days) {
+            expect(day[key]).toBe(
+              of(answer.cells.filter((c) => c.workDate === day.workDate)),
             );
           }
+          expect(answer.days.reduce((sum, day) => sum + day[key], 0)).toBe(
+            answer.totals[key],
+          );
         }
+        expect(answer.days.map((day) => day.workDate)).toEqual(
+          [...new Set(answer.cells.map((c) => c.workDate))].sort(),
+        );
         expect(answer.workers.map((w) => w.worker.id).sort()).toEqual(
           [...new Set(answer.cells.map((c) => c.worker.id))].sort(),
         );
       }
       // Narrowed with the cells: one person, one job.
       expect((await hours(tx, admin.who, { workerId: d.w2 })).totals).toEqual(w2);
-      expect((await hours(tx, admin.who, { jobId: d.K })).workers).toEqual([
-        { worker: { id: d.w1, name: "w1" }, ...w1, hundredths: 350 },
+      expect(
+        (await hours(tx, admin.who, { jobId: d.K })).workers.map(
+          ({ days: _, ...w }) => w,
+        ),
+      ).toEqual([{ worker: { id: d.w1, name: "w1" }, ...w1, hundredths: 350 }]);
+      // Flagged only: the one cell an entry of which carries a flag, and sums of it alone.
+      const flaggedOnly = await hours(tx, admin.who, { flagged: true });
+      expect(flaggedOnly.cells.map((c) => [c.workDate, c.hundredths])).toEqual([
+        ["2026-10-06", 325],
       ]);
+      expect(flaggedOnly.totals).toEqual({
+        hundredths: 325,
+        openSessions: 0,
+        flaggedEntries: 2,
+      });
+      expect(flaggedOnly.workers.map((w) => w.worker.id)).toEqual([d.w2]);
     });
   });
 
@@ -310,7 +372,8 @@ describe("labor.hours", () => {
         timezone: "America/New_York",
         cells: [],
         workers: [],
-        totals: { hundredths: 0, openSessions: 0 },
+        days: [],
+        totals: { hundredths: 0, openSessions: 0, flaggedEntries: 0 },
       });
     });
   });
@@ -398,10 +461,15 @@ describe("labor.hours", () => {
           workDate: DAY,
           hundredths: 425,
           openSessions: 0,
+          flaggedEntries: 2,
           flags: ["offline"],
         },
       ]);
-      expect(answer.totals).toEqual({ hundredths: 425, openSessions: 0 });
+      expect(answer.totals).toEqual({
+        hundredths: 425,
+        openSessions: 0,
+        flaggedEntries: 2,
+      });
     });
   });
 

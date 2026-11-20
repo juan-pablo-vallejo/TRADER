@@ -1,33 +1,49 @@
 "use client";
 
-// Hours: every worker's hours by day and job for a range of up to 31 work dates, read
-// through `labor.hours`, each with its flags, and sessions still open kept apart. Every
-// entry counts; a flag says why the office may want to look. Read-only.
+// Hours: a week of every person's hours, people by days, read through `labor.hours`.
+// Each cell is a day's hours with its flags as badges; a row ends in the person's week,
+// and a row of each day's sum closes the table. A range that is not a week is a list by
+// person, date and jobsite. Sessions still open stand in a strip above: none of their time
+// is in any figure. Every entry counts; a flag says why the office may want to look.
 //
-// Every figure is the server's: the cells, each person's sum and the totals are fields of
-// the answer (labor/day-hours.ts), formatted here and never added or rounded in the browser.
-// Consumed by page.tsx.
+// Every figure is the server's (labor/day-hours.ts): a person's day, a person's sum, a
+// day's sum and the total are fields of the answer, formatted here and never added or
+// rounded in the browser. The dates and the presets live in the address
+// (use-url-filters.ts), so a reload or a pasted link shows the same thing.
+//
+// A cell opens that person's entries for that day, beneath (entries-screen.tsx reads the
+// same address). Consumed by page.tsx.
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
-import { EmptyState, Failure } from "../../failure";
+import { DataTable, type Column } from "../../data-table";
+import { Failure } from "../../failure";
 import { Field } from "../../field";
-import { Note } from "../../note";
-import { addDays, hours } from "../../format";
-import { PageHeader } from "../../page-header";
-import { LoadingRows } from "../../loading-rows";
+import { hours } from "../../format";
 import { useStrings } from "../../i18n";
-import table from "../../table.module.css";
+import { Note } from "../../note";
+import { PageHeader } from "../../page-header";
+import { FlagBadges, StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
-import { type Cell, hoursByPerson, type PersonHours, stillOpen } from "./hours-view";
+import { useUrlFilters } from "../../use-url-filters";
+import { ENTRIES_FILTERS } from "./entries-screen";
+import {
+  daysIn,
+  HOURS_FILTERS,
+  isWeek,
+  listRows,
+  rangeOf,
+  stillOpen,
+  weekOf,
+  weekRows,
+  weekTotals,
+  type Cell,
+  type Hours,
+  type Range,
+  type WeekRow,
+} from "./hours-view";
 import styles from "./hours.module.css";
-
-type Range = { from: string; to: string };
-
-// The longest range the server reads at once (labor/ledger.ts).
-const MAX_RANGE_DAYS = 31;
 
 // Today as the browser's calendar day, YYYY-MM-DD, built from parts: `toISOString` is UTC,
 // which is tomorrow in the evening in Eastern.
@@ -38,265 +54,397 @@ function today(): string {
 }
 
 export function HoursScreen({ signInHref }: { signInHref: string }) {
-  const { t } = useStrings();
+  const { t, f } = useStrings();
+  const [filters, setFilters] = useUrlFilters(HOURS_FILTERS);
+  const [, setEntries] = useUrlFilters(ENTRIES_FILTERS);
+  const range = rangeOf(filters, today());
+  const flagged = filters.flagged === "1";
+  // The dates in the form: the range on screen until someone types others.
+  const shown = range ?? weekOf(today());
+  const [draft, setDraft] = useState<Range | null>(null);
+  const typed = draft ?? shown;
+  const [exporting, setExporting] = useState(false);
+  const preset =
+    filters.range === "dates" ? null : filters.range === "last" ? "last" : "this";
+
+  const choose = (name: "this" | "last") => {
+    setDraft(null);
+    setFilters({ range: name, from: "", to: "" });
+  };
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    setFilters({ range: "dates", from: typed.from, to: typed.to });
+    setDraft(null);
+  };
+  const said = (r: Range) => `${f.day(r.from)} – ${f.day(r.to)}`;
+
   return (
     <>
       <PageHeader title={t.hoursTitle} />
       <p className={`secondary ${styles.explain}`}>{t.reconExplain}</p>
-      <ByDates signInHref={signInHref} />
-    </>
-  );
-}
-
-function ByDates({ signInHref }: { signInHref: string }) {
-  const { t } = useStrings();
-  const [to, setTo] = useState(today);
-  const [from, setFrom] = useState(() => addDays(today(), -6));
-  const [asked, setAsked] = useState<Range | null>(null);
-  const [rangeError, setRangeError] = useState(false);
-  const submit = (e: FormEvent) => {
-    e.preventDefault();
-    if (from === "" || to === "") return;
-    const bad = from > to || to > addDays(from, MAX_RANGE_DAYS - 1);
-    setRangeError(bad);
-    if (!bad) setAsked({ from, to });
-  };
-  return (
-    <>
-      <form aria-label={t.hoursTitle} className={controls.card} onSubmit={submit}>
+      <div className={styles.presets} role="group" aria-label={t.hoursTitle}>
+        <button
+          type="button"
+          className={controls.secondary}
+          aria-pressed={preset === "this"}
+          onClick={() => choose("this")}
+        >
+          {t.week.thisWeek}
+        </button>
+        <button
+          type="button"
+          className={controls.secondary}
+          aria-pressed={preset === "last"}
+          onClick={() => choose("last")}
+        >
+          {t.week.lastWeek}
+        </button>
+        <label className={controls.check}>
+          <input
+            type="checkbox"
+            checked={flagged}
+            onChange={(e) => setFilters({ flagged: e.target.checked ? "1" : "" })}
+          />
+          <span>{t.week.flaggedOnly}</span>
+        </label>
+      </div>
+      <form aria-label={t.week.dates} className={controls.card} onSubmit={submit}>
         <div className={styles.lookupGrid}>
-          <Field id="recon-from" label={t.planFrom}>
+          <Field id="hours-from" label={t.planFrom}>
             <input
-              id="recon-from"
+              id="hours-from"
               className={controls.input}
               type="date"
               required
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              value={typed.from}
+              onChange={(e) => setDraft({ ...typed, from: e.target.value })}
             />
           </Field>
-          <Field id="recon-to" label={t.planThrough}>
+          <Field id="hours-to" label={t.planThrough}>
             <input
-              id="recon-to"
+              id="hours-to"
               className={controls.input}
               type="date"
               required
-              value={to}
-              aria-invalid={rangeError}
-              aria-describedby={rangeError ? "recon-range" : undefined}
-              onChange={(e) => setTo(e.target.value)}
+              value={typed.to}
+              aria-invalid={range === null}
+              aria-describedby={range === null ? "hours-range" : undefined}
+              onChange={(e) => setDraft({ ...typed, to: e.target.value })}
             />
-            {rangeError && (
-              <p id="recon-range" className={`secondary ${controls.error}`} role="alert">
+            {range === null && (
+              <p id="hours-range" className={`secondary ${controls.error}`} role="alert">
                 {t.ledgerRange}
               </p>
             )}
           </Field>
         </div>
-        <button type="submit" className={controls.primary}>
-          {t.showHours}
-        </button>
+        <div className={controls.actions}>
+          <button type="submit" className={controls.secondary}>
+            {t.week.show}
+          </button>
+          <button
+            type="button"
+            className={controls.secondary}
+            disabled={range === null}
+            onClick={() => setExporting(true)}
+          >
+            {t.week.export}
+          </button>
+        </div>
       </form>
-      <PayrollFile from={from} to={to} />
-      {asked !== null && <Reconciliation asked={asked} signInHref={signInHref} />}
+      {exporting && range !== null && (
+        <ExportDialog
+          range={range}
+          said={said(range)}
+          onClose={() => setExporting(false)}
+        />
+      )}
+      {range !== null && (
+        <Shown
+          range={range}
+          said={said(range)}
+          flagged={flagged}
+          signInHref={signInHref}
+          onOpen={(workerId, day) => {
+            setEntries({ who: workerId, day });
+            document.getElementById("entries")?.scrollIntoView();
+          }}
+        />
+      )}
     </>
   );
 }
 
-// Payroll hours for the dates in the form, as a file: its own named button, what the file
-// holds beneath it. Any range that runs forward, however long. Asked for when pressed, never
-// cached: the server builds it from the ledger as it stands (api labor/export.ts), and the
-// browser saves it as it came.
-function PayrollFile({ from, to }: Range) {
-  const { t } = useStrings();
-  const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-  const save = async () => {
-    setSaved(false);
-    if (from === "" || to === "" || from > to) {
-      setNote(t.payrollRange);
-      return;
-    }
-    setBusy(true);
-    setNote(null);
-    try {
-      const file = await queryClient.fetchQuery(
-        trpc.labor.export.queryOptions({ from, to }, { staleTime: 0, gcTime: 0 }),
-      );
-      const url = URL.createObjectURL(new Blob([file.csv], { type: "text/csv" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = file.filename;
-      link.click();
-      URL.revokeObjectURL(url);
-      setSaved(true);
-      setNote(t.payrollCsvSaved(file.filename, hours(file.hundredths)));
-    } catch {
-      setNote(t.requestFailed);
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <div className={styles.section}>
-      <button
-        type="button"
-        className={controls.secondary}
-        disabled={busy}
-        onClick={() => void save()}
-      >
-        {t.payrollCsv}
-      </button>
-      <p className={`secondary ${styles.explain}`}>{t.payrollCsvExplain}</p>
-      <Note text={note} tone={saved ? "saved" : undefined} />
-    </div>
-  );
-}
-
-function Reconciliation({ asked, signInHref }: { asked: Range; signInHref: string }) {
+function Shown({
+  range,
+  said,
+  flagged,
+  signInHref,
+  onOpen,
+}: {
+  range: Range;
+  said: string;
+  flagged: boolean;
+  signInHref: string;
+  onOpen: (workerId: string, day: string) => void;
+}) {
   const { t, f } = useStrings();
   const trpc = useTRPC();
   // Other dates keep the rows on screen until their own arrive (providers.tsx).
   const read = useQuery(
-    trpc.labor.hours.queryOptions(asked, { placeholderData: keepPreviousData }),
+    trpc.labor.hours.queryOptions(
+      { ...range, ...(flagged && { flagged: true }) },
+      { placeholderData: keepPreviousData },
+    ),
   );
-  if (read.isPending) return <LoadingRows />;
-  if (read.isError) {
-    return (
-      <Failure
-        error={read.error}
-        signInHref={signInHref}
-        onRetry={() => void read.refetch()}
-      />
-    );
-  }
   const answer = read.data;
-  const range = `${f.day(asked.from)} – ${f.day(asked.to)}`;
-  if (answer.cells.length === 0) {
-    return (
-      <>
-        <p className={`secondary ${styles.line}`}>{range}</p>
-        <EmptyState text={t.emptyReconciliation} />
-      </>
-    );
-  }
+  const failed = read.isError ? (
+    <Failure
+      error={read.error}
+      signInHref={signInHref}
+      onRetry={() => void read.refetch()}
+    />
+  ) : undefined;
+  const empty = flagged ? t.week.emptyFlagged : t.emptyReconciliation;
+  const days = daysIn(range);
+
+  // A day's figure: the hours, the flags as badges, and a mark for a session still open.
+  const figure = (d: { hundredths: number; openSessions: number } | null) =>
+    d === null ? "" : d.hundredths === 0 && d.openSessions > 0 ? "" : hours(d.hundredths);
+
+  const weekColumns: Column<WeekRow>[] = [
+    { key: "person", header: t.person, cell: (row) => row.worker.name, total: undefined },
+    ...days.map((day, index): Column<WeekRow> => {
+      const total =
+        answer === undefined ? null : (weekTotals(answer, days)[index] ?? null);
+      return {
+        key: day,
+        header: f.weekColumn(day),
+        number: true,
+        empty: (row) => row.days[index] === null,
+        cell: (row) => {
+          const d = row.days[index] ?? null;
+          if (d === null) return "";
+          return (
+            <>
+              <span>{figure(d)}</span>
+              {d.openSessions > 0 && (
+                <StatusBadge tone="active" label={t.week.stillOpenBadge} />
+              )}
+              <FlagBadges flags={d.flags} />
+            </>
+          );
+        },
+        open: (row) =>
+          row.days[index] === null
+            ? null
+            : {
+                label: t.week.openDay(row.worker.name, f.weekDay(day)),
+                onOpen: () => onOpen(row.worker.id, day),
+              },
+        total: total === null ? undefined : hours(total.hundredths),
+      };
+    }),
+    {
+      key: "total",
+      header: t.week.total,
+      number: true,
+      cell: (row) => hours(row.hundredths),
+      total: answer === undefined ? undefined : hours(answer.totals.hundredths),
+    },
+  ];
+
+  const listColumns: Column<Cell>[] = [
+    { key: "date", header: t.date, cell: (c) => f.weekDay(c.workDate) },
+    { key: "job", header: t.job, cell: (c) => c.job.name },
+    {
+      key: "hours",
+      header: t.hours,
+      number: true,
+      cell: (c) => hours(c.hundredths),
+      open: (c) => ({
+        label: t.week.openDay(c.worker.name, f.weekDay(c.workDate)),
+        onOpen: () => onOpen(c.worker.id, c.workDate),
+      }),
+    },
+    {
+      key: "flags",
+      header: t.flags,
+      empty: (c) => c.flags.length === 0,
+      cell: (c) => <FlagBadges flags={c.flags} />,
+    },
+  ];
+  const sumOf = (answer: Hours, id: string) =>
+    answer.workers.find((w) => w.worker.id === id)?.hundredths ?? 0;
+
   return (
     <>
       <p className={`secondary ${styles.line}`}>
-        {range} · {t.workDatesIn(answer.timezone)}
+        {said}
+        {answer !== undefined && ` · ${t.workDatesIn(answer.timezone)}`}
       </p>
-      <Counted
-        people={hoursByPerson(answer)}
-        total={t.reconTotal(hours(answer.totals.hundredths))}
-      />
-      <Open cells={stillOpen(answer)} />
+      {answer !== undefined && <OpenStrip cells={stillOpen(answer)} />}
+      {answer !== undefined && answer.cells.length > 0 && (
+        <p className={`body-strong ${styles.total}`}>
+          {t.reconTotal(hours(answer.totals.hundredths))}
+        </p>
+      )}
+      {isWeek(range) ? (
+        <DataTable
+          caption={t.week.caption(said)}
+          columns={weekColumns}
+          rows={answer === undefined ? [] : weekRows(answer, days)}
+          rowKey={(row) => row.worker.id}
+          loading={read.isPending}
+          failed={failed}
+          empty={empty}
+          totalLabel={t.week.allPeople}
+          lines
+        />
+      ) : (
+        <DataTable
+          caption={t.week.listCaption(said)}
+          columns={listColumns}
+          rows={answer === undefined ? [] : listRows(answer)}
+          rowKey={(c) => `${c.worker.id}-${c.workDate}-${c.job.id}`}
+          loading={read.isPending}
+          failed={failed}
+          empty={answer !== undefined && answer.cells.length > 0 ? t.noHoursYet : empty}
+          groupOf={(c) => ({
+            key: c.worker.id,
+            heading: (
+              <span className={styles.groupHead}>
+                <span>{c.worker.name}</span>
+                <span>
+                  {answer === undefined
+                    ? ""
+                    : t.hoursValue(hours(sumOf(answer, c.worker.id)))}
+                </span>
+              </span>
+            ),
+          })}
+        />
+      )}
     </>
   );
 }
 
-// Each person's hours by day and job, with the flags of the entries behind each figure.
-function Counted({ people, total }: { people: PersonHours[]; total: string }) {
+// Sessions with no clock-out yet, each with the day it was left open: their time is in no
+// figure until it arrives.
+function OpenStrip({ cells }: { cells: Cell[] }) {
   const { t, f } = useStrings();
+  if (cells.length === 0) return null;
   return (
-    <section className={styles.section} aria-labelledby="hours-counted">
-      <h2 id="hours-counted" className="heading">
-        {t.hoursHeading}
+    <section className={styles.strip} aria-labelledby="hours-open">
+      <h2 id="hours-open" className="body-strong">
+        {t.week.openHeading}
       </h2>
-      {people.length === 0 ? (
-        <p className={`body ${styles.total}`}>{t.noHoursYet}</p>
-      ) : (
-        <>
-          <p className={`body-strong ${styles.total}`}>{total}</p>
-          {people.map((p) => (
-            <section
-              key={p.worker.id}
-              className={styles.person}
-              aria-label={p.worker.name}
-            >
-              <h3 className="body-strong">
-                <span>{p.worker.name}</span>
-                <span>{t.hoursValue(hours(p.hundredths))}</span>
-              </h3>
-              <table className={table.table}>
-                <thead>
-                  <tr>
-                    <th scope="col">{t.date}</th>
-                    <th scope="col">{t.job}</th>
-                    <th scope="col" className={table.number}>
-                      {t.hours}
-                    </th>
-                    <th scope="col">{t.flags}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {p.cells.map((c) => {
-                    const flags = c.flags.map((f) => t.reasonTags[f]).join(", ");
-                    return (
-                      <tr key={`${c.workDate}-${c.job.id}`}>
-                        <td data-label={t.date} className="body-strong">
-                          {f.weekDay(c.workDate)}
-                        </td>
-                        <td data-label={t.job}>{c.job.name}</td>
-                        <td data-label={t.hours} className={table.number}>
-                          {hours(c.hundredths)}
-                        </td>
-                        <td
-                          data-label={t.flags}
-                          data-empty={flags === "" ? "" : undefined}
-                        >
-                          {flags === "" ? "" : t.flagged(flags)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </section>
-          ))}
-        </>
-      )}
+      <ul>
+        {cells.map((c) => (
+          <li key={`${c.workDate}-${c.worker.id}-${c.job.id}`}>
+            {t.week.openSince(c.worker.name, c.job.name, f.weekDay(c.workDate))}
+          </li>
+        ))}
+      </ul>
+      <p className="secondary">{t.week.openExplain}</p>
     </section>
   );
 }
 
-// Sessions with no clock-out yet: their time is in no figure above until it arrives.
-function Open({ cells }: { cells: Cell[] }) {
-  const { t, f } = useStrings();
-  if (cells.length === 0) return null;
+// Export asks first: what the file will hold for these dates, then Download. The file is
+// built once, when the dialog opens, from the ledger as it stands (api labor/export.ts);
+// Download saves that same file, so what the dialog says is what the file adds up to.
+function ExportDialog({
+  range,
+  said,
+  onClose,
+}: {
+  range: Range;
+  said: string;
+  onClose: () => void;
+}) {
+  const { t } = useStrings();
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  const ref = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  type File = Awaited<ReturnType<typeof ask>>;
+  const ask = () =>
+    queryClient.fetchQuery(
+      trpc.labor.export.queryOptions(range, { staleTime: 0, gcTime: 0 }),
+    );
+  const [file, setFile] = useState<File | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    // No cleanup: closing here would report a dismissal nobody made when React mounts an
+    // effect twice in development. Unmounting removes the dialog.
+    if (dialog !== null && !dialog.open) dialog.showModal();
+  }, []);
+  useEffect(() => {
+    let current = true;
+    ask().then(
+      (answer) => current && setFile(answer),
+      () => current && setFailed(true),
+    );
+    return () => {
+      current = false;
+    };
+    // The range is fixed for the life of the dialog.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const download = () => {
+    if (file === null) return;
+    const url = URL.createObjectURL(new Blob([file.csv], { type: "text/csv" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = file.filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    setNote(t.week.downloaded(file.filename));
+  };
   return (
-    <section className={styles.section} aria-labelledby="hours-open">
-      <h2 id="hours-open" className="heading">
-        {t.notInHours}
+    <dialog
+      ref={ref}
+      className={styles.dialog}
+      aria-labelledby={titleId}
+      onClose={onClose}
+    >
+      <h2 id={titleId} className="heading">
+        {t.week.exportTitle}
       </h2>
-      <p className={`secondary ${styles.explain}`}>{t.notInHoursExplain}</p>
-      <p className={`${controls.actions} ${styles.links}`}>
-        <Link href="#entries">{t.repairInLedger}</Link>
-      </p>
-      <table className={table.table}>
-        <thead>
-          <tr>
-            <th scope="col">{t.person}</th>
-            <th scope="col">{t.job}</th>
-            <th scope="col">{t.date}</th>
-            <th scope="col">{t.unresolvedState}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {cells.map((c) => (
-            <tr key={`${c.workDate}-${c.worker.id}-${c.job.id}`}>
-              <td data-label={t.person} className="body-strong">
-                {c.worker.name}
-              </td>
-              <td data-label={t.job}>{c.job.name}</td>
-              <td data-label={t.date}>{f.weekDay(c.workDate)}</td>
-              <td data-label={t.unresolvedState}>{t.sessionsOpen(c.openSessions)}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+      <p className="body-strong">{said}</p>
+      {failed ? (
+        <p className={`secondary ${controls.error}`} role="alert">
+          {t.requestFailed}
+        </p>
+      ) : file === null ? (
+        <p className="body" role="status">
+          {t.loading}
+        </p>
+      ) : (
+        <ul className={styles.holds}>
+          <li className="body-strong">{t.week.exportTotal(hours(file.hundredths))}</li>
+          <li>{t.week.exportFlagged(file.flaggedEntries)}</li>
+          <li>{t.week.exportOpen(file.openSessions)}</li>
+        </ul>
+      )}
+      <p className="secondary">{t.week.exportHolds}</p>
+      <Note text={note} tone="saved" />
+      <div className={controls.actions}>
+        <button
+          type="button"
+          className={controls.primary}
+          disabled={file === null}
+          onClick={download}
+        >
+          {t.week.download}
+        </button>
+        <button type="button" className={controls.secondary} onClick={onClose}>
+          {t.close}
+        </button>
+      </div>
+    </dialog>
   );
 }

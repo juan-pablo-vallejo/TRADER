@@ -29,6 +29,7 @@ import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor
 import { useStrings } from "../../i18n";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
+import { useUrlFilters } from "../../use-url-filters";
 import styles from "./entries.module.css";
 import {
   createMinter,
@@ -77,15 +78,34 @@ type JobOption = { id: string; name: string; archived: boolean };
 type Notice = { key: string; text: string; ok: boolean };
 type Outcome = "saved" | "changed";
 
+// A person and a day in the address: what a cell of the week table opens. Both or
+// neither; with both, this section shows that person's entries of that day.
+export const ENTRIES_FILTERS = { who: "", day: "" };
+
 export function EntriesSection({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const trpc = useTRPC();
   const roster = useQuery(trpc.roster.list.queryOptions());
+  const [linked] = useUrlFilters(ENTRIES_FILTERS);
   const [workerId, setWorkerId] = useState("");
   const [to, setTo] = useState(today);
   const [from, setFrom] = useState(() => addDays(today(), -6));
   const [asked, setAsked] = useState<Lookup | null>(null);
   const [rangeError, setRangeError] = useState(false);
+  // The address names a person and a day: the form and the entries follow it, once per
+  // change of address, and the form stays free to ask for something else after.
+  const [followed, setFollowed] = useState("");
+  const link = `${linked.who}|${linked.day}`;
+  if (link !== followed) {
+    setFollowed(link);
+    if (/^[0-9a-f-]{36}$/.test(linked.who) && /^\d{4}-\d{2}-\d{2}$/.test(linked.day)) {
+      setWorkerId(linked.who);
+      setFrom(linked.day);
+      setTo(linked.day);
+      setRangeError(false);
+      setAsked({ workerId: linked.who, from: linked.day, to: linked.day });
+    }
+  }
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (workerId === "" || from === "" || to === "") return;

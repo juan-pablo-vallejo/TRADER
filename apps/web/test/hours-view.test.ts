@@ -1,13 +1,22 @@
-// The Hours screen's layout of a `labor.hours` answer: which cells stand
-// under a person and which stand apart. The totals shown are the server's, carried as given.
+// The Hours screen's layout of a `labor.hours` answer and the dates it asks for: a week as
+// people by days, a longer range as a list, open sessions apart, and the range the address
+// names. Every figure is the server's, carried as given.
 import { describe, expect, it } from "vitest";
 
 import {
-  hoursByPerson,
+  daysIn,
+  HOURS_FILTERS,
+  isWeek,
+  listRows,
+  rangeOf,
   stillOpen,
+  weekOf,
+  weekRows,
+  weekTotals,
   type Cell,
   type Hours,
 } from "../src/app/(office)/hours/hours-view";
+import { readFilters, writeFilters } from "../src/app/use-url-filters";
 
 const ana = { id: "00000000-0000-7000-8000-00000000000a", name: "Ana" };
 const tom = { id: "00000000-0000-7000-8000-00000000000b", name: "Tom" };
@@ -25,78 +34,175 @@ const cell = (
   workDate,
   hundredths: 0,
   openSessions: 0,
+  flaggedEntries: 0,
   flags: [],
   ...figures,
 });
+const day = (workDate: string, hundredths: number, o: Partial<Cell> = {}) => ({
+  workDate,
+  hundredths,
+  openSessions: 0,
+  flaggedEntries: 0,
+  flags: [] as Cell["flags"],
+  ...o,
+});
 
-// As the server orders it: cells by date, worker, job; workers by name. Tom's total is given
-// as 999 where his cells come to 800, to show it is carried, not recomputed.
+// As the server orders it: cells by date, worker, job; workers by name. Tom's sums are
+// given as 999 where his cells come to 800, to show they are carried, not recomputed.
 const answer: Hours = {
   timezone: "America/New_York",
   cells: [
     cell(ana, J, "2026-10-05", { hundredths: 200 }),
     cell(ana, K, "2026-10-05", { hundredths: 350, openSessions: 1 }),
     cell(tom, J, "2026-10-05", { hundredths: 800 }),
-    cell(ana, J, "2026-10-06", { hundredths: 850, flags: ["offline", "corrected"] }),
+    cell(ana, J, "2026-10-06", {
+      hundredths: 850,
+      flags: ["offline", "corrected"],
+      flaggedEntries: 2,
+    }),
     cell(tom, J, "2026-10-06", { openSessions: 1 }),
   ],
   workers: [
-    { worker: ana, hundredths: 1400, openSessions: 1 },
-    { worker: tom, hundredths: 999, openSessions: 1 },
+    {
+      worker: ana,
+      hundredths: 1400,
+      openSessions: 1,
+      flaggedEntries: 2,
+      days: [
+        day("2026-10-05", 550, { openSessions: 1 }),
+        day("2026-10-06", 850, { flags: ["offline", "corrected"], flaggedEntries: 2 }),
+      ],
+    },
+    {
+      worker: tom,
+      hundredths: 999,
+      openSessions: 1,
+      flaggedEntries: 0,
+      days: [day("2026-10-05", 999), day("2026-10-06", 0, { openSessions: 1 })],
+    },
   ],
-  totals: { hundredths: 2399, openSessions: 2 },
+  days: [
+    { workDate: "2026-10-05", hundredths: 1350, openSessions: 1, flaggedEntries: 0 },
+    { workDate: "2026-10-06", hundredths: 850, openSessions: 1, flaggedEntries: 2 },
+  ],
+  totals: { hundredths: 2399, openSessions: 2, flaggedEntries: 2 },
 };
 
-describe("the Hours screen's layout", () => {
-  it("puts each person's cells with hours under them, with the server's total", () => {
-    const people = hoursByPerson(answer);
-    expect(people.map((p) => [p.worker.name, p.hundredths])).toEqual([
+describe("a week of hours", () => {
+  const week = weekOf("2026-10-07");
+  const days = daysIn(week);
+
+  it("is Monday to Sunday around a day", () => {
+    expect(week).toEqual({ from: "2026-10-05", to: "2026-10-11" });
+    expect(weekOf("2026-10-05")).toEqual(week);
+    expect(weekOf("2026-10-11")).toEqual(week);
+    expect(days).toHaveLength(7);
+    expect(isWeek(week)).toBe(true);
+    expect(isWeek({ from: "2026-10-05", to: "2026-10-10" })).toBe(false);
+    expect(isWeek({ from: "2026-10-07", to: "2026-10-13" })).toBe(true);
+  });
+
+  it("puts each person's days in the week's columns, with the server's figures", () => {
+    const rows = weekRows(answer, days);
+    expect(rows.map((r) => [r.worker.name, r.hundredths])).toEqual([
       ["Ana", 1400],
       ["Tom", 999],
     ]);
-    expect(
-      people.map((p) => p.cells.map((c) => [c.workDate, c.job.name, c.hundredths])),
-    ).toEqual([
-      [
-        ["2026-10-05", "Kitchen", 200],
-        ["2026-10-05", "Porch", 350],
-        ["2026-10-06", "Kitchen", 850],
-      ],
-      [["2026-10-05", "Kitchen", 800]],
+    expect(rows.map((r) => r.days.map((d) => d?.hundredths ?? null))).toEqual([
+      [550, 850, null, null, null, null, null],
+      [999, 0, null, null, null, null, null],
     ]);
-    // A flagged day counts like any other, and its flags come through as answered.
-    expect(people[0]!.cells[2]!.flags).toEqual(["offline", "corrected"]);
+    // A day's flags are the server's, in its order.
+    expect(rows[0]!.days[1]!.flags).toEqual(["offline", "corrected"]);
   });
 
-  it("keeps a day with no hours yet out of the hours, and a person with none", () => {
-    const openOnly: Hours = {
-      ...answer,
-      cells: [answer.cells[4]!],
-      workers: [{ ...answer.workers[1]!, hundredths: 0 }],
-    };
-    expect(hoursByPerson(openOnly)).toEqual([]);
-    expect(stillOpen(openOnly)).toEqual([answer.cells[4]]);
+  it("closes with the server's sum of each day", () => {
+    expect(weekTotals(answer, days).map((d) => d?.hundredths ?? null)).toEqual([
+      1350,
+      850,
+      null,
+      null,
+      null,
+      null,
+      null,
+    ]);
+  });
+});
+
+describe("a longer range", () => {
+  it("lists the cells with hours by person, then date and job", () => {
+    expect(listRows(answer).map((c) => [c.worker.name, c.workDate, c.job.name])).toEqual([
+      ["Ana", "2026-10-05", "Kitchen"],
+      ["Ana", "2026-10-05", "Porch"],
+      ["Ana", "2026-10-06", "Kitchen"],
+      ["Tom", "2026-10-05", "Kitchen"],
+    ]);
   });
 
-  it("lists apart every cell with a session still open, in the server's order", () => {
-    expect(stillOpen(answer).map((c) => [c.worker.name, c.job.name, c.workDate])).toEqual(
+  it("sets sessions still open apart, whether or not the cell has hours", () => {
+    expect(stillOpen(answer).map((c) => [c.worker.name, c.workDate, c.job.name])).toEqual(
       [
-        ["Ana", "Porch", "2026-10-05"],
-        ["Tom", "Kitchen", "2026-10-06"],
+        ["Ana", "2026-10-05", "Porch"],
+        ["Tom", "2026-10-06", "Kitchen"],
       ],
     );
-    // A cell can be in both: its ended sessions count, and the open one does not yet.
-    expect(hoursByPerson(answer)[0]!.cells).toContain(answer.cells[1]);
+  });
+});
+
+describe("the dates the address asks for", () => {
+  const TODAY = "2026-10-07";
+  const filters = (over: Partial<typeof HOURS_FILTERS> = {}) => ({
+    ...HOURS_FILTERS,
+    ...over,
   });
 
-  it("is empty for an answer with no cells", () => {
-    const none: Hours = {
-      ...answer,
-      cells: [],
-      workers: [],
-      totals: { hundredths: 0, openSessions: 0 },
-    };
-    expect(hoursByPerson(none)).toEqual([]);
-    expect(stillOpen(none)).toEqual([]);
+  it("is this week for the plain address, and last week by its name", () => {
+    expect(rangeOf(filters(), TODAY)).toEqual({ from: "2026-10-05", to: "2026-10-11" });
+    expect(rangeOf(filters({ range: "last" }), TODAY)).toEqual({
+      from: "2026-09-28",
+      to: "2026-10-04",
+    });
+    // A preset nobody made is the plain screen, not an error.
+    expect(rangeOf(filters({ range: "someday" }), TODAY)).toEqual({
+      from: "2026-10-05",
+      to: "2026-10-11",
+    });
+  });
+
+  it("is the dates named, up to 31 days, and nothing for dates the server would refuse", () => {
+    const dates = (from: string, to: string) =>
+      rangeOf(filters({ range: "dates", from, to }), TODAY);
+    expect(dates("2026-10-01", "2026-10-31")).toEqual({
+      from: "2026-10-01",
+      to: "2026-10-31",
+    });
+    expect(dates("2026-10-01", "2026-10-01")).toEqual({
+      from: "2026-10-01",
+      to: "2026-10-01",
+    });
+    expect(dates("2026-10-01", "2026-11-01")).toBeNull();
+    expect(dates("2026-10-02", "2026-10-01")).toBeNull();
+    expect(dates("", "2026-10-01")).toBeNull();
+    expect(dates("2026-13-40", "2026-10-01")).toBeNull();
+    expect(dates("yesterday", "today")).toBeNull();
+  });
+
+  it("survives a reload: the address written is the address read", () => {
+    const chosen = filters({
+      range: "dates",
+      from: "2026-10-01",
+      to: "2026-10-14",
+      flagged: "1",
+    });
+    const query = writeFilters(HOURS_FILTERS, chosen);
+    expect(query).toBe("?range=dates&from=2026-10-01&to=2026-10-14&flagged=1");
+    expect(readFilters(HOURS_FILTERS, new URLSearchParams(query))).toEqual(chosen);
+    // The plain screen is the plain address.
+    expect(writeFilters(HOURS_FILTERS, filters())).toBe("");
+    expect(readFilters(HOURS_FILTERS, new URLSearchParams(""))).toEqual(filters());
+    // What the address holds that is no filter of this screen is not read.
+    expect(readFilters(HOURS_FILTERS, new URLSearchParams("?who=x&range=last"))).toEqual(
+      filters({ range: "last" }),
+    );
   });
 });

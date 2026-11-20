@@ -102,6 +102,81 @@ describe("labor.export", () => {
     });
   });
 
+  it("adds up to what the Hours screen shows for the same range, figure by figure", async () => {
+    await rolledBack(owner, async (tx) => {
+      const d = await workDayIn(tx);
+      const admin = await boundIn(tx, d.companyId, "admin");
+      // A week with awkward seconds on two jobs, a flagged day and a session left open.
+      const odd = 20 * 60_000 + 10_000;
+      await session(tx, d, d.w1, d.J, at("12:00"), at("12:00", 7 * 3_600_000 + odd));
+      await session(tx, d, d.w1, d.K, at("20:30"), at("20:30", odd));
+      await session(
+        tx,
+        d,
+        d.w1,
+        d.J,
+        at("12:00", 0, "2026-10-06"),
+        at("19:59", 0, "2026-10-06"),
+        ["offline"],
+      );
+      await session(
+        tx,
+        d,
+        d.w2,
+        d.K,
+        at("12:00", 0, "2026-10-07"),
+        at("12:00", 5 * odd, "2026-10-07"),
+        ["location"],
+      );
+      await eventIn(tx, d, {
+        worker: d.w2,
+        job: d.J,
+        type: "started",
+        client: at("12:00", 0, "2026-10-08"),
+      });
+      await becomeApp(tx);
+      const range = { from: DAY, to: "2026-10-11" };
+      const office = appCallerIn(tx, admin.who).labor;
+      const file = await office.export(range);
+      const screen = await office.hours(range);
+
+      // The file's rows, read back as a spreadsheet would, in hundredths.
+      const rows = rowsOf(file.csv)
+        .slice(1)
+        .map((r) => ({
+          worker: r[1]!,
+          day: r[2]!,
+          hundredths: Math.round(Number(r[5]) * 100),
+        }));
+      const sum = (of: typeof rows) => of.reduce((n, r) => n + r.hundredths, 0);
+
+      // The total above the table, the total the dialog states, and the file's own rows.
+      expect(sum(rows)).toBe(screen.totals.hundredths);
+      expect(file.hundredths).toBe(screen.totals.hundredths);
+      // Each person's week total.
+      for (const w of screen.workers) {
+        expect(sum(rows.filter((r) => r.worker === w.worker.id))).toBe(w.hundredths);
+        // Each cell of their row.
+        for (const day of w.days) {
+          expect(
+            sum(rows.filter((r) => r.worker === w.worker.id && r.day === day.workDate)),
+          ).toBe(day.hundredths);
+        }
+      }
+      // The row that closes the table.
+      for (const day of screen.days) {
+        expect(sum(rows.filter((r) => r.day === day.workDate))).toBe(day.hundredths);
+      }
+      // What the dialog says the range still holds: four flagged entries (two sessions of
+      // two), and the one session with no clock-out, which is in no row.
+      expect(file.flaggedEntries).toBe(4);
+      expect(file.openSessions).toBe(1);
+      expect(file.flaggedEntries).toBe(screen.totals.flaggedEntries);
+      expect(file.openSessions).toBe(screen.totals.openSessions);
+      expect(rows.some((r) => r.day === "2026-10-08")).toBe(false);
+    });
+  });
+
   it("takes any range that runs forward, and refuses a backward one", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await workDayIn(tx);
@@ -140,6 +215,7 @@ describe("payrollCsv", () => {
       workDate,
       hundredths,
       openSessions: 0,
+      flaggedEntries: 0,
       flags: [],
     });
     const csv = payrollCsv([

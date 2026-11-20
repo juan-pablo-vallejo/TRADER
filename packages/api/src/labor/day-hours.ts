@@ -24,6 +24,7 @@ import { forbidden } from "../core/trpc";
 import { readJob } from "../jobs/list";
 import { sessionAccounting } from "./accounting";
 import { dayHours, type DayCell } from "./hours";
+import { REASON_ORDER } from "../sync/reasons";
 import { RANGE_REFUSAL, rangeWithinBound } from "./ledger";
 
 // Every cell of the workers named, whatever its date or job: the caller selects.
@@ -63,6 +64,8 @@ export const hoursInput = z
     to: workDay,
     workerId: z.uuid().optional(),
     jobId: z.uuid().optional(),
+    // Only the cells an entry of which carries a flag: every sum below is then of those.
+    flagged: z.boolean().optional(),
   })
   .refine(rangeWithinBound, RANGE_REFUSAL);
 
@@ -72,10 +75,12 @@ const figures = {
   hundredths: z.number().int(),
   // Sessions with no clock-out yet: nothing of theirs is above.
   openSessions: z.number().int(),
+  // Entries that carry a flag, each counted once.
+  flaggedEntries: z.number().int(),
 };
 type Figures = { [K in keyof typeof figures]: number };
 
-const NOTHING: Figures = { hundredths: 0, openSessions: 0 };
+const NOTHING: Figures = { hundredths: 0, openSessions: 0, flaggedEntries: 0 };
 
 // The sum of cells' figures. Each cell was rounded once (hours.ts); nothing is rounded here.
 function sumOf(cells: readonly Figures[]): Figures {
@@ -83,6 +88,7 @@ function sumOf(cells: readonly Figures[]): Figures {
   for (const c of cells) {
     sum.hundredths += c.hundredths;
     sum.openSessions += c.openSessions;
+    sum.flaggedEntries += c.flaggedEntries;
   }
   if (!Object.values(sum).every(Number.isSafeInteger)) {
     throw new Error("a total of hours is a whole number of hundredths");
@@ -104,13 +110,24 @@ export const hoursOutput = z.strictObject({
       flags: z.array(z.enum(entryFlag.enumValues)),
     }),
   ),
-  // Each worker with a cell above and the sum of their cells, by name then id.
+  // Each worker with a cell above and the sum of their cells, by name then id; and that
+  // sum day by day, over every job of the day, with the day's flags: a week's row.
   workers: z.array(
     z.strictObject({
       worker: z.strictObject({ id: z.uuid(), name: z.string() }),
       ...figures,
+      days: z.array(
+        z.strictObject({
+          workDate: z.iso.date(),
+          ...figures,
+          flags: z.array(z.enum(entryFlag.enumValues)),
+        }),
+      ),
     }),
   ),
+  // Every work date with a cell above and the sum of that day's cells, by date: the row
+  // that closes a week.
+  days: z.array(z.strictObject({ workDate: z.iso.date(), ...figures })),
   // The sum of every cell above.
   totals: z.strictObject(figures),
 });
@@ -129,7 +146,13 @@ export const listHours = (
 export async function readHours(
   tx: Tx,
   user: AppUser,
-  input: { from: string; to: string; workerId?: string; jobId?: string },
+  input: {
+    from: string;
+    to: string;
+    workerId?: string;
+    jobId?: string;
+    flagged?: boolean;
+  },
 ): Promise<HoursOutput> {
   // A person or a job that is not visible (another tenant's, under RLS) is the one FORBIDDEN,
   // never an empty answer that could be read as "nothing recorded".
@@ -167,9 +190,12 @@ export async function readHours(
     (c) =>
       c.workDate >= input.from &&
       c.workDate <= input.to &&
-      (input.jobId === undefined || c.jobId === input.jobId),
+      (input.jobId === undefined || c.jobId === input.jobId) &&
+      (input.flagged !== true || c.flags.length > 0),
   );
-  if (kept.length === 0) return { timezone, cells: [], workers: [], totals: NOTHING };
+  if (kept.length === 0) {
+    return { timezone, cells: [], workers: [], days: [], totals: NOTHING };
+  }
 
   const names = async (table: typeof users | typeof jobs, ids: string[]) =>
     new Map(
@@ -201,17 +227,34 @@ export async function readHours(
       workDate: c.workDate,
       hundredths: c.hundredths,
       openSessions: c.openSessions,
+      flaggedEntries: c.flaggedEntries,
       flags: c.flags,
     }));
+  // The days of some cells, each with the sum of its cells and the flags any of them holds.
+  const byDay = (of: typeof cells) =>
+    [...new Set(of.map((c) => c.workDate))].sort(compare).map((workDate) => {
+      const those = of.filter((c) => c.workDate === workDate);
+      return {
+        workDate,
+        ...sumOf(those),
+        flags: REASON_ORDER.filter((f) => those.some((c) => c.flags.includes(f))),
+      };
+    });
   const workers = [...workerNames]
-    .map(([id, name]) => ({
-      worker: { id, name },
-      ...sumOf(cells.filter((c) => c.worker.id === id)),
-    }))
+    .map(([id, name]) => {
+      const theirs = cells.filter((c) => c.worker.id === id);
+      return { worker: { id, name }, ...sumOf(theirs), days: byDay(theirs) };
+    })
     .sort(
       (a, b) =>
         compare(a.worker.name.toLowerCase(), b.worker.name.toLowerCase()) ||
         compare(a.worker.id, b.worker.id),
     );
-  return { timezone, cells, workers, totals: sumOf(cells) };
+  return {
+    timezone,
+    cells,
+    workers,
+    days: byDay(cells).map(({ flags: _, ...day }) => day),
+    totals: sumOf(cells),
+  };
 }

@@ -55,6 +55,16 @@ export function formatters(language: Language, t: Catalog) {
       }).format(new Date(y, m - 1, d));
     },
 
+    // A work date as a column of a week is headed: "Mon 16". From its parts.
+    weekColumn(iso: string): string {
+      const [y, m, d] = iso.split("-").map(Number);
+      if (y === undefined || m === undefined || d === undefined) return iso;
+      const weekday = new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
+        new Date(y, m - 1, d),
+      );
+      return `${weekday.replace(/\.$/, "")} ${d}`;
+    },
+
     // An instant with its day, in a named zone: an entry is often received or corrected
     // on a later day than the one it is about.
     stamp(at: Date, timeZone: string): string {

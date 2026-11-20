@@ -364,7 +364,7 @@ Android user.
       both apps: use the phone's `es.ts` for the trade's words. OWNER: read the Spanish once
       on staging. Done when every office screen has been seen in Spanish at 390 and 1280
       with no English left on it and no label cut.
-- [ ] 15. **Hours: the week table.** The first screen on the shared pieces, which are built
+- [x] 15. **Hours: the week table.** The first screen on the shared pieces, which are built
       here because it needs them: `DataTable` (columns, rows, a caption, its loading, empty
       and failed states, grouping, a row or a cell that opens), `StatusBadge` on the five
       tones, the flag badges, and `useUrlFilters`. Keep the native `<table>` and the
@@ -694,6 +694,16 @@ Android user.
 - [ ] Item 14, at 390 wide in Spanish: the Schedule's seven day buttons take two rows and
       "Esta semana" two lines, where English takes one. Nothing is cut. Item 17 rebuilds
       that screen.
+
+- [ ] Item 15: the demo company has no entry flagged `unscheduled` and no session left
+      open, so for the look at the six badges and the strip one of each was written into
+      the local demo database by hand, and the demo reset after. A demo that holds both
+      would let `ui-check` see them without that.
+- [ ] Item 15: between 720 and about 1100 px of content the week table is wider than its
+      column, more so in Spanish, and scrolls inside its own box; the page does not scroll
+      sideways. Under 720 a row stacks, one line per day.
+- [ ] Item 15: with Flagged only on, the strip of open sessions lists only those whose
+      cell is flagged, since the strip reads the same answer as the table.
 
 ## After MVP
 

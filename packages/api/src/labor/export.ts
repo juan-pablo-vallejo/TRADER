@@ -28,6 +28,10 @@ export const exportOutput = z.strictObject({
   csv: z.string(),
   // What the file adds up to, for the office to check against the screen.
   hundredths: z.number().int(),
+  // What the range still holds that the office may want to settle first: entries that
+  // carry a flag, and sessions with no clock-out, whose time is in no row of the file.
+  flaggedEntries: z.number().int(),
+  openSessions: z.number().int(),
 });
 
 export const PAYROLL_COLUMNS = [
@@ -76,5 +80,7 @@ export async function exportHours(
     filename: `payroll-hours-${input.from}-to-${input.to}.csv`,
     csv: payrollCsv(read.cells),
     hundredths: read.totals.hundredths,
+    flaggedEntries: read.totals.flaggedEntries,
+    openSessions: read.totals.openSessions,
   };
 }

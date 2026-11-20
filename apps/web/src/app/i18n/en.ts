@@ -393,26 +393,11 @@ export const en = {
   },
   reconExplain:
     "Each person's hours by day and job, for the days you choose. Every entry counts; a flag says why you may want to look at it. A day's time on a job is added up first, then rounded to the hundredth of an hour.",
-  showHours: "Show hours",
   workDatesIn: (zone: string) => `Work dates in ${zone}.`,
-  hoursHeading: "Hours",
-  payrollCsv: "Payroll hours (CSV)",
-  payrollCsvExplain:
-    "One row per person, day and job for the dates above, however many days, with each row's flags. Hours only: no rates and no pay.",
-  payrollCsvSaved: (filename: string, hours: string) =>
-    `Saved ${filename}: ${hours} h in all.`,
-  payrollRange: "Choose a first and a last day, the first no later than the last.",
   noHoursYet: "No hours have ended on these days yet.",
-  flagged: (flags: string) => flags,
   reconTotal: (hours: string) => `${hours} h on these days`,
   hoursValue: (hours: string) => `${hours} h`,
   emptyReconciliation: "No hours are recorded on these days.",
-  notInHours: "Still on the clock",
-  notInHoursExplain:
-    "Sessions with no clock-out yet. Their time is in no figure above until it arrives.",
-  repairInLedger: "Correct hours in a person's entries",
-  unresolvedState: "Why",
-  sessionsOpen: (n: number) => `${n} still open`,
 
   // Labor repair, on the ledger
   repair: "Repair",
@@ -474,6 +459,46 @@ export const en = {
     time_in_future: "One of these times has not happened yet.",
     repair_stale:
       "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
+  },
+
+  // The Hours screen as a week: people by days, the presets, the strip of open sessions
+  // and the export's dialog.
+  week: {
+    thisWeek: "This week",
+    lastWeek: "Last week",
+    dates: "Dates",
+    flaggedOnly: "Flagged only",
+    show: "Show these dates",
+    caption: (range: string) => `Hours by person and day, ${range}`,
+    listCaption: (range: string) => `Hours by person, date and jobsite, ${range}`,
+    total: "Total",
+    allPeople: "Everyone",
+    openDay: (name: string, day: string) => `${name}, ${day}: open the entries`,
+    openHeading: "Still on the clock",
+    openSince: (name: string, job: string, day: string) =>
+      `${name} at ${job}, since ${day}`,
+    openExplain: "No clock-out yet, so this time is in no figure below.",
+    stillOpenBadge: "on the clock",
+    emptyFlagged: "Nothing is flagged on these days.",
+    export: "Export for payroll",
+    exportTitle: "Export hours for payroll",
+    exportTotal: (hours: string) => `${hours} h in all`,
+    exportFlagged: (n: number) =>
+      n === 0
+        ? "No flagged entries."
+        : n === 1
+          ? "1 flagged entry you may want to look at first."
+          : `${n} flagged entries you may want to look at first.`,
+    exportOpen: (n: number) =>
+      n === 0
+        ? "Nobody is still on the clock."
+        : n === 1
+          ? "1 session is still open. Its time is not in the file."
+          : `${n} sessions are still open. Their time is not in the file.`,
+    exportHolds:
+      "One row per person, day and jobsite, with each row's flags. Hours only: no rates and no pay. Nothing is frozen: the same dates later give the hours as they are then.",
+    download: "Download CSV",
+    downloaded: (filename: string) => `Saved ${filename}.`,
   },
 
   hours: "Hours",
