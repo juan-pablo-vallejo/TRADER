@@ -570,7 +570,7 @@ Android user.
       it is written. Done when a test for each change (move, edit, remove) shows the cache
       restored after a refused answer, and Undo and a rollback have each been seen on
       staging.
-- [ ] 32. **Keyboard row movement.** In every `DataTable` and in the schedule's grid: the
+- [x] 32. **Keyboard row movement.** In every `DataTable` and in the schedule's grid: the
       arrow keys, or J and K, move a visible focus through the rows, and through the cells
       of the two grids; Enter or Space opens the row's panel or page; Escape closes it and
       returns the focus. A key never acts while a field has the focus. `?` lists the keys.
@@ -850,6 +850,19 @@ Android user.
 - [ ] Item 31: removing a shift still asks once before it is done (the two-step control
       the office uses everywhere), and then also offers Undo. OWNER: say if the question
       should go now that Undo exists.
+
+- [ ] Item 32, how it was seen on staging, with no pointer after sign-in: Tab to the
+      menu's Hours and Enter; J into the week's table, down, K, Enter opening a person's
+      day, Escape closing it with the focus back on the same cell; `?` listing the keys;
+      J and K typed into a field doing nothing; Tab to Export for payroll, Enter, Tab to
+      Download CSV, Enter, and the file `payroll-hours-2026-11-16-to-2026-11-22.csv` saved.
+      Then the schedule's grid by J, right and down, and Jobs by J, right, Space opening a
+      panel and Escape returning the focus.
+- [ ] Item 32: J and K enter a screen's table from anywhere; the arrow keys act only once
+      the focus is in a table, because elsewhere they scroll the page. In Hours a day with
+      no entries opens nothing, so the keys pass over it.
+- [ ] Item 32: the list of keys is also in the account menu (Keyboard shortcuts), for
+      someone who does not know to press `?`.
 
 ## After MVP
 
