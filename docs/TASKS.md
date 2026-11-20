@@ -576,7 +576,7 @@ Android user.
       returns the focus. A key never acts while a field has the focus. `?` lists the keys.
       Every action stays reachable by pointer and by Tab. Done when Hours has been worked by
       keyboard alone on staging, from opening the screen to downloading the CSV.
-- [ ] 33. **The command menu.** Ctrl or Cmd + K, and a button in the header. Type to jump
+- [x] 33. **The command menu.** Ctrl or Cmd + K, and a button in the header. Type to jump
       to a person, a job, a customer or an invoice, from the lists the office already holds
       (no new search on the server), or to run New shift, New invoice, Invite a person or
       Export hours. A `combobox` over a `listbox`, in both languages, closed by Escape. Look
@@ -863,6 +863,21 @@ Android user.
       no entries opens nothing, so the keys pass over it.
 - [ ] Item 32: the list of keys is also in the account menu (Keyboard shortcuts), for
       someone who does not know to press `?`.
+
+- [ ] Item 33, how it was seen on staging, by keyboard: Ctrl+K, typed, Enter, for a person
+      (their panel on People), a job (its page), a customer (their panel) and invoice 3
+      (its page); then New shift (the Add shift panel on Schedule), New invoice (the Start
+      draft form), Invite a person (the Add to roster form) and Export hours (the export
+      dialog, chosen with the arrows and nothing typed). Escape closing it, the header's
+      button opening it by pointer, and the menu in Spanish at 390 with nothing scrolling
+      sideways.
+- [ ] Item 33: no library was added. cmdk 1.1.1, looked up 2026-11-20, brings four Radix
+      packages for what a native `<dialog>` and one component do here.
+- [ ] Item 33: an action is an address (`/schedule?do=shift`, `/invoices?do=invoice`,
+      `/people?do=invite`, `/hours?do=export`), so it can be linked to. The menu holds at
+      most the 500 newest invoices, which is all `invoice.list` answers.
+- [ ] Item 33: the header's button reads "Ctrl K" on every machine; on a Mac Cmd+K works
+      too and is not named.
 
 ## After MVP
 
