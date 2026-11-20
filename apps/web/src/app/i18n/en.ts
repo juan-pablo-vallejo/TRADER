@@ -112,8 +112,16 @@ export const en = {
     remove: "Remove shift",
     removeEffect: (name: string, jobsite: string, day: string) =>
       `${name} will no longer be scheduled at ${jobsite} on ${day}. Recorded hours do not change.`,
-    removed: "Shift removed.",
-    saved: "Shift saved.",
+    // A change shown at once, in the toast that offers Undo, and what became of it.
+    did: {
+      moved: (name: string, day: string) => `${name}'s shift moved to ${day}.`,
+      changed: (name: string, hours: string) => `${name}'s shift changed to ${hours}.`,
+      removed: (name: string, day: string) => `${name}'s shift on ${day} removed.`,
+    },
+    undo: "Undo",
+    undoneChange: "Undone: the shift is as it was.",
+    notDone: (why: string) => `Nothing was changed, and the week is as it was. ${why}`,
+    notUndone: (why: string) => `It could not be undone. ${why}`,
     added: (n: number) => (n === 1 ? "1 shift added." : `${n} shifts added.`),
     alreadyThere: (n: number) =>
       n === 1 ? " 1 was already there." : ` ${n} were already there.`,

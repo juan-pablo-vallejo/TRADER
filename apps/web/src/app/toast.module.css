@@ -1,0 +1,21 @@
+/* The toast: above everything, at the foot of the screen, clear of the phone's home bar. */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: max-content;
+  max-width: calc(100vw - var(--space-4) * 2);
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
+}

@@ -105,8 +105,15 @@ export const es: Catalog = {
     remove: "Quitar turno",
     removeEffect: (name, jobsite, day) =>
       `${name} ya no tendrá turno en ${jobsite} el ${day}. Las horas registradas no cambian.`,
-    removed: "Turno quitado.",
-    saved: "Turno guardado.",
+    did: {
+      moved: (name, day) => `El turno de ${name} se movió al ${day}.`,
+      changed: (name, hours) => `El turno de ${name} cambió a ${hours}.`,
+      removed: (name, day) => `Se quitó el turno de ${name} del ${day}.`,
+    },
+    undo: "Deshacer",
+    undoneChange: "Deshecho: el turno quedó como estaba.",
+    notDone: (why) => `No se cambió nada y la semana quedó como estaba. ${why}`,
+    notUndone: (why) => `No se pudo deshacer. ${why}`,
     added: (n) => (n === 1 ? "1 turno agregado." : `${n} turnos agregados.`),
     alreadyThere: (n) => (n === 1 ? " 1 ya estaba." : ` ${n} ya estaban.`),
     notAdded: (day, why) => `${day}: no se agregó. ${why}`,

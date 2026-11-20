@@ -8,8 +8,13 @@
 // a cell's own button adds one there. Three queries — the roster and the jobs for the
 // pickers, `assignment.week` for the grid — and every write through the drawers
 // (shift-dialog.tsx, copy-dialog.tsx), which the server judges (api assignments/).
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+//
+// Moving, changing or removing a shift nobody has started is drawn at once and sent at
+// once (optimistic.ts), with Undo offered in a toast for a few seconds. A refusal puts the
+// week back and is said in words from the answer's own code. Everything else here waits
+// for the server.
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useRef, useState } from "react";
 
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
@@ -19,6 +24,7 @@ import { Note } from "../../note";
 import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
 import { StatusBadge } from "../../status-badge";
+import { Toast } from "../../toast";
 import { useTRPC } from "../../trpc";
 import { CopyWeek } from "./copy-dialog";
 import styles from "./schedule.module.css";
@@ -29,10 +35,20 @@ import {
   mondayOf,
   nowIn,
   peopleOn,
+  refusalText,
+  type Refusal,
   type Row,
   type Week,
   type WeekShift,
 } from "./schedule-view";
+import {
+  attempt,
+  inverse,
+  said,
+  type Change,
+  type Outcome,
+  type WeekCache,
+} from "./optimistic";
 import { AddShift, EditShift } from "./shift-dialog";
 
 // Today as the browser's calendar day, YYYY-MM-DD, built from parts: `toISOString` is UTC,
@@ -191,11 +207,101 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
       { placeholderData: (previous) => previous },
     ),
   );
+  const queryClient = useQueryClient();
+  const update = useMutation(trpc.assignment.update.mutationOptions());
+  const remove = useMutation(trpc.assignment.remove.mutationOptions());
+  const create = useMutation(trpc.assignment.create.mutationOptions());
+  // What went wrong with a change shown at once, and the toast that offers its Undo.
+  const [problem, setProblem] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    id: number;
+    text: string;
+    undo: () => void;
+  } | null>(null);
+  const toasts = useRef(0);
+  const dismiss = useCallback(() => setToast(null), []);
+
+  // One change, sent: every answer in one shape, a refusal carrying the server's code.
+  type Sent = { result: string } & Partial<Refusal>;
+  const send = async (change: Change): Promise<Sent> => {
+    if (change.kind === "update")
+      return update.mutateAsync({ assignmentId: change.shift.id, ...change.to });
+    if (change.kind === "remove")
+      return remove.mutateAsync({ assignmentId: change.shift.id });
+    // Planned again under its own id: the same shift, not a new one.
+    const { shift } = change;
+    const answer = await create.mutateAsync({
+      userId: shift.worker.id,
+      jobId: shift.job.id,
+      expectedStart: shift.expectedStart,
+      expectedEnd: shift.expectedEnd,
+      days: [{ id: shift.id, workDate: shift.workDate }],
+    });
+    if (answer.result === "rejected") return answer;
+    const day = answer.days[0];
+    return day === undefined || day.result === "rejected"
+      ? { ...day, result: "rejected" }
+      : { result: day.result };
+  };
+  const change = (asked: Change, shown: Week) => {
+    const key = trpc.assignment.week.queryKey({ weekStart });
+    const cache: WeekCache = {
+      read: () => queryClient.getQueryData(key),
+      write: (next) => queryClient.setQueryData(key, next),
+      hold: () => queryClient.cancelQueries({ queryKey: key }),
+      refresh: () => queryClient.invalidateQueries(trpc.assignment.pathFilter()),
+    };
+    const label = (id: string) => {
+      const shift = shown.shifts.find((x) => x.id === id);
+      return shift === undefined || shift.id === asked.shift.id
+        ? s.thisShift
+        : `${shift.job.name} ${hoursOf(shift)}`;
+    };
+    const why = (result: Outcome<Sent>) =>
+      result.outcome === "refused"
+        ? refusalText(s, result.answer as Refusal, label)
+        : t.requestFailed;
+    const name = asked.shift.worker.name;
+    const what = said(asked);
+    const id = (toasts.current += 1);
+    setPanel(null);
+    setNote(null);
+    setProblem(null);
+    const sent = attempt(cache, asked, () => send(asked));
+    setToast({
+      id,
+      text:
+        asked.kind === "update"
+          ? what === "moved"
+            ? s.did.moved(name, f.weekDay(asked.to.workDate))
+            : s.did.changed(name, `${asked.to.expectedStart}–${asked.to.expectedEnd}`)
+          : s.did.removed(name, f.weekDay(asked.shift.workDate)),
+      // Undo waits for the first answer: a change the server refused has nothing to undo.
+      undo: () => {
+        setToast(null);
+        void sent.then(async (first) => {
+          if (first.outcome !== "done") return;
+          const back = inverse(asked);
+          const undone = await attempt(cache, back, () => send(back));
+          if (undone.outcome === "done") setNote(s.undoneChange);
+          else setProblem(s.notUndone(why(undone)));
+        });
+      },
+    });
+    void sent.then((first) => {
+      if (first.outcome === "done") return;
+      // The week is already back as it was; its toast has nothing left to offer.
+      setToast((now) => (now?.id === id ? null : now));
+      setProblem(s.notDone(why(first)));
+    });
+  };
+
   const failed = [roster, jobs, week].find((q) => q.isError);
   const ready = roster.isSuccess && jobs.isSuccess && week.isSuccess;
 
   const show = (monday: string) => {
     setNote(null);
+    setProblem(null);
     setWeekStart(monday);
     // Narrow shows one day: today when it is in the week, else the week's Monday.
     const now = today();
@@ -204,6 +310,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   // A drawer closed: what it did is said beneath the week bar.
   const closed = (result: string | null) => {
     setPanel(null);
+    setProblem(null);
     if (result !== null) setNote(result);
   };
 
@@ -349,6 +456,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
         </div>
       </div>
       <Note text={note} tone="saved" />
+      <Note text={problem} tone="error" />
       {rows.length === 0 ? (
         <p className={`body ${controls.empty}`}>{s.noShifts}</p>
       ) : (
@@ -378,6 +486,16 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           week={week.data}
           jobs={jobs.data.filter((j) => j.status !== "archived")}
           onClose={closed}
+          onChange={(asked) => change(asked, week.data)}
+        />
+      )}
+      {toast !== null && (
+        <Toast
+          key={toast.id}
+          text={toast.text}
+          action={s.undo}
+          onAction={toast.undo}
+          onDone={dismiss}
         />
       )}
       {panel?.kind === "copy" && (

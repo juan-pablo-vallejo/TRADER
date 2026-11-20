@@ -34,6 +34,7 @@ import {
   type Week,
   type WeekShift,
 } from "./schedule-view";
+import { sameAs, type Change } from "./optimistic";
 
 function useRefresh() {
   const trpc = useTRPC();
@@ -294,62 +295,31 @@ export function EditShift({
   week,
   jobs,
   onClose,
+  onChange,
 }: {
   shift: WeekShift;
   week: Week;
   // The jobsites a started shift's person can be moved to.
   jobs: { id: string; name: string }[];
   onClose: (note: string | null) => void;
+  // A change to a shift nobody has started: the screen draws it at once, sends it and
+  // offers Undo (optimistic.ts). This dialog only says what is wanted, and closes.
+  onChange: (change: Change) => void;
 }) {
   const { t, f } = useStrings();
   const s = t.schedule;
-  const trpc = useTRPC();
-  const refresh = useRefresh();
   const formId = useId();
   const [workDate, setWorkDate] = useState(shift.workDate);
   const [start, setStart] = useState(shift.expectedStart);
   const [end, setEnd] = useState(shift.expectedEnd);
   const [note, setNote] = useState<string | null>(null);
-  const [removeNote, setRemoveNote] = useState<string | null>(null);
 
   const dayShifts = week.shifts.filter(
     (other) => other.worker.id === shift.worker.id && other.workDate === workDate,
   );
   const overlaps =
     end > start ? overlapsWith({ id: shift.id, start, end }, dayShifts) : [];
-  const label = (id: string) => {
-    if (id === shift.id) return s.thisShift;
-    const other = week.shifts.find((x) => x.id === id);
-    return other === undefined ? s.thisShift : labelOf(other);
-  };
 
-  const update = useMutation(
-    trpc.assignment.update.mutationOptions({
-      onSuccess: async (answer) => {
-        if (answer.result === "rejected") {
-          setNote(refusalText(s, answer as Refusal, label));
-          return;
-        }
-        await refresh();
-        onClose(answer.result === "unchanged" ? t.unchanged : s.saved);
-      },
-      onError: () => setNote(t.requestFailed),
-    }),
-  );
-  const remove = useMutation(
-    trpc.assignment.remove.mutationOptions({
-      onSuccess: async (answer) => {
-        if (answer.result === "rejected") {
-          setRemoveNote(refusalText(s, answer as Refusal, label));
-          return;
-        }
-        await refresh();
-        onClose(s.removed);
-      },
-      onError: () => setRemoveNote(t.requestFailed),
-    }),
-  );
-  const busy = update.isPending || remove.isPending;
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
@@ -357,12 +327,9 @@ export function EditShift({
       setNote(s.endAfterStart);
       return;
     }
-    update.mutate({
-      assignmentId: shift.id,
-      workDate,
-      expectedStart: start,
-      expectedEnd: end,
-    });
+    const to = { workDate, expectedStart: start, expectedEnd: end };
+    if (sameAs(shift, to)) return onClose(t.unchanged);
+    onChange({ kind: "update", shift, to });
   };
   const title = s.shiftOf(shift.worker.name);
 
@@ -435,12 +402,12 @@ export function EditShift({
               <button
                 type="submit"
                 className={controls.primary}
-                disabled={busy || overlaps.length > 0}
+                disabled={overlaps.length > 0}
               >
                 {s.save}
               </button>
             </div>
-            <Note text={note} tone={note === s.saved ? "saved" : undefined} />
+            <Note text={note} />
           </form>
           <div className={styles.remove}>
             <DestructiveAction
@@ -450,13 +417,9 @@ export function EditShift({
                 shift.job.name,
                 f.weekDay(shift.workDate),
               )}
-              disabled={busy}
-              onConfirm={() => {
-                setRemoveNote(null);
-                remove.mutate({ assignmentId: shift.id });
-              }}
+              disabled={false}
+              onConfirm={() => onChange({ kind: "remove", shift })}
             />
-            <Note text={removeNote} />
           </div>
         </div>
         <PersonWeek
