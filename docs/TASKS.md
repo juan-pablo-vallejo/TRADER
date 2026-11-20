@@ -402,7 +402,7 @@ Android user.
   corrected entry's original event unchanged, and the panel has been worked by keyboard
   alone.
 
-- [ ] 17. **Schedule: the week beside the form, and moving someone.** The week grid moves
+- [x] 17. **Schedule: the week beside the form, and moving someone.** The week grid moves
       onto the shell's tokens and badges and keeps its own layout.
   - The shift drawer shows that person's week beside the form, so an overlap is seen before
     saving (`schedule/shift-dialog.tsx` already computes it).
@@ -717,6 +717,18 @@ Android user.
       each entry says whether a stamp was recorded. In the week table a day's badge still
       reads "location": a day's flags are a sum over entries and `labor.hours` does not
       say which kind.
+
+- [ ] Item 17, how it was seen: on the local demo with the schedule enforced, a week for
+      six people entered through the form with every person and jobsite chosen from a list;
+      a shift added from today's column; the worker clocked in on the iPhone simulator; the
+      office moved them, the simulator offered the second jobsite after its next pull and
+      they switched; then that started shift was ended early. The Android emulator was not
+      part of this one.
+- [ ] Item 17: a shift's hours in a sentence are the schedule's 24-hour times ("ends at
+      03:00"), while the browser's own time field beside it reads in the browser's
+      style ("03:00 AM").
+- [ ] Item 17: a form's field that should take the focus when a side panel opens is marked
+      `data-autofocus`; React's `autoFocus` loses to the dialog's own first-control focus.
 
 ## After MVP
 

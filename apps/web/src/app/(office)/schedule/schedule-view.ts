@@ -8,6 +8,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import { addDays } from "../../format";
 import type { Catalog } from "../../i18n/en";
+import { instantToWall } from "../../zoned";
 
 type Outputs = inferRouterOutputs<AppRouter>["assignment"];
 export type Week = Outputs["week"];
@@ -19,6 +20,57 @@ export type { Issue };
 export function mondayOf(day: string): string {
   const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
   return addDays(day, -((weekday + 6) % 7));
+}
+
+// The day and the minute it is now on a zone's wall clock: what "today's column" and "the
+// time now" mean on a schedule written on the company's clock, wherever the browser is.
+export function nowIn(
+  timeZone: string,
+  at: Date = new Date(),
+): { day: string; minute: string } {
+  const wall = instantToWall(at, timeZone);
+  return { day: wall.slice(0, 10), minute: wall.slice(11, 16) };
+}
+
+const minutesOf = (time: string) =>
+  Number(time.slice(0, 2)) * 60 + Number(time.slice(3, 5));
+const timeOf = (minutes: number) =>
+  `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+
+// The hours a new shift opens with. Any other day, the usual day. Today, once the usual
+// start has passed: from the next quarter hour to the usual end, or two hours on when that
+// has passed too, and never past the day's last minute.
+export function offeredTimes(
+  day: string,
+  now: { day: string; minute: string },
+  usual = { start: "07:00", end: "15:30" },
+): { start: string; end: string } {
+  if (day !== now.day || now.minute <= usual.start) return usual;
+  const start = Math.min(23 * 60 + 45, Math.ceil(minutesOf(now.minute) / 15) * 15);
+  const end =
+    timeOf(start) < usual.end ? usual.end : timeOf(Math.min(23 * 60 + 59, start + 120));
+  return { start: timeOf(start), end };
+}
+
+// One person's shifts of the week, day by day, each day's in time order: what stands
+// beside the shift form, so an overlap is seen before it is saved.
+export function personWeek(
+  week: Week,
+  userId: string,
+): { day: string; shifts: WeekShift[] }[] {
+  return week.days.map((day) => ({
+    day,
+    shifts: week.shifts
+      .filter((shift) => shift.worker.id === userId && shift.workDate === day)
+      .sort(
+        (a, b) =>
+          (a.expectedStart < b.expectedStart
+            ? -1
+            : a.expectedStart > b.expectedStart
+              ? 1
+              : 0) || (a.id < b.id ? -1 : 1),
+      ),
+  }));
 }
 
 export const hoursOf = (shift: { expectedStart: string; expectedEnd: string }) =>

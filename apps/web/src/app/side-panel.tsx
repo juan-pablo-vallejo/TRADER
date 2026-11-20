@@ -35,6 +35,9 @@ export function SidePanel({
     // Not closed in the cleanup: closing would fire `close` and report a dismissal nobody
     // made when React mounts an effect twice in development. Unmounting removes the dialog.
     dialog.showModal();
+    // The browser puts the focus on the panel's first control, its Close. A form that
+    // has one thing left to choose says which with `data-autofocus`.
+    dialog.querySelector<HTMLElement>("[data-autofocus]")?.focus();
     return () => {
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };

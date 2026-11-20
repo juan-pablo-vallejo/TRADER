@@ -18,6 +18,7 @@ import { addDays } from "../../format";
 import { Note } from "../../note";
 import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
+import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import { CopyWeek } from "./copy-dialog";
 import styles from "./schedule.module.css";
@@ -26,6 +27,7 @@ import {
   byJobsite,
   hoursOf,
   mondayOf,
+  nowIn,
   peopleOn,
   type Row,
   type Week,
@@ -75,7 +77,7 @@ function ShiftCard({
         {view === "employee" ? shift.job.name : shift.worker.name}
       </span>
       <span className={`secondary ${styles.hours}`}>{hoursOf(shift)}</span>
-      {shift.locked && <span className={`label ${styles.lockedMark}`}>{s.locked}</span>}
+      {shift.locked && <StatusBadge tone="active" label={s.locked} />}
     </button>
   );
 }
@@ -85,6 +87,7 @@ function Grid({
   rows,
   view,
   selected,
+  today: todayDay,
   onOpen,
   onAdd,
 }: {
@@ -93,6 +96,9 @@ function Grid({
   view: View;
   // The one day shown when narrow.
   selected: string;
+  // Today on the company's clock: its column's Add is a named button, one click to a
+  // shift for today.
+  today: string;
   onOpen: (shiftId: string) => void;
   onAdd: (userId: string, day: string) => void;
 }) {
@@ -144,11 +150,15 @@ function Grid({
                   {view === "employee" && (
                     <button
                       type="button"
-                      className={styles.addCell}
+                      className={
+                        day === todayDay
+                          ? `${styles.addCell} ${styles.addToday}`
+                          : styles.addCell
+                      }
                       aria-label={s.addShiftFor(row.name, f.weekDay(day))}
                       onClick={() => onAdd(row.id, day)}
                     >
-                      +
+                      {day === todayDay ? `+ ${s.addToday}` : "+"}
                     </button>
                   )}
                 </td>
@@ -347,6 +357,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           rows={rows}
           view={view}
           selected={week.data.days.includes(selected) ? selected : weekStart}
+          today={nowIn(week.data.timezone).day}
           onOpen={(shiftId) => setPanel({ kind: "edit", shiftId })}
           onAdd={(userId, day) => setPanel({ kind: "add", userId, day })}
         />
@@ -361,7 +372,13 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
         />
       )}
       {editing !== undefined && (
-        <EditShift key={editing.id} shift={editing} week={week.data} onClose={closed} />
+        <EditShift
+          key={editing.id}
+          shift={editing}
+          week={week.data}
+          jobs={jobs.data.filter((j) => j.status !== "archived")}
+          onClose={closed}
+        />
       )}
       {panel?.kind === "copy" && (
         <CopyWeek week={week.data} signInHref={signInHref} onClose={closed} />

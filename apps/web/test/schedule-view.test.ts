@@ -10,8 +10,11 @@ import {
   copiesIn,
   issueText,
   mondayOf,
+  nowIn,
+  offeredTimes,
   overlapsWith,
   peopleOn,
+  personWeek,
   refusalText,
   type WeekShift,
 } from "../src/app/(office)/schedule/schedule-view";
@@ -190,5 +193,86 @@ describe("copiesIn", () => {
       { copyId: a, count: 2, locked: true },
       { copyId: b, count: 1, locked: false },
     ]);
+  });
+});
+
+describe("the time now on the company's clock", () => {
+  it("is the zone's day and minute, whatever zone the browser is in", () => {
+    const at = new Date("2026-11-17T04:30:00Z");
+    // 23:30 on the 16th in New York, already the 17th in UTC.
+    expect(nowIn("America/New_York", at)).toEqual({ day: "2026-11-16", minute: "23:30" });
+    expect(nowIn("UTC", at)).toEqual({ day: "2026-11-17", minute: "04:30" });
+  });
+});
+
+describe("the hours a new shift opens with", () => {
+  const now = (minute: string) => ({ day: "2026-11-16", minute });
+
+  it("is the usual day for any other day, and for today before the usual start", () => {
+    expect(offeredTimes("2026-11-17", now("10:20"))).toEqual({
+      start: "07:00",
+      end: "15:30",
+    });
+    expect(offeredTimes("", now("10:20"))).toEqual({ start: "07:00", end: "15:30" });
+    expect(offeredTimes("2026-11-16", now("06:10"))).toEqual({
+      start: "07:00",
+      end: "15:30",
+    });
+  });
+
+  it("starts today's from the next quarter hour, to the usual end or two hours on", () => {
+    expect(offeredTimes("2026-11-16", now("10:20"))).toEqual({
+      start: "10:30",
+      end: "15:30",
+    });
+    expect(offeredTimes("2026-11-16", now("10:30"))).toEqual({
+      start: "10:30",
+      end: "15:30",
+    });
+    expect(offeredTimes("2026-11-16", now("15:40"))).toEqual({
+      start: "15:45",
+      end: "17:45",
+    });
+    // Never past the day, and the end always after the start.
+    expect(offeredTimes("2026-11-16", now("22:50"))).toEqual({
+      start: "23:00",
+      end: "23:59",
+    });
+    expect(offeredTimes("2026-11-16", now("23:58"))).toEqual({
+      start: "23:45",
+      end: "23:59",
+    });
+  });
+});
+
+describe("a person's week, beside the form", () => {
+  it("is their shifts alone, day by day, each day in time order", () => {
+    const days = Array.from({ length: 7 }, (_, n) =>
+      new Date(Date.parse(`${MON}T00:00:00Z`) + n * 86_400_000)
+        .toISOString()
+        .slice(0, 10),
+    );
+    const week = {
+      weekStart: MON,
+      timezone: "America/New_York",
+      days,
+      shifts: [
+        shift(1, ana, porch, MON, "12:00", "15:30"),
+        shift(2, tom, kitchen, MON, "07:00", "15:30"),
+        shift(3, ana, kitchen, MON, "07:00", "11:30"),
+        shift(4, ana, kitchen, "2026-11-11", "07:00", "15:30", { locked: true }),
+      ],
+    };
+    const theirs = personWeek(week, ana.id);
+    expect(theirs.map((d) => d.day)).toEqual(days);
+    expect(
+      theirs
+        .filter((d) => d.shifts.length > 0)
+        .map((d) => [d.day, d.shifts.map((x) => `${x.job.name} ${x.expectedStart}`)]),
+    ).toEqual([
+      [MON, ["Kitchen 07:00", "Porch 12:00"]],
+      ["2026-11-11", ["Kitchen 07:00"]],
+    ]);
+    expect(personWeek(week, id(99)).every((d) => d.shifts.length === 0)).toBe(true);
   });
 });
