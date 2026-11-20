@@ -486,7 +486,7 @@ Android user.
 
 ### Release 2: during the pay period
 
-- [ ] 26. **Today.** `/today`, where the office opens. Three bands in a fixed order, rows
+- [x] 26. **Today.** `/today`, where the office opens. Three bands in a fixed order, rows
       and counts, no charts. It reads `overview.today` and the status function of item 11.
   - Needs attention: sessions left open from an earlier day (Fix opens that day's panel in
     Hours) and people late for a shift (Call). Ten rows at most, then a link to the rest.
@@ -763,6 +763,22 @@ Android user.
       The office's do today. The phone's begin with item 12, which waits on gate 3; the
       policy should not be approved as it reads before that item lands, or the phone's
       half of that sentence comes out until it does.
+
+- [ ] Item 26, how it was seen. On staging, with rows made through the office itself for
+      fictional people: an open session from two days before with Fix landing on that day's
+      panel in Hours, a late person with Call, one person on the clock, one expected, one
+      done, what is owed, a draft, and the line for complete jobs, each link landing on its
+      list; in English at 1280 and Spanish at 390. A clear day's one line was seen on the
+      local demo, not on staging, whose fixture shift keeps one person late for the day.
+      The two sessions left open for the check were closed by a correcting clock-out, so
+      staging's fixture people can clock in again. Three fixture people were added to
+      staging's roster for it: Fixture Invitee, Fixture Expected, Fixture Done.
+- [ ] Items 12, 13 and 22 to 25 wait on the owner (gates 3, 4, 8, 9 and 10) and were passed
+      over in order. Item 24, the release job, needs item 13's `eas.json`, which waits on
+      the Expo token and the signing credentials; it was not built ahead of them.
+- [ ] Item 27 will find this: the Jobs editor's Save details sends no `notes`, and
+      `job.update` replaces the whole record, so saving a job's details in the office
+      clears the notes the crew sees. Fixed with item 27's notes field.
 
 ## After MVP
 
