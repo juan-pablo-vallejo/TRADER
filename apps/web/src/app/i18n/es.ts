@@ -29,6 +29,28 @@ export const es: Catalog = {
     home: "Volver a la página principal",
   },
   account: "Tu cuenta",
+  command: {
+    title: "Buscar o hacer",
+    open: "Buscar",
+    placeholder: "Una persona, una obra, un cliente, una factura, o qué hacer",
+    results: "Lo que se encontró",
+    hint: "Arriba y abajo para elegir, Enter para ir, Esc para cerrar.",
+    none: "Nada con ese nombre.",
+    inactive: "Desactivada",
+    kinds: {
+      action: "Hacer",
+      person: "Persona",
+      job: "Obra",
+      customer: "Cliente",
+      invoice: "Factura",
+    },
+    actions: {
+      shift: "Turno nuevo",
+      invoice: "Factura nueva",
+      invite: "Invitar a una persona",
+      export: "Exportar horas",
+    },
+  },
   keys: {
     title: "Teclado",
     open: "Atajos de teclado",

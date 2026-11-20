@@ -34,6 +34,19 @@ export function writeFilters<K extends string>(
   return query === "" ? "" : `?${query}`;
 }
 
+// What a screen was asked to open by the command menu, named in the address as `?do=`:
+// New shift, New invoice, Invite a person, Export hours. The screen opens its own form
+// while it is asked, and clears the asking when that form closes.
+const ASKED = { do: "" };
+export function useAsked(name: string): [boolean, () => void] {
+  const [filters, set] = useUrlFilters(ASKED);
+  const asked = filters.do === name;
+  const clear = useCallback(() => {
+    if (asked) set({ do: "" });
+  }, [asked, set]);
+  return [asked, clear];
+}
+
 export function useUrlFilters<K extends string>(
   defaults: Record<K, string>,
 ): [Record<K, string>, (change: Partial<Record<K, string>>) => void] {

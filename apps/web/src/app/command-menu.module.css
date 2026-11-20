@@ -1,0 +1,85 @@
+/* The command menu: a box near the top of the screen, the whole width on a phone. */
+.menu {
+  box-sizing: border-box;
+  width: min(36rem, calc(100vw - var(--space-4) * 2));
+  max-width: 100vw;
+  max-height: min(32rem, calc(100dvh - var(--space-6) * 2));
+  margin: var(--space-6) auto auto;
+  padding: 0;
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+.menu::backdrop {
+  background: color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: inherit;
+  box-sizing: border-box;
+  padding: var(--space-4);
+}
+.list {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.option {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--space-2);
+  min-height: var(--target);
+  box-sizing: border-box;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+}
+.option[aria-selected="true"] {
+  background: var(--accent-tint);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.kind {
+  flex: none;
+  min-width: 5.5rem;
+  color: var(--ink-secondary);
+}
+.foot {
+  margin: 0;
+}
+.opener {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+/* The account follows the opener, which has taken the room between. */
+.opener + * {
+  margin-left: 0;
+}
+.cap {
+  padding: 0 var(--space-1);
+  font: inherit;
+  color: var(--ink-secondary);
+  border: var(--hairline) solid var(--border);
+  border-radius: 4px;
+}
+@media (max-width: 767px) {
+  .menu {
+    width: calc(100vw - var(--space-2) * 2);
+    margin-top: var(--space-2);
+    max-height: calc(100dvh - var(--space-2) * 2);
+  }
+  .cap {
+    display: none;
+  }
+}

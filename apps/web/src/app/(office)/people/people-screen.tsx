@@ -29,7 +29,7 @@ import { SidePanel } from "../../side-panel";
 import { StatusBadge } from "../../status-badge";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
-import { useUrlFilters } from "../../use-url-filters";
+import { useAsked, useUrlFilters } from "../../use-url-filters";
 import { invitationText, isPhone, smsLink } from "./invitation";
 import styles from "./people.module.css";
 
@@ -57,7 +57,10 @@ const PERSON_FILTERS = { person: "" };
 export function PeopleScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const list = useRoster();
-  const [adding, setAdding] = useState(false);
+  const [addingHere, setAdding] = useState(false);
+  // The command menu's Invite a person asks for the same form by the address.
+  const [asked, clearAsked] = useAsked("invite");
+  const adding = addingHere || asked;
   // Who was just invited: the next thing to do is tell them where to get the app.
   const [invited, setInvited] = useState<string | null>(null);
   const [filters, setFilters] = useUrlFilters(PERSON_FILTERS);
@@ -72,7 +75,10 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
             ? {
                 label: t.addPerson,
                 open: adding,
-                onToggle: () => setAdding((a) => !a),
+                onToggle: () => {
+                  setAdding(!adding);
+                  clearAsked();
+                },
               }
             : undefined
         }
@@ -91,6 +97,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
             <InviteForm
               onDone={(userId) => {
                 setAdding(false);
+                clearAsked();
                 setInvited(userId);
               }}
             />

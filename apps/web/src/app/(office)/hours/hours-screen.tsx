@@ -27,7 +27,7 @@ import { Note } from "../../note";
 import { PageHeader } from "../../page-header";
 import { FlagBadges, StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
-import { useUrlFilters } from "../../use-url-filters";
+import { useAsked, useUrlFilters } from "../../use-url-filters";
 import { DayPanel } from "./day-panel";
 import {
   DAY_FILTERS,
@@ -67,7 +67,10 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
   const shown = range ?? weekOf(today());
   const [draft, setDraft] = useState<Range | null>(null);
   const typed = draft ?? shown;
-  const [exporting, setExporting] = useState(false);
+  const [exportingHere, setExporting] = useState(false);
+  // The command menu's Export hours asks for the same dialog by the address.
+  const [asked, clearAsked] = useAsked("export");
+  const exporting = exportingHere || asked;
   const preset =
     filters.range === "dates" ? null : filters.range === "last" ? "last" : "this";
 
@@ -160,7 +163,10 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
         <ExportDialog
           range={range}
           said={said(range)}
-          onClose={() => setExporting(false)}
+          onClose={() => {
+            setExporting(false);
+            clearAsked();
+          }}
         />
       )}
       {range !== null && (

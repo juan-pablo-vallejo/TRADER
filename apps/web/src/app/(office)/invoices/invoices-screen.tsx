@@ -24,7 +24,7 @@ import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
 import { StatusBadge, type Tone } from "../../status-badge";
 import { useTRPC } from "../../trpc";
-import { useUrlFilters } from "../../use-url-filters";
+import { useAsked, useUrlFilters } from "../../use-url-filters";
 import styles from "./invoices.module.css";
 
 function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
@@ -143,7 +143,10 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
   const trpc = useTRPC();
   const list = useInvoices();
   const jobs = useQuery(trpc.job.list.queryOptions());
-  const [adding, setAdding] = useState(false);
+  const [addingHere, setAdding] = useState(false);
+  // The command menu's New invoice asks for the same form by the address.
+  const [asked, clearAsked] = useAsked("invoice");
+  const adding = addingHere || asked;
   const [filters, setFilters] = useUrlFilters(INVOICE_FILTERS);
   const preset: Preset = (PRESETS as readonly string[]).includes(filters.show)
     ? (filters.show as Preset)
@@ -202,7 +205,14 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
         title={s.title}
         action={
           ready
-            ? { label: s.newDraft, open: adding, onToggle: () => setAdding((a) => !a) }
+            ? {
+                label: s.newDraft,
+                open: adding,
+                onToggle: () => {
+                  setAdding(!adding);
+                  clearAsked();
+                },
+              }
             : undefined
         }
       />

@@ -29,6 +29,29 @@ export const en = {
   },
   // The header's menu behind the person's name.
   account: "Your account",
+  // The command menu (command-menu.tsx).
+  command: {
+    title: "Search or run",
+    open: "Search",
+    placeholder: "A person, a job, a customer, an invoice, or what to do",
+    results: "What was found",
+    hint: "Up and down to choose, Enter to go, Esc to close.",
+    none: "Nothing by that name.",
+    inactive: "Deactivated",
+    kinds: {
+      action: "Do",
+      person: "Person",
+      job: "Job",
+      customer: "Customer",
+      invoice: "Invoice",
+    },
+    actions: {
+      shift: "New shift",
+      invoice: "New invoice",
+      invite: "Invite a person",
+      export: "Export hours",
+    },
+  },
   // The keys of the tables and the schedule (keyboard-rows.tsx).
   keys: {
     title: "Keyboard",

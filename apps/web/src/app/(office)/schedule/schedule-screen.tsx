@@ -26,6 +26,7 @@ import { useStrings } from "../../i18n";
 import { StatusBadge } from "../../status-badge";
 import { Toast } from "../../toast";
 import { useTRPC } from "../../trpc";
+import { useAsked } from "../../use-url-filters";
 import { CopyWeek } from "./copy-dialog";
 import styles from "./schedule.module.css";
 import {
@@ -196,7 +197,10 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const [selected, setSelected] = useState(today);
   const [view, setView] = useState<View>("employee");
   const [only, setOnly] = useState("");
-  const [panel, setPanel] = useState<Panel>(null);
+  const [opened, setPanel] = useState<Panel>(null);
+  // The command menu's New shift asks for the Add panel by the address.
+  const [asked, clearAsked] = useAsked("shift");
+  const panel: Panel = opened ?? (asked ? { kind: "add" } : null);
   const [note, setNote] = useState<string | null>(null);
 
   const roster = useQuery(trpc.roster.list.queryOptions());
@@ -311,6 +315,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   // A drawer closed: what it did is said beneath the week bar.
   const closed = (result: string | null) => {
     setPanel(null);
+    clearAsked();
     setProblem(null);
     if (result !== null) setNote(result);
   };
