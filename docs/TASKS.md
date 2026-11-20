@@ -528,7 +528,7 @@ Android user.
 
   Done when each of the four steps has been seen reached and not reached on staging.
 
-- [ ] 29. **Invoices: due date, status and payments.**
+- [x] 29. **Invoices: due date, status and payments.**
   - A migration adds `invoices.due_on`. A draft may name it; issuing fills it from the
     company's terms when the draft did not, and it is frozen with the rest of the invoice.
   - One function names an invoice's status for the list, the page, the PDF and the email:
@@ -802,6 +802,20 @@ Android user.
 - [ ] Item 28: a job's name links to its page from the Jobs table, the Invoices list, an
       invoice's page and the Hours list. In sentences (Today's rows, the Schedule's cards,
       which are buttons of their own) it is still plain text.
+
+- [ ] Item 29, how it was seen on staging: invoice 2 drafted, issued, part paid ($250 of
+      $650, the dialog closing and $400 left owed) and paid; invoice 3 drafted with a due
+      date already past and Overdue the moment it was issued; the five presets in the
+      address and kept through a reload; the three figures; Today's Overdue row and its
+      link to the preset; the list in Spanish at 390. Invoice 1, issued before the
+      migration, was backfilled with its day of issue as its due date (staging's terms are
+      0 days). Staging now holds invoice 3 overdue for $400 and two drafts.
+- [ ] Item 29: migration 0003 fills the due date of invoices already issued, with the
+      invoice's trigger disabled for that one statement. It rewrote staging and development
+      rows only. The same statement run once production holds issued invoices would be a
+      rewrite of frozen rows and the owner's to approve.
+- [ ] Item 29: Paid this month counts payments by the day the office typed as paid, in the
+      company's calendar month, not by the day they were recorded.
 
 ## After MVP
 
