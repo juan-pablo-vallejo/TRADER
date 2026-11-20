@@ -1,7 +1,7 @@
 "use client";
 
 // The signed-in person in the header: their name, which opens a small menu with their
-// profile and Sign out. `me.get` is the one query every role may call; while it is pending or refused the
+// profile, the other language and Sign out. `me.get` is the one query every role may call; while it is pending or refused the
 // name is absent. Sign-out is the identity's own: the development route's form where that
 // route answers, Clerk's where Clerk's provider is around
 // the office (clerk-session.tsx), and absent on a server with neither. Consumed by header.tsx.
@@ -14,10 +14,12 @@ import { ClerkHeaderRefused, ClerkSignOut } from "./clerk-session";
 import controls from "./controls.module.css";
 import styles from "./account.module.css";
 import { useClerkOn } from "./providers";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
+import { LANGUAGES } from "./i18n/language";
 import { useTRPC } from "./trpc";
 
 export function Account({ signInHref }: { signInHref: string }) {
+  const { t, language, setLanguage } = useStrings();
   const clerk = useClerkOn();
   const devSignIn = signInHref === DEV_SIGN_IN_PATH;
   const trpc = useTRPC();
@@ -31,7 +33,7 @@ export function Account({ signInHref }: { signInHref: string }) {
           <ClerkHeaderRefused className={styles.name} />
         ) : (
           <a className={styles.name} href={signInHref}>
-            {strings.signIn}
+            {t.signIn}
           </a>
         )}
       </div>
@@ -49,7 +51,7 @@ export function Account({ signInHref }: { signInHref: string }) {
         e.currentTarget.querySelector("summary")?.focus();
       }}
     >
-      <summary className={styles.name} title={strings.account}>
+      <summary className={styles.name} title={t.account}>
         <span className={styles.nameText}>{me.data.name}</span>
       </summary>
       <div className={styles.menu}>
@@ -58,14 +60,27 @@ export function Account({ signInHref }: { signInHref: string }) {
           className={`${styles.item} ${path === "/profile" ? styles.current : ""}`}
           aria-current={path === "/profile" ? "page" : undefined}
         >
-          {strings.profile}
+          {t.profile}
         </Link>
+        {/* The other language, under its own name and marked as that language, so a
+            person who cannot read this one still finds theirs. */}
+        {LANGUAGES.filter((l) => l !== language).map((l) => (
+          <button
+            key={l}
+            type="button"
+            lang={l}
+            className={controls.textAction}
+            onClick={() => setLanguage(l)}
+          >
+            {t.languages[l]}
+          </button>
+        ))}
         {clerk && <ClerkSignOut />}
         {devSignIn && (
           <form method="post" action={DEV_SIGN_IN_PATH}>
             <input type="hidden" name="intent" value="signout" />
             <button type="submit" className={controls.textAction}>
-              {strings.signOut}
+              {t.signOut}
             </button>
           </form>
         )}

@@ -8,7 +8,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 import controls from "../../controls.module.css";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import styles from "./schedule.module.css";
 
 export function Drawer({
@@ -20,6 +20,7 @@ export function Drawer({
   onClose: () => void;
   children: ReactNode;
 }) {
+  const { t } = useStrings();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   useEffect(() => {
@@ -42,7 +43,7 @@ export function Drawer({
           {title}
         </h2>
         <button type="button" className={controls.secondary} onClick={onClose}>
-          {strings.close}
+          {t.close}
         </button>
       </div>
       {children}

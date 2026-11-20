@@ -7,7 +7,9 @@ import { devIdentityEnabled, signInEmailSchema } from "@trader/api";
 
 import { DEV_EMAIL_COOKIE } from "../../server/identity";
 import { OFFICE_HOME } from "../../server/sign-in-paths";
-import { strings } from "../strings";
+// English alone: this page exists only where the development identity is on, which no
+// deployment is.
+import { en as strings } from "../i18n/en";
 
 export const dynamic = "force-dynamic";
 

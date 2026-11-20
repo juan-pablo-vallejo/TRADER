@@ -4,15 +4,16 @@
 // (layout.tsx is above this boundary), so the navigation still works. `reset` renders the
 // route again; a write that failed answered through its own result note, never here.
 import controls from "./controls.module.css";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 
 export default function RouteError({ reset }: { error: Error; reset: () => void }) {
+  const { t } = useStrings();
   return (
     <div className={controls.banner} role="alert">
-      <p className="body-strong">{strings.pageError}</p>
-      <p className="secondary">{strings.pageErrorHelp}</p>
+      <p className="body-strong">{t.pageError}</p>
+      <p className="secondary">{t.pageErrorHelp}</p>
       <button type="button" className={controls.secondary} onClick={reset}>
-        {strings.reload}
+        {t.reload}
       </button>
     </div>
   );

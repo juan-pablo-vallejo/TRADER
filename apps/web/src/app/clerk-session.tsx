@@ -14,9 +14,10 @@ import { useEffect, useRef } from "react";
 import { SIGN_IN_PATH } from "../server/sign-in-paths";
 import controls from "./controls.module.css";
 import { EmptyState } from "./empty-state";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 
 export function ClerkSignOut() {
+  const { t } = useStrings();
   const clerk = useClerk();
   return (
     <button
@@ -24,34 +25,36 @@ export function ClerkSignOut() {
       className={controls.textAction}
       onClick={() => void clerk.signOut({ redirectUrl: SIGN_IN_PATH })}
     >
-      {strings.signOut}
+      {t.signOut}
     </button>
   );
 }
 
 // The header's place for the person, when `me.get` was refused.
 export function ClerkHeaderRefused({ className }: { className: string | undefined }) {
+  const { t } = useStrings();
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return null;
   if (isSignedIn) return <ClerkSignOut />;
   return (
     <a className={className} href={SIGN_IN_PATH}>
-      {strings.signIn}
+      {t.signIn}
     </a>
   );
 }
 
 // A screen's empty state, when its query was refused for want of a user.
 export function ClerkRefused() {
+  const { t } = useStrings();
   const { isLoaded, isSignedIn } = useAuth();
   if (!isLoaded) return null;
   if (isSignedIn) {
-    return <EmptyState text={strings.notOnRoster} action={<ClerkSignOut />} />;
+    return <EmptyState text={t.notOnRoster} action={<ClerkSignOut />} />;
   }
   return (
     <EmptyState
-      text={strings.signInToContinue}
-      action={<a href={SIGN_IN_PATH}>{strings.signIn}</a>}
+      text={t.signInToContinue}
+      action={<a href={SIGN_IN_PATH}>{t.signIn}</a>}
     />
   );
 }

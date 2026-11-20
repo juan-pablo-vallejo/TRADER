@@ -18,16 +18,14 @@ import { uuidv7 } from "../../../uuidv7";
 import controls from "../../../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../../../failure";
 import { Field } from "../../../field";
-import { amount, cents, money, stamp, weekDay } from "../../../format";
+import { amount, cents } from "../../../format";
 import { Note } from "../../../note";
 import { PageHeader } from "../../../page-header";
 import { DestructiveAction } from "../../../row-editor";
-import { strings } from "../../../strings";
+import { useStrings } from "../../../i18n";
 import table from "../../../table.module.css";
 import { useTRPC } from "../../../trpc";
 import styles from "../invoices.module.css";
-
-const s = strings.invoices;
 
 type Invoice = inferRouterOutputs<AppRouter>["invoice"]["read"];
 
@@ -79,25 +77,29 @@ function Totals({
   tax: number;
   currency: string;
 }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   return (
     <div className={styles.totals}>
       <div className="body">
         <span>{s.subtotal}</span>
-        <span>{money(subtotal, currency)}</span>
+        <span>{f.money(subtotal, currency)}</span>
       </div>
       <div className="body">
         <span>{s.tax}</span>
-        <span>{money(tax, currency)}</span>
+        <span>{f.money(tax, currency)}</span>
       </div>
       <div className={`body-strong ${styles.grand}`}>
         <span>{s.total}</span>
-        <span>{money(subtotal + tax, currency)}</span>
+        <span>{f.money(subtotal + tax, currency)}</span>
       </div>
     </div>
   );
 }
 
 function DraftEditor({ invoice }: { invoice: Invoice }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -160,7 +162,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         setNote(s.saved);
         await refresh();
       },
-      onError: () => fail(strings.requestFailed),
+      onError: () => fail(t.requestFailed),
     }),
   );
   const issue = useMutation(
@@ -172,7 +174,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         }
         await refresh();
       },
-      onError: () => fail(strings.requestFailed),
+      onError: () => fail(t.requestFailed),
     }),
   );
   const remove = useMutation(
@@ -185,7 +187,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         await refresh();
         router.push("/invoices");
       },
-      onError: () => fail(strings.requestFailed),
+      onError: () => fail(t.requestFailed),
     }),
   );
   const busy = save.isPending || issue.isPending || remove.isPending;
@@ -258,7 +260,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
                   {s.amount}:{" "}
                   {p === null
                     ? "—"
-                    : money(amountOf(p.quantity, p.unitPriceCents), invoice.currency)}
+                    : f.money(amountOf(p.quantity, p.unitPriceCents), invoice.currency)}
                 </span>
                 <button
                   type="button"
@@ -280,15 +282,15 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         <h2 className="heading">{s.draw}</h2>
         <p className={`secondary ${styles.explain}`}>{s.drawExplain}</p>
         {offers.isPending ? (
-          <p className="body">{strings.loading}</p>
+          <p className="body">{t.loading}</p>
         ) : offers.isError ? (
-          <p className="body">{strings.requestFailed}</p>
+          <p className="body">{t.requestFailed}</p>
         ) : offers.data.labor.length === 0 ? (
           <p className="body">{s.nothingToDraw}</p>
         ) : (
           <ul className={styles.offers}>
             {offers.data.labor.map((l) => {
-              const label = s.laborOn(weekDay(l.workDate));
+              const label = s.laborOn(f.weekDay(l.workDate));
               return (
                 <li key={l.workDate}>
                   <span className="body">
@@ -347,7 +349,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         ) : (
           <DestructiveAction
             label={s.issue}
-            effect={s.issueEffect(money(invoice.totalCents, invoice.currency))}
+            effect={s.issueEffect(f.money(invoice.totalCents, invoice.currency))}
             disabled={busy}
             onConfirm={() => issue.mutate({ invoiceId: invoice.id })}
           />
@@ -379,6 +381,8 @@ const METHODS = ["check", "cash", "card", "bank_transfer", "other"] as const;
 // is owed, every payment and reversal, and — while the invoice is issued and something is
 // owed — the form that records one. A payment is reversed, never edited or removed.
 function Payments({ invoice }: { invoice: Invoice }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries(trpc.invoice.pathFilter());
@@ -399,8 +403,8 @@ function Payments({ invoice }: { invoice: Invoice }) {
         if (answer.result === "rejected") {
           fail(
             answer.code === "overpaid"
-              ? s.overpaid(money(invoice.owedCents, invoice.currency))
-              : strings.requestFailed,
+              ? s.overpaid(f.money(invoice.owedCents, invoice.currency))
+              : t.requestFailed,
           );
           return;
         }
@@ -412,7 +416,7 @@ function Payments({ invoice }: { invoice: Invoice }) {
         setNote(s.recorded);
         await refresh();
       },
-      onError: () => fail(strings.requestFailed),
+      onError: () => fail(t.requestFailed),
     }),
   );
   const reverse = useMutation(
@@ -421,7 +425,7 @@ function Payments({ invoice }: { invoice: Invoice }) {
         setNote(null);
         await refresh();
       },
-      onError: () => fail(strings.requestFailed),
+      onError: () => fail(t.requestFailed),
     }),
   );
   const open = invoice.state === "issued";
@@ -432,10 +436,10 @@ function Payments({ invoice }: { invoice: Invoice }) {
         <p className="body-strong">
           {invoice.owedCents === 0
             ? s.paidInFull
-            : `${s.owed}: ${money(invoice.owedCents, invoice.currency)}`}
+            : `${s.owed}: ${f.money(invoice.owedCents, invoice.currency)}`}
           {invoice.paidCents > 0 &&
             invoice.owedCents > 0 &&
-            ` · ${s.paid}: ${money(invoice.paidCents, invoice.currency)}`}
+            ` · ${s.paid}: ${f.money(invoice.paidCents, invoice.currency)}`}
         </p>
       )}
       {invoice.payments.length === 0 ? (
@@ -443,13 +447,13 @@ function Payments({ invoice }: { invoice: Invoice }) {
       ) : (
         <ul className={styles.offers}>
           {invoice.payments.map((p) => {
-            const amountText = money(p.amountCents, invoice.currency);
+            const amountText = f.money(p.amountCents, invoice.currency);
             return (
               <li key={p.id}>
                 <span className="body">
                   {s.paymentLine(
                     amountText,
-                    weekDay(p.paidOn),
+                    f.weekDay(p.paidOn),
                     s.methods[p.method as keyof typeof s.methods] ?? p.method,
                   )}
                   {p.note !== null && ` · ${p.note}`}
@@ -561,6 +565,8 @@ function Payments({ invoice }: { invoice: Invoice }) {
 // The invoice as a PDF, made by the server when asked and saved by the browser: the page
 // the customer is sent. Offered for an issued invoice and a void one; a draft has none.
 function PdfFile({ invoiceId }: { invoiceId: string }) {
+  const { t } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -575,7 +581,7 @@ function PdfFile({ invoiceId }: { invoiceId: string }) {
         trpc.invoice.pdf.queryOptions({ invoiceId }, { staleTime: 0, gcTime: 0 }),
       );
       if (file.result !== "rendered") {
-        setNote(strings.requestFailed);
+        setNote(t.requestFailed);
         return;
       }
       const bytes = Uint8Array.from(atob(file.pdf), (c) => c.charCodeAt(0));
@@ -588,7 +594,7 @@ function PdfFile({ invoiceId }: { invoiceId: string }) {
       setSaved(true);
       setNote(s.pdfSaved(file.filename));
     } catch {
-      setNote(strings.requestFailed);
+      setNote(t.requestFailed);
     } finally {
       setBusy(false);
     }
@@ -601,7 +607,7 @@ function PdfFile({ invoiceId }: { invoiceId: string }) {
         disabled={busy}
         onClick={() => void save()}
       >
-        {busy ? strings.loading : s.pdf}
+        {busy ? t.loading : s.pdf}
       </button>
       <Note text={note} tone={saved ? "saved" : undefined} />
     </section>
@@ -612,6 +618,8 @@ function PdfFile({ invoiceId }: { invoiceId: string }) {
 // listed as failed with why, and can be sent again; nothing is sent for a void invoice. The
 // address offered is the customer's on file, and the admin may type another.
 function Sends({ invoice }: { invoice: Invoice }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const queryClient = useQueryClient();
@@ -635,13 +643,13 @@ function Sends({ invoice }: { invoice: Invoice }) {
               ? s.sendFailures[answer.failure]
               : answer.result === "duplicate"
                 ? s.sendFailed
-                : strings.requestFailed,
+                : t.requestFailed,
         );
         await queryClient.invalidateQueries(trpc.invoice.pathFilter());
       },
       onError: () => {
         setSent(false);
-        setNote(strings.requestFailed);
+        setNote(t.requestFailed);
       },
     }),
   );
@@ -655,8 +663,8 @@ function Sends({ invoice }: { invoice: Invoice }) {
           {invoice.sends.map((x) => (
             <li key={x.id} className="body">
               {x.outcome === "sent"
-                ? s.sentTo(x.recipient, x.sentBy, stamp(x.sentAt, zone))
-                : s.failedTo(x.recipient, x.sentBy, stamp(x.sentAt, zone))}
+                ? s.sentTo(x.recipient, x.sentBy, f.stamp(x.sentAt, zone))
+                : s.failedTo(x.recipient, x.sentBy, f.stamp(x.sentAt, zone))}
             </li>
           ))}
         </ul>
@@ -685,7 +693,7 @@ function Sends({ invoice }: { invoice: Invoice }) {
           </Field>
           <div className={controls.actions}>
             <button type="submit" className={controls.primary} disabled={send.isPending}>
-              {send.isPending ? strings.loading : s.send}
+              {send.isPending ? t.loading : s.send}
             </button>
           </div>
           <Note text={note} tone={sent ? "saved" : undefined} />
@@ -696,6 +704,8 @@ function Sends({ invoice }: { invoice: Invoice }) {
 }
 
 function Issued({ invoice }: { invoice: Invoice }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [note, setNote] = useState<string | null>(null);
@@ -703,12 +713,12 @@ function Issued({ invoice }: { invoice: Invoice }) {
     trpc.invoice.void.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(answer.code === "has_payments" ? s.hasPayments : strings.requestFailed);
+          setNote(answer.code === "has_payments" ? s.hasPayments : t.requestFailed);
           return;
         }
         await queryClient.invalidateQueries(trpc.invoice.pathFilter());
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   return (
@@ -739,9 +749,11 @@ function Issued({ invoice }: { invoice: Invoice }) {
                   {l.unit === null ? "" : ` ${l.unit}`}
                 </td>
                 <td className={table.number}>
-                  {money(l.unitPriceCents, invoice.currency)}
+                  {f.money(l.unitPriceCents, invoice.currency)}
                 </td>
-                <td className={table.number}>{money(l.amountCents, invoice.currency)}</td>
+                <td className={table.number}>
+                  {f.money(l.amountCents, invoice.currency)}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -780,6 +792,8 @@ export function InvoiceScreen({
   invoiceId: string;
   signInHref: string;
 }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const read = useQuery(trpc.invoice.read.queryOptions({ invoiceId }));
   const back = (
@@ -791,7 +805,7 @@ export function InvoiceScreen({
     return (
       <>
         {back}
-        <p className="body">{strings.loading}</p>
+        <p className="body">{t.loading}</p>
       </>
     );
   }
@@ -829,12 +843,12 @@ export function InvoiceScreen({
       </p>
       {invoice.issuedAt !== null && invoice.issuedBy !== null && (
         <p className={`secondary ${styles.meta}`}>
-          {s.issuedBy(invoice.issuedBy, stamp(invoice.issuedAt, zone))}
+          {s.issuedBy(invoice.issuedBy, f.stamp(invoice.issuedAt, zone))}
         </p>
       )}
       {invoice.voidedAt !== null && invoice.voidedBy !== null && (
         <p className={`secondary ${styles.meta}`}>
-          {s.voidedBy(invoice.voidedBy, stamp(invoice.voidedAt, zone))}
+          {s.voidedBy(invoice.voidedBy, f.stamp(invoice.voidedAt, zone))}
         </p>
       )}
       {invoice.state === "draft" ? (

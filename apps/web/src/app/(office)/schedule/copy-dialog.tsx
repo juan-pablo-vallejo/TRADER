@@ -13,19 +13,18 @@ import { useState } from "react";
 import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
-import { addDays, weekDay } from "../../format";
+import { addDays } from "../../format";
 import { Note } from "../../note";
 import { DestructiveAction } from "../../row-editor";
-import { strings } from "../../strings";
+import type { Formatters } from "../../format";
+import { useStrings } from "../../i18n";
 import { useTRPC } from "../../trpc";
 import { Drawer } from "./drawer";
 import styles from "./schedule.module.css";
 import { copiesIn, type CopyPreview, leftOutText, type Week } from "./schedule-view";
 
-const s = strings.schedule;
-
-const line = (o: CopyPreview["create"][number]) =>
-  `${o.worker.name} · ${o.job.name} · ${weekDay(o.workDate)} ${o.expectedStart}–${o.expectedEnd}`;
+const line = (f: Formatters, o: CopyPreview["create"][number]) =>
+  `${o.worker.name} · ${o.job.name} · ${f.weekDay(o.workDate)} ${o.expectedStart}–${o.expectedEnd}`;
 
 export function CopyWeek({
   week,
@@ -36,6 +35,8 @@ export function CopyWeek({
   signInHref: string;
   onClose: (note: string | null) => void;
 }) {
+  const { t, f } = useStrings();
+  const s = t.schedule;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries(trpc.assignment.pathFilter());
@@ -76,21 +77,19 @@ export function CopyWeek({
           setUndoNote(answer.code === "locked" ? s.refused.locked : s.refused.stale);
           return;
         }
-        onClose(
-          answer.result === "undone" ? s.undone(answer.removed) : strings.unchanged,
-        );
+        onClose(answer.result === "undone" ? s.undone(answer.removed) : t.unchanged);
       },
-      onError: () => setUndoNote(strings.requestFailed),
+      onError: () => setUndoNote(t.requestFailed),
     }),
   );
   const copies = copiesIn(week.shifts);
   return (
     <Drawer title={s.copyTitle} onClose={() => onClose(null)}>
       <p className="secondary">
-        {s.copyExplain(weekDay(addDays(week.weekStart, -7)), weekDay(week.weekStart))}
+        {s.copyExplain(f.weekDay(addDays(week.weekStart, -7)), f.weekDay(week.weekStart))}
       </p>
       {asked.isPending ? (
-        <p className="body">{strings.loading}</p>
+        <p className="body">{t.loading}</p>
       ) : asked.isError ? (
         <Failure
           error={asked.error}
@@ -106,7 +105,7 @@ export function CopyWeek({
                 <ul className={styles.copyList}>
                   {preview.create.map((o) => (
                     <li key={o.sourceId} className="secondary">
-                      {line(o)}
+                      {line(f, o)}
                     </li>
                   ))}
                 </ul>
@@ -118,7 +117,7 @@ export function CopyWeek({
                 <ul className={styles.copyList}>
                   {preview.leftOut.map((o) => (
                     <li key={o.sourceId} className="secondary">
-                      {line(o)} — {leftOutText(o.reason)}
+                      {line(f, o)} — {leftOutText(s, o.reason)}
                     </li>
                   ))}
                 </ul>

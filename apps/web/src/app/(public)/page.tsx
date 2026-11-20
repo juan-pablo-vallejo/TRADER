@@ -7,7 +7,7 @@ import { OFFICE_HOME } from "../../server/sign-in-paths";
 import controls from "../controls.module.css";
 import { Logo } from "../logo";
 import styles from "../shell.module.css";
-import { strings } from "../strings";
+import { requestStrings } from "../i18n/server";
 
 // `/`: D Sierra Painting's homepage. Until D Sierra's own words and photos arrive it holds
 // what the repository already has, their name and their logo, and the way in for the team:
@@ -16,13 +16,14 @@ import { strings } from "../strings";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  const { t } = await requestStrings();
   const host = (await headers()).get("host");
   if (officeHost(process.env, host)) redirect(OFFICE_HOME);
   return (
     <div className={styles.home}>
       <Logo />
       <a className={controls.primary} href={signInPath(process.env)}>
-        {strings.teamSignIn}
+        {t.teamSignIn}
       </a>
     </div>
   );

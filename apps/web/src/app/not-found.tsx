@@ -2,13 +2,14 @@
 import Link from "next/link";
 
 import { EmptyState } from "./failure";
-import { strings } from "./strings";
+import { requestStrings } from "./i18n/server";
 
-export default function NotFound() {
+export default async function NotFound() {
+  const { t } = await requestStrings();
   return (
     <EmptyState
-      text={strings.notFound}
-      action={<Link href="/schedule">{strings.goToSchedule}</Link>}
+      text={t.notFound}
+      action={<Link href="/schedule">{t.goToSchedule}</Link>}
     />
   );
 }

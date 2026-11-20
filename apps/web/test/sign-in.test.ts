@@ -14,8 +14,8 @@ afterEach(() => {
 const NOT_FOUND = /NEXT_HTTP_ERROR_FALLBACK;404/;
 
 describe("/sign-in", () => {
-  it("is not found under the development identity", () => {
+  it("is not found under the development identity", async () => {
     vi.stubEnv("TRADER_DEV_IDENTITY", "enabled");
-    expect(() => SignInPage()).toThrow(NOT_FOUND);
+    await expect(SignInPage()).rejects.toThrow(NOT_FOUND);
   });
 });

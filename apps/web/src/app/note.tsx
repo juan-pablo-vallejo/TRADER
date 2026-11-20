@@ -3,20 +3,19 @@
 // `ink-secondary`, an informational line in `ink`; anything else is a refusal or a failure, in
 // `attention` and announced at once. Consumed by every office screen.
 import controls from "./controls.module.css";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 
 type Tone = "saved" | "neutral" | "info" | "error";
 
-const toneOf = (text: string): Tone =>
-  text === strings.saved ? "saved" : text === strings.unchanged ? "neutral" : "error";
-
 export function Note({ text, tone }: { text: string | null; tone?: Tone }) {
+  const { t } = useStrings();
   if (text === null) return null;
-  const t = tone ?? toneOf(text);
+  const shown: Tone =
+    tone ?? (text === t.saved ? "saved" : text === t.unchanged ? "neutral" : "error");
   return (
     <p
-      className={`secondary ${controls.note} ${t === "info" ? "" : controls[t]}`}
-      role={t === "error" ? "alert" : "status"}
+      className={`secondary ${controls.note} ${shown === "info" ? "" : controls[shown]}`}
+      role={shown === "error" ? "alert" : "status"}
     >
       {text}
     </p>

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { clerkEnv } from "../../../../server/clerk-env";
 import { identityMode } from "../../../../server/identity-mode";
 import { EmptyState } from "../../../empty-state";
-import { strings } from "../../../strings";
+import { requestStrings } from "../../../i18n/server";
 import styles from "./sign-in.module.css";
 
 // Office sign-in: Clerk's own form — a code sent to the person's mobile
@@ -15,9 +15,11 @@ import styles from "./sign-in.module.css";
 // not work. The catch-all segment is Clerk's: its form walks its steps under this path.
 export const dynamic = "force-dynamic";
 
-export default function SignInPage() {
+export default async function SignInPage() {
+  // Before anything of the request is read: where this page does not exist, it is a 404.
   if (identityMode(process.env) !== "clerk") notFound();
-  if (clerkEnv(process.env) === null) return <EmptyState text={strings.signInNotSetUp} />;
+  const { t } = await requestStrings();
+  if (clerkEnv(process.env) === null) return <EmptyState text={t.signInNotSetUp} />;
   return (
     <div className={styles.signIn}>
       <SignIn

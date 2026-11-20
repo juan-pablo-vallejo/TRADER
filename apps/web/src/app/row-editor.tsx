@@ -6,7 +6,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 import table from "./table.module.css";
 
 const editorId = (rowId: string) => `editor-${rowId}`;
@@ -17,8 +17,8 @@ export function RowToggle({
   rowId,
   open,
   onToggle,
-  label = strings.edit,
-  closeLabel = strings.close,
+  label,
+  closeLabel,
 }: {
   rowId: string;
   open: boolean;
@@ -26,6 +26,7 @@ export function RowToggle({
   label?: string;
   closeLabel?: string;
 }) {
+  const { t } = useStrings();
   return (
     <td className={table.toggle}>
       <button
@@ -35,7 +36,7 @@ export function RowToggle({
         aria-controls={editorId(rowId)}
         onClick={onToggle}
       >
-        {open ? closeLabel : label}
+        {open ? (closeLabel ?? t.close) : (label ?? t.edit)}
       </button>
     </td>
   );
@@ -101,6 +102,7 @@ export function DestructiveAction({
   acknowledge?: string;
   onConfirm: () => void;
 }) {
+  const { t } = useStrings();
   const [asking, setAsking] = useState(false);
   const [ticked, setTicked] = useState(false);
   const effectId = useId();
@@ -165,7 +167,7 @@ export function DestructiveAction({
           aria-describedby={effectId}
           onClick={close}
         >
-          {strings.cancel}
+          {t.cancel}
         </button>
       </div>
     </div>

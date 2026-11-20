@@ -2,8 +2,12 @@
 // the locale formatter; dates as calendar days. A work date is a YYYY-MM-DD string and is
 // rendered from its parts: `new Date(iso)` would read it as UTC midnight, which is the day
 // before in Eastern. An instant is shown in the zone the server names, never the browser's.
+// Dates and money follow the person's language: `formatters` binds them to it, and a
+// screen reads them from `useStrings().f`. What does not depend on a language (digits to
+// cents, hundredths to hours, a phone number) is a plain function here.
 // Consumed by the people, schedule, hours, invoices and profile screens.
-import { strings } from "./strings";
+import type { Catalog } from "./i18n/en";
+import { localeOf, type Language } from "./i18n/language";
 
 // A sign-in number as the server stores it, +1 and ten digits, shown as it is said aloud:
 // "(401) 555-0100". Anything else is shown as it is.
@@ -19,34 +23,69 @@ export function looksLikeSignInPhone(typed: string): boolean {
   return /^1?[2-9]\d{9}$/.test(typed.replace(/\D/g, ""));
 }
 
-export function money(cents: number, currency: string): string {
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(cents / 100);
+export function formatters(language: Language, t: Catalog) {
+  const locale = localeOf(language);
+  return {
+    money(cents: number, currency: string): string {
+      return new Intl.NumberFormat(locale, {
+        style: "currency",
+        currency,
+        minimumFractionDigits: 2,
+      }).format(cents / 100);
+    },
+
+    day(iso: string): string {
+      const [y, m, d] = iso.split("-").map(Number);
+      if (y === undefined || m === undefined || d === undefined) return iso;
+      return new Intl.DateTimeFormat(locale, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }).format(new Date(y, m - 1, d));
+    },
+
+    // A work date with its weekday, as a plan is read: "Mon, Nov 16". From its parts.
+    weekDay(iso: string): string {
+      const [y, m, d] = iso.split("-").map(Number);
+      if (y === undefined || m === undefined || d === undefined) return iso;
+      return new Intl.DateTimeFormat(locale, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(new Date(y, m - 1, d));
+    },
+
+    // An instant with its day, in a named zone: an entry is often received or corrected
+    // on a later day than the one it is about.
+    stamp(at: Date, timeZone: string): string {
+      return new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone,
+      }).format(at);
+    },
+
+    // The time of day alone, in a named zone, where the day is already said beside it.
+    clock(at: Date, timeZone: string): string {
+      return new Intl.DateTimeFormat(locale, {
+        hour: "numeric",
+        minute: "2-digit",
+        timeZone,
+      }).format(at);
+    },
+
+    // Whole minutes from integer milliseconds, rounded down: a display, not the hours
+    // figure pay is built from.
+    duration(ms: number): string {
+      const minutes = Math.floor(ms / 60_000);
+      return t.duration(Math.floor(minutes / 60), minutes % 60);
+    },
+  };
 }
 
-export function day(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (y === undefined || m === undefined || d === undefined) return iso;
-  return new Intl.DateTimeFormat(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(y, m - 1, d));
-}
-
-// A work date with its weekday, as a plan is read: "Mon, Nov 16". From its parts, as `day`.
-export function weekDay(iso: string): string {
-  const [y, m, d] = iso.split("-").map(Number);
-  if (y === undefined || m === undefined || d === undefined) return iso;
-  return new Intl.DateTimeFormat(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  }).format(new Date(y, m - 1, d));
-}
+export type Formatters = ReturnType<typeof formatters>;
 
 // A calendar day `days` after `iso`, by calendar arithmetic in UTC so no zone or clock change
 // can move it.
@@ -77,23 +116,4 @@ export function amount(value: number): string {
 export function hours(hundredths: number): string {
   const abs = Math.abs(hundredths);
   return `${hundredths < 0 ? "-" : ""}${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, "0")}`;
-}
-
-// An instant with its day, in a named zone: an entry is often received or corrected
-// on a later day than the one it is about.
-export function stamp(at: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(at);
-}
-
-// Whole minutes from integer milliseconds, rounded down: a display, not the hours figure pay
-// is built from.
-export function duration(ms: number): string {
-  const minutes = Math.floor(ms / 60_000);
-  return strings.duration(Math.floor(minutes / 60), minutes % 60);
 }

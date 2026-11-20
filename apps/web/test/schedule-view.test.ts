@@ -3,6 +3,7 @@
 // (api eligibility.test.ts); here only what the screen does with them.
 import { describe, expect, it } from "vitest";
 
+import { en } from "../src/app/i18n/en";
 import {
   byEmployee,
   byJobsite,
@@ -15,6 +16,8 @@ import {
   type WeekShift,
 } from "../src/app/(office)/schedule/schedule-view";
 
+// The English words: what the sentences below are held to.
+const S = en.schedule;
 const id = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const ana = { id: id(1), name: "Ana", active: true };
 const tom = { id: id(2), name: "Tom", active: true };
@@ -118,6 +121,7 @@ describe("a refusal in words", () => {
   it("names the shifts and the hours of each issue", () => {
     expect(
       issueText(
+        S,
         {
           code: "overlap",
           shiftIds: [id(101), id(102)],
@@ -128,25 +132,26 @@ describe("a refusal in words", () => {
       ),
     ).toBe("shift 101 and shift 102 overlap during 12:00–15:30.");
     expect(
-      issueText({ code: "duplicate_shift", shiftIds: [id(101), id(102)] }, label),
+      issueText(S, { code: "duplicate_shift", shiftIds: [id(101), id(102)] }, label),
     ).toBe("That shift already exists.");
   });
 
   it("says each refusal a write can answer", () => {
-    expect(refusalText({ code: "locked" }, label)).toContain(
+    expect(refusalText(S, { code: "locked" }, label)).toContain(
       "Correct attendance in Hours",
     );
-    expect(refusalText({ code: "authorization", shiftId: id(101) }, label)).toContain(
+    expect(refusalText(S, { code: "authorization", shiftId: id(101) }, label)).toContain(
       "already clocked in on shift 101",
     );
-    expect(refusalText({ code: "user_inactive" }, label)).toBe(
+    expect(refusalText(S, { code: "user_inactive" }, label)).toBe(
       "That employee is deactivated.",
     );
-    expect(refusalText({ code: "job_archived" }, label)).toBe(
+    expect(refusalText(S, { code: "job_archived" }, label)).toBe(
       "That jobsite is archived.",
     );
     expect(
       refusalText(
+        S,
         {
           code: "schedule",
           issues: [

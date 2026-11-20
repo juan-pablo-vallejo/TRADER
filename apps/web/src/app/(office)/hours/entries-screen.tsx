@@ -23,10 +23,10 @@ import type { inferRouterOutputs } from "@trpc/server";
 import controls from "../../controls.module.css";
 import { codeOf, EmptyState, Failure } from "../../failure";
 import { Field } from "../../field";
-import { addDays, day as formatDay, duration, stamp, weekDay } from "../../format";
+import { addDays } from "../../format";
 import { Note } from "../../note";
 import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import styles from "./entries.module.css";
@@ -57,20 +57,14 @@ function today(): string {
   return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
 }
 
-const clock = (at: Date, timeZone: string) =>
-  new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone,
-  }).format(at);
-
 // Every answer `labor.repair` refuses with has a sentence: a code added on the server fails
 // to compile here until it has one.
 type RepairCode = Extract<
   inferRouterOutputs<AppRouter>["labor"]["repair"],
   { result: "rejected" }
 >["code"];
-const REJECTED: Record<RepairCode, string> = strings.repairRejected;
+// Held to the catalog: `repairRejected` must have a sentence for each.
+type Rejected = Record<RepairCode, string>;
 
 // The editor for hours nobody recorded has no session to hang from.
 const MISSING = "missing";
@@ -84,6 +78,7 @@ type Notice = { key: string; text: string; ok: boolean };
 type Outcome = "saved" | "changed";
 
 export function EntriesSection({ signInHref }: { signInHref: string }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const roster = useQuery(trpc.roster.list.queryOptions());
   const [workerId, setWorkerId] = useState("");
@@ -101,10 +96,10 @@ export function EntriesSection({ signInHref }: { signInHref: string }) {
   return (
     <section id="entries" aria-labelledby="entries-heading">
       <h2 id="entries-heading" className="heading">
-        {strings.ledger}
+        {t.ledger}
       </h2>
       {roster.isPending ? (
-        <p className="body">{strings.loading}</p>
+        <p className="body">{t.loading}</p>
       ) : roster.isError ? (
         <Failure
           error={roster.error}
@@ -113,10 +108,10 @@ export function EntriesSection({ signInHref }: { signInHref: string }) {
         />
       ) : (
         <>
-          <p className={`secondary ${styles.explain}`}>{strings.ledgerExplain}</p>
-          <form aria-label={strings.ledger} className={controls.card} onSubmit={submit}>
+          <p className={`secondary ${styles.explain}`}>{t.ledgerExplain}</p>
+          <form aria-label={t.ledger} className={controls.card} onSubmit={submit}>
             <div className={styles.lookupGrid}>
-              <Field id="ledger-person" label={strings.person}>
+              <Field id="ledger-person" label={t.person}>
                 <select
                   id="ledger-person"
                   className={controls.select}
@@ -124,17 +119,17 @@ export function EntriesSection({ signInHref }: { signInHref: string }) {
                   value={workerId}
                   onChange={(e) => setWorkerId(e.target.value)}
                 >
-                  <option value="">{strings.choosePerson}</option>
+                  <option value="">{t.choosePerson}</option>
                   {roster.data.map((person) => (
                     <option key={person.id} value={person.id}>
                       {person.deactivatedAt === null
                         ? person.name
-                        : `${person.name} · ${strings.deactivated.toLowerCase()}`}
+                        : `${person.name} · ${t.deactivated.toLowerCase()}`}
                     </option>
                   ))}
                 </select>
               </Field>
-              <Field id="ledger-from" label={strings.planFrom}>
+              <Field id="ledger-from" label={t.planFrom}>
                 <input
                   id="ledger-from"
                   className={controls.input}
@@ -144,7 +139,7 @@ export function EntriesSection({ signInHref }: { signInHref: string }) {
                   onChange={(e) => setFrom(e.target.value)}
                 />
               </Field>
-              <Field id="ledger-to" label={strings.planThrough}>
+              <Field id="ledger-to" label={t.planThrough}>
                 <input
                   id="ledger-to"
                   className={controls.input}
@@ -161,13 +156,13 @@ export function EntriesSection({ signInHref }: { signInHref: string }) {
                     className={`secondary ${controls.error}`}
                     role="alert"
                   >
-                    {strings.ledgerRange}
+                    {t.ledgerRange}
                   </p>
                 )}
               </Field>
             </div>
             <button type="submit" className={controls.primary}>
-              {strings.showLedger}
+              {t.showLedger}
             </button>
           </form>
           {asked !== null && <Ledger asked={asked} signInHref={signInHref} />}
@@ -178,6 +173,7 @@ export function EntriesSection({ signInHref }: { signInHref: string }) {
 }
 
 function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
+  const { t, f } = useStrings();
   const trpc = useTRPC();
   // Not refetched behind an open editor: a repair is built from what is on screen, and the
   // server refuses one built from an entry that is no longer in effect.
@@ -187,7 +183,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   const jobs = useQuery(trpc.job.list.queryOptions());
   const [open, setOpen] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  if (ledger.isPending) return <p className="body">{strings.loading}</p>;
+  if (ledger.isPending) return <p className="body">{t.loading}</p>;
   if (ledger.isError) {
     return (
       <Failure
@@ -220,7 +216,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
     const written = outcome !== "changed";
     setNotice({
       key,
-      text: outcome === "saved" ? strings.repairSaved : strings.repairChanged,
+      text: outcome === "saved" ? t.repairSaved : t.repairChanged,
       ok: written,
     });
     if (written) {
@@ -241,10 +237,10 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
       <h2 className={`heading ${styles.heading}`}>{r.worker.name}</h2>
       <p className={`secondary ${styles.line}`}>
         {[
-          strings.roles[r.worker.role],
-          r.worker.active ? null : strings.deactivated,
-          `${formatDay(asked.from)} – ${formatDay(asked.to)}`,
-          strings.timesIn(zone),
+          t.roles[r.worker.role],
+          r.worker.active ? null : t.deactivated,
+          `${f.day(asked.from)} – ${f.day(asked.to)}`,
+          t.timesIn(zone),
         ]
           .filter((part) => part !== null)
           .join(" · ")}
@@ -252,7 +248,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
       {openElsewhere && r.openSession !== null && (
         <div className={controls.banner} role="status">
           <p className="body-strong">
-            {strings.ledgerOpenSession(formatDay(r.openSession.workDate))}
+            {t.ledgerOpenSession(f.day(r.openSession.workDate))}
           </p>
         </div>
       )}
@@ -265,7 +261,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
           aria-controls={`repair-${MISSING}`}
           onClick={() => toggle(MISSING)}
         >
-          {strings.addMissingHours}
+          {t.addMissingHours}
         </button>
         {noteFor(MISSING)}
       </div>
@@ -278,50 +274,48 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
         />
       )}
       {r.sessions.length === 0 ? (
-        <EmptyState text={strings.emptyLedger} />
+        <EmptyState text={t.emptyLedger} />
       ) : (
         days.map((workDate) => (
           <div key={workDate} className={styles.day}>
-            <h3 className="heading">{weekDay(workDate)}</h3>
+            <h3 className="heading">{f.weekDay(workDate)}</h3>
             {r.sessions
               .filter((s) => s.workDate === workDate)
               .map((s) => (
                 <div key={s.rootEventId} className={styles.session}>
                   <h4 className="body-strong">
-                    {s.job.name} · {clock(s.startedAt, zone)} –{" "}
-                    {s.endedAt === null ? "" : clock(s.endedAt, zone)}
+                    {s.job.name} · {f.clock(s.startedAt, zone)} –{" "}
+                    {s.endedAt === null ? "" : f.clock(s.endedAt, zone)}
                   </h4>
                   <p className={`secondary ${styles.line} ${styles.flags}`}>
                     <span>
                       {[
-                        `${strings.worked} ${duration(s.structuralWorkedMs)}`,
-                        s.breakMs === 0
-                          ? null
-                          : `${strings.breaks} ${duration(s.breakMs)}`,
-                        s.job.status === "archived" ? strings.jobStatus.archived : null,
-                        s.corrected ? strings.sessionEdited : null,
-                        strings.sessionCounts[s.accounting],
+                        `${t.worked} ${f.duration(s.structuralWorkedMs)}`,
+                        s.breakMs === 0 ? null : `${t.breaks} ${f.duration(s.breakMs)}`,
+                        s.job.status === "archived" ? t.jobStatus.archived : null,
+                        s.corrected ? t.sessionEdited : null,
+                        t.sessionCounts[s.accounting],
                       ]
                         .filter((part) => part !== null)
                         .join(" · ")}
                     </span>
                     {!s.complete && (
-                      <span className={table.pillAttention}>{strings.stillOpen}</span>
+                      <span className={table.pillAttention}>{t.stillOpen}</span>
                     )}
                   </p>
                   <table className={table.table}>
                     <thead>
                       <tr>
-                        <th scope="col">{strings.entry}</th>
+                        <th scope="col">{t.entry}</th>
                         <th scope="col" className={table.number}>
-                          {strings.recorded}
+                          {t.recorded}
                         </th>
                         <th scope="col" className={table.number}>
-                          {strings.receivedAt}
+                          {t.receivedAt}
                         </th>
-                        <th scope="col">{strings.enteredBy}</th>
-                        <th scope="col">{strings.flags}</th>
-                        <th scope="col">{strings.entryId}</th>
+                        <th scope="col">{t.enteredBy}</th>
+                        <th scope="col">{t.flags}</th>
+                        <th scope="col">{t.entryId}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -329,9 +323,9 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                         const by =
                           e.initiator.id === r.worker.id
                             ? ""
-                            : strings.enteredByName(e.initiator.name);
+                            : t.enteredByName(e.initiator.name);
                         const flags = e.flags
-                          .map((reason) => strings.reasonTags[reason])
+                          .map((reason) => t.reasonTags[reason])
                           .join(", ");
                         const empty = (text: string) =>
                           text === "" ? { "data-empty": "" } : {};
@@ -342,24 +336,24 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                               e.effect === "superseded" ? styles.replaced : undefined
                             }
                           >
-                            <td data-label={strings.entry} className="body-strong">
-                              {strings.entryTypes[e.type]}
-                              {e.effect === "superseded" && ` (${strings.entryReplaced})`}
-                              {e.effect === "void" && ` (${strings.entryVoids})`}
+                            <td data-label={t.entry} className="body-strong">
+                              {t.entryTypes[e.type]}
+                              {e.effect === "superseded" && ` (${t.entryReplaced})`}
+                              {e.effect === "void" && ` (${t.entryVoids})`}
                             </td>
-                            <td data-label={strings.recorded} className={table.number}>
-                              {stamp(e.clientTimestamp, zone)}
+                            <td data-label={t.recorded} className={table.number}>
+                              {f.stamp(e.clientTimestamp, zone)}
                             </td>
-                            <td data-label={strings.receivedAt} className={table.number}>
-                              {stamp(e.serverTimestamp, zone)}
+                            <td data-label={t.receivedAt} className={table.number}>
+                              {f.stamp(e.serverTimestamp, zone)}
                             </td>
-                            <td data-label={strings.enteredBy} {...empty(by)}>
+                            <td data-label={t.enteredBy} {...empty(by)}>
                               {by}
                             </td>
-                            <td data-label={strings.flags} {...empty(flags)}>
+                            <td data-label={t.flags} {...empty(flags)}>
                               {flags}
                             </td>
-                            <td data-label={strings.entryId}>{e.id.slice(0, 8)}</td>
+                            <td data-label={t.entryId}>{e.id.slice(0, 8)}</td>
                           </tr>
                         );
                       })}
@@ -372,10 +366,10 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                       className={controls.textAction}
                       aria-expanded={open === s.rootEventId}
                       aria-controls={`repair-${s.rootEventId}`}
-                      aria-label={strings.repairOf(s.job.name, stamp(s.startedAt, zone))}
+                      aria-label={t.repairOf(s.job.name, f.stamp(s.startedAt, zone))}
                       onClick={() => toggle(s.rootEventId)}
                     >
-                      {strings.repair}
+                      {t.repair}
                     </button>
                     {noteFor(s.rootEventId)}
                   </div>
@@ -405,6 +399,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
 // set keeps its ids for as long as it is unchanged (repair-set.ts), so sending again after
 // no answer cannot record it twice.
 function useRepair(workerId: string, onDone: (outcome: Outcome) => void) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const repair = useMutation(trpc.labor.repair.mutationOptions());
   const minter = useRef(createMinter());
@@ -418,12 +413,10 @@ function useRepair(workerId: string, onDone: (outcome: Outcome) => void) {
         if (answer.code === "repair_stale") return onDone("changed");
         // The ids are taken: the same set goes again under new ones.
         if (answer.code === "id_conflict") minter.current = createMinter();
-        setRefusal(REJECTED[answer.code]);
+        setRefusal((t.repairRejected satisfies Rejected)[answer.code]);
       },
       onError: (error) =>
-        setRefusal(
-          codeOf(error) === "FORBIDDEN" ? strings.notPermitted : strings.repairUnsent,
-        ),
+        setRefusal(codeOf(error) === "FORBIDDEN" ? t.notPermitted : t.repairUnsent),
     });
   };
   return { send, sending: repair.isPending, refusal, setRefusal };
@@ -446,6 +439,7 @@ function TimeField({
   bad: boolean;
   onChange: (value: string) => void;
 }) {
+  const { t } = useStrings();
   return (
     <Field id={id} label={label}>
       <input
@@ -460,7 +454,7 @@ function TimeField({
       />
       {bad && (
         <p id={`${id}-error`} className={`secondary ${controls.error}`} role="alert">
-          {strings.repairBadTime}
+          {t.repairBadTime}
         </p>
       )}
     </Field>
@@ -478,8 +472,9 @@ function JobSelect({
   jobs: JobOption[];
   onChange: (value: string) => void;
 }) {
+  const { t } = useStrings();
   return (
-    <Field id={id} label={strings.job}>
+    <Field id={id} label={t.job}>
       <select
         id={id}
         className={controls.select}
@@ -487,10 +482,10 @@ function JobSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
-        {value === "" && <option value="">{strings.chooseJob}</option>}
+        {value === "" && <option value="">{t.chooseJob}</option>}
         {jobs.map((j) => (
           <option key={j.id} value={j.id}>
-            {j.archived ? strings.jobOptionArchived(j.name) : j.name}
+            {j.archived ? t.jobOptionArchived(j.name) : j.name}
           </option>
         ))}
       </select>
@@ -517,6 +512,7 @@ function SessionRepair({
   jobs: JobOption[];
   onDone: (outcome: Outcome) => void;
 }) {
+  const { t, f } = useStrings();
   const id = session.rootEventId;
   const [draft, setDraft] = useState<SessionDraft>(() => draftOf(session, zone));
   const [badField, setBadField] = useState<string | null>(null);
@@ -546,10 +542,10 @@ function SessionRepair({
       if (built.problem === "bad_time") {
         setRefusal(null);
         setBadField(built.field);
-      } else setRefusal(strings.repairTooMany);
+      } else setRefusal(t.repairTooMany);
       return;
     }
-    if (built.operations.length === 0) return setRefusal(strings.unchanged);
+    if (built.operations.length === 0) return setRefusal(t.unchanged);
     send(built.operations);
   };
 
@@ -557,18 +553,18 @@ function SessionRepair({
     <form
       id={`repair-${id}`}
       className={`${controls.card} ${styles.editor}`}
-      aria-label={strings.repairOf(session.job.name, stamp(session.startedAt, zone))}
+      aria-label={t.repairOf(session.job.name, f.stamp(session.startedAt, zone))}
       noValidate
       onSubmit={save}
     >
-      <p className="secondary">{strings.repairExplain}</p>
-      <EditorSection heading={strings.repairTimes}>
+      <p className="secondary">{t.repairExplain}</p>
+      <EditorSection heading={t.repairTimes}>
         <div className={styles.fields}>
           {inEffect(session).map((e) => (
             <TimeField
               key={e.id}
               id={`repair-${id}-${e.id}`}
-              label={strings.entryTypes[e.type]}
+              label={t.entryTypes[e.type]}
               value={draft.times[e.id] ?? ""}
               required
               bad={badField === e.id}
@@ -585,7 +581,7 @@ function SessionRepair({
           />
         </div>
       </EditorSection>
-      <EditorSection heading={strings.repairAdded}>
+      <EditorSection heading={t.repairAdded}>
         {draft.added.map((added, i) => {
           const set = (patch: Partial<SessionDraft["added"][number]>) =>
             change({
@@ -595,10 +591,7 @@ function SessionRepair({
           return (
             // By position: the rows have no identity of their own until they are saved.
             <div key={i} className={styles.added}>
-              <Field
-                id={`repair-${id}-added-${i}-type`}
-                label={strings.addedEntryType(i + 1)}
-              >
+              <Field id={`repair-${id}-added-${i}-type`} label={t.addedEntryType(i + 1)}>
                 <select
                   id={`repair-${id}-added-${i}-type`}
                   className={controls.select}
@@ -607,14 +600,14 @@ function SessionRepair({
                 >
                   {ADDED_TYPES.map((type) => (
                     <option key={type} value={type}>
-                      {strings.entryTypes[type]}
+                      {t.entryTypes[type]}
                     </option>
                   ))}
                 </select>
               </Field>
               <TimeField
                 id={`repair-${id}-added-${i}`}
-                label={strings.addedEntryTime(i + 1)}
+                label={t.addedEntryTime(i + 1)}
                 value={added.at}
                 required
                 bad={badField === `added-${i}`}
@@ -627,7 +620,7 @@ function SessionRepair({
                   change({ ...draft, added: draft.added.filter((_, n) => n !== i) })
                 }
               >
-                {strings.remove}
+                {t.remove}
               </button>
             </div>
           );
@@ -639,20 +632,20 @@ function SessionRepair({
             change({ ...draft, added: [...draft.added, { type: "ended", at: "" }] })
           }
         >
-          {strings.addEntry}
+          {t.addEntry}
         </button>
       </EditorSection>
       <EditorSection>
         <button type="submit" className={controls.secondary} disabled={sending}>
-          {strings.saveRepair}
+          {t.saveRepair}
         </button>
         <Note text={refusal} />
       </EditorSection>
       {!voided && (
         <EditorFooter>
           <DestructiveAction
-            label={strings.voidSession}
-            effect={strings.voidSessionEffect}
+            label={t.voidSession}
+            effect={t.voidSessionEffect}
             disabled={sending}
             onConfirm={() => send([voidOperation(session)])}
           />
@@ -675,6 +668,7 @@ function MissingHours({
   jobs: JobOption[];
   onDone: (outcome: Outcome) => void;
 }) {
+  const { t } = useStrings();
   const [draft, setDraft] = useState({ jobId: "", start: "", end: "" });
   const [badField, setBadField] = useState<string | null>(null);
   const { send, sending, refusal, setRefusal } = useRepair(workerId, onDone);
@@ -698,11 +692,11 @@ function MissingHours({
     <form
       id={`repair-${MISSING}`}
       className={`${controls.card} ${styles.editor}`}
-      aria-label={strings.addMissingHours}
+      aria-label={t.addMissingHours}
       noValidate
       onSubmit={save}
     >
-      <p className="secondary">{strings.missingHoursExplain}</p>
+      <p className="secondary">{t.missingHoursExplain}</p>
       <div className={styles.fields}>
         <JobSelect
           id="missing-job"
@@ -712,7 +706,7 @@ function MissingHours({
         />
         <TimeField
           id="missing-start"
-          label={strings.missingClockIn}
+          label={t.missingClockIn}
           value={draft.start}
           required
           bad={badField === "start"}
@@ -720,7 +714,7 @@ function MissingHours({
         />
         <TimeField
           id="missing-end"
-          label={strings.missingClockOut}
+          label={t.missingClockOut}
           value={draft.end}
           required={false}
           bad={badField === "end"}
@@ -732,7 +726,7 @@ function MissingHours({
         className={controls.secondary}
         disabled={sending || draft.jobId === ""}
       >
-        {strings.addHours}
+        {t.addHours}
       </button>
       <Note text={refusal} />
     </form>

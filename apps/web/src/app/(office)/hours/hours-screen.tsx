@@ -15,10 +15,10 @@ import controls from "../../controls.module.css";
 import { EmptyState, Failure } from "../../failure";
 import { Field } from "../../field";
 import { Note } from "../../note";
-import { addDays, day as formatDay, hours, weekDay } from "../../format";
+import { addDays, hours } from "../../format";
 import { PageHeader } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import { type Cell, hoursByPerson, type PersonHours, stillOpen } from "./hours-view";
@@ -38,16 +38,18 @@ function today(): string {
 }
 
 export function HoursScreen({ signInHref }: { signInHref: string }) {
+  const { t } = useStrings();
   return (
     <>
-      <PageHeader title={strings.hoursTitle} />
-      <p className={`secondary ${styles.explain}`}>{strings.reconExplain}</p>
+      <PageHeader title={t.hoursTitle} />
+      <p className={`secondary ${styles.explain}`}>{t.reconExplain}</p>
       <ByDates signInHref={signInHref} />
     </>
   );
 }
 
 function ByDates({ signInHref }: { signInHref: string }) {
+  const { t } = useStrings();
   const [to, setTo] = useState(today);
   const [from, setFrom] = useState(() => addDays(today(), -6));
   const [asked, setAsked] = useState<Range | null>(null);
@@ -61,9 +63,9 @@ function ByDates({ signInHref }: { signInHref: string }) {
   };
   return (
     <>
-      <form aria-label={strings.hoursTitle} className={controls.card} onSubmit={submit}>
+      <form aria-label={t.hoursTitle} className={controls.card} onSubmit={submit}>
         <div className={styles.lookupGrid}>
-          <Field id="recon-from" label={strings.planFrom}>
+          <Field id="recon-from" label={t.planFrom}>
             <input
               id="recon-from"
               className={controls.input}
@@ -73,7 +75,7 @@ function ByDates({ signInHref }: { signInHref: string }) {
               onChange={(e) => setFrom(e.target.value)}
             />
           </Field>
-          <Field id="recon-to" label={strings.planThrough}>
+          <Field id="recon-to" label={t.planThrough}>
             <input
               id="recon-to"
               className={controls.input}
@@ -86,13 +88,13 @@ function ByDates({ signInHref }: { signInHref: string }) {
             />
             {rangeError && (
               <p id="recon-range" className={`secondary ${controls.error}`} role="alert">
-                {strings.ledgerRange}
+                {t.ledgerRange}
               </p>
             )}
           </Field>
         </div>
         <button type="submit" className={controls.primary}>
-          {strings.showHours}
+          {t.showHours}
         </button>
       </form>
       <PayrollFile from={from} to={to} />
@@ -106,6 +108,7 @@ function ByDates({ signInHref }: { signInHref: string }) {
 // cached: the server builds it from the ledger as it stands (api labor/export.ts), and the
 // browser saves it as it came.
 function PayrollFile({ from, to }: Range) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
@@ -114,7 +117,7 @@ function PayrollFile({ from, to }: Range) {
   const save = async () => {
     setSaved(false);
     if (from === "" || to === "" || from > to) {
-      setNote(strings.payrollRange);
+      setNote(t.payrollRange);
       return;
     }
     setBusy(true);
@@ -130,9 +133,9 @@ function PayrollFile({ from, to }: Range) {
       link.click();
       URL.revokeObjectURL(url);
       setSaved(true);
-      setNote(strings.payrollCsvSaved(file.filename, hours(file.hundredths)));
+      setNote(t.payrollCsvSaved(file.filename, hours(file.hundredths)));
     } catch {
-      setNote(strings.requestFailed);
+      setNote(t.requestFailed);
     } finally {
       setBusy(false);
     }
@@ -145,15 +148,16 @@ function PayrollFile({ from, to }: Range) {
         disabled={busy}
         onClick={() => void save()}
       >
-        {strings.payrollCsv}
+        {t.payrollCsv}
       </button>
-      <p className={`secondary ${styles.explain}`}>{strings.payrollCsvExplain}</p>
+      <p className={`secondary ${styles.explain}`}>{t.payrollCsvExplain}</p>
       <Note text={note} tone={saved ? "saved" : undefined} />
     </div>
   );
 }
 
 function Reconciliation({ asked, signInHref }: { asked: Range; signInHref: string }) {
+  const { t, f } = useStrings();
   const trpc = useTRPC();
   // Other dates keep the rows on screen until their own arrive (providers.tsx).
   const read = useQuery(
@@ -170,23 +174,23 @@ function Reconciliation({ asked, signInHref }: { asked: Range; signInHref: strin
     );
   }
   const answer = read.data;
-  const range = `${formatDay(asked.from)} – ${formatDay(asked.to)}`;
+  const range = `${f.day(asked.from)} – ${f.day(asked.to)}`;
   if (answer.cells.length === 0) {
     return (
       <>
         <p className={`secondary ${styles.line}`}>{range}</p>
-        <EmptyState text={strings.emptyReconciliation} />
+        <EmptyState text={t.emptyReconciliation} />
       </>
     );
   }
   return (
     <>
       <p className={`secondary ${styles.line}`}>
-        {range} · {strings.workDatesIn(answer.timezone)}
+        {range} · {t.workDatesIn(answer.timezone)}
       </p>
       <Counted
         people={hoursByPerson(answer)}
-        total={strings.reconTotal(hours(answer.totals.hundredths))}
+        total={t.reconTotal(hours(answer.totals.hundredths))}
       />
       <Open cells={stillOpen(answer)} />
     </>
@@ -195,13 +199,14 @@ function Reconciliation({ asked, signInHref }: { asked: Range; signInHref: strin
 
 // Each person's hours by day and job, with the flags of the entries behind each figure.
 function Counted({ people, total }: { people: PersonHours[]; total: string }) {
+  const { t, f } = useStrings();
   return (
     <section className={styles.section} aria-labelledby="hours-counted">
       <h2 id="hours-counted" className="heading">
-        {strings.hoursHeading}
+        {t.hoursHeading}
       </h2>
       {people.length === 0 ? (
-        <p className={`body ${styles.total}`}>{strings.noHoursYet}</p>
+        <p className={`body ${styles.total}`}>{t.noHoursYet}</p>
       ) : (
         <>
           <p className={`body-strong ${styles.total}`}>{total}</p>
@@ -213,36 +218,36 @@ function Counted({ people, total }: { people: PersonHours[]; total: string }) {
             >
               <h3 className="body-strong">
                 <span>{p.worker.name}</span>
-                <span>{strings.hoursValue(hours(p.hundredths))}</span>
+                <span>{t.hoursValue(hours(p.hundredths))}</span>
               </h3>
               <table className={table.table}>
                 <thead>
                   <tr>
-                    <th scope="col">{strings.date}</th>
-                    <th scope="col">{strings.job}</th>
+                    <th scope="col">{t.date}</th>
+                    <th scope="col">{t.job}</th>
                     <th scope="col" className={table.number}>
-                      {strings.hours}
+                      {t.hours}
                     </th>
-                    <th scope="col">{strings.flags}</th>
+                    <th scope="col">{t.flags}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {p.cells.map((c) => {
-                    const flags = c.flags.map((f) => strings.reasonTags[f]).join(", ");
+                    const flags = c.flags.map((f) => t.reasonTags[f]).join(", ");
                     return (
                       <tr key={`${c.workDate}-${c.job.id}`}>
-                        <td data-label={strings.date} className="body-strong">
-                          {weekDay(c.workDate)}
+                        <td data-label={t.date} className="body-strong">
+                          {f.weekDay(c.workDate)}
                         </td>
-                        <td data-label={strings.job}>{c.job.name}</td>
-                        <td data-label={strings.hours} className={table.number}>
+                        <td data-label={t.job}>{c.job.name}</td>
+                        <td data-label={t.hours} className={table.number}>
                           {hours(c.hundredths)}
                         </td>
                         <td
-                          data-label={strings.flags}
+                          data-label={t.flags}
                           data-empty={flags === "" ? "" : undefined}
                         >
-                          {flags === "" ? "" : strings.flagged(flags)}
+                          {flags === "" ? "" : t.flagged(flags)}
                         </td>
                       </tr>
                     );
@@ -259,36 +264,35 @@ function Counted({ people, total }: { people: PersonHours[]; total: string }) {
 
 // Sessions with no clock-out yet: their time is in no figure above until it arrives.
 function Open({ cells }: { cells: Cell[] }) {
+  const { t, f } = useStrings();
   if (cells.length === 0) return null;
   return (
     <section className={styles.section} aria-labelledby="hours-open">
       <h2 id="hours-open" className="heading">
-        {strings.notInHours}
+        {t.notInHours}
       </h2>
-      <p className={`secondary ${styles.explain}`}>{strings.notInHoursExplain}</p>
+      <p className={`secondary ${styles.explain}`}>{t.notInHoursExplain}</p>
       <p className={`${controls.actions} ${styles.links}`}>
-        <Link href="#entries">{strings.repairInLedger}</Link>
+        <Link href="#entries">{t.repairInLedger}</Link>
       </p>
       <table className={table.table}>
         <thead>
           <tr>
-            <th scope="col">{strings.person}</th>
-            <th scope="col">{strings.job}</th>
-            <th scope="col">{strings.date}</th>
-            <th scope="col">{strings.unresolvedState}</th>
+            <th scope="col">{t.person}</th>
+            <th scope="col">{t.job}</th>
+            <th scope="col">{t.date}</th>
+            <th scope="col">{t.unresolvedState}</th>
           </tr>
         </thead>
         <tbody>
           {cells.map((c) => (
             <tr key={`${c.workDate}-${c.worker.id}-${c.job.id}`}>
-              <td data-label={strings.person} className="body-strong">
+              <td data-label={t.person} className="body-strong">
                 {c.worker.name}
               </td>
-              <td data-label={strings.job}>{c.job.name}</td>
-              <td data-label={strings.date}>{weekDay(c.workDate)}</td>
-              <td data-label={strings.unresolvedState}>
-                {strings.sessionsOpen(c.openSessions)}
-              </td>
+              <td data-label={t.job}>{c.job.name}</td>
+              <td data-label={t.date}>{f.weekDay(c.workDate)}</td>
+              <td data-label={t.unresolvedState}>{t.sessionsOpen(c.openSessions)}</td>
             </tr>
           ))}
         </tbody>

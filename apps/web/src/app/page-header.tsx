@@ -3,7 +3,7 @@
 // open the button is the secondary "Close", so the form's own submit is the one primary.
 // Consumed by the people, customers, jobs, hours and invoices screens.
 import controls from "./controls.module.css";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 
 // The create form's id, named by the action's `aria-controls`; one form per screen.
 export const CREATE_FORM_ID = "create-form";
@@ -15,6 +15,7 @@ export function PageHeader({
   title: string;
   action?: { label: string; open: boolean; onToggle: () => void };
 }) {
+  const { t } = useStrings();
   return (
     <div className={controls.pageHeader}>
       <h1 className="title">{title}</h1>
@@ -26,7 +27,7 @@ export function PageHeader({
           aria-controls={CREATE_FORM_ID}
           onClick={action.onToggle}
         >
-          {action.open ? strings.close : action.label}
+          {action.open ? t.close : action.label}
         </button>
       )}
     </div>

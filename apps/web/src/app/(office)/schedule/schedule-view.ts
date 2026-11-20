@@ -7,15 +7,13 @@ import type { Issue } from "@trader/api/eligibility";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import { addDays } from "../../format";
-import { strings } from "../../strings";
+import type { Catalog } from "../../i18n/en";
 
 type Outputs = inferRouterOutputs<AppRouter>["assignment"];
 export type Week = Outputs["week"];
 export type WeekShift = Week["shifts"][number];
 export type CopyPreview = Outputs["copyPreview"];
 export type { Issue };
-
-const s = strings.schedule;
 
 // The Monday of the week `day` is in. Calendar arithmetic in UTC: no zone can move it.
 export function mondayOf(day: string): string {
@@ -99,8 +97,16 @@ export function overlapsWith(
     }));
 }
 
+// The schedule's words, in the language of whoever is reading: handed in, since nothing
+// here is a component.
+export type Words = Catalog["schedule"];
+
 // A refusal in words. `label` names a shift by what the office sees: its jobsite and hours.
-export function issueText(issue: Issue, label: (shiftId: string) => string): string {
+export function issueText(
+  s: Words,
+  issue: Issue,
+  label: (shiftId: string) => string,
+): string {
   switch (issue.code) {
     case "duplicate_shift":
       return s.issue.duplicate;
@@ -122,12 +128,13 @@ export type Refusal =
   | { code: "locked" | "stale" | "id_conflict" | "user_inactive" | "job_archived" };
 
 export function refusalText(
+  s: Words,
   refusal: Refusal,
   label: (shiftId: string) => string,
 ): string {
   switch (refusal.code) {
     case "schedule":
-      return refusal.issues.map((issue) => issueText(issue, label)).join(" ");
+      return refusal.issues.map((issue) => issueText(s, issue, label)).join(" ");
     case "authorization":
       return s.refused.authorization(label(refusal.shiftId));
     case "locked":
@@ -142,8 +149,10 @@ export function refusalText(
   }
 }
 
-export const leftOutText = (reason: CopyPreview["leftOut"][number]["reason"]): string =>
-  s.leftOut[reason];
+export const leftOutText = (
+  s: Words,
+  reason: CopyPreview["leftOut"][number]["reason"],
+): string => s.leftOut[reason];
 
 // The copies that still have shifts in the week on screen: how many, and whether a clock-in
 // has locked any of them — which is what decides whether the copy can be undone.

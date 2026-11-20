@@ -12,11 +12,13 @@ import { Failure } from "../../failure";
 import { Field } from "../../field";
 import { signInPhone } from "../../format";
 import { Note } from "../../note";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
+import { LANGUAGES, type Language } from "../../i18n/language";
 import { useTRPC } from "../../trpc";
 import styles from "./profile.module.css";
 
 export function ProfileForm({ signInHref }: { signInHref: string }) {
+  const { t, language, setLanguage } = useStrings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const me = useQuery(trpc.me.get.queryOptions());
@@ -28,10 +30,10 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
     trpc.me.update.mutationOptions({
       onSuccess: async () => {
         setDraft(null);
-        setNote(strings.saved);
+        setNote(t.saved);
         await queryClient.invalidateQueries(trpc.me.get.queryFilter());
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const fields = (record: { name: string; phone: string | null }) =>
@@ -44,9 +46,9 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
   };
   return (
     <>
-      <h1 className="title">{strings.profile}</h1>
+      <h1 className="title">{t.profile}</h1>
       {me.isPending ? (
-        <p className="body">{strings.loading}</p>
+        <p className="body">{t.loading}</p>
       ) : me.isError ? (
         <Failure
           error={me.error}
@@ -55,7 +57,7 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
         />
       ) : (
         <form className={`${controls.card} ${styles.card}`} onSubmit={submit(me.data)}>
-          <Field id="profile-name" label={strings.name}>
+          <Field id="profile-name" label={t.name}>
             <input
               id="profile-name"
               className={controls.input}
@@ -67,7 +69,7 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
               onChange={(e) => setDraft({ ...fields(me.data), name: e.target.value })}
             />
           </Field>
-          <Field id="profile-phone" label={strings.contactPhone}>
+          <Field id="profile-phone" label={t.contactPhone}>
             <input
               id="profile-phone"
               className={controls.input}
@@ -79,7 +81,7 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
             />
           </Field>
           {me.data.signInPhone !== null && (
-            <Field id="profile-sign-in-phone" label={strings.signInNumber}>
+            <Field id="profile-sign-in-phone" label={t.signInNumber}>
               <input
                 id="profile-sign-in-phone"
                 className={controls.input}
@@ -87,13 +89,11 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
                 readOnly
                 value={signInPhone(me.data.signInPhone)}
               />
-              <p className={`secondary ${controls.caption}`}>
-                {strings.signInNumberCaption}
-              </p>
+              <p className={`secondary ${controls.caption}`}>{t.signInNumberCaption}</p>
             </Field>
           )}
           {me.data.email !== null && (
-            <Field id="profile-email" label={strings.email}>
+            <Field id="profile-email" label={t.email}>
               <input
                 id="profile-email"
                 className={controls.input}
@@ -101,12 +101,28 @@ export function ProfileForm({ signInHref }: { signInHref: string }) {
                 readOnly
                 value={me.data.email}
               />
-              <p className={`secondary ${controls.caption}`}>{strings.managedBySignIn}</p>
+              <p className={`secondary ${controls.caption}`}>{t.managedBySignIn}</p>
             </Field>
           )}
+          {/* Kept on this browser, and changed at once: it is not part of the record
+              the button below saves. */}
+          <Field id="profile-language" label={t.language}>
+            <select
+              id="profile-language"
+              className={controls.select}
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+            >
+              {LANGUAGES.map((l) => (
+                <option key={l} value={l} lang={l}>
+                  {t.languages[l]}
+                </option>
+              ))}
+            </select>
+          </Field>
           <Note text={note} />
           <button type="submit" className={controls.primary} disabled={save.isPending}>
-            {strings.save}
+            {t.save}
           </button>
         </form>
       )}

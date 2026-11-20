@@ -13,18 +13,17 @@ import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
 import { Field } from "../../field";
-import { money } from "../../format";
 import { Note } from "../../note";
 import { CREATE_FORM_ID, PageHeader } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import styles from "./invoices.module.css";
 
-const s = strings.invoices;
-
 function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
+  const { t } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const router = useRouter();
   const [id] = useState(() => uuidv7());
@@ -33,10 +32,10 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
   const create = useMutation(
     trpc.invoice.create.mutationOptions({
       onSuccess: (answer) => {
-        if (answer.result === "rejected") setNote(strings.requestFailed);
+        if (answer.result === "rejected") setNote(t.requestFailed);
         else router.push(`/invoices/${id}`);
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const submit = (e: FormEvent) => {
@@ -78,6 +77,8 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
 }
 
 export function InvoicesScreen({ signInHref }: { signInHref: string }) {
+  const { t, f } = useStrings();
+  const s = t.invoices;
   const trpc = useTRPC();
   const list = useQuery(trpc.invoice.list.queryOptions());
   const jobs = useQuery(trpc.job.list.queryOptions());
@@ -135,9 +136,9 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
                     <td>{i.customer.name}</td>
                     <td>{i.job.name}</td>
                     <td className={table.status}>{s.states[i.state]}</td>
-                    <td className={table.number}>{money(i.totalCents, i.currency)}</td>
+                    <td className={table.number}>{f.money(i.totalCents, i.currency)}</td>
                     <td className={table.number}>
-                      {i.state === "issued" ? money(i.owedCents, i.currency) : "—"}
+                      {i.state === "issued" ? f.money(i.owedCents, i.currency) : "—"}
                     </td>
                   </tr>
                 ))}

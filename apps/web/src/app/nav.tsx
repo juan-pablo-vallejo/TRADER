@@ -15,25 +15,28 @@ import { usePathname } from "next/navigation";
 import { useRef, useState, type KeyboardEvent } from "react";
 
 import styles from "./nav.module.css";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
+import type { Catalog } from "./i18n/en";
 import { useTRPC } from "./trpc";
 
 type Destination = {
   href: string;
-  label: string;
+  // The destination's name in the catalog (`nav`).
+  label: keyof Catalog["nav"];
   // Other addresses that are part of this destination.
   also?: string[];
 };
 
 const links: Destination[] = [
-  { href: "/schedule", label: strings.nav.schedule },
-  { href: "/hours", label: strings.nav.hours },
-  { href: "/jobs", label: strings.nav.jobs, also: ["/customers"] },
-  { href: "/invoices", label: strings.nav.invoices },
-  { href: "/people", label: strings.nav.people },
+  { href: "/schedule", label: "schedule" },
+  { href: "/hours", label: "hours" },
+  { href: "/jobs", label: "jobs", also: ["/customers"] },
+  { href: "/invoices", label: "invoices" },
+  { href: "/people", label: "people" },
 ];
 
 export function Nav() {
+  const { t } = useStrings();
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const toggle = useRef<HTMLButtonElement>(null);
@@ -61,7 +64,7 @@ export function Nav() {
     toggle.current?.focus();
   };
   return (
-    <nav className={styles.nav} aria-label={strings.navigation} onKeyDown={onKeyDown}>
+    <nav className={styles.nav} aria-label={t.navigation} onKeyDown={onKeyDown}>
       <button
         ref={toggle}
         type="button"
@@ -70,7 +73,7 @@ export function Nav() {
         aria-controls="office-nav"
         onClick={() => setOpen((o) => !o)}
       >
-        {strings.menu}
+        {t.menu}
       </button>
       <div id="office-nav" className={`${styles.groups} ${open ? styles.open : ""}`}>
         <ul className={styles.list}>
@@ -90,7 +93,7 @@ export function Nav() {
                   onMouseEnter={() => warm(href)}
                   onFocus={() => warm(href)}
                 >
-                  {label}
+                  {t.nav[label]}
                 </Link>
               </li>
             );

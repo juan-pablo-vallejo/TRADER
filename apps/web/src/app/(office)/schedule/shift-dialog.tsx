@@ -12,10 +12,9 @@ import { useId, useState, type FormEvent } from "react";
 import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
 import { Field } from "../../field";
-import { weekDay } from "../../format";
 import { Note } from "../../note";
 import { DestructiveAction } from "../../row-editor";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import { useTRPC } from "../../trpc";
 import { Drawer } from "./drawer";
 import styles from "./schedule.module.css";
@@ -27,8 +26,6 @@ import {
   type Week,
   type WeekShift,
 } from "./schedule-view";
-
-const s = strings.schedule;
 
 function useRefresh() {
   const trpc = useTRPC();
@@ -42,6 +39,8 @@ type Overlap = ReturnType<typeof overlapsWith>[number];
 
 // The shifts this one would overlap, and why it cannot be saved while it does.
 function Overlaps({ overlaps }: { overlaps: Overlap[] }) {
+  const { t } = useStrings();
+  const s = t.schedule;
   if (overlaps.length === 0) return null;
   return (
     <section className={styles.overlaps} aria-label={s.overlapsHeading}>
@@ -67,6 +66,8 @@ export function EditShift({
   week: Week;
   onClose: (note: string | null) => void;
 }) {
+  const { t, f } = useStrings();
+  const s = t.schedule;
   const trpc = useTRPC();
   const refresh = useRefresh();
   const formId = useId();
@@ -91,26 +92,26 @@ export function EditShift({
     trpc.assignment.update.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(refusalText(answer as Refusal, label));
+          setNote(refusalText(s, answer as Refusal, label));
           return;
         }
         await refresh();
-        onClose(answer.result === "unchanged" ? strings.unchanged : s.saved);
+        onClose(answer.result === "unchanged" ? t.unchanged : s.saved);
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const remove = useMutation(
     trpc.assignment.remove.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setRemoveNote(refusalText(answer as Refusal, label));
+          setRemoveNote(refusalText(s, answer as Refusal, label));
           return;
         }
         await refresh();
         onClose(s.removed);
       },
-      onError: () => setRemoveNote(strings.requestFailed),
+      onError: () => setRemoveNote(t.requestFailed),
     }),
   );
   const busy = update.isPending || remove.isPending;
@@ -135,7 +136,7 @@ export function EditShift({
       <Drawer title={title} onClose={() => onClose(null)}>
         <p className="body-strong">{shift.job.name}</p>
         <p className={`body ${styles.hours}`}>
-          {weekDay(shift.workDate)} · {hoursOf(shift)}
+          {f.weekDay(shift.workDate)} · {hoursOf(shift)}
         </p>
         <p className="secondary">{s.lockedExplain}</p>
         <p className={styles.link}>
@@ -157,7 +158,7 @@ export function EditShift({
           >
             {week.days.map((day) => (
               <option key={day} value={day}>
-                {weekDay(day)}
+                {f.weekDay(day)}
               </option>
             ))}
           </select>
@@ -202,7 +203,7 @@ export function EditShift({
           effect={s.removeEffect(
             shift.worker.name,
             shift.job.name,
-            weekDay(shift.workDate),
+            f.weekDay(shift.workDate),
           )}
           disabled={busy}
           onConfirm={() => {
@@ -230,6 +231,8 @@ export function AddShift({
   first: { userId?: string; day?: string };
   onClose: (note: string | null) => void;
 }) {
+  const { t, f } = useStrings();
+  const s = t.schedule;
   const trpc = useTRPC();
   const refresh = useRefresh();
   const formId = useId();
@@ -267,7 +270,7 @@ export function AddShift({
     trpc.assignment.create.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(refusalText(answer, label));
+          setNote(refusalText(s, answer, label));
           return;
         }
         await refresh();
@@ -275,7 +278,7 @@ export function AddShift({
           answer.days.filter((d) => d.result === result).length;
         const refused = answer.days.flatMap((d) =>
           d.result === "rejected"
-            ? [s.notAdded(weekDay(d.workDate), refusalText(d as Refusal, label))]
+            ? [s.notAdded(f.weekDay(d.workDate), refusalText(s, d as Refusal, label))]
             : [],
         );
         const done =
@@ -294,7 +297,7 @@ export function AddShift({
         setNoteTone("saved");
         setNote(count("created") + count("duplicate") === 0 ? null : done);
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const submit = (e: FormEvent) => {
@@ -369,7 +372,7 @@ export function AddShift({
                   )
                 }
               />
-              <span>{weekDay(day)}</span>
+              <span>{f.weekDay(day)}</span>
             </label>
           ))}
         </fieldset>
@@ -399,7 +402,7 @@ export function AddShift({
           .filter(({ overlaps }) => overlaps.length > 0)
           .map(({ day, overlaps }) => (
             <div key={day}>
-              <p className="label">{weekDay(day)}</p>
+              <p className="label">{f.weekDay(day)}</p>
               <Overlaps overlaps={overlaps} />
             </div>
           ))}

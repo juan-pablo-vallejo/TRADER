@@ -7,7 +7,7 @@ import { ClerkRefused } from "./clerk-session";
 import controls from "./controls.module.css";
 import { EmptyState } from "./empty-state";
 import { useClerkOn } from "./providers";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 
 export { EmptyState };
 
@@ -25,25 +25,26 @@ export function Failure({
   signInHref: string;
   onRetry?: () => void;
 }) {
+  const { t } = useStrings();
   const clerk = useClerkOn();
   const code = codeOf(error);
   if (code === "UNAUTHORIZED") {
     if (clerk) return <ClerkRefused />;
     return (
       <EmptyState
-        text={strings.signInToContinue}
-        action={<a href={signInHref}>{strings.signIn}</a>}
+        text={t.signInToContinue}
+        action={<a href={signInHref}>{t.signIn}</a>}
       />
     );
   }
-  if (code === "FORBIDDEN") return <EmptyState text={strings.notPermitted} />;
+  if (code === "FORBIDDEN") return <EmptyState text={t.notPermitted} />;
   return (
     <div className={controls.banner} role="alert">
-      <p className="body-strong">{strings.loadFailed}</p>
-      <p className="secondary">{strings.loadFailedHelp}</p>
+      <p className="body-strong">{t.loadFailed}</p>
+      <p className="secondary">{t.loadFailedHelp}</p>
       {onRetry !== undefined && (
         <button type="button" className={controls.secondary} onClick={onRetry}>
-          {strings.tryAgain}
+          {t.tryAgain}
         </button>
       )}
     </div>

@@ -22,12 +22,13 @@ import {
 } from "../../row-editor";
 import { PageHeader, CREATE_FORM_ID } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
+import type { Catalog } from "../../i18n/en";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import styles from "./people.module.css";
 
-type Roles = keyof typeof strings.roles;
+type Roles = keyof Catalog["roles"];
 const ROLES = ["worker", "admin"] as const satisfies readonly Roles[];
 
 type Rows = NonNullable<ReturnType<typeof useRoster>["data"]>;
@@ -46,16 +47,17 @@ function useRefresh() {
 }
 
 export function PeopleScreen({ signInHref }: { signInHref: string }) {
+  const { t } = useStrings();
   const list = useRoster();
   const [adding, setAdding] = useState(false);
   return (
     <>
       <PageHeader
-        title={strings.roster}
+        title={t.roster}
         action={
           list.isSuccess
             ? {
-                label: strings.addPerson,
+                label: t.addPerson,
                 open: adding,
                 onToggle: () => setAdding((a) => !a),
               }
@@ -74,7 +76,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
         <>
           {adding && <InviteForm onDone={() => setAdding(false)} />}
           {list.data.length === 0 ? (
-            <EmptyState text={strings.emptyRoster} />
+            <EmptyState text={t.emptyRoster} />
           ) : (
             <RosterTable rows={list.data} />
           )}
@@ -84,14 +86,11 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
   );
 }
 
-const statusOf = (row: Row) =>
-  row.deactivatedAt !== null
-    ? strings.deactivated
-    : row.invited
-      ? strings.invited
-      : strings.active;
+const statusOf = (t: Catalog, row: Row) =>
+  row.deactivatedAt !== null ? t.deactivated : row.invited ? t.invited : t.active;
 
 function InviteForm({ onDone }: { onDone: () => void }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [phone, setPhone] = useState("");
@@ -108,10 +107,10 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         if (answer.result === "rejected") {
           setNote(
             answer.code === "company_closed"
-              ? { under: "phone", text: strings.companyClosed }
+              ? { under: "phone", text: t.companyClosed }
               : answer.code === "phone_taken"
-                ? { under: "phone", text: strings.phoneTaken }
-                : { under: "email", text: strings.emailTaken },
+                ? { under: "phone", text: t.phoneTaken }
+                : { under: "email", text: t.emailTaken },
           );
           return;
         }
@@ -133,11 +132,11 @@ function InviteForm({ onDone }: { onDone: () => void }) {
     const typedPhone = phone.trim();
     const typedEmail = email.trim();
     if (typedPhone === "") {
-      setNote({ under: "phone", text: strings.mobileNumberNeeded });
+      setNote({ under: "phone", text: t.mobileNumberNeeded });
       return;
     }
     if (!looksLikeSignInPhone(typedPhone)) {
-      setNote({ under: "phone", text: strings.mobileNumberInvalid });
+      setNote({ under: "phone", text: t.mobileNumberInvalid });
       return;
     }
     invite.mutate({
@@ -150,12 +149,12 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   return (
     <form
       id={CREATE_FORM_ID}
-      aria-label={strings.addPerson}
+      aria-label={t.addPerson}
       className={controls.card}
       onSubmit={submit}
     >
       <div className={styles.inviteGrid}>
-        <Field id="invite-phone" label={strings.mobileNumber}>
+        <Field id="invite-phone" label={t.mobileNumber}>
           <input
             id="invite-phone"
             autoFocus
@@ -168,7 +167,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           />
           <Note text={note?.under === "phone" ? note.text : null} />
         </Field>
-        <Field id="invite-email" label={strings.email}>
+        <Field id="invite-email" label={t.email}>
           <input
             id="invite-email"
             className={controls.input}
@@ -179,7 +178,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           />
           <Note text={note?.under === "email" ? note.text : null} />
         </Field>
-        <Field id="invite-name" label={strings.name}>
+        <Field id="invite-name" label={t.name}>
           <input
             id="invite-name"
             className={controls.input}
@@ -190,7 +189,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
             onChange={(e) => setName(e.target.value)}
           />
         </Field>
-        <Field id="invite-role" label={strings.role}>
+        <Field id="invite-role" label={t.role}>
           <select
             id="invite-role"
             className={controls.select}
@@ -199,33 +198,34 @@ function InviteForm({ onDone }: { onDone: () => void }) {
           >
             {ROLES.map((r) => (
               <option key={r} value={r}>
-                {strings.roles[r]}
+                {t.roles[r]}
               </option>
             ))}
           </select>
         </Field>
       </div>
-      <p className={`secondary ${controls.caption}`}>{strings.inviteAddressHint}</p>
-      {invite.isError && <Note text={strings.requestFailed} />}
+      <p className={`secondary ${controls.caption}`}>{t.inviteAddressHint}</p>
+      {invite.isError && <Note text={t.requestFailed} />}
       <button type="submit" className={controls.primary} disabled={invite.isPending}>
-        {strings.addToRoster}
+        {t.addToRoster}
       </button>
     </form>
   );
 }
 
 function RosterTable({ rows }: { rows: Rows }) {
+  const { t } = useStrings();
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <table className={table.table}>
       <thead>
         <tr>
-          <th scope="col">{strings.name}</th>
-          <th scope="col">{strings.signInAddress}</th>
-          <th scope="col">{strings.role}</th>
-          <th scope="col">{strings.status}</th>
+          <th scope="col">{t.name}</th>
+          <th scope="col">{t.signInAddress}</th>
+          <th scope="col">{t.role}</th>
+          <th scope="col">{t.status}</th>
           <th scope="col">
-            <span className="visually-hidden">{strings.edit}</span>
+            <span className="visually-hidden">{t.edit}</span>
           </th>
         </tr>
       </thead>
@@ -235,10 +235,10 @@ function RosterTable({ rows }: { rows: Rows }) {
           return (
             <Fragment key={row.id}>
               <tr>
-                <td data-label={strings.name} className="body-strong">
+                <td data-label={t.name} className="body-strong">
                   {row.name}
                 </td>
-                <td data-label={strings.signInAddress}>
+                <td data-label={t.signInAddress}>
                   {row.signInPhone !== null && (
                     <span className={styles.address}>{signInPhone(row.signInPhone)}</span>
                   )}
@@ -246,14 +246,12 @@ function RosterTable({ rows }: { rows: Rows }) {
                     <span className={styles.address}>{row.email}</span>
                   )}
                 </td>
-                <td data-label={strings.role}>{strings.roles[row.role]}</td>
-                <td data-label={strings.status} className={table.status}>
-                  {statusOf(row) === strings.invited ? (
-                    <span className={`label ${table.pillPending}`}>
-                      {strings.invited}
-                    </span>
+                <td data-label={t.role}>{t.roles[row.role]}</td>
+                <td data-label={t.status} className={table.status}>
+                  {statusOf(t, row) === t.invited ? (
+                    <span className={`label ${table.pillPending}`}>{t.invited}</span>
                   ) : (
-                    statusOf(row)
+                    statusOf(t, row)
                   )}
                 </td>
                 <RowToggle
@@ -289,14 +287,15 @@ function Editor({ row }: { row: Row }) {
 }
 
 // What a role or an access answer says: the last admin is refused, a no-op is "No change.".
-const noteOf = (answer: { result: string }) =>
+const noteOf = (t: Catalog, answer: { result: string }) =>
   answer.result === "rejected"
-    ? strings.lastAdmin
+    ? t.lastAdmin
     : answer.result === "unchanged"
-      ? strings.unchanged
-      : strings.saved;
+      ? t.unchanged
+      : t.saved;
 
 function Role({ row }: { row: Row }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [role, setRole] = useState<Roles>(row.role);
@@ -304,16 +303,16 @@ function Role({ row }: { row: Row }) {
   const setRoleCall = useMutation(
     trpc.roster.setRole.mutationOptions({
       onSuccess: async (answer) => {
-        setNote(noteOf(answer));
+        setNote(noteOf(t, answer));
         await refresh();
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const roleId = `role-${row.id}`;
   return (
     <EditorSection>
-      <Field id={roleId} label={strings.role}>
+      <Field id={roleId} label={t.role}>
         <select
           id={roleId}
           className={controls.select}
@@ -322,7 +321,7 @@ function Role({ row }: { row: Row }) {
         >
           {ROLES.map((r) => (
             <option key={r} value={r}>
-              {strings.roles[r]}
+              {t.roles[r]}
             </option>
           ))}
         </select>
@@ -333,7 +332,7 @@ function Role({ row }: { row: Row }) {
         disabled={setRoleCall.isPending}
         onClick={() => setRoleCall.mutate({ userId: row.id, role })}
       >
-        {strings.saveRole}
+        {t.saveRole}
       </button>
       <Note text={note} />
     </EditorSection>
@@ -342,14 +341,15 @@ function Role({ row }: { row: Row }) {
 
 // Deactivation, last and alone in the editor's footer; reactivation in its place.
 function Access({ row }: { row: Row }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [note, setNote] = useState<string | null>(null);
   const answered = async (answer: { result: string }) => {
-    setNote(noteOf(answer));
+    setNote(noteOf(t, answer));
     await refresh();
   };
-  const failed = () => setNote(strings.requestFailed);
+  const failed = () => setNote(t.requestFailed);
   const deactivate = useMutation(
     trpc.roster.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
   );
@@ -361,8 +361,8 @@ function Access({ row }: { row: Row }) {
     <>
       {row.deactivatedAt === null ? (
         <DestructiveAction
-          label={strings.deactivate}
-          effect={strings.deactivatePersonEffect(row.name)}
+          label={t.deactivate}
+          effect={t.deactivatePersonEffect(row.name)}
           disabled={busy}
           onConfirm={() => deactivate.mutate({ userId: row.id })}
         />
@@ -373,7 +373,7 @@ function Access({ row }: { row: Row }) {
           disabled={busy}
           onClick={() => reactivate.mutate({ userId: row.id })}
         >
-          {strings.reactivate}
+          {t.reactivate}
         </button>
       )}
       <Note text={note} />

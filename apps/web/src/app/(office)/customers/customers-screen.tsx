@@ -22,7 +22,7 @@ import {
 import { JobsTabs } from "../../jobs-tabs";
 import { PageHeader, CREATE_FORM_ID } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import styles from "./customers.module.css";
@@ -59,6 +59,7 @@ function useRefresh() {
 }
 
 export function CustomersScreen({ signInHref }: { signInHref: string }) {
+  const { t } = useStrings();
   const list = useCustomers();
   const [adding, setAdding] = useState(false);
   const ready = list.isSuccess;
@@ -66,11 +67,11 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
     <>
       <JobsTabs />
       <PageHeader
-        title={strings.customers}
+        title={t.customers}
         action={
           ready
             ? {
-                label: strings.addCustomer,
+                label: t.addCustomer,
                 open: adding,
                 onToggle: () => setAdding((a) => !a),
               }
@@ -89,7 +90,7 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
         <>
           {adding && <CreateForm onDone={() => setAdding(false)} />}
           {list.data.length === 0 ? (
-            <EmptyState text={strings.emptyCustomers} />
+            <EmptyState text={t.emptyCustomers} />
           ) : (
             <CustomersTable rows={list.data} />
           )}
@@ -109,6 +110,7 @@ function CustomerFields({
   value: Fields;
   onChange: (next: Fields) => void;
 }) {
+  const { t } = useStrings();
   const field = (
     key: keyof Fields,
     label: string,
@@ -128,16 +130,16 @@ function CustomerFields({
   );
   return (
     <div className={styles.formGrid}>
-      {field("name", strings.name, {
+      {field("name", t.name, {
         type: "text",
         required: true,
         maxLength: 200,
         autoFocus: id === "new-customer",
       })}
-      {field("address", strings.address, { type: "text", maxLength: 500 })}
-      {field("phone", strings.phone, { type: "tel", maxLength: 32 })}
-      {field("email", strings.email, { type: "email", maxLength: 254 })}
-      <Field id={`${id}-notes`} label={strings.notes} className={styles.wide}>
+      {field("address", t.address, { type: "text", maxLength: 500 })}
+      {field("phone", t.phone, { type: "tel", maxLength: 32 })}
+      {field("email", t.email, { type: "email", maxLength: 254 })}
+      <Field id={`${id}-notes`} label={t.notes} className={styles.wide}>
         <textarea
           id={`${id}-notes`}
           className={`${controls.input} ${styles.notes}`}
@@ -151,6 +153,7 @@ function CustomerFields({
 }
 
 function CreateForm({ onDone }: { onDone: () => void }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [value, setValue] = useState<Fields>(EMPTY);
@@ -163,7 +166,7 @@ function CreateForm({ onDone }: { onDone: () => void }) {
         await refresh();
         onDone();
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const submit = (e: FormEvent) => {
@@ -174,35 +177,36 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   return (
     <form
       id={CREATE_FORM_ID}
-      aria-label={strings.addCustomer}
+      aria-label={t.addCustomer}
       className={controls.card}
       onSubmit={submit}
     >
       <CustomerFields id="new-customer" value={value} onChange={setValue} />
       <Note text={note} />
       <button type="submit" className={controls.primary} disabled={create.isPending}>
-        {strings.addCustomer}
+        {t.addCustomer}
       </button>
     </form>
   );
 }
 
 function CustomersTable({ rows }: { rows: Rows }) {
+  const { t } = useStrings();
   const [editing, setEditing] = useState<string | null>(null);
   return (
     <table className={table.table}>
       <thead>
         <tr>
-          <th scope="col">{strings.name}</th>
-          <th scope="col">{strings.address}</th>
-          <th scope="col">{strings.phone}</th>
-          <th scope="col">{strings.email}</th>
+          <th scope="col">{t.name}</th>
+          <th scope="col">{t.address}</th>
+          <th scope="col">{t.phone}</th>
+          <th scope="col">{t.email}</th>
           <th scope="col" className={table.number}>
-            {strings.jobs}
+            {t.jobs}
           </th>
-          <th scope="col">{strings.status}</th>
+          <th scope="col">{t.status}</th>
           <th scope="col">
-            <span className="visually-hidden">{strings.edit}</span>
+            <span className="visually-hidden">{t.edit}</span>
           </th>
         </tr>
       </thead>
@@ -212,32 +216,26 @@ function CustomersTable({ rows }: { rows: Rows }) {
           return (
             <Fragment key={row.id}>
               <tr>
-                <td data-label={strings.name} className="body-strong">
+                <td data-label={t.name} className="body-strong">
                   {row.name}
                 </td>
                 <td
-                  data-label={strings.address}
+                  data-label={t.address}
                   data-empty={row.address === null ? "" : undefined}
                 >
-                  {row.address ?? strings.none}
+                  {row.address ?? t.none}
                 </td>
-                <td
-                  data-label={strings.phone}
-                  data-empty={row.phone === null ? "" : undefined}
-                >
-                  {row.phone ?? strings.none}
+                <td data-label={t.phone} data-empty={row.phone === null ? "" : undefined}>
+                  {row.phone ?? t.none}
                 </td>
-                <td
-                  data-label={strings.email}
-                  data-empty={row.email === null ? "" : undefined}
-                >
-                  {row.email ?? strings.none}
+                <td data-label={t.email} data-empty={row.email === null ? "" : undefined}>
+                  {row.email ?? t.none}
                 </td>
-                <td data-label={strings.jobs} className={table.number}>
+                <td data-label={t.jobs} className={table.number}>
                   {row.unarchivedJobs}
                 </td>
-                <td data-label={strings.status} className={table.status}>
-                  {row.deactivatedAt === null ? strings.active : strings.deactivated}
+                <td data-label={t.status} className={table.status}>
+                  {row.deactivatedAt === null ? t.active : t.deactivated}
                 </td>
                 <RowToggle
                   rowId={row.id}
@@ -259,6 +257,7 @@ function CustomersTable({ rows }: { rows: Rows }) {
 }
 
 function Editor({ row }: { row: Row }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [value, setValue] = useState<Fields>(fieldsOf(row));
@@ -267,23 +266,23 @@ function Editor({ row }: { row: Row }) {
   const save = useMutation(
     trpc.customer.update.mutationOptions({
       onSuccess: async () => {
-        setNote(strings.saved);
+        setNote(t.saved);
         await refresh();
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const answered = async (answer: { result: string; unarchivedJobs?: number }) => {
     setStateNote(
       answer.result === "rejected"
-        ? strings.jobsUnarchived(answer.unarchivedJobs ?? 0)
+        ? t.jobsUnarchived(answer.unarchivedJobs ?? 0)
         : answer.result === "unchanged"
-          ? strings.unchanged
-          : strings.saved,
+          ? t.unchanged
+          : t.saved,
     );
     await refresh();
   };
-  const failed = () => setStateNote(strings.requestFailed);
+  const failed = () => setStateNote(t.requestFailed);
   const deactivate = useMutation(
     trpc.customer.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
   );
@@ -306,7 +305,7 @@ function Editor({ row }: { row: Row }) {
             className={`${controls.secondary} ${table.stretch}`}
             disabled={busy}
           >
-            {strings.save}
+            {t.save}
           </button>
           <Note text={note} />
         </form>
@@ -314,8 +313,8 @@ function Editor({ row }: { row: Row }) {
       <EditorFooter>
         {row.deactivatedAt === null ? (
           <DestructiveAction
-            label={strings.deactivate}
-            effect={strings.deactivateCustomerEffect}
+            label={t.deactivate}
+            effect={t.deactivateCustomerEffect}
             disabled={busy}
             onConfirm={() => deactivate.mutate({ customerId: row.id })}
           />
@@ -326,7 +325,7 @@ function Editor({ row }: { row: Row }) {
             disabled={busy}
             onClick={() => reactivate.mutate({ customerId: row.id })}
           >
-            {strings.reactivate}
+            {t.reactivate}
           </button>
         )}
         <Note text={stateNote} />

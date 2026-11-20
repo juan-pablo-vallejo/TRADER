@@ -14,10 +14,10 @@ import { useState } from "react";
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
 import { Field } from "../../field";
-import { addDays, day as longDay, weekDay } from "../../format";
+import { addDays } from "../../format";
 import { Note } from "../../note";
 import { LoadingRows } from "../../loading-rows";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
 import { useTRPC } from "../../trpc";
 import { CopyWeek } from "./copy-dialog";
 import styles from "./schedule.module.css";
@@ -32,8 +32,6 @@ import {
   type WeekShift,
 } from "./schedule-view";
 import { AddShift, EditShift } from "./shift-dialog";
-
-const s = strings.schedule;
 
 // Today as the browser's calendar day, YYYY-MM-DD, built from parts: `toISOString` is UTC,
 // which is tomorrow in the evening in Eastern. Only where the screen opens: no rule reads it.
@@ -59,6 +57,8 @@ function ShiftCard({
   view: View;
   onOpen: () => void;
 }) {
+  const { t, f } = useStrings();
+  const s = t.schedule;
   return (
     <button
       type="button"
@@ -68,7 +68,7 @@ function ShiftCard({
         shift.worker.name,
         shift.job.name,
         hoursOf(shift),
-        weekDay(shift.workDate),
+        f.weekDay(shift.workDate),
       )}
     >
       <span className={`compact ${styles.cardName}`}>
@@ -96,6 +96,8 @@ function Grid({
   onOpen: (shiftId: string) => void;
   onAdd: (userId: string, day: string) => void;
 }) {
+  const { t, f } = useStrings();
+  const s = t.schedule;
   return (
     <table className={styles.grid}>
       <thead>
@@ -111,7 +113,7 @@ function Grid({
               data-day
               data-selected={day === selected ? "" : undefined}
             >
-              {weekDay(day)}
+              {f.weekDay(day)}
             </th>
           ))}
         </tr>
@@ -143,7 +145,7 @@ function Grid({
                     <button
                       type="button"
                       className={styles.addCell}
-                      aria-label={s.addShiftFor(row.name, weekDay(day))}
+                      aria-label={s.addShiftFor(row.name, f.weekDay(day))}
                       onClick={() => onAdd(row.id, day)}
                     >
                       +
@@ -160,6 +162,8 @@ function Grid({
 }
 
 export function ScheduleScreen({ signInHref }: { signInHref: string }) {
+  const { t, f } = useStrings();
+  const s = t.schedule;
   const trpc = useTRPC();
   const [weekStart, setWeekStart] = useState(() => mondayOf(today()));
   const [selected, setSelected] = useState(today);
@@ -284,7 +288,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           </button>
         </div>
         <p className={`body-strong ${styles.range}`} aria-live="polite">
-          {s.weekOf(longDay(weekStart), longDay(addDays(weekStart, 6)))}
+          {s.weekOf(f.day(weekStart), f.day(addDays(weekStart, 6)))}
         </p>
         <div className={styles.choices}>
           <fieldset className={styles.view}>
@@ -329,7 +333,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
               aria-pressed={day === selected}
               onClick={() => setSelected(day)}
             >
-              {weekDay(day)}
+              {f.weekDay(day)}
             </button>
           ))}
         </div>

@@ -7,17 +7,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import styles from "./nav.module.css";
-import { strings } from "./strings";
+import { useStrings } from "./i18n";
 
 const tabs = [
-  ["/jobs", strings.nav.jobs],
-  ["/customers", strings.nav.customers],
+  ["/jobs", "jobs"],
+  ["/customers", "customers"],
 ] as const;
 
 export function JobsTabs() {
+  const { t } = useStrings();
   const path = usePathname();
   return (
-    <nav className={styles.tabs} aria-label={strings.jobsTabs}>
+    <nav className={styles.tabs} aria-label={t.jobsTabs}>
       {tabs.map(([href, label]) => (
         <Link
           key={href}
@@ -25,7 +26,7 @@ export function JobsTabs() {
           className={`${styles.tab} ${path === href ? styles.tabCurrent : ""}`}
           aria-current={path === href ? "page" : undefined}
         >
-          {label}
+          {t.nav[label]}
         </Link>
       ))}
     </nav>

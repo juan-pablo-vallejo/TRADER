@@ -18,7 +18,8 @@ import { EditorRow, EditorSection, RowToggle } from "../../row-editor";
 import { JobsTabs } from "../../jobs-tabs";
 import { PageHeader, CREATE_FORM_ID } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
-import { strings } from "../../strings";
+import { useStrings } from "../../i18n";
+import type { Catalog } from "../../i18n/en";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import styles from "./jobs.module.css";
@@ -86,6 +87,7 @@ function useRefresh() {
 }
 
 export function JobsScreen({ signInHref }: { signInHref: string }) {
+  const { t } = useStrings();
   const list = useJobs();
   const customers = useCustomers();
   const [filter, setFilter] = useState<Status | "all">("open");
@@ -96,11 +98,11 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
     <>
       <JobsTabs />
       <PageHeader
-        title={strings.jobs}
+        title={t.jobs}
         action={
           ready
             ? {
-                label: strings.addJob,
+                label: t.addJob,
                 open: adding,
                 onToggle: () => setAdding((a) => !a),
               }
@@ -120,7 +122,7 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
           {adding && (
             <CreateForm customers={customers.data!} onDone={() => setAdding(false)} />
           )}
-          <Field id="jobs-filter" label={strings.show} className={styles.filter}>
+          <Field id="jobs-filter" label={t.show} className={styles.filter}>
             <select
               id="jobs-filter"
               className={controls.select}
@@ -129,10 +131,10 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
             >
               {STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {strings.jobStatus[s]}
+                  {t.jobStatus[s]}
                 </option>
               ))}
-              <option value="all">{strings.allJobs}</option>
+              <option value="all">{t.allJobs}</option>
             </select>
           </Field>
           <JobsTable rows={list.data!} filter={filter} customers={customers.data!} />
@@ -153,6 +155,7 @@ function FactsFields({
   value: Facts;
   onChange: (next: Facts) => void;
 }) {
+  const { t } = useStrings();
   const set =
     (key: keyof Facts) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       onChange({ ...value, [key]: e.target.value });
@@ -181,7 +184,7 @@ function FactsFields({
   );
   return (
     <div className={styles.formGrid}>
-      <Field id={`${id}-customerId`} label={strings.customer}>
+      <Field id={`${id}-customerId`} label={t.customer}>
         <select
           id={`${id}-customerId`}
           autoFocus={id === "new-job"}
@@ -190,7 +193,7 @@ function FactsFields({
           value={value.customerId}
           onChange={set("customerId")}
         >
-          <option value="">{strings.chooseCustomer}</option>
+          <option value="">{t.chooseCustomer}</option>
           {options.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -198,16 +201,16 @@ function FactsFields({
           ))}
         </select>
       </Field>
-      {input("name", strings.job, { type: "text", required: true, maxLength: 200 })}
+      {input("name", t.job, { type: "text", required: true, maxLength: 200 })}
       <div className={styles.wide}>
-        {input("address", strings.address, { type: "text", maxLength: 500 })}
+        {input("address", t.address, { type: "text", maxLength: 500 })}
       </div>
       <details className={`${styles.location} ${styles.wide}`} open={located}>
-        <summary className="label">{strings.location}</summary>
+        <summary className="label">{t.location}</summary>
         <div className={styles.locationGrid}>
-          {input("lat", strings.latitude, { type: "text", inputMode: "decimal" })}
-          {input("lng", strings.longitude, { type: "text", inputMode: "decimal" })}
-          {input("radiusM", strings.radiusM, { type: "text", inputMode: "numeric" })}
+          {input("lat", t.latitude, { type: "text", inputMode: "decimal" })}
+          {input("lng", t.longitude, { type: "text", inputMode: "decimal" })}
+          {input("radiusM", t.radiusM, { type: "text", inputMode: "numeric" })}
         </div>
       </details>
     </div>
@@ -215,16 +218,17 @@ function FactsFields({
 }
 
 // What a `rejected` answer says, by its code and the control it came from.
-const reason = (code: string, on: "facts" | "status") =>
+const reason = (t: Catalog, code: string, on: "facts" | "status") =>
   code === "customer_inactive"
     ? on === "status"
-      ? strings.customerInactiveOnStatus
-      : strings.customerInactive
+      ? t.customerInactiveOnStatus
+      : t.customerInactive
     : code === "has_invoices"
-      ? strings.hasInvoices
-      : strings.requestFailed;
+      ? t.hasInvoices
+      : t.requestFailed;
 
 function CreateForm({ customers, onDone }: { customers: Customers; onDone: () => void }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [facts, setFacts] = useState<Facts>(EMPTY);
@@ -233,7 +237,7 @@ function CreateForm({ customers, onDone }: { customers: Customers; onDone: () =>
     trpc.job.create.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(reason(answer.code, "facts"));
+          setNote(reason(t, answer.code, "facts"));
           return;
         }
         setFacts(EMPTY);
@@ -241,14 +245,14 @@ function CreateForm({ customers, onDone }: { customers: Customers; onDone: () =>
         await refresh();
         onDone();
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const location = locationOf(facts);
     if (location === "partial") {
-      setNote(strings.locationAllOrNone);
+      setNote(t.locationAllOrNone);
       return;
     }
     setNote(null);
@@ -262,14 +266,14 @@ function CreateForm({ customers, onDone }: { customers: Customers; onDone: () =>
   return (
     <form
       id={CREATE_FORM_ID}
-      aria-label={strings.addJob}
+      aria-label={t.addJob}
       className={controls.card}
       onSubmit={submit}
     >
       <FactsFields id="new-job" customers={customers} value={facts} onChange={setFacts} />
       <Note text={note} />
       <button type="submit" className={controls.primary} disabled={create.isPending}>
-        {strings.addJob}
+        {t.addJob}
       </button>
     </form>
   );
@@ -284,6 +288,7 @@ function JobsTable({
   filter: Status | "all";
   customers: Customers;
 }) {
+  const { t } = useStrings();
   const [editing, setEditing] = useState<string | null>(null);
   // The row whose editor is open stays whatever the filter says: a status change under the
   // default "Open" filter would otherwise take the row, its editor and the result note away
@@ -291,17 +296,17 @@ function JobsTable({
   const rows = all.filter(
     (j) => filter === "all" || j.status === filter || j.id === editing,
   );
-  if (rows.length === 0) return <EmptyState text={strings.emptyJobs} />;
+  if (rows.length === 0) return <EmptyState text={t.emptyJobs} />;
   return (
     <table className={table.table}>
       <thead>
         <tr>
-          <th scope="col">{strings.job}</th>
-          <th scope="col">{strings.customer}</th>
-          <th scope="col">{strings.status}</th>
-          <th scope="col">{strings.address}</th>
+          <th scope="col">{t.job}</th>
+          <th scope="col">{t.customer}</th>
+          <th scope="col">{t.status}</th>
+          <th scope="col">{t.address}</th>
           <th scope="col">
-            <span className="visually-hidden">{strings.edit}</span>
+            <span className="visually-hidden">{t.edit}</span>
           </th>
         </tr>
       </thead>
@@ -311,18 +316,18 @@ function JobsTable({
           return (
             <Fragment key={row.id}>
               <tr>
-                <td data-label={strings.job} className="body-strong">
+                <td data-label={t.job} className="body-strong">
                   {row.name}
                 </td>
-                <td data-label={strings.customer}>{row.customer.name}</td>
-                <td data-label={strings.status} className={table.status}>
-                  {strings.jobStatus[row.status]}
+                <td data-label={t.customer}>{row.customer.name}</td>
+                <td data-label={t.status} className={table.status}>
+                  {t.jobStatus[row.status]}
                 </td>
                 <td
-                  data-label={strings.address}
+                  data-label={t.address}
                   data-empty={row.address === null ? "" : undefined}
                 >
-                  {row.address ?? strings.none}
+                  {row.address ?? t.none}
                 </td>
                 <RowToggle
                   rowId={row.id}
@@ -344,9 +349,10 @@ function JobsTable({
 }
 
 function Editor({ row, customers }: { row: Row; customers: Customers }) {
+  const { t } = useStrings();
   return (
     <div className={styles.editorGrid}>
-      <EditorSection heading={strings.details}>
+      <EditorSection heading={t.details}>
         <FactsEditor row={row} customers={customers} />
       </EditorSection>
       <StatusEditor row={row} />
@@ -355,6 +361,7 @@ function Editor({ row, customers }: { row: Row; customers: Customers }) {
 }
 
 function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [facts, setFacts] = useState<Facts>(factsOf(row));
@@ -363,20 +370,20 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
     trpc.job.update.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(reason(answer.code, "facts"));
+          setNote(reason(t, answer.code, "facts"));
           return;
         }
-        setNote(strings.saved);
+        setNote(t.saved);
         await refresh();
       },
-      onError: () => setNote(strings.requestFailed),
+      onError: () => setNote(t.requestFailed),
     }),
   );
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const location = locationOf(facts);
     if (location === "partial") {
-      setNote(strings.locationAllOrNone);
+      setNote(t.locationAllOrNone);
       return;
     }
     setNote(null);
@@ -401,7 +408,7 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
         className={`${controls.secondary} ${table.stretch}`}
         disabled={save.isPending}
       >
-        {strings.saveDetails}
+        {t.saveDetails}
       </button>
       <Note text={note} />
     </form>
@@ -409,6 +416,7 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
 }
 
 function StatusEditor({ row }: { row: Row }) {
+  const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [status, setStatus] = useState<Status>(row.status);
@@ -418,16 +426,16 @@ function StatusEditor({ row }: { row: Row }) {
       onSuccess: async (answer) => {
         setStatusNote(
           answer.result === "rejected"
-            ? reason(answer.code, "status")
+            ? reason(t, answer.code, "status")
             : answer.result === "unchanged"
-              ? strings.unchanged
+              ? t.unchanged
               : answer.job.status === "archived"
-                ? strings.archivedNote
-                : strings.saved,
+                ? t.archivedNote
+                : t.saved,
         );
         await refresh();
       },
-      onError: () => setStatusNote(strings.requestFailed),
+      onError: () => setStatusNote(t.requestFailed),
     }),
   );
   const busy = setStatusCall.isPending;
@@ -435,7 +443,7 @@ function StatusEditor({ row }: { row: Row }) {
   return (
     <div>
       <EditorSection>
-        <Field id={statusId} label={strings.status}>
+        <Field id={statusId} label={t.status}>
           <select
             id={statusId}
             className={controls.select}
@@ -444,7 +452,7 @@ function StatusEditor({ row }: { row: Row }) {
           >
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {strings.jobStatus[s]}
+                {t.jobStatus[s]}
               </option>
             ))}
           </select>
@@ -455,11 +463,11 @@ function StatusEditor({ row }: { row: Row }) {
           disabled={busy}
           onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
         >
-          {strings.setStatus}
+          {t.setStatus}
         </button>
         <Note
           text={statusNote}
-          tone={statusNote === strings.archivedNote ? "info" : undefined}
+          tone={statusNote === t.archivedNote ? "info" : undefined}
         />
       </EditorSection>
     </div>

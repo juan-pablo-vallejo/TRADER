@@ -1,6 +1,8 @@
-// The office's English strings, in one module. The phone app's strings are its own two
-// typed catalogs; nothing a worker sees lives here.
-export const strings = {
+// The office's English catalog, and the shape of every catalog: `es.ts` is held to this
+// one's keys by the compiler, so a key missing from either fails `pnpm typecheck`. Not
+// `as const`: a sentence is a string in the shape, so another language's sentence fits it.
+// The phone app's strings are its own two catalogs (apps/mobile/src/i18n).
+export const en = {
   wordmark: "TRADER",
   devSignIn: "Development sign-in",
   devSignInBadEmail: "Enter an email address.",
@@ -15,6 +17,9 @@ export const strings = {
   jobsTabs: "Jobs and customers",
   // Said to a screen reader while a list's first rows are on their way.
   loadingRows: "Loading",
+  // Where a person chooses their language: each language under its own name.
+  language: "Language",
+  languages: { en: "English", es: "Español" },
 
   // Navigation
   navigation: "Office",
@@ -486,4 +491,6 @@ export const strings = {
   signInNumberCaption: "Your sign-in code is sent here. The office changes it.",
   save: "Save",
   saved: "Saved.",
-} as const;
+};
+
+export type Catalog = typeof en;
