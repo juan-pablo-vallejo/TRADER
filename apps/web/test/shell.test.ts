@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { officeHost } from "../src/server/environment";
+import { addressFor, listedOrigins } from "../src/server/addresses";
 import { isPublicPath, OFFICE_HOME, PUBLIC_PATHS } from "../src/server/sign-in-paths";
 
 const at = (path: string) =>
@@ -104,21 +104,116 @@ describe("the public pages", () => {
   });
 });
 
-describe("whose `/` it is", () => {
-  it("is the office's only on the host the deployment names", () => {
-    const env = { TRADER_OFFICE_HOST: "app.jpteq.app" };
-    expect(officeHost(env, "app.jpteq.app")).toBe(true);
-    expect(officeHost(env, "APP.JPTEQ.APP")).toBe(true);
-    expect(officeHost(env, "jpteq.app")).toBe(false);
-    expect(officeHost(env, "www.jpteq.app")).toBe(false);
-    expect(officeHost(env, null)).toBe(false);
+describe("which address a page is served at", () => {
+  const PRODUCTION = {
+    CLERK_AUTHORIZED_PARTIES: "https://app.jpteq.app,https://dsierrapainting.jpteq.app",
+    TRADER_HOME_HOST: "dsierrapainting.jpteq.app",
+  };
+  const at = (
+    env: Record<string, string | undefined>,
+    host: string | null,
+    path: string,
+  ) => {
+    const [pathname = "/", query] = path.split("?");
+    return addressFor(env, {
+      host,
+      pathname,
+      search: query === undefined ? "" : `?${query}`,
+    });
+  };
+  const SERVE = { kind: "serve" };
+  const to = (where: string) => ({ kind: "redirect", to: where });
+
+  it("the home host: `/` is the homepage, and everything else answers as anywhere", () => {
+    const home = "dsierrapainting.jpteq.app";
+    for (const path of [
+      "/",
+      "/get",
+      "/sign-in",
+      "/schedule",
+      "/hours?range=last",
+      "/privacy",
+    ]) {
+      expect([path, at(PRODUCTION, home, path)]).toEqual([path, SERVE]);
+    }
+    // However the browser spelled the host.
+    expect(at(PRODUCTION, "DSierraPainting.JPTEQ.app", "/")).toEqual(SERVE);
+    expect(at(PRODUCTION, "dsierrapainting.jpteq.app.", "/")).toEqual(SERVE);
   });
 
-  it("is the homepage where one host serves both, as on staging", () => {
-    for (const env of [{}, { TRADER_OFFICE_HOST: "" }, { TRADER_OFFICE_HOST: "  " }]) {
-      expect(officeHost(env, "staging.example")).toBe(false);
-      expect(officeHost(env, "")).toBe(false);
+  it("the neutral host: `/` goes to the office, and everything else is served", () => {
+    const neutral = "app.jpteq.app";
+    expect(at(PRODUCTION, neutral, "/")).toEqual(to("/schedule"));
+    for (const path of ["/get", "/sign-in", "/schedule", "/invoices/abc", "/terms"]) {
+      expect([path, at(PRODUCTION, neutral, path)]).toEqual([path, SERVE]);
     }
+  });
+
+  it("an unlisted host: a page goes to the same path on the first listed origin", () => {
+    const stray = "trader-abc123.vercel.app";
+    expect(at(PRODUCTION, stray, "/schedule")).toEqual(
+      to("https://app.jpteq.app/schedule"),
+    );
+    expect(at(PRODUCTION, stray, "/hours?range=last&flagged=1")).toEqual(
+      to("https://app.jpteq.app/hours?range=last&flagged=1"),
+    );
+    expect(at(PRODUCTION, stray, "/")).toEqual(to("https://app.jpteq.app/"));
+    expect(at(PRODUCTION, "www.jpteq.app", "/sign-in")).toEqual(
+      to("https://app.jpteq.app/sign-in"),
+    );
+    // Sent on, it is then the neutral host's own `/`: two steps, never a loop.
+    expect(at(PRODUCTION, "app.jpteq.app", "/")).toEqual(to("/schedule"));
+    expect(at(PRODUCTION, "app.jpteq.app", "/schedule")).toEqual(SERVE);
+  });
+
+  it("never moves the API: the phone and the readiness check name a host of their own", () => {
+    for (const path of ["/api/ready", "/api/trpc/sync.pull", "/api", "/trpc/x"]) {
+      expect([path, at(PRODUCTION, "trader-abc123.vercel.app", path)]).toEqual([
+        path,
+        SERVE,
+      ]);
+    }
+  });
+
+  it("no variable at all: `/` stays the homepage on whatever host asked", () => {
+    for (const env of [{}, { TRADER_HOME_HOST: "" }, { TRADER_HOME_HOST: "  " }]) {
+      for (const host of ["localhost:3000", "staging.example", "anything.at.all"]) {
+        expect(at(env, host, "/")).toEqual(SERVE);
+        expect(at(env, host, "/schedule")).toEqual(SERVE);
+      }
+    }
+    // Staging: its one origin listed, no home host. `/` is the homepage there.
+    const staging = { CLERK_AUTHORIZED_PARTIES: "https://staging.example" };
+    expect(at(staging, "staging.example", "/")).toEqual(SERVE);
+    expect(at(staging, "old.example", "/get")).toEqual(to("https://staging.example/get"));
+  });
+
+  it("reads only origins from the list, and serves when a request names no host", () => {
+    expect(
+      listedOrigins({
+        CLERK_AUTHORIZED_PARTIES:
+          " https://a.example , not a url,https://b.example/path ",
+      }).map((o) => o.origin),
+    ).toEqual(["https://a.example"]);
+    expect(at(PRODUCTION, null, "/schedule")).toEqual(SERVE);
+    expect(at(PRODUCTION, "", "/")).toEqual(SERVE);
+    // A port is part of a host: a local server on another port is not the listed one.
+    const local = { CLERK_AUTHORIZED_PARTIES: "http://localhost:3000" };
+    expect(at(local, "localhost:3000", "/schedule")).toEqual(SERVE);
+    expect(at(local, "localhost:4000", "/schedule")).toEqual(
+      to("http://localhost:3000/schedule"),
+    );
+  });
+
+  it("is carried out by the proxy before Clerk or the page", () => {
+    const proxy = readFileSync(
+      fileURLToPath(new URL("../src/proxy.ts", import.meta.url)),
+      "utf8",
+    );
+    const decided = proxy.indexOf("const address = addressFor(");
+    expect(decided).toBeGreaterThan(0);
+    expect(decided).toBeLessThan(proxy.indexOf("return clerkMiddleware("));
+    expect(decided).toBeLessThan(proxy.indexOf("if (isPublicPath("));
   });
 
   it("sends a signed-in person to the schedule", () => {

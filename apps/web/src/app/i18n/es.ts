@@ -12,6 +12,23 @@ export const es: Catalog = {
   signIn: "Iniciar sesión",
   signOut: "Cerrar sesión",
   teamSignIn: "Acceso del equipo",
+  getApp: "Obtener la aplicación",
+  call: (number) => `Llamar al ${number}`,
+  emailUs: (address) => `Escribir a ${address}`,
+  photos: "Nuestro trabajo",
+  get: {
+    title: "Obtén la aplicación TRADER",
+    explain:
+      "La aplicación a la que te invitó tu oficina: tu semana, y marcar entrada y salida.",
+    iphone: "Obtenerla para iPhone",
+    android: "Obtenerla para Android",
+    askOffice: "El enlace todavía no está aquí. Pídeselo a tu oficina.",
+    androidNote:
+      "En Android la oficina primero tiene que agregar tu cuenta de Google a la lista de pruebas. Si la página dice que la aplicación no está disponible, pídeles que te agreguen.",
+    thenSignIn:
+      "Después abre la aplicación e inicia sesión con el número de celular que la oficina invitó.",
+    home: "Volver a la página principal",
+  },
   account: "Tu cuenta",
   jobsTabs: "Obras y clientes",
   loadingRows: "Cargando",

@@ -1,5 +1,8 @@
-// The request proxy (Next 16's name for middleware). Two jobs, both per request and never at
-// module load.
+// The request proxy (Next 16's name for middleware). Three jobs, all per request and never
+// at module load.
+// The address's: a page asked for on a host no session can belong to, or `/` on a host
+// that is not the homepage's, is sent where it belongs before anything else runs
+// (server/addresses.ts).
 // Clerk's: it verifies the session token and leaves what it found for `auth()` in the route
 // handler (server/identity.ts); on a page request it also renews an expired session by
 // Clerk's own redirect. It protects no route: the API's gates are the only authority, 401
@@ -15,6 +18,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
+import { addressFor } from "./server/addresses";
 import { clerkEnv, partiesFor } from "./server/clerk-env";
 import {
   clerkFrontendApi,
@@ -43,8 +47,24 @@ function pass(request: NextRequest, publishableKey: string | null): NextResponse
 }
 
 export default function proxy(request: NextRequest, event: NextFetchEvent) {
+  // The origins rule is Clerk's sessions' and holds only where Clerk is the identity: a
+  // development machine's `.env` may list origins it does not answer on.
+  const clerkIsIdentity = identityMode(process.env) === "clerk";
+  const address = addressFor(
+    clerkIsIdentity ? process.env : { ...process.env, CLERK_AUTHORIZED_PARTIES: "" },
+    {
+      host: request.headers.get("host"),
+      pathname: request.nextUrl.pathname,
+      search: request.nextUrl.search,
+    },
+  );
+  if (address.kind === "redirect") {
+    // 307: the same request, somewhere else, and nothing a browser should remember if the
+    // hosts are changed.
+    return NextResponse.redirect(new URL(address.to, request.nextUrl), 307);
+  }
   const env = clerkEnv(process.env);
-  if (identityMode(process.env) !== "clerk" || env === null) return pass(request, null);
+  if (!clerkIsIdentity || env === null) return pass(request, null);
   // A public page: the policy and its nonce, with no Clerk host in it, and no session read.
   if (isPublicPath(request.nextUrl.pathname)) return pass(request, null);
   // Clerk reads its two keys from the environment itself: handed over as options here, the

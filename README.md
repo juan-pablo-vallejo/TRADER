@@ -144,17 +144,26 @@ Once, in this order.
 
 3. **Clerk.** Production instance on `jpteq.app`, its DNS records in Cloudflare, the
    development instance's settings copied. That includes the four session-token claims
-   `.env.example` lists: without them every signed-in call answers 401.
-4. **Vercel.** Production project: domains `app.jpteq.app`, `jpteq.app` and `www`; a deploy
-   hook for `production`; one firewall rate-limit rule on `/api`. Its Production variables,
-   as `.env.example` describes them:
+   `.env.example` lists: without them every signed-in call answers 401. Under Allowed
+   Subdomains add `app` and `dsierrapainting`: a session is issued to one of those two
+   origins and to no other.
+4. **Vercel.** Production project: domains `app.jpteq.app` and
+   `dsierrapainting.jpteq.app`, each with its DNS record in Cloudflare, and `jpteq.app`
+   and `www` redirecting to `app.jpteq.app`; a deploy hook for `production`; one firewall
+   rate-limit rule on `/api`. Its Production variables, as `.env.example` describes them:
    - `TRADER_ENVIRONMENT=production`
    - `DATABASE_URL`: the pooled endpoint, logged in as `trader_app`
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`: Clerk's production keys
-   - `CLERK_AUTHORIZED_PARTIES=https://app.jpteq.app`
+   - `CLERK_AUTHORIZED_PARTIES=https://app.jpteq.app,https://dsierrapainting.jpteq.app`,
+     `app.jpteq.app` first: a page asked for on any other host is sent to the same path
+     on the first origin listed
    - `SENTRY_DSN`
-   - `TRADER_OFFICE_HOST=app.jpteq.app`, so `/` there opens the office and `/` on
-     `jpteq.app` opens the homepage
+   - `TRADER_HOME_HOST=dsierrapainting.jpteq.app`, so `/` there is D Sierra's homepage
+     and `/` on `app.jpteq.app` opens the office
+   - `NEXT_PUBLIC_GET_IOS_URL` and `NEXT_PUBLIC_GET_ANDROID_URL`, after step 6: the
+     TestFlight public link and the Play testing link, which
+     `https://dsierrapainting.jpteq.app/get` hands to the phone that asks. Blank, that
+     page says to ask the office.
    - `RESEND_API_KEY` and `MAIL_FROM`, both or neither. Leave `INVOICE_EMAIL_ALLOWLIST`
      blank: in production that means any customer may be emailed, except by the Demo
      company, which then emails nobody.

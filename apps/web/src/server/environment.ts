@@ -15,13 +15,3 @@ export function traderEnvironment(env: Env): TraderEnvironment | null {
     ? (value as TraderEnvironment)
     : null;
 }
-
-// Where a deployment answers on two hosts, the public pages on one and the office on the
-// other (production: `jpteq.app` and `app.jpteq.app`), TRADER_OFFICE_HOST names the
-// office's, and `/` on it goes to the office instead of the homepage. Blank, as on staging
-// and a development machine, there is one host and `/` is the homepage. A host is compared
-// as the browser sent it, without regard to case; a port is part of it.
-export function officeHost(env: Env, host: string | null): boolean {
-  const office = (env.TRADER_OFFICE_HOST ?? "").trim().toLowerCase();
-  return office !== "" && host !== null && host.trim().toLowerCase() === office;
-}

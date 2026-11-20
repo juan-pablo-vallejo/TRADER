@@ -55,11 +55,56 @@
   gap: var(--space-6);
   padding-top: var(--space-6);
 }
-.home a {
+.home h1,
+.home p {
+  margin: 0;
+}
+/* A sentence or two, held to a readable measure and centered under the logo. */
+.about {
+  max-width: 34rem;
+  text-align: center;
+}
+.contact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+}
+.contact a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
+.photos {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+}
+.photos img {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-card);
+}
+/* The ways in: buttons of one width, one under the other. */
+.ways {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 320px;
+}
+.ways a {
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
   text-decoration: none;
-  max-width: 320px;
+  text-align: center;
+}
+.ways p {
+  text-align: center;
+}
+@media (min-width: 768px) {
+  .photos {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }

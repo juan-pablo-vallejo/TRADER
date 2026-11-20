@@ -11,6 +11,23 @@ export const en = {
   signOut: "Sign out",
   // The homepage's way in for the crew and the office.
   teamSignIn: "Team sign-in",
+  // The homepage and `/get`, the page an invitation points to.
+  getApp: "Get the app",
+  call: (number: string) => `Call ${number}`,
+  emailUs: (address: string) => `Email ${address}`,
+  photos: "Our work",
+  get: {
+    title: "Get the TRADER app",
+    explain: "The app your office invited you to: your week, and clocking in and out.",
+    iphone: "Get it for iPhone",
+    android: "Get it for Android",
+    askOffice: "The link is not here yet. Ask your office for it.",
+    androidNote:
+      "On Android the office must first add your Google account to the testers. If the page says the app is not available, ask them to add you.",
+    thenSignIn:
+      "Then open the app and sign in with the mobile number the office invited.",
+    home: "Back to the homepage",
+  },
   // The header's menu behind the person's name.
   account: "Your account",
   // The two tabs of one place: a job belongs to a customer.
