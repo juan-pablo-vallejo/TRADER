@@ -514,7 +514,7 @@ Android user.
   Done when a job has been created with a new customer in one form on staging, and a test
   reads a pasted pair and a maps address into the same location.
 
-- [ ] 28. **The job page.** `/jobs/[id]`, one page that says where a job stands. `job.read`,
+- [x] 28. **The job page.** `/jobs/[id]`, one page that says where a job stands. `job.read`,
       admin only, answers it in one call.
   - A row of four steps, each derived and never stored: Scheduled (a shift today or later),
     Hours recorded, Invoiced (an issued invoice that is not void), Paid (nothing owed on
@@ -793,6 +793,15 @@ Android user.
 - [ ] Item 27: every reader of `job.list` now gets each job's hours, which folds the whole
       ledger: the Schedule, Invoices and Hours screens ask for it only for the names. Fine
       for a crew of ten; a `job.names` read would spare it if the ledger grows.
+
+- [ ] Item 28, how it was seen on staging: "Item 27 fence" with none of the four steps
+      reached and Schedule as its action; "Item 11 porch repaint" scheduled, with hours and
+      invoiced but not paid; then, once the $352.50 owed on its invoice was noted as paid
+      from the invoice's page, all four reached; that page in Spanish at 390. Create
+      invoice as the action was seen on the local demo. Staging's invoice 1 is now paid.
+- [ ] Item 28: a job's name links to its page from the Jobs table, the Invoices list, an
+      invoice's page and the Hours list. In sentences (Today's rows, the Schedule's cards,
+      which are buttons of their own) it is still plain text.
 
 ## After MVP
 
