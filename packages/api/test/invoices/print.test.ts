@@ -2,7 +2,7 @@
 // date and how to pay are found in the PDF's own text and in the email; and an invoice
 // issued before a change to Settings prints as it did, byte for byte, while one issued
 // after prints the new words. Every test runs in an owner transaction, always rolled back.
-import { companies, invoiceCounters, invoices } from "@trader/db/schema";
+import { companies, customers, invoiceCounters, invoices, jobs } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -49,6 +49,19 @@ async function office(tx: Tx) {
     await asTenant(tx, d.companyId);
   };
   await settings(AS_ISSUED);
+  // The customer and the job as the office would have them, and a later change to either.
+  const customer = async (values: { name?: string; address?: string | null }) => {
+    await tx.execute(sql`reset role`);
+    await tx.update(customers).set(values).where(eq(customers.id, d.customerId));
+    await asTenant(tx, d.companyId);
+  };
+  const job = async (name: string) => {
+    await tx.execute(sql`reset role`);
+    await tx.update(jobs).set({ name }).where(eq(jobs.id, d.J));
+    await asTenant(tx, d.companyId);
+  };
+  await customer({ name: "Harbor Dental", address: "12 Wharf St, Bristol, RI 02809" });
+  await job("Waiting room repaint");
   const sent: Mail[] = [];
   const mailer: Mailer = {
     send: (mail) => {
@@ -83,7 +96,7 @@ async function office(tx: Tx) {
   };
   const text = async (invoiceId: string) =>
     drawn(Buffer.from(await page(invoiceId), "base64"));
-  return { ...d, bill, issued, page, text, settings, sent };
+  return { ...d, bill, issued, page, text, settings, customer, job, sent };
 }
 
 describe("what a customer is sent", () => {
@@ -175,6 +188,52 @@ describe("what a customer is sent", () => {
     });
   });
 
+  it("prints the customer and the job as they were at issue", async () => {
+    await rolledBack(owner, async (tx) => {
+      const o = await office(tx);
+      // A draft reads the live record.
+      const draft = uuidv7();
+      await o.bill.create({ id: draft, jobId: o.J, currency: "USD" });
+      expect((await o.bill.read({ invoiceId: draft })).customer.name).toBe(
+        "Harbor Dental",
+      );
+
+      const id = await o.issued(50_000);
+      const asItWas = await o.page(id);
+      const words = await o.text(id);
+      expect(words).toContain("Harbor Dental");
+      expect(words).toContain("12 Wharf St, Bristol, RI 02809");
+      expect(words).toContain("Waiting room repaint");
+
+      await o.customer({ name: "Harbor Family Dental LLC", address: "400 Hope St" });
+      await o.job("Whole office repaint");
+
+      // The same page, byte for byte, and so the same text.
+      expect(await o.page(id)).toBe(asItWas);
+      expect(await o.text(id)).toBe(words);
+      const read = await o.bill.read({ invoiceId: id });
+      expect(read.customer.name).toBe("Harbor Dental");
+      expect(read.job.name).toBe("Waiting room repaint");
+      // The draft follows the live record, and the list may too.
+      const live = await o.bill.read({ invoiceId: draft });
+      expect(live.customer.name).toBe("Harbor Family Dental LLC");
+      expect(live.job.name).toBe("Whole office repaint");
+      // The database freezes the copy and holds it on every issued row.
+      await tx.execute(sql`reset role`);
+      for (const forged of [
+        { printedCustomerName: "Forged" },
+        { printedJobName: null },
+      ]) {
+        const refused = await rejection(
+          tx.transaction((sp) =>
+            sp.update(invoices).set(forged).where(eq(invoices.id, id)),
+          ),
+        );
+        expect(sqlstateOf(refused)).toBe("23000");
+      }
+    });
+  });
+
   it("takes the copy at issue and not before, and the database freezes it", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
@@ -208,6 +267,9 @@ describe("what a customer is sent", () => {
         companyPhone: AS_ISSUED.phone,
         companyEmail: AS_ISSUED.email,
         howToPay: AS_ISSUED.paymentInstructions,
+        customerName: "Harbor Dental",
+        customerAddress: "12 Wharf St, Bristol, RI 02809",
+        jobName: "Waiting room repaint",
       });
       await tx.execute(sql`reset role`);
       const refused = await rejection(

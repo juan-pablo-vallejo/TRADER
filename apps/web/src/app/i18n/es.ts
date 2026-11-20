@@ -142,8 +142,6 @@ export const es: Catalog = {
     add: "Agregar turno",
     addShifts: (n) => (n === 1 ? "Agregar 1 turno" : `Agregar ${n} turnos`),
     remove: "Quitar turno",
-    removeEffect: (name, jobsite, day) =>
-      `${name} ya no tendrá turno en ${jobsite} el ${day}. Las horas registradas no cambian.`,
     did: {
       moved: (name, day) => `El turno de ${name} se movió al ${day}.`,
       changed: (name, hours) => `El turno de ${name} cambió a ${hours}.`,

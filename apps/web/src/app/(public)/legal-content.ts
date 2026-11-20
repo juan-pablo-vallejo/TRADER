@@ -43,16 +43,17 @@ export const PRIVACY: Record<Language, Document> = {
         paragraphs: [
           "About you, from your office: your name, the mobile number you sign in with, an email if the office gave one, and whether you are a worker or an admin. You can add a contact phone yourself.",
           "Your schedule: the shifts the office plans for you.",
-          "Your hours: each time you clock in, clock out, start a break or end one, the app records that it happened, on which jobsite, the time on your phone and the time the office's system received it, and whether the phone had a connection. These entries are never edited or deleted. If one is wrong, the office adds a correcting entry beside it, and both stay.",
+          "Your hours: each time you clock in, clock out, switch jobsite, start a break or end one, the app records that it happened, on which jobsite, the time on your phone and the time the office's system received it, and whether the phone had a connection. These entries are never edited or deleted. If one is wrong, the office adds a correcting entry beside it, and both stay.",
           "For the office's own work: its customers' names and contact details, its jobsites and their addresses, its invoices and the payments it notes on them.",
         ],
       },
       {
         heading: "Location",
         paragraphs: [
-          "At the moment you tap to clock in, clock out, or start or end a break, the app records where the phone is: one position, with how accurate it is. That is the only time. The app reads a location only while it is open on your screen, never in the background, and it does not follow you between taps.",
+          "At the moment you tap to clock in, clock out, switch jobsite, or start or end a break, the app records where the phone is: one position, with how accurate it is. That is the only time. The app reads a location only while it is open on your screen, never in the background, and it does not follow you between taps.",
           "The position is kept with the entry so the office can tell whether a tap was at the jobsite. The office sees a mark on an entry that had no location or was away from the jobsite; it is not shown a map of where you were.",
           "Your office can switch location off for the whole company or for you alone, and the app then neither asks for a location nor records one. You can also refuse the phone's location permission: the clock still works, and your entries are marked as having no location.",
+          "An admin can also set a jobsite's location from where their own phone is. That position is saved as the jobsite's place, not as a record about the admin.",
         ],
       },
       {
@@ -104,16 +105,17 @@ export const PRIVACY: Record<Language, Document> = {
         paragraphs: [
           "Sobre ti, de parte de tu oficina: tu nombre, el número de celular con el que inicias sesión, un correo si la oficina dio uno, y si eres trabajador o administrador. Tú puedes agregar un teléfono de contacto.",
           "Tu horario: los turnos que la oficina planea para ti.",
-          "Tus horas: cada vez que marcas entrada, marcas salida, empiezas un descanso o lo terminas, la aplicación anota que pasó, en qué obra, la hora de tu teléfono y la hora en que el sistema de la oficina lo recibió, y si el teléfono tenía conexión. Estos registros nunca se editan ni se borran. Si uno está mal, la oficina agrega al lado un registro que lo corrige, y los dos se conservan.",
+          "Tus horas: cada vez que marcas entrada, marcas salida, cambias de obra, empiezas un descanso o lo terminas, la aplicación anota que pasó, en qué obra, la hora de tu teléfono y la hora en que el sistema de la oficina lo recibió, y si el teléfono tenía conexión. Estos registros nunca se editan ni se borran. Si uno está mal, la oficina agrega al lado un registro que lo corrige, y los dos se conservan.",
           "Para el trabajo de la oficina: los nombres y datos de contacto de sus clientes, sus obras y sus direcciones, sus facturas y los pagos que anota en ellas.",
         ],
       },
       {
         heading: "Ubicación",
         paragraphs: [
-          "En el momento en que tocas para marcar entrada, marcar salida, o empezar o terminar un descanso, la aplicación anota dónde está el teléfono: una sola posición, con qué tan exacta es. Ese es el único momento. La aplicación lee la ubicación solo mientras está abierta en tu pantalla, nunca en segundo plano, y no te sigue entre un toque y otro.",
+          "En el momento en que tocas para marcar entrada, marcar salida, cambiar de obra, o empezar o terminar un descanso, la aplicación anota dónde está el teléfono: una sola posición, con qué tan exacta es. Ese es el único momento. La aplicación lee la ubicación solo mientras está abierta en tu pantalla, nunca en segundo plano, y no te sigue entre un toque y otro.",
           "La posición se guarda con el registro para que la oficina sepa si marcaste en la obra. La oficina ve una señal en un registro que no tuvo ubicación o que fue lejos de la obra; no se le muestra un mapa de dónde estuviste.",
           "Tu oficina puede desactivar la ubicación para toda la empresa o solo para ti, y entonces la aplicación ni pide la ubicación ni la anota. También puedes negar el permiso de ubicación del teléfono: el reloj sigue funcionando, y tus registros quedan señalados como sin ubicación.",
+          "Un administrador también puede fijar la ubicación de una obra desde donde está su propio teléfono. Esa posición se guarda como el lugar de la obra, no como un registro sobre el administrador.",
         ],
       },
       {

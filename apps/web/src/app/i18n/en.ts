@@ -152,8 +152,6 @@ export const en = {
     add: "Add shift",
     addShifts: (n: number) => (n === 1 ? "Add 1 shift" : `Add ${n} shifts`),
     remove: "Remove shift",
-    removeEffect: (name: string, jobsite: string, day: string) =>
-      `${name} will no longer be scheduled at ${jobsite} on ${day}. Recorded hours do not change.`,
     // A change shown at once, in the toast that offers Undo, and what became of it.
     did: {
       moved: (name: string, day: string) => `${name}'s shift moved to ${day}.`,

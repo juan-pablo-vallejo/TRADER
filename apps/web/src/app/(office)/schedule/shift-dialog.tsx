@@ -410,16 +410,15 @@ export function EditShift({
             <Note text={note} />
           </form>
           <div className={styles.remove}>
-            <DestructiveAction
-              label={s.remove}
-              effect={s.removeEffect(
-                shift.worker.name,
-                shift.job.name,
-                f.weekDay(shift.workDate),
-              )}
-              disabled={false}
-              onConfirm={() => onChange({ kind: "remove", shift })}
-            />
+            {/* One press, no question: the toast's Undo is the way back (optimistic.ts).
+                Every other removal in the office still asks first. */}
+            <button
+              type="button"
+              className={controls.destructive}
+              onClick={() => onChange({ kind: "remove", shift })}
+            >
+              {s.remove}
+            </button>
           </div>
         </div>
         <PersonWeek

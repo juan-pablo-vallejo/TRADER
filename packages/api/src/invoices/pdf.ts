@@ -6,16 +6,15 @@
 // The page is the only thing a customer sees, so it opens with what they need: the amount
 // due, the day it is due and the invoice's number. Then who is asking (the company's
 // block), who is asked, the job, the lines, the payments received and the balance, and how
-// to pay. The company's block and the instructions are the copy the invoice took at issue
-// (`printed`), never the company as it stands today. PAID across the head when nothing is
-// owed.
+// to pay. The company's block, the instructions, the customer's name and address and the
+// job's name are the copy the invoice took at issue (`printed`), never the records as
+// they stand today. PAID across the head when nothing is owed.
 //
 // `renderInvoice` is pure: a plain description of the page in, bytes out, the same bytes for
 // the same description (the document's dates are the invoice's own, never the clock's). The
 // standard Helvetica carries Latin text only, so a character it cannot draw is written `?`
 // rather than failing the invoice. Consumed by routers/invoice.ts.
-import { companies, customers, invoices } from "@trader/db/schema";
-import { eq } from "drizzle-orm";
+import { companies } from "@trader/db/schema";
 import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import { z } from "zod";
 
@@ -330,11 +329,6 @@ export async function invoicePdf(
   // The company as it stands is read for its timezone alone: what prints is the copy.
   const [company] = await tx.select({ timezone: companies.timezone }).from(companies);
   if (company === undefined) throw new Error("the caller's company is not visible");
-  const [customer] = await tx
-    .select({ address: customers.address })
-    .from(invoices)
-    .innerJoin(customers, eq(customers.id, invoices.customerId))
-    .where(eq(invoices.id, invoice.id));
   if (invoice.printed === null) throw new Error("an issued invoice has no printed copy");
   const bytes = await renderInvoice({
     company: {
@@ -353,8 +347,11 @@ export async function invoicePdf(
     dueOn: invoice.dueOn ?? workDate(invoice.issuedAt, company.timezone),
     status: INVOICE_STATUS_WORDS[invoice.status],
     void: invoice.state === "void",
-    customer: { name: invoice.customer.name, address: customer?.address ?? null },
-    job: invoice.job.name,
+    customer: {
+      name: invoice.printed.customerName,
+      address: invoice.printed.customerAddress,
+    },
+    job: invoice.printed.jobName,
     currency: invoice.currency,
     lines: invoice.lines,
     subtotalCents: invoice.subtotalCents,

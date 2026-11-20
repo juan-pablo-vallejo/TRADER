@@ -82,6 +82,11 @@ export const invoices = pgTable(
     printedCompanyPhone: text("printed_company_phone"),
     printedCompanyEmail: text("printed_company_email"),
     printedPaymentInstructions: text("printed_payment_instructions"),
+    // The rest of what prints, copied at the same moment from the customer and the job:
+    // renaming either, or moving the customer, never reaches an issued invoice's page.
+    printedCustomerName: text("printed_customer_name"),
+    printedCustomerAddress: text("printed_customer_address"),
+    printedJobName: text("printed_job_name"),
     issuedAt: timestamp("issued_at", { withTimezone: true }),
     issuedByUserId: uuid("issued_by_user_id"),
     voidedAt: timestamp("voided_at", { withTimezone: true }),
@@ -145,6 +150,11 @@ export const invoices = pgTable(
     check(
       "invoices_issued_has_print",
       sql`${t.issuedAt} IS NULL OR ${t.printedCompanyName} IS NOT NULL`,
+    ),
+    // And the customer and the job it was made out for.
+    check(
+      "invoices_issued_has_print_names",
+      sql`${t.issuedAt} IS NULL OR (${t.printedCustomerName} IS NOT NULL AND ${t.printedJobName} IS NOT NULL)`,
     ),
   ],
 );

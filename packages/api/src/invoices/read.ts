@@ -79,7 +79,9 @@ export const readOutput = z.strictObject({
       amountCents: z.number().int(),
     }),
   ),
-  // What prints, as copied from the company at issue; null on a draft, which prints nothing.
+  // What prints, as copied at issue from the company, the customer and the job; null on a
+  // draft, which prints nothing. On an issued invoice `customer.name` and `job.name` above
+  // are this copy too; the lists go on reading the live names.
   printed: z
     .strictObject({
       companyName: z.string(),
@@ -87,6 +89,9 @@ export const readOutput = z.strictObject({
       companyPhone: z.string().nullable(),
       companyEmail: z.string().nullable(),
       howToPay: z.string().nullable(),
+      customerName: z.string(),
+      customerAddress: z.string().nullable(),
+      jobName: z.string(),
     })
     .nullable(),
   // The customer's address on file, offered as where to send the page; the admin may type
@@ -332,6 +337,9 @@ export async function readInvoice(
       printedCompanyPhone: invoices.printedCompanyPhone,
       printedCompanyEmail: invoices.printedCompanyEmail,
       printedPaymentInstructions: invoices.printedPaymentInstructions,
+      printedCustomerName: invoices.printedCustomerName,
+      printedCustomerAddress: invoices.printedCustomerAddress,
+      printedJobName: invoices.printedJobName,
     })
     .from(invoices)
     .innerJoin(customers, eq(customers.id, invoices.customerId))
@@ -387,18 +395,34 @@ export async function readInvoice(
     .from(customers)
     .where(eq(customers.id, row.customerId));
   const reversedIds = new Set(recorded.map((p) => p.reversesPaymentId));
+  // An issued row always holds all three names (the database's own checks).
+  const printed =
+    row.printedCompanyName === null ||
+    row.printedCustomerName === null ||
+    row.printedJobName === null
+      ? null
+      : {
+          companyName: row.printedCompanyName,
+          companyAddress: row.printedCompanyAddress,
+          companyPhone: row.printedCompanyPhone,
+          companyEmail: row.printedCompanyEmail,
+          howToPay: row.printedPaymentInstructions,
+          customerName: row.printedCustomerName,
+          customerAddress: row.printedCustomerAddress,
+          jobName: row.printedJobName,
+        };
+  const head = headerOf(
+    row,
+    totals(lines, row.taxCents).subtotalCents,
+    row.paidCents,
+    today,
+  );
   return {
-    ...headerOf(row, totals(lines, row.taxCents).subtotalCents, row.paidCents, today),
-    printed:
-      row.printedCompanyName === null
-        ? null
-        : {
-            companyName: row.printedCompanyName,
-            companyAddress: row.printedCompanyAddress,
-            companyPhone: row.printedCompanyPhone,
-            companyEmail: row.printedCompanyEmail,
-            howToPay: row.printedPaymentInstructions,
-          },
+    ...head,
+    // The copy on an issued invoice, the live record on a draft.
+    customer: { id: head.customer.id, name: printed?.customerName ?? head.customer.name },
+    job: { id: head.job.id, name: printed?.jobName ?? head.job.name },
+    printed,
     issuedBy: row.issuedBy,
     voidedBy: row.voidedBy,
     lines,

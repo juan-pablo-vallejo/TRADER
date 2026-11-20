@@ -42,7 +42,7 @@ and `www` only send a visitor to `app.jpteq.app`.
 - Sign in.
 - Today: who is on the clock, who is expected and late, sessions left open, money owed.
 - Schedule: weekly; one person, one job, one day, start to end. An admin can end a started
-  shift early to move someone.
+  shift early to move someone. Removing a shift asks nothing: Undo brings it back.
 - Hours: a week of people by days. Every entry counts. Flags are badges. A day opens in a
   side panel, where a mistake is fixed with a correcting entry. Payroll hours export as CSV
   for any date range.
@@ -69,10 +69,10 @@ payment, a customer's invoice page, payment reminders and receipts, an estimate 
 **Finish line.** D Sierra's whole crew runs one full pay period on it: every hour clocked on
 a phone, payroll hours exported from TRADER, one real invoice issued and emailed.
 
-**Two releases.** Release 1 is the crew's first day: everything in the phone build, and the
-office's sign-in, Schedule, Hours, People, Settings and the public pages. Release 2 lands
-during the pay period: Today, Jobs and the job page, invoices, and the three accelerators.
-The phone app changes only with a new build; the office changes the moment a release merges.
+**One release.** Changed 2026-11-20; it replaces "Two releases". Everything on the list goes
+out together: the second release's screens were built before the first went out. What ships
+after it is a release of its own, when there is something to ship. The phone app changes only
+with a new build; the office changes the moment a release merges.
 
 **How it reaches phones** (checked against Apple's and Google's pages, 2026-11-18)
 
@@ -105,7 +105,8 @@ The phone app changes only with a new build; the office changes the moment a rel
    `jpteq.app` address is only ever served by TRADER itself from the repository; a site a
    contractor hosts or edits themselves goes on the contractor's own domain.
 7. What prints on an invoice is copied onto it at issue, so an issued invoice's page never
-   changes. An invoice to a customer is in English.
+   changes: the company's block and how to pay, the customer's name and address, and the
+   job's name. An invoice to a customer is in English.
 8. An entry the office writes is flagged `corrected` and never `location`.
 9. An address never decides whose data is shown: the signed-in person's company does. The
    phone app and the release checks use `app.jpteq.app`, so no customer's name is built into
@@ -135,12 +136,14 @@ Three things hold for every item and are not repeated in each:
 
 In the order they block. Each can be done ahead of its item.
 
-1. Clerk's development instance: turn test mode on, or accept sign-in tickets as the only
-   way in to staging by hand ("Found along the way"). It blocks every phone check on staging.
+1. Staging by hand: decided 2026-11-20. The owner signs in to staging as himself, an admin
+   of staging's company on his own number, by texted code. Clerk's test mode stays off, and
+   the machine goes on signing in by ticket.
 2. Item 3: choose how the Demo company signs in without an SMS.
 3. Item 12: a Sentry project for the phone app, its DSN, and an upload token in EAS.
 4. Item 13: the Expo token in GitHub's `staging` environment, the iOS ad hoc credentials
-   with the test iPhone registered, the Android keystore and its fingerprint at Clerk.
+   with the test iPhone registered, and the Android keystore. Clerk asks for a fingerprint
+   only for passkeys and app links, which the MVP does not use.
 5. Items 8 to 11 and 14: read the new Spanish once, on a simulator and on staging.
 6. Item 18, from D Sierra: two sentences on what they do and where, in each language; the
    phone number and email their customers should use; three to six photos of their work that
@@ -151,14 +154,14 @@ In the order they block. Each can be done ahead of its item.
    record in Cloudflare, its domain on the Vercel project, and its name in Clerk's allowed
    subdomains. Then D Sierra's details in Settings, and the TestFlight and Play links for
    Get the app.
-10. Items 25 and 34: the two releases.
+10. Items 25 and 34: the release, and the first fix release after it.
 11. Item 30: confirm the invoice email arrived.
 
 Any time: one rate-limit rule on `/api` in Vercel's firewall (the staging project now,
 production when it exists); the roster's phone numbers, and a Google account email for each
 Android user.
 
-### Release 1: the crew's first day
+### The release: the crew's first day
 
 - [x] 1. **Documents follow this list.** `docs/ARCHITECTURE.md`, People and roles: the
       roles line reads "admin (office web; on the phone, their own clock when they work a
@@ -350,9 +353,10 @@ Android user.
 - [ ] 13. **Preview builds.** `eas.json` with development, preview and production
       profiles; the build number from EAS; a workflow that builds a preview for a commit,
       told staging's API, Clerk's publishable key and the Sentry DSN. OWNER first: the Expo
-      token in GitHub's `staging` environment, the iOS ad hoc credentials with the test
-      iPhone registered, the Android keystore and its fingerprint at Clerk. Done when one
-      commit has an Android build and an iOS build that sign in to staging.
+      token in GitHub's `staging` environment; then, once `eas.json` is on `main`, the test
+      iPhone registered and one build of the preview profile run by hand for each platform,
+      which signs in to Apple, makes the ad hoc profile and makes the Android keystore. Done
+      when one commit has an Android build and an iOS build that sign in to staging.
 - [x] 14. **The office in English and Spanish.** `apps/web/src/app/strings.ts` becomes two
       typed catalogs, as the phone's are (`apps/mobile/src/i18n`): a key missing from one
       fails `pnpm typecheck`, and nothing falls back to English at run time. A person's
@@ -478,13 +482,15 @@ Android user.
 - [ ] 24. **The release job builds the phone app.** On a push to `production`: build with
       the production profile and send it to TestFlight and to Play's internal track, with
       the Expo token and the store credentials read from the `production` environment
-      only. Done when the workflow is on `main`, to be read in the first release's pull
-      request.
-- [ ] 25. **Release 1.** OWNER merges `main` into `production`. D Sierra and Demo are
+      only. The `production` environment holds `EXPO_TOKEN`, `ASC_API_KEY_ID`,
+      `ASC_API_KEY_ISSUER_ID`, `ASC_API_KEY_P8` and `GOOGLE_SERVICE_ACCOUNT_KEY`. No store
+      credential is kept at Expo, so no token of staging's can submit. Done when the
+      workflow is on `main`, to be read in the release's pull request.
+- [ ] 25. **The release.** OWNER merges `main` into `production`. D Sierra and Demo are
       onboarded, the invitations go out from People, Play's tester list holds each Android
       user's Google account, and week one's schedule is entered before the crew starts.
 
-### Release 2: during the pay period
+### Built before the release
 
 - [x] 26. **Today.** `/today`, where the office opens. Three bands in a fixed order, rows
       and counts, no charts. It reads `overview.today` and the status function of item 11.
@@ -583,7 +589,9 @@ Android user.
       up whether a small library earns its place against a native `<dialog>` before adding
       one. Done when each jump and each action has been reached by keyboard on staging and
       the menu has been seen at 390.
-- [ ] 34. **Release 2.** OWNER merges `main` into `production`.
+- [ ] 34. **The first fix release.** OWNER merges `main` into `production` when the pay
+      period has turned up something to fix. A fix to the phone app reaches the crew as a new
+      build.
 - [ ] 35. **The finish line.** One full pay period on real phones, payroll hours exported
       from TRADER, one real invoice issued and emailed.
 
@@ -592,17 +600,20 @@ Android user.
 - [ ] OWNER: `STAGING_MIGRATOR_URL` in `.env.staging` ends in a cut-off query parameter
       (`&ch`); the value in GitHub's `staging` environment is whole. Fix the file's copy.
 - [ ] OWNER: the `staging` environment variable `E2E_COMPANY_ID` is no longer read; delete it.
-- [ ] Clerk's fixed test code (424242) is refused on staging's sign-in form, so a person
+- [x] Clerk's fixed test code (424242) is refused on staging's sign-in form, so a person
       cannot sign in to staging's office by hand with a fixture number; the smoke test uses
       single-use tickets. OWNER: turn the development instance's test mode on, or accept
-      tickets as the only way in.
+      tickets as the only way in. Decided 2026-11-20: test mode stays off; the owner signs
+      in to staging as himself by texted code, and the machine by ticket.
 - [x] The phone has still never signed in to staging. A development build pointed at
       staging reaches Clerk and gets to the code step for a fixture number, and the fixed
       test code is refused there too, so the phone was seen against the local server only.
       Blocked on the Clerk item above, then items 2 and 3.
-- [ ] OWNER: `pnpm --filter @trader/db onboard` and `pnpm db:migrate` fall back to the local
+- [x] OWNER: `pnpm --filter @trader/db onboard` and `pnpm db:migrate` fall back to the local
       database when `DATABASE_URL` is given empty, as an unset `$OWNER_URL` makes it. Decide
-      whether `run-onboard.ts` should refuse a blank `DATABASE_URL`.
+      whether `run-onboard.ts` should refuse a blank `DATABASE_URL`. Decided 2026-11-20: it
+      stays as it is, since `.env` relies on blank meaning local; the runbook's commands
+      refuse an empty `$OWNER_URL` themselves.
 - [x] Item 2's fix is on staging and the office signs in there (the smoke test, by
       ticket). Its box waits on the other half of its "Done when": a phone build signing in
       to staging, which item 3's Demo sign-in now makes possible without Clerk's test mode,
@@ -827,10 +838,11 @@ Android user.
 - [ ] Item 30: migration 0004 gave invoices already issued the company's words as they
       stood at the migration, since until then the page read them live. Like 0003's
       backfill it rewrote staging and development rows only.
-- [ ] Item 30: the customer's name and address on the page are still read live from the
+- [x] Item 30: the customer's name and address on the page are still read live from the
       customer, and the job's name from the job. The item names only the company's block
       and how to pay as the copy taken at issue. OWNER: say whether the customer's block
-      should be copied at issue too.
+      should be copied at issue too. Decided 2026-11-20: the copy takes everything that
+      prints, the customer's name and address and the job's name with it.
 - [ ] The status line on the PDF ("Status: Overdue") is as of the moment the file is made,
       like the amount due and the payments; the same invoice downloaded on a later day can
       say something else. The copy taken at issue never changes.
@@ -847,9 +859,10 @@ Android user.
       a tab closed while the toast shows loses nothing. A removed shift comes back under
       its own id; if someone planned an overlapping shift in those seconds, Undo is refused
       and says so.
-- [ ] Item 31: removing a shift still asks once before it is done (the two-step control
+- [x] Item 31: removing a shift still asks once before it is done (the two-step control
       the office uses everywhere), and then also offers Undo. OWNER: say if the question
-      should go now that Undo exists.
+      should go now that Undo exists. Decided 2026-11-20: the question goes; one press
+      removes the shift and Undo is the way back.
 
 - [ ] Item 32, how it was seen on staging, with no pointer after sign-in: Tab to the
       menu's Hours and Enter; J into the week's table, down, K, Enter opening a person's

@@ -100,7 +100,8 @@ only the owner merges it.
 3. Merge with the admin bypass. The deploy job migrates production's database, then deploys
    the office and the API. It does not build the phone app yet ("Preview builds" and "The
    release job builds the phone app" in `docs/TASKS.md`).
-4. Check `https://app.jpteq.app/api/ready` and one office screen.
+4. Check `https://app.jpteq.app/api/ready`, one office screen, and D Sierra's homepage at
+   `https://dsierrapainting.jpteq.app`.
 
 ### Undo a release
 
@@ -113,8 +114,13 @@ only the owner merges it.
 
 Once, in this order.
 
-1. **GitHub.** Create the `production` branch from a green `main` commit. `main` has its
-   ruleset already (deletions restricted, force pushes blocked). Add two for `production`:
+1. **GitHub.** Create the `production` branch from a green `main` commit. Creating the
+   branch starts a deploy run that stops at "Migrate the environment's database" for want
+   of its secret, and deploys nothing. After step 5, run that job again (Actions, the run,
+   Re-run failed jobs): it migrates, calls the hook and waits, and production then serves
+   the branch's commit. That is the office the next steps sign in to; the release brings
+   what `main` has gained since. `main` has its ruleset already (deletions restricted,
+   force pushes blocked). Add two for `production`:
    - floor, no bypass list: Restrict deletions, Block force pushes, Require a pull request
      (0 approvals), Require status check `check` without "require branches to be up to
      date".
@@ -131,26 +137,41 @@ Once, in this order.
    - With `DATABASE_URL` set, a migration refuses to run unless `TRADER_MIGRATE_PURPOSE`
      says who is asking: `owner` (this runbook) or `deploy` (the deploy job).
 
-   Migrate once by hand, then give `trader_app` its password:
+   Migrate once by hand, then give `trader_app` its password. The first line waits in
+   silence: paste the production owner connection string (direct endpoint), then Return. No
+   comment follows a command there: a zsh that takes no comments at the prompt would fail
+   the `read`, and the string pasted next would land in the shell's history.
 
    ```sh
-   read -rs OWNER_URL     # paste the production owner connection string (direct endpoint)
+   read -rs OWNER_URL
    TRADER_MIGRATE_PURPOSE=owner DATABASE_URL="$OWNER_URL" pnpm db:migrate
    ```
 
    ```sql
-   alter role trader_app password '<openssl rand -base64 32>';
+   alter role trader_app password '<openssl rand -hex 32>';
    ```
+
+   Hex, not base64: the password goes into a connection string, where a `/` would end the
+   address early.
 
 3. **Clerk.** Production instance on `jpteq.app`, its DNS records in Cloudflare, the
    development instance's settings copied. That includes the four session-token claims
    `.env.example` lists: without them every signed-in call answers 401. Under Allowed
    Subdomains add `app` and `dsierrapainting`: a session is issued to one of those two
-   origins and to no other.
+   origins and to no other. On Native applications the Native API is on: without it the
+   phone app cannot reach Clerk. Under User & authentication, User model, User permissions,
+   all three switches are off: nobody deletes their own login, or changes its email address
+   or its phone number, from their own side. Left on, anyone signed in, a holder of the
+   Demo code included, could have Clerk text a code to a number of their choosing, or
+   delete a login the office gave. The dashboard and the server's key still change them.
+   Test mode is off.
 4. **Vercel.** Production project: domains `app.jpteq.app` and
    `dsierrapainting.jpteq.app`, each with its DNS record in Cloudflare, and `jpteq.app`
    and `www` redirecting to `app.jpteq.app`; a deploy hook for `production`; one firewall
-   rate-limit rule on `/api`. Its Production variables, as `.env.example` describes them:
+   rate-limit rule on `/api`. The project's Production environment tracks the `production`
+   branch (Settings, Environments, Production, Branch Tracking). Left on `main`, the hook's
+   deployment is a preview, the domains never serve it, and the deploy job waits out its
+   fifteen minutes. Its Production variables, as `.env.example` describes them:
    - `TRADER_ENVIRONMENT=production`
    - `DATABASE_URL`: the pooled endpoint, logged in as `trader_app`
    - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`: Clerk's production keys
@@ -179,21 +200,32 @@ Once, in this order.
 
 5. **GitHub.** The `production` environment's secrets: `PRODUCTION_MIGRATOR_URL` (the direct
    endpoint, as the owner), `PRODUCTION_DEPLOY_HOOK`, `PRODUCTION_URL`
-   (`https://app.jpteq.app`). Later: the Expo token and the store credentials.
+   (`https://app.jpteq.app`). And the phone's five, which the release workflow
+   (`.github/workflows/release-phone.yml`) reads and nothing else does. No store credential
+   is kept at Expo, so no token of staging's can submit.
+   - `EXPO_TOKEN`: an Expo access token, which starts the production build and the
+     submission.
+   - `ASC_API_KEY_ID`: the id of the App Store Connect API key that uploads to TestFlight.
+   - `ASC_API_KEY_ISSUER_ID`: that key's issuer id, from the same page of App Store Connect.
+   - `ASC_API_KEY_P8`: the key itself, the whole text of the `.p8` file Apple lets you
+     download once.
+   - `GOOGLE_SERVICE_ACCOUNT_KEY`: the whole JSON key of the Google service account that
+     uploads to Play's internal track.
 6. **Apple and Google.** Apple: the app record, a TestFlight external group, a public link
    capped at the crew's size, beta review notes with the Demo sign-in: a Demo person's
    number and the demo code, entered under "I have a demo code". Google: the app
    record, the internal testing track, the tester list.
 7. **Onboard the two companies.** Each command is a dry run until `--apply` is added: every
    statement runs and is rolled back, and it prints the database it reached and the ids it
-   would have written. An empty `$OWNER_URL` (a new terminal since step 2) reaches the local
-   database instead, so read the name, then run each again with `--apply`.
+   would have written. With `$OWNER_URL` empty (a new terminal since step 2) the shell
+   refuses to run the command, so the local database is never onboarded by mistake. Read
+   the name, then run each again with `--apply`.
 
    ```sh
-   DATABASE_URL="$OWNER_URL" pnpm --filter @trader/db onboard \
+   DATABASE_URL="${OWNER_URL:?paste it again, as in step 2}" pnpm --filter @trader/db onboard \
      --company 'D Sierra Painting' --timezone America/New_York --next-invoice <n> \
      --admin-name '<name>' --admin-phone +1XXXXXXXXXX
-   DATABASE_URL="$OWNER_URL" pnpm --filter @trader/db onboard \
+   DATABASE_URL="${OWNER_URL:?paste it again, as in step 2}" pnpm --filter @trader/db onboard \
      --company 'Demo' --timezone America/New_York --next-invoice 1 \
      --admin-name 'Demo Admin' --admin-phone +1XXXXXXXXXX
    ```

@@ -36,6 +36,13 @@
       "when": 1795160707183,
       "tag": "0004_invoice_print_copy",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795186971725,
+      "tag": "0005_invoice_print_names",
+      "breakpoints": true
     }
   ]
 }

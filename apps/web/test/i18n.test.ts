@@ -79,9 +79,6 @@ describe("the office's catalogs", () => {
   it("carry a name through a sentence built from one", () => {
     for (const catalog of [en, es]) {
       expect(catalog.deactivatePersonEffect("Ana Ruiz")).toContain("Ana Ruiz");
-      expect(catalog.schedule.removeEffect("Ana Ruiz", "Elm St", "Mon")).toContain(
-        "Elm St",
-      );
       expect(catalog.invoices.issueEffect("$1,250.00")).toContain("$1,250.00");
     }
   });
