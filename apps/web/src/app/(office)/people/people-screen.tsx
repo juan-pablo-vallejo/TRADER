@@ -1,31 +1,36 @@
 "use client";
 
-// The People screen: the admin's roster. The list is
-// one query; every mutation invalidates it, so the table refetches and nothing is edited in
-// the cache by hand. The page header's action opens the invite form. Each row is text plus one
-// Edit toggle; the editor row beneath holds the role and, last, the deactivation. A
-// `rejected` answer reads beneath the form it came from. Consumed by page.tsx.
+// The People screen: the admin's roster, on the shared table. The list is one query; every
+// mutation invalidates it, so the table refetches and nothing is edited in the cache by
+// hand. The page header's action opens the invite form. A row's name opens the person in
+// the side panel, and which person is in the address: their role (making an admin asks
+// first), whether their taps are stamped with a location, their numbers as links that
+// dial, their week in Hours, the invitation while they have not signed in, and, last and
+// alone, Deactivate. A `rejected` answer reads beneath the control it came from.
+//
+// The invitation is a text message the admin sends from their own phone
+// (invitation.ts): TRADER writes the words and sends nothing. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Fragment, useState, type FormEvent } from "react";
+import Link from "next/link";
+import { useState, useSyncExternalStore, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
-import { EmptyState, Failure } from "../../failure";
+import { Failure } from "../../failure";
 import { looksLikeSignInPhone, signInPhone } from "../../format";
 import { Field } from "../../field";
 import { Note } from "../../note";
-import {
-  DestructiveAction,
-  EditorFooter,
-  EditorRow,
-  EditorSection,
-  RowToggle,
-} from "../../row-editor";
+import { DataTable, type Column } from "../../data-table";
+import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor";
 import { PageHeader, CREATE_FORM_ID } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
 import type { Catalog } from "../../i18n/en";
+import { SidePanel } from "../../side-panel";
+import { StatusBadge } from "../../status-badge";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
+import { useUrlFilters } from "../../use-url-filters";
+import { invitationText, isPhone, smsLink } from "./invitation";
 import styles from "./people.module.css";
 
 type Roles = keyof Catalog["roles"];
@@ -46,10 +51,18 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.roster.pathFilter());
 }
 
+// The person whose panel is open, in the address: a panel can be linked and reloaded.
+const PERSON_FILTERS = { person: "" };
+
 export function PeopleScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const list = useRoster();
   const [adding, setAdding] = useState(false);
+  // Who was just invited: the next thing to do is tell them where to get the app.
+  const [invited, setInvited] = useState<string | null>(null);
+  const [filters, setFilters] = useUrlFilters(PERSON_FILTERS);
+  const opened = list.data?.find((row) => row.id === filters.person);
+  const justInvited = list.data?.find((row) => row.id === invited);
   return (
     <>
       <PageHeader
@@ -74,11 +87,31 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
         />
       ) : (
         <>
-          {adding && <InviteForm onDone={() => setAdding(false)} />}
-          {list.data.length === 0 ? (
-            <EmptyState text={t.emptyRoster} />
-          ) : (
-            <RosterTable rows={list.data} />
+          {adding && (
+            <InviteForm
+              onDone={(userId) => {
+                setAdding(false);
+                setInvited(userId);
+              }}
+            />
+          )}
+          {justInvited !== undefined && justInvited.invited && (
+            <div className={controls.card} role="status">
+              <p className="body-strong">{t.personPanel.invitedNote(justInvited.name)}</p>
+              <Invitation row={justInvited} />
+            </div>
+          )}
+          <RosterTable
+            rows={list.data}
+            onOpen={(id) => setFilters({ person: id })}
+            empty={t.emptyRoster}
+          />
+          {opened !== undefined && (
+            <PersonPanel
+              key={opened.id}
+              row={opened}
+              onClose={() => setFilters({ person: "" })}
+            />
           )}
         </>
       )}
@@ -89,7 +122,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
 const statusOf = (t: Catalog, row: Row) =>
   row.deactivatedAt !== null ? t.deactivated : row.invited ? t.invited : t.active;
 
-function InviteForm({ onDone }: { onDone: () => void }) {
+function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
@@ -120,7 +153,7 @@ function InviteForm({ onDone }: { onDone: () => void }) {
         setRole("worker");
         setNote(null);
         await refresh();
-        onDone();
+        onDone(answer.user.id);
       },
     }),
   );
@@ -213,75 +246,178 @@ function InviteForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-function RosterTable({ rows }: { rows: Rows }) {
+function RosterTable({
+  rows,
+  onOpen,
+  empty,
+}: {
+  rows: Rows;
+  onOpen: (userId: string) => void;
+  empty: string;
+}) {
   const { t } = useStrings();
-  const [editing, setEditing] = useState<string | null>(null);
+  const columns: Column<Row>[] = [
+    {
+      key: "name",
+      header: t.name,
+      cell: (row) => row.name,
+      open: (row) => ({
+        label: t.personPanel.open(row.name),
+        onOpen: () => onOpen(row.id),
+      }),
+    },
+    {
+      key: "address",
+      header: t.signInAddress,
+      empty: (row) => row.signInPhone === null && row.email === null,
+      cell: (row) => (
+        <>
+          {row.signInPhone !== null && (
+            <span className={styles.address}>{signInPhone(row.signInPhone)}</span>
+          )}
+          {row.email !== null && <span className={styles.address}>{row.email}</span>}
+        </>
+      ),
+    },
+    { key: "role", header: t.role, cell: (row) => t.roles[row.role] },
+    {
+      key: "status",
+      header: t.status,
+      cell: (row) =>
+        row.deactivatedAt !== null ? (
+          <StatusBadge tone="neutral" label={t.deactivated} />
+        ) : row.invited ? (
+          <StatusBadge tone="attention" label={t.invited} />
+        ) : (
+          <StatusBadge tone="done" label={t.active} />
+        ),
+    },
+  ];
   return (
-    <table className={table.table}>
-      <thead>
-        <tr>
-          <th scope="col">{t.name}</th>
-          <th scope="col">{t.signInAddress}</th>
-          <th scope="col">{t.role}</th>
-          <th scope="col">{t.status}</th>
-          <th scope="col">
-            <span className="visually-hidden">{t.edit}</span>
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((row) => {
-          const open = editing === row.id;
-          return (
-            <Fragment key={row.id}>
-              <tr>
-                <td data-label={t.name} className="body-strong">
-                  {row.name}
-                </td>
-                <td data-label={t.signInAddress}>
-                  {row.signInPhone !== null && (
-                    <span className={styles.address}>{signInPhone(row.signInPhone)}</span>
-                  )}
-                  {row.email !== null && (
-                    <span className={styles.address}>{row.email}</span>
-                  )}
-                </td>
-                <td data-label={t.role}>{t.roles[row.role]}</td>
-                <td data-label={t.status} className={table.status}>
-                  {statusOf(t, row) === t.invited ? (
-                    <span className={`label ${table.pillPending}`}>{t.invited}</span>
-                  ) : (
-                    statusOf(t, row)
-                  )}
-                </td>
-                <RowToggle
-                  rowId={row.id}
-                  open={open}
-                  onToggle={() => setEditing(open ? null : row.id)}
-                />
-              </tr>
-              {open ? (
-                <EditorRow key={`${row.id}-editor`} rowId={row.id} colSpan={5}>
-                  <Editor row={row} />
-                </EditorRow>
-              ) : null}
-            </Fragment>
-          );
-        })}
-      </tbody>
-    </table>
+    <DataTable
+      caption={t.roster}
+      columns={columns}
+      rows={rows}
+      rowKey={(row) => row.id}
+      empty={empty}
+    />
   );
 }
 
-function Editor({ row }: { row: Row }) {
+function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
+  const { t } = useStrings();
   return (
-    <>
-      <div className={styles.editorGrid}>
-        <Role row={row} />
-      </div>
+    <SidePanel title={row.name} onClose={onClose}>
+      <p className={`secondary ${styles.line}`}>
+        {t.roles[row.role]} · {statusOf(t, row)}
+      </p>
+      <Numbers row={row} />
+      <p className={styles.line}>
+        <Link href={`/hours?person=${row.id}`}>{t.personPanel.theirWeek}</Link>
+      </p>
+      {row.invited && row.deactivatedAt === null && (
+        <EditorSection heading={t.personPanel.invitation}>
+          <p className="secondary">{t.personPanel.invitationExplain}</p>
+          <Invitation row={row} />
+        </EditorSection>
+      )}
+      <Role row={row} />
+      <Location row={row} />
       <EditorFooter>
         <Access row={row} />
       </EditorFooter>
+    </SidePanel>
+  );
+}
+
+// Their numbers as links that dial: the one they sign in with, and the contact phone they
+// gave themselves when it is another.
+function Numbers({ row }: { row: Row }) {
+  const { t } = useStrings();
+  const dial = (number: string) => `tel:${number.replace(/[^\d+]/g, "")}`;
+  const contact = row.phone !== null && row.phone !== row.signInPhone ? row.phone : null;
+  return (
+    <EditorSection heading={t.personPanel.numbers}>
+      {row.signInPhone === null && contact === null ? (
+        <p className="secondary">{t.personPanel.noNumber}</p>
+      ) : (
+        <ul className={styles.numbers}>
+          {row.signInPhone !== null && (
+            <li>
+              <a href={dial(row.signInPhone)}>
+                {t.personPanel.signInNumber(signInPhone(row.signInPhone))}
+              </a>
+            </li>
+          )}
+          {contact !== null && (
+            <li>
+              <a href={dial(contact)}>{t.personPanel.contactNumber(contact)}</a>
+            </li>
+          )}
+        </ul>
+      )}
+      {row.email !== null && <p className="secondary">{row.email}</p>}
+    </EditorSection>
+  );
+}
+
+// Neither the browser's description of itself nor its address changes under a page.
+const unchanging = () => () => undefined;
+
+// The invitation: on a phone, a link that opens the admin's own messages on the text,
+// written; anywhere else the same text to copy. Which it is cannot be known on the
+// server, so the copy is drawn first and the link takes its place once the browser has
+// said what it is.
+function Invitation({ row }: { row: Row }) {
+  const { t } = useStrings();
+  const trpc = useTRPC();
+  const company = useQuery(trpc.company.get.queryOptions());
+  // What only the browser knows, read as React reads anything outside itself: nothing on
+  // the server, the browser's answer once it is there.
+  const phone = useSyncExternalStore(
+    unchanging,
+    () => isPhone(navigator.userAgent),
+    () => false,
+  );
+  const origin = useSyncExternalStore(
+    unchanging,
+    () => window.location.origin,
+    () => null,
+  );
+  const [note, setNote] = useState<string | null>(null);
+  if (row.signInPhone === null) {
+    return <p className="secondary">{t.personPanel.noSignInNumber}</p>;
+  }
+  if (origin === null || company.data === undefined) return null;
+  const text = invitationText({
+    name: row.name,
+    company: company.data.name,
+    url: `${origin}/get`,
+  });
+  return (
+    <>
+      <p className={`secondary ${styles.message}`} data-invitation>
+        {text}
+      </p>
+      {phone ? (
+        <a className={controls.primary} href={smsLink(row.signInPhone, text)}>
+          {t.personPanel.sendInvitation}
+        </a>
+      ) : (
+        <button
+          type="button"
+          className={controls.secondary}
+          onClick={() =>
+            void navigator.clipboard.writeText(text).then(
+              () => setNote(t.personPanel.copied),
+              () => setNote(t.requestFailed),
+            )
+          }
+        >
+          {t.personPanel.copyInvitation}
+        </button>
+      )}
+      <Note text={note} tone={note === t.personPanel.copied ? "saved" : undefined} />
     </>
   );
 }
@@ -294,11 +430,12 @@ const noteOf = (t: Catalog, answer: { result: string }) =>
       ? t.unchanged
       : t.saved;
 
+// The role: the other one is offered. Making an admin says what that gives before it does
+// it; making a worker of an admin is refused by the server for the last one.
 function Role({ row }: { row: Row }) {
   const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
-  const [role, setRole] = useState<Roles>(row.role);
   const [note, setNote] = useState<string | null>(null);
   const setRoleCall = useMutation(
     trpc.roster.setRole.mutationOptions({
@@ -309,37 +446,93 @@ function Role({ row }: { row: Row }) {
       onError: () => setNote(t.requestFailed),
     }),
   );
-  const roleId = `role-${row.id}`;
+  const other: Roles = ROLES.find((r) => r !== row.role) ?? "worker";
   return (
-    <EditorSection>
-      <Field id={roleId} label={t.role}>
-        <select
-          id={roleId}
-          className={controls.select}
-          value={role}
-          onChange={(e) => setRole(e.target.value as Roles)}
+    <EditorSection heading={t.role}>
+      <p className="body">{t.roles[row.role]}</p>
+      {other === "admin" ? (
+        <DestructiveAction
+          label={t.personPanel.makeAdmin}
+          effect={t.personPanel.makeAdminEffect(row.name)}
+          disabled={setRoleCall.isPending || row.deactivatedAt !== null}
+          onConfirm={() => setRoleCall.mutate({ userId: row.id, role: "admin" })}
+        />
+      ) : (
+        <button
+          type="button"
+          className={controls.secondary}
+          disabled={setRoleCall.isPending}
+          onClick={() => setRoleCall.mutate({ userId: row.id, role: "worker" })}
         >
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {t.roles[r]}
+          {t.personPanel.makeWorker}
+        </button>
+      )}
+      <Note text={note} />
+    </EditorSection>
+  );
+}
+
+const LOCATION = ["company", "on", "off"] as const;
+type LocationChoice = (typeof LOCATION)[number];
+const choiceOf = (stamps: boolean | null): LocationChoice =>
+  stamps === null ? "company" : stamps ? "on" : "off";
+
+// Whether this person's taps are stamped with a location: as the company, on, or off.
+function Location({ row }: { row: Row }) {
+  const { t } = useStrings();
+  const trpc = useTRPC();
+  const refresh = useRefresh();
+  const [choice, setChoice] = useState<LocationChoice>(choiceOf(row.locationStamps));
+  const [note, setNote] = useState<string | null>(null);
+  const save = useMutation(
+    trpc.roster.setLocation.mutationOptions({
+      onSuccess: async (answer) => {
+        setNote(answer.result === "unchanged" ? t.unchanged : t.saved);
+        await refresh();
+      },
+      onError: () => setNote(t.requestFailed),
+    }),
+  );
+  const id = `location-${row.id}`;
+  return (
+    <EditorSection heading={t.personPanel.location}>
+      <p className="secondary">{t.personPanel.locationExplain}</p>
+      <Field id={id} label={t.personPanel.location}>
+        <select
+          id={id}
+          className={controls.select}
+          value={choice}
+          onChange={(e) => {
+            setNote(null);
+            setChoice(e.target.value as LocationChoice);
+          }}
+        >
+          {LOCATION.map((c) => (
+            <option key={c} value={c}>
+              {t.personPanel.locationAs[c]}
             </option>
           ))}
         </select>
       </Field>
       <button
         type="button"
-        className={`${controls.secondary} ${table.stretch}`}
-        disabled={setRoleCall.isPending}
-        onClick={() => setRoleCall.mutate({ userId: row.id, role })}
+        className={controls.secondary}
+        disabled={save.isPending}
+        onClick={() =>
+          save.mutate({
+            userId: row.id,
+            locationStamps: choice === "company" ? null : choice === "on",
+          })
+        }
       >
-        {t.saveRole}
+        {t.personPanel.saveLocation}
       </button>
       <Note text={note} />
     </EditorSection>
   );
 }
 
-// Deactivation, last and alone in the editor's footer; reactivation in its place.
+// Deactivation, last and alone in the panel's footer; reactivation in its place.
 function Access({ row }: { row: Row }) {
   const { t } = useStrings();
   const trpc = useTRPC();

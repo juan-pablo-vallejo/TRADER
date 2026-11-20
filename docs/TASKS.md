@@ -415,7 +415,7 @@ Android user.
   started shift has been ended early and a simulator has offered the worker the second job
   after its next pull.
 
-- [ ] 18. **D Sierra's homepage and Get the app.**
+- [x] 18. **D Sierra's homepage and Get the app.**
   - Addresses. `TRADER_HOME_HOST` names the host whose `/` is the homepage
     (`dsierrapainting.jpteq.app` in production) and replaces `TRADER_OFFICE_HOST`. On that
     host everything else answers as it does anywhere: sign-in, the office, the public pages,
@@ -729,6 +729,18 @@ Android user.
       style ("03:00 AM").
 - [ ] Item 17: a form's field that should take the focus when a side panel opens is marked
       `data-autofocus`; React's `autoFocus` loses to the dialog's own first-control focus.
+
+- [ ] OWNER, item 18 (gate 6): the homepage holds D Sierra's name, their logo and the two
+      buttons, and nothing else, until their words, numbers and photos arrive. They go in
+      one file, `apps/web/src/app/(public)/home-content.ts`; a part left empty draws nothing.
+- [ ] OWNER, item 18: `/get` says "ask your office" for both phones on staging, because
+      `NEXT_PUBLIC_GET_IOS_URL` and `NEXT_PUBLIC_GET_ANDROID_URL` are unset there. Set them
+      in the staging project once a TestFlight link and a Play testing link exist, and in
+      production with it (`README.md`).
+- [ ] Item 18: the unlisted-host rule holds only where Clerk is the identity. Staging's
+      deploy passed its smoke test under it, so staging's own address is one of the origins
+      its `CLERK_AUTHORIZED_PARTIES` lists. A Vercel deployment's own `*.vercel.app` address
+      now sends a page to the first listed origin; its `/api` still answers there.
 
 ## After MVP
 

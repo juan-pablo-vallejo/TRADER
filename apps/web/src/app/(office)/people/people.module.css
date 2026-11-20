@@ -45,3 +45,29 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* In a person's panel: a line of facts, their numbers as a list of links with a full
+   target each, and the invitation's words as they will be sent. */
+.line {
+  margin: 0 0 var(--space-4);
+}
+.numbers {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.numbers a,
+.line a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
+.message {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  background: var(--canvas);
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

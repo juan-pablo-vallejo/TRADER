@@ -167,6 +167,8 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
           range={range}
           said={said(range)}
           flagged={flagged}
+          person={/^[0-9a-f-]{36}$/.test(filters.person) ? filters.person : null}
+          onEveryone={() => setFilters({ person: "" })}
           signInHref={signInHref}
           onOpen={(workerId, day) => setDay({ who: workerId, day })}
         />
@@ -189,12 +191,17 @@ function Shown({
   range,
   said,
   flagged,
+  person,
+  onEveryone,
   signInHref,
   onOpen,
 }: {
   range: Range;
   said: string;
   flagged: boolean;
+  // One person's hours alone, or everyone's.
+  person: string | null;
+  onEveryone: () => void;
   signInHref: string;
   onOpen: (workerId: string, day: string) => void;
 }) {
@@ -203,7 +210,11 @@ function Shown({
   // Other dates keep the rows on screen until their own arrive (providers.tsx).
   const read = useQuery(
     trpc.labor.hours.queryOptions(
-      { ...range, ...(flagged && { flagged: true }) },
+      {
+        ...range,
+        ...(flagged && { flagged: true }),
+        ...(person !== null && { workerId: person }),
+      },
       { placeholderData: keepPreviousData },
     ),
   );
@@ -293,6 +304,16 @@ function Shown({
         {said}
         {answer !== undefined && ` · ${t.workDatesIn(answer.timezone)}`}
       </p>
+      {person !== null && (
+        <p className={`body ${styles.only}`}>
+          {answer?.workers[0] !== undefined && (
+            <span>{t.onlyPerson(answer.workers[0].worker.name)}</span>
+          )}
+          <button type="button" className={controls.textAction} onClick={onEveryone}>
+            {t.showEveryone}
+          </button>
+        </p>
+      )}
       {answer !== undefined && <OpenStrip cells={stillOpen(answer)} />}
       {answer !== undefined && answer.cells.length > 0 && (
         <p className={`body-strong ${styles.total}`}>

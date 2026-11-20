@@ -345,6 +345,36 @@ export const en = {
   active: "Active",
   deactivated: "Deactivated",
   roles: { admin: "Admin", worker: "Worker" },
+  // A person, opened from their row in a side panel.
+  personPanel: {
+    open: (name: string) => `Open ${name}`,
+    makeAdmin: "Make an admin",
+    makeAdminEffect: (name: string) =>
+      `${name} will see and change everything in this office: everyone's hours, the schedule, invoices and this list.`,
+    makeWorker: "Make a worker",
+    location: "Location stamps",
+    locationExplain:
+      "Whether their clock taps record where the phone is. As the company follows the setting for everyone.",
+    locationAs: { company: "As the company", on: "On", off: "Off" },
+    saveLocation: "Save location",
+    numbers: "Numbers",
+    signInNumber: (number: string) => `Sign-in: ${number}`,
+    contactNumber: (number: string) => `Contact: ${number}`,
+    noNumber: "No number on record.",
+    theirWeek: "Their week in Hours",
+    invitation: "Invitation",
+    invitationExplain:
+      "They have not signed in yet. Send them where to get the app: the message is written, in English and Spanish, and goes from your own phone.",
+    sendInvitation: "Send the invitation",
+    copyInvitation: "Copy the message",
+    copied: "Copied. Paste it into a text message to them.",
+    invitedNote: (name: string) =>
+      `${name} is invited. Now tell them where to get the app.`,
+    noSignInNumber: "They have no sign-in number to send it to.",
+  },
+  // Hours narrowed to one person, from their panel.
+  onlyPerson: (name: string) => `Only ${name}.`,
+  showEveryone: "Show everyone",
 
   // Customers
   emptyCustomers: "No customers yet.",

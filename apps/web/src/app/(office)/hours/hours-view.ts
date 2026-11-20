@@ -20,8 +20,9 @@ export const MAX_RANGE_DAYS = 31;
 
 // What the address holds (use-url-filters.ts). `range` is a preset or `dates`, and then
 // `from` and `to` are the dates; `flagged` is "1" for flagged only. The plain address is
-// this week, everything.
-export const HOURS_FILTERS = { range: "this", from: "", to: "", flagged: "" };
+// this week, everything. `person` narrows the screen to one person's hours (their id), as
+// the link in their panel on People does.
+export const HOURS_FILTERS = { range: "this", from: "", to: "", flagged: "", person: "" };
 export type HoursFilters = typeof HOURS_FILTERS;
 
 // A person and a day in the address: the day panel a cell opens. Both or neither.

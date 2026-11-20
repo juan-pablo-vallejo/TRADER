@@ -327,6 +327,34 @@ export const es: Catalog = {
   active: "Activo",
   deactivated: "Desactivado",
   roles: { admin: "Administrador", worker: "Trabajador" },
+  personPanel: {
+    open: (name) => `Abrir a ${name}`,
+    makeAdmin: "Hacer administrador",
+    makeAdminEffect: (name) =>
+      `${name} verá y podrá cambiar todo en esta oficina: las horas de todos, el horario, las facturas y esta lista.`,
+    makeWorker: "Hacer trabajador",
+    location: "Ubicación al marcar",
+    locationExplain:
+      "Si al marcar se anota dónde está el teléfono. Como la empresa sigue el ajuste de todos.",
+    locationAs: { company: "Como la empresa", on: "Sí", off: "No" },
+    saveLocation: "Guardar ubicación",
+    numbers: "Números",
+    signInNumber: (number) => `Acceso: ${number}`,
+    contactNumber: (number) => `Contacto: ${number}`,
+    noNumber: "No hay ningún número anotado.",
+    theirWeek: "Su semana en Horas",
+    invitation: "Invitación",
+    invitationExplain:
+      "Todavía no ha iniciado sesión. Mándale dónde obtener la aplicación: el mensaje ya está escrito, en inglés y en español, y sale de tu propio teléfono.",
+    sendInvitation: "Enviar la invitación",
+    copyInvitation: "Copiar el mensaje",
+    copied: "Copiado. Pégalo en un mensaje de texto para esa persona.",
+    invitedNote: (name) =>
+      `${name} ya tiene invitación. Ahora dile dónde obtener la aplicación.`,
+    noSignInNumber: "No tiene número de acceso al cual enviarla.",
+  },
+  onlyPerson: (name) => `Solo ${name}.`,
+  showEveryone: "Mostrar a todos",
 
   emptyCustomers: "Todavía no hay clientes.",
   addCustomer: "Agregar cliente",
