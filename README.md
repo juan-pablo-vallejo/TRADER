@@ -27,6 +27,10 @@ database.
   for advisories and every commit for a leaked secret. `preview-phone.yml` builds a preview
   of the phone app for a commit, when started by hand. `release-phone.yml` builds and
   submits the phone app on a release.
+- `scripts/`: `check-ci.sh` is CI's `check` for a machine that is not CI; `staging.sh`
+  uses staging's keys for one command; `release-facts.sh` lists what a release would ship.
+- `.githooks/pre-push`, and under `.claude/` the hooks, skills and one agent Claude Code
+  works with here.
 - `.env.example`: every environment variable and what reads it.
 
 ## Run it on a new machine
@@ -97,7 +101,13 @@ runs the browser smoke test.
 ```sh
 gh run list --branch main --limit 3
 gh run watch <run-id> --exit-status
+scripts/staging.sh ready             # what staging serves, beside main's commit
+scripts/staging.sh look /schedule    # that screen as the suite's admin, as screenshots
 ```
+
+`scripts/staging.sh` loads the git-ignored `.env.staging` for the one command asked of it
+and prints none of it. `smoke` and `look` sign in with single-use tickets and need the
+suite's two numbers there, as `E2E_ADMIN_PHONE` and `E2E_WORKER_PHONE`.
 
 ## Production: the owner's runbook
 

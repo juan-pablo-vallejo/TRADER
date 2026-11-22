@@ -69,4 +69,6 @@ read-only for you.
 ## Staging is yours
 
 Fictional data only. Reset, reseed or break it without asking. Its keys are in
-`.env.staging`, which git ignores. Local development never connects to a deployed database.
+`.env.staging`, which git ignores. `scripts/staging.sh` uses them without showing them: its
+address, its readiness, the smoke test, and screenshots of the office to look at. Local
+development never connects to a deployed database.

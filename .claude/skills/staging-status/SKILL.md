@@ -16,8 +16,9 @@ Read only. Nothing here changes staging, and nothing here reads production.
    "not deployed" in its summary; read the newest run instead. Never `gh workflow run`.
    A red run: `gh run view <id> --log-failed`, and report the first failing step with the
    lines that say why. The log itself stays here.
-3. **Deployment.** `STAGING_URL` from `.env.staging`, `/api/ready` answers
-   `{ ready, commit }`. Compare `commit` with `main`.
+3. **Deployment.** `scripts/staging.sh ready` prints what `/api/ready` answers,
+   `{ ready, commit }`, beside `main`'s commit. Compare the two. The script loads
+   `.env.staging` for that one request; nothing here reads the file.
 4. **Database.** Through Neon's read-only connector on the staging project:
    `select count(*) from drizzle.__drizzle_migrations`. Compare with the journal.
 5. **Errors.** Vercel's connector for the staging project's runtime errors in the last

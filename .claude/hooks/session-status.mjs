@@ -72,7 +72,7 @@ const [ahead, back] = (behind ?? "? ?").split(/\s+/);
 
 const lines = [
   `toolchain: node ${node ?? "missing"}${wantNode && node && !node.startsWith(`v${wantNode}`) ? ` (repository wants ${wantNode})` : ""}, pnpm ${pnpm ?? "missing"}${wantPnpm && pnpm && pnpm !== wantPnpm ? ` (repository wants ${wantPnpm})` : ""}, docker ${docker ?? "not running"}`,
-  `tree: ${branch || "detached"}, ${dirty === null ? "status unknown" : dirty === "" ? "clean" : `${dirty.split("\n").length} changed files`}, ${ahead} ahead and ${back} behind origin/main as last fetched; HEAD's tree ${green ? "has" : "has no"} recorded green check`,
+  `tree: ${branch || "detached"}, ${dirty === null ? "status unknown" : dirty === "" ? "clean" : `${dirty.split("\n").length} changed files`}, ${ahead} ahead and ${back} behind origin/main as last fetched; HEAD's tree ${green ? "has a recorded green check" : "has no recorded green check of its own (a commit that changed Markdown alone needs none)"}`,
   `workstation: ${ws ?? "no answer (wake it, or `trader-ws check --local`; Android waits)"}${nightly ? `; last night: ${nightly}` : ""}`,
   `release: ${release === null ? "GitHub did not answer" : release === "0" ? "no pull request into production is open" : "A PULL REQUEST INTO PRODUCTION IS OPEN: do not push to main"}`,
 ];
