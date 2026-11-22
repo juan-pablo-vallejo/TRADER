@@ -11,10 +11,11 @@ Three layouts (`apps/web/src/app`, one route group each):
   are written. No menu, nothing of Clerk loaded.
 - **Sign-in**, `(auth)`: `/sign-in`, alone under the logo. Locally the development sign-in
   at `/dev-signin` stands in for it.
-- **Office**, `(office)`: Schedule (`/schedule`, where a signed-in person lands), Hours
-  (`/hours`), Jobs (`/jobs`) with Customers (`/customers`) as the tab beside it, Invoices
-  (`/invoices`, and one invoice at `/invoices/<id>`), People (`/people`), and Settings
-  (`/settings`) behind the person's name in the header; `/profile` is its old address.
+- **Office**, `(office)`: Today (`/today`, where a signed-in person lands), Schedule
+  (`/schedule`), Hours (`/hours`), Jobs (`/jobs`) with Customers (`/customers`) as the tab
+  beside it, Invoices (`/invoices`, and one invoice at `/invoices/<id>`), People (`/people`),
+  and Settings (`/settings`) behind the person's name in the header; `/profile` is its old
+  address.
 
 1. **Demo data.** `pnpm demo --reset` (never export a long `TMPDIR` for it: tsx's socket
    path breaks). Screens that commit rows nothing can delete (a correcting entry on Hours,
@@ -24,7 +25,7 @@ Three layouts (`apps/web/src/app`, one route group each):
    `POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled pnpm exec next dev --webpack`.
    Kill only listeners on the port (`lsof -ti :3000 -sTCP:LISTEN`). `--webpack` because the
    default bundler has looped on "Fast Refresh rebuilding" at the first page load.
-3. **Sign in** at `/dev-signin` as `office@demo.invalid`. It lands on `/schedule`.
+3. **Sign in** at `/dev-signin` as `office@demo.invalid`. It lands on `/today`.
 4. **Look**, with the Playwright connector, at 390, 768 and 1280 wide: a screenshot before
    the change and after it. At each width check that nothing scrolls sideways, focus is
    visible and in order by keyboard, and the console is clean.

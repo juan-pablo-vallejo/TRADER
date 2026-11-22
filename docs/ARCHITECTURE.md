@@ -121,7 +121,7 @@ Three, sharing nothing.
 **Keys**
 
 - Staging keys: a git-ignored `.env.staging` on the Mac, plus GitHub's `staging`
-  environment. Claude reads them.
+  environment. Claude uses them through `scripts/staging.sh` and does not read them.
 - Production keys: the vendor's dashboard, plus GitHub's `production` environment, which
   hands its secrets only to runs on the `production` branch. Never in a file on the Mac.
 - The vendor sign-ins on the Mac are the owner's and reach the whole account (`CLAUDE.md`, The owner's sign-ins).

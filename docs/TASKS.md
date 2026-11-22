@@ -979,6 +979,16 @@ Android user.
 - [ ] At item 23, with the owner: Claude's vendor connectors scoped so that none reaches
       production (Neon pinned to staging and read-only, Sentry to its inspect tools, the
       Vercel plugin off), and the `production` environment limited to its branch.
+- [ ] The entry above that begins "The Android emulator on this Mac" is history: Android
+      builds, the emulator and the phone flows run on the workstation alone (2026-11-22).
+- [ ] For the scoping at item 23: the Expo CLI also reaches the whole account, and the entry
+      above does not name it. Clerk's write tools are denied in `.claude/settings.json`
+      once the owner applies the patch of 2026-11-22.
+- [ ] By the owner's word of 2026-11-22: `trader-ws` moves into the repository as
+      `scripts/trader-ws`. The host comes from a file in the owner's home through a shim;
+      the script names no alias, user or address. It, its audit and its ledger helpers are
+      guard files: `guard.mjs` covers their paths and `release-auditor` flags a change to
+      them. Workflow, not product.
 
 ## After MVP
 
