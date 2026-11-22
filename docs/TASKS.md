@@ -950,7 +950,7 @@ Android user.
       variable `E2E_COMPANY_ID`: neither checked; the two entries at the top of this list
       stay open.
 
-- [ ] The workstation, and CI's check before the push. By the owner's word of 2026-11-22;
+- [x] The workstation, and CI's check before the push. By the owner's word of 2026-11-22;
       workflow, not product, and nothing of the MVP changed. `pnpm check:ci` is CI's
       `check` step for step (`scripts/check-ci.sh`); the pre-push hook lets a tree onto
       `main` only when that was green on it, or when it differs from such a tree in Markdown
@@ -971,9 +971,11 @@ Android user.
       not read it. It closes the entry above that begins "The amendment of 2026-11-20".
 - [ ] After MVP item 20's browser suite on the demo data, by the owner's word: built as a
       job on the workstation first. Into `check` once it has stayed green for two weeks,
-      which is the owner's to say.
+      which is the owner's to say. Built 2026-11-22 as `pnpm e2e:local`: three tests, green
+      on the workstation and here, red on a screen broken on purpose.
 - [ ] A nightly run of `main` from a clean clone on the workstation: the check, the browser
-      suite and the Android flows with nothing warm.
+      suite and the Android flows with nothing warm. Set aside by the owner on 2026-11-22:
+      not built, and not before the first release.
 - [ ] At item 23, with the owner: Claude's vendor connectors scoped so that none reaches
       production (Neon pinned to staging and read-only, Sentry to its inspect tools, the
       Vercel plugin off), and the `production` environment limited to its branch.
