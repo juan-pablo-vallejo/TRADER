@@ -8,7 +8,8 @@
     "start": "next start",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "e2e:staging": "playwright test -c e2e/playwright.config.ts"
+    "e2e:staging": "playwright test -c e2e/playwright.config.ts",
+    "e2e:local": "playwright test -c e2e/local.config.ts"
   },
   "dependencies": {
     "@clerk/localizations": "4.24.6",

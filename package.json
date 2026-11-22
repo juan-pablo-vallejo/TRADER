@@ -23,7 +23,8 @@
     "db:migrate": "pnpm --filter @trader/db migrate",
     "db:seed": "pnpm --filter @trader/db seed",
     "demo": "pnpm --filter @trader/api demo",
-    "e2e:staging": "pnpm --filter @trader/web e2e:staging"
+    "e2e:staging": "pnpm --filter @trader/web e2e:staging",
+    "e2e:local": "pnpm demo --db trader_demo_browser --reset && pnpm --filter @trader/web e2e:local"
   },
   "prettier": {
     "semi": true,

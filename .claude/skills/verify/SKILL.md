@@ -17,7 +17,9 @@ on this Mac, outside the repository; it sends the tree to the workstation and ru
 2. **Red.** It prints the last lines of the log, which name the step and say why. More:
    `trader-ws logs check 200`. Fix it and check again. Never write `.git/trader/green` by
    hand.
-3. **What the change touches.** A phone screen or the sync path under `apps/mobile`: also
+3. **What the change touches.** A screen under `apps/web/src/app`, or what one calls: also
+   `trader-ws e2e`, the office in a browser on the demo data (`pnpm e2e:local` here, with
+   port 3000 free). A phone screen or the sync path under `apps/mobile`: also
    `trader-ws android`, then `trader-ws wait android`.
 4. **Workstation off.** The session's first lines say so. `trader-ws check --local` runs the
    same steps here and records the same line. Android waits for the workstation.

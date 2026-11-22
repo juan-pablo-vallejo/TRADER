@@ -13,8 +13,8 @@ Three layouts (`apps/web/src/app`, one route group each):
   at `/dev-signin` stands in for it.
 - **Office**, `(office)`: Schedule (`/schedule`, where a signed-in person lands), Hours
   (`/hours`), Jobs (`/jobs`) with Customers (`/customers`) as the tab beside it, Invoices
-  (`/invoices`, and one invoice at `/invoices/<id>`), People (`/people`), and the profile
-  (`/profile`) behind the person's name in the header.
+  (`/invoices`, and one invoice at `/invoices/<id>`), People (`/people`), and Settings
+  (`/settings`) behind the person's name in the header; `/profile` is its old address.
 
 1. **Demo data.** `pnpm demo --reset` (never export a long `TMPDIR` for it: tsx's socket
    path breaks). Screens that commit rows nothing can delete (a correcting entry on Hours,

@@ -18,8 +18,8 @@ database.
   for an admin and Me, in English and Spanish, over a local SQLite store and its outbox. `.maestro/`
   holds the phone flows.
 - `apps/web`: the office (Next.js). People, Customers, Jobs, Schedule, Hours and Invoices. It
-  also serves the API at `/api/trpc` and the readiness check at `/api/ready`. `e2e/` is the
-  staging smoke test.
+  also serves the API at `/api/trpc` and the readiness check at `/api/ready`. `e2e/` holds
+  the staging smoke test and the browser suite on the demo data.
 - `packages/api`: the tRPC API, one folder per domain. `src/demo/` builds the demo company.
 - `packages/db`: the schema (eleven tables), its migrations, the seed and the onboarding
   script.
@@ -86,6 +86,10 @@ the office first, because the suite starts its own on port 3000 and builds its o
   file: `pnpm exec vitest run <file>`, from its package's folder.
 - `pnpm build`: builds the office. CI's `check` and `pnpm check:ci` run it; `pnpm check`
   does not.
+- `pnpm e2e:local`: the office in a real browser on the demo data (`apps/web/e2e`,
+  `office.local.ts`). It rebuilds the database `trader_demo_browser` and starts its own
+  office on port 3000. Playwright's browser comes first, once, from `apps/web`:
+  `pnpm exec playwright install chromium`. Not in CI yet.
 - `pnpm format`, `pnpm lint:fix`: rewrite formatting, apply lint fixes.
 - `pnpm db:generate`: a new migration from a schema change.
 - `pnpm demo --reset`: rebuild the demo database. A plain `pnpm demo` refuses one that
