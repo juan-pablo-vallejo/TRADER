@@ -92,6 +92,16 @@ Three, sharing nothing.
   phone app.
 - Tests, seed and demo run here and nowhere else. Local never connects to a deployed
   database.
+- Two machines. The Mac writes the code and is the only machine that commits and pushes.
+  The Ubuntu workstation is compute: it gets the working tree from the Mac over SSH and
+  runs what the Mac sends, which is the checks, Postgres in Docker, Android debug builds
+  and the Android phone flows.
+- The workstation holds no credential: no GitHub sign-in, no signing key, no staging key,
+  no vendor sign-in, no Expo token, and no keystore but Android's debug one. Everything it
+  serves listens on its own loopback, and the Mac reaches it through SSH.
+- What the Mac sends runs there as an account with neither sudo nor Docker, and reaches
+  that Postgres over loopback.
+- For now Claude Code runs on the Mac alone and sends the workstation commands.
 
 **Staging: proving a change before release**
 
@@ -115,6 +125,8 @@ Three, sharing nothing.
 - Production keys: the vendor's dashboard, plus GitHub's `production` environment, which
   hands its secrets only to runs on the `production` branch. Never in a file on the Mac.
 - The vendor sign-ins on the Mac are the owner's and reach the whole account (`CLAUDE.md`, The owner's sign-ins).
+- The workstation: none. Its `.env` holds the password of its own local Postgres, made
+  there, and nothing else.
 
 ## Branches and release
 
@@ -159,3 +171,8 @@ temporary.
 - Claude holds no production key in a file. The vendor sign-ins it works through are the
   owner's and reach production once it exists: what keeps Claude out there is the rules in
   `CLAUDE.md` and the blocks in `.claude/settings.json`, not the vendor.
+- Two programs read a command before those rules have to. `.githooks/pre-push` refuses a
+  push to `production`, a push to `main` of a tree with no recorded green check or while a
+  release is open, and a push that holds a secret. `.claude/hooks/guard.mjs` refuses what
+  `CLAUDE.md` says never to run, however the command is wrapped. Both read text and are
+  tripwires; the lock is GitHub's ruleset and the owner's bypass.

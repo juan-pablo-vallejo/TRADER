@@ -950,6 +950,34 @@ Android user.
       variable `E2E_COMPANY_ID`: neither checked; the two entries at the top of this list
       stay open.
 
+- [ ] The workstation, and CI's check before the push. By the owner's word of 2026-11-22;
+      workflow, not product, and nothing of the MVP changed. `pnpm check:ci` is CI's
+      `check` step for step (`scripts/check-ci.sh`); the pre-push hook lets a tree onto
+      `main` only when that was green on it, or when it differs from such a tree in Markdown
+      alone, and refuses a push to `production`, a push while a release is open and a push
+      that holds a secret. Three Claude Code hooks: a guard that reads the whole command, a
+      formatter for the file just written, a session's first lines. The `verify` skill makes
+      the green. On the workstation the checks and the Android flows run as an account with
+      neither sudo nor Docker. Seen: the check green there in 47 s and here in 74 s; red at
+      typecheck and at lint, nothing recorded; all nine sections of the phone flows green on
+      the Android emulator there and on the iPhone simulator here.
+- [ ] OWNER, to arm the above: the hooks block into `.claude/settings.json` (his file), and
+      `git config core.hooksPath .githooks` in his clone. Until both, the hooks are files
+      and stop nothing.
+- [ ] The release kit: a `/release` skill, a `release-auditor` agent that reads
+      `production...main` in a context that did not write it, and `scripts/release-facts.sh`.
+- [ ] `scripts/staging.sh`: staging's address, its readiness, the smoke test and screenshots
+      of the office as the suite's admin, for a session that may use `.env.staging` and may
+      not read it. It closes the entry above that begins "The amendment of 2026-11-20".
+- [ ] After MVP item 20's browser suite on the demo data, by the owner's word: built as a
+      job on the workstation first. Into `check` once it has stayed green for two weeks,
+      which is the owner's to say.
+- [ ] A nightly run of `main` from a clean clone on the workstation: the check, the browser
+      suite and the Android flows with nothing warm.
+- [ ] At item 23, with the owner: Claude's vendor connectors scoped so that none reaches
+      production (Neon pinned to staging and read-only, Sentry to its inspect tools, the
+      Vercel plugin off), and the `production` environment limited to its branch.
+
 ## After MVP
 
 In the order it would come back. The owner reorders at will.
@@ -979,7 +1007,8 @@ In the order it would come back. The owner reorders at will.
     customers in Spanish.
 20. For the workflow: scheduled Claude Code runs; a separate GitHub identity or a scoped
     token for a hard production lock; vendor sign-ins for Claude that cannot reach
-    production; a browser suite on the demo data in `check`.
+    production; a browser suite on the demo data in `check`; a Claude Code session of its
+    own on the workstation, with the rule for two sessions on one list.
 
 **Still to decide:** what triggers the first bill to D Sierra, now that "V1 complete" no
 longer means the old feature list.

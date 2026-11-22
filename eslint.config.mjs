@@ -37,6 +37,11 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   ...webOnly,
   {
+    // Claude Code's hooks are plain Node scripts, outside every package.
+    files: [".claude/hooks/**/*.mjs"],
+    languageOptions: { globals: { process: "readonly", console: "readonly" } },
+  },
+  {
     // The app router has no pages directory; the rule looks for one from the cwd.
     settings: { next: { rootDir: "apps/web/" } },
     rules: {

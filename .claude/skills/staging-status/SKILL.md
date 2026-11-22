@@ -1,6 +1,7 @@
 ---
 name: staging-status
 description: Report what TRADER's staging environment is actually running — the deployed commit, the last deploy run, the migration count against the repository's journal, and recent errors. Use before relying on staging, after a push to main, or when a deploy run is red.
+context: fork
 ---
 
 # Staging status
@@ -13,6 +14,8 @@ Read only. Nothing here changes staging, and nothing here reads production.
    `gh run view <id>` for the newest: `check`, then `deploy` (migrate, deploy hook, ready
    wait, browser smoke test). A run whose commit `main` has moved past ends green with
    "not deployed" in its summary; read the newest run instead. Never `gh workflow run`.
+   A red run: `gh run view <id> --log-failed`, and report the first failing step with the
+   lines that say why. The log itself stays here.
 3. **Deployment.** `STAGING_URL` from `.env.staging`, `/api/ready` answers
    `{ ready, commit }`. Compare `commit` with `main`.
 4. **Database.** Through Neon's read-only connector on the staging project:

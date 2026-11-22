@@ -24,11 +24,13 @@ MARCUS=marcus.bell@demo.invalid
 OFFICE=office@demo.invalid
 api_pid=
 
-# One statement's answer, as the database's own superuser inside its container: the
-# container's environment names the role, so nothing of `.env` is read here.
+# One statement's answer, as the database's own superuser, through Postgres' client over
+# loopback and not through `docker compose exec`: the account that runs this on the
+# workstation has no Docker. `.env` names the role, in the three lines compose reads.
+pg() { sed -n "s/^$1=//p" "$root/.env" | tail -n 1; }
 sql() {
-  (cd "$root" && docker compose exec -T postgres sh -c \
-    "psql -U \"\$POSTGRES_USER\" -d $DB -At -v ON_ERROR_STOP=1 -f -") <<SQL
+  PGPASSWORD=$(pg POSTGRES_PASSWORD) psql -h 127.0.0.1 -U "$(pg POSTGRES_USER)" -d "$DB" \
+    -At -v ON_ERROR_STOP=1 -f - <<SQL
 $1
 SQL
 }
@@ -42,7 +44,7 @@ expect() {
 }
 api_up() {
   (cd "$root/apps/web" && POSTGRES_DB=$DB DATABASE_URL= TRADER_DEV_IDENTITY=enabled \
-    exec pnpm exec next dev --webpack -p 3000 >"${TMPDIR:-/tmp}/trader-e2e-api.log" 2>&1) &
+    exec pnpm exec next dev --webpack -H 127.0.0.1 -p 3000 >"${TMPDIR:-/tmp}/trader-e2e-api.log" 2>&1) &
   api_pid=$!
   n=0
   until curl -fs -o /dev/null "http://localhost:3000/api/ready"; do

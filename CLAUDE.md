@@ -22,7 +22,8 @@ Done means `check` green on `main`, deployed to staging, seen working there.
 - a key you don't hold
 - a change to the MVP (top of `docs/TASKS.md`) or to the six invariants
   (`docs/ARCHITECTURE.md`)
-- anything on Apple, Google or legal text
+- anything on Apple, Google or legal text, except the Android SDK's licences
+  (`sdkmanager --licenses`), which you accept
 - a migration that drops or rewrites data, once production exists
 
 Everything else, decide, and say why in the commit message. While a pull request into
@@ -35,6 +36,8 @@ Everything else, decide, and say why in the commit message. While a pull request
 - route around a block in `.claude/settings.json`: if a blocked tool is the only way to do
   the task, stop and ask
 - read the owner's mail, drive or calendar
+- put a credential on the workstation (no sign-in, token, key or `.env` of this Mac's),
+  or run there through SSH what `.claude/settings.json` blocks here
 - commit a secret: this repository is public
 
 ## The owner's sign-ins
@@ -48,11 +51,14 @@ read-only for you.
 
 1. Scope is the MVP. Nothing outside it is built without the owner's word.
 2. The six invariants are never weakened.
-3. `main` stays green: `pnpm check` before every commit.
+3. `main` stays green: `pnpm check` while building, and before every commit CI's own steps
+   (`pnpm check:ci`, run by the `verify` skill) green on the exact tree. A green run on the
+   workstation counts when the tree committed is exactly the tree it checked.
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
    clock. Everything else gets ordinary tests.
 5. Every screen exists in English and Spanish. An invoice to a customer is in English.
-6. Versions, prices and platform rules are looked up, never recalled.
+6. Versions, prices and platform rules are looked up, never recalled. Next's own, for the
+   installed version, are in `apps/web/node_modules/next/dist/docs/`.
 7. Commits are as large as the work needs; the message says what changed and why. Signed, no
    trailers.
 8. In `docs/TASKS.md`: tick items, add what you find at the bottom, never reorder, never add
