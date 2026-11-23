@@ -22,9 +22,10 @@ import {
   type SignInFailure,
   type SignInIdentifier,
 } from "@trader/api/contract";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ssoCallbackFrom } from "../../../server/sign-in-paths";
+import { passkeyFailure } from "../../passkey-rules";
 import { signInPhone as shownNumber } from "../../format";
 import { useStrings } from "../../i18n";
 import styles from "../auth.module.css";
@@ -33,7 +34,12 @@ import google from "./google-button.module.css";
 // What the form says under its field. A refusal from Clerk, by name; a field that is
 // neither a number nor an email; or a sign-in Clerk left at a step this form has none for.
 // Or a Google account no roster holds, said when the browser comes back from Google.
-type Note = SignInFailure | "bad_address" | "unfinished" | "google_refused";
+// Or a passkey Clerk did not take.
+type Note =
+  SignInFailure | "bad_address" | "unfinished" | "google_refused" | "passkey_failed";
+
+// What only the browser knows, and that does not change under a page.
+const unchanging = () => () => undefined;
 
 // Clerk's own name for why a call was refused. Its errors carry a list of them, or one.
 function codeOf(error: unknown): string | undefined {
@@ -94,6 +100,7 @@ export function SignInForm({
       bad_address: s.badAddress,
       unfinished: s.unfinished,
       google_refused: s.googleRefused,
+      passkey_failed: s.passkeyFailed,
     })[which];
 
   // One step of the sign-in: busy while it runs, and whatever it threw is a failure said
@@ -150,6 +157,24 @@ export function SignInForm({
     });
   };
 
+  // A sign-in Clerk has verified becomes a session, and the browser goes to the office as
+  // a fresh page, so everything it draws is asked for as the person now signed in.
+  const finish = async (): Promise<Note | null> => {
+    if (signIn.status !== "complete") {
+      // A second factor, a device check or a challenge: nothing this instance asks of
+      // anyone, and nothing this form can answer. Said, and left in the console for
+      // whoever is asked about it: the office has no error reporting in the browser.
+      console.error(`sign-in stopped at ${signIn.status}`);
+      return "unfinished";
+    }
+    const { error: refused } = await signIn.finalize({
+      navigate: ({ decorateUrl }) => {
+        window.location.assign(decorateUrl(returnTo));
+      },
+    });
+    return refused === null ? null : signInFailure(codeOf(refused));
+  };
+
   const verify = (entered: string) => {
     if (sentTo === null || entered.length < SIGN_IN_CODE_LENGTH) return;
     void attempt(async () => {
@@ -161,23 +186,45 @@ export function SignInForm({
         setCode("");
         return signInFailure(codeOf(error));
       }
-      if (signIn.status !== "complete") {
-        // A second factor, a device check or a challenge: nothing this instance asks of
-        // anyone, and nothing this form can answer. Said, and left in the console for
-        // whoever is asked about it: the office has no error reporting in the browser.
-        console.error(`sign-in stopped at ${signIn.status}`);
-        return "unfinished";
-      }
-      // The session is made, and the browser goes to the office as a fresh page, so
-      // everything it draws is asked for as the person now signed in.
-      const { error: refused } = await signIn.finalize({
-        navigate: ({ decorateUrl }) => {
-          window.location.assign(decorateUrl(returnTo));
-        },
-      });
-      return refused === null ? null : signInFailure(codeOf(refused));
+      return finish();
     });
   };
+
+  // A passkey: the device's own lock signs the person in, with no code. Asked for by the
+  // button below, and offered by the browser in the field itself where it can (`autofill`:
+  // the request waits, unseen, until the person picks their passkey from the field's
+  // suggestions, and ends by itself when they sign in another way). A sheet the person
+  // closed is nothing to say; a passkey Clerk did not take is.
+  const withPasskey = async (flow: "discoverable" | "autofill"): Promise<Note | null> => {
+    const { error } = await signIn.passkey({ flow });
+    if (error !== null) {
+      return passkeyFailure(error) === "cancelled" ? null : "passkey_failed";
+    }
+    return finish();
+  };
+  // Whether this browser can use one at all: the browser's to say, and nothing on the
+  // server, so the button is drawn once the page is the browser's.
+  const passkeys = useSyncExternalStore(
+    unchanging,
+    () => typeof window.PublicKeyCredential === "function",
+    () => false,
+  );
+  useEffect(() => {
+    if (!clerk.loaded || !passkeys) return;
+    let gone = false;
+    void (async () => {
+      const inField =
+        (await window.PublicKeyCredential.isConditionalMediationAvailable?.()) === true;
+      if (!inField || gone) return;
+      const note = await withPasskey("autofill").catch(() => null);
+      if (!gone && note !== null) setNote(note);
+    })();
+    return () => {
+      gone = true;
+    };
+    // Once, when Clerk has loaded: the request it starts lives as long as the page.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clerk.loaded, passkeys]);
 
   const again = () => {
     if (sentTo === null) return;
@@ -236,7 +283,8 @@ export function SignInForm({
           // Letters, digits and an @: a number and an email are both typed here.
           type="text"
           inputMode="email"
-          autoComplete="username"
+          // `webauthn`: the browser lists the person's passkey for this site here too.
+          autoComplete="username webauthn"
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
@@ -254,6 +302,16 @@ export function SignInForm({
         <button type="submit" className={styles.send} disabled={idle}>
           {busy ? s.sending : s.send}
         </button>
+        {passkeys && (
+          <button
+            type="button"
+            className={styles.textButton}
+            disabled={idle}
+            onClick={() => void attempt(() => withPasskey("discoverable"))}
+          >
+            {s.usePasskey}
+          </button>
+        )}
       </form>
     );
   }

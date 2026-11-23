@@ -20,11 +20,13 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { PasskeyBand } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
 import { useStrings } from "../../i18n";
 import { LoadingRows } from "../../loading-rows";
 import { PageHeader } from "../../page-header";
+import { useClerkOn } from "../../providers";
 import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import {
@@ -43,6 +45,7 @@ const REFRESH_MS = 60_000;
 export function TodayScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const trpc = useTRPC();
+  const clerkOn = useClerkOn();
   const read = useQuery(
     trpc.overview.today.queryOptions(undefined, { refetchInterval: REFRESH_MS }),
   );
@@ -55,6 +58,7 @@ export function TodayScreen({ signInHref }: { signInHref: string }) {
   return (
     <>
       <PageHeader title={t.todayScreen.title} />
+      {clerkOn && <PasskeyBand />}
       {read.isPending ? (
         <LoadingRows />
       ) : read.isError ? (

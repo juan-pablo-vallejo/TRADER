@@ -10,7 +10,8 @@
 // sentence what it does as it stands, and what changing it will do before it changes it:
 // both reach every phone at its next sync, and one of them can stop a person clocking in.
 //
-// Me: the person's own name, contact phone and language (me-form.tsx).
+// Me: the person's own name, contact phone and language (me-form.tsx), and, where Clerk
+// signs people in, their passkeys (clerk-passkeys.tsx).
 //
 // The first two are the company's and an admin's alone (`company.get`, `company.update`,
 // which writes the keys it is given and no others, so a switch is saved without resending
@@ -18,6 +19,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
+import { PasskeySection } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
 import { Field } from "../../field";
@@ -25,6 +27,7 @@ import { useStrings } from "../../i18n";
 import { LoadingRows } from "../../loading-rows";
 import { Note } from "../../note";
 import { PageHeader } from "../../page-header";
+import { useClerkOn } from "../../providers";
 import { DestructiveAction } from "../../row-editor";
 import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
@@ -35,11 +38,13 @@ export function SettingsScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const trpc = useTRPC();
   const me = useQuery(trpc.me.get.queryOptions());
+  const clerkOn = useClerkOn();
   return (
     <>
       <PageHeader title={t.settings.title} />
       {me.data?.role === "admin" && <CompanyParts signInHref={signInHref} />}
       <MeForm signInHref={signInHref} />
+      {clerkOn && <PasskeySection className={styles.part} />}
     </>
   );
 }

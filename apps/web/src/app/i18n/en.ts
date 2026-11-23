@@ -513,6 +513,8 @@ export const en = {
     or: "or",
     googleRefused: "That Google account is not on a roster. Ask your office.",
     signingIn: "Signing you in…",
+    usePasskey: "Use a passkey",
+    passkeyFailed: "That passkey did not work. Sign in with a code.",
     helper: "Enter your mobile number or email. We'll send you a code.",
     address: "Mobile number or email",
     send: "Send me a code",
@@ -589,6 +591,36 @@ export const en = {
   },
   deactivated: "Deactivated",
   roles: { admin: "Admin", worker: "Worker" },
+  // A passkey in the office (clerk-passkeys.tsx): the offer on Today right after a code,
+  // and the list in Settings.
+  passkeys: {
+    title: "Passkeys",
+    explain:
+      "A passkey signs you in to the office with this device's own lock, without a code. Your face or fingerprint never leaves the device.",
+    offer:
+      "Sign in faster next time: add a passkey, and this device's own lock signs you in without a code.",
+    add: "Add a passkey",
+    notNow: "Not now",
+    added: "Passkey added. Next time, choose Use a passkey.",
+    removed: "Passkey removed.",
+    none: "No passkeys yet.",
+    unnamed: "Passkey",
+    addedOn: (day: string) => `Added ${day}`,
+    lastUsed: (day: string) => `last used ${day}`,
+    neverUsed: "never used",
+    remove: "Remove",
+    removeEffect: (name: string) =>
+      `${name} will no longer sign you in. You can still sign in with a code, and add a passkey again.`,
+    signInAgain: "Sign in again",
+    failures: {
+      sign_in_again:
+        "Sign in again first: a passkey can be added or removed within ten minutes of signing in.",
+      cancelled: "Nothing was changed.",
+      exists: "This device already has a passkey for you.",
+      unsupported: "This browser cannot use passkeys.",
+      failed: "That did not work. Try again.",
+    },
+  },
   // A person, opened from their row in a side panel.
   personPanel: {
     open: (name: string) => `Open ${name}`,

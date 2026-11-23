@@ -1,0 +1,15 @@
+/* The passkey offer on Today and the list in Settings (clerk-passkeys.tsx). */
+.band p {
+  margin: 0 0 var(--space-3);
+}
+.list {
+  margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none;
+}
+.list li {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) 0;
+  border-bottom: var(--hairline) solid var(--border);
+}

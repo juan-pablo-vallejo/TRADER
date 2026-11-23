@@ -484,6 +484,8 @@ export const es: Catalog = {
     googleRefused:
       "Esa cuenta de Google no está en ninguna plantilla. Pregunta en tu oficina.",
     signingIn: "Iniciando tu sesión…",
+    usePasskey: "Usar una llave de acceso",
+    passkeyFailed: "Esa llave de acceso no funcionó. Inicia sesión con un código.",
     helper: "Escribe tu número de celular o tu correo. Te enviaremos un código.",
     address: "Número de celular o correo",
     send: "Envíame un código",
@@ -557,6 +559,34 @@ export const es: Catalog = {
   },
   deactivated: "Desactivado",
   roles: { admin: "Administrador", worker: "Trabajador" },
+  passkeys: {
+    title: "Llaves de acceso",
+    explain:
+      "Una llave de acceso te inicia la sesión en la oficina con el bloqueo de este dispositivo, sin código. Tu cara o tu huella nunca sale del dispositivo.",
+    offer:
+      "Entra más rápido la próxima vez: agrega una llave de acceso, y el bloqueo de este dispositivo te inicia la sesión sin código.",
+    add: "Agregar una llave de acceso",
+    notNow: "Ahora no",
+    added: "Llave de acceso agregada. La próxima vez, elige Usar una llave de acceso.",
+    removed: "Llave de acceso quitada.",
+    none: "Todavía no hay llaves de acceso.",
+    unnamed: "Llave de acceso",
+    addedOn: (day) => `Agregada el ${day}`,
+    lastUsed: (day) => `usada por última vez el ${day}`,
+    neverUsed: "nunca usada",
+    remove: "Quitar",
+    removeEffect: (name) =>
+      `${name} ya no te iniciará la sesión. Puedes seguir entrando con un código, y agregar otra llave de acceso.`,
+    signInAgain: "Iniciar sesión de nuevo",
+    failures: {
+      sign_in_again:
+        "Primero inicia sesión de nuevo: una llave de acceso se puede agregar o quitar dentro de los diez minutos después de iniciar sesión.",
+      cancelled: "No se cambió nada.",
+      exists: "Este dispositivo ya tiene una llave de acceso tuya.",
+      unsupported: "Este navegador no puede usar llaves de acceso.",
+      failed: "Eso no funcionó. Inténtalo de nuevo.",
+    },
+  },
   personPanel: {
     open: (name) => `Abrir a ${name}`,
     makeAdmin: "Hacer administrador",
