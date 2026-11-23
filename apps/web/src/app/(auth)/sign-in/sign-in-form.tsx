@@ -106,7 +106,10 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
 
   const send = (event: { preventDefault(): void }) => {
     event.preventDefault();
-    const to = signInIdentifier(typed);
+    // What the field holds, not what this component was told: an address typed, pasted or
+    // filled in by the browser before the page's script arrived never reached `typed`,
+    // and was refused as no address at all while it stood in the field (seen on staging).
+    const to = signInIdentifier(address.current?.value ?? typed);
     if (to === null) {
       setNote("bad_address");
       return;

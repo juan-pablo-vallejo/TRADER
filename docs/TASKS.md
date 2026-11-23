@@ -1320,6 +1320,32 @@ Android user.
 - [ ] A dev server leaves `apps/web/.next/dev/types`, which `tsc` reads: after a route is
       removed, `pnpm typecheck` fails on the stale file until that folder is deleted, on
       the Mac and, after `trader-ws e2e`, on the workstation. CI has no such folder.
+- [ ] Item 21e, first landing (the invitation: by email alone, sent by email, and where it
+      stands), seen and not seen. On staging at `f18e691`, on 2026-11-23, at 1440: a
+      person invited by email alone and one by number and email, each with a login at
+      Clerk tagged with its roster row, the first with no number; Not sent in the table
+      for both; Copy the message turning one to Sent · not verified, with the send, who
+      made it and when in the panel; Send by email refused for both by staging's own
+      allow-list, said under the button and kept in the panel as not sent, the status
+      unmoved; the email-only person taken through the office's sign-in to the code step
+      ("We emailed it to ..."), which is also item 21a's emailed code; Verified on the
+      three people who had signed in. Locally on the demo data at 390, 768 and 1280, in
+      both languages: the same, the invite form refusing no address at all, a verified
+      person's panel, nothing scrolling sideways, 48 px targets on the phone. Not seen: an
+      invitation email arriving (OWNER: on staging, give a person an inbox staging may
+      mail and press Send by email), a first sign-in turning a person to Verified, the
+      text link on a real phone, the daily limit, and the Demo company's refusal, which
+      have tests only. The two people stay on staging's roster: Fixture Email Only and
+      Fixture Both.
+- [ ] Clerk's test code is not taken on the development instance: `424242` for a
+      `+clerk_test` address was answered as a wrong code on staging, once, on 2026-11-23.
+      Its Test mode setting was not read. Until it is on, no sign-in by code can be
+      finished without a real phone or inbox, which is why a right code is still the
+      owner's to see (item 21a).
+- [ ] Item 21a: an address in the field before the page's script arrived (typed early,
+      pasted, or filled in by the browser) was refused as no address while it stood
+      there. Found on staging by filling the field at once; the form now reads the field
+      itself.
 
 ## After MVP
 

@@ -115,6 +115,10 @@ describe("the sign-in form", () => {
     expect(form).toContain('from "@trader/api/contract"');
   });
 
+  it("reads the address from the field itself, so one typed before the script arrived counts", () => {
+    expect(form).toContain("signInIdentifier(address.current?.value ?? typed)");
+  });
+
   it("takes the texted code from the keyboard, in one field", () => {
     expect(form).toContain('autoComplete="one-time-code"');
     expect(form).toContain('inputMode="numeric"');
