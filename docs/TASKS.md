@@ -1361,6 +1361,20 @@ Android user.
       has a login at Clerk with no tag, so their address cannot be changed from People
       until they sign in once ("made before addresses could be changed here"). On staging
       that is the three fixture people of the smoke test; production has nobody yet.
+- [ ] Item 21e, second landing (a worker's addresses), seen and not seen. On staging at
+      `8abc4ac`, on 2026-11-23, at 1440: Fixture Both's email changed and Fixture Email
+      Only given a number, each asked about first with the person and the address named,
+      each answered Changed and listed in the panel with who and when; read back at
+      Clerk, the two logins hold exactly the roster's addresses, the old email gone, the
+      new address primary, the tags kept; Fixture Invitee, whose login has no tag, refused
+      in its sentence with nothing changed. Locally on the demo data at 390 and 1280, in
+      both languages: the same, an email someone on the roster has, what is not an
+      address, an address taken away, the last one kept, an admin's panel with nothing to
+      change. Not seen, so the box is not ticked: a person who was signed in being signed
+      out by a change, and signing in again with the new address (OWNER, with gate 1's
+      texted code: nobody on staging can be signed in as from here); a passkey or a Google
+      link coming off; an address another login holds, refused. Those have tests against
+      a stand-in Clerk only.
 
 ## After MVP
 
