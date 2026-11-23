@@ -85,6 +85,10 @@ describe("the three layouts", () => {
     expect(existsSync(at("fonts/Inter-latin.woff2"))).toBe(true);
     expect(read("(public)/page.tsx")).toContain("../fonts/Inter-latin.woff2");
     expect(read("(public)/home.module.css")).toContain("font-family: var(--font-home);");
+    // And nothing beside the homepage's root inherits the office's face and fetches it.
+    expect(read("theme.css")).toMatch(
+      /html:has\(\[data-brand\]\) \{\s*font-family: system-ui, sans-serif;/,
+    );
   });
 
   it("opens the menu on Today, then as a week is worked, with Customers beside Jobs", () => {
