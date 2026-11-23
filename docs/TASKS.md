@@ -961,7 +961,7 @@ Android user.
       neither sudo nor Docker. Seen: the check green there in 47 s and here in 74 s; red at
       typecheck and at lint, nothing recorded; all nine sections of the phone flows green on
       the Android emulator there and on the iPhone simulator here.
-- [ ] OWNER, to arm the above: the hooks block into `.claude/settings.json` (his file), and
+- [x] OWNER, to arm the above: the hooks block into `.claude/settings.json` (his file), and
       `git config core.hooksPath .githooks` in his clone. Until both, the hooks are files
       and stop nothing.
 - [ ] The release kit: a `/release` skill, a `release-auditor` agent that reads
@@ -984,7 +984,7 @@ Android user.
 - [ ] For the scoping at item 23: the Expo CLI also reaches the whole account, and the entry
       above does not name it. Clerk's write tools are denied in `.claude/settings.json`
       once the owner applies the patch of 2026-11-22.
-- [ ] By the owner's word of 2026-11-22: `trader-ws` moves into the repository as
+- [x] By the owner's word of 2026-11-22: `trader-ws` moves into the repository as
       `scripts/trader-ws`. The host comes from a file in the owner's home through a shim;
       the script names no alias, user or address. It, its audit and its ledger helpers are
       guard files: `guard.mjs` covers their paths and `release-auditor` flags a change to

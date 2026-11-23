@@ -137,7 +137,13 @@
       "mcp__clerk__put_instance_config",
       "mcp__clerk__get_deploy_oauth_providers",
       "mcp__clerk__configure_mcp_server",
-      "mcp__plugin_sentry_sentry__update_issue"
+      "mcp__plugin_sentry_sentry__update_issue",
+      "mcp__clerk__create_*",
+      "mcp__clerk__update_*",
+      "mcp__clerk__patch_*",
+      "mcp__clerk__enable_*",
+      "mcp__clerk__reply_*",
+      "mcp__clerk__submit_*"
     ],
     "allow": [
       "Bash(pnpm check)",
@@ -157,6 +163,54 @@
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run watch:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/session-status.mjs"
+            ],
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/guard.mjs"
+            ],
+            "timeout": 30,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/format.mjs"
+            ],
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
