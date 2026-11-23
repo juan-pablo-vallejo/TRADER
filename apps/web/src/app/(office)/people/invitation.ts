@@ -2,7 +2,9 @@
 // number, in English and Spanish since the office may not know which they read, with the
 // link to `/get`. Pure: the words, the link that opens the phone's own messages on them,
 // and whether this is a phone at all. Nothing is sent by TRADER: the admin presses Send in
-// their own messages, or copies the text on a desktop.
+// their own messages, or copies the text on a desktop. The words are the ones an emailed
+// invitation carries too (packages/api, contract/invitation.ts).
+import { invitationParagraphs } from "@trader/api/contract";
 
 export function invitationText(input: {
   name: string;
@@ -10,11 +12,7 @@ export function invitationText(input: {
   // Where the app is got from: this host's `/get`.
   url: string;
 }): string {
-  const { name, company, url } = input;
-  return [
-    `${name}: ${company} uses TRADER for your schedule and your hours. Get the app: ${url} Then sign in with this mobile number.`,
-    `${name}: ${company} usa TRADER para tu horario y tus horas. Obtén la aplicación: ${url} Después inicia sesión con este número de celular.`,
-  ].join("\n\n");
+  return invitationParagraphs({ ...input, by: "text" }).join("\n\n");
 }
 
 // A link that opens the phone's messages on a new text to a number, with the words

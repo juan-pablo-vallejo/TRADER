@@ -5,11 +5,14 @@
 // hand. The page header's action opens the invite form. A row's name opens the person in
 // the side panel, and which person is in the address: their role (making an admin asks
 // first), whether their taps are stamped with a location, their numbers as links that
-// dial, their week in Hours, the invitation while they have not signed in, and, last and
-// alone, Deactivate. A `rejected` answer reads beneath the control it came from.
+// dial, their week in Hours, the invitation and where it stands, and, last and alone,
+// Deactivate. A `rejected` answer reads beneath the control it came from.
 //
-// The invitation is a text message the admin sends from their own phone
-// (invitation.ts): TRADER writes the words and sends nothing. Consumed by page.tsx.
+// The invitation goes two ways. By text, from the admin's own phone (invitation.ts):
+// TRADER writes the words, sends nothing, and notes that the admin took them to send. By
+// email, from TRADER (roster.sendInvitation). Each is recorded, and the roster answers
+// where the invitation stands: not sent, sent and not verified, or verified once the
+// person has signed in. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
@@ -26,10 +29,11 @@ import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
 import type { Catalog } from "../../i18n/en";
 import { SidePanel } from "../../side-panel";
-import { StatusBadge } from "../../status-badge";
+import { StatusBadge, type Tone } from "../../status-badge";
 import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import { useAsked, useUrlFilters } from "../../use-url-filters";
+import { uuidv7 } from "../../uuidv7";
 import { invitationText, isPhone, smsLink } from "./invitation";
 import styles from "./people.module.css";
 
@@ -126,8 +130,26 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
   );
 }
 
+// Where a person stands: deactivated, or where their invitation is.
+const STANDING: Record<Row["invitation"]["status"], Tone> = {
+  not_sent: "neutral",
+  sent: "attention",
+  verified: "done",
+};
 const statusOf = (t: Catalog, row: Row) =>
-  row.deactivatedAt !== null ? t.deactivated : row.invited ? t.invited : t.active;
+  row.deactivatedAt !== null ? t.deactivated : t.invitationStatus[row.invitation.status];
+
+function Standing({ row }: { row: Row }) {
+  const { t } = useStrings();
+  return row.deactivatedAt !== null ? (
+    <StatusBadge tone="neutral" label={t.deactivated} />
+  ) : (
+    <StatusBadge
+      tone={STANDING[row.invitation.status]}
+      label={t.invitationStatus[row.invitation.status]}
+    />
+  );
+}
 
 function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   const { t } = useStrings();
@@ -167,20 +189,20 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
-    // An empty email is an address not given, never an empty address. The number is needed
-    // of everyone, and one the server would refuse is said here, with no request made.
+    // An empty field is an address not given, never an empty address. One of the two is
+    // needed, and a number the server would refuse is said here, with no request made.
     const typedPhone = phone.trim();
     const typedEmail = email.trim();
-    if (typedPhone === "") {
-      setNote({ under: "phone", text: t.mobileNumberNeeded });
+    if (typedPhone === "" && typedEmail === "") {
+      setNote({ under: "phone", text: t.addressNeeded });
       return;
     }
-    if (!looksLikeSignInPhone(typedPhone)) {
+    if (typedPhone !== "" && !looksLikeSignInPhone(typedPhone)) {
       setNote({ under: "phone", text: t.mobileNumberInvalid });
       return;
     }
     invite.mutate({
-      phone: typedPhone,
+      ...(typedPhone !== "" && { phone: typedPhone }),
       ...(typedEmail !== "" && { email: typedEmail }),
       name,
       role,
@@ -290,14 +312,7 @@ function RosterTable({
     {
       key: "status",
       header: t.status,
-      cell: (row) =>
-        row.deactivatedAt !== null ? (
-          <StatusBadge tone="neutral" label={t.deactivated} />
-        ) : row.invited ? (
-          <StatusBadge tone="attention" label={t.invited} />
-        ) : (
-          <StatusBadge tone="done" label={t.active} />
-        ),
+      cell: (row) => <Standing row={row} />,
     },
   ];
   return (
@@ -322,12 +337,18 @@ function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
       <p className={styles.line}>
         <Link href={`/hours?person=${row.id}`}>{t.personPanel.theirWeek}</Link>
       </p>
-      {row.invited && row.deactivatedAt === null && (
-        <EditorSection heading={t.personPanel.invitation}>
-          <p className="secondary">{t.personPanel.invitationExplain}</p>
-          <Invitation row={row} />
-        </EditorSection>
-      )}
+      <EditorSection heading={t.personPanel.invitation}>
+        <p className={styles.standing}>
+          <Standing row={row} />
+        </p>
+        {row.invited && row.deactivatedAt === null && (
+          <>
+            <p className="secondary">{t.personPanel.invitationExplain}</p>
+            <Invitation row={row} />
+          </>
+        )}
+        <Sends row={row} />
+      </EditorSection>
       <Role row={row} />
       <Location row={row} />
       <EditorFooter>
@@ -371,13 +392,16 @@ function Numbers({ row }: { row: Row }) {
 // Neither the browser's description of itself nor its address changes under a page.
 const unchanging = () => () => undefined;
 
-// The invitation: on a phone, a link that opens the admin's own messages on the text,
-// written; anywhere else the same text to copy. Which it is cannot be known on the
-// server, so the copy is drawn first and the link takes its place once the browser has
-// said what it is.
+// The invitation, each way the person can be reached. By text: on a phone, a link that
+// opens the admin's own messages on the words, written; anywhere else the same words to
+// copy. Which it is cannot be known on the server, so the copy is drawn first and the link
+// takes its place once the browser has said what it is. Taking the words either way is
+// noted as the send: TRADER cannot know more of a message it does not carry. By email:
+// TRADER sends the same words itself, and says how that went.
 function Invitation({ row }: { row: Row }) {
   const { t } = useStrings();
   const trpc = useTRPC();
+  const refresh = useRefresh();
   const company = useQuery(trpc.company.get.queryOptions());
   // What only the browser knows, read as React reads anything outside itself: nothing on
   // the server, the browser's answer once it is there.
@@ -391,41 +415,125 @@ function Invitation({ row }: { row: Row }) {
     () => window.location.origin,
     () => null,
   );
-  const [note, setNote] = useState<string | null>(null);
-  if (row.signInPhone === null) {
-    return <p className="secondary">{t.personPanel.noSignInNumber}</p>;
-  }
+  const [note, setNote] = useState<{ text: string; saved: boolean } | null>(null);
+  // The admin took the words to send: noted, and the list says where that leaves it. A
+  // note that does not arrive costs the status and nothing else, so it fails quietly.
+  const noted = useMutation(
+    trpc.roster.noteInvitation.mutationOptions({ onSuccess: () => refresh() }),
+  );
+  // An emailed send keeps its id until it is answered, so a retry is the same send.
+  const [emailId, setEmailId] = useState(() => uuidv7());
+  const emailed = useMutation(
+    trpc.roster.sendInvitation.mutationOptions({
+      onSuccess: async (answer) => {
+        setEmailId(uuidv7());
+        const went =
+          answer.result === "sent" ||
+          (answer.result === "duplicate" && answer.outcome === "sent");
+        setNote({
+          saved: went,
+          text: went
+            ? t.personPanel.emailed(row.email ?? "")
+            : answer.result === "failed"
+              ? t.invoices.sendFailures[answer.failure]
+              : answer.result === "rejected"
+                ? t.personPanel.refused[answer.code]
+                : t.invoices.sendFailed,
+        });
+        await refresh();
+      },
+      onError: () => setNote({ saved: false, text: t.requestFailed }),
+    }),
+  );
   if (origin === null || company.data === undefined) return null;
-  const text = invitationText({
-    name: row.name,
-    company: company.data.name,
-    url: `${origin}/get`,
-  });
+  const text =
+    row.signInPhone === null
+      ? null
+      : invitationText({
+          name: row.name,
+          company: company.data.name,
+          url: `${origin}/get`,
+        });
+  const took = () => noted.mutate({ id: uuidv7(), userId: row.id });
   return (
     <>
-      <p className={`secondary ${styles.message}`} data-invitation>
-        {text}
-      </p>
-      {phone ? (
-        <a className={controls.primary} href={smsLink(row.signInPhone, text)}>
-          {t.personPanel.sendInvitation}
-        </a>
-      ) : (
-        <button
-          type="button"
-          className={controls.secondary}
-          onClick={() =>
-            void navigator.clipboard.writeText(text).then(
-              () => setNote(t.personPanel.copied),
-              () => setNote(t.requestFailed),
-            )
-          }
-        >
-          {t.personPanel.copyInvitation}
-        </button>
+      {text !== null && (
+        <p className={`secondary ${styles.message}`} data-invitation>
+          {text}
+        </p>
       )}
-      <Note text={note} tone={note === t.personPanel.copied ? "saved" : undefined} />
+      {row.email !== null && (
+        <p className="secondary">{t.personPanel.emailGoesTo(row.email)}</p>
+      )}
+      <div className={controls.actions}>
+        {text === null || row.signInPhone === null ? null : phone ? (
+          <a
+            className={controls.primary}
+            href={smsLink(row.signInPhone, text)}
+            onClick={took}
+          >
+            {t.personPanel.sendInvitation}
+          </a>
+        ) : (
+          <button
+            type="button"
+            className={controls.secondary}
+            onClick={() =>
+              void navigator.clipboard.writeText(text).then(
+                () => {
+                  setNote({ saved: true, text: t.personPanel.copied });
+                  took();
+                },
+                () => setNote({ saved: false, text: t.requestFailed }),
+              )
+            }
+          >
+            {t.personPanel.copyInvitation}
+          </button>
+        )}
+        {row.email !== null && (
+          <button
+            type="button"
+            className={controls.secondary}
+            disabled={emailed.isPending}
+            onClick={() => {
+              setNote(null);
+              emailed.mutate({ id: emailId, userId: row.id });
+            }}
+          >
+            {emailed.isPending ? t.loading : t.personPanel.emailInvitation}
+          </button>
+        )}
+      </div>
+      <Note text={note?.text ?? null} tone={note?.saved ? "saved" : undefined} />
     </>
+  );
+}
+
+// When the office invited them, and each time the invitation went out, newest first.
+function Sends({ row }: { row: Row }) {
+  const { t, f } = useStrings();
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const p = t.personPanel;
+  const failures: Record<string, string | undefined> = t.invoices.sendFailures;
+  return (
+    <ul className={styles.sends}>
+      {row.invitation.sends.map((send) => {
+        const at = f.stamp(send.at, zone);
+        return (
+          <li key={send.id} className="secondary">
+            {send.channel === "text"
+              ? p.byText(send.by, at)
+              : send.outcome === "sent"
+                ? p.byEmail(send.by, at)
+                : [p.emailNotSent(send.by, at), failures[send.failure ?? ""]]
+                    .filter((part) => part !== undefined)
+                    .join(". ")}
+          </li>
+        );
+      })}
+      <li className="secondary">{p.invitedOn(f.dayOf(row.invitedAt))}</li>
+    </ul>
   );
 }
 

@@ -62,11 +62,14 @@ describe("the procedure context", () => {
     expect(seen.demoIsUndefined).toBe(true);
     // `closed` names the company that reaches nobody outside, or is null (demo-door.ts):
     // a company's id and a list of addresses, no secret and no connection.
+    // `getAppUrl` is where the app is got from on this host, or null: an address the host
+    // configured, for an emailed invitation to link to.
     expect(seen.keys).toEqual([
       "closed",
       "db",
       "demo",
       "directory",
+      "getAppUrl",
       "identity",
       "mailer",
       "reporter",

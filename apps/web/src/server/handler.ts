@@ -28,8 +28,12 @@ export type HandlerDependencies = {
   getDb: () => Db;
   identity: IdentityAdapter;
   directory: IdentityDirectory;
-  // The mail service for invoice.send (mailer.ts). Absent, every send fails closed.
+  // The mail service for invoice.send and roster.sendInvitation (mailer.ts). Absent, every
+  // send fails closed.
   mailer?: Mailer;
+  // Where the app is got from on this host (addresses.ts), read per request. Absent or
+  // null, no invitation is emailed.
+  getAppUrl?: () => string | null;
   // The Demo sign-in's door (clerk-demo.ts), read per request. Absent, there is no door.
   demo?: () => DemoDoor | null;
   // The company that reaches nobody outside, read per request. Absent, there is none.
@@ -61,6 +65,7 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           identity,
           directory: deps.directory,
           ...(deps.mailer !== undefined && { mailer: deps.mailer }),
+          ...(deps.getAppUrl !== undefined && { getAppUrl: deps.getAppUrl() }),
           ...(deps.demo !== undefined && { demo: deps.demo() }),
           ...(deps.closed !== undefined && { closed: deps.closed() }),
           reporter: deps.reporter,

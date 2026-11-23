@@ -70,12 +70,14 @@ export function createResendMailer(deps: {
             to: [mail.to],
             subject: mail.subject,
             html: mail.text.map((line) => `<p>${escaped(line)}</p>`).join(""),
-            attachments: [
-              {
-                filename: mail.attachment.filename,
-                content: Buffer.from(mail.attachment.content).toString("base64"),
-              },
-            ],
+            ...(mail.attachment !== undefined && {
+              attachments: [
+                {
+                  filename: mail.attachment.filename,
+                  content: Buffer.from(mail.attachment.content).toString("base64"),
+                },
+              ],
+            }),
           }),
           signal: AbortSignal.timeout(deps.timeoutMs ?? MAIL_TIMEOUT_MS),
         });

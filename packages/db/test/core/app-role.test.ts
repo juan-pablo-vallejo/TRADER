@@ -26,6 +26,7 @@ const GRANTS: Record<string, Privilege[]> = {
   work_session_events: ["SELECT", "INSERT"],
   invoice_payments: ["SELECT", "INSERT"],
   invoice_sends: ["SELECT", "INSERT"],
+  invitation_sends: ["SELECT", "INSERT"],
 };
 
 let db: Db;

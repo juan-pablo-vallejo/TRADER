@@ -6,6 +6,7 @@ export * from "./crew";
 export * from "./dev";
 export * from "./enums";
 export * from "./instant";
+export * from "./invitation";
 export * from "./invoice-status";
 export * from "./labor";
 export * from "./protocol";

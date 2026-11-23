@@ -1,7 +1,7 @@
 // The roster over the real transport — the route module as Next calls it, the
 // development headers as the cookie bridge sets them: 401 anonymous, 403 as a worker, and an
-// admin's invite answering `invited` then `email_taken` through POST, and an invitation by
-// mobile number that the number's own login then binds.
+// admin's invite answering `invited` then `email_taken` through POST, an invitation by
+// mobile number that the number's own login then binds, and an invitation's sends.
 import { DEV_EMAIL_HEADER, DEV_PHONE_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
 import type { Db } from "@trader/db";
 import {
@@ -122,12 +122,20 @@ describe("the roster through the route handler", () => {
       headers: as(admin.email),
     });
     expect(neither.status).toBe(400);
-    // An email alone is not an invitation: everyone signs in with a number.
+    // An email alone is an invitation too: that person signs in by a code sent to it.
     const emailOnly = await mutate(POST, "roster.invite", {
       input: { email: `only-${admin.run}@web.test`, name: "Email Only" },
       headers: as(admin.email),
     });
-    expect(emailOnly.status).toBe(400);
+    expect(emailOnly.status).toBe(200);
+    expect(emailOnly.body.result?.data.json).toMatchObject({
+      result: "invited",
+      user: {
+        email: `only-${admin.run}@web.test`,
+        signInPhone: null,
+        invitation: { status: "not_sent", sends: [] },
+      },
+    });
 
     // The number's own login, with no email at all. The admin's browser cookie rides along
     // and is not bridged over a request that names its own development identity.
@@ -153,6 +161,65 @@ describe("the roster through the route handler", () => {
       headers: { [DEV_SUBJECT_HEADER]: "dev:someone-else", [DEV_PHONE_HEADER]: phone },
     });
     expect(other.status).toBe(401);
+  });
+
+  it("notes a texted invitation, answers where it stands, and emails only with an address of its own to link to", async () => {
+    const email = `both-${admin.run}@web.test`;
+    const invited = await mutate(POST, "roster.invite", {
+      input: { phone: "(401) 555-0146", email, name: "Painter By Both" },
+      headers: as(admin.email),
+    });
+    const userId = (invited.body.result?.data.json as { user: { id: string } }).user.id;
+    const standing = async () => {
+      const list = await query(GET, "roster.list", { headers: as(admin.email) });
+      const rows = list.body.result?.data.json as {
+        id: string;
+        invitation: { status: string; sends: { channel: string; outcome: string }[] };
+      }[];
+      return rows.find((row) => row.id === userId)?.invitation;
+    };
+    expect(await standing()).toEqual({ status: "not_sent", sends: [] });
+
+    const noted = await mutate(POST, "roster.noteInvitation", {
+      input: { id: crypto.randomUUID(), userId },
+      headers: as(admin.email),
+    });
+    expect(noted.body.result?.data.json).toEqual({ result: "noted" });
+    expect(await standing()).toMatchObject({
+      status: "sent",
+      sends: [{ channel: "text", outcome: "sent" }],
+    });
+
+    // A server that names no address of its own has no link to mail: nothing is sent.
+    vi.stubEnv("TRADER_HOME_HOST", "");
+    vi.stubEnv("CLERK_AUTHORIZED_PARTIES", "");
+    const noLink = await mutate(POST, "roster.sendInvitation", {
+      input: { id: crypto.randomUUID(), userId },
+      headers: as(admin.email),
+    });
+    expect(noLink.body.result?.data.json).toEqual({
+      result: "rejected",
+      code: "no_link",
+    });
+    // With one, the send reaches the mail service, which this server has none of: the
+    // failure is recorded and said.
+    vi.stubEnv("CLERK_AUTHORIZED_PARTIES", "https://office.test");
+    vi.stubEnv("RESEND_API_KEY", "");
+    vi.stubEnv("MAIL_FROM", "");
+    const unsent = await mutate(POST, "roster.sendInvitation", {
+      input: { id: crypto.randomUUID(), userId },
+      headers: as(admin.email),
+    });
+    expect(unsent.body.result?.data.json).toEqual({
+      result: "failed",
+      failure: "mail_not_configured",
+    });
+    expect((await standing())?.sends.map((send) => [send.channel, send.outcome])).toEqual(
+      [
+        ["email", "failed"],
+        ["text", "sent"],
+      ],
+    );
   });
 
   it("refuses an invite by POST from a worker with 403", async () => {

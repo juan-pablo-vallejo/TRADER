@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { addressFor, listedOrigins } from "../src/server/addresses";
+import { addressFor, getAppUrl, listedOrigins } from "../src/server/addresses";
 import { isPublicPath, OFFICE_HOME, PUBLIC_PATHS } from "../src/server/sign-in-paths";
 
 const at = (path: string) =>
@@ -273,6 +273,25 @@ describe("which address a page is served at", () => {
     expect(at(local, "localhost:4000", "/schedule")).toEqual(
       to("http://localhost:3000/schedule"),
     );
+  });
+
+  it("says where the app is got from by the deployment's own configuration", () => {
+    // The host whose `/` is the homepage, where one is named.
+    expect(
+      getAppUrl({
+        TRADER_HOME_HOST: "dsierrapainting.example",
+        CLERK_AUTHORIZED_PARTIES: "https://app.example,https://dsierrapainting.example",
+      }),
+    ).toBe("https://dsierrapainting.example/get");
+    // Else the first origin a session may be issued to: staging.
+    expect(getAppUrl({ CLERK_AUTHORIZED_PARTIES: "https://staging.example" })).toBe(
+      "https://staging.example/get",
+    );
+    // A server that names neither has no link, and a host that is not one is not used.
+    expect(getAppUrl({})).toBeNull();
+    expect(
+      getAppUrl({ TRADER_HOME_HOST: "evil.example/x?", CLERK_AUTHORIZED_PARTIES: "" }),
+    ).toBeNull();
   });
 
   it("is carried out by the proxy before Clerk or the page", () => {

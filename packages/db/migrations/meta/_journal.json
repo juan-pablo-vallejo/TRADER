@@ -43,6 +43,13 @@
       "when": 1795186971725,
       "tag": "0005_invoice_print_names",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795467445007,
+      "tag": "0006_invitation_sends",
+      "breakpoints": true
     }
   ]
 }

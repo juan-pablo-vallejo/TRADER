@@ -24,9 +24,13 @@ export type Context = {
   db: Db;
   identity: VerifiedIdentity | null;
   directory: IdentityDirectory;
-  // The mail service as invoice.send sees it (mailer.ts). A host that names none gets one
-  // that sends nothing and says so.
+  // The mail service as invoice.send and roster.sendInvitation see it (mailer.ts). A host
+  // that names none gets one that sends nothing and says so.
   mailer: Mailer;
+  // Where the app is got from on this host, as an emailed invitation links to it: the
+  // host's own configured address, never anything of a request. Null where the host names
+  // none, and then no invitation is emailed.
+  getAppUrl: string | null;
   // The Demo sign-in's door (demo-door.ts), or null on a host that has none: then
   // demo.signIn refuses everyone.
   demo: DemoDoor | null;
@@ -52,6 +56,7 @@ export function createContext(opts: {
   identity: unknown;
   directory: IdentityDirectory;
   mailer?: Mailer;
+  getAppUrl?: string | null;
   demo?: DemoDoor | null;
   closed?: ClosedCompany | null;
   reporter: ErrorReporter;
@@ -64,6 +69,7 @@ export function createContext(opts: {
     identity: parsed.success ? parsed.data : null,
     directory: opts.directory,
     mailer: opts.mailer ?? unconfiguredMailer,
+    getAppUrl: opts.getAppUrl ?? null,
     demo: opts.demo ?? null,
     closed: opts.closed ?? null,
     reporter: opts.reporter,

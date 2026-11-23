@@ -1,4 +1,4 @@
-// The eleven tables and their triggers, asserted against the migrated container. Rolled-back
+// The tables and their triggers, asserted against the migrated container. Rolled-back
 // transactions throughout; see helpers.ts.
 import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -11,6 +11,7 @@ import { company, one, rolledBack, sqlstate } from "../helpers";
 const TABLES = [
   "companies",
   "customers",
+  "invitation_sends",
   "invoice_counters",
   "invoice_line_items",
   "invoice_payments",
@@ -26,6 +27,9 @@ const TENANT_TABLES = TABLES.filter((t) => t !== "companies");
 
 // Every trigger a table in public carries, the ones Postgres makes for foreign keys aside.
 const TRIGGERS = [
+  "invitation_sends_no_delete",
+  "invitation_sends_no_truncate",
+  "invitation_sends_no_update",
   "invoice_line_items_check_mutation",
   "invoice_payments_check_insert",
   "invoice_payments_no_delete",
@@ -55,16 +59,16 @@ afterAll(async () => {
 });
 
 describe("core tables", () => {
-  it("holds exactly eleven tables in public", async () => {
+  it("holds exactly twelve tables in public", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ count: string }>(
         sql`select count(*) from pg_tables where schemaname = 'public'`,
       );
-      expect(Number(one(rows).count)).toBe(11);
+      expect(Number(one(rows).count)).toBe(12);
     });
   });
 
-  it("holds exactly the eleven named tables in public", async () => {
+  it("holds exactly the twelve named tables in public", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ tablename: string }>(sql`
         select tablename::text from pg_tables where schemaname = 'public' order by tablename
@@ -73,7 +77,7 @@ describe("core tables", () => {
     });
   });
 
-  it("carries exactly the eighteen named triggers on the tables in public", async () => {
+  it("carries exactly the twenty-one named triggers on the tables in public", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ tgname: string }>(sql`
         select t.tgname::text from pg_trigger t
@@ -83,7 +87,7 @@ describe("core tables", () => {
         order by t.tgname
       `);
       expect(rows.map((r) => r.tgname)).toEqual(TRIGGERS);
-      expect(rows).toHaveLength(18);
+      expect(rows).toHaveLength(21);
     });
   });
 

@@ -7,6 +7,13 @@ import {
   targetInput,
 } from "../roster/deactivation";
 import { isClosed } from "../core/demo-door";
+import {
+  invitationInput,
+  noteInvitation,
+  noteInvitationOutput,
+  sendInvitation,
+  sendInvitationOutput,
+} from "../roster/invitation";
 import { inviteInput, inviteOutput, rosterInvite } from "../roster/invite";
 import { listOutput, rosterList } from "../roster/list";
 import { setLocation, setLocationInput, setLocationOutput } from "../roster/location";
@@ -26,6 +33,27 @@ export const rosterRouter = router({
       isClosed(ctx.closed, ctx.user.companyId)
         ? ({ result: "rejected", code: "company_closed" } as const)
         : rosterInvite(ctx.tx, ctx.user, input, ctx.directory),
+    ),
+  // The closed company's invitations go to nobody, by email or by note: it invites nobody
+  // (above), so there is nobody of its own to send to, and nothing is mailed or recorded.
+  sendInvitation: roleProcedure("admin")
+    .input(invitationInput)
+    .output(sendInvitationOutput)
+    .mutation(({ ctx, input }) =>
+      isClosed(ctx.closed, ctx.user.companyId)
+        ? ({ result: "rejected", code: "company_closed" } as const)
+        : sendInvitation(ctx.tx, ctx.user, input, {
+            mailer: ctx.mailer,
+            getAppUrl: ctx.getAppUrl,
+          }),
+    ),
+  noteInvitation: roleProcedure("admin")
+    .input(invitationInput)
+    .output(noteInvitationOutput)
+    .mutation(({ ctx, input }) =>
+      isClosed(ctx.closed, ctx.user.companyId)
+        ? ({ result: "rejected", code: "company_closed" } as const)
+        : noteInvitation(ctx.tx, ctx.user, input),
     ),
   setRole: roleProcedure("admin")
     .input(setRoleInput)

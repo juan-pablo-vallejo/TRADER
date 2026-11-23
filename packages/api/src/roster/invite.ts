@@ -1,6 +1,6 @@
 // roster.invite: accounts are by invitation only; a new user starts as a worker unless the
-// invitation names another role. An invitation is a users row with a sign-in address — the
-// mobile number, and an email when one is given — the name and the role, identity_subject
+// invitation names another role. An invitation is a users row with a sign-in address — a
+// mobile number, an email, or both — the name and the role, identity_subject
 // NULL: the first sign-in the provider verified for either address binds it
 // (resolve-user.ts). The person is then admitted at the identity provider (identity.ts,
 // IdentityDirectory), inside this transaction: if the provider cannot be told, nothing was
@@ -38,15 +38,23 @@ const invitedPhone = z
   .pipe(signInPhoneSchema);
 
 // Each address validated as a sign-in address is, since that is what it will be matched
-// against. The number is required of every new invitation: the provider holds no login
-// without one. Rows invited by email alone
-// before that stay as they are; the column's own rule is still one address of the two.
-export const inviteInput = z.strictObject({
-  email: signInEmailSchema.optional(),
-  phone: invitedPhone,
-  name: z.string().trim().min(1).max(120),
-  role: z.enum(ROLES).default("worker"),
-});
+// against. A mobile number, an email, or both: one of the two, as the column's own rule has
+// it (users_sign_in_address_present). A person invited by email alone signs in by a code
+// sent to it.
+export const inviteInput = z
+  .strictObject({
+    email: signInEmailSchema.optional(),
+    phone: invitedPhone.optional(),
+    name: z.string().trim().min(1).max(120),
+    role: z.enum(ROLES).default("worker"),
+  })
+  .refine(
+    (invitation) => invitation.email !== undefined || invitation.phone !== undefined,
+    {
+      path: ["phone"],
+      message: "an invitation needs a mobile number or an email",
+    },
+  );
 
 export type InviteInput = z.infer<typeof inviteInput>;
 
@@ -71,7 +79,7 @@ export async function rosterInvite(
   directory: IdentityDirectory,
 ): Promise<InviteResult> {
   const email = input.email ?? null;
-  const phone = input.phone;
+  const phone = input.phone ?? null;
   const { rows } = await tx.execute<{ id: string }>(sql`
     INSERT INTO users (company_id, email, sign_in_phone, name, role)
     VALUES (${user.companyId}, ${email}, ${phone}, ${input.name}, ${input.role}::user_role)
@@ -99,6 +107,6 @@ export async function rosterInvite(
   // so a provider that cannot be told rolls the row back. The reverse
   // order of failure — the provider told, the commit lost — leaves a login that matches no
   // invitation and is refused; inviting again admits the same addresses and succeeds.
-  await directory.admit({ email, phone });
+  await directory.admit({ id: inserted.id, email, phone });
   return { result: "invited", user: invited };
 }

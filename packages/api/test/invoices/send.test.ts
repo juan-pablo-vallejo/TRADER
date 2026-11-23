@@ -175,6 +175,7 @@ describe("invoice.send", () => {
       // The attachment is the page invoice.pdf answers, byte for byte.
       const page = await o.bill.pdf({ invoiceId: o.invoiceId });
       if (page.result !== "rendered") throw new Error("not rendered");
+      if (mail.attachment === undefined) throw new Error("no attachment");
       expect(mail.attachment.filename).toBe("invoice-1042.pdf");
       expect(Buffer.from(mail.attachment.content).toString("base64")).toBe(page.pdf);
 

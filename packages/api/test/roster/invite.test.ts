@@ -1,4 +1,4 @@
-// roster.invite — a users row with a sign-in number, an email when one is given, name and
+// roster.invite — a users row with a sign-in number, an email, or both, name and
 // role, worker unless named, bound by the first sign-in verified for either address; a second
 // use of an address in the company is `email_taken` or `phone_taken` with nothing written and
 // no error; the person admitted at the identity provider in the same transaction; admin only.
@@ -63,14 +63,17 @@ const inviteThrough = (who: unknown, input: Input, directory: IdentityDirectory)
   ).roster.invite(input);
 
 const recordingDirectory = () => {
-  const admitted: { email: string | null; phone: string }[] = [];
+  const admitted: { email: string | null; phone: string | null }[] = [];
+  // The row's own id is told too (its own test, below); most tests read the addresses.
+  const ids: string[] = [];
   const directory: IdentityDirectory = {
-    admit: (person) => {
-      admitted.push(person);
+    admit: ({ id, email, phone }) => {
+      ids.push(id);
+      admitted.push({ email, phone });
       return Promise.resolve();
     },
   };
-  return { admitted, directory };
+  return { admitted, ids, directory };
 };
 
 // An E.164 number as an admin might type it.
@@ -234,13 +237,11 @@ describe("roster.invite", () => {
     }
   });
 
-  it("refuses no number, an email alone, or a number that is not a United States or Canada one", async () => {
+  it("refuses no address at all, or a number that is not a United States or Canada one", async () => {
     const admin = await member(owner, w, "a", "admin");
     const before = await userCount(owner, [w.a.companyId]);
     for (const input of [
       { name: "Nobody" },
-      // An email alone was an invitation once; the provider holds no login without a number.
-      { email: `only-${w.run}@co.test`, name: "Email Only" },
       { phone: "", name: "Name" },
       { phone: "555-0100", name: "Name" },
       { phone: "+44 1632 960100", name: "Name" },
@@ -284,6 +285,43 @@ describe("roster.invite", () => {
       status: 403,
       code: "FORBIDDEN",
     });
+  });
+
+  it("invites by email alone, and the first sign-in with that email binds it", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const { admitted, directory } = recordingDirectory();
+    const email = `only-${w.run}@co.test`;
+    const answer = await inviteThrough(
+      admin.who,
+      { email, name: "Email Only" },
+      directory,
+    );
+    expect(answer).toMatchObject({
+      result: "invited",
+      user: { email, signInPhone: null, invited: true },
+    });
+    if (answer.result !== "invited") throw new Error("unreachable");
+    // The provider is told of the email and of no number.
+    expect(admitted).toEqual([{ email, phone: null }]);
+    const me = await appCaller(app, identity(`sub-only-${w.run}`, email)).me.get();
+    expect(me.id).toBe(answer.user.id);
+    // And the same email twice in the company is taken, as a number is.
+    expect(await inviteThrough(admin.who, { email, name: "Again" }, directory)).toEqual({
+      result: "rejected",
+      code: "email_taken",
+    });
+  });
+
+  it("tells the provider the row's own id, so its login can be found by it later", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const { ids, directory } = recordingDirectory();
+    const answer = await inviteThrough(
+      admin.who,
+      { phone: testPhone(), name: "Tagged" },
+      directory,
+    );
+    if (answer.result !== "invited") throw new Error("unreachable");
+    expect(ids).toEqual([answer.user.id]);
   });
 
   it("admits the person at the provider with the stored number, and the email when given", async () => {

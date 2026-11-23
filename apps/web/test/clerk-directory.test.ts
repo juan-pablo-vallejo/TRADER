@@ -16,6 +16,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+const ID = "0193a1b2-0000-7000-8000-000000000001";
 const PHONE = "+14015550123";
 const EMAIL = "dana@office.test";
 const KEY = "sk_test_abc";
@@ -49,19 +50,26 @@ const refusal = (status: number, ...errors: [code: string, param?: string][]) =>
 const bodyOf = (call: Call | undefined) => JSON.parse(String(call?.init.body)) as unknown;
 
 describe("the Clerk directory", () => {
-  it("creates the user by number, and by number and email, under the secret key", async () => {
-    const { calls, directory } = clerk(created(), created());
-    await directory.admit({ email: null, phone: PHONE });
-    await directory.admit({ email: EMAIL, phone: PHONE });
-    expect(calls).toHaveLength(2);
+  it("creates the user by number, by both, and by email alone, tagged with the row's id", async () => {
+    const { calls, directory } = clerk(created(), created(), created());
+    await directory.admit({ id: ID, email: null, phone: PHONE });
+    await directory.admit({ id: ID, email: EMAIL, phone: PHONE });
+    await directory.admit({ id: ID, email: EMAIL, phone: null });
+    expect(calls).toHaveLength(3);
     expect(calls[0]?.url).toBe("https://api.clerk.com/v1/users");
     expect(calls[0]?.init.method).toBe("POST");
     expect(new Headers(calls[0]?.init.headers).get("authorization")).toBe(
       `Bearer ${KEY}`,
     );
     expect(calls[0]?.init.signal).toBeInstanceOf(AbortSignal);
-    expect(bodyOf(calls[0])).toEqual({ phone_number: [PHONE] });
-    expect(bodyOf(calls[1])).toEqual({ phone_number: [PHONE], email_address: [EMAIL] });
+    expect(bodyOf(calls[0])).toEqual({ external_id: ID, phone_number: [PHONE] });
+    expect(bodyOf(calls[1])).toEqual({
+      external_id: ID,
+      phone_number: [PHONE],
+      email_address: [EMAIL],
+    });
+    // No number at all is sent for a person who has none.
+    expect(bodyOf(calls[2])).toEqual({ external_id: ID, email_address: [EMAIL] });
     expect(ADMIT_TIMEOUT_MS).toBe(5000);
   });
 
@@ -75,7 +83,7 @@ describe("the Clerk directory", () => {
     ] as [string, string][][]) {
       const { calls, directory } = clerk(refusal(422, ...errors));
       await expect(
-        directory.admit({ email: EMAIL, phone: PHONE }),
+        directory.admit({ id: ID, email: EMAIL, phone: PHONE }),
       ).resolves.toBeUndefined();
       expect(calls).toHaveLength(1);
     }
@@ -84,10 +92,10 @@ describe("the Clerk directory", () => {
   it("creates the user by number alone when only the email is already held", async () => {
     const taken = () => refusal(422, ["form_identifier_exists", "email_address"]);
     const first = clerk(taken(), created());
-    await first.directory.admit({ email: EMAIL, phone: PHONE });
+    await first.directory.admit({ id: ID, email: EMAIL, phone: PHONE });
     expect(first.calls.map(bodyOf)).toEqual([
-      { phone_number: [PHONE], email_address: [EMAIL] },
-      { phone_number: [PHONE] },
+      { external_id: ID, phone_number: [PHONE], email_address: [EMAIL] },
+      { external_id: ID, phone_number: [PHONE] },
     ]);
     // The number turned out to be held too, by the time of the second call: admitted.
     const raced = clerk(
@@ -95,13 +103,45 @@ describe("the Clerk directory", () => {
       refusal(422, ["form_identifier_exists", "phone_number"]),
     );
     await expect(
-      raced.directory.admit({ email: EMAIL, phone: PHONE }),
+      raced.directory.admit({ id: ID, email: EMAIL, phone: PHONE }),
     ).resolves.toBeUndefined();
     // And a second call Clerk refuses outright invites no one.
     const broken = clerk(taken(), refusal(500));
-    await expect(broken.directory.admit({ email: EMAIL, phone: PHONE })).rejects.toThrow(
-      ClerkDirectoryError,
+    await expect(
+      broken.directory.admit({ id: ID, email: EMAIL, phone: PHONE }),
+    ).rejects.toThrow(ClerkDirectoryError);
+  });
+
+  it("takes an email Clerk already holds as admitted, for a person invited by email alone", async () => {
+    const { calls, directory } = clerk(
+      refusal(422, ["form_identifier_exists", "email_address"]),
     );
+    await expect(
+      directory.admit({ id: ID, email: EMAIL, phone: null }),
+    ).resolves.toBeUndefined();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("does not take a held tag for an admission: only an address says a person is known", async () => {
+    for (const person of [
+      { id: ID, email: null, phone: PHONE },
+      { id: ID, email: EMAIL, phone: null },
+      { id: ID, email: EMAIL, phone: PHONE },
+    ]) {
+      const { calls, directory } = clerk(
+        refusal(422, ["form_identifier_exists", "external_id"]),
+      );
+      await expect(directory.admit(person)).rejects.toThrow(ClerkDirectoryError);
+      expect(calls).toHaveLength(1);
+    }
+    // Nor on the second call, made by number alone.
+    const second = clerk(
+      refusal(422, ["form_identifier_exists", "email_address"]),
+      refusal(422, ["form_identifier_exists", "external_id"]),
+    );
+    await expect(
+      second.directory.admit({ id: ID, email: EMAIL, phone: PHONE }),
+    ).rejects.toThrow(ClerkDirectoryError);
   });
 
   it("fails on every other answer, carrying the status and codes and nothing of the person", async () => {
@@ -120,7 +160,7 @@ describe("the Clerk directory", () => {
     ]) {
       const { directory } = clerk(answer);
       const error = await directory
-        .admit({ email: EMAIL, phone: PHONE })
+        .admit({ id: ID, email: EMAIL, phone: PHONE })
         .then(() => null)
         .catch((e: unknown) => e);
       expect(error).toBeInstanceOf(ClerkDirectoryError);
@@ -132,7 +172,7 @@ describe("the Clerk directory", () => {
     }
     // A provider that never answers, or cannot be reached.
     const { directory } = clerk(new DOMException("timed out", "TimeoutError"));
-    await expect(directory.admit({ email: null, phone: PHONE })).rejects.toThrow(
+    await expect(directory.admit({ id: ID, email: null, phone: PHONE })).rejects.toThrow(
       "timed out",
     );
   });
@@ -144,7 +184,7 @@ describe("the web directory", () => {
     const spy = vi.fn();
     vi.stubGlobal("fetch", spy);
     await expect(
-      webDirectory.admit({ email: EMAIL, phone: PHONE }),
+      webDirectory.admit({ id: ID, email: EMAIL, phone: PHONE }),
     ).resolves.toBeUndefined();
     expect(spy).not.toHaveBeenCalled();
   });
@@ -153,9 +193,9 @@ describe("the web directory", () => {
     vi.stubEnv("TRADER_DEV_IDENTITY", "");
     const spy = vi.fn();
     vi.stubGlobal("fetch", spy);
-    await expect(webDirectory.admit({ email: EMAIL, phone: PHONE })).rejects.toThrow(
-      "no identity provider is configured",
-    );
+    await expect(
+      webDirectory.admit({ id: ID, email: EMAIL, phone: PHONE }),
+    ).rejects.toThrow("no identity provider is configured");
     expect(spy).not.toHaveBeenCalled();
   });
 
@@ -166,7 +206,7 @@ describe("the web directory", () => {
     vi.stubEnv("CLERK_SECRET_KEY", KEY);
     const spy = vi.fn(() => Promise.resolve(created()));
     vi.stubGlobal("fetch", spy);
-    await webDirectory.admit({ email: null, phone: PHONE });
+    await webDirectory.admit({ id: ID, email: null, phone: PHONE });
     expect(spy).toHaveBeenCalledTimes(1);
   });
 });

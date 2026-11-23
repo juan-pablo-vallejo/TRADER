@@ -62,6 +62,19 @@ describe("the Resend mailer", () => {
     });
   });
 
+  it("sends a message that carries no file with no attachments at all", async () => {
+    const { calls, send } = recorder(accepted);
+    const mailer = createResendMailer({
+      apiKey: "re_test_key",
+      from: "D Sierra Painting <invoices@mail.test>",
+      fetch: send,
+    });
+    const { attachment: _file, ...invitation } = MAIL;
+    expect(await mailer.send(invitation)).toMatchObject({ ok: true });
+    const body = JSON.parse(calls[0]!.init.body as string) as Record<string, unknown>;
+    expect(Object.keys(body).sort()).toEqual(["from", "html", "subject", "to"]);
+  });
+
   it("reads a refusal, an unreachable service and a slow one as what they are", async () => {
     const mailer = (send: typeof fetch, timeoutMs?: number) =>
       createResendMailer({

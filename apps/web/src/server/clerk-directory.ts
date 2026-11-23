@@ -6,13 +6,20 @@
 // One documented call, Clerk's Backend API `POST /v1/users`, made with `fetch` so that its
 // timeout and every answer it can give are stated here. What was read on the development
 // instance (2026-11-12): a number alone is accepted; an address another user holds answers
-// 422 `form_identifier_exists` naming that address; an email with no number answers 422
-// `form_data_missing`, because the instance requires a number.
+// 422 `form_identifier_exists` naming that address. An email with no number answered 422
+// `form_data_missing` while the instance required a number; it requires none since
+// 2026-11-23 (`auth_phone.required_for_sign_up: false`), and a person invited by email alone
+// is created by it.
+//
+// A login made here carries the roster row's id as Clerk's `external_id`: the row's login
+// can then be found by what it is, never by an address that someone else may hold. A login
+// that already existed is left exactly as it was, untagged: it may be another person's.
 //
 // "Already admitted" is success, and silent: a second invitation of the same number — a
 // retry, another company's — must neither fail nor say that the number is known. The number
-// is what must end up with a login, so when only the email is held by an existing user the
-// person is created by number alone.
+// is what must end up with a login, or the email for a person with no number; so when a
+// person has both and only the email is held by an existing user, they are created by
+// number alone.
 //
 // Nothing of a response is kept or thrown: it names the person. An error carries the HTTP
 // status and Clerk's error codes, no more.
@@ -56,8 +63,9 @@ export function createClerkDirectory(deps: {
   fetch: typeof fetch;
 }): IdentityDirectory {
   const create = async (person: {
+    id: string;
     email: string | null;
-    phone: string;
+    phone: string | null;
   }): Promise<Answer> => {
     const response = await deps.fetch(USERS_URL, {
       method: "POST",
@@ -66,7 +74,8 @@ export function createClerkDirectory(deps: {
         "content-type": "application/json",
       },
       body: JSON.stringify({
-        phone_number: [person.phone],
+        external_id: person.id,
+        ...(person.phone !== null && { phone_number: [person.phone] }),
         ...(person.email !== null && { email_address: [person.email] }),
       }),
       signal: AbortSignal.timeout(ADMIT_TIMEOUT_MS),
@@ -93,13 +102,22 @@ export function createClerkDirectory(deps: {
       const first = await create(person);
       if (first.status === 200) return;
       if (!onlyExists(first)) throw refused(first);
+      const held = (param: string) => first.errors.some((e) => e.param === param);
+      if (person.phone === null) {
+        // By email alone, and the email already has a login: admitted before.
+        if (held("email_address")) return;
+        throw refused(first);
+      }
       // The number already has a login: admitted before.
-      if (first.errors.some((e) => e.param === "phone_number")) return;
+      if (held("phone_number")) return;
       // Only the email is held, by a user without this number: the number still needs its
       // login. Without an email this call differs from the first, so it cannot loop.
-      if (person.email === null) throw refused(first);
-      const second = await create({ email: null, phone: person.phone });
-      if (second.status === 200 || onlyExists(second)) return;
+      if (person.email === null || !held("email_address")) throw refused(first);
+      const second = await create({ ...person, email: null });
+      if (second.status === 200) return;
+      if (onlyExists(second) && second.errors.some((e) => e.param === "phone_number")) {
+        return;
+      }
       throw refused(second);
     },
   };

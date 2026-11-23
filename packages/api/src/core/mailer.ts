@@ -1,5 +1,5 @@
-// The mail seam, for invoice delivery only. The API
-// knows a message and whether it went; which service carries it is the host's (apps/web,
+// The mail seam: an invoice to a customer (invoices/send.ts) and an invitation to a person
+// (roster/invitation.ts). The API knows a message and whether it went; which service carries it is the host's (apps/web,
 // server/mailer.ts). A mailer never throws: every way a send can fail is an answer with a
 // short code, which is what the send's record keeps — never the service's own message,
 // which may quote an address.
@@ -8,7 +8,8 @@ export type Mail = {
   subject: string;
   // Plain words, a paragraph a line.
   text: string[];
-  attachment: { filename: string; content: Uint8Array };
+  // An invoice carries its PDF; an invitation carries nothing.
+  attachment?: { filename: string; content: Uint8Array };
   // The send's own id: the service is asked to treat a repeat of it as the same message.
   idempotencyKey: string;
 };

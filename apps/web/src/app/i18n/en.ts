@@ -564,18 +564,23 @@ export const en = {
   companyClosed: "This demo company cannot invite anyone.",
   mobileNumber: "Mobile number",
   signInAddress: "Sign-in",
-  mobileNumberNeeded: "Enter a mobile number.",
+  addressNeeded: "Enter a mobile number or an email.",
   mobileNumberInvalid: "Enter a ten-digit United States or Canada number.",
   inviteAddressHint:
-    "The sign-in code is sent to this mobile number. An email is optional: the office can also sign in with a code sent to it.",
+    "Give a mobile number, an email, or both. They sign in with a code sent to whichever they type.",
   deactivate: "Deactivate",
   reactivate: "Reactivate",
   lastAdmin: "This is the last admin. Make someone else an admin first.",
   deactivatePersonEffect: (name: string) =>
     `${name} will not be able to sign in or send hours from their phone. Hours the office already has stay on record.`,
   unchanged: "No change.",
-  invited: "Invited",
   active: "Active",
+  // Where a person's invitation stands (packages/api, contract/invitation.ts).
+  invitationStatus: {
+    not_sent: "Not sent",
+    sent: "Sent · not verified",
+    verified: "Verified",
+  },
   deactivated: "Deactivated",
   roles: { admin: "Admin", worker: "Worker" },
   // A person, opened from their row in a side panel.
@@ -597,13 +602,30 @@ export const en = {
     theirWeek: "Their week in Hours",
     invitation: "Invitation",
     invitationExplain:
-      "They have not signed in yet. Send them where to get the app: the message is written, in English and Spanish, and goes from your own phone.",
-    sendInvitation: "Send the invitation",
+      "They have not signed in yet. Send them where to get the app. The message is written, in English and Spanish: text it from your own phone, or have TRADER email it.",
+    invitedOn: (day: string) => `Invited ${day}`,
+    sendInvitation: "Send by text",
+    emailInvitation: "Send by email",
+    emailGoesTo: (email: string) =>
+      `By email, TRADER sends the same message to ${email}.`,
+    emailed: (email: string) => `Sent to ${email}.`,
+    byText: (by: string, at: string) => `By text from ${by}, ${at}`,
+    byEmail: (by: string, at: string) => `By email, sent by ${by}, ${at}`,
+    emailNotSent: (by: string, at: string) => `Email not sent (tried by ${by}, ${at})`,
+    refused: {
+      id_conflict: "That did not go. Try again.",
+      deactivated: "They are deactivated. Nothing was sent.",
+      signed_in: "They have already signed in. Nothing was sent.",
+      no_email: "They have no email on record.",
+      no_number: "They have no sign-in number on record.",
+      no_link: "This server has no address of its own to link to. Nothing was sent.",
+      too_many: "That is enough email for one day. Send it again tomorrow.",
+      company_closed: "This demo company cannot invite anyone.",
+    },
     copyInvitation: "Copy the message",
     copied: "Copied. Paste it into a text message to them.",
     invitedNote: (name: string) =>
       `${name} is invited. Now tell them where to get the app.`,
-    noSignInNumber: "They have no sign-in number to send it to.",
   },
   // Hours narrowed to one person, from their panel.
   onlyPerson: (name: string) => `Only ${name}.`,

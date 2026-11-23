@@ -8,6 +8,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDb, type Db } from "../../src/client";
 import {
   customers,
+  invitationSends,
   invoiceLineItems,
   invoicePayments,
   invoiceSends,
@@ -32,6 +33,7 @@ import {
 // The tables that carry company_id; companies is checked on its own id.
 const TENANT_TABLES = [
   "customers",
+  "invitation_sends",
   "invoice_counters",
   "invoice_line_items",
   "invoice_payments",
@@ -77,6 +79,15 @@ async function everything(tx: Tx, name: string) {
     companyId: refs.companyId,
     invoiceId,
     recipient: "billing@customer.test",
+    outcome: "sent",
+    sentByUserId: refs.adminId,
+  });
+  await tx.insert(invitationSends).values({
+    id: uuidv7(),
+    companyId: refs.companyId,
+    userId: refs.workerId,
+    channel: "email",
+    recipient: "worker@crew.test",
     outcome: "sent",
     sentByUserId: refs.adminId,
   });
@@ -143,14 +154,14 @@ describe("row-level security", () => {
     });
   });
 
-  it("holds exactly the eleven tenant policies and the four sign-in policies", async () => {
+  it("holds exactly the twelve tenant policies and the four sign-in policies", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ policyname: string; roles: string[] }>(sql`
         select policyname::text, roles::text[] as roles from pg_policies
         where schemaname = 'public' order by policyname
       `);
       expect(rows.map((r) => r.policyname)).toEqual(POLICIES);
-      expect(rows).toHaveLength(15);
+      expect(rows).toHaveLength(16);
       for (const row of rows) expect(row.roles, row.policyname).toEqual(["trader_app"]);
     });
   });

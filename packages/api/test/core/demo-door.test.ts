@@ -90,7 +90,7 @@ function office(who: unknown, closed: { companyId: string; allowed: string[] } |
     createContext({
       directory: {
         admit: (person) => {
-          directory.admitted.push(person.phone);
+          directory.admitted.push(person.phone ?? "");
           return Promise.resolve();
         },
       },

@@ -62,6 +62,18 @@
   align-items: center;
   min-height: var(--target);
 }
+.standing {
+  margin: 0 0 var(--space-3);
+}
+/* When they were invited and each time the invitation went out, one to a line. */
+.sends {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sends li + li {
+  margin-top: var(--space-1);
+}
 .message {
   margin: 0 0 var(--space-3);
   padding: var(--space-3);

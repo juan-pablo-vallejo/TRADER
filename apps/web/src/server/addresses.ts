@@ -16,7 +16,7 @@
 //
 // Pages only. The API answers on whatever host reached it: the phone and the deploy job's
 // readiness check name a host of their own, and a redirect would break both.
-import { OFFICE_HOME } from "./sign-in-paths";
+import { homeHref, OFFICE_HOME } from "./sign-in-paths";
 
 type Env = Record<string, string | undefined>;
 
@@ -45,6 +45,18 @@ export function listedOrigins(env: Env): URL[] {
         return [];
       }
     });
+}
+
+// Where the app is got from, as an emailed invitation links to it: `/get` on the host
+// whose `/` is the homepage, else on the first origin a session may be issued to. From the
+// deployment's own configuration and nothing of a request, since TRADER mails it under its
+// own name. Null where a server names neither, as a development machine: nothing is mailed
+// from there.
+export function getAppUrl(env: Env): string | null {
+  const home = homeHref(env);
+  if (home !== "/") return `${home}get`;
+  const first = listedOrigins(env)[0];
+  return first === undefined ? null : `${first.origin}/get`;
 }
 
 export const isApiPath = (pathname: string): boolean =>

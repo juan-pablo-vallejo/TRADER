@@ -54,7 +54,10 @@ describe("roster.list", () => {
       role: "worker",
       locationStamps: null,
       invited: true,
+      invitedAt: expect.any(Date) as Date,
       deactivatedAt: null,
+      // Nothing has been sent to them, and they have not signed in (invitation.test.ts).
+      invitation: { status: "not_sent", sends: [] },
     });
     expect(rows.find((r) => r.id === w.a.boundId)).toMatchObject({ invited: false });
     expect(rows.find((r) => r.id === admin.id)).toMatchObject({ role: "admin" });

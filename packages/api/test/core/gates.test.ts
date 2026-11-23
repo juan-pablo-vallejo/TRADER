@@ -80,6 +80,8 @@ const EXPECTED: Record<string, Gate> = {
   "overview.today": ADMIN,
   "roster.list": ADMIN,
   "roster.invite": ADMIN,
+  "roster.sendInvitation": ADMIN,
+  "roster.noteInvitation": ADMIN,
   "roster.setRole": ADMIN,
   "roster.deactivate": ADMIN,
   "roster.reactivate": ADMIN,
