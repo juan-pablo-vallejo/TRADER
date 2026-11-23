@@ -14,6 +14,7 @@ export {
   verifiedIdentitySchema,
   type IdentityAdapter,
   type IdentityDirectory,
+  type Readdressed,
   type VerifiedIdentity,
 } from "./core/identity";
 export {

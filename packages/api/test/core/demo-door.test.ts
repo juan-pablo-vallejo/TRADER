@@ -89,6 +89,7 @@ function office(who: unknown, closed: { companyId: string; allowed: string[] } |
   const caller = createCallerFactory(appRouter)(
     createContext({
       directory: {
+        ...localDirectory,
         admit: (person) => {
           directory.admitted.push(person.phone ?? "");
           return Promise.resolve();

@@ -3,8 +3,8 @@
 // ordered by name. `invited` is "never signed in" (identity_subject still NULL); the subject
 // itself is never output, as me.get never outputs it. Each person carries where their
 // invitation stands and the sends it is worked out from (contract/invitation.ts,
-// invitation_sends): worked out here on every read, never stored. A plain read under RLS,
-// no locks. Consumed by routers/roster.ts, and by invite.ts, role.ts and deactivation.ts for
+// invitation_sends): worked out here on every read, never stored; and each time the office
+// changed an address of theirs (address_changes). A plain read under RLS, no locks. Consumed by routers/roster.ts, and by invite.ts, role.ts and deactivation.ts for
 // the row they answer with.
 import { ROLES } from "../contract/enums";
 import {
@@ -13,7 +13,7 @@ import {
   invitationStatus,
   type InvitationChannel,
 } from "../contract/invitation";
-import { invitationSends, users } from "@trader/db/schema";
+import { addressChanges, invitationSends, users } from "@trader/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -31,6 +31,17 @@ const invitationSend = z.strictObject({
   by: z.string(),
   outcome: z.enum(["sent", "failed"]),
   failure: z.string().nullable(),
+});
+
+// One time the office changed an address the person signs in with: which, from what to
+// what (null: there was none, or it was taken away), by whom and when.
+const addressChange = z.strictObject({
+  id: z.uuid(),
+  field: z.enum(["email", "sign_in_phone"]),
+  from: z.string().nullable(),
+  to: z.string().nullable(),
+  by: z.string(),
+  at: z.date(),
 });
 
 export const rosterUser = z.strictObject({
@@ -53,6 +64,8 @@ export const rosterUser = z.strictObject({
     status: z.enum(INVITATION_STATUSES),
     sends: z.array(invitationSend),
   }),
+  // Each change of their sign-in addresses, newest first.
+  addressChanges: z.array(addressChange),
 });
 
 export type RosterUser = z.infer<typeof rosterUser>;
@@ -118,10 +131,36 @@ async function sendsOf(tx: Tx, userId?: string): Promise<Send[]> {
   return rows;
 }
 
+type Changed = z.infer<typeof addressChange> & { userId: string };
+
+// The address changes of the people asked for, newest first.
+async function changesOf(tx: Tx, userId?: string): Promise<Changed[]> {
+  const admin = alias(users, "changed_by");
+  const query = tx
+    .select({
+      id: addressChanges.id,
+      userId: addressChanges.userId,
+      field: addressChanges.field,
+      from: addressChanges.oldValue,
+      to: addressChanges.newValue,
+      by: admin.name,
+      at: addressChanges.createdAt,
+    })
+    .from(addressChanges)
+    .innerJoin(admin, eq(admin.id, addressChanges.changedByUserId));
+  const rows = await (
+    userId === undefined ? query : query.where(eq(addressChanges.userId, userId))
+  ).orderBy(desc(addressChanges.createdAt), desc(addressChanges.id));
+  return rows.map((row) => ({
+    ...row,
+    field: row.field === "email" ? "email" : "sign_in_phone",
+  }));
+}
+
 const channelOf = (send: Send): InvitationChannel =>
   send.channel === "email" ? "email" : "text";
 
-const toUser = (row: Row, sends: Send[]): RosterUser => ({
+const toUser = (row: Row, sends: Send[], changes: Changed[]): RosterUser => ({
   id: row.id,
   name: row.name,
   email: row.email,
@@ -152,6 +191,7 @@ const toUser = (row: Row, sends: Send[]): RosterUser => ({
       failure: send.failure,
     })),
   },
+  addressChanges: changes.map(({ userId: _person, ...change }) => change),
 });
 
 export async function rosterList(tx: Tx): Promise<RosterUser[]> {
@@ -163,7 +203,13 @@ export async function rosterList(tx: Tx): Promise<RosterUser[]> {
   for (const send of await sendsOf(tx)) {
     byPerson.set(send.userId, [...(byPerson.get(send.userId) ?? []), send]);
   }
-  return rows.map((row) => toUser(row, byPerson.get(row.id) ?? []));
+  const changed = new Map<string, Changed[]>();
+  for (const change of await changesOf(tx)) {
+    changed.set(change.userId, [...(changed.get(change.userId) ?? []), change]);
+  }
+  return rows.map((row) =>
+    toUser(row, byPerson.get(row.id) ?? [], changed.get(row.id) ?? []),
+  );
 }
 
 // One visible user, or undefined: another tenant's row is invisible under RLS.
@@ -173,5 +219,5 @@ export async function readRosterUser(
 ): Promise<RosterUser | undefined> {
   const [row] = await tx.select(columns).from(users).where(eq(users.id, id));
   if (row === undefined) return undefined;
-  return toUser(row, await sendsOf(tx, id));
+  return toUser(row, await sendsOf(tx, id), await changesOf(tx, id));
 }

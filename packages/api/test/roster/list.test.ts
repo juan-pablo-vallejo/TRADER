@@ -58,6 +58,7 @@ describe("roster.list", () => {
       deactivatedAt: null,
       // Nothing has been sent to them, and they have not signed in (invitation.test.ts).
       invitation: { status: "not_sent", sends: [] },
+      addressChanges: [],
     });
     expect(rows.find((r) => r.id === w.a.boundId)).toMatchObject({ invited: false });
     expect(rows.find((r) => r.id === admin.id)).toMatchObject({ role: "admin" });

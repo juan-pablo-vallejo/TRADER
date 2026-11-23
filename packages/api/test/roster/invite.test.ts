@@ -6,7 +6,7 @@ import type { Db } from "@trader/db";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createContext } from "../../src/core/context";
-import type { IdentityDirectory } from "../../src/core/identity";
+import { localDirectory, type IdentityDirectory } from "../../src/core/identity";
 import { createCallerFactory } from "../../src/core/trpc";
 import { appRouter } from "../../src/router";
 import {
@@ -67,6 +67,7 @@ const recordingDirectory = () => {
   // The row's own id is told too (its own test, below); most tests read the addresses.
   const ids: string[] = [];
   const directory: IdentityDirectory = {
+    ...localDirectory,
     admit: ({ id, email, phone }) => {
       ids.push(id);
       admitted.push({ email, phone });
@@ -366,6 +367,7 @@ describe("roster.invite", () => {
     const admin = await member(owner, w, "a", "admin");
     const before = await userCount(owner, [w.a.companyId]);
     const refusing: IdentityDirectory = {
+      ...localDirectory,
       admit: () => Promise.reject(new Error("the provider refused")),
     };
     expect(

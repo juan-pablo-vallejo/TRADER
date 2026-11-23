@@ -46,16 +46,43 @@ export type IdentityAdapter = {
 // mobile number, an email, or both: never neither. `id` is the roster row's own, which a
 // login made here is tagged with, so that the row's login can later be found by what it
 // is and never by an address someone else may hold.
+//
+// `readdress` brings the login of one roster row to the addresses the roster now holds for
+// it, and to nothing else: an address the roster does not hold is taken off the login. The
+// login is the one bound to the row (`subject`) or, for a person who has not signed in,
+// the one tagged with the row's id; it is never looked for by an address, since an address
+// may be another person's, in another company. It answers:
+//   `done`       the login was changed, and whatever could sign in as the person before
+//                (sessions, passkeys, links to other accounts) was ended with it;
+//   `unchanged`  the login already held exactly these addresses, and nothing was touched;
+//   `no_login`   no login is this row's: nothing was changed;
+//   `held`       an address is another login's: nothing of the roster's may change.
+// It throws when the provider could not be reached or refused, like `admit`. Asked again
+// with the same addresses it finishes what an earlier call left half-done; and `fresh`,
+// true when the roster itself changed in this call, has it end whatever could sign in as
+// the person even where the login already holds the addresses, which is how a call that
+// stopped after the addresses and before the sign-out is finished too.
+export type Readdressed = "done" | "unchanged" | "no_login" | "held";
+
 export type IdentityDirectory = {
   admit(person: {
     id: string;
     email: string | null;
     phone: string | null;
   }): Promise<void>;
+  readdress(person: {
+    id: string;
+    // The provider's own name for the login bound to the row, or null: never signed in.
+    subject: string | null;
+    email: string | null;
+    phone: string | null;
+    fresh: boolean;
+  }): Promise<Readdressed>;
 };
 
 // The directory where no provider is connected — the development identity, the demo and the
 // tests: the users row is the whole invitation, as it was before a provider existed.
 export const localDirectory: IdentityDirectory = {
   admit: () => Promise.resolve(),
+  readdress: () => Promise.resolve("unchanged"),
 };

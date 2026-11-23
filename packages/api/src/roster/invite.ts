@@ -26,7 +26,7 @@ import { readRosterUser, rosterUser } from "./list";
 // A number as an admin types it: ten digits, or eleven starting with 1, with any spacing and
 // punctuation; a number written with another country's prefix is refused, not reinterpreted.
 // Stored as it will be matched, in E.164 (signInPhoneSchema).
-const invitedPhone = z
+export const invitedPhone = z
   .string()
   .trim()
   .max(32)

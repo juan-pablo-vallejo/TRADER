@@ -222,6 +222,59 @@ describe("the roster through the route handler", () => {
     );
   });
 
+  it("changes a worker's sign-in addresses, keeps the record, and refuses an admin's", async () => {
+    const invited = await mutate(POST, "roster.invite", {
+      input: { phone: "(401) 555-0147", name: "Painter Readdressed" },
+      headers: as(admin.email),
+    });
+    const user = (invited.body.result?.data.json as { user: { id: string } }).user;
+    const email = `moved-${admin.run}@web.test`;
+    const given = await mutate(POST, "roster.setEmail", {
+      input: { userId: user.id, email },
+      headers: as(admin.email),
+    });
+    expect(given.body.result?.data.json).toMatchObject({
+      result: "changed",
+      user: {
+        email,
+        signInPhone: "+14015550147",
+        addressChanges: [{ field: "email", from: null, to: email }],
+      },
+    });
+    const moved = await mutate(POST, "roster.setSignInPhone", {
+      input: { userId: user.id, phone: "401-555-0148" },
+      headers: as(admin.email),
+    });
+    expect(moved.body.result?.data.json).toMatchObject({
+      result: "changed",
+      user: { signInPhone: "+14015550148" },
+    });
+    // The old number signs nobody in; the new one is the person.
+    const by = (phone: string) => ({
+      [DEV_SUBJECT_HEADER]: `dev:${phone}`,
+      [DEV_PHONE_HEADER]: phone,
+    });
+    expect((await query(GET, "me.get", { headers: by("+14015550147") })).status).toBe(
+      401,
+    );
+    const me = await query(GET, "me.get", { headers: by("+14015550148") });
+    expect(me.body.result?.data.json).toMatchObject({ id: user.id });
+    // An admin's addresses, the caller's own here, are not the office's to change.
+    const own = await query(GET, "me.get", { headers: as(admin.email) });
+    const mine = (own.body.result?.data.json as { id: string }).id;
+    const refused = await mutate(POST, "roster.setEmail", {
+      input: { userId: mine, email: `mine-${admin.run}@web.test` },
+      headers: as(admin.email),
+    });
+    expect(refused.body.result?.data.json).toEqual({ result: "rejected", code: "admin" });
+    // And what is not an address is not read as one.
+    const bad = await mutate(POST, "roster.setEmail", {
+      input: { userId: user.id, email: "not an email" },
+      headers: as(admin.email),
+    });
+    expect(bad.status).toBe(400);
+  });
+
   it("refuses an invite by POST from a worker with 403", async () => {
     const worker = await invitation(owner);
     try {

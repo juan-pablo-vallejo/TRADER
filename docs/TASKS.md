@@ -1352,6 +1352,15 @@ Android user.
       of an open customer panel, no panel within 20 seconds. The same test passed from
       the Mac against the same commit and on a re-run of the job. Not reproduced, cause
       not known.
+- [ ] Item 21e, second landing: a Face ID or fingerprint key from the phone app is not
+      removed when a person's address changes. `@clerk/backend` 3.27.0 has no call for
+      one. Their sessions are revoked and their passkeys and Google or Apple links are
+      removed. To settle when item 21c builds biometric sign-in: whether a key outlives a
+      revoked session, and how one is removed from the server.
+- [ ] Item 21e, second landing: a person invited before 2026-11-23 who has never signed in
+      has a login at Clerk with no tag, so their address cannot be changed from People
+      until they sign in once ("made before addresses could be changed here"). On staging
+      that is the three fixture people of the smoke test; production has nobody yet.
 
 ## After MVP
 

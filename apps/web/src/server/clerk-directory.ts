@@ -21,15 +21,31 @@
 // person has both and only the email is held by an existing user, they are created by
 // number alone.
 //
+// `readdress` brings one row's login to the addresses the roster now holds (packages/api,
+// roster/address.ts). The login is read by its own id, the one bound to the row, or found
+// by the row's tag: no call here ever names an address to find anyone by. A new address
+// goes on first, verified and primary, and Clerk's "another user has it" is the answer
+// `held` with nothing yet changed; then links to other accounts and passkeys come off,
+// then the addresses the roster no longer holds, then every session is revoked. Each step
+// is one documented Backend API call (paths read from @clerk/backend 3.27.0, 2026-11-23),
+// all under one deadline, and done again from the top they finish what was left. What is
+// not removed here: a Face ID or fingerprint key from the phone app, for which the Backend
+// API of that version has no call.
+//
 // Nothing of a response is kept or thrown: it names the person. An error carries the HTTP
 // status and Clerk's error codes, no more.
-import type { IdentityDirectory } from "@trader/api";
+import type { IdentityDirectory, Readdressed } from "@trader/api";
 
-const USERS_URL = "https://api.clerk.com/v1/users";
+const API = "https://api.clerk.com/v1";
+const USERS_URL = `${API}/users`;
 
 // roster.invite waits on this inside its transaction (roster/invite.ts): bounded, so a
 // stalled provider costs one admin a failed invitation and never a held connection.
 export const ADMIT_TIMEOUT_MS = 5_000;
+
+// roster.setEmail and roster.setSignInPhone wait on this inside their transaction, with the
+// person's row locked: one deadline for every call a change makes, not one each.
+export const READDRESS_TIMEOUT_MS = 5_000;
 
 const EXISTS = "form_identifier_exists";
 
@@ -97,7 +113,163 @@ export function createClerkDirectory(deps: {
       answer.errors.map((e) => e.code),
     );
 
+  // One call of a change, under the change's own deadline. A body that cannot be read is
+  // no body: only the status and the error codes are ever looked at.
+  const call = async (
+    signal: AbortSignal,
+    method: "GET" | "POST" | "PATCH" | "DELETE",
+    path: string,
+    body?: Record<string, unknown>,
+  ): Promise<Answer & { body: unknown }> => {
+    const response = await deps.fetch(`${API}${path}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${deps.secretKey}`,
+        ...(body !== undefined && { "content-type": "application/json" }),
+      },
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+      signal,
+    });
+    const read: unknown = await response.json().catch(() => null);
+    return {
+      status: response.status,
+      errors: response.ok ? [] : errorsOf(read),
+      body: response.ok ? read : null,
+    };
+  };
+
+  const done = (answer: Answer) => {
+    if (answer.status < 200 || answer.status > 299) throw refused(answer);
+  };
+
+  // The ids of what a login holds, as Clerk's user object lists them.
+  type Held = { id: string; value: string };
+  const listOf = (user: unknown, key: string, field: string | null): Held[] => {
+    const list = (user as Record<string, unknown> | null)?.[key];
+    if (!Array.isArray(list)) return [];
+    return list.flatMap((item: unknown) => {
+      const id = (item as { id?: unknown } | null)?.id;
+      const value = field === null ? "" : (item as Record<string, unknown>)[field];
+      return typeof id === "string" && typeof value === "string" ? [{ id, value }] : [];
+    });
+  };
+  const segment = (id: string) => encodeURIComponent(id);
+
+  // The row's login: the one bound to it, else the one tagged with it. Never by address.
+  const loginOf = async (
+    signal: AbortSignal,
+    person: { id: string; subject: string | null },
+  ): Promise<{ id: string; user: unknown } | null> => {
+    if (person.subject !== null) {
+      const answer = await call(signal, "GET", `/users/${segment(person.subject)}`);
+      if (answer.status === 404) return null;
+      done(answer);
+      return { id: person.subject, user: answer.body };
+    }
+    const answer = await call(
+      signal,
+      "GET",
+      `/users?external_id=${segment(person.id)}&limit=2`,
+    );
+    done(answer);
+    const found = Array.isArray(answer.body) ? (answer.body as unknown[]) : [];
+    const tagged = found.filter(
+      (user) => (user as { external_id?: unknown } | null)?.external_id === person.id,
+    );
+    const [only] = tagged;
+    const id = (only as { id?: unknown } | undefined)?.id;
+    // Clerk keeps a tag to one login. Two would be two people: neither is touched.
+    return tagged.length === 1 && typeof id === "string" ? { id, user: only } : null;
+  };
+
+  const readdress = async (
+    person: Parameters<IdentityDirectory["readdress"]>[0],
+  ): Promise<Readdressed> => {
+    const signal = AbortSignal.timeout(READDRESS_TIMEOUT_MS);
+    const login = await loginOf(signal, person);
+    if (login === null) return "no_login";
+    const primary = login.user as {
+      primary_email_address_id?: unknown;
+      primary_phone_number_id?: unknown;
+    } | null;
+    const kinds = [
+      {
+        path: "/email_addresses",
+        field: "email_address",
+        want: person.email,
+        have: listOf(login.user, "email_addresses", "email_address"),
+        primaryId: primary?.primary_email_address_id,
+        // Clerk compares an email without regard to case, as the roster does.
+        same: (a: string, b: string) => a.toLowerCase() === b.toLowerCase(),
+      },
+      {
+        path: "/phone_numbers",
+        field: "phone_number",
+        want: person.phone,
+        have: listOf(login.user, "phone_numbers", "phone_number"),
+        primaryId: primary?.primary_phone_number_id,
+        same: (a: string, b: string) => a === b,
+      },
+    ];
+    let changed = false;
+    // First what is added, so that "another login has it" is said with nothing changed,
+    // and so that the login never stands without an address.
+    for (const kind of kinds) {
+      const { want } = kind;
+      if (want === null) continue;
+      const held = kind.have.find((h) => kind.same(h.value, want));
+      if (held === undefined) {
+        const answer = await call(signal, "POST", kind.path, {
+          user_id: login.id,
+          [kind.field]: want,
+          verified: true,
+          primary: true,
+        });
+        if (onlyExists(answer)) return "held";
+        done(answer);
+        changed = true;
+      } else if (held.id !== kind.primaryId) {
+        done(
+          await call(signal, "PATCH", `${kind.path}/${segment(held.id)}`, {
+            verified: true,
+            primary: true,
+          }),
+        );
+        changed = true;
+      }
+    }
+    const stale = kinds.flatMap((kind) =>
+      kind.have
+        .filter((h) => kind.want === null || !kind.same(h.value, kind.want))
+        .map((h) => `${kind.path}/${segment(h.id)}`),
+    );
+    if (stale.length === 0 && !changed && !person.fresh) return "unchanged";
+    // Whatever else could sign in as the person, before the addresses it may rest on go.
+    const user = `/users/${segment(login.id)}`;
+    for (const account of listOf(login.user, "external_accounts", null)) {
+      done(
+        await call(signal, "DELETE", `${user}/external_accounts/${segment(account.id)}`),
+      );
+    }
+    for (const passkey of listOf(login.user, "passkeys", null)) {
+      done(await call(signal, "DELETE", `${user}/passkeys/${segment(passkey.id)}`));
+    }
+    for (const path of stale) done(await call(signal, "DELETE", path));
+    // Last: nobody is left signed in under what the login was.
+    const sessions = await call(
+      signal,
+      "GET",
+      `/sessions?user_id=${segment(login.id)}&status=active&limit=100`,
+    );
+    done(sessions);
+    for (const session of listOf({ sessions: sessions.body }, "sessions", null)) {
+      done(await call(signal, "POST", `/sessions/${segment(session.id)}/revoke`));
+    }
+    return "done";
+  };
+
   return {
+    readdress,
     async admit(person) {
       const first = await create(person);
       if (first.status === 200) return;

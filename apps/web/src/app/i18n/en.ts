@@ -624,6 +624,53 @@ export const en = {
     },
     copyInvitation: "Copy the message",
     copied: "Copied. Paste it into a text message to them.",
+    // The addresses a worker signs in with, changed by the office (roster.setEmail,
+    // roster.setSignInPhone).
+    addresses: "Sign-in addresses",
+    addressesExplain:
+      "What they type to sign in. Leave one empty to take it away: one of the two always stays.",
+    adminAddresses:
+      "An admin's sign-in addresses are not changed here. Ask the owner of this TRADER.",
+    signInNumberField: "Sign-in number",
+    changeEmail: "Change the email",
+    changeNumber: "Change the sign-in number",
+    changeEffect: (name: string, address: string) =>
+      `Whoever has ${address} will be able to sign in as ${name}. ${name} is signed out everywhere and signs in again with it.`,
+    removeEffect: (name: string, address: string) =>
+      `${name} will no longer sign in with ${address}, and is signed out everywhere.`,
+    addressChanged: "Changed. They are signed out, and sign in with it from now on.",
+    addressRepaired: "Their sign-in now matches this.",
+    emailInvalid: "Enter an email address, or leave it empty to take it away.",
+    addressRefused: {
+      admin: "An admin's sign-in addresses are not changed here.",
+      deactivated: "They are deactivated. Nothing was changed.",
+      last_address:
+        "They need one address to sign in with. Give them the other one first.",
+      email_taken: "Someone on this roster already has that email.",
+      phone_taken: "Someone on this roster already has that mobile number.",
+      address_held: "That address cannot be used. Nothing was changed.",
+      no_login:
+        "Their sign-in was made before addresses could be changed here. It can be changed once they have signed in.",
+      company_closed: "This demo company cannot change anyone's address.",
+    },
+    addressWas: {
+      email: {
+        given: (to: string, by: string, at: string) =>
+          `Email ${to} given by ${by}, ${at}`,
+        changed: (from: string, to: string, by: string, at: string) =>
+          `Email changed from ${from} to ${to} by ${by}, ${at}`,
+        removed: (from: string, by: string, at: string) =>
+          `Email ${from} taken away by ${by}, ${at}`,
+      },
+      sign_in_phone: {
+        given: (to: string, by: string, at: string) =>
+          `Sign-in number ${to} given by ${by}, ${at}`,
+        changed: (from: string, to: string, by: string, at: string) =>
+          `Sign-in number changed from ${from} to ${to} by ${by}, ${at}`,
+        removed: (from: string, by: string, at: string) =>
+          `Sign-in number ${from} taken away by ${by}, ${at}`,
+      },
+    },
     invitedNote: (name: string) =>
       `${name} is invited. Now tell them where to get the app.`,
   },

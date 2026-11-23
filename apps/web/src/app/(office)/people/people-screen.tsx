@@ -12,7 +12,11 @@
 // TRADER writes the words, sends nothing, and notes that the admin took them to send. By
 // email, from TRADER (roster.sendInvitation). Each is recorded, and the roster answers
 // where the invitation stands: not sent, sent and not verified, or verified once the
-// person has signed in. Consumed by page.tsx.
+// person has signed in.
+//
+// A worker's sign-in addresses are changed here, each asked about first: whoever has the
+// new address can sign in as that person, and the person is signed out everywhere. An
+// admin's are shown and not changed (the owner's word, 2026-11-23). Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useState, useSyncExternalStore, type FormEvent } from "react";
@@ -349,6 +353,7 @@ function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
         )}
         <Sends row={row} />
       </EditorSection>
+      <Addresses row={row} />
       <Role row={row} />
       <Location row={row} />
       <EditorFooter>
@@ -533,6 +538,145 @@ function Sends({ row }: { row: Row }) {
         );
       })}
       <li className="secondary">{p.invitedOn(f.dayOf(row.invitedAt))}</li>
+    </ul>
+  );
+}
+
+// The addresses a person signs in with. A worker's are changed here, one at a time; an
+// admin's are the owner's to change; a deactivated person's are left as they are.
+function Addresses({ row }: { row: Row }) {
+  const { t } = useStrings();
+  const p = t.personPanel;
+  return (
+    <EditorSection heading={p.addresses}>
+      {row.role === "admin" ? (
+        <p className="secondary">{p.adminAddresses}</p>
+      ) : (
+        row.deactivatedAt === null && (
+          <>
+            <p className="secondary">{p.addressesExplain}</p>
+            <Address row={row} kind="email" />
+            <Address row={row} kind="sign_in_phone" />
+          </>
+        )
+      )}
+      <AddressChanges row={row} />
+    </EditorSection>
+  );
+}
+
+type AddressKind = "email" | "sign_in_phone";
+
+// One address: the field, and the change, which asks first and says who will be able to
+// sign in. An empty field takes the address away. Saving what is already there is allowed:
+// it is how a change that stopped half-way at the provider is finished.
+function Address({ row, kind }: { row: Row; kind: AddressKind }) {
+  const { t } = useStrings();
+  const p = t.personPanel;
+  const trpc = useTRPC();
+  const refresh = useRefresh();
+  const shown = (value: string | null) =>
+    value === null ? "" : kind === "email" ? value : signInPhone(value);
+  const current = kind === "email" ? row.email : row.signInPhone;
+  const [typed, setTyped] = useState(shown(current));
+  const [note, setNote] = useState<{ text: string; saved: boolean } | null>(null);
+  type Answer =
+    | { result: "changed" | "unchanged" | "repaired"; user: Row }
+    | { result: "rejected"; code: keyof typeof p.addressRefused };
+  const answered = async (answer: Answer) => {
+    if (answer.result === "rejected") {
+      setNote({ saved: false, text: p.addressRefused[answer.code] });
+      return;
+    }
+    setTyped(shown(kind === "email" ? answer.user.email : answer.user.signInPhone));
+    setNote({
+      saved: true,
+      text:
+        answer.result === "changed"
+          ? p.addressChanged
+          : answer.result === "repaired"
+            ? p.addressRepaired
+            : t.unchanged,
+    });
+    await refresh();
+  };
+  // An address the server would not read is said under the field; anything else failed.
+  const failed = (error: { data?: { code?: string } | null }) =>
+    setNote({
+      saved: false,
+      text:
+        error.data?.code === "BAD_REQUEST"
+          ? kind === "email"
+            ? p.emailInvalid
+            : t.mobileNumberInvalid
+          : t.requestFailed,
+    });
+  const setEmail = useMutation(
+    trpc.roster.setEmail.mutationOptions({ onSuccess: answered, onError: failed }),
+  );
+  const setNumber = useMutation(
+    trpc.roster.setSignInPhone.mutationOptions({ onSuccess: answered, onError: failed }),
+  );
+  const value = typed.trim() === "" ? null : typed.trim();
+  const save = () => {
+    setNote(null);
+    if (kind === "email") setEmail.mutate({ userId: row.id, email: value });
+    else setNumber.mutate({ userId: row.id, phone: value });
+  };
+  const id = `address-${kind}-${row.id}`;
+  return (
+    <div className={styles.addressField}>
+      <Field id={id} label={kind === "email" ? t.email : p.signInNumberField}>
+        <input
+          id={id}
+          className={controls.input}
+          type={kind === "email" ? "email" : "tel"}
+          autoComplete="off"
+          maxLength={kind === "email" ? 254 : 32}
+          value={typed}
+          onChange={(e) => {
+            setNote(null);
+            setTyped(e.target.value);
+          }}
+        />
+      </Field>
+      <DestructiveAction
+        label={kind === "email" ? p.changeEmail : p.changeNumber}
+        effect={
+          value === null
+            ? p.removeEffect(row.name, shown(current))
+            : p.changeEffect(row.name, value)
+        }
+        disabled={setEmail.isPending || setNumber.isPending}
+        onConfirm={save}
+      />
+      <Note text={note?.text ?? null} tone={note?.saved ? "saved" : undefined} />
+    </div>
+  );
+}
+
+// Each time the office changed one of their addresses, newest first.
+function AddressChanges({ row }: { row: Row }) {
+  const { t, f } = useStrings();
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (row.addressChanges.length === 0) return null;
+  return (
+    <ul className={styles.sends}>
+      {row.addressChanges.map((change) => {
+        const words = t.personPanel.addressWas[change.field];
+        const at = f.stamp(change.at, zone);
+        const shown = (value: string) =>
+          change.field === "email" ? value : signInPhone(value);
+        return (
+          <li key={change.id} className="secondary">
+            {change.from === null
+              ? words.given(shown(change.to ?? ""), change.by, at)
+              : change.to === null
+                ? words.removed(shown(change.from), change.by, at)
+                : words.changed(shown(change.from), shown(change.to), change.by, at)}
+          </li>
+        );
+      })}
     </ul>
   );
 }

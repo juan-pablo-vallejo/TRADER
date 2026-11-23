@@ -272,11 +272,9 @@ Once, in this order.
 
 ### Day-one support
 
-- A worker's number changed. If they have signed in before, change it on their Clerk user:
-  they keep working, and People goes on showing the old number, because the office cannot
-  edit a sign-in number yet ("Change a worker's sign-in number from the office", after MVP
-  in `docs/TASKS.md`). If they have never signed in, deactivate them in People and invite
-  them again with the new number.
+- A worker's number or email changed: an admin changes it in People, in the person's
+  panel. They are signed out everywhere and sign in again with the new one. An admin's own
+  addresses are the owner's to change, on their Clerk user.
 - "Where are my hours?": an entry lives on the phone until it syncs, and the phone shows
   what needs attention.
 

@@ -13,4 +13,5 @@ export * from "./invoices";
 export * from "./invoice-line-items";
 export * from "./invoice-payments";
 export * from "./invoice-sends";
+export * from "./address-changes";
 export * from "./invitation-sends";

@@ -14,6 +14,13 @@ import {
   sendInvitation,
   sendInvitationOutput,
 } from "../roster/invitation";
+import {
+  addressOutput,
+  rosterSetEmail,
+  rosterSetSignInPhone,
+  setEmailInput,
+  setSignInPhoneInput,
+} from "../roster/address";
 import { inviteInput, inviteOutput, rosterInvite } from "../roster/invite";
 import { listOutput, rosterList } from "../roster/list";
 import { setLocation, setLocationInput, setLocationOutput } from "../roster/location";
@@ -54,6 +61,24 @@ export const rosterRouter = router({
       isClosed(ctx.closed, ctx.user.companyId)
         ? ({ result: "rejected", code: "company_closed" } as const)
         : noteInvitation(ctx.tx, ctx.user, input),
+    ),
+  // The closed company's people keep the addresses they have: whoever holds a new one could
+  // sign in as them, and it reaches nobody outside.
+  setEmail: roleProcedure("admin")
+    .input(setEmailInput)
+    .output(addressOutput)
+    .mutation(({ ctx, input }) =>
+      isClosed(ctx.closed, ctx.user.companyId)
+        ? ({ result: "rejected", code: "company_closed" } as const)
+        : rosterSetEmail(ctx.tx, ctx.user, input, ctx.directory),
+    ),
+  setSignInPhone: roleProcedure("admin")
+    .input(setSignInPhoneInput)
+    .output(addressOutput)
+    .mutation(({ ctx, input }) =>
+      isClosed(ctx.closed, ctx.user.companyId)
+        ? ({ result: "rejected", code: "company_closed" } as const)
+        : rosterSetSignInPhone(ctx.tx, ctx.user, input, ctx.directory),
     ),
   setRole: roleProcedure("admin")
     .input(setRoleInput)

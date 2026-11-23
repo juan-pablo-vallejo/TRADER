@@ -9,6 +9,7 @@ import { company, one, rolledBack, sqlstate } from "../helpers";
 
 // Every table in public. The inventory tests below hold the catalog to exactly this list.
 const TABLES = [
+  "address_changes",
   "companies",
   "customers",
   "invitation_sends",
@@ -27,6 +28,9 @@ const TENANT_TABLES = TABLES.filter((t) => t !== "companies");
 
 // Every trigger a table in public carries, the ones Postgres makes for foreign keys aside.
 const TRIGGERS = [
+  "address_changes_no_delete",
+  "address_changes_no_truncate",
+  "address_changes_no_update",
   "invitation_sends_no_delete",
   "invitation_sends_no_truncate",
   "invitation_sends_no_update",
@@ -59,16 +63,16 @@ afterAll(async () => {
 });
 
 describe("core tables", () => {
-  it("holds exactly twelve tables in public", async () => {
+  it("holds exactly thirteen tables in public", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ count: string }>(
         sql`select count(*) from pg_tables where schemaname = 'public'`,
       );
-      expect(Number(one(rows).count)).toBe(12);
+      expect(Number(one(rows).count)).toBe(13);
     });
   });
 
-  it("holds exactly the twelve named tables in public", async () => {
+  it("holds exactly the thirteen named tables in public", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ tablename: string }>(sql`
         select tablename::text from pg_tables where schemaname = 'public' order by tablename
@@ -77,7 +81,7 @@ describe("core tables", () => {
     });
   });
 
-  it("carries exactly the twenty-one named triggers on the tables in public", async () => {
+  it("carries exactly the twenty-four named triggers on the tables in public", async () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute<{ tgname: string }>(sql`
         select t.tgname::text from pg_trigger t
@@ -87,7 +91,7 @@ describe("core tables", () => {
         order by t.tgname
       `);
       expect(rows.map((r) => r.tgname)).toEqual(TRIGGERS);
-      expect(rows).toHaveLength(21);
+      expect(rows).toHaveLength(24);
     });
   });
 

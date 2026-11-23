@@ -74,6 +74,10 @@
 .sends li + li {
   margin-top: var(--space-1);
 }
+/* One address and its change: the next one stands clear of this one's buttons. */
+.addressField + .addressField {
+  margin-top: var(--space-4);
+}
 .message {
   margin: 0 0 var(--space-3);
   padding: var(--space-3);

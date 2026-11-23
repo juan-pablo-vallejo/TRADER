@@ -592,6 +592,48 @@ export const es: Catalog = {
     },
     copyInvitation: "Copiar el mensaje",
     copied: "Copiado. Pégalo en un mensaje de texto para esa persona.",
+    addresses: "Direcciones de acceso",
+    addressesExplain:
+      "Lo que escribe para iniciar sesión. Deja una vacía para quitarla: una de las dos siempre se queda.",
+    adminAddresses:
+      "Las direcciones de acceso de un administrador no se cambian aquí. Pídeselo al dueño de este TRADER.",
+    signInNumberField: "Número de acceso",
+    changeEmail: "Cambiar el correo",
+    changeNumber: "Cambiar el número de acceso",
+    changeEffect: (name, address) =>
+      `Quien tenga ${address} podrá iniciar sesión como ${name}. La sesión de ${name} se cierra en todas partes y vuelve a iniciarla con esa dirección.`,
+    removeEffect: (name, address) =>
+      `${name} ya no iniciará sesión con ${address}, y su sesión se cierra en todas partes.`,
+    addressChanged:
+      "Cambiado. Su sesión se cerró, y de ahora en adelante inicia sesión con esa dirección.",
+    addressRepaired: "Su acceso ya coincide con esto.",
+    emailInvalid: "Escribe un correo, o déjalo vacío para quitarlo.",
+    addressRefused: {
+      admin: "Las direcciones de acceso de un administrador no se cambian aquí.",
+      deactivated: "Esta persona está desactivada. No se cambió nada.",
+      last_address: "Necesita una dirección para iniciar sesión. Dale primero la otra.",
+      email_taken: "Alguien de esta plantilla ya tiene ese correo.",
+      phone_taken: "Alguien de esta plantilla ya tiene ese número de celular.",
+      address_held: "Esa dirección no se puede usar. No se cambió nada.",
+      no_login:
+        "Su acceso se creó antes de que aquí se pudieran cambiar direcciones. Se podrá cambiar cuando haya iniciado sesión.",
+      company_closed:
+        "Esta empresa de demostración no puede cambiar la dirección de nadie.",
+    },
+    addressWas: {
+      email: {
+        given: (to, by, at) => `Correo ${to} dado por ${by}, ${at}`,
+        changed: (from, to, by, at) =>
+          `Correo cambiado de ${from} a ${to} por ${by}, ${at}`,
+        removed: (from, by, at) => `Correo ${from} quitado por ${by}, ${at}`,
+      },
+      sign_in_phone: {
+        given: (to, by, at) => `Número de acceso ${to} dado por ${by}, ${at}`,
+        changed: (from, to, by, at) =>
+          `Número de acceso cambiado de ${from} a ${to} por ${by}, ${at}`,
+        removed: (from, by, at) => `Número de acceso ${from} quitado por ${by}, ${at}`,
+      },
+    },
     invitedNote: (name) =>
       `${name} ya tiene invitación. Ahora dile dónde obtener la aplicación.`,
   },
