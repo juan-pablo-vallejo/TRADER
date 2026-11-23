@@ -12,7 +12,7 @@ import * as Sentry from "@sentry/react-native";
 import type { ComponentType } from "react";
 
 import { BUILD, environment, sentryDsn } from "./config";
-import { scrubEvent, screenTag } from "./report-event";
+import { onPurposeAllowed, scrubEvent, screenTag } from "./report-event";
 import type { Stage } from "./sync/failures";
 
 export const reporting = sentryDsn !== null;
@@ -54,6 +54,19 @@ export function reportSyncFailure(stage: Stage, kind: string, error: unknown): v
     tags: { sync_stage: stage, sync_failure: kind },
     fingerprint: ["sync", stage, kind],
   });
+}
+
+// A report made on purpose, to see one arrive with a readable stack (docs/TASKS.md, item
+// 12). A staging build's alone: Me offers it on a long press of the build's number.
+// Thrown and caught, so it carries a stack of its own and the app goes on.
+export const reportsOnPurpose = reporting && onPurposeAllowed(environment);
+export function reportOnPurpose(): void {
+  if (!reportsOnPurpose) return;
+  try {
+    throw new Error("a report made on purpose");
+  } catch (error) {
+    Sentry.captureException(error, { fingerprint: ["on-purpose"] });
+  }
 }
 
 // The root layout, wrapped as Sentry asks, only where reporting is on.

@@ -250,5 +250,6 @@ export const en: Catalog = {
     saved: "Saved.",
     saveFailed: "That did not save. Check your connection and try again.",
     build: (build) => `Build ${build}`,
+    testReportSent: "Test report sent.",
   },
 };

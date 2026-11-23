@@ -257,5 +257,6 @@ export const es: Catalog = {
     saved: "Guardado.",
     saveFailed: "No se guardó. Revisa tu conexión e inténtalo de nuevo.",
     build: (build) => `Versión ${build}`,
+    testReportSent: "Informe de prueba enviado.",
   },
 };

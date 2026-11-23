@@ -3,7 +3,7 @@
 import type { Event } from "@sentry/react-native";
 import { describe, expect, it } from "vitest";
 
-import { screenTag, scrubEvent } from "../src/report-event";
+import { onPurposeAllowed, screenTag, scrubEvent } from "../src/report-event";
 
 const DEBUG_ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
 
@@ -119,5 +119,13 @@ describe("a screen's name", () => {
     expect(screenTag("/")).toBe("/");
     expect(screenTag("/jobs/0190-abc")).toBeUndefined();
     expect(screenTag("/week?day=2026-11-20")).toBeUndefined();
+  });
+});
+
+describe("a report made on purpose", () => {
+  it("is a staging build's alone: a store build and a development machine have none", () => {
+    expect(onPurposeAllowed("staging")).toBe(true);
+    expect(onPurposeAllowed("production")).toBe(false);
+    expect(onPurposeAllowed(null)).toBe(false);
   });
 });

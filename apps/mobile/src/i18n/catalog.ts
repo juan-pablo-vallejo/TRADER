@@ -246,6 +246,8 @@ export type Catalog = {
     saved: string;
     saveFailed: string;
     build: (build: string) => string;
+    // A staging build only: the answer to a long press on the build's number.
+    testReportSent: string;
   };
 };
 

@@ -96,3 +96,8 @@ export function scrubEvent(event: Event): ErrorEvent {
 // route with a value in it; one that ever had would not pass, and the tag would be absent.
 export const screenTag = (pathname: string): string | undefined =>
   /^\/[a-z-]{0,40}$/.test(pathname) ? (pathname === "/" ? "/" : pathname) : undefined;
+
+// Which build may make a report on purpose (report.ts, reportOnPurpose): a staging build
+// alone. A store build has no such path, and a development machine reports nothing.
+export const onPurposeAllowed = (environment: string | null): boolean =>
+  environment === "staging";

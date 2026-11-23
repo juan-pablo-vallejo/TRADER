@@ -12,6 +12,7 @@ import { createApi } from "../../api";
 import { apiUrl, BUILD } from "../../config";
 import { useStrings } from "../../i18n";
 import { useReminders } from "../../reminders";
+import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
 import { useSync } from "../../sync/provider";
 import { color, size, space, type } from "../../theme";
@@ -36,6 +37,7 @@ export default function Me() {
   const [note, setNote] = useState<"saved" | "failed" | null>(null);
   const reminders = useReminders();
   const [remindersRefused, setRemindersRefused] = useState(false);
+  const [reported, setReported] = useState(false);
 
   // The name comes with the pull; the contact phone only from the server, when reachable.
   useEffect(() => {
@@ -206,9 +208,26 @@ export default function Me() {
             void signOut().then(() => router.replace("/sign-in"));
           }}
         />
-        <Text testID="settings-build" style={[text.secondary, styles.build]}>
+        {/* In a staging build a long press sends one report on purpose (report.ts). */}
+        <Text
+          testID="settings-build"
+          style={[text.secondary, styles.build]}
+          onLongPress={
+            reportsOnPurpose
+              ? () => {
+                  reportOnPurpose();
+                  setReported(true);
+                }
+              : undefined
+          }
+        >
           {t.settings.build(String(BUILD))}
         </Text>
+        {reported && (
+          <Text testID="settings-reported" style={[text.secondary, styles.build]}>
+            {t.settings.testReportSent}
+          </Text>
+        )}
       </ScrollView>
     </Screen>
   );
