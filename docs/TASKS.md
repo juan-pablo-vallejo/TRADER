@@ -1057,6 +1057,19 @@ Android user.
 - [ ] A second Vercel project, `trader`, is connected to the repository beside
       `trader-staging`: each push to `main` starts a deployment there that
       `apps/web/vercel.json` cancels.
+- [ ] The two hand builds of items 12 and 13 ran on 2026-11-22, both of the preview
+      profile at commit `694325e`. Read that evening: EAS lists an iOS build (number 1) and
+      an Android build (version code 2), both finished; each build's log shows its source
+      maps uploaded to Sentry's `trader-phone`, and the iOS log its debug files too; the
+      build's DSN names that same project. Staging's tables hold two clock-ins and two
+      clock-outs between 02:49 and 02:55 UTC on 2026-11-23 by the owner's own admin, each
+      with a location stamp and none captured offline, which is the iOS build signed in to
+      staging. Not yet: Sentry holds no event of any kind, so the report made on purpose
+      (a long press on the build's number in Me) has not been read back and item 12 stays
+      open; the Android build has not signed in, so item 13 stays open. On the Mac's
+      emulator the Android build was refused (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) because
+      a development build signed with another key is installed there; uninstalling that
+      one first clears it.
 
 ## After MVP
 
