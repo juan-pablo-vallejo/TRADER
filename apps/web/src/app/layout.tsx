@@ -13,6 +13,7 @@ import "./theme.css";
 // slow connection (Lighthouse on staging, 2026-11-23: mobile 86, and 98 with this one
 // request blocked). A page that sets text in it fetches it when its stylesheet asks; the
 // homepage sets its text in the Latin cut instead ((public)/page.tsx). The owner's choice.
+// This build lists every preloadable font under every page, so a preload is all or none.
 const inter = localFont({
   src: "./fonts/InterVariable.woff2",
   variable: "--font-inter",

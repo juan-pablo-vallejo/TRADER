@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import localFont from "next/font/local";
 import { headers } from "next/headers";
 import Image from "next/image";
+import { preload } from "react-dom";
 
 import { signInPath } from "../../server/identity-mode";
 import type { Language } from "../i18n/language";
@@ -24,30 +24,17 @@ import { SiteHeader } from "./site-header";
 // elsewhere are plain links.
 export const dynamic = "force-dynamic";
 
-// Their headings' serif, the one nearest their own wordmark: Bodoni Moda, from the
-// repository itself (fonts/, with its license). And their text, in Inter as everywhere,
-// from the Latin cut of the same typeface: 48 KB for English and Spanish, against the
-// 352 KB file the office reads (layout.tsx), from @fontsource-variable/inter 5.3.0 under
-// the license already beside it.
-// Neither is preloaded. Declared in this file they were meant to be this page's alone,
-// but the built app put both preloads on every route's response, the office's among them
-// (seen in staging's `Link` headers, 2026-11-23). Without a preload a font is fetched by
-// the page whose text is set in it, and by no other: here, when this page's stylesheet
-// asks, a few milliseconds after it would have been.
-const bodoni = localFont({
-  src: "../fonts/BodoniModa-latin.woff2",
-  variable: "--font-bodoni",
-  weight: "400 900",
-  display: "swap",
-  preload: false,
-});
-const interLatin = localFont({
-  src: "../fonts/Inter-latin.woff2",
-  variable: "--font-inter-latin",
-  weight: "100 900",
-  display: "swap",
-  preload: false,
-});
+// The page's two fonts, from the app itself (public/fonts, their licenses in app/fonts):
+// Bodoni Moda for headings, the serif nearest D'Sierra's own wordmark, and the Latin cut
+// of Inter for text, 48 KB for English and Spanish against the 352 KB file the office
+// reads (layout.tsx). Each from its @fontsource-variable package at the version in its
+// name, and declared in home.module.css.
+// Not next/font: this build lists every preloadable font under every page, so a font
+// declared here was preloaded on every route's response, the office's among them (seen in
+// staging's `Link` headers, 2026-11-23); and with no preload the Spanish headline drew in
+// three lines, then five when the serif arrived. At a fixed address the page asks for the
+// headline's font itself, ahead of its stylesheet, and no other page hears of either.
+const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";
 
 // A number as a `tel:` link dials it: the digits, and a leading plus.
 const dialable = (phone: string) => phone.replace(/[^\d+]/g, "");
@@ -127,11 +114,9 @@ export default async function Home() {
   const tel = HOME.phone === null ? null : `tel:${dialable(HOME.phone)}`;
   const mail = HOME.email === null ? null : `mailto:${HOME.email}`;
   const place = HOME.place?.[language];
+  preload(HEADING_FONT, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   return (
-    <div
-      className={`${styles.page} ${bodoni.variable} ${interLatin.variable}`}
-      data-brand
-    >
+    <div className={styles.page} data-brand>
       <SiteHeader
         name={HOME.name}
         signIn={t.teamSignIn}

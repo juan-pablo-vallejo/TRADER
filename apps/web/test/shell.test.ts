@@ -74,18 +74,23 @@ describe("the three layouts", () => {
     expect(existsSync(at("fonts/InterVariable.woff2"))).toBe(true);
     expect(read("fonts/Inter-LICENSE.txt")).toContain("SIL Open Font License");
     expect(read("layout.tsx")).toContain("next/font/local");
-    // The homepage's headings: Bodoni Moda, the same way, fetched by that page alone.
-    expect(existsSync(at("fonts/BodoniModa-latin.woff2"))).toBe(true);
+    // The homepage's two, Bodoni Moda and Inter's Latin cut: files of the app's own at
+    // fixed addresses, their licenses kept, and the page asks for its headline's itself.
+    // Not next/font, whose preloads this build puts on every route.
+    const web = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
+    for (const file of ["BodoniModa-latin-5.3.0.woff2", "Inter-latin-5.3.0.woff2"]) {
+      expect(existsSync(web(`public/fonts/${file}`)), file).toBe(true);
+      expect(read("(public)/home.module.css")).toContain(`url("/fonts/${file}")`);
+    }
     expect(read("fonts/BodoniModa-LICENSE.txt")).toContain("SIL Open Font License");
-    expect(read("(public)/page.tsx")).toContain("next/font/local");
-    expect(read("(public)/layout.tsx")).not.toContain("next/font");
+    const home = read("(public)/page.tsx");
+    expect(home).not.toMatch(/from "next\/font/);
+    expect(home).toContain('const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";');
+    expect(home).toContain("preload(HEADING_FONT,");
+    expect(read("(public)/layout.tsx")).not.toMatch(/from "next\/font/);
     // The office's Inter is every script it draws, 352 KB: no page is made to fetch it
-    // before its own text asks, and the homepage reads the Latin cut of the same face.
+    // before its own text asks.
     expect(read("layout.tsx")).toContain("preload: false");
-    // Nor the homepage's two: a preload declared in a page reached every route's response.
-    expect(read("(public)/page.tsx").match(/preload: false,/g)).toHaveLength(2);
-    expect(existsSync(at("fonts/Inter-latin.woff2"))).toBe(true);
-    expect(read("(public)/page.tsx")).toContain("../fonts/Inter-latin.woff2");
     expect(read("(public)/home.module.css")).toContain("font-family: var(--font-home);");
     // And nothing beside the homepage's root inherits the office's face and fetches it.
     expect(read("theme.css")).toMatch(

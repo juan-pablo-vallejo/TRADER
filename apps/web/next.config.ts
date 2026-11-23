@@ -40,6 +40,12 @@ const config: NextConfig = {
     if (process.env.NODE_ENV !== "production") return [];
     return [
       {
+        // The homepage's two fonts (public/fonts): the version is in each file's name, so
+        // an address never changes what it holds and a browser may keep it for good.
+        source: "/fonts/:file",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
