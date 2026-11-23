@@ -81,17 +81,20 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = { themeColor: "#140064" };
 
 // One of their photos: resized and re-encoded by next/image for the screen that asks, a
-// blurred stand-in until it arrives, and lazy unless the page says otherwise.
+// blurred stand-in until it arrives, and lazy unless it is the page's first: that one is
+// asked for at once and ahead of everything else, as the installed Next's docs say to
+// (`loading` and `fetchPriority`, in place of `preload`; `priority` is retired). With
+// `preload` alone the request carried no priority (Lighthouse on staging, 2026-11-23).
 function Shot({
   photo,
   language,
   sizes,
-  preload = false,
+  first = false,
 }: {
   photo: Photo;
   language: Language;
   sizes: string;
-  preload?: boolean;
+  first?: boolean;
 }) {
   return (
     <Image
@@ -99,7 +102,7 @@ function Shot({
       alt={photo.alt[language]}
       placeholder="blur"
       sizes={sizes}
-      preload={preload}
+      {...(first && { loading: "eager" as const, fetchPriority: "high" as const })}
     />
   );
 }
@@ -128,7 +131,7 @@ export default async function Home() {
               photo={HOME.hero}
               language={language}
               sizes="(min-width: 900px) 54vw, 100vw"
-              preload
+              first
             />
           </div>
           <div className={styles.heroText}>
