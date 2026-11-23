@@ -1389,8 +1389,9 @@ Android user.
       before and after), and a passkey added, used and removed (OWNER, in a browser
       with a device lock; the band shows within ten minutes of a sign-in by code).
       Corrected the same push: the Google button sat flush under the heading.
-- [ ] `scripts/staging.sh passkey` (item 21b's flow by hand, with Playwright's virtual
-      authenticator) is not written yet.
+- [x] `scripts/staging.sh passkey` (item 21b's flow by hand, with Playwright's virtual
+      authenticator) is not written yet. Written with the Clerk suite; green on staging
+      at `d2fb40c`, 2026-11-23.
 - [ ] The office's sign-in against real Clerk on the Mac, 2026-11-23, by
       `scripts/staging.sh local`: the development instance's keys on localhost and the demo
       database `trader_demo_clerk`, six tests in `apps/web/e2e/clerk.local.ts`, green. Seen there and
@@ -1423,6 +1424,13 @@ Android user.
       never undone (the users guard, the owner included), so no Clerk login can become a
       demo person. The Clerk suite inserts its own admin, unbound, for the staging suite's
       admin number; its worker is invited by the test itself.
+- [ ] Items 21b and 21d on staging at `d2fb40c`, 2026-11-23, after the deploy's smoke
+      test passed: `scripts/staging.sh passkey` green (Today's band after a fresh sign-in,
+      a passkey added from it, listed in Settings, Use a passkey after signing out, then
+      removed); Continue with Google reaching Google with the field's passkey offer
+      running; the band at 390 and the Settings section at 1280, in English. Not seen, so
+      21b is not ticked: both in Spanish (`staging.sh look` draws English only). 21d waits
+      on the owner's two Google sign-ins.
 
 ## After MVP
 
