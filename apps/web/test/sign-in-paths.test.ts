@@ -149,6 +149,12 @@ describe("the sign-in form", () => {
     expect(mark).not.toMatch(/https?:\/\/(?!www\.w3\.org\/)/);
     expect(form).toContain('<img src="/google-g.svg" alt="" width={20} height={20} />');
     expect(form).toContain('strategy: "oauth_google"');
+    // A sign-in the passkey offer already started stops Clerk going to Google: set aside.
+    const google = form.slice(
+      form.indexOf("const withGoogle"),
+      form.indexOf("signIn.sso("),
+    );
+    expect(google).toContain("await signIn.reset();");
     for (const source of [form, back, sheet]) {
       expect(code(source)).not.toMatch(/google\.com|gstatic|googleapis/);
     }

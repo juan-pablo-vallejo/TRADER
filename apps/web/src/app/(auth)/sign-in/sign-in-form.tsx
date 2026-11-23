@@ -148,6 +148,12 @@ export function SignInForm({
   // whose verified email it is, so it works for a person the office invited by that email.
   const withGoogle = () => {
     void attempt(async () => {
+      // The field's passkey offer (below) has already started a sign-in of its own, and
+      // Clerk's `sso` goes to Google only for a sign-in it starts itself: on one already
+      // started it does nothing at all (@clerk/clerk-js 6.43.1, SignInFuture.sso). Seen
+      // on staging: the button did nothing. So the passkey's is set aside first. The code
+      // buttons need nothing of the kind: each call starts its own sign-in.
+      await signIn.reset();
       const { error } = await signIn.sso({
         strategy: "oauth_google",
         redirectUrl: returnTo,
