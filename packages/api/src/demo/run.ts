@@ -381,7 +381,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       "accepted",
     );
     if (a.result === "accepted") {
-      const reasons = a.events[0]?.reasons ?? [];
+      const reasons = a.events[0]?.flags ?? [];
       if (reasons.join(",") !== s.reasons.join(",")) {
         fail(
           `correction flagged [${reasons.join(", ")}], planned [${s.reasons.join(", ")}]`,

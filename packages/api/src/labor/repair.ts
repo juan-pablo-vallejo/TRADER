@@ -91,7 +91,7 @@ export type RepairInput = z.infer<typeof repairInput>;
 const acknowledgement = z.strictObject({
   id: z.uuid(),
   serverTimestamp: z.date(),
-  reasons: z.array(z.enum(entryFlag.enumValues)),
+  flags: z.array(z.enum(entryFlag.enumValues)),
 });
 
 type RepairRejection = RejectionCode | "id_conflict" | "time_in_future" | "repair_stale";
@@ -224,7 +224,7 @@ async function answerRecorded(
     events: input.operations.map((op) => ({
       id: op.id,
       serverTimestamp: byId.get(op.id)!.serverTimestamp,
-      reasons: byId.get(op.id)!.flags,
+      flags: byId.get(op.id)!.flags,
     })),
   };
 }
@@ -403,7 +403,7 @@ export async function repairLabor(
   const events: Acknowledgement[] = candidates.map((c, i) => ({
     id: c.id,
     serverTimestamp: receivedAt,
-    reasons: reasons[i]!,
+    flags: reasons[i]!,
   }));
   return { result: "accepted", events };
 }

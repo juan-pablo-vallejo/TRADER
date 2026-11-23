@@ -235,7 +235,7 @@ describe("labor.repair — append, correct, void", () => {
       const r = await repair(tx, admin.who, d.w1, [end]);
       expect(r).toMatchObject({
         result: "accepted",
-        events: [{ id: end.id, reasons: ["corrected", "user_timed"] }],
+        events: [{ id: end.id, flags: ["corrected", "user_timed"] }],
       });
       const [row] = await tx
         .select()
@@ -281,7 +281,7 @@ describe("labor.repair — append, correct, void", () => {
       const r = await repair(tx, admin.who, d.w1, [c]);
       expect(r).toMatchObject({
         result: "accepted",
-        events: [{ id: c.id, reasons: ["corrected", "user_timed"] }],
+        events: [{ id: c.id, flags: ["corrected", "user_timed"] }],
       });
       expect(await flagsOf(tx, c.id)).toEqual(["corrected", "user_timed"]);
       const ledger = await readWorkerEvents(tx, d.w1);
@@ -415,7 +415,7 @@ describe("labor.repair — append, correct, void", () => {
       const r = await repair(tx, admin.who, d.w1, [v]);
       expect(r).toMatchObject({
         result: "accepted",
-        events: [{ id: v.id, reasons: ["corrected"] }],
+        events: [{ id: v.id, flags: ["corrected"] }],
       });
       const [row] = await tx
         .select()
@@ -495,7 +495,7 @@ describe("labor.repair — append, correct, void", () => {
       const same = correct(start, "started", d.J, "08:00");
       expect(await repair(tx, admin.who, d.w1, [same])).toMatchObject({
         result: "accepted",
-        events: [{ id: same.id, reasons: ["corrected", "user_timed"] }],
+        events: [{ id: same.id, flags: ["corrected", "user_timed"] }],
       });
       expect(await counts(tx, d)).toEqual({ events: before.events + 1 });
       expect((await accounting(tx, d.w1))[0]).toMatchObject({
@@ -524,8 +524,8 @@ describe("labor.repair — the caller's own ledger", () => {
       expect(first).toMatchObject({
         result: "accepted",
         events: [
-          { id: start.id, reasons: ["corrected", "user_timed"] },
-          { id: end.id, reasons: ["corrected", "user_timed"] },
+          { id: start.id, flags: ["corrected", "user_timed"] },
+          { id: end.id, flags: ["corrected", "user_timed"] },
         ],
       });
       const [row] = await tx
@@ -553,7 +553,7 @@ describe("labor.repair — the caller's own ledger", () => {
       const fix = correct(end.id, "ended", d.J, "15:00");
       expect(await repair(tx, admin.who, admin.id, [fix])).toMatchObject({
         result: "accepted",
-        events: [{ id: fix.id, reasons: ["corrected", "user_timed"] }],
+        events: [{ id: fix.id, flags: ["corrected", "user_timed"] }],
       });
       expect(await accounting(tx, admin.id)).toMatchObject([
         { accounting: "eligible", eligibleWorkedMs: 7 * HOUR },
@@ -561,7 +561,7 @@ describe("labor.repair — the caller's own ledger", () => {
       const v = voidOf(start.id);
       expect(await repair(tx, admin.who, admin.id, [v])).toMatchObject({
         result: "accepted",
-        events: [{ id: v.id, reasons: ["corrected"] }],
+        events: [{ id: v.id, flags: ["corrected"] }],
       });
       expect(await accounting(tx, admin.id)).toMatchObject([
         { accounting: "voided", eligibleWorkedMs: 0 },

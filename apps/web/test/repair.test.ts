@@ -167,8 +167,8 @@ describe("labor repair through the route handler", () => {
     expect(first.data).toMatchObject({
       result: "accepted",
       events: [
-        { id: set.operations[0]!.id, reasons: ["corrected", "user_timed"] },
-        { id: set.operations[1]!.id, reasons: ["corrected", "user_timed"] },
+        { id: set.operations[0]!.id, flags: ["corrected", "user_timed"] },
+        { id: set.operations[1]!.id, flags: ["corrected", "user_timed"] },
       ],
     });
     // The same set again, as after an answer that never arrived.
@@ -296,7 +296,7 @@ describe("labor repair through the route handler", () => {
     const flags = ["corrected", "user_timed"];
     expect(saved).toMatchObject({
       result: "accepted",
-      events: [{ reasons: flags }, { reasons: flags }],
+      events: [{ flags }, { flags }],
     });
     expect((await ledger(admin.userId)).data?.sessions).toMatchObject([
       {
