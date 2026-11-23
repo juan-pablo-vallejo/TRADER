@@ -350,7 +350,7 @@ Android user.
       A sync cycle that fails for a reason other than no connection is reported once, not
       every minute. Done when an error thrown on purpose in a staging build is read back
       through the read-only Sentry tools with a readable stack.
-- [ ] 13. **Preview builds.** `eas.json` with development, preview and production
+- [x] 13. **Preview builds.** `eas.json` with development, preview and production
       profiles; the build number from EAS; a workflow that builds a preview for a commit,
       told staging's API, Clerk's publishable key and the Sentry DSN. OWNER first: the Expo
       token in GitHub's `staging` environment; then, once `eas.json` is on `main`, the test
@@ -1070,6 +1070,33 @@ Android user.
       emulator the Android build was refused (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`) because
       a development build signed with another key is installed there; uninstalling that
       one first clears it.
+- [x] Item 13, ticked on 2026-11-22 on what was read that evening. Both builds are of
+      commit `694325e` (EAS's list). The iOS build: the clock rows above. The Android
+      build: Clerk's log of the development instance shows a native Android client
+      (`okhttp`) asking for a texted code, verifying it and getting a session at 04:06 UTC
+      on 2026-11-23, for the login that staging's users table binds to the owner's own
+      admin; the owner says he was then signed in on the Android device. Nothing read shows
+      that phone's first call to staging itself. The "Preview builds" workflow has still
+      never run: it is proven the next time a build is wanted.
+- [ ] Item 12, as it stood that evening: no report from either of the owner's phones had
+      reached Sentry. The path itself works. The development build on the iPhone simulator,
+      told the phone project's DSN and `staging`, sent the report made on purpose twice
+      (a long press on the build's number in Me; "Test report sent." showed), and both
+      were read back as `TRADER-PHONE-1` with the screen, the build's number, no message,
+      no user and no address. That is not item 12's "Done when": it was not a staging
+      build, and its frames were readable only because a development bundle is not
+      minified. The box waits on one long press in a preview build, read back with its
+      frames resolved by the uploaded source maps.
+- [ ] OWNER: a phone report reaches Sentry with a city on it. Sentry looks up the
+      connection's address as the report arrives and keeps the country, region and city
+      (`user.geo`), though it stores no address and the app sends none. The privacy page
+      says a report "is built to carry no name, phone number, location or entry". To
+      settle before the legal pages are approved: have Sentry remove it, send reports by
+      way of TRADER's own service, or say it in the policy.
+- [ ] A report from a development build carries this machine's file paths in its frames,
+      the account's name among them (`report-event.ts` passes any path with no white
+      space). A store or preview build's frames name the bundle only. To weigh: keep a
+      frame's file name only where it begins `app://`.
 
 ## After MVP
 
