@@ -34,6 +34,16 @@ const bodoni = localFont({
   display: "swap",
 });
 
+// Its text, in Inter as everywhere, from the Latin cut of the same typeface: 48 KB for
+// English and Spanish, against the 352 KB file the office reads (layout.tsx). From
+// @fontsource-variable/inter 5.3.0, under the license already beside it.
+const interLatin = localFont({
+  src: "../fonts/Inter-latin.woff2",
+  variable: "--font-inter-latin",
+  weight: "100 900",
+  display: "swap",
+});
+
 // A number as a `tel:` link dials it: the digits, and a leading plus.
 const dialable = (phone: string) => phone.replace(/[^\d+]/g, "");
 
@@ -113,7 +123,10 @@ export default async function Home() {
   const mail = HOME.email === null ? null : `mailto:${HOME.email}`;
   const place = HOME.place?.[language];
   return (
-    <div className={`${styles.page} ${bodoni.variable}`} data-brand>
+    <div
+      className={`${styles.page} ${bodoni.variable} ${interLatin.variable}`}
+      data-brand
+    >
       <SiteHeader
         name={HOME.name}
         signIn={t.teamSignIn}

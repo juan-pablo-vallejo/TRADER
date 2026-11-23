@@ -79,6 +79,12 @@ describe("the three layouts", () => {
     expect(read("fonts/BodoniModa-LICENSE.txt")).toContain("SIL Open Font License");
     expect(read("(public)/page.tsx")).toContain("next/font/local");
     expect(read("(public)/layout.tsx")).not.toContain("next/font");
+    // The office's Inter is every script it draws, 352 KB: no page is made to fetch it
+    // before its own text asks, and the homepage reads the Latin cut of the same face.
+    expect(read("layout.tsx")).toContain("preload: false");
+    expect(existsSync(at("fonts/Inter-latin.woff2"))).toBe(true);
+    expect(read("(public)/page.tsx")).toContain("../fonts/Inter-latin.woff2");
+    expect(read("(public)/home.module.css")).toContain("font-family: var(--font-home);");
   });
 
   it("opens the menu on Today, then as a week is worked, with Customers beside Jobs", () => {

@@ -6,6 +6,7 @@
 .page {
   background: var(--surface);
   color: var(--ink);
+  font-family: var(--font-home);
   font-size: var(--home-text);
   line-height: var(--home-text-line);
 }

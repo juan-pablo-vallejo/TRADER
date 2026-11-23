@@ -110,8 +110,10 @@
   --red-600: var(--brand);
   --red-700: #9a0a0a;
   --red-800: #7c0808;
-  /* Headings, in the serif their own wordmark is drawn in; the page loads it. */
+  /* Headings, in the serif their own wordmark is drawn in; the page loads it. Text in
+     Inter's Latin cut, which the page loads too: the office's file is seven times it. */
   --font-display: var(--font-bodoni), Georgia, "Times New Roman", serif;
+  --font-home: var(--font-inter-latin), system-ui, sans-serif;
 
   /* Its sizes: a customer's page, read once, so larger than the office's, and it does not
      shrink on a laptop as the office does. Narrow first: a phone in a hand. */
