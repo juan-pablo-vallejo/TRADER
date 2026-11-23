@@ -1,0 +1,19 @@
+/* D'Sierra's two fonts, at fixed addresses in public/fonts ((public)/page.tsx says why they
+   are not next/font's): Bodoni Moda for headings and the Latin cut of Inter for text.
+   Imported by the homepage and by sign-in, the two places that wear their brand
+   (`data-brand`, theme.css), so no other page's stylesheet names them. A face is fetched
+   only where text is set in it. */
+@font-face {
+  font-family: "Bodoni Moda";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/BodoniModa-latin-5.3.0.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter Latin";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/Inter-latin-5.3.0.woff2") format("woff2");
+}

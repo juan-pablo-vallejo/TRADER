@@ -4,22 +4,7 @@
    theme.css's `[data-brand]` block. Three widths: a phone; 768 px, where the Call bar
    goes and photos sit side by side; 900 px, where the headline stands beside the photo. */
 
-/* Its two fonts, at fixed addresses in public/fonts (page.tsx says why they are not
-   next/font's). A face is fetched only where text is set in it, and only this page's is. */
-@font-face {
-  font-family: "Bodoni Moda";
-  font-style: normal;
-  font-weight: 400 900;
-  font-display: swap;
-  src: url("/fonts/BodoniModa-latin-5.3.0.woff2") format("woff2");
-}
-@font-face {
-  font-family: "Inter Latin";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url("/fonts/Inter-latin-5.3.0.woff2") format("woff2");
-}
+/* Its two fonts are declared in app/brand-fonts.css, which page.tsx imports beside this. */
 .page {
   background: var(--surface);
   color: var(--ink);

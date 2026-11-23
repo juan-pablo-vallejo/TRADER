@@ -9,9 +9,10 @@
 // would only return them here.
 import { useAuth, useClerk } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 
-import { SIGN_IN_PATH } from "../server/sign-in-paths";
+import { SIGN_IN_PATH, signInFrom } from "../server/sign-in-paths";
 import controls from "./controls.module.css";
 import { EmptyState } from "./empty-state";
 import { useStrings } from "./i18n";
@@ -30,14 +31,23 @@ export function ClerkSignOut() {
   );
 }
 
+// The way in for a person found signed out here: sign-in, told where they were, so
+// Clerk's form returns them to this screen with its filters as the address holds them.
+function useSignInHref(): string {
+  const path = usePathname();
+  const query = useSearchParams().toString();
+  return signInFrom(query === "" ? path : `${path}?${query}`);
+}
+
 // The header's place for the person, when `me.get` was refused.
 export function ClerkHeaderRefused({ className }: { className: string | undefined }) {
   const { t } = useStrings();
   const { isLoaded, isSignedIn } = useAuth();
+  const signIn = useSignInHref();
   if (!isLoaded) return null;
   if (isSignedIn) return <ClerkSignOut />;
   return (
-    <a className={className} href={SIGN_IN_PATH}>
+    <a className={className} href={signIn}>
       {t.signIn}
     </a>
   );
@@ -47,15 +57,13 @@ export function ClerkHeaderRefused({ className }: { className: string | undefine
 export function ClerkRefused() {
   const { t } = useStrings();
   const { isLoaded, isSignedIn } = useAuth();
+  const signIn = useSignInHref();
   if (!isLoaded) return null;
   if (isSignedIn) {
     return <EmptyState text={t.notOnRoster} action={<ClerkSignOut />} />;
   }
   return (
-    <EmptyState
-      text={t.signInToContinue}
-      action={<a href={SIGN_IN_PATH}>{t.signIn}</a>}
-    />
+    <EmptyState text={t.signInToContinue} action={<a href={signIn}>{t.signIn}</a>} />
   );
 }
 

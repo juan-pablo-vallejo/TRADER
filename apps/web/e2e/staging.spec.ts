@@ -110,8 +110,7 @@ async function signIn(page: Page, phone: string, ticket: string): Promise<void> 
   await page.goto("/sign-in");
   const identifier = page.locator('input[name="identifier"]');
   await identifier.waitFor({ state: "visible", timeout: 60_000 });
-  // The form opens on the email address; the number is behind its "Use phone" link.
-  await page.getByRole("link", { name: "Use phone", exact: true }).click();
+  // The form opens on the number: the sign-in page starts it there (its page.tsx).
   await expect(identifier).toHaveAttribute("type", "tel");
   // The field shows a country code of its own: type the national number.
   await identifier.fill(phone.replace(/^\+1/, ""));

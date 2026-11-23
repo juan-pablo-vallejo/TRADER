@@ -4,8 +4,9 @@
 :root {
   /* Color. The same names and values as the phone's (apps/mobile/src/theme.ts); a test
      fails when the two differ (apps/web/test/theme.test.ts). D Sierra's brand: their indigo
-     is the color of every action, link, focus ring and current item; their red and their
-     navy belong to the mark and the homepage, never to a control and never to a status. */
+     is the color of every action, link, focus ring and current item inside the office;
+     their red and their navy belong to the mark, the homepage and sign-in, never to a
+     control of the office and never to a status. */
   --ink: #111827;
   --ink-secondary: #4b5563;
   --canvas: #f5f6f8;
@@ -94,11 +95,11 @@
   }
 }
 
-/* D'Sierra's own scale, for their homepage alone: `data-brand` is on its root
-   ((public)/page.tsx). Their navy and their red, as the logo draws them, with the tints
+/* D'Sierra's own scale, for their homepage and for sign-in, its next page: `data-brand`
+   is on each one's root ((public)/page.tsx, (auth)/sign-in-frame.tsx). Their navy and their red, as the logo draws them, with the tints
    and shades mixed from each. Outside the block at the top on purpose: that one is the
-   phone's too, and nothing here is. Every pair the homepage puts together is held to its
-   contrast in test/theme.test.ts. White on the red is 6.57:1; the red on the navy is only
+   phone's too, and nothing here is. Every pair those two pages put together is held to
+   its contrast in test/theme.test.ts. White on the red is 6.57:1; the red on the navy is only
    2.63:1, so red never sits on navy. */
 [data-brand] {
   --navy-900: #0d0041;

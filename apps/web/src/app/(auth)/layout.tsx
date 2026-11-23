@@ -1,20 +1,13 @@
 import type { ReactNode } from "react";
 
-import { Logo } from "../logo";
 import { SessionFrame } from "../session-frame";
-import styles from "../shell.module.css";
 
-// Sign-in alone on its page, under the logo: no header, no menu, nothing to go to before
-// a person is someone.
+// Sign-in's layout: the session frame, so Clerk's provider is around its form, and nothing
+// drawn. No header, no menu: there is nothing to go to before a person is someone. The
+// page draws its own surroundings (sign-in-frame.tsx), because this layout is also around
+// the not-found screen /sign-in answers under the development identity.
 export const dynamic = "force-dynamic";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
-  return (
-    <SessionFrame>
-      <main className={styles.alone}>
-        <Logo />
-        {children}
-      </main>
-    </SessionFrame>
-  );
+  return <SessionFrame>{children}</SessionFrame>;
 }

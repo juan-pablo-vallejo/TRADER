@@ -72,6 +72,17 @@ export type HomeContent = {
 
 const both = (words: string): Words => ({ en: words, es: words });
 
+// A painter at work, and the picture on the team's sign-in page ((auth)/sign-in-frame.tsx), where
+// it stands by itself by the owner's word of 2026-11-23: that door is the team's. On the
+// homepage, a customer's page, it is never shown without the finished ceiling beside it.
+export const SIGN_IN_PHOTO: Photo = {
+  image: sprayingCeiling,
+  alt: {
+    en: "A D'Sierra painter spraying a store's ceiling black from a lift",
+    es: "Un pintor de D'Sierra pintando de negro el techo de una tienda desde una plataforma",
+  },
+};
+
 export const HOME: HomeContent = {
   name: "D'Sierra Painting",
   legalName: "D'Sierra Painting LLC",
@@ -173,13 +184,7 @@ export const HOME: HomeContent = {
         en: "A store's ceiling, sprayed black",
         es: "El techo de una tienda, pintado de negro",
       },
-      before: {
-        image: sprayingCeiling,
-        alt: {
-          en: "A D'Sierra painter spraying a store's ceiling black from a lift",
-          es: "Un pintor de D'Sierra pintando de negro el techo de una tienda desde una plataforma",
-        },
-      },
+      before: SIGN_IN_PHOTO,
       after: {
         image: ceilingFinished,
         alt: {

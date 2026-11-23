@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { SIGN_IN_COLORS } from "../src/app/(auth)/sign-in/sign-in-appearance";
+
 const read = (path: string) =>
   readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
 
@@ -126,7 +128,8 @@ describe("the theme", () => {
 
 // D'Sierra's homepage has a scale of its own (`[data-brand]` in theme.css): their navy and
 // their red with tints and shades. It is not the phone's, so the test above does not see
-// it; this one holds every pair the homepage puts together to its contrast.
+// it; this one holds every pair the homepage puts together to its contrast. Sign-in, the
+// homepage's next page, draws on the same scale and is held to the same rules.
 describe("the homepage's scale", () => {
   const web = webColors();
   const start = css.indexOf("[data-brand] {");
@@ -139,6 +142,7 @@ describe("the homepage's scale", () => {
   }
   const color = (name: string) => scale.get(name) ?? web.get(name)!;
   const home = read("../src/app/(public)/home.module.css");
+  const auth = read("../src/app/(auth)/auth.module.css");
 
   it("is their navy and their red, with what is mixed from them", () => {
     expect(Object.fromEntries(scale)).toEqual({
@@ -201,14 +205,63 @@ describe("the homepage's scale", () => {
     expect(home).toMatch(
       /\.header :focus-visible,\s*\.footer :focus-visible,\s*\.viewer :focus-visible \{\s*outline-color: var\(--surface\);/,
     );
+    // Sign-in's own sheet names no red at all: its one red thing is the form's main
+    // button, which Clerk draws on white, and its navy panel's focus ring is white too.
+    expect(auth).toMatch(/background: var\(--navy-700\)/);
+    expect(auth).not.toMatch(/--red-|var\(--brand\)/);
+    expect(auth).toMatch(/\.panel :focus-visible \{\s*outline-color: var\(--surface\);/);
   });
 
-  it("names a token for every color: the stylesheet holds no color of its own", () => {
-    expect(home).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+  it("hands Clerk's form the same colors, as the literals it needs", () => {
+    // sign-in-appearance.ts says why they are literals. Each is a token of this scale or
+    // of the palette, so the form cannot drift from the page around it.
+    const upper = Object.fromEntries(
+      Object.entries(SIGN_IN_COLORS).map(([name, hex]) => [name, hex.toUpperCase()]),
+    );
+    expect(upper).toEqual({
+      red600: color("red-600"),
+      red700: color("red-700"),
+      red800: color("red-800"),
+      navy700: color("navy-700"),
+      ink: color("ink"),
+      inkSecondary: color("inkSecondary"),
+      controlBorder: color("controlBorder"),
+      problemInk: color("problemInk"),
+      surface: color("surface"),
+    });
+    // The button's label on each of its reds, an error's words and the helper on white.
+    for (const [ink, ground] of [
+      ["surface", "red600"],
+      ["surface", "red700"],
+      ["surface", "red800"],
+      ["navy700", "surface"],
+      ["problemInk", "surface"],
+      ["inkSecondary", "surface"],
+    ] as const) {
+      expect([
+        ink,
+        ground,
+        contrast(SIGN_IN_COLORS[ink], SIGN_IN_COLORS[ground]) >= 4.5,
+      ]).toEqual([ink, ground, true]);
+    }
+    expect(
+      contrast(SIGN_IN_COLORS.controlBorder, SIGN_IN_COLORS.surface),
+    ).toBeGreaterThanOrEqual(3);
   });
 
-  it("gives the browser's own bar the header's navy", () => {
-    const page = read("../src/app/(public)/page.tsx");
-    expect(page.toUpperCase()).toContain(`THEMECOLOR: "${web.get("brandNavy")}"`);
+  it("names a token for every color: neither stylesheet holds a color of its own", () => {
+    for (const sheet of [home, auth]) {
+      expect(sheet).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+    }
+  });
+
+  it("gives the browser's own bar the header's navy, on the homepage and on sign-in", () => {
+    for (const file of ["(public)/page.tsx", "(auth)/sign-in/[[...sign-in]]/page.tsx"]) {
+      const page = read(`../src/app/${file}`);
+      expect([file, page.toUpperCase()]).toEqual([
+        file,
+        expect.stringContaining(`THEMECOLOR: "${web.get("brandNavy")}"`),
+      ]);
+    }
   });
 });

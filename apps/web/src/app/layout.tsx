@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 
 // The document and the type, and nothing else. Three layouts sit beneath it, one per route
 // group: `(public)`, the pages anyone may read, with no menu and nothing of Clerk loaded;
-// `(auth)`, sign-in alone on its page under the logo; `(office)`, the header and the menu.
+// `(auth)`, sign-in on D'Sierra's brand, beside their navy; `(office)`, the header and the menu.
 // A route group's name is not part of an address.
 //
 // The language is chosen here, on the server, from the person's cookie or their browser

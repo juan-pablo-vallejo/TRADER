@@ -37,11 +37,16 @@ describe("the three layouts", () => {
       "(public)/site-header.tsx",
       "(public)/gallery.tsx",
       "logo.tsx",
+      // Sign-in too: a server with no Clerk keys serves it under the policy that admits
+      // no inline style at all, so its two pictures are plain <img> as the logo is.
+      "(auth)/sign-in-frame.tsx",
+      "(auth)/sign-in/[[...sign-in]]/page.tsx",
     ]) {
       expect(read(file), file).not.toMatch(/style=\{|<style\b|dangerouslySetInnerHTML/);
     }
-    // The logo is above sign-in too, where the policy is Clerk's: it stays a plain <img>.
-    expect(read("logo.tsx")).not.toMatch(/<Image\b|import Image from "next\/image"/);
+    for (const file of ["logo.tsx", "(auth)/sign-in-frame.tsx"]) {
+      expect(read(file), file).not.toMatch(/<Image\b|import Image from "next\/image"/);
+    }
   });
 
   it("gives the office and sign-in the session frame, and only the office its menu", () => {
@@ -51,6 +56,10 @@ describe("the three layouts", () => {
     expect(office).toContain("<Nav />");
     expect(office).toContain("<Header />");
     expect(auth).not.toMatch(/<Nav|<Header/);
+    // Nor anything of sign-in's own page: this layout is also around the not-found screen
+    // /sign-in answers under the development identity, which must not wear its frame.
+    expect(auth).not.toMatch(/data-brand|auth\.module|import [^;]*sign-in-frame/);
+    expect(read("(auth)/sign-in/[[...sign-in]]/page.tsx")).toContain("<SignInFrame>");
   });
 
   it("puts every office screen in the office's layout", () => {
@@ -74,25 +83,41 @@ describe("the three layouts", () => {
     expect(existsSync(at("fonts/InterVariable.woff2"))).toBe(true);
     expect(read("fonts/Inter-LICENSE.txt")).toContain("SIL Open Font License");
     expect(read("layout.tsx")).toContain("next/font/local");
-    // The homepage's two, Bodoni Moda and Inter's Latin cut: files of the app's own at
-    // fixed addresses, their licenses kept, and the page asks for its headline's itself.
-    // Not next/font, whose preloads this build puts on every route.
+    // D'Sierra's two, Bodoni Moda and Inter's Latin cut: files of the app's own at fixed
+    // addresses, their licenses kept, declared in one sheet that only the homepage and
+    // sign-in import, and each of those asks for its headline's itself. Not next/font,
+    // whose preloads this build puts on every route.
     const web = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
     for (const file of ["BodoniModa-latin-5.3.0.woff2", "Inter-latin-5.3.0.woff2"]) {
       expect(existsSync(web(`public/fonts/${file}`)), file).toBe(true);
-      expect(read("(public)/home.module.css")).toContain(`url("/fonts/${file}")`);
+      expect(read("brand-fonts.css")).toContain(`url("/fonts/${file}")`);
+    }
+    const importers = ["(public)/page.tsx", "(auth)/sign-in-frame.tsx"];
+    for (const file of importers) {
+      expect(read(file), file).toContain('import "../brand-fonts.css";');
+      expect(read(file), file).toContain(
+        'const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";',
+      );
+      expect(read(file), file).toContain("preload(HEADING_FONT,");
+      expect(read(file), file).not.toMatch(/from "next\/font/);
+    }
+    for (const file of [
+      "layout.tsx",
+      "(office)/layout.tsx",
+      "(public)/layout.tsx",
+      "(auth)/layout.tsx",
+    ]) {
+      expect(read(file), file).not.toContain("brand-fonts.css");
     }
     expect(read("fonts/BodoniModa-LICENSE.txt")).toContain("SIL Open Font License");
-    const home = read("(public)/page.tsx");
-    expect(home).not.toMatch(/from "next\/font/);
-    expect(home).toContain('const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";');
-    expect(home).toContain("preload(HEADING_FONT,");
     expect(read("(public)/layout.tsx")).not.toMatch(/from "next\/font/);
     // The office's Inter is every script it draws, 352 KB: no page is made to fetch it
     // before its own text asks.
     expect(read("layout.tsx")).toContain("preload: false");
     expect(read("(public)/home.module.css")).toContain("font-family: var(--font-home);");
-    // And nothing beside the homepage's root inherits the office's face and fetches it.
+    expect(read("(auth)/auth.module.css")).toContain("font-family: var(--font-home);");
+    expect(read("(auth)/sign-in-frame.tsx")).toContain("data-brand");
+    // And nothing beside either page's root inherits the office's face and fetches it.
     expect(read("theme.css")).toMatch(
       /html:has\(\[data-brand\]\) \{\s*font-family: system-ui, sans-serif;/,
     );

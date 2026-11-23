@@ -4,6 +4,7 @@ import Image from "next/image";
 import { preload } from "react-dom";
 
 import { signInPath } from "../../server/identity-mode";
+import "../brand-fonts.css";
 import type { Language } from "../i18n/language";
 import { requestStrings } from "../i18n/server";
 import { LanguageSwitch } from "../language-switch";
@@ -28,12 +29,13 @@ export const dynamic = "force-dynamic";
 // Bodoni Moda for headings, the serif nearest D'Sierra's own wordmark, and the Latin cut
 // of Inter for text, 48 KB for English and Spanish against the 352 KB file the office
 // reads (layout.tsx). Each from its @fontsource-variable package at the version in its
-// name, and declared in home.module.css.
+// name, and declared in app/brand-fonts.css, which sign-in imports too.
 // Not next/font: this build lists every preloadable font under every page, so a font
 // declared here was preloaded on every route's response, the office's among them (seen in
 // staging's `Link` headers, 2026-11-23); and with no preload the Spanish headline drew in
 // three lines, then five when the serif arrived. At a fixed address the page asks for the
-// headline's font itself, ahead of its stylesheet, and no other page hears of either.
+// headline's font itself, ahead of its stylesheet, and no page but this one and sign-in,
+// which does the same, hears of either.
 const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";
 
 // A number as a `tel:` link dials it: the digits, and a leading plus.

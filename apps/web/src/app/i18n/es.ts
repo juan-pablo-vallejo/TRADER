@@ -478,6 +478,26 @@ export const es: Catalog = {
   signInToContinue: "Inicia sesión para continuar.",
   notOnRoster: "Este acceso no está en ninguna plantilla. Pregunta en tu oficina.",
   signInNotSetUp: "El inicio de sesión no está configurado en este servidor.",
+  signInForm: {
+    helper: "Escribe tu número de celular. Te enviaremos un código por mensaje de texto.",
+    mobileNumber: "Número de celular",
+    useEmail: "Usar correo electrónico",
+    usePhone: "Usar teléfono",
+    codeTitle: "Escribe el código",
+    codeTexted: "Lo enviamos por mensaje de texto a este número.",
+    codeEmailed: "Lo enviamos a este correo.",
+    resend: "¿No llegó? Enviar otro",
+    textCodeTo: "Enviar un código por mensaje a {{identifier}}",
+    emailCodeTo: "Enviar un código por correo a {{identifier}}",
+    codeWrong: "Ese código no funcionó. Revísalo o pide uno nuevo.",
+    trouble: "¿Problemas para iniciar sesión?",
+    troubleNoCode:
+      "¿No llegó el código? Espera 30 segundos y pide otro. También puedes usar tu correo si la oficina lo tiene.",
+    troubleNewDevice:
+      "¿Teléfono nuevo, llave de acceso perdida o Face ID no funciona? Entra con un código. Después actívalo de nuevo.",
+    troubleNeverInvited:
+      "¿Nunca te invitaron? Solo tu oficina puede agregarte. Pregúntales.",
+  },
   notPermitted: "No tienes permiso.",
   requestFailed: "Eso no se pudo hacer. No se guardó nada; inténtalo de nuevo.",
   loadFailed: "Esta página no cargó.",

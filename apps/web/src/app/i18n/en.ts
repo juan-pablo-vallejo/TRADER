@@ -503,6 +503,29 @@ export const en = {
   signInToContinue: "Sign in to continue.",
   notOnRoster: "This sign-in is not on a roster. Ask your office.",
   signInNotSetUp: "Sign-in is not set up on this server.",
+  // The sign-in page ((auth)/sign-in-frame.tsx) and the words Clerk's own form says there
+  // (i18n/clerk-words.ts puts each under Clerk's key). The same thing has the same name
+  // in the phone app (apps/mobile/src/i18n). The form's main button stays Clerk's
+  // "Continue": it is one label for every one of its steps.
+  signInForm: {
+    helper: "Enter your mobile number. We'll text you a code.",
+    mobileNumber: "Mobile number",
+    useEmail: "Use email instead",
+    usePhone: "Use phone instead",
+    codeTitle: "Enter the code",
+    codeTexted: "We texted it to this number.",
+    codeEmailed: "We emailed it to this address.",
+    resend: "No code yet? Send another",
+    textCodeTo: "Text a code to {{identifier}}",
+    emailCodeTo: "Email a code to {{identifier}}",
+    codeWrong: "That code did not work. Check it, or ask for a new one.",
+    trouble: "Trouble signing in?",
+    troubleNoCode:
+      "No code yet? Wait 30 seconds, then ask for a new one. You can also use your email if the office has it.",
+    troubleNewDevice:
+      "New phone, lost passkey, or Face ID not working? Sign in with a code. Then turn it on again.",
+    troubleNeverInvited: "Never invited? Only your office can add you. Ask them.",
+  },
   notPermitted: "Not permitted.",
   requestFailed: "That didn't go through. Nothing was saved; try again.",
   loadFailed: "This page didn't load.",

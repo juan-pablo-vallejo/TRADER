@@ -22,19 +22,8 @@
   }
 }
 
-/* Sign-in alone on its page: the logo, then the form, centered in one narrow column. */
-.alone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-6);
-  padding: var(--space-6) var(--space-4);
-  min-height: 100vh;
-  box-sizing: border-box;
-  /* The logo is drawn on white: so is its page. */
-  background: var(--surface);
-}
-/* D Sierra's logo: their red and navy live here and on the homepage, nowhere else. */
+/* D Sierra's logo, on `/get`: their red and navy live in the mark, on the homepage and on
+   sign-in ((auth)/auth.module.css), nowhere else. */
 .logo {
   width: 160px;
   height: auto;
