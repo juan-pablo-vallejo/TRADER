@@ -71,6 +71,7 @@ export const PRIVACY: Record<Language, Document> = {
         paragraphs: [
           "TRADER runs on services from other companies, each doing one job and receiving only what that job needs:",
           "Clerk signs you in: it receives your mobile number or email and sends the code you type.",
+          "If you turn on Face ID or fingerprint sign-in in the app, or add a passkey in the office, your face or fingerprint never leaves your device: Clerk receives only a public key your device made, which lets it recognize that device. A passkey may be kept by your device's own password manager, under its maker's terms.",
           "If you choose to sign in with Google or with Apple, that company confirms your email address to Clerk, and learns that you signed in to TRADER, under its own terms.",
           "Vercel runs the office's website and the system the app talks to, and Neon holds the database where the records are kept.",
           "Resend delivers an invoice by email when the office sends one, and an invitation when the office emails one: it receives the address and the message.",
@@ -134,6 +135,7 @@ export const PRIVACY: Record<Language, Document> = {
         paragraphs: [
           "TRADER funciona con servicios de otras empresas, cada una con una sola tarea y recibiendo solo lo que esa tarea necesita:",
           "Clerk te inicia la sesión: recibe tu número de celular o tu correo y envía el código que escribes.",
+          "Si activas el inicio de sesión con Face ID o huella en la aplicación, o agregas una llave de acceso en la oficina, tu cara o tu huella nunca sale de tu dispositivo: Clerk recibe solo una clave pública creada por tu dispositivo, que le permite reconocerlo. Una llave de acceso puede guardarse en el administrador de contraseñas de tu dispositivo, bajo los términos de su fabricante.",
           "Si eliges iniciar sesión con Google o con Apple, esa empresa confirma tu correo a Clerk, y se entera de que iniciaste sesión en TRADER, bajo sus propios términos.",
           "Vercel ejecuta el sitio de la oficina y el sistema con el que habla la aplicación, y Neon tiene la base de datos donde se guardan los registros.",
           "Resend entrega una factura por correo cuando la oficina la envía, y una invitación cuando la oficina la manda por correo: recibe la dirección y el mensaje.",
