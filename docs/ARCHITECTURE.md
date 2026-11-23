@@ -8,7 +8,10 @@ describes the target: where the code differs, the code is wrong.
 - Two roles: **worker** (phone) and **admin** (office web; on the phone, their own clock
   when they work a shift, and the Crew tab).
 - One login per person, by office invitation, on their own mobile number. Sign-in is a
-  texted code; an admin may also use an emailed code. No passwords.
+  texted code, or an emailed code for a person who has an email. After a code, an admin may
+  add a passkey in the office, and anyone may turn on Face ID or fingerprint sign-in in the
+  phone app; a lost one falls back to a code. No passwords, no sign-up, no social login, no
+  passkeys in the phone app.
 - A login belongs to exactly one company. New people start as workers; making an admin is a
   deliberate act.
 - Worker can: see own week, clock in / switch / out on own shift, see own hours, edit own

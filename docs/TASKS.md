@@ -26,20 +26,22 @@ and `www` only send a visitor to `app.jpteq.app`.
 
 **Phone, in English and Spanish, the language chosen in the app**
 
-- Sign in by texted code.
+- Sign in by texted code, or by emailed code where the office has the person's email; then
+  by Face ID or fingerprint once the person turns it on. Trouble signing in? is always
+  there: a new phone or a failed read falls back to a code.
 - Today: the shift's job on a card and one Clock in button. On the clock: a running timer,
   break, switch job, and clock out, which asks once. Works offline, sends later; a chip
   always says where the entries stand. The job opens to its address in the phone's maps and
   the office's notes. A reminder from the phone itself at a shift's start and at its end.
   Location is stamped at each tap, unless the company's switch or the person's turns it off.
 - Week: my shifts and my hours.
-- Me: language, reminders, my name and phone, sign out.
+- Me: language, reminders, Face ID or fingerprint sign-in, my name and phone, sign out.
 - Crew, admins only and online only: today's crew by person or by job, call, add a shift for
   today, move someone to another job, set a jobsite's location.
 
 **Office, admin only, in English and Spanish**
 
-- Sign in.
+- Sign in: a texted or emailed code; then by passkey on a device where the admin added one.
 - Today: who is on the clock, who is expected and late, sessions left open, money owed.
 - Schedule: weekly; one person, one job, one day, start to end. An admin can end a started
   shift early to move someone. Removing a shift asks nothing: Undo brings it back.
@@ -52,19 +54,22 @@ and `www` only send a visitor to `app.jpteq.app`.
   due date and how to pay, PDF, emailed to the customer, payments recorded.
 - People: invite with a ready message, make admin, deactivate, location on or off per person.
 - Settings: the company's details as they print on an invoice, schedule enforcement,
-  location, my profile and language.
+  location, my profile, language and passkeys.
 
 **Across the office.** One table, one set of status badges, a side panel for a row's detail,
 filters kept in the address, Undo on schedule edits, keyboard row movement, a command menu.
 Compact on a laptop, large targets on a phone.
 
-**The look.** D Sierra's brand. Their roller and brush is the icon, their indigo is the color
-of every action, and their red belongs to the mark and the homepage only.
+**The look.** D Sierra's brand. Their roller and brush is the icon, and their indigo is the
+color of every action inside the office and the app. Their red belongs to the mark, the
+homepage and the two sign-in screens, which take the homepage's navy, its red for their one
+main button and Bodoni Moda for their heading. Red never sits on navy.
 
 **Out until after MVP:** approval queue, pay periods, pay rates and job cost, day closeout,
-materials, photos, credit memos, QuickBooks exports, Smart Clock-In by geofence, biometrics,
-product analytics, developer console, crews and foremen, public store listings, online
-payment, a customer's invoice page, payment reminders and receipts, an estimate request form.
+materials, photos, credit memos, QuickBooks exports, Smart Clock-In by geofence, biometric
+confirmation of a clock tap, passkeys in the phone app, product analytics, developer
+console, crews and foremen, public store listings, online payment, a customer's invoice
+page, payment reminders and receipts, an estimate request form.
 
 **Finish line.** D Sierra's whole crew runs one full pay period on it: every hour clocked on
 a phone, payroll hours exported from TRADER, one real invoice issued and emailed.
@@ -143,17 +148,21 @@ In the order they block. Each can be done ahead of its item.
 3. Item 12: a Sentry project for the phone app, its DSN, and an upload token in EAS.
 4. Item 13: the Expo token in GitHub's `staging` environment, the iOS ad hoc credentials
    with the test iPhone registered, and the Android keystore. Clerk asks for a fingerprint
-   only for passkeys and app links, which the MVP does not use.
+   only for passkeys in the phone app and app links, which the MVP does not use.
 5. Items 8 to 11 and 14: read the new Spanish once, on a simulator and on staging.
 6. Item 18, from D Sierra: two sentences on what they do and where, in each language; the
    phone number and email their customers should use; three to six photos of their work that
    they own; their OK to publish them. The repository is public.
 7. Item 21: approve the privacy policy and the terms.
+   Items 21b and 21c, lettered so no gate is renumbered: on Clerk's development instance
+   (User & authentication), Sign-in with passkey switched on before 21b, and Sign-in with
+   mobile biometrics before 21c. Then, once 21c is on `main`, new preview builds started by
+   the owner (Actions, Preview builds, Run workflow) and installed on both phones.
 8. Item 22: one iPhone and one Android phone.
 9. Item 23: production, by `README.md`, which now carries D Sierra's address: its DNS
    record in Cloudflare, its domain on the Vercel project, and its name in Clerk's allowed
-   subdomains. Then D Sierra's details in Settings, and the TestFlight and Play links for
-   Get the app.
+   subdomains, with gate 7's two Clerk switches on the production instance. Then D Sierra's
+   details in Settings, and the TestFlight and Play links for Get the app.
 10. Items 25 and 34: the release, and the first fix release after it.
 11. Item 30: confirm the invoice email arrived.
 
@@ -468,12 +477,47 @@ Android user.
       Sentry from the office and the phone, sign-in by Clerk, invoice email by Resend,
       reminders that never leave the phone, and no analytics. Done when the owner has
       approved the text and both pages are live on staging.
+- [ ] 21a. **The office's sign-in page.** By the owner's word of 2026-11-23, the homepage's
+      next page. At laptop width a navy panel (the mark, the painter spraying a ceiling
+      from `assets/pics/`, the homepage's headline) beside the form on white; at phone
+      width the form under a navy header. Clerk's own form, restyled through its
+      appearance options and never rebuilt: the mobile number first, email the alternative,
+      "Team sign-in" as its heading in Bodoni Moda, its one main button in their red. The
+      way back to the homepage, the other language and Trouble signing in? are on every
+      step. A signed-out link from the office keeps where the person was. Still no
+      sign-up, and `/sign-in` is still a 404 under the development identity. Done when each
+      step has been seen on staging, signed out, at 390 and 1440 in both languages, nothing
+      scrolls sideways, and the smoke test is green.
+- [ ] 21b. **Passkeys in the office.** OWNER first: gate 7's passkey switch. An admin who
+      signed in by code is offered a passkey once, in a band on Today; "Not now" is
+      remembered in that browser. Settings, Me lists a person's passkeys with Add and
+      Remove. Clerk's form then offers "Use passkey instead", and a lost one falls back to
+      a code. The privacy draft gains its sentence on the key Clerk holds, and `README.md`
+      the switch for production. Done when `scripts/staging.sh passkey` has added a
+      passkey, signed in with it and removed it on staging, and the band and the section
+      have been seen at 390 and 1280 in both languages.
+- [ ] 21c. **Phone: sign-in on the brand, with Face ID or fingerprint.** OWNER first: gate
+      7's biometric switch. `src/ui/phone-sign-in.tsx`: a navy band with the mark, the
+      heading in Bodoni Moda, one red button. An emailed code beside the texted one, Resend
+      after 30 seconds, a wrong code and an expired one told apart, and Trouble signing in?
+      on every step. After the first code sign-in on a phone that can, one screen offers
+      Face ID or fingerprint sign-in through Clerk's biometric sign-in
+      (`@clerk/expo-biometrics`), with the phone's passcode standing in; "Not now" is
+      remembered. Me has its on and off, and Sign out keeps it. A second person signing in
+      by code replaces the first, the Demo door is never offered it, and a person the
+      office deactivated is refused by the API and their key revoked. A stand-in that
+      exists only under the development identity lets the simulators and Maestro walk those
+      screens. Look up what the package adds to each platform's build before installing
+      it, as item 10 did. Done when every state has been seen on the iPhone simulator and
+      the Android emulator in both languages, a build pointed at staging signs in by code
+      and by the Demo door, and the Maestro suite is green on both.
 - [ ] 22. **Physical phones.** OWNER, with one iPhone and one Android phone: sign in by
-      texted code, see the week, clock in, switch job and clock out across an airplane-mode
-      gap; a schedule changed while the phone was offline shows as stale; a reminder arrives
-      at a shift's start with the app closed; an admin moves the worker mid-day from the
-      Crew tab and the worker's phone offers the second job; Call dials. Done when the
-      office shows those hours once, per job, with their flags.
+      texted code, turn on Face ID or fingerprint, sign out and back in by it, fail it once
+      and get in by code; see the week, clock in, switch job and clock out across an
+      airplane-mode gap; a schedule changed while the phone was offline shows as stale; a
+      reminder arrives at a shift's start with the app closed; an admin moves the worker
+      mid-day from the Crew tab and the worker's phone offers the second job; Call dials.
+      Done when the office shows those hours once, per job, with their flags.
 - [ ] 23. **Production exists.** OWNER, by `README.md`, "Make production exist", which now
       carries D Sierra's address: the DNS record, the Vercel domain, Clerk's allowed
       subdomains, both origins in `CLERK_AUTHORIZED_PARTIES`, and `TRADER_HOME_HOST`. Then,
@@ -1000,8 +1044,9 @@ Android user.
       `assets/pics/`, resized and stripped of all metadata; none shows a face. Seen on
       staging at 390 and 1280 in both languages: nothing scrolls sideways, every photo
       loads, and the page asks only its own host.
-- [ ] By the owner's word of 2026-11-22, a photo of work under way is never shown alone.
-      The one on the homepage, a painter spraying a ceiling, carries the same ceiling
+- [ ] By the owner's word of 2026-11-22, a photo of work under way is never shown alone on
+      the homepage. On the sign-in page it is, by his word of 2026-11-23: that door is the
+      team's. The one on the homepage, a painter spraying a ceiling, carries the same ceiling
       finished, from D Sierra's post six days later, on a strip that a swipe moves along;
       its line is a link, for a mouse. CSS alone, no script. A photo's `finished` in
       `home-content.ts` is how the next one is paired.
