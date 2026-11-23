@@ -123,3 +123,92 @@ describe("the theme", () => {
     for (const sheet of sheets) expect(sheet).not.toMatch(/--brand\b|--brand-navy/);
   });
 });
+
+// D'Sierra's homepage has a scale of its own (`[data-brand]` in theme.css): their navy and
+// their red with tints and shades. It is not the phone's, so the test above does not see
+// it; this one holds every pair the homepage puts together to its contrast.
+describe("the homepage's scale", () => {
+  const web = webColors();
+  const start = css.indexOf("[data-brand] {");
+  const block = css.slice(start, css.indexOf("}", start));
+  const scale = new Map<string, string>();
+  for (const m of block.matchAll(/--((?:navy|red)-\d+):\s*([^;]+);/g)) {
+    const alias = /^var\(--([a-z-]+)\)$/.exec(m[2]!.trim());
+    const name = alias?.[1]?.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+    scale.set(m[1]!, (name === undefined ? m[2]!.trim() : web.get(name)!).toUpperCase());
+  }
+  const color = (name: string) => scale.get(name) ?? web.get(name)!;
+  const home = read("../src/app/(public)/home.module.css");
+
+  it("is their navy and their red, with what is mixed from them", () => {
+    expect(Object.fromEntries(scale)).toEqual({
+      "navy-900": "#0D0041",
+      "navy-700": web.get("brandNavy"),
+      "navy-400": "#7266A2",
+      "navy-200": "#BDB8D4",
+      "navy-100": "#E3E0EC",
+      "navy-50": "#F3F2F7",
+      "red-600": web.get("brand"),
+      "red-700": "#9A0A0A",
+      "red-800": "#7C0808",
+    });
+  });
+
+  it("keeps every text and ground the page pairs at 4.5:1 or better", () => {
+    const pairs: [string, string][] = [
+      // The header, the footer and the photo viewer: white, and the quieter tint, on navy.
+      ["surface", "navy-700"],
+      ["surface", "navy-900"],
+      ["navy-200", "navy-900"],
+      // Headings, links and words on white and on the near-white band.
+      ["navy-700", "surface"],
+      ["navy-700", "navy-50"],
+      ["ink", "navy-50"],
+      ["inkSecondary", "navy-50"],
+      // Call: white on their red, at rest, pointed at and pressed; and the red as a
+      // link's hover color on white and on the band.
+      ["surface", "red-600"],
+      ["surface", "red-700"],
+      ["surface", "red-800"],
+      ["red-600", "surface"],
+      ["red-600", "navy-50"],
+    ];
+    for (const [ink, ground] of pairs) {
+      expect([ink, ground, contrast(color(ink), color(ground)) >= 4.5]).toEqual([
+        ink,
+        ground,
+        true,
+      ]);
+    }
+  });
+
+  it("never puts the red on navy, where it cannot be seen", () => {
+    // 2.63:1: under the 3:1 a control's edge or a focus ring needs.
+    expect(contrast(color("red-600"), color("navy-700"))).toBeLessThan(3);
+    // So no rule that paints a navy ground names a red, and the three navy places (the
+    // header, the footer, the viewer) name none at all.
+    const rules = [...home.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+      (m) => [m[1]!.trim(), m[2]!] as const,
+    );
+    expect(rules.length).toBeGreaterThan(40);
+    for (const [selector, body] of rules) {
+      const onNavy =
+        /background:\s*var\(--navy-(700|900)\)/.test(body) ||
+        /\.(header|head[A-Z]\w*|brand\w*|signIn|footer\w*|viewer\w*)\b/.test(selector);
+      if (onNavy) expect([selector, /--red-/.test(body)]).toEqual([selector, false]);
+    }
+    // A focus ring there is white.
+    expect(home).toMatch(
+      /\.header :focus-visible,\s*\.footer :focus-visible,\s*\.viewer :focus-visible \{\s*outline-color: var\(--surface\);/,
+    );
+  });
+
+  it("names a token for every color: the stylesheet holds no color of its own", () => {
+    expect(home).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(/i);
+  });
+
+  it("gives the browser's own bar the header's navy", () => {
+    const page = read("../src/app/(public)/page.tsx");
+    expect(page.toUpperCase()).toContain(`THEMECOLOR: "${web.get("brandNavy")}"`);
+  });
+});

@@ -39,6 +39,10 @@ export function contentSecurityPolicy(options: {
   nonce: string;
   // Clerk's Frontend API host, or null where Clerk is not this server's identity.
   clerkFrontendApi: string | null;
+  // A public page: a `style` attribute is admitted, and nothing else inline. next/image
+  // draws a photo's blurred stand-in as one, and the homepage is its photos (the owner's
+  // word, 2026-11-22). A `<style>` element and inline script are refused as everywhere.
+  styleAttributes?: boolean;
 }): string {
   const fapi =
     options.clerkFrontendApi === null ? [] : [`https://${options.clerkFrontendApi}`];
@@ -57,6 +61,11 @@ export function contentSecurityPolicy(options: {
     ],
     // Clerk's components inject their styles at run time; ours are stylesheets.
     ["style-src", ["'self'", ...(clerk ? ["'unsafe-inline'"] : [])]],
+    // Narrower than the line above: attributes only. A browser that does not know the
+    // directive falls back to style-src, and the stand-in is simply not drawn.
+    ...(options.styleAttributes === true && !clerk
+      ? ([["style-src-attr", ["'unsafe-inline'"]]] as [string, string[]][])
+      : []),
     ["img-src", ["'self'", "data:", "blob:", ...(clerk ? [CLERK_IMAGES] : [])]],
     ["font-src", ["'self'"]],
     // The trailing :* is Clerk's: its protection hosts answer on other ports too.

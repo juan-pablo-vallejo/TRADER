@@ -82,6 +82,31 @@ describe("contentSecurityPolicy", () => {
     });
   });
 
+  it("admits a style attribute on a public page, and nothing else inline", () => {
+    const { "style-src-attr": attributes, ...rest } = directives(
+      contentSecurityPolicy({
+        nonce: "N0nce==",
+        clerkFrontendApi: null,
+        styleAttributes: true,
+      }),
+    );
+    expect(attributes).toEqual(["'unsafe-inline'"]);
+    // A `<style>` element and inline script are refused as on every other page.
+    expect(rest).toEqual(without);
+    // Asked for nowhere else, it is nowhere else; and where Clerk's own styles are
+    // already admitted whole, the narrower directive would say nothing.
+    expect(without["style-src-attr"]).toBeUndefined();
+    expect(
+      directives(
+        contentSecurityPolicy({
+          nonce: "N0nce==",
+          clerkFrontendApi: "x.clerk.accounts.dev",
+          styleAttributes: true,
+        }),
+      ),
+    ).toEqual(withClerk);
+  });
+
   it("admits Clerk's hosts as its page lists them, and no other", () => {
     expect(withClerk["style-src"]).toEqual(["'self'", "'unsafe-inline'"]);
     expect(withClerk["img-src"]).toEqual([

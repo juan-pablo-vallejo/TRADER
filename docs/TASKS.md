@@ -1100,6 +1100,49 @@ Android user.
       the account's name among them (`report-event.ts` passes any path with no white
       space). A store or preview build's frames name the bundle only. To weigh: keep a
       frame's file name only where it begins `app://`.
+- [ ] The homepage redesigned, by the owner's word of 2026-11-22: it is the first thing a
+      customer of D'Sierra's sees, and it read as an unstyled document. Still one page,
+      and Call and Email are still all a customer can do on it. A navy header that stays,
+      with the language and Team sign-in in it; a photo, the headline and where they
+      work; four facts as paint chips; three jobs before and after; a gallery of twelve
+      that opens each photo larger; what they do as two lists; Call and Email; a footer
+      with Get the app, the policy, the terms and their Facebook and Instagram as plain
+      links. On a phone Call is pinned to the bottom of the screen. This builds the
+      services list and the gallery of "After MVP" 18 now; its estimate request stays out.
+      Their navy and red get a scale of their own (`[data-brand]`, `theme.css`), the
+      headings are Bodoni Moda 5.3.0 from `@fontsource-variable/bodoni-moda` (OFL 1.1),
+      served by the app, and red is Call and nothing else: on the navy it is 2.63:1, so it
+      never sits there. Done when seen on staging at 390 and 1440 in both languages,
+      loading nothing from another host.
+- [ ] Its words. D'Sierra's paragraph is said in parts, adding nothing, with three
+      things that are the owner's and not theirs: "Serving Rhode Island and upper New
+      England" (2026-11-22; they have sent no service area), "In business" under "Since
+      2017" (2026-11-23), and the line that names each job. OWNER, before production:
+      D'Sierra's OK on the area line.
+- [ ] Its photos, by the owner's word of 2026-11-22 that D'Sierra allows it: eleven more,
+      from their Facebook page (`facebook.com/profile.php?id=100063510039251`), each saved
+      by the page's own Download at the size Facebook serves: 2048 px at most, and three
+      posts of 2018 to 2021 exist there only at 720 by 960. Facebook's tracking tag and
+      every other metadata segment are cut out without re-encoding. Each was looked at:
+      no face, no plate, no house number. `photo.php?fbid=` 944847877642205 and
+      944852370975089 (the colonial house, finished and peeling), 951344443659215,
+      951344653659194 and 951344436992549 (the dining room, finished, yellow, and from
+      the mantel), 523506946442969 and 523507029776294 (the office), 1130741604394019
+      (the house with red trim), 318203645647823 (the warehouse), 318205188981002 (the
+      dark commercial building), 979968426138005 (the bridge railing). They join the
+      list above that waits on D'Sierra's OK before production.
+- [ ] The rule on a photo of work under way changes, by the owner's word of 2026-11-22:
+      the crew at work may be shown, never a face. The colonial house's "before" shows a
+      painter from behind; the ceiling's, a painter under a spray hood.
+- [ ] A public page's policy now admits a `style` attribute and nothing else inline
+      (`style-src-attr 'unsafe-inline'`): next/image draws a photo's blurred
+      stand-in as one. The owner's choice of 2026-11-22, over leaving the policy whole
+      and holding a photo's place with a tint. Photos are served as AVIF, then WebP
+      (`next.config.ts`), by his word of 2026-11-23: Vercel bills image optimization by
+      use on this plan ($0.05 per 1,000 transformations, `vercel pricing`), and each size
+      is now made twice.
+- [ ] To weigh: camera originals in place of the Facebook copies, most of all the three
+      at 720 by 960; and a version of the mark with no white behind it, for the header.
 
 ## After MVP
 

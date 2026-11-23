@@ -24,6 +24,11 @@ const config: NextConfig = {
   outputFileTracingIncludes: {
     "/favicon.ico": ["../../assets/brand/logo.png"],
   },
+  // The homepage is its photos: AVIF where a browser takes it, WebP where it does not.
+  // Each size of each photo is then made and kept twice, and Vercel bills image
+  // optimization by use: cents a month for this many photos, by the owner's word of
+  // 2026-11-23.
+  images: { formats: ["image/avif", "image/webp"] },
   // No framework banner on responses.
   poweredByHeader: false,
   // Baseline response headers for every route of a built app: no MIME sniffing, no framing by

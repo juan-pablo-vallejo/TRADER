@@ -94,6 +94,69 @@
   }
 }
 
+/* D'Sierra's own scale, for their homepage alone: `data-brand` is on its root
+   ((public)/page.tsx). Their navy and their red, as the logo draws them, with the tints
+   and shades mixed from each. Outside the block at the top on purpose: that one is the
+   phone's too, and nothing here is. Every pair the homepage puts together is held to its
+   contrast in test/theme.test.ts. White on the red is 6.57:1; the red on the navy is only
+   2.63:1, so red never sits on navy. */
+[data-brand] {
+  --navy-900: #0d0041;
+  --navy-700: var(--brand-navy);
+  --navy-400: #7266a2;
+  --navy-200: #bdb8d4;
+  --navy-100: #e3e0ec;
+  --navy-50: #f3f2f7;
+  --red-600: var(--brand);
+  --red-700: #9a0a0a;
+  --red-800: #7c0808;
+  /* Headings, in the serif their own wordmark is drawn in; the page loads it. */
+  --font-display: var(--font-bodoni), Georgia, "Times New Roman", serif;
+
+  /* Its sizes: a customer's page, read once, so larger than the office's, and it does not
+     shrink on a laptop as the office does. Narrow first: a phone in a hand. */
+  --home-text: 17px;
+  --home-text-line: 26px;
+  --home-small: 15px;
+  --home-small-line: 22px;
+  --home-h1: 40px;
+  --home-h1-line: 44px;
+  --home-h2: 28px;
+  --home-h2-line: 32px;
+  --home-figure: 24px;
+  --home-figure-line: 28px;
+  /* The page's edge, the room between two sections, the header's height, the widest a
+     section grows, a button's height, a photo's corner and a paint chip's color block. */
+  --home-gutter: var(--space-4);
+  --home-gap: 40px;
+  --home-head: 56px;
+  --home-measure: 1200px;
+  --home-control: 52px;
+  --home-radius: 4px;
+  --home-chip: 64px;
+}
+@media (min-width: 768px) {
+  [data-brand] {
+    --home-gutter: 32px;
+    --home-gap: 64px;
+    --home-head: 64px;
+    --home-figure: 30px;
+    --home-figure-line: 34px;
+    --home-chip: 88px;
+  }
+}
+/* Wide enough for the photo and the headline to stand side by side. */
+@media (min-width: 900px) {
+  [data-brand] {
+    --home-text: 18px;
+    --home-text-line: 28px;
+    --home-h1: clamp(40px, 4.2vw, 60px);
+    --home-h1-line: 1.06;
+    --home-h2: 40px;
+    --home-h2-line: 44px;
+  }
+}
+
 html {
   background: var(--canvas);
   color: var(--ink);

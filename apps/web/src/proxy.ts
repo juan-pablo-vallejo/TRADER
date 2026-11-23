@@ -14,7 +14,8 @@
 // The policy's: on a built app every response it passes carries the content security policy
 // (server/csp.ts) with a nonce made for that request, handed to the page render on the
 // request's headers, where Next looks for it. A development server gets none: it is never
-// exposed, and its tooling evaluates script the policy would refuse.
+// exposed, and its tooling evaluates script the policy would refuse. A public page's policy
+// admits a `style` attribute, which no other page's does unless Clerk is on it.
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 
@@ -36,6 +37,8 @@ function pass(request: NextRequest, publishableKey: string | null): NextResponse
   const policy = contentSecurityPolicy({
     nonce,
     clerkFrontendApi: publishableKey === null ? null : clerkFrontendApi(publishableKey),
+    // The public pages alone: their photos' blurred stand-ins are `style` attributes.
+    styleAttributes: isPublicPath(request.nextUrl.pathname),
   });
   // A client's own x-nonce or policy never reaches the render: both are overwritten.
   const headers = new Headers(request.headers);

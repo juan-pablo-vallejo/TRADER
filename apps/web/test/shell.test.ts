@@ -15,7 +15,12 @@ const read = (path: string) => readFileSync(at(path), "utf8");
 
 describe("the three layouts", () => {
   it("keeps Clerk and the query client out of the public pages", () => {
-    for (const file of ["(public)/layout.tsx", "(public)/page.tsx"]) {
+    for (const file of [
+      "(public)/layout.tsx",
+      "(public)/page.tsx",
+      "(public)/site-header.tsx",
+      "(public)/gallery.tsx",
+    ]) {
       const source = read(file);
       expect(source, file).not.toMatch(/from "@clerk|session-frame|providers|useQuery/);
     }
@@ -23,14 +28,20 @@ describe("the three layouts", () => {
     expect(read("layout.tsx")).not.toMatch(/from "@clerk|session-frame|providers/);
   });
 
-  it("writes no inline style on a public page, which its policy would refuse", () => {
-    for (const file of ["(public)/layout.tsx", "(public)/page.tsx", "logo.tsx"]) {
-      const source = read(file);
-      expect(source, file).not.toMatch(
-        /style=\{|<Image\b|from "next\/image";\nimport Image/,
-      );
-      expect(source, file).not.toMatch(/import Image from "next\/image"/);
+  it("writes no style of its own on a public page: the one inline style is next/image's", () => {
+    // A public page's policy admits a `style` attribute, for a photo's blurred stand-in,
+    // and nothing else inline (csp.ts, proxy.ts). The pages still write none themselves.
+    for (const file of [
+      "(public)/layout.tsx",
+      "(public)/page.tsx",
+      "(public)/site-header.tsx",
+      "(public)/gallery.tsx",
+      "logo.tsx",
+    ]) {
+      expect(read(file), file).not.toMatch(/style=\{|<style\b|dangerouslySetInnerHTML/);
     }
+    // The logo is above sign-in too, where the policy is Clerk's: it stays a plain <img>.
+    expect(read("logo.tsx")).not.toMatch(/<Image\b|import Image from "next\/image"/);
   });
 
   it("gives the office and sign-in the session frame, and only the office its menu", () => {
@@ -63,6 +74,11 @@ describe("the three layouts", () => {
     expect(existsSync(at("fonts/InterVariable.woff2"))).toBe(true);
     expect(read("fonts/Inter-LICENSE.txt")).toContain("SIL Open Font License");
     expect(read("layout.tsx")).toContain("next/font/local");
+    // The homepage's headings: Bodoni Moda, the same way, fetched by that page alone.
+    expect(existsSync(at("fonts/BodoniModa-latin.woff2"))).toBe(true);
+    expect(read("fonts/BodoniModa-LICENSE.txt")).toContain("SIL Open Font License");
+    expect(read("(public)/page.tsx")).toContain("next/font/local");
+    expect(read("(public)/layout.tsx")).not.toContain("next/font");
   });
 
   it("opens the menu on Today, then as a week is worked, with Customers beside Jobs", () => {
@@ -110,6 +126,8 @@ describe("the public pages", () => {
     );
     expect(skip).toBeGreaterThan(0);
     expect(skip).toBeLessThan(proxy.indexOf("return clerkMiddleware("));
+    // And theirs is the policy that admits a `style` attribute, by the same list.
+    expect(proxy).toContain("styleAttributes: isPublicPath(request.nextUrl.pathname),");
   });
 });
 

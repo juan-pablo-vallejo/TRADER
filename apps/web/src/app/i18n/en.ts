@@ -17,6 +17,26 @@ export const en = {
   photos: "Our work",
   // Under a photo of work under way, which carries the finished job beside it.
   swipeFinished: "Swipe to see it finished",
+  // D'Sierra's homepage: what its sections and controls are called. Its own words, the
+  // ones D'Sierra sent, are (public)/home-content.ts.
+  home: {
+    contact: "Contact",
+    emailShort: "Email",
+    beforeAfter: "Before and after",
+    before: "Before",
+    after: "After",
+    whatWeDo: "What we do",
+    services: "Services",
+    projects: "Projects",
+    team: "For the team",
+    elsewhere: "More of our work",
+    // A photo in the gallery opens larger, one at a time.
+    viewPhoto: (what: string) => `View larger: ${what}`,
+    viewer: "Photos of our work",
+    previous: "Previous photo",
+    next: "Next photo",
+    photoOf: (n: number, total: number) => `${n} of ${total}`,
+  },
   get: {
     title: "Get the TRADER app",
     explain: "The app your office invited you to: your week, and clocking in and out.",

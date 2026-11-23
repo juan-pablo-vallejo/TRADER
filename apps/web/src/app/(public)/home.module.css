@@ -1,0 +1,665 @@
+/* D'Sierra Painting's homepage ((public)/page.tsx). White and near-white surfaces, their
+   navy for the header, the headings, the footer and the facts, and their red for what a
+   customer can press and for nothing else. Every color, size and space is a token of
+   theme.css's `[data-brand]` block. Three widths: a phone; 768 px, where the Call bar
+   goes and photos sit side by side; 900 px, where the headline stands beside the photo. */
+.page {
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--home-text);
+  line-height: var(--home-text-line);
+}
+/* `:where` keeps these two resets as light as one class, so any class below overrides
+   them by coming later, with no second selector to outweigh them. */
+.page :where(h1, h2, h3, p, ul, figure) {
+  margin: 0;
+}
+.page :where(ul) {
+  padding: 0;
+  list-style: none;
+}
+/* A link here is navy and underlined; pointed at, it is their red. */
+.page :where(a) {
+  color: var(--navy-700);
+  text-underline-offset: 3px;
+}
+.page :where(a:hover) {
+  color: var(--red-600);
+}
+/* Keyboard focus: their red on white, and white where the ground is navy (further down:
+   the red on navy is 2.63:1 and would not be seen). */
+.page :focus-visible {
+  outline: 2px solid var(--red-600);
+  outline-offset: 2px;
+}
+
+/* A photo fills the box its section gives it; the box holds the place, in a pale navy,
+   until the photo's blurred stand-in and then the photo arrive. */
+.heroPhoto,
+.half,
+.tile {
+  background: var(--navy-100);
+  overflow: hidden;
+}
+.heroPhoto img,
+.half img,
+.tile img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The two things a customer can do. Call is the only red on the page. */
+.call,
+.email {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: var(--home-control);
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-card);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+.call {
+  background: var(--red-600);
+  color: var(--surface);
+}
+.call:hover {
+  background: var(--red-700);
+  color: var(--surface);
+}
+.call:active {
+  background: var(--red-800);
+}
+.email {
+  background: var(--surface);
+  color: var(--navy-700);
+  box-shadow: inset 0 0 0 2px var(--navy-700);
+}
+.email:hover {
+  background: var(--navy-50);
+  color: var(--navy-700);
+}
+
+/* The header: navy, pinned to the top. */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--navy-700);
+}
+.headerInner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  box-sizing: border-box;
+  height: var(--home-head);
+  max-width: var(--home-measure);
+  margin: 0 auto;
+  padding: 0 var(--home-gutter);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--row);
+  margin-right: auto;
+  text-decoration: none;
+}
+/* Their mark on its white tile: the file is drawn on white, so the tile is the picture. */
+.mark {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-card);
+}
+.brandName {
+  display: none;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+}
+.brand,
+.headCall,
+.headLink,
+.signIn {
+  color: var(--surface);
+}
+.headCall {
+  display: none;
+  align-items: center;
+  min-height: var(--row);
+  padding: 0 var(--space-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+.headCall:hover,
+.headLink:hover {
+  text-decoration: underline;
+}
+/* The other language: a button that reads as a link. */
+.headLink {
+  min-height: 48px;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+/* Team sign-in: outlined in white, 40 px tall with 48 px to press. */
+.signIn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-card);
+  box-shadow: inset 0 0 0 2px var(--surface);
+  font-size: var(--home-small);
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.signIn::after {
+  content: "";
+  position: absolute;
+  inset: -4px 0;
+}
+.signIn:hover {
+  background: var(--surface);
+  color: var(--navy-700);
+}
+.header :focus-visible,
+.footer :focus-visible,
+.viewer :focus-visible {
+  outline-color: var(--surface);
+}
+
+/* The hero: the photo, then the words, with room left on a phone's first screen for the
+   headline in either language. */
+.heroPhoto {
+  aspect-ratio: 5 / 4;
+}
+.heroText {
+  padding: var(--space-6) var(--home-gutter) 0;
+}
+.h1 {
+  color: var(--navy-700);
+  font-family: var(--font-display);
+  font-size: var(--home-h1);
+  font-weight: 700;
+  line-height: var(--home-h1-line);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+/* A word of the headline is never broken, not even at its own hyphen. */
+.word {
+  white-space: nowrap;
+}
+.lede {
+  max-width: 36em;
+  margin-top: var(--space-4);
+}
+.place {
+  margin-top: var(--space-3);
+  color: var(--ink-secondary);
+  font-size: var(--home-small);
+  line-height: var(--home-small-line);
+}
+/* On a phone the Call bar is already under the thumb. */
+.heroActions {
+  display: none;
+}
+
+/* The four facts, as paint chips: a block of one navy, its name below on white. */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  box-sizing: border-box;
+  max-width: var(--home-measure);
+  margin: 0 auto;
+  padding: var(--home-gap) var(--home-gutter) 0;
+}
+.chip {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--space-3) var(--space-3);
+  border: var(--hairline) solid var(--border);
+  border-radius: 2px;
+}
+/* The color itself, rolled on from the left once as the page arrives: the one thing here
+   that moves unasked, and not at all under reduced motion (theme.css). */
+.chip::before {
+  content: "";
+  height: var(--home-chip);
+  margin: 0 calc(-1 * var(--space-3)) var(--space-3);
+  background: var(--navy-700);
+  animation: roll 420ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.chip:nth-child(2)::before {
+  background: var(--navy-400);
+  animation-delay: 70ms;
+}
+.chip:nth-child(3)::before {
+  background: var(--navy-200);
+  animation-delay: 140ms;
+}
+.chip:nth-child(4)::before {
+  background: var(--navy-100);
+  animation-delay: 210ms;
+}
+@keyframes roll {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+.figure {
+  color: var(--navy-700);
+  font-family: var(--font-display);
+  font-size: var(--home-figure);
+  font-weight: 700;
+  line-height: var(--home-figure-line);
+}
+.factLabel {
+  color: var(--ink-secondary);
+  font-size: var(--home-small);
+  line-height: var(--home-small-line);
+}
+
+/* A section: a heading, then what it holds, at the page's measure. */
+.section,
+.bandInner {
+  box-sizing: border-box;
+  max-width: var(--home-measure);
+  margin: 0 auto;
+  padding: var(--home-gap) var(--home-gutter) 0;
+}
+.h2 {
+  margin-bottom: var(--space-4);
+  color: var(--navy-700);
+  font-family: var(--font-display);
+  font-size: var(--home-h2);
+  font-weight: 700;
+  line-height: var(--home-h2-line);
+  letter-spacing: -0.01em;
+}
+
+/* Before and after. One strip a photo wide, moved by a swipe or a sideways scroll and
+   stopping on a whole photo; its line says so. */
+.pairs {
+  display: grid;
+  gap: var(--space-6);
+}
+.pair {
+  display: grid;
+  gap: var(--space-2);
+}
+.strip {
+  display: flex;
+  gap: var(--space-2);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+}
+/* Not quite the strip's width: the finished half shows at the edge before any swipe, so
+   a job is never seen only as it was found. */
+.half {
+  position: relative;
+  flex: 0 0 86%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--home-radius);
+  scroll-snap-align: start;
+  /* A link to a finished half stops below the pinned header. */
+  scroll-margin-top: calc(var(--home-head) + var(--space-4));
+}
+.half:last-child {
+  scroll-snap-align: end;
+}
+.tagBefore,
+.tagAfter {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  padding: var(--space-1) var(--space-3);
+  border-radius: 2px;
+  font-size: var(--home-small);
+  font-weight: 600;
+  line-height: var(--home-small-line);
+}
+.tagBefore {
+  background: var(--surface);
+  color: var(--navy-700);
+}
+.tagAfter {
+  background: var(--navy-700);
+  color: var(--surface);
+}
+.pairCaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-4);
+  color: var(--ink-secondary);
+  font-size: var(--home-small);
+  line-height: var(--home-small-line);
+}
+.swipe {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+}
+
+/* The gallery: squares, cut to each photo's middle, so every row keeps one line. */
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 1;
+  border-radius: var(--home-radius);
+  cursor: zoom-in;
+}
+/* Pointed at or focused, a square is edged in their red, inside itself. */
+.tile::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  /* At rest a hairline, so a photo with a white sky still has its edge. */
+  box-shadow: inset 0 0 0 var(--hairline) var(--border);
+  transition: box-shadow var(--move);
+}
+.tile:hover::after,
+.tile:focus-visible::after {
+  box-shadow: inset 0 0 0 4px var(--red-600);
+}
+
+/* The viewer: one photo, whole, on their darkest navy. */
+.viewer {
+  box-sizing: border-box;
+  width: 100vw;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: var(--space-3) var(--home-gutter) var(--space-4);
+  border: 0;
+  background: var(--navy-900);
+  color: var(--surface);
+}
+.viewer[open] {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+}
+.viewer::backdrop {
+  background: var(--navy-900);
+}
+.viewerBar,
+.viewerSteps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.viewerSteps {
+  justify-content: center;
+}
+.viewerCount {
+  color: var(--navy-200);
+  font-size: var(--home-small);
+  font-variant-numeric: tabular-nums;
+}
+.viewerFigure {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 0;
+}
+.viewerFigure img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  border-radius: var(--home-radius);
+}
+.viewerFigure figcaption {
+  max-width: 40em;
+  font-size: var(--home-small);
+  line-height: var(--home-small-line);
+  text-align: center;
+}
+.viewerButton {
+  min-height: 48px;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: none;
+  box-shadow: inset 0 0 0 2px var(--surface);
+  color: var(--surface);
+  font: inherit;
+  font-size: var(--home-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+.viewerButton:hover {
+  background: var(--surface);
+  color: var(--navy-700);
+}
+
+/* What they do: two plain lists. */
+.lists {
+  display: grid;
+  gap: var(--space-6);
+}
+.h3 {
+  margin-bottom: var(--space-2);
+  color: var(--ink-secondary);
+  font-size: var(--home-small);
+  font-weight: 600;
+  line-height: var(--home-small-line);
+}
+.list li {
+  padding: var(--space-3) 0;
+  border-top: var(--hairline) solid var(--border);
+  color: var(--navy-700);
+  font-weight: 600;
+}
+.list li:last-child {
+  border-bottom: var(--hairline) solid var(--border);
+}
+
+/* Call and Email, said once more at the end, on the near-white. */
+.band {
+  margin-top: var(--home-gap);
+  background: var(--navy-50);
+}
+.bandInner {
+  padding-bottom: var(--home-gap);
+}
+.band .h2 {
+  margin-bottom: 0;
+}
+.actions {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* The footer: their darkest navy, and room under it for the Call bar. */
+.footer {
+  padding-bottom: calc(
+    var(--home-control) + var(--space-4) + env(safe-area-inset-bottom)
+  );
+  background: var(--navy-900);
+  color: var(--surface);
+}
+.footerInner {
+  display: grid;
+  gap: var(--space-4);
+  box-sizing: border-box;
+  max-width: var(--home-measure);
+  margin: 0 auto;
+  padding: var(--space-6) var(--home-gutter);
+}
+.footerName {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+.footerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-6);
+  font-size: var(--home-small);
+}
+.footerLinks a,
+.footerSwitch {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  color: var(--surface);
+}
+.footerLinks a:hover {
+  color: var(--navy-200);
+}
+.footerSwitch {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.footerSwitch:hover {
+  text-decoration: underline;
+}
+
+/* A phone only: Call, pinned to the bottom of the screen, with Email beside it. */
+.callBar {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--home-gutter)
+    calc(var(--space-2) + env(safe-area-inset-bottom));
+  border-top: var(--hairline) solid var(--border);
+  background: var(--surface);
+}
+.callBar .call {
+  flex: 1;
+  padding: 0 var(--space-3);
+}
+.callBar .email {
+  padding: 0 var(--space-4);
+}
+
+@media (min-width: 480px) {
+  .brandName {
+    display: block;
+  }
+}
+
+@media (min-width: 768px) {
+  .headCall {
+    display: inline-flex;
+  }
+  .heroPhoto {
+    aspect-ratio: 16 / 9;
+  }
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+  }
+  /* Beside the photo there is room for one button a line: both as wide as the wider. */
+  .heroActions {
+    display: inline-grid;
+    gap: var(--space-3);
+    margin-top: var(--space-6);
+  }
+  .facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+  /* Both halves at once: nothing to swipe, so the strip is no strip. */
+  .strip {
+    gap: var(--space-3);
+    overflow: visible;
+  }
+  .half {
+    flex: 1 1 0;
+  }
+  .swipe {
+    display: none;
+  }
+  .gallery {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .lists {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6) var(--home-gap);
+  }
+  .footer {
+    padding-bottom: 0;
+  }
+  .footerInner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--home-gap);
+  }
+  .footerName {
+    margin-right: auto;
+  }
+  .callBar {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) {
+  /* The words on the left at the page's own edge, the photo to the right edge of the
+     screen. */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 11fr) minmax(0, 13fr);
+    align-items: center;
+  }
+  .heroPhoto {
+    order: 2;
+    aspect-ratio: 4 / 3;
+  }
+  .heroText {
+    padding: var(--space-6) var(--home-gutter) var(--space-6)
+      max(
+        var(--home-gutter),
+        calc((100vw - var(--home-measure)) / 2 + var(--home-gutter))
+      );
+  }
+}
+
+@media (min-width: 1100px) {
+  .gallery {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

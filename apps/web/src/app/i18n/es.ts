@@ -16,6 +16,23 @@ export const es: Catalog = {
   emailUs: (address) => `Escribir a ${address}`,
   photos: "Nuestro trabajo",
   swipeFinished: "Desliza para verlo terminado",
+  home: {
+    contact: "Contacto",
+    emailShort: "Correo",
+    beforeAfter: "Antes y después",
+    before: "Antes",
+    after: "Después",
+    whatWeDo: "Lo que hacemos",
+    services: "Servicios",
+    projects: "Proyectos",
+    team: "Para el equipo",
+    elsewhere: "Más de nuestro trabajo",
+    viewPhoto: (what) => `Ver más grande: ${what}`,
+    viewer: "Fotos de nuestro trabajo",
+    previous: "Foto anterior",
+    next: "Foto siguiente",
+    photoOf: (n, total) => `${n} de ${total}`,
+  },
   get: {
     title: "Obtén la aplicación TRADER",
     explain:

@@ -40,14 +40,18 @@
   height: auto;
 }
 
-/* The public pages: one readable column, 720 px at most, on white (the logo is drawn on
-   white), no menu. */
+/* The public pages: white (the logo is drawn on white), no menu. The homepage fills the
+   width and brings its own styles ((public)/home.module.css); `/get`, the policy and the
+   terms are one readable column, 720 px at most. */
 .public {
   min-height: 100vh;
-  padding: var(--space-6) max(var(--space-4), calc((100% - 720px) / 2));
-  box-sizing: border-box;
   background: var(--surface);
 }
+.column {
+  padding: var(--space-6) max(var(--space-4), calc((100% - 720px) / 2));
+  box-sizing: border-box;
+}
+/* `/get`: the logo, then what to do, centered in the column. */
 .home {
   display: flex;
   flex-direction: column;
@@ -63,61 +67,6 @@
 .about {
   max-width: 34rem;
   text-align: center;
-}
-/* The town, under the paragraph: said quietly, it is not a link. */
-.where {
-  color: var(--ink-secondary);
-}
-.contact {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-2) var(--space-6);
-}
-.contact a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--target);
-}
-.photos {
-  display: grid;
-  gap: var(--space-3);
-  width: 100%;
-}
-/* Every photo a square, cut to its middle, so the two columns keep one line. */
-.photos img {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: var(--radius-card);
-}
-/* Work under way with the same job finished beside it: a strip one photo wide, moved by
-   a swipe or a sideways scroll, stopping on a whole photo. Its line says so. */
-.reveal {
-  margin: 0;
-  display: grid;
-  gap: var(--space-2);
-}
-.strip {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  border-radius: var(--radius-card);
-}
-.strip img {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  border-radius: 0;
-}
-.reveal figcaption {
-  text-align: center;
-}
-.reveal figcaption a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--target);
 }
 /* The ways in: buttons of one width, one under the other. */
 .ways {
@@ -136,11 +85,6 @@
 }
 .ways p {
   text-align: center;
-}
-@media (min-width: 768px) {
-  .photos {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 /* The privacy policy and the terms: a column of text at a reading measure. */
