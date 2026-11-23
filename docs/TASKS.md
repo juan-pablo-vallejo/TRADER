@@ -1376,6 +1376,22 @@ Android user.
       link coming off; an address another login holds, refused. Those have tests against
       a stand-in Clerk only.
 
+- [ ] Items 21d and 21b, seen and not seen. On staging at `ce078f3`, on 2026-11-23,
+      signed out at 1440 and 390: Continue with Google above the field, as tall and
+      wide as Send me a code, Google's mark and Google Sans loaded from staging itself,
+      no console error; the callback page, reached with no Google sign-in behind it,
+      sending the browser back to the form with "That Google account is not on a
+      roster"; Use a passkey, and the field marked for the browser's saved passkey.
+      Signed in as the suite's admin: Settings' Passkeys section with none and Add; no
+      band on Today for a session older than ten minutes, as meant. Not seen, so
+      neither box is ticked: a sign-in with Google (OWNER: as himself, after People
+      gives his row his Gmail, and with an account on no roster, Clerk's logins counted
+      before and after), and a passkey added, used and removed (OWNER, in a browser
+      with a device lock; the band shows within ten minutes of a sign-in by code).
+      Corrected the same push: the Google button sat flush under the heading.
+- [ ] `scripts/staging.sh passkey` (item 21b's flow by hand, with Playwright's virtual
+      authenticator) is not written yet.
+
 ## After MVP
 
 In the order it would come back. The owner reorders at will.
