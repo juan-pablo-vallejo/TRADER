@@ -26,9 +26,10 @@ and `www` only send a visitor to `app.jpteq.app`.
 
 **Phone, in English and Spanish, the language chosen in the app**
 
-- Sign in by texted code, or by emailed code where the office has the person's email; then
-  by Face ID or fingerprint once the person turns it on. Trouble signing in? is always
-  there: a new phone or a failed read falls back to a code.
+- Sign in with one field that takes a mobile number or an email, by texted or emailed
+  code; or with Google, and on an iPhone with Apple, where the invitation carries that
+  address; then by Face ID or fingerprint once the person turns it on. Trouble signing in?
+  is always there: a new phone or a failed read falls back to a code.
 - Today: the shift's job on a card and one Clock in button. On the clock: a running timer,
   break, switch job, and clock out, which asks once. Works offline, sends later; a chip
   always says where the entries stand. The job opens to its address in the phone's maps and
@@ -41,7 +42,8 @@ and `www` only send a visitor to `app.jpteq.app`.
 
 **Office, admin only, in English and Spanish**
 
-- Sign in: a texted or emailed code; then by passkey on a device where the admin added one.
+- Sign in: one field for a mobile number or an email, and a texted or emailed code; or
+  Google; then by passkey on a device where the admin added one.
 - Today: who is on the clock, who is expected and late, sessions left open, money owed.
 - Schedule: weekly; one person, one job, one day, start to end. An admin can end a started
   shift early to move someone. Removing a shift asks nothing: Undo brings it back.
@@ -52,7 +54,9 @@ and `www` only send a visitor to `app.jpteq.app`.
   beside Jobs.
 - Invoices, and one invoice: draft → issued → void, numbered in D Sierra's series, with a
   due date and how to pay, PDF, emailed to the customer, payments recorded.
-- People: invite with a ready message, make admin, deactivate, location on or off per person.
+- People: invite by mobile number, by email or both; send the invitation by text or by
+  email and see where it stands (not sent, sent, verified); change a person's email and
+  sign-in number; make admin, deactivate, location on or off per person.
 - Settings: the company's details as they print on an invoice, schedule enforcement,
   location, my profile, language and passkeys.
 
@@ -117,8 +121,9 @@ with a new build; the office changes the moment a release merges.
    phone app and the release checks use `app.jpteq.app`, so no customer's name is built into
    the phone app.
 10. In production the Demo company reaches nobody outside: its invoices are emailed only to
-    the deployment's allow-list, blank meaning nobody, and it can invite nobody. Its code is
-    shared by design, so whoever holds it must be harmless.
+    the deployment's allow-list, blank meaning nobody, and it can invite nobody and change
+    nobody's sign-in address. Its code is shared by design, so whoever holds it must be
+    harmless.
 
 ## The list
 
@@ -154,15 +159,20 @@ In the order they block. Each can be done ahead of its item.
    phone number and email their customers should use; three to six photos of their work that
    they own; their OK to publish them. The repository is public.
 7. Item 21: approve the privacy policy and the terms.
-   Items 21b and 21c, lettered so no gate is renumbered: on Clerk's development instance
-   (User & authentication), Sign-in with passkey switched on before 21b, and Sign-in with
-   mobile biometrics before 21c. Then, once 21c is on `main`, new preview builds started by
-   the owner (Actions, Preview builds, Run workflow) and installed on both phones.
+   Items 21b to 21e, lettered so no gate is renumbered, on Clerk's development instance:
+   before 21e's invitation by email alone, a mobile number no longer required at sign-up;
+   before 21d, the Google connection, and then the owner's own two sign-ins with Google on
+   staging, one as himself and one with an account on no roster; before 21b, Sign-in with
+   passkey; before 21c, Sign-in with mobile biometrics, the Apple connection, and
+   `trader://sso-callback` among the allowed redirects. For 21c also Sign in with Apple on
+   the App ID. Then, once 21c is on `main`, new preview builds started by the owner
+   (Actions, Preview builds, Run workflow) and installed on both phones.
 8. Item 22: one iPhone and one Android phone.
 9. Item 23: production, by `README.md`, which now carries D Sierra's address: its DNS
    record in Cloudflare, its domain on the Vercel project, and its name in Clerk's allowed
-   subdomains, with gate 7's two Clerk switches on the production instance. Then D Sierra's
-   details in Settings, and the TestFlight and Play links for Get the app.
+   subdomains, with gate 7's Clerk settings on the production instance and a Google Cloud
+   OAuth client of the owner's for Google sign-in there. Then D Sierra's details in
+   Settings, and the TestFlight and Play links for Get the app.
 10. Items 25 and 34: the release, and the first fix release after it.
 11. Item 30: confirm the invoice email arrived.
 
@@ -480,27 +490,37 @@ Android user.
 - [ ] 21a. **The office's sign-in page.** By the owner's word of 2026-11-23, the homepage's
       next page. At laptop width a navy panel (the mark, the painter spraying a ceiling
       from `assets/pics/`, the homepage's headline) beside the form on white; at phone
-      width the form under a navy header. Clerk's own form, restyled through its
-      appearance options and never rebuilt: the mobile number first, email the alternative,
-      "Team sign-in" as its heading in Bodoni Moda, its one main button in their red. The
-      way back to the homepage, the other language and Trouble signing in? are on every
-      step. A signed-out link from the office keeps where the person was. Still no
-      sign-up, and `/sign-in` is still a 404 under the development identity. Done when each
-      step has been seen on staging, signed out, at 390 and 1440 in both languages, nothing
-      scrolls sideways, and the smoke test is green.
+      width the form under a navy header. The form is the office's own, on Clerk's hooks as
+      the phone's is: Clerk's prebuilt one cannot take an email and a number in one field,
+      and his word the same day put that field ahead of "never rebuilt". One field for a
+      mobile number or an email, read by one function the phone shares; "Send me a code";
+      the code, Resend after 30 seconds, and a sentence in both languages for a wrong code,
+      an expired one, too many tries and an address no roster holds. "Team sign-in" in
+      Bodoni Moda, its one main button in their red. The way back to the homepage, the
+      other language and Trouble signing in? are on every step. A signed-out link from the
+      office keeps where the person was, and a signed-in visitor is sent on by the server.
+      Still no sign-up, and `/sign-in` is still a 404 under the development identity. Done
+      when each step has been seen on staging, signed out, at 390 and 1440 in both
+      languages, nothing scrolls sideways, and the smoke test is green.
 - [ ] 21b. **Passkeys in the office.** OWNER first: gate 7's passkey switch. An admin who
       signed in by code is offered a passkey once, in a band on Today; "Not now" is
       remembered in that browser. Settings, Me lists a person's passkeys with Add and
-      Remove. Clerk's form then offers "Use passkey instead", and a lost one falls back to
-      a code. The privacy draft gains its sentence on the key Clerk holds, and `README.md`
-      the switch for production. Done when `scripts/staging.sh passkey` has added a
-      passkey, signed in with it and removed it on staging, and the band and the section
-      have been seen at 390 and 1280 in both languages.
-- [ ] 21c. **Phone: sign-in on the brand, with Face ID or fingerprint.** OWNER first: gate
-      7's biometric switch. `src/ui/phone-sign-in.tsx`: a navy band with the mark, the
-      heading in Bodoni Moda, one red button. An emailed code beside the texted one, Resend
+      Remove. The sign-in form then offers Use a passkey, and its field the browser's
+      saved one; a lost one falls back to a code. The privacy draft gains its sentence on
+      the key Clerk holds, and `README.md` the switch for production. Done when
+      `scripts/staging.sh passkey` has added a passkey, signed in with it and removed it on
+      staging, and the band and the section have been seen at 390 and 1280 in both
+      languages.
+- [ ] 21c. **Phone: sign-in on the brand, with Face ID or fingerprint, Google and Apple.**
+      OWNER first: gate 7's biometric switch, Apple connection and redirect.
+      `src/ui/phone-sign-in.tsx`: a navy band with the mark, the heading in Bodoni Moda,
+      one red button. One field for a mobile number or an email, as the office's; Resend
       after 30 seconds, a wrong code and an expired one told apart, and Trouble signing in?
-      on every step. After the first code sign-in on a phone that can, one screen offers
+      on every step. Google by the phone's own browser sheet (Clerk's `useSSO`), and on an
+      iPhone Apple's own sheet (`useSignInWithApple`), which Apple's rule 4.8 asks of an
+      app that offers Google; an account no roster holds is told to ask the office, and
+      the app never asks Clerk for a sign-up. A person invited by email alone can use the
+      app. After the first code sign-in on a phone that can, one screen offers
       Face ID or fingerprint sign-in through Clerk's biometric sign-in
       (`@clerk/expo-biometrics`), with the phone's passcode standing in; "Not now" is
       remembered. Me has its on and off, and Sign out keeps it. A second person signing in
@@ -511,13 +531,47 @@ Android user.
       it, as item 10 did. Done when every state has been seen on the iPhone simulator and
       the Android emulator in both languages, a build pointed at staging signs in by code
       and by the Demo door, and the Maestro suite is green on both.
+- [ ] 21d. **Sign in with Google, in the office.** OWNER first: gate 7's Google connection.
+      By the owner's word of 2026-11-23, in place of "no social login". A Google button
+      above the field, in Google's own style, its mark drawn by the page and nothing of
+      Google's loaded. It signs in a person whose invitation carries that Google address,
+      which is how Clerk ties the two; anyone else is told to ask the office, and the page
+      never asks Clerk for a sign-up. The privacy draft gains its sentence, and `README.md`
+      the Google Cloud client that production needs. Done when the owner has signed in to
+      staging with Google as himself, and with an account on no roster has been refused
+      with Clerk holding no more logins than before.
+- [ ] 21e. **People: the office's hold on sign-in addresses, and where an invitation
+      stands.** By the owner's word of 2026-11-23: "admin has all controls".
+  - An invitation takes a mobile number, an email, or both: one of the two, no longer the
+    number. OWNER first, for the email alone: gate 7's Clerk setting.
+  - A person's panel changes their email and their sign-in number, for someone invited or
+    already signed in (`roster.setEmail`, `roster.setSignInPhone`). The roster row and the
+    person's login at Clerk change together or not at all: the provider is told last,
+    inside the transaction, as `roster.invite` does. One address always remains. An
+    address another login holds is refused in one sentence that does not say why. A
+    signed-in person keeps their session. The Demo company changes nobody's in production.
+  - Send the invitation by email (Resend, the words of the text message, in both
+    languages), each send recorded with its outcome; by text as now, from the admin's own
+    phone, recorded when the admin taps Send. `invitation_sends`, append-only.
+  - A status per person, worked out and never stored: Not sent, Sent · not verified,
+    Verified (the person has signed in). A column in the table; the sends in the panel.
+  - Tests for what can go wrong: the provider down, an address taken in the company, an
+    address another login holds, the last address removed, two admins at once; and that a
+    sign-in identity still cannot write an address.
+
+  Done when, on staging, a fixture person has been invited by email alone, given a number,
+  had their email changed, been emailed an invitation at an allow-listed inbox, and shown
+  each of the three statuses; and `README.md`'s "a worker's number changed" is one line
+  about People.
+
 - [ ] 22. **Physical phones.** OWNER, with one iPhone and one Android phone: sign in by
       texted code, turn on Face ID or fingerprint, sign out and back in by it, fail it once
-      and get in by code; see the week, clock in, switch job and clock out across an
-      airplane-mode gap; a schedule changed while the phone was offline shows as stale; a
-      reminder arrives at a shift's start with the app closed; an admin moves the worker
-      mid-day from the Crew tab and the worker's phone offers the second job; Call dials.
-      Done when the office shows those hours once, per job, with their flags.
+      and get in by code; sign in with Google, and on the iPhone with Apple; see the week,
+      clock in, switch job and clock out across an airplane-mode gap; a schedule changed
+      while the phone was offline shows as stale; a reminder arrives at a shift's start
+      with the app closed; an admin moves the worker mid-day from the Crew tab and the
+      worker's phone offers the second job; Call dials. Done when the office shows those
+      hours once, per job, with their flags.
 - [ ] 23. **Production exists.** OWNER, by `README.md`, "Make production exist", which now
       carries D Sierra's address: the DNS record, the Vercel domain, Clerk's allowed
       subdomains, both origins in `CLERK_AUTHORIZED_PARTIES`, and `TRADER_HOME_HOST`. Then,
@@ -1220,7 +1274,8 @@ Android user.
 
 In the order it would come back. The owner reorders at will.
 
-1. Change a worker's sign-in number from the office.
+1. Change a worker's sign-in number from the office. In the MVP since 2026-11-23, as part
+   of item 21e.
 2. Pay periods: close, lock, late adjustments.
 3. Materials and receipt photos.
 4. Day closeout.

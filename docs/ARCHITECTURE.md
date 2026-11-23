@@ -7,11 +7,12 @@ describes the target: where the code differs, the code is wrong.
 
 - Two roles: **worker** (phone) and **admin** (office web; on the phone, their own clock
   when they work a shift, and the Crew tab).
-- One login per person, by office invitation, on their own mobile number. Sign-in is a
-  texted code, or an emailed code for a person who has an email. After a code, an admin may
-  add a passkey in the office, and anyone may turn on Face ID or fingerprint sign-in in the
-  phone app; a lost one falls back to a code. No passwords, no sign-up, no social login, no
-  passkeys in the phone app.
+- One login per person, by office invitation, on their mobile number, their email, or both.
+  Sign-in is a texted or emailed code; or Google, for a person whose invitation carries
+  that address, and Apple on an iPhone; after a code, a passkey in the office and Face ID
+  or fingerprint in the phone app, and a lost one falls back to a code. No passwords and no
+  sign-up: a login exists only because the office made it, and an admin changes a person's
+  email and sign-in number. No passkeys in the phone app.
 - A login belongs to exactly one company. New people start as workers; making an admin is a
   deliberate act.
 - Worker can: see own week, clock in / switch / out on own shift, see own hours, edit own
@@ -34,8 +35,8 @@ SQLite + outbox                       |
                      |
                Postgres (Neon)
 
-Beside it:  Clerk (sign-in codes)
-            Resend (invoice email)
+Beside it:  Clerk (sign-in)
+            Resend (invoice and invitation email)
             Sentry (errors: office, API, phone)
 ```
 
@@ -45,7 +46,8 @@ Beside it:  Clerk (sign-in codes)
 - Phone: Expo / React Native, local SQLite.
 - Office and API: Next.js on Vercel. The API is tRPC, served by the web app.
 - Database: Postgres. Docker locally, Neon deployed. Drizzle for schema and migrations.
-- Clerk for sign-in, Resend for invoice email, Sentry for errors, EAS for phone builds.
+- Clerk for sign-in, Resend for invoice and invitation email, Sentry for errors, EAS for
+  phone builds.
 
 **Four folders**
 
@@ -54,11 +56,11 @@ Beside it:  Clerk (sign-in codes)
 - `packages/api`: the API, one folder per domain
 - `packages/db`: schema, migrations, seed
 
-**Eleven tables**
+**Twelve tables**
 
 `companies` · `users` · `customers` · `jobs` · `job_assignments` (shifts) ·
 `work_session_events` (clock log) · `invoices` · `invoice_line_items` · `invoice_counters` ·
-`invoice_payments` · `invoice_sends`
+`invoice_payments` · `invoice_sends` · `invitation_sends`
 
 **Six invariants**
 
