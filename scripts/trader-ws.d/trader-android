@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# ~/bin/trader-android on the workstation's job account: the phone flows on the Android
+# emulator, against one checkout. Installed by `trader-ws install`; run by `trader-ws
+# android` on ~/trader and by the nightly run on its own clone. It holds no credential and
+# reaches no deployed service: the suite builds its own demo database in the local Postgres.
+#   trader-android <checkout>
+set -euo pipefail
+dir=${1:?usage: trader-android <checkout>}
+emu=emulator-5554
+cd "$dir"
+export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true SENTRY_DISABLE_AUTO_UPLOAD=true
+
+# The native project is disposable: make it again when what it is made from changed, and
+# build the development app from it. JavaScript reaches the app through Metro and needs
+# neither.
+apk=apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
+inputs=$(cat apps/mobile/app.json pnpm-lock.yaml | sha256sum | cut -d' ' -f1)
+if [[ ! -f $apk || $(cat .prebuild-inputs 2>/dev/null) != "$inputs" ]]; then
+  echo "== expo prebuild, then the debug build"
+  (cd apps/mobile && pnpm exec expo prebuild -p android --clean --no-install)
+  (cd apps/mobile/android && ./gradlew --no-daemon :app:assembleDebug)
+  echo "$inputs" >.prebuild-inputs
+fi
+
+metro=
+finish() {
+  [[ -z $metro ]] || kill "$metro" 2>/dev/null || true
+  # Metro leaves children holding its port.
+  lsof -ti tcp:8081 -sTCP:LISTEN | xargs -r kill 2>/dev/null || true
+  systemctl --user stop trader-emulator 2>/dev/null || true
+  adb kill-server 2>/dev/null || true
+}
+trap finish EXIT
+
+echo "== emulator"
+systemctl --user start trader-emulator
+timeout 300 adb -s "$emu" wait-for-device
+timeout 300 bash -c "until [[ \$(adb -s $emu shell getprop sys.boot_completed 2>/dev/null | tr -d '\r') == 1 ]]; do sleep 2; done"
+adb -s "$emu" install -r "$apk" >/dev/null
+
+echo "== metro, on loopback"
+(cd apps/mobile && EXPO_PUBLIC_DEV_IDENTITY=enabled exec pnpm exec expo start --dev-client --localhost) \
+  >"$dir/.last-metro.log" 2>&1 &
+metro=$!
+timeout 180 bash -c 'until curl -fs -o /dev/null http://127.0.0.1:8081/status; do sleep 2; done'
+
+echo "== the flows"
+apps/mobile/.maestro/suite.sh android "$emu"

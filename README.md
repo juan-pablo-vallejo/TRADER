@@ -28,7 +28,9 @@ database.
   of the phone app for a commit, when started by hand. `release-phone.yml` builds and
   submits the phone app on a release.
 - `scripts/`: `check-ci.sh` is CI's `check` for a machine that is not CI; `staging.sh`
-  uses staging's keys for one command; `release-facts.sh` lists what a release would ship.
+  uses staging's keys for one command; `release-facts.sh` lists what a release would ship;
+  `trader-ws` runs the check and the Android flows on a second machine, named by
+  `TRADER_WS_HOST` (an ssh name) and never in this repository.
 - `.githooks/pre-push`, and under `.claude/` the hooks, skills and one agent Claude Code
   works with here.
 - `.env.example`: every environment variable and what reads it.

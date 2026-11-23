@@ -3,8 +3,9 @@
 // lines that Claude Code adds to the conversation: toolchain against the repository's pins,
 // the working tree, whether its tree has a recorded green check, the workstation, an open
 // release. Read-only, every probe on a short timeout, never a failure: a hook that cannot
-// tell says so and exits 0. The workstation is asked through `trader-ws`, the owner's
-// wrapper outside this repository; a machine without it is told so and loses nothing.
+// tell says so and exits 0. The workstation is asked through `trader-ws`: the owner's shim
+// for `scripts/trader-ws`, which says which machine; a machine without it is told so and
+// loses nothing.
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 

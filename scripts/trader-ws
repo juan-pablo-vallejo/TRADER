@@ -1,0 +1,264 @@
+#!/bin/sh
+# trader-ws: use the Ubuntu workstation as compute for TRADER. The Mac writes, commits and
+# pushes; the workstation only runs what this sends it and holds no credential. What runs
+# there runs as a job account with neither sudo nor Docker; an admin account is for work on
+# the machine itself. This file names no machine: the caller says which, in TRADER_WS_HOST
+# (the job account's ssh name) and TRADER_WS_ADMIN (the admin's, for `audit` alone).
+# A guard file: it writes the record of greens, so a change to it is shown to the owner
+# and applied on his word (.claude/hooks/guard.mjs).
+#
+#   trader-ws status                    one line: is the workstation there
+#   trader-ws sync                      working tree -> ~/trader there (+ pnpm install if needed)
+#   trader-ws check [--local]           sync, then CI's check (scripts/check-ci.sh); green records the tree
+#   trader-ws verified                  exit 0 only if HEAD's tree has a green check
+#   trader-ws e2e                       sync, then the browser suite on the demo data
+#   trader-ws android                   sync, then the phone flows on the emulator, detached
+#   trader-ws wait <name> [secs]        wait for a detached job; its log's tail; its exit code
+#   trader-ws logs <name> [lines]       a log's tail: check, e2e, sync, run, or a job's name
+#   trader-ws nightly                   last night's result, one line
+#   trader-ws db-reset                  drop, create and migrate the local database there
+#   trader-ws run -- <cmd...>           sync, then <cmd> in ~/trader, foreground
+#   trader-ws start <name> -- <cmd...>  sync, then <cmd> in tmux session tw-<name>, detached
+#   trader-ws tunnel                    Mac 13000/18081/15432 -> workstation loopback 3000/8081/5432
+#   trader-ws install                   the job account's own files (trader-ws.d) -> there
+#   trader-ws audit                     prove neither account there holds a credential
+#   trader-ws time                      the timing table (both machines)
+#
+# A green is one line in <the clone's .git>/trader/green: "<tree> <job> <when> <where>".
+# The repository's pre-push hook reads it; nothing but this file writes it.
+set -eu
+
+HOST=${TRADER_WS_HOST:-}
+ADMIN=${TRADER_WS_ADMIN:-}
+RDIR=trader                       # relative to the job account's home
+RHOME='$HOME'                     # left for the workstation's own shell to fill in
+STATE=$HOME/.trader-ws
+HERE=$(cd "$(dirname "$0")" && pwd)
+EXCLUDE=$HERE/trader-ws.d/exclude
+mkdir -p "$STATE"
+
+die() { echo "trader-ws: $*" >&2; exit "${2:-1}"; }
+
+# The clone this file is in: the script that checks a tree is part of that tree.
+REPO=$(cd "$HERE/.." && pwd)
+ledger() { echo "$(git -C "$REPO" rev-parse --path-format=absolute --git-common-dir)/trader/green"; }
+record() { # <tree> <job> <where>
+  l=$(ledger); mkdir -p "$(dirname "$l")"
+  printf '%s %s %s %s\n' "$1" "$2" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$3" >> "$l"
+}
+
+need_host() { [ -n "$HOST" ] || die "TRADER_WS_HOST is not set: it is the ssh name of the workstation's job account. For the check alone: trader-ws check --local" 78; }
+reach() {
+  need_host
+  ssh -o ConnectTimeout=8 "$HOST" true 2>/dev/null || die "the workstation does not answer: wake it; if it is in Windows, this machine does the work, Android excepted. For the check alone: trader-ws check --local" 69
+}
+
+# The working tree as git sees it, untracked files included, through a temporary index:
+# the real index is never touched.
+tree_id() {
+  t=$(mktemp -u "${TMPDIR:-/tmp}/trader-ws-index.XXXXXX")
+  id=$(cd "$REPO" && GIT_INDEX_FILE=$t git add -A && GIT_INDEX_FILE=$t git write-tree)
+  rm -f "$t"
+  echo "$id"
+}
+
+# rsync must send exactly the files git would: tracked plus untracked-not-ignored that exist.
+parity() {
+  empty=$(mktemp -d "${TMPDIR:-/tmp}/trader-ws-empty.XXXXXX")
+  (cd "$REPO" && rsync -a -n --out-format='%n' --filter="merge $EXCLUDE" ./ "$empty/") \
+    > "$STATE/rsync.list"
+  rmdir "$empty"
+  (cd "$REPO" && git ls-files -z -co --exclude-standard) > "$STATE/git.list0"
+  python3 -I - "$REPO" "$STATE/git.list0" "$STATE/rsync.list" <<'PY'
+import os, sys
+repo, g, r = sys.argv[1:]
+git = {p for p in open(g, 'rb').read().decode().split('\0') if p and os.path.lexists(os.path.join(repo, p))}
+rs = {l for l in open(r).read().splitlines() if l and not l.endswith('/') and l != '.'}
+only_git, only_rs = sorted(git - rs), sorted(rs - git)
+for p in only_git: print('  git has, rsync would not send:', p)
+for p in only_rs: print('  rsync would send, git ignores:', p)
+sys.exit(1 if only_git or only_rs else 0)
+PY
+}
+
+do_sync() {
+  reach
+  parity || die "parity check failed: trader-ws.exclude and .gitignore disagree; nothing sent"
+  before=$(tree_id)
+  ssh "$HOST" "mkdir -p $RDIR"
+  # The remote rsync runs under the job lock: a sync never lands under a running job.
+  # Everywhere, `flock -o`: the lock belongs to the job alone, and a daemon the job leaves
+  # behind (adb's server, for one) does not go on holding it.
+  if ! (cd "$REPO" && rsync -a --delete --filter="merge $EXCLUDE" \
+        --rsync-path="flock -n -o -E 75 $RHOME/$RDIR/.lock rsync" ./ "$HOST:$RDIR/"); then
+    die "sync failed (a job holding the lock, or rsync's own error above); nothing will run on a stale tree" 75
+  fi
+  after=$(tree_id)
+  [ "$before" = "$after" ] || die "the tree changed during the sync; run it again"
+  # Belt: no .env of the Mac's may have travelled.
+  stray=$(ssh "$HOST" "cd $RDIR && find . -name node_modules -prune -o -name '.env*' -print | grep -vxE '\./\.env|\./\.env\.example' || true")
+  [ -z "$stray" ] || die "env files found on the workstation after sync: $stray"
+  ssh "$HOST" "echo $after > $RDIR/.synced"
+  SYNCED=$after
+}
+
+# A script run on the workstation under the lock: install when the inputs changed.
+remote_prelude='set -euo pipefail
+cd ~/trader
+inputs=$(cat pnpm-lock.yaml pnpm-workspace.yaml $(find . -name node_modules -prune -o -name package.json -print | sort) | sha256sum | cut -d" " -f1)
+if [ ! -d node_modules ] || [ "$(cat .install-inputs 2>/dev/null)" != "$inputs" ]; then
+  echo "== pnpm install --frozen-lockfile"
+  pnpm install --frozen-lockfile
+  echo "$inputs" > .install-inputs
+fi'
+
+# Run a script on the workstation, under the lock, through a login shell. Its output goes
+# to a log there and not into the caller's terminal: green prints nothing, red prints the
+# log's last 40 lines. The exit status comes back through ssh (no ssh -t).
+remote_job() { # <log name> <script>
+  log=$RHOME/$RDIR/.last-$1.log; shift
+  printf '%s\n' "$*" | ssh "$HOST" \
+    "flock -n -o -E 75 $RHOME/$RDIR/.lock bash -lc 'bash -s > $log 2>&1; rc=\$?; [ \$rc = 0 ] || tail -n 40 $log; exit \$rc'"
+}
+# The same, with the output shown as it comes: for `sync` and `run`.
+remote_shown() { # <log name> <script>
+  log=$RHOME/$RDIR/.last-$1.log; shift
+  printf '%s\n' "$*" | ssh "$HOST" \
+    "flock -n -o -E 75 $RHOME/$RDIR/.lock bash -lc 'set -o pipefail; bash -s 2>&1 | tee $log'"
+}
+verdict() { # <job> <tree> <exit> <seconds> <where>: one line, and the record when green
+  if [ "$3" -eq 0 ]; then
+    record "$2" "$1" "$5"
+    echo "green: $1 on tree $2, $4 s ($5)"
+  elif [ "$3" -eq 75 ]; then
+    echo "trader-ws: a job holds the lock on the workstation; $1 did not run" >&2
+  else
+    echo "RED: $1 on tree $2, exit $3, $4 s ($5). More: trader-ws logs $1 200" >&2
+  fi
+}
+pg_gate='pg_isready -q -h 127.0.0.1 || { echo "the local Postgres does not answer; on the admin account: cd ~/trader-pg && docker compose up -d --wait postgres"; exit 1; }'
+
+cmd=${1:-}; [ $# -gt 0 ] && shift
+case "$cmd" in
+  status)
+    need_host
+    if up=$(ssh -o BatchMode=yes -o ConnectTimeout=2 "$HOST" 'uptime -p' 2>/dev/null); then
+      echo "reachable, $up"
+    else
+      echo "no answer in 2 s"; exit 69
+    fi ;;
+  sync)
+    do_sync; echo "synced tree $SYNCED"
+    remote_shown sync "$remote_prelude" ;;
+  check)
+    start=$(date +%s)
+    if [ "${1:-}" = --local ]; then
+      tree=$(tree_id)
+      rc=0
+      (cd "$REPO" && pnpm db:up && sh scripts/check-ci.sh) > "$STATE/last-check.log" 2>&1 || rc=$?
+      [ $rc -eq 0 ] || tail -n 40 "$STATE/last-check.log"
+      if [ $rc -eq 0 ] && [ "$(tree_id)" != "$tree" ]; then
+        die "the tree changed while it was checked; nothing is recorded"
+      fi
+      verdict check "$tree" $rc $(( $(date +%s) - start )) "$(hostname -s)"
+      [ $rc -eq 0 ] || echo "the whole log: $STATE/last-check.log" >&2
+      exit $rc
+    fi
+    do_sync
+    rc=0
+    remote_job check "set -euo pipefail
+cd ~/trader
+echo \"== tree \$(cat .synced)\"
+$pg_gate
+sh scripts/check-ci.sh" || rc=$?
+    verdict check "$SYNCED" $rc $(( $(date +%s) - start )) workstation
+    exit $rc ;;
+  verified)
+    head=$(git -C "$REPO" rev-parse 'HEAD^{tree}')
+    if grep -qs "^$head check " "$(ledger)"; then echo "verified: tree $head checked green"; exit 0; fi
+    die "HEAD's tree $head has no green check" ;;
+  e2e)
+    start=$(date +%s)
+    do_sync
+    rc=0
+    remote_job e2e "$remote_prelude
+$pg_gate
+pnpm e2e:local" || rc=$?
+    verdict e2e "$SYNCED" $rc $(( $(date +%s) - start )) workstation
+    exit $rc ;;
+  android)
+    do_sync
+    ssh "$HOST" "mkdir -p ~/trader-jobs && rm -f ~/trader-jobs/android.exit && echo $SYNCED > ~/trader-jobs/android.tree"
+    printf '%s\n%s\n%s\n' "$remote_prelude" "$pg_gate" 'exec ~/bin/trader-android ~/trader' | ssh "$HOST" "cat > ~/trader-jobs/android.sh"
+    ssh "$HOST" "tmux new-session -d -s tw-android \"flock -n -o -E 75 $RHOME/$RDIR/.lock bash -l $RHOME/trader-jobs/android.sh > $RHOME/trader-jobs/android.log 2>&1; echo \\\$? > $RHOME/trader-jobs/android.exit\""
+    echo "started the phone flows on tree $SYNCED; trader-ws wait android" ;;
+  db-reset)
+    reach
+    remote_shown db-reset 'set -euo pipefail
+cd ~/trader
+set -a; . ./.env; set +a
+export PGPASSWORD=$POSTGRES_PASSWORD
+dropdb -h 127.0.0.1 -U "$POSTGRES_USER" --if-exists --force "$POSTGRES_DB"
+createdb -h 127.0.0.1 -U "$POSTGRES_USER" "$POSTGRES_DB"
+pnpm db:migrate' ;;
+  run)
+    [ "${1:-}" = "--" ] && shift
+    [ $# -gt 0 ] || die "usage: trader-ws run -- <cmd...>"
+    do_sync
+    remote_shown run "$remote_prelude
+$*" ;;
+  start)
+    name=${1:?usage: trader-ws start <name> -- <cmd...>}; shift
+    [ "${1:-}" = "--" ] && shift
+    [ $# -gt 0 ] || die "usage: trader-ws start <name> -- <cmd...>"
+    case "$name" in *[!a-z0-9-]*) die "job names are [a-z0-9-]";; esac
+    do_sync
+    ssh "$HOST" "mkdir -p ~/trader-jobs && rm -f ~/trader-jobs/$name.exit ~/trader-jobs/$name.tree"
+    printf '%s\n%s\n' "$remote_prelude" "$*" | ssh "$HOST" "cat > ~/trader-jobs/$name.sh"
+    # The lock is taken inside the session and held for the whole job.
+    ssh "$HOST" "tmux new-session -d -s tw-$name \"flock -n -o -E 75 $RHOME/$RDIR/.lock bash -l $RHOME/trader-jobs/$name.sh > $RHOME/trader-jobs/$name.log 2>&1; echo \\\$? > $RHOME/trader-jobs/$name.exit\""
+    echo "started tw-$name; trader-ws wait $name" ;;
+  wait)
+    name=${1:?usage: trader-ws wait <name> [secs]}; limit=${2:-540}; waited=0
+    while ! ssh "$HOST" "test -f ~/trader-jobs/$name.exit"; do
+      [ "$waited" -lt "$limit" ] || { ssh "$HOST" "tail -5 ~/trader-jobs/$name.log"; echo "trader-ws: $name still running after ${limit}s; wait again" >&2; exit 124; }
+      sleep 15; waited=$((waited + 15))
+    done
+    rc=$(ssh "$HOST" "cat ~/trader-jobs/$name.exit")
+    if [ "$rc" -eq 0 ]; then ssh "$HOST" "tail -8 ~/trader-jobs/$name.log"; else ssh "$HOST" "tail -40 ~/trader-jobs/$name.log"; fi
+    # A detached job that named its tree (the phone flows) gets its green here.
+    tree=$(ssh "$HOST" "cat ~/trader-jobs/$name.tree 2>/dev/null" || true)
+    if [ -n "$tree" ]; then verdict "$name" "$tree" "$rc" "-" workstation; else echo "trader-ws: $name exited $rc"; fi
+    exit "$rc" ;;
+  logs)
+    name=${1:?usage: trader-ws logs <name> [lines]}; n=${2:-80}
+    case "$name" in *[!a-z0-9-]*) die "log names are [a-z0-9-]";; esac
+    ssh "$HOST" "if [ -f ~/trader-jobs/$name.log ]; then tail -n $n ~/trader-jobs/$name.log; else tail -n $n ~/$RDIR/.last-$name.log; fi" ;;
+  nightly)
+    ssh -o BatchMode=yes -o ConnectTimeout=2 "$HOST" 'cat ~/nightly/last' 2>/dev/null ;;
+  tunnel)
+    exec ssh -N -L 13000:127.0.0.1:3000 -L 18081:127.0.0.1:8081 -L 15432:127.0.0.1:5432 "$HOST" ;;
+  install)
+    reach
+    ssh "$HOST" 'mkdir -p ~/bin ~/.config/systemd/user'
+    scp -q "$HERE/trader-ws.d/trader-android" "$HOST:bin/trader-android"
+    [ ! -f "$HERE/trader-ws.d/trader-nightly" ] || scp -q "$HERE/trader-ws.d/trader-nightly" "$HOST:bin/trader-nightly"
+    scp -q "$HERE"/trader-ws.d/*.service "$HOST:.config/systemd/user/"
+    ls "$HERE"/trader-ws.d/*.timer >/dev/null 2>&1 && scp -q "$HERE"/trader-ws.d/*.timer "$HOST:.config/systemd/user/"
+    ssh "$HOST" 'chmod +x ~/bin/trader-*; systemctl --user daemon-reload; for t in ~/.config/systemd/user/*.timer; do [ -f "$t" ] && systemctl --user enable --now "$(basename "$t")"; done; ls ~/bin ~/.config/systemd/user; systemctl --user list-timers --no-pager 2>/dev/null | head -4' ;;
+  audit)
+    reach
+    rc=0
+    echo "== the job account ($HOST)"
+    ssh "$HOST" 'bash -s trader/.env' < "$HERE/trader-ws.d/audit" || rc=1
+    ssh "$HOST" 'if sudo -n true 2>/dev/null; then echo "FOUND sudo for the job account"; exit 1; fi; if docker ps >/dev/null 2>&1; then echo "FOUND docker for the job account"; exit 1; fi; echo "no sudo, no docker: right"' || rc=1
+    [ -n "$ADMIN" ] || die "TRADER_WS_ADMIN is not set: it is the ssh name of the workstation's admin account" 78
+    echo "== the admin account ($ADMIN)"
+    ssh "$ADMIN" 'bash -s trader-pg/.env' < "$HERE/trader-ws.d/audit" || rc=1
+    [ $rc -eq 0 ] && echo "BOTH CLEAN"
+    exit $rc ;;
+  time)
+    exec sh "$HERE/trader-ws.d/time" "$@" ;;
+  *)
+    sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+esac

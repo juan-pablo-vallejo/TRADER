@@ -1,0 +1,36 @@
+# Run on the workstation by `trader-ws audit` (bash -s <the account's one .env>), once as
+# the job account (trader/.env) and once as the admin (trader-pg/.env). Names only, never
+# contents. Allowed: ~/.ssh/authorized_keys, ~/.ssh/known_hosts, ~/.android/debug.keystore,
+# ~/.android/adbkey{,.pub}, and that one .env (POSTGRES_* and DATABASE_DRIVER only); the
+# debug keystore `expo prebuild` writes into the disposable android/ project; ~/.expo while
+# its state.json holds no sign-in; and the desktop's own login keyring (GNOME's, made by
+# the installer for the account that logs in at the screen: it is not handed to any job).
+# Also allowed: a file named .env.example anywhere, while it holds none of the secret
+# patterns below (every one found is scanned).
+# Key files are matched as id_*, except id_*.pak: Chromium ships locale files with that name.
+envfile=$HOME/${1:-trader/.env}; envdir=$(dirname "$envfile")
+pat='sk_(live|test)_[A-Za-z0-9]{10}|ghp_[A-Za-z0-9]{20}|github_pat_|sntrys_|re_[A-Za-z0-9]{20}|^-----BEGIN [A-Z ]*PRIVATE KEY-----'
+bad=0; say(){ echo "FOUND $*"; bad=1; }
+for p in ~/.config/gh ~/.gitconfig ~/.config/git ~/.git-credentials ~/.netrc ~/.npmrc ~/.yarnrc ~/.config/pnpm/rc \
+         ~/.eas ~/.config/eas ~/.claude ~/.claude.json ~/.gradle/gradle.properties \
+         ~/.config/vercel ~/.local/share/com.vercel.cli ~/.config/neonctl ~/.sentryclirc ~/.config/clerk ~/.maestro/auth \
+         ~/.gnupg/private-keys-v1.d ~/.config/gcloud ~/.aws; do [ -e "$p" ] && say "$p"; done
+grep -q '"auth"' ~/.expo/state.json 2>/dev/null && say "~/.expo/state.json (an Expo sign-in)"
+grep -qE '"(auths|credsStore)"' ~/.docker/config.json 2>/dev/null && say "~/.docker/config.json (auths/credsStore)"
+ls -1A ~/.ssh | grep -vxE 'authorized_keys|known_hosts(\.old)?' | sed 's/^/FOUND ~\/.ssh\//' | grep . && bad=1
+env | cut -d= -f1 | grep -E 'TOKEN|KEY|SECRET' | sed 's/^/FOUND env /' | grep . && bad=1
+bash -lc 'env | cut -d= -f1' | grep -E 'TOKEN|KEY|SECRET' | sed 's/^/FOUND login-env /' | grep . && bad=1
+find ~ -xdev \( -name node_modules -o -name .gradle -o -path ~/Android \) -prune -o -type f \
+  \( -name '*.jks' -o -name '*.keystore' -o -name '*.p8' -o -name '*.p12' -o -name '*.pem' -o -name '*.mobileprovision' -o \( -name 'id_*' ! -name '*.pak' \) -o -name '.env*' \) -print \
+  | grep -vxE "$HOME/\.android/debug\.keystore|$envfile|.*/\.env\.example|$HOME/trader/apps/mobile/android/app/debug\.keystore|$HOME/\.local/share/keyrings/user\.keystore" | sed 's/^/FOUND /' | grep . && bad=1
+find ~ -xdev \( -name node_modules -o -name .gradle -o -path ~/Android \) -prune -o -type f -name '.env.example' \
+  -exec grep -IlE "$pat" {} + 2>/dev/null | sed 's/^/FOUND /; s/$/ (a secret pattern)/' | grep . && bad=1
+grep -rIlE "$pat" "$envdir" \
+  --exclude-dir=node_modules --exclude-dir=.gradle --exclude-dir=build --exclude-dir=.next --exclude-dir=android \
+  --exclude-dir=.expo --exclude-dir=dist --exclude='*.tsbuildinfo' 2>/dev/null | sed 's/^/FOUND pattern in /' | grep . && bad=1
+grep -vE '^(POSTGRES_(USER|PASSWORD|DB)|DATABASE_DRIVER)=|^[A-Z_]+=$|^#|^$' "$envfile" 2>/dev/null | cut -d= -f1 | sed 's/^/FOUND .env sets /' | grep . && bad=1
+ssh-add -l >/dev/null 2>&1 && { echo "FOUND a reachable ssh agent"; bad=1; }
+echo "-- allowed and present:"
+for p in ~/.ssh/authorized_keys ~/.ssh/known_hosts ~/.android/debug.keystore ~/.android/adbkey ~/.android/adbkey.pub "$envfile" ~/trader/apps/mobile/android/app/debug.keystore ~/.expo/state.json ~/.local/share/keyrings/user.keystore ~/.local/share/keyrings/login.keyring; do [ -e "$p" ] && echo "   $p"; done
+[ $bad = 0 ] && echo CLEAN
+exit $bad

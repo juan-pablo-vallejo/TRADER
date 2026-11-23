@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { refusal } from "./guard.mjs";
+import { guards, refusal, touches } from "./guard.mjs";
 
 const base = (sel) => (sel === "41" || sel === undefined ? "production" : "main");
 const refused = [
@@ -72,4 +72,69 @@ assert.ok(
     throw new Error("offline");
   }),
 );
-console.log(`guard: ${refused.length} refused, ${allowed.length} allowed, as expected`);
+
+// Guard files: an edit is asked of the owner; his settings and the record of greens are refused.
+const asked = [
+  "/Users/x/TRADER/scripts/trader-ws",
+  "/Users/x/TRADER/scripts/trader-ws.d/audit",
+  "/Users/x/TRADER/scripts/check-ci.sh",
+  "/Users/x/TRADER/.claude/hooks/guard.mjs",
+  "/Users/x/TRADER/.claude/agents/release-auditor.md",
+  "/Users/x/TRADER/.claude/skills/verify/SKILL.md",
+  "/Users/x/TRADER/.githooks/pre-push",
+  "/Users/x/TRADER/.github/workflows/ci.yml",
+  "scripts/trader-ws",
+];
+const denied = [
+  "/Users/x/TRADER/.claude/settings.json",
+  "/Users/x/TRADER/.claude/settings.local.json",
+  "/Users/x/TRADER/.git/trader/green",
+  ".git/trader/green",
+];
+const free = [
+  "/Users/x/TRADER/scripts/staging.sh",
+  "/Users/x/TRADER/apps/web/src/app/nav.tsx",
+  "/Users/x/TRADER/docs/TASKS.md",
+  "/Users/x/TRADER/scripts/trader-ws-notes.md",
+];
+for (const p of asked) assert.equal(guards(p)?.decision, "ask", `should ask: ${p}`);
+for (const p of denied) assert.equal(guards(p)?.decision, "deny", `should deny: ${p}`);
+for (const p of free) assert.equal(guards(p), null, `should pass: ${p}`);
+
+const changing = [
+  ["sed -i '' s/a/b/ scripts/trader-ws", "ask"],
+  ["echo x > scripts/trader-ws.d/audit", "ask"],
+  ["echo x >>.githooks/pre-push", "ask"],
+  ["cp /tmp/guard.mjs .claude/hooks/guard.mjs", "ask"],
+  ["rm .claude/skills/verify/SKILL.md", "ask"],
+  ["git checkout HEAD~3 -- scripts/check-ci.sh", "ask"],
+  ["bash -c 'tee .github/workflows/ci.yml < /tmp/x'", "ask"],
+  ["python3 -c \"open('scripts/trader-ws','w').write('')\"", "ask"],
+  ["echo 'abc check now here' >> .git/trader/green", "deny"],
+  ["cp /tmp/s.json .claude/settings.json", "deny"],
+  ["jq 'del(.hooks)' .claude/settings.json > .claude/settings.json", "deny"],
+];
+const unchanged = [
+  "scripts/trader-ws check",
+  "sh scripts/trader-ws status",
+  "trader-ws check --local",
+  "cat scripts/trader-ws",
+  "sed -n '1,20p' .claude/hooks/guard.mjs",
+  "node .claude/hooks/guard.test.mjs",
+  "git add scripts/trader-ws .claude/hooks/guard.mjs",
+  "git diff -- .githooks/pre-push",
+  "git log --oneline -- .github/workflows/ci.yml",
+  "tail -5 .git/trader/green",
+  "jq . .claude/settings.json",
+  "grep -rn trader-ws scripts/",
+  "pnpm check",
+  "sed -i '' s/a/b/ scripts/staging.sh",
+  "echo 'see scripts/trader-ws and .claude/hooks/guard.mjs'",
+  "git commit -m 'scripts/trader-ws moves into the repository'",
+  "ls scripts/trader-ws.d/",
+];
+for (const [c, d] of changing) assert.equal(touches(c)?.decision, d, `should ${d}: ${c}`);
+for (const c of unchanged) assert.equal(touches(c), null, `should pass: ${c}`);
+console.log(
+  `guard: ${refused.length} refused, ${allowed.length} allowed, ${asked.length + changing.length + denied.length} guard-file cases, as expected`,
+);

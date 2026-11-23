@@ -1,0 +1,40 @@
+# rsync filter rules for trader-ws. They mirror TRADER's .gitignore files (root and
+# apps/mobile). An excluded path is never sent, and never deleted on the workstation either
+# (no --delete-excluded), so the workstation's own node_modules, android/ and .env stay.
+# The parity check in trader-ws proves every run that this list and git agree.
++ /.env.example
+- .git/
+- node_modules/
+- .env
+- .env.*
+- /.claude/settings.local.json
+- *.jks
+- *.p8
+- *.p12
+- *.key
+- *.mobileprovision
+- .DS_Store
+- .next/
+- next-env.d.ts
+- *.tsbuildinfo
+- .vercel
+- test-results/
+- playwright-report/
+- /apps/mobile/ios
+- /apps/mobile/android
+- /apps/mobile/**.expo/
+- /apps/mobile/.expo/
+- /apps/mobile/**dist/
+- /apps/mobile/dist/
+- /apps/mobile/**expo-env.d.ts
+- /apps/mobile/expo-env.d.ts
+- /apps/mobile/**.metro-health-check*
+- /apps/mobile/.metro-health-check*
+- /apps/mobile/**.pem
+- /apps/mobile/*.pem
+# The workstation's own state files; on the Mac they do not exist.
+- /.synced
+- /.lock
+- /.last-*.log
+- /.install-inputs
+- /.prebuild-inputs

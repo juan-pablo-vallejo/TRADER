@@ -174,5 +174,7 @@ temporary.
 - Two programs read a command before those rules have to. `.githooks/pre-push` refuses a
   push to `production`, a push to `main` of a tree with no recorded green check or while a
   release is open, and a push that holds a secret. `.claude/hooks/guard.mjs` refuses what
-  `CLAUDE.md` says never to run, however the command is wrapped. Both read text and are
-  tripwires; the lock is GitHub's ruleset and the owner's bypass.
+  `CLAUDE.md` says never to run, however the command is wrapped, and puts a change to a
+  guard file to the owner: the scripts that check and record a green, the hooks, the
+  agents, the skills and the workflows. Both read text and are tripwires; the lock is
+  GitHub's ruleset and the owner's bypass.

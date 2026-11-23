@@ -1,0 +1,50 @@
+#!/bin/sh
+# `trader-ws time`: wall times of pnpm check on both machines, cold and warm, three runs
+# each, plus CI's steps (`trader-ws check`) end to end from the Mac and here (`--local`).
+# Prints a table of medians.
+# Cold = *.tsbuildinfo, node_modules/.cache, apps/web/.next removed first (caches only).
+set -u
+HERE=$(cd "$(dirname "$0")" && pwd)
+REPO=$(cd "$HERE/../.." && pwd)
+HOST=${TRADER_WS_HOST:?the ssh name of the workstation's job account}
+OUT=$HOME/.trader-ws/time-$(date +%Y%m%dT%H%M%S).tsv
+clean='find . -name node_modules -prune -o -name "*.tsbuildinfo" -type f -print | xargs rm -f; rm -rf node_modules/.cache apps/*/node_modules/.cache packages/*/node_modules/.cache apps/web/.next .eslintcache'
+
+now() { python3 -I -c 'import time; print(f"{time.time():.2f}")'; }
+row() { # label, command (evaluated by sh)
+  for i in 1 2 3; do
+    s=$(now); sh -c "$2" >/dev/null 2>&1; rc=$?; e=$(now)
+    printf '%s\t%s\t%s\n' "$1" "$(python3 -I -c "print(f'{$e-$s:.1f}')")" "$rc" | tee -a "$OUT"
+  done
+}
+mac_cold="cd '$REPO' && $clean && pnpm check"
+mac_warm="cd '$REPO' && pnpm check"
+ws_cold="ssh $HOST \"flock -n -o -E 75 trader/.lock bash -lc 'cd ~/trader && $clean && pnpm check'\""
+ws_warm="ssh $HOST \"flock -n -o -E 75 trader/.lock bash -lc 'cd ~/trader && pnpm check'\""
+e2e="cd '$REPO' && $HERE/../trader-ws check"
+local="cd '$REPO' && $HERE/../trader-ws check --local"
+
+# `trader-ws time ci`: the two rows of CI's steps alone.
+# Interleave cold and warm so each warm run follows a cold one's rebuilt caches.
+[ "${1:-}" = ci ] || for i in 1 2 3; do
+  for m in ws mac; do
+    eval "c=\$${m}_cold; w=\$${m}_warm"
+    s=$(now); sh -c "$c" >/dev/null 2>&1; rc=$?; e=$(now)
+    printf '%s\t%s\t%s\n' "$m cold" "$(python3 -I -c "print(f'{$e-$s:.1f}')")" "$rc" | tee -a "$OUT"
+    s=$(now); sh -c "$w" >/dev/null 2>&1; rc=$?; e=$(now)
+    printf '%s\t%s\t%s\n' "$m warm" "$(python3 -I -c "print(f'{$e-$s:.1f}')")" "$rc" | tee -a "$OUT"
+  done
+done
+row "trader-ws check (ci steps, workstation)" "$e2e"
+row "trader-ws check --local (ci steps, mac)" "$local"
+echo "--- medians (seconds; any non-zero exit is listed)"
+python3 -I - "$OUT" <<'PY'
+import sys, statistics, collections
+d = collections.defaultdict(list); bad = []
+for l in open(sys.argv[1]):
+    k, t, rc = l.rstrip('\n').split('\t'); d[k].append(float(t))
+    if rc != '0': bad.append((k, t, rc))
+for k, v in d.items(): print(f"{k:42s} median {statistics.median(v):6.1f}   runs {v}")
+for b in bad: print("NON-ZERO EXIT:", b)
+PY
+echo "raw: $OUT"

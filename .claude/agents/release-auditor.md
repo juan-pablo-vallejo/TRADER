@@ -29,7 +29,11 @@ matters. No praise, and no account of what is fine.
 4. **What the release changes about releasing.** Anything under `.github/workflows`,
    `apps/mobile/eas.json`, `apps/mobile/app.json`, `.claude`, `.githooks` or
    `pnpm-workspace.yaml`: a secret handed to a new step, a permission widened, a pin
-   loosened, a build setting changed.
+   loosened, a build setting changed. And every change, however small, to a guard file:
+   `scripts/trader-ws`, `scripts/trader-ws.d/`, `scripts/check-ci.sh`, `.claude/hooks/`,
+   `.claude/settings.json`, `.githooks/`. Name each one with what it now lets through or
+   records that it did not before; a machine, user or address named in `scripts/` is a
+   finding by itself.
 5. **New dependencies.** Each one: what it is for, who publishes it, whether it runs an
    install script.
 6. **Both languages.** A screen or message added in English without Spanish, or the

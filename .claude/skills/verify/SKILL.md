@@ -7,9 +7,9 @@ allowed-tools: Bash(trader-ws *)
 # Verify this tree
 
 A push to `main` is refused unless a green check is recorded for the exact tree being pushed
-(`.githooks/pre-push`). This is how the record is made. `trader-ws` is the owner's wrapper
-on this Mac, outside the repository; it sends the tree to the workstation and runs
-`scripts/check-ci.sh` there, which is CI's `check` step for step.
+(`.githooks/pre-push`). This is how the record is made. `trader-ws` is `scripts/trader-ws`,
+run through the owner's shim of that name, which says which machine; it sends the tree to
+the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step for step.
 
 1. **Check.** `trader-ws check`. It sends the working tree as it stands (tracked changes and
    untracked files, nothing git ignores), runs the check, prints one line when green and
