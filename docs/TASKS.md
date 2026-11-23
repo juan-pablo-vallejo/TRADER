@@ -552,7 +552,7 @@ Android user.
   Done when tests walk one invoice through issue, a part payment and the final payment,
   and a second one past its due date to Overdue with no manual step.
 
-- [ ] 30. **The customer-ready invoice.** The only thing a customer of D Sierra sees.
+- [x] 30. **The customer-ready invoice.** The only thing a customer of D Sierra sees.
   - At issue the invoice takes a copy of what prints: the company's name, address, phone
     and email, and how to pay. An issued invoice's page never changes when Settings do
     (invariant 6). Today the PDF reads the company's name live; this ends that.
@@ -828,7 +828,7 @@ Android user.
 - [ ] Item 29: Paid this month counts payments by the day the office typed as paid, in the
       company's calendar month, not by the day they were recorded.
 
-- [ ] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
+- [x] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
       send one invoice from staging to an allow-listed inbox (invoice 4 is ready: open it,
       Send) and confirm it arrived with its PDF. Seen on staging: Settings filled with
       fictional words and terms of 15 days, invoice 4 issued after and printing the
@@ -1020,11 +1020,14 @@ Android user.
 - [ ] OWNER, item 21 (gate 7): the legal pages now name JPTEQ LLC as the operator and
       `privacy@jpteq.app` as where to write, which the owner routed to his inbox. They
       stay drafts: `APPROVED` is set on his "approved", after item 12 has been seen.
-- [ ] Item 30, read from staging's own tables on 2026-11-22: invoice 4 has never been
+- [x] Item 30, read from staging's own tables on 2026-11-22: invoice 4 has never been
       sent. The one send that went out on staging is invoice 1's, on 2026-11-19, the day
       before item 30 was built. The box was ticked that day on the owner's answer to a
       question, with nothing looked at, and unticked the same day. It waits on invoice 4
       sent from staging and seen to arrive with its PDF.
+- [x] Item 30, ticked later on 2026-11-22, on two things. Read from staging's tables:
+      invoice 4 has one send, at 02:19 UTC on 2026-11-23, with the outcome "sent". And the
+      owner's word that the email arrived with its PDF; he did not name the inbox.
 - [ ] Item 12: the app had no way to throw an error on purpose. In a staging build alone,
       a long press on the build's number in Me sends one report through `report.ts` and
       the screen says so. Seeing it waits on the owner's two preview builds by hand.
@@ -1035,13 +1038,17 @@ Android user.
       developer accounts exist, and the rate-limit rule on `/api` is published on the
       staging project (first seen with the action Log, which holds nothing back). EAS
       has no build of any profile yet.
-- [ ] OWNER: the owner's own login on staging. `scripts/staging.sh invite`, given a
+- [x] OWNER: the owner's own login on staging. `scripts/staging.sh invite`, given a
       number and a name, invites one person as an admin through `roster.invite`, signed in
       by the suite's ticket (`apps/web/e2e/invite.run.ts`). Run against staging with a fixture
       number already on the roster: it answered "rejected (phone_taken)", and the users
       table was as before. "invited" has not been seen there. A test person was not made:
       a users row is never deleted and nothing takes a login back out of Clerk, so one
       would have stayed on staging as an admin. The owner runs it with his own number.
+- [x] The owner ran it on 2026-11-22: "roster.invite: HTTP 200, invited", and he signed
+      in to staging by texted code (his word). Read from staging's tables after: six
+      people, two of them admins, the new one on a number outside the fixture range and
+      bound to a login. Gate 1 holds.
 - [x] The deploy job failed three runs in a row on 2026-11-22 with staging about to serve
       the commit. Vercel's deploy hook gave no answer within the job's thirty seconds; the
       deployment it had started appeared fifty seconds after the call. Re-running the
