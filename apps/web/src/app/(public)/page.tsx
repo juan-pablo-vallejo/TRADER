@@ -25,23 +25,28 @@ import { SiteHeader } from "./site-header";
 export const dynamic = "force-dynamic";
 
 // Their headings' serif, the one nearest their own wordmark: Bodoni Moda, from the
-// repository itself (fonts/, with its license). Declared here and not in the layout, so
-// only this page fetches it.
+// repository itself (fonts/, with its license). And their text, in Inter as everywhere,
+// from the Latin cut of the same typeface: 48 KB for English and Spanish, against the
+// 352 KB file the office reads (layout.tsx), from @fontsource-variable/inter 5.3.0 under
+// the license already beside it.
+// Neither is preloaded. Declared in this file they were meant to be this page's alone,
+// but the built app put both preloads on every route's response, the office's among them
+// (seen in staging's `Link` headers, 2026-11-23). Without a preload a font is fetched by
+// the page whose text is set in it, and by no other: here, when this page's stylesheet
+// asks, a few milliseconds after it would have been.
 const bodoni = localFont({
   src: "../fonts/BodoniModa-latin.woff2",
   variable: "--font-bodoni",
   weight: "400 900",
   display: "swap",
+  preload: false,
 });
-
-// Its text, in Inter as everywhere, from the Latin cut of the same typeface: 48 KB for
-// English and Spanish, against the 352 KB file the office reads (layout.tsx). From
-// @fontsource-variable/inter 5.3.0, under the license already beside it.
 const interLatin = localFont({
   src: "../fonts/Inter-latin.woff2",
   variable: "--font-inter-latin",
   weight: "100 900",
   display: "swap",
+  preload: false,
 });
 
 // A number as a `tel:` link dials it: the digits, and a leading plus.
