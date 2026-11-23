@@ -79,3 +79,33 @@ export function passkeyFailure(error: unknown): PasskeyFailure {
     ? "cancelled"
     : "failed";
 }
+
+// The browser's own ways of not offering a passkey at all: none to offer, none it can make,
+// or an address it will not use one at. Clerk's names for them, then the browser's.
+const NOT_OFFERED = new Set([
+  "passkey_retrieval_failed",
+  "passkey_not_supported",
+  "passkey_pa_not_supported",
+  "passkey_invalid_rp",
+]);
+const NOT_OFFERED_NAMES = ["NotSupportedError", "SecurityError"];
+
+// Whether the sign-in field's own passkey offer, the one it makes unseen as the page loads,
+// has anything to tell the person when it ends without a sign-in. Only a passkey they picked
+// and Clerk refused: a browser with none to offer fails that request at once (seen in the
+// Clerk suite, 2026-11-23), and a person who asked for nothing is told nothing.
+export function fieldOfferSays(error: unknown): boolean {
+  if (passkeyFailure(error) === "cancelled") return false;
+  const e = error as {
+    code?: unknown;
+    name?: unknown;
+    errors?: { code?: unknown }[];
+  } | null;
+  const codes = [
+    e?.code,
+    ...(Array.isArray(e?.errors) ? e.errors.map((x) => x?.code) : []),
+  ];
+  if (codes.some((code) => typeof code === "string" && NOT_OFFERED.has(code)))
+    return false;
+  return !(typeof e?.name === "string" && NOT_OFFERED_NAMES.includes(e.name));
+}

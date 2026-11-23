@@ -160,7 +160,9 @@ case ${1:-} in
     if [ "${1:-}" = serve ]; then
       # POSTGRES_DB here and in the suite's own server, not before: the demo refuses a
       # target that is already the configured database.
-      POSTGRES_DB=trader_demo_clerk exec pnpm exec next dev --webpack -H 127.0.0.1 -p 3000
+      # `localhost`, not 127.0.0.1: Clerk passes a request on by rewriting it to its own URL,
+      # and Next proxies a rewrite to a host it is not bound to as an outside address.
+      POSTGRES_DB=trader_demo_clerk exec pnpm exec next dev --webpack -H localhost -p 3000
     fi
     mkdir -p "$out"
     if [ "${1:-}" = only ]; then

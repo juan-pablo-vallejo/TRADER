@@ -1391,6 +1391,38 @@ Android user.
       Corrected the same push: the Google button sat flush under the heading.
 - [ ] `scripts/staging.sh passkey` (item 21b's flow by hand, with Playwright's virtual
       authenticator) is not written yet.
+- [ ] The office's sign-in against real Clerk on the Mac, 2026-11-23, by
+      `scripts/staging.sh local`: the development instance's keys on localhost and the demo
+      database `trader_demo_clerk`, six tests in `apps/web/e2e/clerk.local.ts`, green. Seen there and
+      until now only on staging or not at all: Continue with Google leaving for Google; an
+      address filled before the script arrives kept and answered (item 21a); an unknown
+      email and a Google account nobody holds each told to ask the office; the form in
+      Spanish at 390; Today's passkey band after a fresh sign-in, a passkey added from it,
+      listed in Settings, used by Use a passkey after signing out, and removed (item 21b);
+      a signed-in worker given an email by the office left with no session at Clerk and
+      refused by the next request once their token ran out, within the 90 s the test
+      allows (item 21e's "signed out by a change"). Still not seen: a right code, signing in
+      again with the new address, and anything on staging since `55c1922`.
+- [ ] Item 21d: the dead Continue with Google, read on staging at `55c1922`, was not seen
+      again. A fresh browser clicked through to Google on staging and locally, with and
+      without the field's passkey offer running, and the owner's own click on staging went
+      to Google and came back "not on a roster", making no login at Clerk (counted). So
+      `55c1922` (a reset before Google) is not shown to be the fix: the dead click was most
+      likely a browser holding an earlier sign-in of Clerk's. Test 1 of the suite guards it.
+- [ ] Item 21b: a browser driven by Playwright says so (`navigator.webdriver`), and Clerk
+      then offers it no passkey at all (@clerk/shared 4.45.1, isValidBrowser): adding one
+      fails as "not supported" and the field's own offer never starts. Every test of a
+      sign-in in a driven browser saw a form no person sees. The Clerk suite and the
+      passkey run on staging launch Chromium with that flag off.
+- [ ] Item 21b: in a browser with no passkey to offer, the field's own unseen request
+      failed as the page loaded, and the form said "That passkey did not work" to someone
+      who had asked for nothing, over the answer to the code they then asked for. Found
+      by the Clerk suite, fixed: the field's offer speaks only of a passkey the person
+      picked (`passkey-rules.ts`, fieldOfferSays).
+- [ ] The demo binds every person it builds to the development identity, and a binding is
+      never undone (the users guard, the owner included), so no Clerk login can become a
+      demo person. The Clerk suite inserts its own admin, unbound, for the staging suite's
+      admin number; its worker is invited by the test itself.
 
 ## After MVP
 

@@ -25,7 +25,7 @@ import {
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ssoCallbackFrom } from "../../../server/sign-in-paths";
-import { passkeyFailure } from "../../passkey-rules";
+import { fieldOfferSays, passkeyFailure } from "../../passkey-rules";
 import { signInPhone as shownNumber } from "../../format";
 import { useStrings } from "../../i18n";
 import styles from "../auth.module.css";
@@ -204,7 +204,13 @@ export function SignInForm({
   const withPasskey = async (flow: "discoverable" | "autofill"): Promise<Note | null> => {
     const { error } = await signIn.passkey({ flow });
     if (error !== null) {
-      return passkeyFailure(error) === "cancelled" ? null : "passkey_failed";
+      // The field's own offer speaks only of a passkey the person picked (fieldOfferSays);
+      // the button's, of anything but a sheet they closed.
+      const says =
+        flow === "autofill"
+          ? fieldOfferSays(error)
+          : passkeyFailure(error) !== "cancelled";
+      return says ? "passkey_failed" : null;
     }
     return finish();
   };
