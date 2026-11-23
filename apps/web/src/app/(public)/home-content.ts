@@ -15,9 +15,9 @@ import type { StaticImageData } from "next/image";
 
 import apartmentInterior from "../../../../../assets/pics/apartment-interior.jpg";
 import ceilingFinished from "../../../../../assets/pics/ceiling-finished.jpg";
+import classroom from "../../../../../assets/pics/classroom.jpg";
 import homeExterior from "../../../../../assets/pics/home-exterior.jpg";
 import newportHarborHouse from "../../../../../assets/pics/newport-harbor-house.jpg";
-import schoolHallway from "../../../../../assets/pics/school-hallway.jpg";
 import shoppingCenter from "../../../../../assets/pics/shopping-center.jpg";
 import sprayingCeiling from "../../../../../assets/pics/spraying-ceiling.jpg";
 import type { Language } from "../i18n/language";
@@ -62,10 +62,10 @@ export const HOME: HomeContent = {
       },
     },
     {
-      image: schoolHallway,
+      image: classroom,
       alt: {
-        en: "A school hallway with repainted walls and blue lockers",
-        es: "El pasillo de una escuela con paredes repintadas y casilleros azules",
+        en: "A classroom with a freshly painted orange wall",
+        es: "Un salón de clases con una pared recién pintada de naranja",
       },
     },
     {
