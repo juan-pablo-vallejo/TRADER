@@ -1087,12 +1087,15 @@ Android user.
       build, and its frames were readable only because a development bundle is not
       minified. The box waits on one long press in a preview build, read back with its
       frames resolved by the uploaded source maps.
-- [ ] OWNER: a phone report reaches Sentry with a city on it. Sentry looks up the
+- [x] OWNER: a phone report reaches Sentry with a city on it. Sentry looks up the
       connection's address as the report arrives and keeps the country, region and city
       (`user.geo`), though it stores no address and the app sends none. The privacy page
       says a report "is built to carry no name, phone number, location or entry". To
       settle before the legal pages are approved: have Sentry remove it, send reports by
       way of TRADER's own service, or say it in the policy.
+      The owner chose the policy, 2026-11-22: its sentence on Sentry now says that Sentry
+      sees the address a phone's report arrives from and keeps the city, not the address.
+      It is the owner's to read with the rest before he says "approved".
 - [ ] A report from a development build carries this machine's file paths in its frames,
       the account's name among them (`report-event.ts` passes any path with no white
       space). A store or preview build's frames name the bundle only. To weigh: keep a

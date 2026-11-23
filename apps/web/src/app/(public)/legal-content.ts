@@ -13,6 +13,8 @@
 // packages/api/src/sync/scope.ts), error reports to Sentry (apps/web/src/server/reporter.ts
 // and, for the phone, docs/TASKS.md item 12), sign-in by Clerk, invoice email by Resend,
 // reminders that never leave the phone (apps/mobile/src/reminders.tsx), no analytics.
+// The city on a phone's report is Sentry's own doing: it looks up the connection's address
+// as the report arrives and stores the place, not the address (read on a report, 2026-11-22).
 import type { Language } from "../i18n/language";
 
 export const APPROVED = false;
@@ -70,7 +72,7 @@ export const PRIVACY: Record<Language, Document> = {
           "Clerk signs you in: it receives your mobile number or email and sends the code you type.",
           "Vercel runs the office's website and the system the app talks to, and Neon holds the database where the records are kept.",
           "Resend delivers an invoice by email when the office sends one: it receives the customer's email address and the invoice.",
-          "Sentry receives error reports when something in the office or the app fails, so it can be fixed. A report describes the failure and the version of the software. It is built to carry no name, phone number, location or entry.",
+          "Sentry receives error reports when something in the office or the app fails, so it can be fixed. A report describes the failure and the version of the software. It is built to carry no name, phone number, position or entry. When a report comes from the app, Sentry sees the internet address it arrives from, as any service does, and keeps the city that address suggests, not the address.",
           "The app itself reaches your phone through Apple's or Google's store, under their own terms.",
         ],
       },
@@ -132,7 +134,7 @@ export const PRIVACY: Record<Language, Document> = {
           "Clerk te inicia la sesión: recibe tu número de celular o tu correo y envía el código que escribes.",
           "Vercel ejecuta el sitio de la oficina y el sistema con el que habla la aplicación, y Neon tiene la base de datos donde se guardan los registros.",
           "Resend entrega una factura por correo cuando la oficina la envía: recibe el correo del cliente y la factura.",
-          "Sentry recibe informes de error cuando algo falla en la oficina o en la aplicación, para poder arreglarlo. Un informe describe la falla y la versión del programa. Está hecho para no llevar ningún nombre, número de teléfono, ubicación ni registro.",
+          "Sentry recibe informes de error cuando algo falla en la oficina o en la aplicación, para poder arreglarlo. Un informe describe la falla y la versión del programa. Está hecho para no llevar ningún nombre, número de teléfono, posición ni registro. Cuando un informe viene de la aplicación, Sentry ve la dirección de internet de la que llega, como cualquier servicio, y guarda la ciudad que esa dirección sugiere, no la dirección.",
           "La aplicación llega a tu teléfono por la tienda de Apple o de Google, bajo sus propios términos.",
         ],
       },
