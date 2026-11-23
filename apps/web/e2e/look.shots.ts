@@ -7,6 +7,8 @@ import { join } from "node:path";
 
 import { expect, test } from "@playwright/test";
 
+import { signInByTicket } from "./ticket-session";
+
 const WIDTHS = [390, 768, 1280];
 const paths = (process.env.LOOK_PATHS ?? "")
   .split(/\s+/)
@@ -20,35 +22,7 @@ test("the office on staging, as screenshots", async ({ page }) => {
   expect(ticket, "E2E_ADMIN_TICKET is set").not.toBe("");
   mkdirSync(dir, { recursive: true });
 
-  await page.goto("/sign-in");
-  await page.waitForFunction(
-    () => (window as unknown as { Clerk?: { loaded?: boolean } }).Clerk?.loaded === true,
-    undefined,
-    { timeout: 60_000 },
-  );
-  const signedIn = await page.evaluate(async (given): Promise<boolean> => {
-    type Attempt = { status: string | null; createdSessionId: string | null };
-    const clerk = (
-      window as unknown as {
-        Clerk: {
-          client: { signIn: { create(p: Record<string, string>): Promise<Attempt> } };
-          setActive(p: { session: string }): Promise<void>;
-        };
-      }
-    ).Clerk;
-    try {
-      const attempt = await clerk.client.signIn.create({
-        strategy: "ticket",
-        ticket: given,
-      });
-      if (attempt.status !== "complete" || attempt.createdSessionId === null)
-        return false;
-      await clerk.setActive({ session: attempt.createdSessionId });
-      return true;
-    } catch {
-      return false;
-    }
-  }, ticket);
+  const signedIn = await signInByTicket(page, ticket);
   expect(signedIn, "the ticket signs the admin in").toBe(true);
 
   for (const path of paths) {
