@@ -38,6 +38,9 @@ const link = {
 
 export const signInAppearance: NonNullable<ComponentProps<typeof SignIn>["appearance"]> =
   {
+    // Clerk's plain base: its default one draws a sheen and a shadow on the button, and
+    // the homepage's Call is flat.
+    theme: "simple",
     // No logo: the page's navy carries their mark. No card: the form is the page.
     options: { logoPlacement: "none", elevation: "flush" },
     variables: {
@@ -88,15 +91,14 @@ export const signInAppearance: NonNullable<ComponentProps<typeof SignIn>["appear
       otpCodeFieldInput: {
         width: "48px",
         height: "56px",
+        minHeight: "56px",
         fontSize: "24px",
         borderColor: c.controlBorder,
       },
-      // Flat, as the homepage's Call is: no sheen, no arrow.
+      // Their red, with no arrow after the word.
       formButtonPrimary: {
         minHeight: "52px",
         backgroundColor: c.red600,
-        backgroundImage: "none",
-        boxShadow: "none",
         color: c.surface,
         fontSize: "18px",
         fontWeight: 600,
@@ -107,7 +109,18 @@ export const signInAppearance: NonNullable<ComponentProps<typeof SignIn>["appear
         },
       },
       buttonArrowIcon: { display: "none" },
-      formResendCodeLink: link,
+      // The code step, set to the left edge as the heading is: Clerk centers it.
+      identityPreview: {
+        justifyContent: "flex-start",
+        marginInline: 0,
+        paddingInline: 0,
+      },
+      otpCodeField: { alignSelf: "flex-start" },
+      formResendCodeLink: {
+        ...link,
+        alignSelf: "flex-start",
+        justifyContent: "flex-start",
+      },
       footerActionLink: link,
       backLink: link,
       identityPreviewEditButton: {

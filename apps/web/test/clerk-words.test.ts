@@ -1,5 +1,8 @@
 // The words the sign-in page gives Clerk's own form (src/app/i18n/clerk-words.ts), and the
 // two addresses the page builds for itself (src/server/sign-in-paths.ts).
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { enUS, esMX } from "@clerk/localizations";
 import { describe, expect, it } from "vitest";
 
@@ -75,6 +78,23 @@ describe("the office's words on Clerk's form", () => {
     const base = { a: { b: "1", c: "2" } };
     expect(laidOver(base, { a: { c: "3" } })).toEqual({ a: { b: "1", c: "3" } });
     expect(base).toEqual({ a: { b: "1", c: "2" } });
+  });
+});
+
+describe("the form's first field", () => {
+  it("is the number, opened with a blank and never with a plus", () => {
+    // Clerk has no setting for the order; a starting phone number is what opens the form
+    // on the number field. Started from "+1" the form could not be switched to email at
+    // all (seen on staging, 2026-11-23). Read from the page itself.
+    const page = readFileSync(
+      fileURLToPath(
+        new URL("../src/app/(auth)/sign-in/[[...sign-in]]/page.tsx", import.meta.url),
+      ),
+      "utf8",
+    );
+    expect(page).toContain('const START_ON_NUMBER = { phoneNumber: " " };');
+    expect(page).toContain("initialValues={START_ON_NUMBER}");
+    expect(page).toContain("withSignUp={false}");
   });
 });
 

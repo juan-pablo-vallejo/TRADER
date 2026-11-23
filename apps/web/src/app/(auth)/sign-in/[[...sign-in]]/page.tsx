@@ -25,9 +25,12 @@ export const viewport: Viewport = { themeColor: "#140064" };
 
 // The number first. Clerk shows email first where an instance admits both, and has no
 // setting for the order: a phone number to start from is what makes it open on the number
-// field, and the country's code alone leaves that field empty (seen on staging,
-// 2026-11-23). Only +1 numbers are ever invited.
-const START_ON_NUMBER = { phoneNumber: "+1" };
+// field. The one that works is a blank. With the country's code, "+1", the field opened
+// on the number and "Use email instead" came straight back to it, because Clerk reads a
+// value that starts with a plus as a phone number, whichever field holds it (seen on
+// staging, 2026-11-23: the email alternative could not be reached). A blank opens on the
+// number, leaves the field empty, and lets the two swap. Only +1 numbers are ever invited.
+const START_ON_NUMBER = { phoneNumber: " " };
 
 export default async function SignInPage() {
   // Before anything of the request is read: where this page does not exist, it is a 404.
