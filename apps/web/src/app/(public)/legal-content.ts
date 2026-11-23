@@ -2,10 +2,11 @@
 // file, so the pages' code never changes when the words do.
 //
 // A DRAFT until the owner approves it (docs/TASKS.md, item 21, the owner's gate 7). While
-// `APPROVED` is false both pages say so at the top. Three things are the owner's to
-// supply and are not invented here: who operates TRADER (the legal name), how to reach
-// them about privacy, and any clause a lawyer wants (liability, governing law). A part
-// left null draws a line saying it is still to come, on the draft only.
+// `APPROVED` is false both pages say so at the top. Three things are the owner's and are
+// not invented here: who operates TRADER (the legal name) and how to reach them about
+// privacy, both his word of 2026-11-22, and any clause a lawyer wants (liability,
+// governing law), of which there is none. A part left null draws a line saying it is
+// still to come, on the draft only.
 //
 // The policy says what the product does and no more. Each sentence below is held to the
 // code: a location stamp at each clock tap unless switched off (apps/mobile/src/location.ts,
@@ -16,11 +17,11 @@ import type { Language } from "../i18n/language";
 
 export const APPROVED = false;
 // The day the words below last changed.
-export const LAST_CHANGED = "2026-11-20";
+export const LAST_CHANGED = "2026-11-22";
 
 // The legal name of whoever operates TRADER, and where a person writes about privacy.
-export const OPERATOR: string | null = null;
-export const PRIVACY_CONTACT: string | null = null;
+export const OPERATOR: string | null = "JPTEQ LLC";
+export const PRIVACY_CONTACT: string | null = "privacy@jpteq.app";
 
 export type Section = { heading: string; paragraphs: string[] };
 export type Document = { title: string; intro: string; sections: Section[] };
