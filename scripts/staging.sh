@@ -9,6 +9,9 @@
 #   scripts/staging.sh smoke           the browser smoke test, as the deploy job runs it
 #   scripts/staging.sh look <path>...  office screens as the suite's admin, as screenshots
 #                                      at 390, 768 and 1280 wide; prints where they are
+#   scripts/staging.sh invite <number> <name>
+#                                      one person onto staging's roster as an admin, by
+#                                      the suite's admin; the number is never printed
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 file=$root/.env.staging
@@ -89,8 +92,16 @@ case ${1:-} in
       pnpm exec playwright test -c e2e/look.config.ts
     echo "screenshots: $out/look"
     ;;
+  invite)
+    shift
+    [ $# -eq 2 ] || { echo "usage: staging.sh invite <mobile number> <name>" >&2; exit 64; }
+    tickets
+    cd "$root/apps/web"
+    INVITE_PHONE=$1 INVITE_NAME=$2 E2E_OUTPUT_DIR=$out/invite-results \
+      pnpm exec playwright test -c e2e/invite.config.ts
+    ;;
   *)
-    sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
     exit 64
     ;;
 esac
