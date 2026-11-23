@@ -24,13 +24,16 @@ import {
 } from "@trader/api/contract";
 import { useEffect, useRef, useState } from "react";
 
+import { ssoCallbackFrom } from "../../../server/sign-in-paths";
 import { signInPhone as shownNumber } from "../../format";
 import { useStrings } from "../../i18n";
 import styles from "../auth.module.css";
+import google from "./google-button.module.css";
 
 // What the form says under its field. A refusal from Clerk, by name; a field that is
 // neither a number nor an email; or a sign-in Clerk left at a step this form has none for.
-type Note = SignInFailure | "bad_address" | "unfinished";
+// Or a Google account no roster holds, said when the browser comes back from Google.
+type Note = SignInFailure | "bad_address" | "unfinished" | "google_refused";
 
 // Clerk's own name for why a call was refused. Its errors carry a list of them, or one.
 function codeOf(error: unknown): string | undefined {
@@ -39,7 +42,14 @@ function codeOf(error: unknown): string | undefined {
   return typeof first === "string" ? first : undefined;
 }
 
-export function SignInForm({ returnTo }: { returnTo: string }) {
+export function SignInForm({
+  returnTo,
+  googleRefused,
+}: {
+  returnTo: string;
+  // The browser has just come back from Google with an account no roster holds.
+  googleRefused: boolean;
+}) {
   const { t } = useStrings();
   const s = t.signInForm;
   const clerk = useClerk();
@@ -49,7 +59,7 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
   const [sentTo, setSentTo] = useState<SignInIdentifier | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<Note | null>(null);
+  const [note, setNote] = useState<Note | null>(googleRefused ? "google_refused" : null);
   const [wait, setWait] = useState(0);
   const address = useRef<HTMLInputElement>(null);
   const codeField = useRef<HTMLInputElement>(null);
@@ -83,6 +93,7 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
       failed: s.failed,
       bad_address: s.badAddress,
       unfinished: s.unfinished,
+      google_refused: s.googleRefused,
     })[which];
 
   // One step of the sign-in: busy while it runs, and whatever it threw is a failure said
@@ -121,6 +132,21 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
       setSentTo(to);
       setWait(SIGN_IN_RESEND_SECONDS);
       return null;
+    });
+  };
+
+  // Google: the browser leaves for Google and comes back signed in, to where the person
+  // was going; or, when Google's account is nobody Clerk knows, to the callback page,
+  // which sends them back here to be told so. Clerk ties a Google account to the login
+  // whose verified email it is, so it works for a person the office invited by that email.
+  const withGoogle = () => {
+    void attempt(async () => {
+      const { error } = await signIn.sso({
+        strategy: "oauth_google",
+        redirectUrl: returnTo,
+        redirectCallbackUrl: ssoCallbackFrom(returnTo),
+      });
+      return error === null ? null : signInFailure(codeOf(error));
     });
   };
 
@@ -184,6 +210,20 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
     return (
       <form className={styles.fields} onSubmit={send} noValidate>
         <h1 className={styles.heading}>{t.teamSignIn}</h1>
+        <button
+          type="button"
+          className={google.google}
+          disabled={idle}
+          onClick={withGoogle}
+        >
+          {/* Google's mark, cut from Google's own button (public/google-g.svg) and served
+              from here: nothing is fetched from Google. A plain <img>: it is a 20px mark,
+              and next/image would write an inline style the policy refuses. */}
+          {/* eslint-disable-next-line @next/next/no-img-element -- see above */}
+          <img src="/google-g.svg" alt="" width={20} height={20} />
+          <span>{s.google}</span>
+        </button>
+        <p className={styles.or}>{s.or}</p>
         <p className={styles.helper}>{s.helper}</p>
         <label className={styles.label} htmlFor="sign-in-address">
           {s.address}

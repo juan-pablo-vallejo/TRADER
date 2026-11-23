@@ -479,6 +479,11 @@ export const es: Catalog = {
   notOnRoster: "Este acceso no está en ninguna plantilla. Pregunta en tu oficina.",
   signInNotSetUp: "El inicio de sesión no está configurado en este servidor.",
   signInForm: {
+    google: "Continuar con Google",
+    or: "o",
+    googleRefused:
+      "Esa cuenta de Google no está en ninguna plantilla. Pregunta en tu oficina.",
+    signingIn: "Iniciando tu sesión…",
     helper: "Escribe tu número de celular o tu correo. Te enviaremos un código.",
     address: "Número de celular o correo",
     send: "Envíame un código",

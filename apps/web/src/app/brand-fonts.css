@@ -3,6 +3,17 @@
    Imported by the homepage and by sign-in, the two places that wear their brand
    (`data-brand`, theme.css), so no other page's stylesheet names them. A face is fetched
    only where text is set in it. */
+/* Google's own, for its button on the sign-in page and nothing else: "The button font is
+   Google Sans Medium" (developers.google.com/identity/branding-guidelines). The Latin cut of
+   the 500 weight from @fontsource/google-sans 5.3.2, OFL 1.1 (fonts/GoogleSans-LICENSE.txt),
+   served from here like the other two (the owner's word, 2026-11-23). */
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/fonts/GoogleSans-latin-500-5.3.2.woff2") format("woff2");
+}
 @font-face {
   font-family: "Bodoni Moda";
   font-style: normal;

@@ -6,7 +6,15 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { homeHref, returnPath, signInFrom } from "../src/server/sign-in-paths";
+import { en } from "../src/app/i18n/en";
+import { es } from "../src/app/i18n/es";
+import {
+  homeHref,
+  returnPath,
+  signInFrom,
+  signInRefused,
+  ssoCallbackFrom,
+} from "../src/server/sign-in-paths";
 
 const read = (path: string) =>
   readFileSync(fileURLToPath(new URL(`../src/app/${path}`, import.meta.url)), "utf8");
@@ -95,17 +103,85 @@ describe("the way back to the homepage from sign-in", () => {
 describe("the sign-in form", () => {
   const form = read("(auth)/sign-in/sign-in-form.tsx");
   const page = read("(auth)/sign-in/page.tsx");
+  const back = read("(auth)/sign-in/sso-callback/sso-callback.tsx");
+  const backPage = read("(auth)/sign-in/sso-callback/page.tsx");
+  // What a file does, without what its comments say about what it does not.
+  const code = (source: string) =>
+    source.replace(/\/\*[^]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
   it("is the office's own, and never offers or asks for a sign-up", () => {
     // Clerk's prebuilt form cannot take a number and an email in one field. And nobody
     // signs up: a login exists only because the office made it.
-    for (const source of [form, page]) {
-      expect(source).not.toMatch(
-        /<SignIn\b|<SignUp\b|useSignUp|signUp\b|signUpIfMissing/,
+    for (const source of [form, page, back, backPage]) {
+      expect(code(source)).not.toMatch(
+        /<SignIn\b|<SignUp\b|useSignUp|signUp\b|signUpIfMissing|HandleSSOCallback|transfer/,
       );
     }
     expect(form).toContain('from "@clerk/nextjs"');
     expect(form).toContain("useSignIn()");
+  });
+
+  it("offers Google in Google's own style, with nothing of Google's fetched", () => {
+    // A sheet of its own: these colors are Google's, and the page's sheet names tokens.
+    const sheet = read("(auth)/sign-in/google-button.module.css");
+    expect(read("(auth)/auth.module.css")).not.toContain(".google");
+    const rule = sheet.slice(sheet.indexOf(".google {"), sheet.indexOf(".google img"));
+    // Google's light button, as its branding page has it (read 2026-11-23).
+    for (const part of [
+      "background: #ffffff;",
+      "box-shadow: inset 0 0 0 1px #747775;",
+      "color: #1f1f1f;",
+      "gap: 10px;",
+      "padding: 0 12px;",
+      '500 14px/20px "Google Sans"',
+      // As tall as the page's own button: no less prominent.
+      "min-height: var(--home-control);",
+    ]) {
+      expect([part, rule.includes(part)]).toEqual([part, true]);
+    }
+    // Its mark is Google's own, cut from Google's button and served from here, at its
+    // own 20 px; its words are Google's, in each language.
+    const mark = readFileSync(
+      fileURLToPath(new URL("../public/google-g.svg", import.meta.url)),
+      "utf8",
+    );
+    expect(mark).toMatch(/^<svg width="20" height="20" viewBox="10 10 20 20"/);
+    expect(mark).not.toMatch(/https?:\/\/(?!www\.w3\.org\/)/);
+    expect(form).toContain('<img src="/google-g.svg" alt="" width={20} height={20} />');
+    expect(form).toContain('strategy: "oauth_google"');
+    for (const source of [form, back, sheet]) {
+      expect(code(source)).not.toMatch(/google\.com|gstatic|googleapis/);
+    }
+    expect([en.signInForm.google, es.signInForm.google]).toEqual([
+      "Continue with Google",
+      "Continuar con Google",
+    ]);
+  });
+
+  it("brings a person back from Google to where they were going, or to be told", () => {
+    expect(ssoCallbackFrom("/today")).toBe("/sign-in/sso-callback");
+    expect(ssoCallbackFrom("/hours?week=2026-11-16")).toBe(
+      "/sign-in/sso-callback?redirect_url=%2Fhours%3Fweek%3D2026-11-16",
+    );
+    expect(signInRefused("/today")).toBe("/sign-in?refused=google");
+    expect(signInRefused("/people")).toBe(
+      "/sign-in?refused=google&redirect_url=%2Fpeople",
+    );
+    // Whatever a link said, only a path of the office is carried on.
+    for (const elsewhere of ["https://evil.example/", "//evil.example", "/sign-in"]) {
+      expect(ssoCallbackFrom(elsewhere)).toBe("/sign-in/sso-callback");
+      expect(signInRefused(elsewhere)).toBe("/sign-in?refused=google");
+    }
+    // The callback finishes a sign-in that is complete, takes up a session Clerk has,
+    // and otherwise sends the person back: three ways out and no fourth.
+    expect(back).toContain('signIn.status === "complete"');
+    expect(back).toContain("signIn.existingSession?.sessionId");
+    expect(back).toContain("signInRefused(returnTo)");
+    // And the page is no page where sign-in is none.
+    expect(backPage.indexOf("notFound()")).toBeGreaterThan(0);
+    expect(backPage.indexOf("notFound()")).toBeLessThan(
+      backPage.indexOf("searchParams)."),
+    );
   });
 
   it("reads what was typed, and a refusal, by the functions the phone shares", () => {

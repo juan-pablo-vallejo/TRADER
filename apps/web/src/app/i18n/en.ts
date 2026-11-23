@@ -507,6 +507,12 @@ export const en = {
   // one field for a mobile number or an email, then the code. The same thing has the same
   // name in the phone app (apps/mobile/src/i18n).
   signInForm: {
+    // Google's own words for its button, which may be translated and not reworded
+    // (developers.google.com/identity/branding-guidelines, read 2026-11-23).
+    google: "Continue with Google",
+    or: "or",
+    googleRefused: "That Google account is not on a roster. Ask your office.",
+    signingIn: "Signing you in…",
     helper: "Enter your mobile number or email. We'll send you a code.",
     address: "Mobile number or email",
     send: "Send me a code",

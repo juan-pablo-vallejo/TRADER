@@ -11,7 +11,8 @@
 // The policy says what the product does and no more. Each sentence below is held to the
 // code: a location stamp at each clock tap unless switched off (apps/mobile/src/location.ts,
 // packages/api/src/sync/scope.ts), error reports to Sentry (apps/web/src/server/reporter.ts
-// and, for the phone, docs/TASKS.md item 12), sign-in by Clerk, invoice email by Resend,
+// and, for the phone, docs/TASKS.md item 12), sign-in by Clerk (a code, or Google: (auth)/sign-in), invoice and invitation email by
+// Resend (packages/api, invoices/send.ts and roster/invitation.ts),
 // reminders that never leave the phone (apps/mobile/src/reminders.tsx), no analytics.
 // The city on a phone's report is Sentry's own doing: it looks up the connection's address
 // as the report arrives and stores the place, not the address (read on a report, 2026-11-22).
@@ -19,7 +20,7 @@ import type { Language } from "../i18n/language";
 
 export const APPROVED = false;
 // The day the words below last changed.
-export const LAST_CHANGED = "2026-11-22";
+export const LAST_CHANGED = "2026-11-23";
 
 // The legal name of whoever operates TRADER, and where a person writes about privacy.
 export const OPERATOR: string | null = "JPTEQ LLC";
@@ -44,7 +45,7 @@ export const PRIVACY: Record<Language, Document> = {
       {
         heading: "What is recorded",
         paragraphs: [
-          "About you, from your office: your name, the mobile number you sign in with, an email if the office gave one, and whether you are a worker or an admin. You can add a contact phone yourself.",
+          "About you, from your office: your name, the mobile number or the email you sign in with, whichever the office gave, and whether you are a worker or an admin. You can add a contact phone yourself.",
           "Your schedule: the shifts the office plans for you.",
           "Your hours: each time you clock in, clock out, switch jobsite, start a break or end one, the app records that it happened, on which jobsite, the time on your phone and the time the office's system received it, and whether the phone had a connection. These entries are never edited or deleted. If one is wrong, the office adds a correcting entry beside it, and both stay.",
           "For the office's own work: its customers' names and contact details, its jobsites and their addresses, its invoices and the payments it notes on them.",
@@ -70,8 +71,9 @@ export const PRIVACY: Record<Language, Document> = {
         paragraphs: [
           "TRADER runs on services from other companies, each doing one job and receiving only what that job needs:",
           "Clerk signs you in: it receives your mobile number or email and sends the code you type.",
+          "If you choose to sign in with Google or with Apple, that company confirms your email address to Clerk, and learns that you signed in to TRADER, under its own terms.",
           "Vercel runs the office's website and the system the app talks to, and Neon holds the database where the records are kept.",
-          "Resend delivers an invoice by email when the office sends one: it receives the customer's email address and the invoice.",
+          "Resend delivers an invoice by email when the office sends one, and an invitation when the office emails one: it receives the address and the message.",
           "Sentry receives error reports when something in the office or the app fails, so it can be fixed. A report describes the failure and the version of the software. It is built to carry no name, phone number, position or entry. When a report comes from the app, Sentry sees the internet address it arrives from, as any service does, and keeps the city that address suggests, not the address.",
           "The app itself reaches your phone through Apple's or Google's store, under their own terms.",
         ],
@@ -106,7 +108,7 @@ export const PRIVACY: Record<Language, Document> = {
       {
         heading: "Qué se anota",
         paragraphs: [
-          "Sobre ti, de parte de tu oficina: tu nombre, el número de celular con el que inicias sesión, un correo si la oficina dio uno, y si eres trabajador o administrador. Tú puedes agregar un teléfono de contacto.",
+          "Sobre ti, de parte de tu oficina: tu nombre, el número de celular o el correo con el que inicias sesión, el que la oficina haya dado, y si eres trabajador o administrador. Tú puedes agregar un teléfono de contacto.",
           "Tu horario: los turnos que la oficina planea para ti.",
           "Tus horas: cada vez que marcas entrada, marcas salida, cambias de obra, empiezas un descanso o lo terminas, la aplicación anota que pasó, en qué obra, la hora de tu teléfono y la hora en que el sistema de la oficina lo recibió, y si el teléfono tenía conexión. Estos registros nunca se editan ni se borran. Si uno está mal, la oficina agrega al lado un registro que lo corrige, y los dos se conservan.",
           "Para el trabajo de la oficina: los nombres y datos de contacto de sus clientes, sus obras y sus direcciones, sus facturas y los pagos que anota en ellas.",
@@ -132,8 +134,9 @@ export const PRIVACY: Record<Language, Document> = {
         paragraphs: [
           "TRADER funciona con servicios de otras empresas, cada una con una sola tarea y recibiendo solo lo que esa tarea necesita:",
           "Clerk te inicia la sesión: recibe tu número de celular o tu correo y envía el código que escribes.",
+          "Si eliges iniciar sesión con Google o con Apple, esa empresa confirma tu correo a Clerk, y se entera de que iniciaste sesión en TRADER, bajo sus propios términos.",
           "Vercel ejecuta el sitio de la oficina y el sistema con el que habla la aplicación, y Neon tiene la base de datos donde se guardan los registros.",
-          "Resend entrega una factura por correo cuando la oficina la envía: recibe el correo del cliente y la factura.",
+          "Resend entrega una factura por correo cuando la oficina la envía, y una invitación cuando la oficina la manda por correo: recibe la dirección y el mensaje.",
           "Sentry recibe informes de error cuando algo falla en la oficina o en la aplicación, para poder arreglarlo. Un informe describe la falla y la versión del programa. Está hecho para no llevar ningún nombre, número de teléfono, posición ni registro. Cuando un informe viene de la aplicación, Sentry ve la dirección de internet de la que llega, como cualquier servicio, y guarda la ciudad que esa dirección sugiere, no la dirección.",
           "La aplicación llega a tu teléfono por la tienda de Apple o de Google, bajo sus propios términos.",
         ],

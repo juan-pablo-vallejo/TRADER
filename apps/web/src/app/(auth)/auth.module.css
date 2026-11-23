@@ -154,6 +154,22 @@
   font-size: var(--home-small);
   line-height: var(--home-small-line);
 }
+/* "or", between Google's way and the code's: a word on a rule. */
+.or {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  color: var(--ink-secondary);
+  font-size: 14px;
+}
+.or::before,
+.or::after {
+  flex: 1;
+  height: var(--hairline);
+  background: var(--border);
+  content: "";
+}
 .send {
   min-height: var(--home-control);
   margin-top: var(--space-4);

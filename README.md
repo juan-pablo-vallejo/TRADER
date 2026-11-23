@@ -194,7 +194,15 @@ Once, in this order.
    or its phone number, from their own side. Left on, anyone signed in, a holder of the
    Demo code included, could have Clerk text a code to a number of their choosing, or
    delete a login the office gave. The dashboard and the server's key still change them.
-   Test mode is off.
+   Test mode is off. Under User & authentication, Phone, a number is not required at
+   sign-up: the office invites by number, by email, or by both. Under SSO connections,
+   Google is on for all users with credentials of its own, which a production instance
+   must have: in Google Cloud, an OAuth client of type Web application whose authorized
+   redirect URI is the one Clerk shows for the connection, with the consent screen's
+   publishing status In production; its client ID and secret go into Clerk and nowhere
+   else. Sign-in asks Google for a name and an email only, which needs none of
+   Google's app verification; showing the app's own name and logo on Google's screen
+   needs its brand verification (both read on Google's pages, 2026-11-23).
 4. **Vercel.** Production project: domains `app.jpteq.app` and
    `dsierrapainting.jpteq.app`, each with its DNS record in Cloudflare, and `jpteq.app`
    and `www` redirecting to `app.jpteq.app`; a deploy hook for `production`; one firewall

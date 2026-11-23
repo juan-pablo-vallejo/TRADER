@@ -36,6 +36,25 @@ export function returnPath(redirectUrl: string | string[] | undefined): string {
     : OFFICE_HOME;
 }
 
+// Where the browser comes back to from Google when the sign-in was not finished there
+// (sign-in/sso-callback/page.tsx), carrying where the person was going; and the sign-in
+// page as it is shown to someone whose Google account no roster holds.
+export const SSO_CALLBACK_PATH = "/sign-in/sso-callback";
+const carrying = (path: string, returnTo: string, more = ""): string => {
+  const query = [
+    more,
+    isReturnPath(returnTo) && returnTo !== OFFICE_HOME
+      ? `redirect_url=${encodeURIComponent(returnTo)}`
+      : "",
+  ].filter((part) => part !== "");
+  return query.length === 0 ? path : `${path}?${query.join("&")}`;
+};
+export const ssoCallbackFrom = (returnTo: string): string =>
+  carrying(SSO_CALLBACK_PATH, returnTo);
+export const GOOGLE_REFUSED = "google";
+export const signInRefused = (returnTo: string): string =>
+  carrying(SIGN_IN_PATH, returnTo, `refused=${GOOGLE_REFUSED}`);
+
 // The way back to the homepage from sign-in. Where a deployment names the host whose `/`
 // is the homepage (TRADER_HOME_HOST, server/addresses.ts), that host: on any other, `/`
 // goes to the office, and the link would only come back here. Where it names none, `/`.

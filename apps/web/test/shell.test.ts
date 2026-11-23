@@ -93,6 +93,15 @@ describe("the three layouts", () => {
       expect(existsSync(web(`public/fonts/${file}`)), file).toBe(true);
       expect(read("brand-fonts.css")).toContain(`url("/fonts/${file}")`);
     }
+    // And Google's own, for its button on sign-in: the same way, its licence kept.
+    expect(existsSync(web("public/fonts/GoogleSans-latin-500-5.3.2.woff2"))).toBe(true);
+    expect(read("brand-fonts.css")).toContain(
+      'url("/fonts/GoogleSans-latin-500-5.3.2.woff2")',
+    );
+    expect(read("fonts/GoogleSans-LICENSE.txt")).toContain("SIL Open Font License");
+    for (const license of ["BodoniModa-LICENSE.txt", "Inter-LICENSE.txt"]) {
+      expect(read(`fonts/${license}`), license).toContain("SIL Open Font License");
+    }
     const importers = ["(public)/page.tsx", "(auth)/sign-in-frame.tsx"];
     for (const file of importers) {
       expect(read(file), file).toContain('import "../brand-fonts.css";');
