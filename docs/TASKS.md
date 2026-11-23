@@ -1100,7 +1100,7 @@ Android user.
       the account's name among them (`report-event.ts` passes any path with no white
       space). A store or preview build's frames name the bundle only. To weigh: keep a
       frame's file name only where it begins `app://`.
-- [ ] The homepage redesigned, by the owner's word of 2026-11-22: it is the first thing a
+- [x] The homepage redesigned, by the owner's word of 2026-11-22: it is the first thing a
       customer of D'Sierra's sees, and it read as an unstyled document. Still one page,
       and Call and Email are still all a customer can do on it. A navy header that stays,
       with the language and Team sign-in in it; a photo, the headline and where they
@@ -1114,6 +1114,16 @@ Android user.
       served by the app, and red is Call and nothing else: on the navy it is 2.63:1, so it
       never sits there. Done when seen on staging at 390 and 1440 in both languages,
       loading nothing from another host.
+      Seen on staging at `cdd8dea` on 2026-11-23, signed out, at 390 and 1440 in English
+      and in Spanish: nothing scrolls sideways, all twenty photos load, as AVIF, with
+      their blurred stand-ins, and a browser with no session asked only staging's own
+      host, with a clean console. By keyboard at 1440: every control in order, a white
+      ring on the navy and a red one elsewhere; the viewer steps by arrow key, closes on
+      Escape and gives the focus back to its photo. Under reduced motion nothing moves.
+      `/get`, the policy and the terms measure as they did at 390 and 1280. Lighthouse
+      13.6.0 there: mobile 96 to 99 over five runs, the largest paint (simulated, slow 4G)
+      2.1 to 2.7 s with 2.4 the median; desktop 100 three times; accessibility, best
+      practices and SEO 100 on both, and no layout shift.
 - [ ] Its words. D'Sierra's paragraph is said in parts, adding nothing, with three
       things that are the owner's and not theirs: "Serving Rhode Island and upper New
       England" (2026-11-22; they have sent no service area), "In business" under "Since
@@ -1134,15 +1144,32 @@ Android user.
 - [ ] The rule on a photo of work under way changes, by the owner's word of 2026-11-22:
       the crew at work may be shown, never a face. The colonial house's "before" shows a
       painter from behind; the ceiling's, a painter under a spray hood.
-- [ ] A public page's policy now admits a `style` attribute and nothing else inline
+- [x] A public page's policy now admits a `style` attribute and nothing else inline
       (`style-src-attr 'unsafe-inline'`): next/image draws a photo's blurred
       stand-in as one. The owner's choice of 2026-11-22, over leaving the policy whole
       and holding a photo's place with a tint. Photos are served as AVIF, then WebP
       (`next.config.ts`), by his word of 2026-11-23: Vercel bills image optimization by
       use on this plan ($0.05 per 1,000 transformations, `vercel pricing`), and each size
-      is now made twice.
+      is now made twice. Read from staging's response at `cdd8dea`: `style-src 'self'`
+      and `style-src-attr 'unsafe-inline'`, and the photos arrive as `image/avif`.
 - [ ] To weigh: camera originals in place of the Facebook copies, most of all the three
       at 720 by 960; and a version of the mark with no white behind it, for the header.
+- [x] Fonts, found while measuring the homepage. The office's Inter is 352 KB, every
+      script the typeface draws, and the root layout preloaded it on every page: on the
+      homepage it was most of what stood before the first photo on a slow connection
+      (mobile Lighthouse 86, and 98 with that one request blocked). By the owner's choice
+      of 2026-11-23, the narrowest of three: no page preloads it, the office fetches it
+      when its stylesheet asks, and the homepage reads Inter's Latin cut, 48 KB. This
+      build's font manifest lists every preloadable font under every page, so a
+      next/font preload is on every route or on none: the homepage's two fonts are files
+      in `apps/web/public/fonts` instead, and the page writes the one preload itself.
+      Read from staging at `cdd8dea`: only `/` preloads a font; `/get`, `/privacy` and
+      `/today` fetch the office's Inter and draw in it.
+- [ ] To weigh: `/favicon.ico` answers with the 2048 px logo, 234 KB, to every first
+      visit of any page (seen among the homepage's requests in Lighthouse).
+- [ ] To weigh, on the homepage: at 768 px and wider the three before-and-after strips
+      are still keyboard stops though nothing scrolls there; and in English at 390, if
+      the headline's font is late, the headline draws in four lines and then three.
 
 ## After MVP
 
