@@ -40,7 +40,8 @@ describe("the three layouts", () => {
       // Sign-in too: a server with no Clerk keys serves it under the policy that admits
       // no inline style at all, so its two pictures are plain <img> as the logo is.
       "(auth)/sign-in-frame.tsx",
-      "(auth)/sign-in/[[...sign-in]]/page.tsx",
+      "(auth)/sign-in/page.tsx",
+      "(auth)/sign-in/sign-in-form.tsx",
     ]) {
       expect(read(file), file).not.toMatch(/style=\{|<style\b|dangerouslySetInnerHTML/);
     }
@@ -59,7 +60,7 @@ describe("the three layouts", () => {
     // Nor anything of sign-in's own page: this layout is also around the not-found screen
     // /sign-in answers under the development identity, which must not wear its frame.
     expect(auth).not.toMatch(/data-brand|auth\.module|import [^;]*sign-in-frame/);
-    expect(read("(auth)/sign-in/[[...sign-in]]/page.tsx")).toContain("<SignInFrame>");
+    expect(read("(auth)/sign-in/page.tsx")).toContain("<SignInFrame>");
   });
 
   it("puts every office screen in the office's layout", () => {
@@ -76,7 +77,7 @@ describe("the three layouts", () => {
     ]) {
       expect(existsSync(at(`(office)/${screen}/page.tsx`)), screen).toBe(true);
     }
-    expect(existsSync(at("(auth)/sign-in/[[...sign-in]]/page.tsx"))).toBe(true);
+    expect(existsSync(at("(auth)/sign-in/page.tsx"))).toBe(true);
   });
 
   it("serves the font from the app itself, with its license beside it", () => {

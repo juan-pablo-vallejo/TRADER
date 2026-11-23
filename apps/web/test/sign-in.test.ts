@@ -4,7 +4,7 @@
 // states draw JSX, which this suite does not render; they are checked in the browser.
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import SignInPage from "../src/app/(auth)/sign-in/[[...sign-in]]/page";
+import SignInPage from "../src/app/(auth)/sign-in/page";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -16,6 +16,8 @@ const NOT_FOUND = /NEXT_HTTP_ERROR_FALLBACK;404/;
 describe("/sign-in", () => {
   it("is not found under the development identity", async () => {
     vi.stubEnv("TRADER_DEV_IDENTITY", "enabled");
-    await expect(SignInPage()).rejects.toThrow(NOT_FOUND);
+    await expect(SignInPage({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+      NOT_FOUND,
+    );
   });
 });

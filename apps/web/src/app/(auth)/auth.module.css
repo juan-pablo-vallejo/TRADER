@@ -1,9 +1,10 @@
-/* Sign-in, the homepage's next page ((auth)/sign-in-frame.tsx). D'Sierra's navy beside the form on
-   white: at a phone's width the navy is a header over the form; from 900 px it is a panel
-   with one of their photos and the homepage's headline. Their red is the form's one main
-   button, which Clerk draws (sign-in/sign-in-appearance.ts), and it never sits on navy:
-   2.63:1. Every color, and every size it shares with the homepage, is a token of
-   theme.css's `[data-brand]` block; a test holds this sheet to that (test/theme.test.ts). */
+/* Sign-in, the homepage's next page ((auth)/sign-in-frame.tsx) and its form
+   (sign-in/sign-in-form.tsx). D'Sierra's navy beside the form on white: at a phone's width
+   the navy is a header over the form; from 900 px it is a panel with one of their photos
+   and the homepage's headline. Their red is the form's one main button, on white, and it
+   never sits on navy: 2.63:1. Every color, and every size it shares with the homepage, is
+   a token of theme.css's `[data-brand]` block; a test holds this sheet to that
+   (test/theme.test.ts). */
 .page {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -98,24 +99,13 @@
   margin: 0 auto;
   padding: var(--space-6) var(--home-gutter) var(--home-gap);
 }
-/* Where Clerk's form mounts. Its height is held from the first paint, at the tallest of
-   the form's steps, so nothing beneath it moves when the form arrives or changes step. */
-.mount {
-  position: relative;
-  min-height: 420px;
+/* The form: its heading, a line of help, one field, one main button. Their red is that
+   button and nothing else on the page, on white: it never sits on navy (2.63:1). */
+.fields {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
 }
-/* What stands there until it does, lying over the form's empty place, and gone the moment
-   Clerk has drawn its card (`cl-cardBox`, one of the class names Clerk keeps stable). */
-.waiting {
-  position: absolute;
-  inset: 0 0 auto;
-}
-.mount:has(:global(.cl-cardBox)) .waiting {
-  display: none;
-}
-/* Its parts, and what is said where sign-in is not set up: the same heading and helper
-   at the same sizes (sign-in-appearance.ts), then the field's and the button's
-   places. */
 .heading {
   color: var(--navy-700);
   font-family: var(--font-display);
@@ -128,15 +118,87 @@
   margin-top: var(--space-1);
   color: var(--ink-secondary);
 }
-.place {
-  height: var(--home-control);
+.label {
   margin-top: var(--space-6);
-  border-radius: var(--radius-card);
-  background: var(--navy-50);
+  font-size: var(--home-small);
+  font-weight: 600;
+  line-height: var(--home-small-line);
 }
-.place + .place {
+/* 52 px to press, and 18 px text: under 16 px an iPhone zooms the page on focus. */
+.field {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--home-control);
+  margin-top: var(--space-1);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+}
+.field[aria-invalid="true"] {
+  border-color: var(--problem-ink);
+}
+/* The code: six digits, set apart so each can be checked against the message. */
+.code {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+.problem {
+  margin-top: var(--space-2);
+  color: var(--problem-ink);
+  font-size: var(--home-small);
+  line-height: var(--home-small-line);
+}
+.send {
+  min-height: var(--home-control);
   margin-top: var(--space-4);
-  background: var(--navy-100);
+  padding: 0 var(--space-6);
+  border: 0;
+  border-radius: var(--radius-card);
+  background: var(--red-600);
+  color: var(--surface);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.send:hover {
+  background: var(--red-700);
+}
+.send:active {
+  background: var(--red-800);
+}
+.send:disabled,
+.textButton:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+/* What else can be done on a step: a button that reads as a link, 48 px tall. */
+.textButton {
+  align-self: flex-start;
+  min-height: 48px;
+  margin-top: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--navy-700);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.send + .textButton {
+  margin-top: var(--space-4);
+}
+.textButton + .textButton {
+  margin-top: 0;
 }
 
 /* Trouble signing in? Always under the form; it opens in place. */

@@ -7,8 +7,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { SIGN_IN_COLORS } from "../src/app/(auth)/sign-in/sign-in-appearance";
-
 const read = (path: string) =>
   readFileSync(fileURLToPath(new URL(path, import.meta.url)), "utf8");
 
@@ -205,48 +203,56 @@ describe("the homepage's scale", () => {
     expect(home).toMatch(
       /\.header :focus-visible,\s*\.footer :focus-visible,\s*\.viewer :focus-visible \{\s*outline-color: var\(--surface\);/,
     );
-    // Sign-in's own sheet names no red at all: its one red thing is the form's main
-    // button, which Clerk draws on white, and its navy panel's focus ring is white too.
+    // Sign-in's sheet: the same rule. Its one red thing is the form's main button, on
+    // white; nothing that paints navy, and nothing of the panel, names a red; and the
+    // panel's focus ring is white.
+    const authRules = [...auth.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+      (m) => [m[1]!.trim(), m[2]!] as const,
+    );
+    expect(authRules.length).toBeGreaterThan(30);
+    const reds = authRules.filter(([, body]) => /--red-/.test(body)).map(([sel]) => sel);
+    expect(reds.map((sel) => sel.replace(/\/\*[^]*?\*\/\s*/g, ""))).toEqual([
+      ".send",
+      ".send:hover",
+      ".send:active",
+    ]);
+    for (const [selector, body] of authRules) {
+      const onNavy =
+        /background:\s*var\(--navy-(700|900)\)/.test(body) ||
+        /\.(panel|brand|mark|picture|line|home)\b/.test(selector);
+      if (onNavy) expect([selector, /--red-/.test(body)]).toEqual([selector, false]);
+    }
     expect(auth).toMatch(/background: var\(--navy-700\)/);
-    expect(auth).not.toMatch(/--red-|var\(--brand\)/);
     expect(auth).toMatch(/\.panel :focus-visible \{\s*outline-color: var\(--surface\);/);
   });
 
-  it("hands Clerk's form the same colors, as the literals it needs", () => {
-    // sign-in-appearance.ts says why they are literals. Each is a token of this scale or
-    // of the palette, so the form cannot drift from the page around it.
-    const upper = Object.fromEntries(
-      Object.entries(SIGN_IN_COLORS).map(([name, hex]) => [name, hex.toUpperCase()]),
-    );
-    expect(upper).toEqual({
-      red600: color("red-600"),
-      red700: color("red-700"),
-      red800: color("red-800"),
-      navy700: color("navy-700"),
-      ink: color("ink"),
-      inkSecondary: color("inkSecondary"),
-      controlBorder: color("controlBorder"),
-      problemInk: color("problemInk"),
-      surface: color("surface"),
-    });
-    // The button's label on each of its reds, an error's words and the helper on white.
+  it("keeps what the sign-in form pairs at its contrast", () => {
+    // The button's words on each of its reds, the heading and links, an error and the
+    // helper on white, and the field's edge.
     for (const [ink, ground] of [
-      ["surface", "red600"],
-      ["surface", "red700"],
-      ["surface", "red800"],
-      ["navy700", "surface"],
+      ["surface", "red-600"],
+      ["surface", "red-700"],
+      ["surface", "red-800"],
+      ["navy-700", "surface"],
       ["problemInk", "surface"],
       ["inkSecondary", "surface"],
+      ["ink", "surface"],
     ] as const) {
-      expect([
+      expect([ink, ground, contrast(color(ink), color(ground)) >= 4.5]).toEqual([
         ink,
         ground,
-        contrast(SIGN_IN_COLORS[ink], SIGN_IN_COLORS[ground]) >= 4.5,
-      ]).toEqual([ink, ground, true]);
+        true,
+      ]);
     }
-    expect(
-      contrast(SIGN_IN_COLORS.controlBorder, SIGN_IN_COLORS.surface),
-    ).toBeGreaterThanOrEqual(3);
+    expect(contrast(color("controlBorder"), color("surface"))).toBeGreaterThanOrEqual(3);
+    for (const token of [
+      "--red-600",
+      "--navy-700",
+      "--problem-ink",
+      "--control-border",
+    ]) {
+      expect([token, auth.includes(`var(${token})`)]).toEqual([token, true]);
+    }
   });
 
   it("names a token for every color: neither stylesheet holds a color of its own", () => {
@@ -256,7 +262,7 @@ describe("the homepage's scale", () => {
   });
 
   it("gives the browser's own bar the header's navy, on the homepage and on sign-in", () => {
-    for (const file of ["(public)/page.tsx", "(auth)/sign-in/[[...sign-in]]/page.tsx"]) {
+    for (const file of ["(public)/page.tsx", "(auth)/sign-in/page.tsx"]) {
       const page = read(`../src/app/${file}`);
       expect([file, page.toUpperCase()]).toEqual([
         file,

@@ -32,7 +32,7 @@ export function ClerkSignOut() {
 }
 
 // The way in for a person found signed out here: sign-in, told where they were, so
-// Clerk's form returns them to this screen with its filters as the address holds them.
+// the sign-in page returns them to this screen with its filters as the address holds them.
 function useSignInHref(): string {
   const path = usePathname();
   const query = useSearchParams().toString();

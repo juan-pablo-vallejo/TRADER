@@ -7,22 +7,33 @@ export const SIGN_IN_PATH = "/sign-in";
 // Where a signed-in person lands: the office's first screen. `/` is the public homepage.
 export const OFFICE_HOME = "/today";
 
-// The sign-in link for a person the office found signed out at `path` (its path and
-// query): Clerk's form sends them back there once they are in, by its own `redirect_url`,
-// which it reads ahead of the fallback (OFFICE_HOME). Only a path of this origin is kept:
-// one leading slash, no backslash and no control character, so nothing a browser could
-// read as another host; and never sign-in itself. Anything else is the plain link.
-export function signInFrom(path: string): string {
-  const printable = [...path].every((character) => {
+// A place in the office a person can be sent back to after signing in: a path of this
+// origin and nothing else. One leading slash, no backslash and no control character, so
+// nothing a browser could read as another host; and never sign-in itself.
+const isReturnPath = (path: string): boolean =>
+  /^\/(?!\/)/.test(path) &&
+  [...path].every((character) => {
     const code = character.charCodeAt(0);
     return code > 31 && code !== 127 && character !== "\\";
-  });
-  const here =
-    /^\/(?!\/)/.test(path) &&
-    printable &&
-    !/^\/sign-in(?:[/?#]|$)/.test(path) &&
-    path !== OFFICE_HOME;
-  return here ? `${SIGN_IN_PATH}?redirect_url=${encodeURIComponent(path)}` : SIGN_IN_PATH;
+  }) &&
+  !/^\/sign-in(?:[/?#]|$)/.test(path);
+
+// The sign-in link for a person the office found signed out at `path` (its path and
+// query): the sign-in page reads it back (`returnPath`) and sends them there once they are
+// in. Today needs no saying, and anything that is not a path here is the plain link.
+export function signInFrom(path: string): string {
+  return isReturnPath(path) && path !== OFFICE_HOME
+    ? `${SIGN_IN_PATH}?redirect_url=${encodeURIComponent(path)}`
+    : SIGN_IN_PATH;
+}
+
+// Where the sign-in page sends a person once they are in: the `redirect_url` its address
+// carries, if that is a path of this origin, else Today. The value is whatever a link
+// said, so it is held to the same rule as the link that wrote it.
+export function returnPath(redirectUrl: string | string[] | undefined): string {
+  return typeof redirectUrl === "string" && isReturnPath(redirectUrl)
+    ? redirectUrl
+    : OFFICE_HOME;
 }
 
 // The way back to the homepage from sign-in. Where a deployment names the host whose `/`

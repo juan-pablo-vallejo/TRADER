@@ -1,3 +1,4 @@
+import { esMX } from "@clerk/localizations";
 import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";
 import type { ReactNode } from "react";
@@ -6,8 +7,7 @@ import { clerkEnv } from "../server/clerk-env";
 import { NONCE_HEADER } from "../server/csp";
 import { identityMode } from "../server/identity-mode";
 import { OFFICE_HOME, SIGN_IN_PATH } from "../server/sign-in-paths";
-import { clerkWords } from "./i18n/clerk-words";
-import { requestStrings } from "./i18n/server";
+import { requestLanguage } from "./i18n/server";
 import { Providers } from "./providers";
 
 // What the office and the sign-in page share and the public pages never load: the query
@@ -23,9 +23,10 @@ export async function SessionFrame({ children }: { children: ReactNode }) {
   const env = identityMode(process.env) === "clerk" ? clerkEnv(process.env) : null;
   const inside = <Providers clerk={env !== null}>{children}</Providers>;
   if (env === null) return inside;
-  // Clerk's own form and messages, in the person's language and, where the sign-in page
-  // says a thing its own way, in the office's words (i18n/clerk-words.ts).
-  const { t, language } = await requestStrings();
+  // What Clerk draws itself, in the person's language: the sign-in form is the office's
+  // own, so that is only what Clerk shows over the office when it must ask again. English
+  // is Clerk's default; its Spanish is the Latin American one, as the crew's is.
+  const language = await requestLanguage();
   return (
     <ClerkProvider
       publishableKey={env.publishableKey}
@@ -33,7 +34,7 @@ export async function SessionFrame({ children }: { children: ReactNode }) {
       // Clerk's SDK reports usage to a host of its own from a development instance;
       // the policy admits no such host, and nothing here needs it sent.
       telemetry={false}
-      localization={clerkWords(language, t)}
+      localization={language === "es" ? esMX : undefined}
       signInUrl={SIGN_IN_PATH}
       signInFallbackRedirectUrl={OFFICE_HOME}
       afterSignOutUrl={SIGN_IN_PATH}

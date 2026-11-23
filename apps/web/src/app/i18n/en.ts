@@ -503,25 +503,29 @@ export const en = {
   signInToContinue: "Sign in to continue.",
   notOnRoster: "This sign-in is not on a roster. Ask your office.",
   signInNotSetUp: "Sign-in is not set up on this server.",
-  // The sign-in page ((auth)/sign-in-frame.tsx) and the words Clerk's own form says there
-  // (i18n/clerk-words.ts puts each under Clerk's key). The same thing has the same name
-  // in the phone app (apps/mobile/src/i18n). The form's main button stays Clerk's
-  // "Continue": it is one label for every one of its steps.
+  // The sign-in page ((auth)/sign-in-frame.tsx) and its form (sign-in/sign-in-form.tsx):
+  // one field for a mobile number or an email, then the code. The same thing has the same
+  // name in the phone app (apps/mobile/src/i18n).
   signInForm: {
-    helper: "Enter your mobile number. We'll text you a code.",
-    mobileNumber: "Mobile number",
-    // In the empty field. Clerk's own, "Enter your phone number", is cut short at a
-    // phone's width in Spanish.
-    numberHint: "10 digits",
-    useEmail: "Use email instead",
-    usePhone: "Use phone instead",
+    helper: "Enter your mobile number or email. We'll send you a code.",
+    address: "Mobile number or email",
+    send: "Send me a code",
+    sending: "Sending…",
+    badAddress: "Enter a ten-digit mobile number or an email address.",
     codeTitle: "Enter the code",
-    codeTexted: "We texted it to this number.",
-    codeEmailed: "We emailed it to this address.",
-    resend: "No code yet? Send another",
-    textCodeTo: "Text a code to {{identifier}}",
-    emailCodeTo: "Email a code to {{identifier}}",
+    codeTexted: (number: string) => `We texted it to ${number}.`,
+    codeEmailed: (address: string) => `We emailed it to ${address}.`,
+    code: "Code",
+    checking: "Checking…",
+    resend: "Send another code",
+    resendIn: (seconds: number) => `Send another code in ${seconds} s`,
+    change: "Use a different number or email",
     codeWrong: "That code did not work. Check it, or ask for a new one.",
+    codeExpired: "That code has expired. Ask for a new one.",
+    tooMany: "Too many tries. Wait a few minutes, then try again.",
+    locked: "This sign-in is locked for now. Try again later, or ask your office.",
+    failed: "That did not work. Check your connection and try again.",
+    unfinished: "Sign-in could not finish here. Ask your office.",
     trouble: "Trouble signing in?",
     troubleNoCode:
       "No code yet? Wait 30 seconds, then ask for a new one. You can also use your email if the office has it.",

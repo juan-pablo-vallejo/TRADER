@@ -106,18 +106,13 @@ async function signIn(page: Page, phone: string, ticket: string): Promise<void> 
     });
     return;
   }
-  // Clerk's own form: the number, Continue, then the six-digit code, which submits itself.
+  // The office's own form: the number in its one field, Send me a code, then the
+  // six-digit code, which submits itself.
   await page.goto("/sign-in");
   const identifier = page.locator('input[name="identifier"]');
   await identifier.waitFor({ state: "visible", timeout: 60_000 });
-  // The form opens on the number: the sign-in page starts it there (its page.tsx).
-  await expect(identifier).toHaveAttribute("type", "tel");
-  // The field shows a country code of its own: type the national number.
-  await identifier.fill(phone.replace(/^\+1/, ""));
-  // Enter straight after the last digit is refused as an invalid identifier; the button a
-  // moment later is not.
-  await page.waitForTimeout(500);
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
+  await identifier.fill(phone);
+  await page.getByRole("button", { name: "Send me a code", exact: true }).click();
   const code = page.locator('input[autocomplete="one-time-code"]').first();
   await code.waitFor({ state: "visible", timeout: 30_000 });
   await code.pressSequentially(CLERK_TEST_CODE, { delay: 80 });
