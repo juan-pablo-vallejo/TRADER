@@ -11,7 +11,7 @@ import styles from "./shell.module.css";
 export function Logo() {
   const { props } = getImageProps({
     src: logo,
-    alt: "D Sierra Painting",
+    alt: "D'Sierra Painting",
     width: 160,
     height: 160,
     priority: true,

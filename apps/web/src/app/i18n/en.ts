@@ -15,6 +15,8 @@ export const en = {
   call: (number: string) => `Call ${number}`,
   emailUs: (address: string) => `Email ${address}`,
   photos: "Our work",
+  // Under a photo of work under way, which carries the finished job beside it.
+  swipeFinished: "Swipe to see it finished",
   get: {
     title: "Get the TRADER app",
     explain: "The app your office invited you to: your week, and clocking in and out.",

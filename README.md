@@ -253,7 +253,7 @@ Once, in this order.
 
    ```sh
    DATABASE_URL="${OWNER_URL:?paste it again, as in step 2}" pnpm --filter @trader/db onboard \
-     --company 'D Sierra Painting' --timezone America/New_York --next-invoice <n> \
+     --company "D'Sierra Painting LLC" --timezone America/New_York --next-invoice <n> \
      --admin-name '<name>' --admin-phone +1XXXXXXXXXX
    DATABASE_URL="${OWNER_URL:?paste it again, as in step 2}" pnpm --filter @trader/db onboard \
      --company 'Demo' --timezone America/New_York --next-invoice 1 \

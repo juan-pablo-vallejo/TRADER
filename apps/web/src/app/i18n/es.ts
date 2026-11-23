@@ -15,6 +15,7 @@ export const es: Catalog = {
   call: (number) => `Llamar al ${number}`,
   emailUs: (address) => `Escribir a ${address}`,
   photos: "Nuestro trabajo",
+  swipeFinished: "Desliza para verlo terminado",
   get: {
     title: "Obtén la aplicación TRADER",
     explain:
