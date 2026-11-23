@@ -552,7 +552,7 @@ Android user.
   Done when tests walk one invoice through issue, a part payment and the final payment,
   and a second one past its due date to Overdue with no manual step.
 
-- [ ] 30. **The customer-ready invoice.** The only thing a customer of D Sierra sees.
+- [x] 30. **The customer-ready invoice.** The only thing a customer of D Sierra sees.
   - At issue the invoice takes a copy of what prints: the company's name, address, phone
     and email, and how to pay. An issued invoice's page never changes when Settings do
     (invariant 6). Today the PDF reads the company's name live; this ends that.
@@ -633,7 +633,7 @@ Android user.
       The first tries were refused by Clerk as "already signed in": a session from an
       earlier try was still in the simulator's keychain, which outlives a cleared app. The
       sign-in screen now signs a stale session out before a new sign-in, by either way in.
-- [ ] `labor.repair`'s answer still calls an entry's flags `reasons`
+- [x] `labor.repair`'s answer still calls an entry's flags `reasons`
       (`packages/api/src/labor/repair.ts`); item 4 named the push acknowledgement and the
       phone's outbox only. Rename it with item 16, which rebuilds its one screen.
 - [x] Item 7 on staging by eye, 2026-11-19: every office screen at 390, 768 and 1280, in a
@@ -741,7 +741,7 @@ Android user.
 - [ ] Item 17: a form's field that should take the focus when a side panel opens is marked
       `data-autofocus`; React's `autoFocus` loses to the dialog's own first-control focus.
 
-- [ ] OWNER, item 18 (gate 6): the homepage holds D Sierra's name, their logo and the two
+- [x] OWNER, item 18 (gate 6): the homepage holds D Sierra's name, their logo and the two
       buttons, and nothing else, until their words, numbers and photos arrive. They go in
       one file, `apps/web/src/app/(public)/home-content.ts`; a part left empty draws nothing.
 - [ ] OWNER, item 18: `/get` says "ask your office" for both phones on staging, because
@@ -828,7 +828,7 @@ Android user.
 - [ ] Item 29: Paid this month counts payments by the day the office typed as paid, in the
       company's calendar month, not by the day they were recorded.
 
-- [ ] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
+- [x] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
       send one invoice from staging to an allow-listed inbox (invoice 4 is ready: open it,
       Send) and confirm it arrived with its PDF. Seen on staging: Settings filled with
       fictional words and terms of 15 days, invoice 4 issued after and printing the
@@ -915,7 +915,7 @@ Android user.
       `eas.json` is read on the runner and handed to EAS Submit with that one submission; it
       is not saved among the account's credentials. Expo's machines do the upload, so they
       hold it for as long as the submission runs.
-- [ ] OWNER, item 13: EAS's `preview` environment still needs its three plain-text
+- [x] OWNER, item 13: EAS's `preview` environment still needs its three plain-text
       variables, `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` and
       `EXPO_PUBLIC_SENTRY_DSN`. The session was blocked from creating them and from reading
       `.env.staging` for the first two. `eas env:create` is deprecated in the CLI installed
@@ -989,6 +989,51 @@ Android user.
       the script names no alias, user or address. It, its audit and its ledger helpers are
       guard files: `guard.mjs` covers their paths and `release-auditor` flags a change to
       them. Workflow, not product.
+
+- [x] Gate 6 arrived on 2026-11-22: D Sierra's paragraph, two contacts, their address,
+      their capability statement, and their word that the photos may come from their
+      socials. On the homepage, each by the owner's word of that day: the name as they
+      write it, D'Sierra Painting; their paragraph as sent, and a Spanish translation of
+      it; "Central Falls, RI", as their capability statement prints it, and not the street
+      address; (401) 286-9997 and dsierrapainting@gmail.com. The second contact they sent
+      is not public. Six photos from their Instagram, chosen with the owner, in
+      `assets/pics/`, resized and stripped of all metadata; none shows a face. Seen on
+      staging at 390 and 1280 in both languages: nothing scrolls sideways, every photo
+      loads, and the page asks only its own host.
+- [ ] By the owner's word of 2026-11-22, a photo of work under way is never shown alone.
+      The one on the homepage, a painter spraying a ceiling, carries the same ceiling
+      finished, from D Sierra's post six days later, on a strip that a swipe moves along;
+      its line is a link, for a mouse. CSS alone, no script. A photo's `finished` in
+      `home-content.ts` is how the next one is paired.
+- [ ] `assets/pics/home-exterior.jpg` shows a house number, 65, beside its door, and no
+      street. The owner saw it and kept the photo.
+- [ ] OWNER, item 21 (gate 7): the legal pages now name JPTEQ LLC as the operator and
+      `privacy@jpteq.app` as where to write, which the owner routed to his inbox. They
+      stay drafts: `APPROVED` is set on his "approved", after item 12 has been seen.
+- [x] Item 30: the owner saw the invoice email arrive with its PDF (2026-11-22).
+- [ ] Item 12: the app had no way to throw an error on purpose. In a staging build alone,
+      a long press on the build's number in Me sends one report through `report.ts` and
+      the screen says so. Seeing it waits on the owner's two preview builds by hand.
+- [ ] The gates on 2026-11-22. Checked: the Sentry project for the phone exists; EAS's
+      `preview` environment holds its four variables; `.env.staging` holds both suite
+      numbers, so `scripts/staging.sh look` signs in. On the owner's word: `EXPO_TOKEN` is
+      in GitHub's `staging` environment, one iPhone is registered, the Apple and Play
+      developer accounts exist, and the rate-limit rule on `/api` is published on the
+      staging project (first seen with the action Log, which holds nothing back). EAS
+      has no build of any profile yet.
+- [ ] OWNER: the owner's own login on staging. `apps/web/e2e/invite.run.ts` invites one
+      number as an admin through `roster.invite`, signed in by the suite's ticket; its
+      subcommand, `scripts/staging.sh invite <number> <name>`, is shown to the owner and
+      lands on his word. Not yet run against staging.
+- [ ] OWNER: the deploy job failed three runs in a row on 2026-11-22 with staging about
+      to serve the commit. Vercel's deploy hook gave no answer within the job's thirty
+      seconds; the deployment it had started appeared fifty seconds after the call.
+      Re-running the failed job once staging served the commit passed each time, smoke
+      test included. A longer limit on that one call (two minutes) is a change to
+      `.github/workflows/ci.yml`, shown to the owner.
+- [ ] A second Vercel project, `trader`, is connected to the repository beside
+      `trader-staging`: each push to `main` starts a deployment there that
+      `apps/web/vercel.json` cancels.
 
 ## After MVP
 
