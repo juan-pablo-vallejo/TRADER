@@ -4,20 +4,24 @@
 # into `production` is open, and any push whose new commits hold a secret (this repository
 # is public: a secret pushed is a secret published, and CI's scan comes after).
 # The record of greens is one line per tree in .git/trader/green, "<tree> check <when>
-# <where>", written when `pnpm check:ci` ends green on that exact tree.
+# <where>", written when `pnpm check:ci` ends green on that exact tree. A push to `main` whose
+# new commits touch the office's sign-in (CLERK_PATHS) also needs "<tree> clerk ...", written
+# by `scripts/staging.sh local` when the suite against real Clerk ends green on that tree.
 # Enabled once per clone:  git config core.hooksPath .githooks
 set -eu
 ledger=$(git rev-parse --git-common-dir)/trader/green
 top=$(git rev-parse --show-toplevel)
 zero=0000000000000000000000000000000000000000
+# What only the Clerk suite exercises: no unit test renders the sign-in.
+CLERK_PATHS='^apps/web/(src/app/\(auth\)/|src/.*/clerk-[^/]*\.tsx$|src/server/clerk-[^/]*\.ts$|src/server/directory\.ts$|e2e/clerk)'
 
 # A tree that differs from a checked one in Markdown alone needs no second check: of the
 # steps of `check`, only the format check reads a .md file, and it is run here on the files
 # that changed, as the commit holds them.
-markdown_only() { # <commit>
+markdown_only() { # <commit> <job>
   [ -s "$ledger" ] || return 1
   [ -x "$top/node_modules/.bin/prettier" ] || return 1
-  for green in $(awk '$2 == "check" { print $1 }' "$ledger" | tail -n 30 | sort -u); do
+  for green in $(awk -v job="$2" '$2 == job { print $1 }' "$ledger" | tail -n 30 | sort -u); do
     git cat-file -e "$green^{tree}" 2>/dev/null || continue
     changed=$(git diff --name-only "$green" "$1^{tree}") || continue
     if printf '%s\n' "$changed" | grep -qv '\.md$'; then continue; fi
@@ -56,9 +60,16 @@ while read -r _ local_sha remote_ref remote_sha; do
         exit 1
       fi
       tree=$(git rev-parse "$local_sha^{tree}")
-      if ! grep -qs "^$tree check " "$ledger" && ! markdown_only "$local_sha" </dev/null; then
+      if ! grep -qs "^$tree check " "$ledger" && ! markdown_only "$local_sha" check </dev/null; then
         echo "pre-push: no green check is recorded for tree $tree" >&2
         echo "          run the verify skill: it checks this tree and records it" >&2
+        exit 1
+      fi
+      # shellcheck disable=SC2086 # $range is two or four words, by design
+      if git log --format= --name-only $range | grep -qE "$CLERK_PATHS" &&
+        ! grep -qs "^$tree clerk " "$ledger" && ! markdown_only "$local_sha" clerk </dev/null; then
+        echo "pre-push: this push changes the office's sign-in, and no green Clerk suite is" >&2
+        echo "          recorded for tree $tree: scripts/staging.sh local" >&2
         exit 1
       fi
       if ! open=$(gh pr list --base production --state open --json number --jq length 2>/dev/null </dev/null); then

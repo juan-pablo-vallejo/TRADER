@@ -13,7 +13,9 @@ Read only. Nothing here changes staging, and nothing here reads production.
 2. **Deploy job.** `gh run list --workflow ci.yml --branch main --limit 5`, then
    `gh run view <id>` for the newest: `check`, then `deploy` (migrate, deploy hook, ready
    wait, browser smoke test). A run whose commit `main` has moved past ends green with
-   "not deployed" in its summary; read the newest run instead. Never `gh workflow run`.
+   "not deployed" in its summary; read the newest run instead. So does a run whose commit
+   adds only `apps/mobile/` and Markdown to what staging serves: staging then serves an
+   older commit than `main`, by design, and that is not a fault. Never `gh workflow run`.
    A red run: `gh run view <id> --log-failed`, and report the first failing step with the
    lines that say why. The log itself stays here.
 3. **Deployment.** `scripts/staging.sh ready` prints what `/api/ready` answers,

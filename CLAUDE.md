@@ -9,12 +9,17 @@ released). Where the code disagrees with them, the code is wrong: fix it, or sto
 
 1. Read `docs/TASKS.md`. Take the top open item.
 2. Build it. Run `pnpm check` until green.
-3. Commit and land it on `main`: a push, or a pull request you merge yourself.
-4. Watch `check` and the staging deploy (`gh run watch`). Red: fix it before anything else.
-5. See it working on staging: a browser for the office, a simulator for the phone.
-6. Tick the item. Next item.
+3. Commit locally, each tree green as rule 3 says. Notes in `docs/TASKS.md` ride along.
+4. Push a batch: the related items together, once, straight to `main`. Never push to find
+   out: a defect seen on staging is first reproduced as a failing local test.
+5. Watch `check` and the staging deploy (`gh run watch`). Red: fix it before anything else.
+   A batch of only `apps/mobile/` and Markdown deploys nothing, and staging then serves an
+   older commit than `main`, by design.
+6. See it working: on staging in a browser for the office; on the simulator and the
+   emulator for the phone. Collect everything wrong; one follow-up push at most.
+7. Tick the items. Next batch.
 
-Done means `check` green on `main`, deployed to staging, seen working there.
+Done means `check` green on `main`, deployed to staging where the batch deploys, seen working.
 
 ## Stop and ask the owner only for
 
@@ -53,7 +58,10 @@ read-only for you.
 2. The six invariants are never weakened.
 3. `main` stays green: `pnpm check` while building, and before every commit CI's own steps
    (`pnpm check:ci`, run by the `verify` skill) green on the exact tree. A green run on the
-   workstation counts when the tree committed is exactly the tree it checked.
+   workstation counts when the tree committed is exactly the tree it checked. A change to
+   the office's sign-in also needs `scripts/staging.sh local` green on that tree, on this
+   Mac; a change to the phone, its Maestro suite on the iPhone simulator and
+   `trader-ws android`.
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
    clock. Everything else gets ordinary tests.
 5. Every screen exists in English and Spanish. An invoice to a customer is in English.
@@ -70,5 +78,6 @@ read-only for you.
 
 Fictional data only. Reset, reseed or break it without asking. Its keys are in
 `.env.staging`, which git ignores. `scripts/staging.sh` uses them without showing them: its
-address, its readiness, the smoke test, and screenshots of the office to look at. Local
+address, its readiness, the smoke test, screenshots of the office to look at, and the
+office's sign-in run on this Mac against Clerk's development instance (`local`). Local
 development never connects to a deployed database.

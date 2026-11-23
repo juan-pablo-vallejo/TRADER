@@ -304,6 +304,25 @@ describe("the workflows and the staging key", () => {
       ...new Set([...text(file).matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1])),
     ].sort();
 
+  it("deploys staging unless the phone app and Markdown are all a commit adds", () => {
+    const changes = stepAt("id: changes");
+    // First, before anything is installed, and against what staging serves.
+    expect(deploy.indexOf("id: changes")).toBeLessThan(deploy.indexOf("pnpm install"));
+    expect(changes).toContain("/api/ready");
+    expect(changes).toContain("'^apps/mobile/|\\.md$'");
+    expect(changes).toContain('if [ "$TARGET" = staging ]');
+    expect(changes).not.toMatch(/pnpm|npm |npx|playwright|secrets\.(?!STAGING_URL\b)/);
+    // Every step after it waits on its answer: none migrates, deploys or tests alone.
+    const after = deploy.slice(deploy.indexOf(STEP, deploy.indexOf("id: changes")));
+    const steps = after.split(STEP).slice(1);
+    expect(steps.length).toBeGreaterThan(5);
+    for (const step of steps) {
+      expect(step, step.split("\n")[0]).toContain(
+        "steps.changes.outputs.deploy == 'true'",
+      );
+    }
+  });
+
   it("builds a preview by hand alone, with staging's Expo token and no store key", () => {
     const preview = text("preview-phone.yml");
     expect(secretsIn("preview-phone.yml")).toEqual(["EXPO_TOKEN", "STAGING_URL"]);

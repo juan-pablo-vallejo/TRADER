@@ -75,7 +75,8 @@ jobs:
       - run: pnpm test
 
   # One deploy per branch at a time, on a push alone: migrate, call the deploy hook, wait
-  # until the host serves this commit, then, on staging, the browser smoke test. The
+  # until the host serves this commit, then, on staging, the browser smoke test. On staging
+  # a commit that adds only the phone app or Markdown to what is served deploys nothing. The
   # environment hands this job its secrets; `production`'s admits the `production` branch
   # alone.
   deploy:
@@ -96,17 +97,47 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
+
+      # Staging alone: compared with the commit staging serves, not the push before it,
+      # because a run skipped as superseded leaves its commit to a later run, and that run
+      # must still deploy it. Nothing but apps/mobile/ and .md files between the two: staging
+      # keeps serving the older commit, by design. A served commit that cannot be read or
+      # fetched deploys. Production always deploys.
+      - name: What this commit adds to the one staging serves
+        id: changes
+        env:
+          STAGING_URL: ${{ secrets.STAGING_URL }}
+        run: |
+          set -euo pipefail
+          deploy=true
+          if [ "$TARGET" = staging ]; then
+            serving=$(curl -sS --max-time 10 "$STAGING_URL/api/ready" | jq -r '.commit // empty' 2>/dev/null || true)
+            if printf '%s' "$serving" | grep -Eqx '[0-9a-f]{40}' && [ "$serving" != "$SHA" ] &&
+              git fetch --no-tags --depth=1 origin "$serving" 2>/dev/null; then
+              changed=$(git diff --name-only "$serving" "$SHA")
+              if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qvE '^apps/mobile/|\.md$'; then
+                deploy=false
+                echo "- **not deployed**: since \`$serving\`, which staging serves, only the phone app and Markdown changed" >> "$GITHUB_STEP_SUMMARY"
+              fi
+            fi
+          fi
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
+
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        if: steps.changes.outputs.deploy == 'true'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.changes.outputs.deploy == 'true'
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.deploy == 'true'
 
       # The direct endpoint, as the database's owner. drizzle-kit refuses a deployed
       # database unless its caller states a purpose (packages/db/src/env.ts). Migrations
       # roll forward only, so a superseded run migrating is harmless.
       - name: Migrate the environment's database
+        if: steps.changes.outputs.deploy == 'true'
         env:
           STAGING_MIGRATOR_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
           PRODUCTION_MIGRATOR_URL: ${{ secrets.PRODUCTION_MIGRATOR_URL }}
@@ -125,6 +156,7 @@ jobs:
       # Vercel project building `main` on a push by itself; the hook is the only road.)
       - name: Deploy this branch by the environment's deploy hook
         id: hook
+        if: steps.changes.outputs.deploy == 'true'
         env:
           STAGING_DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
           STAGING_URL: ${{ secrets.STAGING_URL }}
@@ -172,7 +204,7 @@ jobs:
 
       # Fails closed: the smoke test never runs on a host that has not named this commit.
       - name: Wait until the host serves this commit and is ready
-        if: steps.hook.outputs.result != 'superseded'
+        if: steps.changes.outputs.deploy == 'true' && steps.hook.outputs.result != 'superseded'
         env:
           STAGING_URL: ${{ secrets.STAGING_URL }}
           PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
@@ -200,7 +232,9 @@ jobs:
       # smoke test fails naming it, and the fix is `playwright install-deps chromium` here.
       - name: Playwright's version, for the browser cache's key
         id: playwright
-        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        if: >-
+          steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
+          steps.hook.outputs.result != 'superseded'
         run: |
           set -euo pipefail
           version=$(pnpm --filter @trader/web exec playwright --version | grep -Eo '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
@@ -208,15 +242,17 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - name: Restore the browser
         id: browser
-        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        if: >-
+          steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
+          steps.hook.outputs.result != 'superseded'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-ubuntu-24.04-chromium-${{ steps.playwright.outputs.version }}
       - name: A browser for the smoke test
         if: >-
-          env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded' &&
-          steps.browser.outputs.cache-hit != 'true'
+          steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
+          steps.hook.outputs.result != 'superseded' && steps.browser.outputs.cache-hit != 'true'
         run: pnpm --filter @trader/web exec playwright install --with-deps chromium
 
       # Clerk's fixed test code is public, so the suite signs in with single-use tickets
@@ -224,7 +260,9 @@ jobs:
       # which runs that one file with `node` and nothing a package installed; the tickets
       # are masked and live ten minutes.
       - name: Sign-in tickets for the smoke test's two people
-        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        if: >-
+          steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
+          steps.hook.outputs.result != 'superseded'
         env:
           CLERK_STAGING_SECRET_KEY: ${{ secrets.CLERK_STAGING_SECRET_KEY }}
           E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
@@ -234,7 +272,9 @@ jobs:
       # No trace, no video and no uploaded artifact: this log and its artifacts are public,
       # and any of them could hold a signed-in session.
       - name: Browser smoke test on staging
-        if: env.TARGET == 'staging' && steps.hook.outputs.result != 'superseded'
+        if: >-
+          steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
+          steps.hook.outputs.result != 'superseded'
         env:
           STAGING_URL: ${{ secrets.STAGING_URL }}
           E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}

@@ -12,6 +12,14 @@
 #   scripts/staging.sh invite <number> <name>
 #                                      one person onto staging's roster as an admin, by
 #                                      the suite's admin; the number is never printed
+#   scripts/staging.sh local           the office's sign-in against real Clerk on this Mac:
+#                                      resets trader_demo_clerk, runs e2e/clerk.config.ts
+#                                      on localhost with the development instance's keys,
+#                                      and records "<tree> clerk <when> mac" when green
+#   scripts/staging.sh local only <pattern>
+#                                      the tests whose names match; records nothing
+#   scripts/staging.sh local serve     the same server and database, and no test
+#   scripts/staging.sh passkey         the passkey test alone, against staging, by ticket
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 file=$root/.env.staging
@@ -28,6 +36,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     \'*\') value=${value#\'} value=${value%\'} ;;
   esac
   export "$name=$value"
+  loaded="${loaded:-} $name"
 done <"$file"
 
 # The development instance's secret key, under the name the deploy job gives it or Clerk's own.
@@ -41,6 +50,43 @@ need() {
   done
 }
 out=${TRADER_STAGING_OUT:-$HOME/Library/Caches/TRADER/staging}
+
+# For a run on this Mac: the development instance's two keys under Clerk's own names, the
+# suite's two numbers, and nothing else of the file. Local development never connects to a
+# deployed database, so every other name the file set is dropped before anything starts.
+# The publishable key is public (staging's own /sign-in carries it); it is read from there
+# when the file does not name one.
+local_env() {
+  need CLERK_STAGING_SECRET_KEY E2E_ADMIN_PHONE E2E_WORKER_PHONE
+  if ! is_set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY; then
+    need STAGING_URL
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$(curl -sS --max-time 15 "$STAGING_URL/sign-in" |
+      grep -o 'pk_test_[A-Za-z0-9+/=]*' | head -n 1) || true
+    [ -n "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" ] || {
+      echo "staging.sh: staging's /sign-in names no publishable key; add NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY to .env.staging" >&2
+      exit 78
+    }
+  fi
+  secret=$CLERK_STAGING_SECRET_KEY
+  for n in $loaded CLERK_STAGING_SECRET_KEY; do
+    case $n in
+      E2E_ADMIN_PHONE | E2E_WORKER_PHONE | NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY) ;;
+      *) unset "$n" ;;
+    esac
+  done
+  CLERK_SECRET_KEY=$secret secret=
+  DATABASE_URL= TRADER_DEV_IDENTITY= CLERK_AUTHORIZED_PARTIES=http://localhost:3000
+  export CLERK_SECRET_KEY NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY DATABASE_URL \
+    TRADER_DEV_IDENTITY CLERK_AUTHORIZED_PARTIES
+}
+
+# The working tree as git sees it, untracked files included, through a temporary index, as
+# scripts/trader-ws names it: a green names the tree it ran on.
+tree_id() {
+  t=$(mktemp -u "${TMPDIR:-/tmp}/staging-index.XXXXXX")
+  (cd "$root" && GIT_INDEX_FILE=$t git add -A && GIT_INDEX_FILE=$t git write-tree)
+  rm -f "$t"
+}
 
 # Both sign-in tickets, made as the deploy job makes them and kept out of every log: the
 # script that makes them prints each one for the runner to mask, so its output is dropped.
@@ -100,8 +146,42 @@ case ${1:-} in
     INVITE_PHONE=$1 INVITE_NAME=$2 E2E_OUTPUT_DIR=$out/invite-results \
       pnpm exec playwright test -c e2e/invite.config.ts
     ;;
+  local)
+    shift
+    case ${1:-} in
+      '' | serve) ;;
+      only) [ $# -eq 2 ] || { echo "usage: staging.sh local only <pattern>" >&2; exit 64; } ;;
+      *) echo "usage: staging.sh local [serve | only <pattern>]" >&2; exit 64 ;;
+    esac
+    local_env
+    cd "$root"
+    pnpm demo --db trader_demo_clerk --reset
+    cd "$root/apps/web"
+    if [ "${1:-}" = serve ]; then
+      # POSTGRES_DB here and in the suite's own server, not before: the demo refuses a
+      # target that is already the configured database.
+      POSTGRES_DB=trader_demo_clerk exec pnpm exec next dev --webpack -H 127.0.0.1 -p 3000
+    fi
+    mkdir -p "$out"
+    if [ "${1:-}" = only ]; then
+      E2E_OUTPUT_DIR=$out/clerk-results exec pnpm exec playwright test -c e2e/clerk.config.ts -g "$2"
+    fi
+    before=$(tree_id)
+    E2E_OUTPUT_DIR=$out/clerk-results pnpm exec playwright test -c e2e/clerk.config.ts
+    after=$(tree_id)
+    [ "$before" = "$after" ] || { echo "staging.sh: the tree changed during the run; nothing recorded" >&2; exit 1; }
+    ledger=$(git -C "$root" rev-parse --path-format=absolute --git-common-dir)/trader/green
+    mkdir -p "$(dirname "$ledger")"
+    printf '%s clerk %s mac\n' "$after" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$ledger"
+    echo "clerk suite green on tree $after"
+    ;;
+  passkey)
+    tickets
+    cd "$root/apps/web"
+    E2E_OUTPUT_DIR=$out/passkey-results exec pnpm exec playwright test -c e2e/passkey.config.ts
+    ;;
   *)
-    sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'
     exit 64
     ;;
 esac

@@ -25,7 +25,8 @@
 #   trader-ws time                      the timing table (both machines)
 #
 # A green is one line in <the clone's .git>/trader/green: "<tree> <job> <when> <where>".
-# The repository's pre-push hook reads it; nothing but this file writes it.
+# The repository's pre-push hook reads it; nothing but this file writes it, save the
+# "clerk" lines, which `scripts/staging.sh local` writes.
 set -eu
 
 HOST=${TRADER_WS_HOST:-}

@@ -9,8 +9,10 @@ Three layouts (`apps/web/src/app`, one route group each):
 
 - **Public**, `(public)`: `/`, D Sierra's homepage, and `/get`, `/privacy`, `/terms` as they
   are written. No menu, nothing of Clerk loaded.
-- **Sign-in**, `(auth)`: `/sign-in`, alone under the logo. Locally the development sign-in
-  at `/dev-signin` stands in for it.
+- **Sign-in**, `(auth)`: `/sign-in`, the office's own one-field form on D'Sierra's brand,
+  beside their navy. Locally it is a 404 under the development identity, and `/dev-signin`
+  stands in for it; its frame can be seen on a server started with no Clerk keys and no
+  development identity, and the real thing under `scripts/staging.sh local serve`.
 - **Office**, `(office)`: Today (`/today`, where a signed-in person lands), Schedule
   (`/schedule`), Hours (`/hours`), Jobs (`/jobs`) with Customers (`/customers`) as the tab
   beside it, Invoices (`/invoices`, and one invoice at `/invoices/<id>`), People (`/people`),

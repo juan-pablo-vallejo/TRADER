@@ -19,8 +19,12 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
    hand.
 3. **What the change touches.** A screen under `apps/web/src/app`, or what one calls: also
    `trader-ws e2e`, the office in a browser on the demo data (`pnpm e2e:local` here, with
-   port 3000 free). A phone screen or the sync path under `apps/mobile`: also
-   `trader-ws android`, then `trader-ws wait android`.
+   port 3000 free). The office's sign-in (`apps/web/src/app/(auth)/`, `clerk-*.tsx`,
+   `server/clerk-*.ts`, `server/directory.ts`, `e2e/clerk*`): also `scripts/staging.sh local`,
+   real Clerk on this Mac only, which records the `clerk` line the pre-push hook asks for. A
+   phone screen or the sync path under `apps/mobile`: also
+   `apps/mobile/.maestro/suite.sh ios <udid>` here and `trader-ws android`, then
+   `trader-ws wait android`.
 4. **Workstation off.** The session's first lines say so. `trader-ws check --local` runs the
    same steps here and records the same line. Android waits for the workstation.
 5. **Commit what was checked.** `git add -A`, then `git write-tree` prints the tree the
@@ -28,3 +32,5 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
 6. **Markdown alone.** A commit that differs from a checked tree only in `.md` files, a tick
    in `docs/TASKS.md` for one, needs no check: the hook runs the format check on those
    files itself.
+7. **Push once per batch.** Commits stay local until the batch is whole; one push lands it.
+   Never push to find out: a defect seen on staging is first a failing local test.
