@@ -101,10 +101,20 @@
 /* Where Clerk's form mounts. Its height is held from the first paint, at the tallest of
    the form's steps, so nothing beneath it moves when the form arrives or changes step. */
 .mount {
+  position: relative;
   min-height: 420px;
 }
-/* What stands there until it does, and where sign-in is not set up: the same heading and
-   helper at the same sizes (sign-in-appearance.ts), then the field's and the button's
+/* What stands there until it does, lying over the form's empty place, and gone the moment
+   Clerk has drawn its card (`cl-cardBox`, one of the class names Clerk keeps stable). */
+.waiting {
+  position: absolute;
+  inset: 0 0 auto;
+}
+.mount:has(:global(.cl-cardBox)) .waiting {
+  display: none;
+}
+/* Its parts, and what is said where sign-in is not set up: the same heading and helper
+   at the same sizes (sign-in-appearance.ts), then the field's and the button's
    places. */
 .heading {
   color: var(--navy-700);

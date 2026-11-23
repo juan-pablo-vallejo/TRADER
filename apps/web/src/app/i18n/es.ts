@@ -481,6 +481,7 @@ export const es: Catalog = {
   signInForm: {
     helper: "Escribe tu número de celular. Te enviaremos un código por mensaje de texto.",
     mobileNumber: "Número de celular",
+    numberHint: "10 dígitos",
     useEmail: "Usar correo electrónico",
     usePhone: "Usar teléfono",
     codeTitle: "Escribe el código",

@@ -22,6 +22,7 @@ export function clerkOverrides(t: Catalog): ClerkWords {
   const s = t.signInForm;
   return {
     formFieldLabel__phoneNumber: s.mobileNumber,
+    formFieldInputPlaceholder__phoneNumber: s.numberHint,
     signIn: {
       start: {
         title: t.teamSignIn,

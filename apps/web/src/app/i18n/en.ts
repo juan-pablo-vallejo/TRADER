@@ -510,6 +510,9 @@ export const en = {
   signInForm: {
     helper: "Enter your mobile number. We'll text you a code.",
     mobileNumber: "Mobile number",
+    // In the empty field. Clerk's own, "Enter your phone number", is cut short at a
+    // phone's width in Spanish.
+    numberHint: "10 digits",
     useEmail: "Use email instead",
     usePhone: "Use phone instead",
     codeTitle: "Enter the code",

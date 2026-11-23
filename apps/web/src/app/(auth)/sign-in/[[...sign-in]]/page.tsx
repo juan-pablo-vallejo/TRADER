@@ -47,19 +47,21 @@ export default async function SignInPage() {
   return (
     <SignInFrame>
       <div className={styles.mount}>
+        {/* Until Clerk's form has loaded: its heading and helper, already in their places,
+            and the field's and the button's. The stylesheet takes this away once the form
+            is there. Not Clerk's own `fallback`: with one, Clerk keeps its form hidden
+            while it mounts, and a hidden field cannot take the focus, so the number field
+            opened unfocused (seen on staging, 2026-11-23). */}
+        <div className={styles.waiting} aria-busy="true">
+          <h1 className={styles.heading}>{t.teamSignIn}</h1>
+          <p className={styles.helper}>{t.signInForm.helper}</p>
+          <div className={styles.place} />
+          <div className={styles.place} />
+        </div>
         <SignIn
           withSignUp={false}
           initialValues={START_ON_NUMBER}
           appearance={signInAppearance}
-          // Until Clerk's form has loaded: its heading and helper, already in their places.
-          fallback={
-            <div aria-busy="true">
-              <h1 className={styles.heading}>{t.teamSignIn}</h1>
-              <p className={styles.helper}>{t.signInForm.helper}</p>
-              <div className={styles.place} />
-              <div className={styles.place} />
-            </div>
-          }
         />
       </div>
     </SignInFrame>

@@ -95,6 +95,9 @@ describe("the form's first field", () => {
     expect(page).toContain('const START_ON_NUMBER = { phoneNumber: " " };');
     expect(page).toContain("initialValues={START_ON_NUMBER}");
     expect(page).toContain("withSignUp={false}");
+    // And it takes the focus as it arrives, which Clerk's `fallback` prevents: the form is
+    // mounted hidden behind one. The page draws its own stand-in instead.
+    expect(page).not.toMatch(/fallback=/);
   });
 });
 
