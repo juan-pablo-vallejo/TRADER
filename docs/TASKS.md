@@ -552,7 +552,7 @@ Android user.
   Done when tests walk one invoice through issue, a part payment and the final payment,
   and a second one past its due date to Overdue with no manual step.
 
-- [x] 30. **The customer-ready invoice.** The only thing a customer of D Sierra sees.
+- [ ] 30. **The customer-ready invoice.** The only thing a customer of D Sierra sees.
   - At issue the invoice takes a copy of what prints: the company's name, address, phone
     and email, and how to pay. An issued invoice's page never changes when Settings do
     (invariant 6). Today the PDF reads the company's name live; this ends that.
@@ -828,7 +828,7 @@ Android user.
 - [ ] Item 29: Paid this month counts payments by the day the office typed as paid, in the
       company's calendar month, not by the day they were recorded.
 
-- [x] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
+- [ ] Item 30 is built, deployed and seen on staging; its box waits on the OWNER alone:
       send one invoice from staging to an allow-listed inbox (invoice 4 is ready: open it,
       Send) and confirm it arrived with its PDF. Seen on staging: Settings filled with
       fictional words and terms of 15 days, invoice 4 issued after and printing the
@@ -1005,12 +1005,26 @@ Android user.
       finished, from D Sierra's post six days later, on a strip that a swipe moves along;
       its line is a link, for a mouse. CSS alone, no script. A photo's `finished` in
       `home-content.ts` is how the next one is paired.
+- [ ] The school hallway was one of the six at first. It shows masking paper still up
+      around its lockers, and the owner had the classroom of the same school put in its
+      place.
+- [ ] OWNER, before production: D Sierra's OK on the photos themselves. They said the
+      photos may come from their socials; they have not seen which. On
+      `instagram.com/dsierrapainting`, the first photo of each post: `/p/B_YDyNOAgkC/`
+      (the Newport house), `/p/CgDG5nBuGy4/` (the home with the porch), `/p/DNgd-lxBmm9/`
+      (the classroom), `/p/CRUqA4PhPV0/` (the apartment), `/p/CqJdVo_uLoa/` (the shopping
+      center), `/p/B4DswuynL42/` (the painter spraying the ceiling) and, shown as that
+      ceiling finished, `/p/B4SlajLHXFz/`.
 - [ ] `assets/pics/home-exterior.jpg` shows a house number, 65, beside its door, and no
       street. The owner saw it and kept the photo.
 - [ ] OWNER, item 21 (gate 7): the legal pages now name JPTEQ LLC as the operator and
       `privacy@jpteq.app` as where to write, which the owner routed to his inbox. They
       stay drafts: `APPROVED` is set on his "approved", after item 12 has been seen.
-- [x] Item 30: the owner saw the invoice email arrive with its PDF (2026-11-22).
+- [ ] Item 30, read from staging's own tables on 2026-11-22: invoice 4 has never been
+      sent. The one send that went out on staging is invoice 1's, on 2026-11-19, the day
+      before item 30 was built. The box was ticked that day on the owner's answer to a
+      question, with nothing looked at, and unticked the same day. It waits on invoice 4
+      sent from staging and seen to arrive with its PDF.
 - [ ] Item 12: the app had no way to throw an error on purpose. In a staging build alone,
       a long press on the build's number in Me sends one report through `report.ts` and
       the screen says so. Seeing it waits on the owner's two preview builds by hand.
@@ -1021,16 +1035,18 @@ Android user.
       developer accounts exist, and the rate-limit rule on `/api` is published on the
       staging project (first seen with the action Log, which holds nothing back). EAS
       has no build of any profile yet.
-- [ ] OWNER: the owner's own login on staging. `apps/web/e2e/invite.run.ts` invites one
-      number as an admin through `roster.invite`, signed in by the suite's ticket; its
-      subcommand, `scripts/staging.sh invite <number> <name>`, is shown to the owner and
-      lands on his word. Not yet run against staging.
-- [ ] OWNER: the deploy job failed three runs in a row on 2026-11-22 with staging about
-      to serve the commit. Vercel's deploy hook gave no answer within the job's thirty
-      seconds; the deployment it had started appeared fifty seconds after the call.
-      Re-running the failed job once staging served the commit passed each time, smoke
-      test included. A longer limit on that one call (two minutes) is a change to
-      `.github/workflows/ci.yml`, shown to the owner.
+- [ ] OWNER: the owner's own login on staging. `scripts/staging.sh invite`, given a
+      number and a name, invites one person as an admin through `roster.invite`, signed in
+      by the suite's ticket (`apps/web/e2e/invite.run.ts`). Run against staging with a fixture
+      number already on the roster: it answered "rejected (phone_taken)", and the users
+      table was as before. "invited" has not been seen there. A test person was not made:
+      a users row is never deleted and nothing takes a login back out of Clerk, so one
+      would have stayed on staging as an admin. The owner runs it with his own number.
+- [x] The deploy job failed three runs in a row on 2026-11-22 with staging about to serve
+      the commit. Vercel's deploy hook gave no answer within the job's thirty seconds; the
+      deployment it had started appeared fifty seconds after the call. Re-running the
+      failed job once staging served the commit passed each time, smoke test included. The
+      one call now waits two minutes (`.github/workflows/ci.yml`), on the owner's word.
 - [ ] A second Vercel project, `trader`, is connected to the repository beside
       `trader-staging`: each push to `main` starts a deployment there that
       `apps/web/vercel.json` cancels.
