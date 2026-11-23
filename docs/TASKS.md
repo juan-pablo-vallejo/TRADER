@@ -1342,10 +1342,16 @@ Android user.
       Its Test mode setting was not read. Until it is on, no sign-in by code can be
       finished without a real phone or inbox, which is why a right code is still the
       owner's to see (item 21a).
-- [ ] Item 21a: an address in the field before the page's script arrived (typed early,
-      pasted, or filled in by the browser) was refused as no address while it stood
-      there. Found on staging by filling the field at once; the form now reads the field
-      itself.
+- [ ] Item 21a: an address put in the field before the page's script arrived (typed
+      early, pasted, or filled in by the browser) was erased as React took the page over,
+      and Send then answered that nothing was typed. Found on staging by filling the field
+      at once. The first correction (`4fde560`, reading the field at submit) was wrong
+      about the cause and changed nothing, which a second look on staging showed; the
+      field's value is now the browser's own.
+- [ ] The deploy job's smoke test on staging failed once, on `4fde560`: after the reload
+      of an open customer panel, no panel within 20 seconds. The same test passed from
+      the Mac against the same commit and on a re-run of the job. Not reproduced, cause
+      not known.
 
 ## After MVP
 

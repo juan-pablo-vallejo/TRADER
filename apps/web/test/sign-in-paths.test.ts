@@ -115,8 +115,15 @@ describe("the sign-in form", () => {
     expect(form).toContain('from "@trader/api/contract"');
   });
 
-  it("reads the address from the field itself, so one typed before the script arrived counts", () => {
-    expect(form).toContain("signInIdentifier(address.current?.value ?? typed)");
+  it("leaves the address field's value to the browser, so one typed before the script arrived stays", () => {
+    // A field whose value React holds is emptied as React takes the page over.
+    const field = form.slice(
+      form.indexOf('id="sign-in-address"'),
+      form.indexOf("{problem}"),
+    );
+    expect(field).toContain("defaultValue={typed}");
+    expect(field).not.toMatch(/\bvalue=\{/);
+    expect(form).toContain('address.current?.value ?? ""');
   });
 
   it("takes the texted code from the keyboard, in one field", () => {

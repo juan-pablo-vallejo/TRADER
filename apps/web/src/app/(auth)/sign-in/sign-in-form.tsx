@@ -106,10 +106,10 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
 
   const send = (event: { preventDefault(): void }) => {
     event.preventDefault();
-    // What the field holds, not what this component was told: an address typed, pasted or
-    // filled in by the browser before the page's script arrived never reached `typed`,
-    // and was refused as no address at all while it stood in the field (seen on staging).
-    const to = signInIdentifier(address.current?.value ?? typed);
+    // The field keeps its own value (below), and this is where it is read.
+    const value = address.current?.value ?? "";
+    setTyped(value);
+    const to = signInIdentifier(value);
     if (to === null) {
       setNote("bad_address");
       return;
@@ -201,8 +201,12 @@ export function SignInForm({ returnTo }: { returnTo: string }) {
           autoCorrect="off"
           spellCheck={false}
           maxLength={254}
-          value={typed}
-          onChange={(event) => setTyped(event.target.value)}
+          // The field's value is the browser's, not this component's: React empties a
+          // field whose value it holds as it takes the page over, so an address typed,
+          // pasted or filled in before the script arrived was erased under the person
+          // (seen on staging). `typed` is only what the field starts from when it is
+          // drawn again, after "Use a different number or email".
+          defaultValue={typed}
           aria-invalid={note !== null}
           aria-describedby={note !== null ? "sign-in-note" : undefined}
         />
