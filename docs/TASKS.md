@@ -1270,6 +1270,38 @@ Android user.
       are still keyboard stops though nothing scrolls there; and in English at 390, if
       the headline's font is late, the headline draws in four lines and then three.
 
+- [ ] Item 21a, seen and not seen. On staging at `158a700`, signed out, on 2026-11-23: the
+      one field at 390 and 1440 in both languages, with nothing scrolling sideways and
+      nothing moving as Clerk loads; a field that is neither a number nor an email told so
+      with no request made; an email and a number no login holds, each given the roster's
+      one sentence; a fixture number taken to the code step, and a wrong code told so with
+      the field cleared and focused, in English at 1440 and in Spanish at 390; Use a
+      different number or email; Trouble signing in?; a signed-in visitor sent on by the
+      server to the address the link carried, to Today without one, and to Today for an
+      address that is not the office's. Not seen, so the box is not ticked: a right code
+      making a session and landing in the office (OWNER: one sign-in to staging by texted
+      code, as gate 1 has it), an expired code, too many tries, a locked sign-in, and an
+      emailed code, since no fixture person has an email yet (item 21e gives one).
+- [ ] Item 21a: two things shipped to staging and corrected the same hour, both seen there
+      and neither by a test. Clerk's prebuilt form, opened on its number field by giving
+      it "+1" to start from, could not be switched to email; and with Clerk's own
+      stand-in while it loaded, the field arrived unfocused. Both went with that form.
+- [ ] Item 21a: the office has no error reporting in the browser (Sentry is the server's
+      and the phone's). A sign-in that Clerk leaves at a step the form has none for says
+      so to the person and is otherwise only in their console.
+- [ ] Item 21a: while Clerk's form was being tried against staging, one fixture number's
+      code requests ran into Clerk's limit ("Too many verification code requests") for
+      under an hour. The form now has that sentence in both languages.
+- [ ] On 2026-11-23 the Mac's `node_modules` was found without its native binaries
+      (esbuild's, Next's compiler, sharp's library), removed between 12:42 and 12:55 by
+      nothing this session ran, so no test or dev server would start. Put back from the
+      lockfile by `pnpm install --frozen-lockfile --offline --force` with
+      `--config.optimistic-repeat-install=false`, without which pnpm answers "Already up
+      to date" and puts nothing back. The cause is not known.
+- [ ] A dev server leaves `apps/web/.next/dev/types`, which `tsc` reads: after a route is
+      removed, `pnpm typecheck` fails on the stale file until that folder is deleted, on
+      the Mac and, after `trader-ws e2e`, on the workstation. CI has no such folder.
+
 ## After MVP
 
 In the order it would come back. The owner reorders at will.
