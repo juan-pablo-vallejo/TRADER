@@ -159,7 +159,10 @@ jobs:
             exit 0
           fi
 
-          answer=$(curl -sS --proto '=https' --max-time 30 -X POST "$hook" || true)
+          # Two minutes: on 2026-11-22 the hook gave no answer in thirty seconds, three
+          # runs in a row, and the deployment it had started appeared fifty seconds
+          # after the call: the job failed with staging about to serve the commit.
+          answer=$(curl -sS --proto '=https' --max-time 120 -X POST "$hook" || true)
           state=$(printf '%s' "$answer" | jq -r '.job.state // empty' 2>/dev/null || true)
           if [ -z "$state" ]; then
             echo "::error::the deploy hook did not answer with a job"; exit 1
