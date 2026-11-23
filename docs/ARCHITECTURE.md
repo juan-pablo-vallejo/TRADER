@@ -11,8 +11,10 @@ describes the target: where the code differs, the code is wrong.
   Sign-in is a texted or emailed code; or Google, for a person whose invitation carries
   that address, and Apple on an iPhone; after a code, a passkey in the office and Face ID
   or fingerprint in the phone app, and a lost one falls back to a code. No passwords and no
-  sign-up: a login exists only because the office made it, and an admin changes a person's
-  email and sign-in number. No passkeys in the phone app.
+  sign-up: a login exists only because the office made it. An admin changes a worker's
+  email and sign-in number; the person is then signed out and starts clean, and the change
+  is kept on record. An admin's own are the owner's to change. No passkeys in the phone
+  app.
 - A login belongs to exactly one company. New people start as workers; making an admin is a
   deliberate act.
 - Worker can: see own week, clock in / switch / out on own shift, see own hours, edit own
@@ -56,11 +58,11 @@ Beside it:  Clerk (sign-in)
 - `packages/api`: the API, one folder per domain
 - `packages/db`: schema, migrations, seed
 
-**Twelve tables**
+**Thirteen tables**
 
 `companies` · `users` · `customers` · `jobs` · `job_assignments` (shifts) ·
 `work_session_events` (clock log) · `invoices` · `invoice_line_items` · `invoice_counters` ·
-`invoice_payments` · `invoice_sends` · `invitation_sends`
+`invoice_payments` · `invoice_sends` · `invitation_sends` · `address_changes`
 
 **Six invariants**
 

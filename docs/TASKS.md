@@ -55,8 +55,9 @@ and `www` only send a visitor to `app.jpteq.app`.
 - Invoices, and one invoice: draft → issued → void, numbered in D Sierra's series, with a
   due date and how to pay, PDF, emailed to the customer, payments recorded.
 - People: invite by mobile number, by email or both; send the invitation by text or by
-  email and see where it stands (not sent, sent, verified); change a person's email and
-  sign-in number; make admin, deactivate, location on or off per person.
+  email and see where it stands (not sent, sent, verified); change a worker's email and
+  sign-in number, which signs them out and is kept on record; make admin, deactivate,
+  location on or off per person.
 - Settings: the company's details as they print on an invoice, schedule enforcement,
   location, my profile, language and passkeys.
 
@@ -544,25 +545,43 @@ Android user.
       stands.** By the owner's word of 2026-11-23: "admin has all controls".
   - An invitation takes a mobile number, an email, or both: one of the two, no longer the
     number. OWNER first, for the email alone: gate 7's Clerk setting.
-  - A person's panel changes their email and their sign-in number, for someone invited or
-    already signed in (`roster.setEmail`, `roster.setSignInPhone`). The roster row and the
-    person's login at Clerk change together or not at all: the provider is told last,
-    inside the transaction, as `roster.invite` does. One address always remains. An
-    address another login holds is refused in one sentence that does not say why. A
-    signed-in person keeps their session. The Demo company changes nobody's in production.
   - Send the invitation by email (Resend, the words of the text message, in both
     languages), each send recorded with its outcome; by text as now, from the admin's own
     phone, recorded when the admin taps Send. `invitation_sends`, append-only.
   - A status per person, worked out and never stored: Not sent, Sent · not verified,
     Verified (the person has signed in). A column in the table; the sends in the panel.
-  - Tests for what can go wrong: the provider down, an address taken in the company, an
-    address another login holds, the last address removed, two admins at once; and that a
-    sign-in identity still cannot write an address.
+  - A worker's panel changes their email and their sign-in number, for someone invited or
+    already signed in (`roster.setEmail`, `roster.setSignInPhone`). An admin's addresses
+    are read-only in the office: they are the owner's to change (his word, the same day).
+    Read against the code before it was built, the first design let one company's admin
+    rewrite another company's login, so it is held to these:
+    - A login is tagged at Clerk with its roster row when it is made, and a change touches
+      only the login found by that tag or by the row's own bound id, never one found by an
+      address.
+    - A change ends with the login's addresses exactly the roster's, and saving the same
+      value again repairs one that stopped half-way. One address always remains. An
+      address another login holds is refused in one sentence that does not say why.
+    - It asks first, naming the person: whoever controls the new address will be able to
+      sign in as them.
+    - A person who had signed in is signed out everywhere, and their passkeys, Face ID or
+      fingerprint keys and Google or Apple links are removed: they sign in once more with
+      the new address. Their hours and history are untouched.
+    - Each change is kept on record, who, when and which address, and shown in the
+      person's history: `address_changes`, append-only.
+    - It locks the admin's row and the person's and no other, so nobody's clock waits on
+      it. The Demo company changes nobody's in production.
+  - Tests for what can go wrong: the provider down or answering late, a change that
+    stopped half-way and is saved again, an address taken in the company, an address
+    another login holds, another company's person on the old address, the last address
+    removed, two admins at once, a clock tap sent during a change; and that a sign-in
+    identity still cannot write an address.
 
-  Done when, on staging, a fixture person has been invited by email alone, given a number,
-  had their email changed, been emailed an invitation at an allow-listed inbox, and shown
-  each of the three statuses; and `README.md`'s "a worker's number changed" is one line
-  about People.
+  Two landings: the invitation's sends, status and email, and the invitation by email
+  alone; then the address changes. Done when, on staging, a fixture person has been
+  invited by email alone, emailed an invitation at an allow-listed inbox and shown each of
+  the three statuses; a fixture worker has had their email changed and a number given,
+  been signed out by it, and the two changes are in their history; and `README.md`'s "a
+  worker's number changed" is one line about People.
 
 - [ ] 22. **Physical phones.** OWNER, with one iPhone and one Android phone: sign in by
       texted code, turn on Face ID or fingerprint, sign out and back in by it, fail it once
