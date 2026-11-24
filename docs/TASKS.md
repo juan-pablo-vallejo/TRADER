@@ -617,10 +617,14 @@ Android user.
       `4fc493c`: `trader_call` lines in the runtime log, and `Server-Timing` with
       `x-request-id` on `status.get`. A deployed `me.get` counts 7 against its budget's 6:
       the role check, once per pool, which the budgets leave out.
-- [ ] 24c. **What the audit found, server and office.** A void may not leave a session
+- [x] 24c. **What the audit found, server and office.** A void may not leave a session
       open; a late push is treated as an offline one; the job page reads its own invoices;
       the Demo door asks the database; the invite re-checks its caller; the rules for a live
       database. Done when each has a test that failed first.
+      Seen 2026-11-24: each finding's test red without its fix; both pushes green on CI and
+      deployed (`d15965d`, `4e58a19`). Staging after 0008: the same 1 company, 8 users, 2
+      jobs, 12 events, 6 invoices and 4 shifts, 9 migrations, `/api/ready` `"demo":false`
+      until the owner flags it. The pushes' notes are under Found along the way.
 - [ ] 24d. **What the audit found, phone.** Settled records pruned after a pull; an older
       snapshot upcast; every call times out; the job's location set by its own procedure.
       Done when both phone suites are green and the build's calls are recorded. OWNER: new
