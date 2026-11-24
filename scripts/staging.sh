@@ -20,6 +20,9 @@
 #                                      the tests whose names match; records nothing
 #   scripts/staging.sh local serve     the same server and database, and no test
 #   scripts/staging.sh passkey         the passkey test alone, against staging, by ticket
+#   scripts/staging.sh sample          staging's API timed: seven office reads, five rounds,
+#                                      one call a second, as the suite's admin; writes
+#                                      sample/<commit>.json and prints a summary
 set -eu
 root=$(cd "$(dirname "$0")/.." && pwd)
 file=$root/.env.staging
@@ -145,6 +148,16 @@ case ${1:-} in
     cd "$root/apps/web"
     INVITE_PHONE=$1 INVITE_NAME=$2 E2E_OUTPUT_DIR=$out/invite-results \
       pnpm exec playwright test -c e2e/invite.config.ts
+    ;;
+  sample)
+    need STAGING_URL
+    tickets
+    mkdir -p "$out/sample"
+    commit=$(curl -sS --max-time 10 "$STAGING_URL/api/ready" | sed -n 's/.*"commit":"\([0-9a-f]*\)".*/\1/p')
+    [ -n "$commit" ] || { echo "staging.sh: staging named no commit" >&2; exit 1; }
+    cd "$root/apps/web"
+    SAMPLE_FILE=$out/sample/$commit.json E2E_OUTPUT_DIR=$out/sample-results \
+      pnpm exec playwright test -c e2e/sample.config.ts
     ;;
   local)
     shift
