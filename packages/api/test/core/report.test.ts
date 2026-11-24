@@ -2,9 +2,11 @@
 // identity reaches it, whatever was thrown — and reporting never throws, rejects or blocks.
 import { TRPCError } from "@trpc/server";
 import { DrizzleQueryError } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  framesOf,
+  logReporter,
   reportConfigFault,
   reportFailure,
   reportingOnError,
@@ -235,5 +237,60 @@ describe("reportingOnError and reportConfigFault", () => {
         invalid: ["TRADER_SYNC_MODE"],
       },
     ]);
+  });
+});
+
+// The server's own log line carries where an error was thrown (M18), and nothing else from
+// a stack: frames in this repository's code, never a message, never a path outside it.
+describe("frames on the log line", () => {
+  function thrownHere(): Error {
+    return new Error('select * from users where email = "worker@co.test"');
+  }
+
+  it("names the file and line an error was thrown at, inside the repository only", () => {
+    const frames = framesOf(internal(thrownHere()));
+    expect(frames[0]).toMatch(
+      /^thrownHere at api\/test\/core\/report\.test\.ts:\d+:\d+$/,
+    );
+    expect(frames.length).toBeLessThanOrEqual(8);
+    for (const f of frames) expect(f).not.toMatch(/node_modules|node:/);
+    expect(JSON.stringify(frames)).not.toContain("worker@co.test");
+  });
+
+  it("reads no frame out of a message, however it is shaped", () => {
+    const forged = new Error(
+      "x\n    at injected (/srv/packages/worker@co.test/a.ts:1:1)\n    at y (/srv/apps/sub-secret-subject.ts:2:2)",
+    );
+    expect(JSON.stringify(framesOf(forged))).not.toMatch(/injected|worker|sub-secret/);
+    expect(framesOf({ stack: 42 })).toEqual([]);
+    expect(framesOf("plain")).toEqual([]);
+  });
+
+  it("puts frames on the log line beside the event, which stays as it was", () => {
+    const { reporter, events } = recordingReporter();
+    const lines: string[] = [];
+    const log = vi
+      .spyOn(console, "error")
+      .mockImplementation((l: string) => lines.push(l));
+    try {
+      reportFailure(
+        { report: (e, d) => (reporter.report(e), logReporter.report(e, d)) },
+        internal(thrownHere()),
+        where,
+      );
+    } finally {
+      log.mockRestore();
+    }
+    expect(Object.keys(events[0]!).sort()).toEqual([
+      "errorNames",
+      "path",
+      "requestId",
+      "source",
+      "sqlstate",
+      "type",
+    ]);
+    const line = JSON.parse(lines[0]!) as { trader_error: unknown; frames: string[] };
+    expect(line.trader_error).toEqual(events[0]);
+    expect(line.frames[0]).toMatch(/^thrownHere at api\/test\/core\/report\.test\.ts:/);
   });
 });

@@ -148,4 +148,33 @@ describe("the route handler", () => {
       .where(eq(companies.id, fixture.companyId));
     expect(company).toBeDefined();
   });
+
+  it("logs one timing line per call, and answers Server-Timing only where asked", async () => {
+    vi.stubEnv("TRADER_DEV_IDENTITY", "");
+    const lines: unknown[] = [];
+    const make = (timingHeaders: boolean) =>
+      createTrpcHandler({
+        getDb: () => unusableDb,
+        identity: webIdentity,
+        directory: localDirectory,
+        reporter: quietReporter,
+        logCall: (line) => lines.push(line),
+        timingHeaders: () => timingHeaders,
+      });
+    const input = { input: { protocolVersion: 1, platform: "ios", build: 1 } };
+    const shown = await query(make(true), "status.get", input);
+    expect(lines).toEqual([
+      expect.objectContaining({ path: "status.get", ok: true, statements: 0 }),
+    ]);
+    const id = shown.headers.get("x-request-id");
+    expect(id).toMatch(/^[0-9a-f-]{36}$/);
+    expect(lines[0]).toMatchObject({ requestId: id });
+    expect(shown.headers.get("server-timing")).toMatch(
+      /^call;desc="status\.get, 0 statements";dur=[0-9.]+$/,
+    );
+    const hidden = await query(make(false), "status.get", input);
+    expect(lines).toHaveLength(2);
+    expect(hidden.headers.get("server-timing")).toBeNull();
+    expect(hidden.headers.get("x-request-id")).toBeNull();
+  });
 });

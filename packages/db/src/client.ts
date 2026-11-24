@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 import { parseDatabaseEnv } from "./env";
+import { statementLogger } from "./meter";
 
 // How long a caller waits for a free connection before failing. pg's default is to wait for
 // ever, which turns an exhausted pool into requests that never answer.
@@ -34,7 +35,8 @@ export function createDb(env: Record<string, string | undefined> = process.env) 
       // on the pool; with no listener Node treats it as uncaught and the process exits. The
       // pool has already discarded the client, so logging is all there is to do.
       pool.on("error", (error) => console.error(describePoolError(error)));
-      return drizzle({ client: pool });
+      // The meter counts statements through the logger hook and does nothing else (meter.ts).
+      return drizzle({ client: pool, logger: statementLogger });
     }
   }
 }

@@ -5,7 +5,12 @@
 // concern: swapping the vendor is this file and instrumentation.ts.
 // Sending is deferred past the response and never awaited by the call it reports on (api
 // core/report.ts); a failure to send is swallowed, since the stderr line already exists.
-import { logReporter, type ErrorReport, type ErrorReporter } from "@trader/api";
+import {
+  logReporter,
+  type ErrorReport,
+  type ErrorReporter,
+  type ReportDetail,
+} from "@trader/api";
 import type { Event } from "@sentry/nextjs";
 
 import { sentryDsn } from "./deploy-env";
@@ -24,8 +29,9 @@ export type ReporterDependencies = {
 
 export function createWebReporter(deps: ReporterDependencies): ErrorReporter {
   return {
-    report(event: ErrorReport): void {
-      void deps.log.report(event);
+    // The detail (frames) goes to the log line alone; Sentry gets the event as before.
+    report(event: ErrorReport, detail?: ReportDetail): void {
+      void deps.log.report(event, detail);
       if (!deps.configured()) return;
       const outgoing = toSentryEvent(event);
       deps.defer(() => deps.send(outgoing).catch(() => undefined));

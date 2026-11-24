@@ -20,12 +20,19 @@ export type ErrorReport = {
   // The first SQLSTATE on the chain: a schema-level code, never row data.
   sqlstate: string | null;
   // No stack frames: a stack is free text that any code, or a forged value, can fill, so no
-  // filter over it is a guarantee. Sentry decides frames under its own scrubbing.
+  // filter over it is a guarantee. Sentry decides frames under its own scrubbing. The
+  // server's own log line gets strict frames beside the event (ReportDetail, framesOf).
   // Configuration only: the names of invalid variables, never their values.
   invalid?: string[];
 };
 
-export type ErrorReporter = { report(event: ErrorReport): void | Promise<void> };
+// What only the server's own log line carries, never an event sent anywhere: where the
+// error was thrown, as framesOf reads it.
+export type ReportDetail = { frames: string[] };
+
+export type ErrorReporter = {
+  report(event: ErrorReport, detail?: ReportDetail): void | Promise<void>;
+};
 
 export type ReportWhere = {
   source: "request" | "push_record";
@@ -100,6 +107,57 @@ export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
   return event;
 }
 
+// Where an error was thrown, for the server's log line (M18): at most 8 frames, each
+// "function at file:line:col", the file only from this repository's `packages/` or `apps/`
+// (a built server's `.next/` too) and never under node_modules. Only the stack after its
+// own header (`Name: message`) is read, so nothing a message holds is taken for a frame; a
+// stack whose header cannot be found gives none. The deepest error on the chain with a
+// frame wins: that is where the failure began.
+const FRAME =
+  /^\s+at (?:(?:async |new )?([A-Za-z0-9_$.<>]{1,80}) \()?(?:file:\/\/)?(\/[A-Za-z0-9_.@[\]()+/-]{1,300}\.(?:[mc]?[jt]sx?)):(\d{1,6}):(\d{1,6})\)?$/;
+const IN_REPO = /\/(?:packages|apps)\/(.+)$|\/(\.next\/.+)$/;
+const MAX_FRAMES = 8;
+
+function framesOfOne(error: object): string[] {
+  const stack = read(error, "stack");
+  const message = read(error, "message");
+  if (typeof stack !== "string" || typeof message !== "string") return [];
+  const at = stack.indexOf(message);
+  if (at === -1) return [];
+  const frames: string[] = [];
+  for (const line of stack.slice(at + message.length).split("\n")) {
+    const m = FRAME.exec(line);
+    if (m === null || m[2]!.includes("/node_modules/")) continue;
+    const file = IN_REPO.exec(m[2]!);
+    if (file === null) continue;
+    frames.push(`${m[1] ?? "?"} at ${file[1] ?? file[2]}:${m[3]}:${m[4]}`);
+    if (frames.length === MAX_FRAMES) break;
+  }
+  return frames;
+}
+
+export function framesOf(error: unknown): string[] {
+  let found: string[] = [];
+  const seen = new Set<object>();
+  let current: unknown = error;
+  try {
+    while (
+      typeof current === "object" &&
+      current !== null &&
+      !seen.has(current) &&
+      seen.size < MAX_CHAIN
+    ) {
+      seen.add(current);
+      const frames = framesOfOne(current);
+      if (frames.length > 0) found = frames;
+      current = read(current, "cause");
+    }
+  } catch {
+    // A hostile value: the frames read so far stand.
+  }
+  return found;
+}
+
 // What the client is answered: a TRPCError keeps its code; anything else is an internal error,
 // as tRPC itself treats it. An unreadable value is internal too.
 function codeOf(error: unknown): string {
@@ -111,11 +169,16 @@ function codeOf(error: unknown): string {
   return "INTERNAL_SERVER_ERROR";
 }
 
-function deliver(reporter: ErrorReporter, build: () => ErrorReport | null): void {
+function deliver(
+  reporter: ErrorReporter,
+  build: () => ErrorReport | null,
+  detail?: () => ReportDetail,
+): void {
   try {
     const event = build();
     if (event === null) return;
-    const sent: unknown = reporter.report(event);
+    const sent: unknown =
+      detail === undefined ? reporter.report(event) : reporter.report(event, detail());
     if (typeof sent === "object" && sent !== null && "then" in sent) {
       (sent as Promise<void>).then(undefined, () => undefined);
     }
@@ -131,8 +194,11 @@ export function reportFailure(
   error: unknown,
   where: ReportWhere,
 ): void {
-  deliver(reporter, () =>
-    codeOf(error) === "INTERNAL_SERVER_ERROR" ? toErrorReport(error, where) : null,
+  deliver(
+    reporter,
+    () =>
+      codeOf(error) === "INTERNAL_SERVER_ERROR" ? toErrorReport(error, where) : null,
+    () => ({ frames: framesOf(error) }),
   );
 }
 
@@ -153,10 +219,13 @@ export function reportConfigFault(
 }
 
 // One JSON line on stderr, which the platform's logs keep. Safe to log
-// because an event holds no message, input or identity.
+// because an event holds no message, input or identity, and frames only code locations.
 export const logReporter: ErrorReporter = {
-  report(event) {
-    console.error(JSON.stringify({ trader_error: event }));
+  report(event, detail) {
+    const frames = detail?.frames ?? [];
+    console.error(
+      JSON.stringify({ trader_error: event, ...(frames.length > 0 && { frames }) }),
+    );
   },
 };
 

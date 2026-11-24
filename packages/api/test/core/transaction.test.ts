@@ -64,6 +64,8 @@ describe("the procedure context", () => {
     // a company's id and a list of addresses, no secret and no connection.
     // `getAppUrl` is where the app is got from on this host, or null: an address the host
     // configured, for an emailed invitation to link to.
+    // `observe` is where a call's timing line goes (observe.ts): a function that takes
+    // numbers and a path, reaching no database and naming no one.
     expect(seen.keys).toEqual([
       "closed",
       "db",
@@ -72,6 +74,7 @@ describe("the procedure context", () => {
       "getAppUrl",
       "identity",
       "mailer",
+      "observe",
       "reporter",
       "requestId",
       "tx",

@@ -10,6 +10,7 @@ import {
 } from "./identity";
 import type { ClosedCompany, DemoDoor } from "./demo-door";
 import { type Mailer, unconfiguredMailer } from "./mailer";
+import { ignoreCalls, type CallObserver } from "./observe";
 import type { ErrorReporter } from "./report";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -39,6 +40,8 @@ export type Context = {
   closed: ClosedCompany | null;
   reporter: ErrorReporter;
   requestId: string;
+  // Where each call's timing line goes (observe.ts). A host that names none drops them.
+  observe: CallObserver;
   waits?: CallerWaits;
 };
 
@@ -61,6 +64,7 @@ export function createContext(opts: {
   closed?: ClosedCompany | null;
   reporter: ErrorReporter;
   requestId: string;
+  observe?: CallObserver;
   waits?: CallerWaits;
 }): Context {
   const parsed = verifiedIdentitySchema.safeParse(opts.identity);
@@ -74,6 +78,7 @@ export function createContext(opts: {
     closed: opts.closed ?? null,
     reporter: opts.reporter,
     requestId: opts.requestId,
+    observe: opts.observe ?? ignoreCalls,
     ...(opts.waits !== undefined && { waits: opts.waits }),
   };
 }

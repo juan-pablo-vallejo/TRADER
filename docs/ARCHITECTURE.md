@@ -83,6 +83,19 @@ Beside it:  Clerk (sign-in)
 - Push: oldest first. The server answers each record accepted, duplicate or rejected.
 - Pull: the worker's own entries, shifts and jobs.
 
+**The phone's contract.** A released build is used for weeks, so what it sends and reads
+only grows. On a procedure the phone calls (`PHONE_PROCEDURES`): never remove, rename or
+retype a field, add a required input, narrow an input or change a default; a new output
+field is fine, a new enum value only where every supported build ignores it. A sync payload
+version is frozen once shipped; a change is a new version beside it, upcast on the server.
+Anything else waits until `TRADER_MIN_BUILD_*` has passed every build that relied on the
+old shape. `packages/api/test/contract` holds the snapshot and each released build's calls.
+
+**Measured.** Every call writes one timing line (`trader_call`: path, milliseconds,
+statements) to the server's log, and answers it as `Server-Timing` with an `x-request-id`
+everywhere but production; none of it goes to Sentry. Each phone procedure and hot office
+read has an exact statement budget (`packages/api/test/core/budgets.test.ts`).
+
 **Schema rule.** Free to change until the first production release. After it, a migration
 that drops or rewrites data needs the owner's OK.
 

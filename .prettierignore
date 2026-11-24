@@ -15,3 +15,6 @@ apps/mobile/expo-env.d.ts
 
 # The owner's file, committed byte for byte as handed over.
 .claude/settings.json
+
+# The wire contract snapshot, written by its test (packages/api/test/contract/wire.test.ts).
+packages/api/test/contract/wire.json

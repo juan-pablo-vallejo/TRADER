@@ -9,4 +9,5 @@ export {
   type DatabaseEnv,
 } from "./env";
 export { assertLoginRole, assertRuntimeRole } from "./guard";
+export { metered } from "./meter";
 export { SEED, seed, type SeedCompany, type SeedResult } from "./seed";

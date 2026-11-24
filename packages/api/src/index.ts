@@ -1,4 +1,5 @@
 export { createContext, type Context } from "./core/context";
+export { type CallLine, type CallObserver } from "./core/observe";
 export type { ClosedCompany, DemoDoor } from "./core/demo-door";
 export {
   createDevIdentityAdapter,
@@ -23,6 +24,7 @@ export {
   reportingOnError,
   type ErrorReport,
   type ErrorReporter,
+  type ReportDetail,
 } from "./core/report";
 export type { AppUser } from "./core/resolve-user";
 export { appRouter, type AppRouter } from "./router";

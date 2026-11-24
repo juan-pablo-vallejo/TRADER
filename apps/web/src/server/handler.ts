@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import {
   appRouter,
   createContext,
+  type CallLine,
   reportingOnError,
   type ClosedCompany,
   type DemoDoor,
@@ -42,7 +43,24 @@ export type HandlerDependencies = {
   // What stands in front of the route (edge.ts). Absent, nothing is refused there: a test
   // of something else hands the handler none.
   edge?: EdgeDependencies;
+  // Where each call's timing line goes (api core/observe.ts). Absent, one JSON line on
+  // stdout, which the platform's logs keep.
+  logCall?: (line: CallLine) => void;
+  // Whether a response also carries its calls as Server-Timing and its request id as
+  // x-request-id, read per request. Absent, never: production answers neither.
+  timingHeaders?: () => boolean;
 };
+
+const logToStdout = (line: CallLine): void => {
+  console.log(JSON.stringify({ trader_call: line }));
+};
+
+// One Server-Timing entry per call. A path is a router's dotted name (letters and dots,
+// core/report.ts's PATH), so it needs no escaping inside the quoted description.
+export const serverTiming = (calls: readonly CallLine[]): string =>
+  calls
+    .map((c) => `call;desc="${c.path}, ${c.statements} statements";dur=${c.ms}`)
+    .join(", ");
 
 export function createTrpcHandler(deps: HandlerDependencies) {
   return async (req: Request): Promise<Response> => {
@@ -50,6 +68,8 @@ export function createTrpcHandler(deps: HandlerDependencies) {
     // context does, so a request whose context cannot be built is still reported under it.
     const requestId = randomUUID();
     const { edge } = deps;
+    const logCall = deps.logCall ?? logToStdout;
+    const calls: CallLine[] = [];
     if (edge !== undefined) {
       const refusal = guardRequest(req, edge);
       if (refusal !== null) return refusal;
@@ -70,6 +90,10 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           ...(deps.closed !== undefined && { closed: deps.closed() }),
           reporter: deps.reporter,
           requestId,
+          observe: (line) => {
+            calls.push(line);
+            logCall(line);
+          },
         });
       },
       onError: reportingOnError(deps.reporter, requestId),
@@ -78,7 +102,16 @@ export function createTrpcHandler(deps: HandlerDependencies) {
       maxBatchSize: MAX_BATCH_SIZE,
       // Every answer is per caller or per deployment, and `status.get` is read by every
       // build before it syncs: nothing here may be served from a shared cache.
-      responseMeta: () => ({ headers: { "cache-control": "no-store" } }),
+      // The batch link waits for every call before it answers, so `calls` is whole here.
+      responseMeta: () => ({
+        headers: {
+          "cache-control": "no-store",
+          ...(deps.timingHeaders?.() === true && {
+            "x-request-id": requestId,
+            ...(calls.length > 0 && { "server-timing": serverTiming(calls) }),
+          }),
+        },
+      }),
     });
   };
 }

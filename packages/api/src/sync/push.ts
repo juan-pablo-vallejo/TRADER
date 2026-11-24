@@ -41,7 +41,8 @@ const addressable = z.object({ id: z.uuid({ version: "v7" }) });
 // Upcasters: each kind's payload at each version it was ever written in, to the current shape.
 // Version 1 is the current one of every kind; a later version adds its parser here and keeps
 // every older one, so an outbox written by an older build is accepted forever.
-const PAYLOADS = {
+// Exported for the contract snapshot (test/contract/wire.test.ts) alone.
+export const PAYLOADS = {
   labor_event: { 1: laborPayloadV1 },
 } as const satisfies Record<Kind, Record<number, z.ZodType>>;
 

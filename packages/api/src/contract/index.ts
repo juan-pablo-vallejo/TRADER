@@ -9,6 +9,7 @@ export * from "./instant";
 export * from "./invitation";
 export * from "./invoice-status";
 export * from "./labor";
+export * from "./phone";
 export * from "./protocol";
 export * from "./pull";
 export * from "./rejections";

@@ -1,7 +1,7 @@
 // tRPC with superjson (Dates survive the wire) and the protected procedure: one transaction
 // per procedure call, in which the request is authenticated, its tenant established, and the
 // procedure run. Nothing a client sends names a company, a role or a subject.
-import { assertRuntimeRole } from "@trader/db";
+import { assertRuntimeRole, metered } from "@trader/db";
 import { initTRPC, TRPCError } from "@trpc/server";
 import { sql } from "drizzle-orm";
 import superjson from "superjson";
@@ -39,7 +39,31 @@ const t = initTRPC.context<Context>().create({
 
 export const router = t.router;
 export const createCallerFactory = t.createCallerFactory;
-export const publicProcedure = t.procedure;
+
+// The base every gate builds on, so every call is measured once, outermost: its wall time
+// and the statements it sent, gate and transaction included, as one line to the context's
+// observer (observe.ts). A middleware's `next()` answers a failure as { ok: false } rather
+// than throwing, so a refused call is measured too. Observing never changes an answer.
+const measuredProcedure = t.procedure.use(async ({ ctx, path, type, next }) => {
+  const started = performance.now();
+  const { value: result, statements } = await metered(() => next());
+  try {
+    ctx.observe({
+      requestId: ctx.requestId,
+      path,
+      type,
+      ms: Math.round((performance.now() - started) * 10) / 10,
+      statements,
+      ok: result.ok,
+      code: result.ok ? null : result.error.code,
+    });
+  } catch {
+    // An observer that fails loses a line, never a call.
+  }
+  return result;
+});
+
+export const publicProcedure = measuredProcedure;
 
 // Invariant 5: the server checks its database role once when it starts and refuses to serve
 // if that role could get around row-level security. "Starts" is a server instance's first
@@ -124,7 +148,7 @@ export const PROTECTED_TIMEOUTS: CallerTimeouts = {
   statementTimeout: "20s",
 };
 
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = measuredProcedure.use(async ({ ctx, next }) => {
   const { db, identity, waits } = ctx;
   if (identity === null) throw unauthorized();
   const run = async (tx: Tx, user: AppUser) => {
@@ -162,7 +186,7 @@ export const SYNC_TIMEOUTS: CallerTimeouts = {
   statementTimeout: "4s",
 };
 
-export const syncProcedure = t.procedure.use(({ ctx, next }) => {
+export const syncProcedure = measuredProcedure.use(({ ctx, next }) => {
   const { db, identity, waits } = ctx;
   if (identity === null) throw unauthorized();
   const runRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) =>

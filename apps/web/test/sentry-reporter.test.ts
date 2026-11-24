@@ -271,6 +271,23 @@ describe("createWebReporter", () => {
     expect(send).toHaveBeenCalledExactlyOnceWith(toSentryEvent(report));
   });
 
+  it("hands frames to the log line alone, and Sentry the same event as without them", async () => {
+    const send = vi.fn((_event: unknown) => Promise.resolve());
+    const lines: unknown[] = [];
+    const reporter = createWebReporter({
+      configured: () => true,
+      send,
+      defer: (work) => void work(),
+      log: { report: (event, detail) => void lines.push([event, detail]) },
+    });
+    const detail = { frames: ["boom at api/src/x.ts:1:1"] };
+    void reporter.report(report, detail);
+    await Promise.resolve();
+    expect(lines).toEqual([[report, detail]]);
+    expect(send).toHaveBeenCalledExactlyOnceWith(toSentryEvent(report));
+    expect(JSON.stringify(send.mock.calls)).not.toContain("api/src/x.ts");
+  });
+
   it("swallows a failure to send", async () => {
     const { reporter, deferred } = harness(
       true,
