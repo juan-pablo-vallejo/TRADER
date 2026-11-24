@@ -9,6 +9,9 @@ import {
   setJobStatus,
   setStatusInput,
   setStatusOutput,
+  setJobLocation,
+  setLocationInput,
+  setLocationOutput,
   updateInput,
   updateJob,
   updateOutput,
@@ -31,6 +34,10 @@ export const jobRouter = router({
     .input(updateInput)
     .output(updateOutput)
     .mutation(({ ctx, input }) => updateJob(ctx.tx, ctx.user, input)),
+  setLocation: roleProcedure("admin")
+    .input(setLocationInput)
+    .output(setLocationOutput)
+    .mutation(({ ctx, input }) => setJobLocation(ctx.tx, ctx.user, input)),
   setStatus: roleProcedure("admin")
     .input(setStatusInput)
     .output(setStatusOutput)

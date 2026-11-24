@@ -8,7 +8,8 @@
 // (users.ts), so two unique indexes can refuse the insert and one ON CONFLICT target would
 // cover one of them: the statement names none, so no conflict is ever raised and the
 // transaction is never aborted, and a read then says which address is held. The id is the
-// database's own uuidv7(), so the only conflicts there can be are those two. Consumed by
+// office's own uuidv7 when it sends one (M10), so a retry after a dropped response finds its
+// own row and answers as the first call did; without one it is the database's. Consumed by
 // routers/roster.ts.
 import { ROLES } from "../contract/enums";
 import { sql } from "drizzle-orm";
@@ -20,6 +21,7 @@ import {
   signInPhoneSchema,
   type IdentityDirectory,
 } from "../core/identity";
+import { lockActiveSelf } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
 import { readRosterUser, rosterUser } from "./list";
 
@@ -43,6 +45,8 @@ export const invitedPhone = z
 // sent to it.
 export const inviteInput = z
   .strictObject({
+    // The invitation's id, made by the office (uuidv7): the same id again is a retry.
+    id: z.uuid().optional(),
     email: signInEmailSchema.optional(),
     phone: invitedPhone.optional(),
     name: z.string().trim().min(1).max(120),
@@ -64,9 +68,11 @@ export const inviteOutput = z.discriminatedUnion("result", [
   // written. When both are held, the email is the one named.
   // `company_closed`: this company invites nobody on this deployment (the Demo company in
   // production; core/demo-door.ts, routers/roster.ts). Nothing is written.
+  // `id_conflict`: the id is held by a row this caller cannot see. Nothing is written; the
+  // office sends again under a new id.
   z.strictObject({
     result: z.literal("rejected"),
-    code: z.enum(["email_taken", "phone_taken", "company_closed"]),
+    code: z.enum(["email_taken", "phone_taken", "company_closed", "id_conflict"]),
   }),
 ]);
 
@@ -78,15 +84,33 @@ export async function rosterInvite(
   input: InviteInput,
   directory: IdentityDirectory,
 ): Promise<InviteResult> {
+  // The caller, under a lock held to commit, as every office writer re-reads it.
+  await lockActiveSelf(tx, user, "admin");
   const email = input.email ?? null;
   const phone = input.phone ?? null;
   const { rows } = await tx.execute<{ id: string }>(sql`
-    INSERT INTO users (company_id, email, sign_in_phone, name, role)
-    VALUES (${user.companyId}, ${email}, ${phone}, ${input.name}, ${input.role}::user_role)
+    INSERT INTO users (id, company_id, email, sign_in_phone, name, role)
+    VALUES (coalesce(${input.id ?? null}::uuid, uuidv7()), ${user.companyId}, ${email},
+      ${phone}, ${input.name}, ${input.role}::user_role)
     ON CONFLICT DO NOTHING
     RETURNING id
   `);
   const inserted = rows[0];
+  if (inserted === undefined && input.id !== undefined) {
+    // A retry: the row is this company's own, written by the call whose answer was lost, so
+    // it is answered as that call was (the person was admitted then). Held by a row this
+    // tenant cannot see, it is no retry.
+    const own = await readRosterUser(tx, input.id);
+    if (own !== undefined) return { result: "invited", user: own };
+    const { rows: unheld } = await tx.execute<{ free: boolean }>(sql`
+      SELECT NOT EXISTS (
+        SELECT 1 FROM users WHERE company_id = ${user.companyId}
+          AND (lower(email) = lower(${email}) OR sign_in_phone = ${phone})
+      ) AS free
+    `);
+    // Neither address is held here, so only the id stopped the insert.
+    if (unheld[0]?.free === true) return { result: "rejected", code: "id_conflict" };
+  }
   if (inserted === undefined) {
     // The row that won is committed or this transaction's own, and a users row is never
     // deleted, so it is there to read.

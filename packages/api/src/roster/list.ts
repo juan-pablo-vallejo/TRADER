@@ -19,6 +19,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { groupBy } from "../core/group";
 
 // One time an invitation went out: by which way, when, who sent it, and how it went. A
 // text is the admin's own message, noted when they opened it to send; an email is
@@ -199,14 +200,8 @@ export async function rosterList(tx: Tx): Promise<RosterUser[]> {
     .select(columns)
     .from(users)
     .orderBy(asc(sql`lower(${users.name})`), asc(users.id));
-  const byPerson = new Map<string, Send[]>();
-  for (const send of await sendsOf(tx)) {
-    byPerson.set(send.userId, [...(byPerson.get(send.userId) ?? []), send]);
-  }
-  const changed = new Map<string, Changed[]>();
-  for (const change of await changesOf(tx)) {
-    changed.set(change.userId, [...(changed.get(change.userId) ?? []), change]);
-  }
+  const byPerson = groupBy(await sendsOf(tx), (send) => send.userId);
+  const changed = groupBy(await changesOf(tx), (change) => change.userId);
   return rows.map((row) =>
     toUser(row, byPerson.get(row.id) ?? [], changed.get(row.id) ?? []),
   );

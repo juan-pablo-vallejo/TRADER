@@ -384,6 +384,8 @@ export const en = {
       paid: "Paid",
     },
     noneHere: "No invoices to show.",
+    truncated: (shown: number) =>
+      `Showing the newest ${shown}. Older invoices are on each job's page.`,
     figures: {
       outstanding: (amount: string) => `${amount} outstanding`,
       overdue: (amount: string) => `${amount} overdue`,

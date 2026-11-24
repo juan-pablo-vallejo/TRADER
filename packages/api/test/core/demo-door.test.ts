@@ -1,8 +1,8 @@
 // demo.signIn: a ticket for an active person of the one company the host names, given
 // that person's number and the code; one refusal for everything else, and no ticket ever
 // asked of the provider for anybody the door does not admit.
-import { users } from "@trader/db/schema";
-import { eq } from "drizzle-orm";
+import { companies, users } from "@trader/db/schema";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createContext } from "../../src/core/context";
@@ -27,8 +27,14 @@ const owner = ownerDb();
 const app = appDb({ max: 4 });
 let w: World;
 
+// Both companies are flagged Demo (M8) unless a test says otherwise: the door admits people
+// of a flagged company only.
 beforeEach(async () => {
   w = await world(owner);
+  await owner
+    .update(companies)
+    .set({ demo: true })
+    .where(inArray(companies.id, [w.a.companyId, w.b.companyId]));
 });
 afterEach(async () => {
   await w.cleanup();
@@ -51,20 +57,28 @@ async function personWith(company: "a" | "b", opts: { deactivated?: boolean } = 
   return { ...person, phone };
 }
 
-// The door of company `a`, recording every number a ticket was asked for.
+// The door of company `a`, recording every number a ticket was asked for, and the login
+// the admitted row is bound to (null for an invitation not yet signed in).
 function door(over: Partial<DemoDoor> = {}) {
   const asked: string[] = [];
+  const subjects: (string | null)[] = [];
   const it: DemoDoor = {
     code: CODE,
     companyId: w.a.companyId,
-    ticket: (phone) => {
+    ticket: ({ phone, subject }) => {
       asked.push(phone);
+      subjects.push(subject);
       return Promise.resolve(`ticket-for-${phone}`);
     },
     ...over,
   };
-  return { it, asked };
+  return { it, asked, subjects };
 }
+
+const subjectOf = async (id: string) =>
+  (
+    await owner.select({ s: users.identitySubject }).from(users).where(eq(users.id, id))
+  )[0]!.s;
 
 function signIn(demo: DemoDoor | null, reporter = recordingReporter()) {
   const caller = createCallerFactory(appRouter)(
@@ -144,6 +158,34 @@ describe("demo.signIn", () => {
       ticket: `ticket-for-${person.phone}`,
     });
     expect(d.asked).toEqual([person.phone]);
+    // M9: the ticket is for the admitted row's own login, never whoever holds the number.
+    expect(d.subjects).toEqual([await subjectOf(person.id)]);
+  });
+
+  // M8: nothing in the database said the door's company was the Demo company.
+  it("refuses a company not flagged as the Demo company, and asks the provider for nothing", async () => {
+    const person = await personWith("a");
+    await owner
+      .update(companies)
+      .set({ demo: false })
+      .where(eq(companies.id, w.a.companyId));
+    const d = door();
+    expect(await signIn(d.it).call({ phone: person.phone, code: CODE })).toEqual({
+      result: "refused",
+    });
+    expect(d.asked).toEqual([]);
+  });
+
+  it("names no login for an invitation not yet signed in", async () => {
+    const phone = testPhone();
+    await owner
+      .insert(users)
+      .values({ companyId: w.a.companyId, signInPhone: phone, name: "Invited" });
+    const d = door();
+    expect(await signIn(d.it).call({ phone, code: CODE })).toMatchObject({
+      result: "ticket",
+    });
+    expect(d.subjects).toEqual([null]);
   });
 
   it("refuses a wrong code, and asks the provider for nothing", async () => {

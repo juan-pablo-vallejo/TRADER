@@ -20,7 +20,12 @@ export function describePoolError(error: unknown): string {
   return `database pool: idle client failed (${name}${typeof code === "string" ? ` ${code}` : ""})`;
 }
 
-export function createDb(env: Record<string, string | undefined> = process.env) {
+// `tuning` is a host's own floor under the pool's size and its idle timeout (apps/web
+// server/db.ts); scripts and suites take pg's defaults.
+export function createDb(
+  env: Record<string, string | undefined> = process.env,
+  tuning: { minMax?: number; idleTimeoutMillis?: number } = {},
+) {
   // One parse: the driver, the connection and the pool's size come from one validated record.
   const { driver, connection, poolMax } = parseDatabaseEnv(env);
   switch (driver) {
@@ -28,8 +33,11 @@ export function createDb(env: Record<string, string | undefined> = process.env) 
       // A pool, not a single client: tests and the API run concurrent queries.
       const pool = new Pool({
         ...connection,
-        max: poolMax,
+        max: Math.max(poolMax, tuning.minMax ?? 0),
         connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+        ...(tuning.idleTimeoutMillis !== undefined && {
+          idleTimeoutMillis: tuning.idleTimeoutMillis,
+        }),
       });
       // An idle client whose server went away (a restart, Neon scaling to zero) emits `error`
       // on the pool; with no listener Node treats it as uncaught and the process exits. The

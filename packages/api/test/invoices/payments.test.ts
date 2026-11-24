@@ -117,7 +117,7 @@ describe("invoice.recordPayment", () => {
         },
         { amountCents: 35640, method: "bank_transfer", paidOn: "2026-11-09" },
       ]);
-      expect((await o.bill.list()).find((i) => i.id === id)).toMatchObject({
+      expect((await o.bill.list()).items.find((i) => i.id === id)).toMatchObject({
         paidCents: 55640,
         owedCents: 0,
       });

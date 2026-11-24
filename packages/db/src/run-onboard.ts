@@ -17,7 +17,7 @@ try {
 const USAGE =
   "usage: onboard --company <name> --timezone <IANA zone> --next-invoice <n> " +
   "--admin-name <name> --admin-phone <+1XXXXXXXXXX> " +
-  "[--admin-email <address>] [--apply]";
+  "[--admin-email <address>] [--demo] [--apply]";
 
 async function main() {
   const { values } = parseArgs({
@@ -28,6 +28,7 @@ async function main() {
       "admin-name": { type: "string" },
       "admin-phone": { type: "string" },
       "admin-email": { type: "string" },
+      demo: { type: "boolean", default: false },
       apply: { type: "boolean", default: false },
     },
   });
@@ -38,6 +39,7 @@ async function main() {
     adminName: values["admin-name"],
     adminPhone: values["admin-phone"],
     ...(values["admin-email"] !== undefined && { adminEmail: values["admin-email"] }),
+    demo: values.demo,
   };
   const faults = onboardingFaults(input);
   if (faults.length > 0) {

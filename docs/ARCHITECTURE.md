@@ -99,6 +99,16 @@ read has an exact statement budget (`packages/api/test/core/budgets.test.ts`).
 **Schema rule.** Free to change until the first production release. After it, a migration
 that drops or rewrites data needs the owner's OK.
 
+**Migrating a live database** (from the first production release). A migration runs before
+the new code serves, and installed phones stay for weeks: a migration only adds, and a
+removal waits for a later release. All pending migrations run in one transaction, so each
+starts `SET LOCAL lock_timeout = '3s'`, an index is never built CONCURRENTLY, and a new
+CHECK or foreign key is added NOT VALID in one release and validated in the next. A trigger
+on an append-only or invoice table is never disabled. Squawk reads every new migration.
+
+**Pool.** An instance's pool holds at least twice the batch limit. On Vercel it is attached
+with `attachDatabasePool`, and idle clients close after 5 s.
+
 **In place of a rate limiter in the database:** one rate-limit rule in Vercel's firewall on
 `/api`, set in the dashboard, no code.
 

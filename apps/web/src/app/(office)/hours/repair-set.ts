@@ -181,8 +181,9 @@ export const missingPreview = (
 
 // A void names the session's root. An open session is ended first, in the same set: the
 // server refuses a void that leaves its session open (labor/repair.ts, H1), since its
-// worker would stay clocked in. The end is a minute before now, so no device clock ahead of
-// the server's makes it a future time, and never before the session's last entry.
+// worker would stay clocked in. The end is a minute before this browser's now, so a clock up
+// to a minute ahead of the server's is no future time (more is refused time_in_future), and
+// never before the session's last entry.
 export function voidOperation(
   session: LedgerSession,
   now: number = Date.now(),

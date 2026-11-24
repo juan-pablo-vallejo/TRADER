@@ -19,7 +19,7 @@
 // admin's are shown and not changed (the owner's word, 2026-11-23). Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState, useSyncExternalStore, type FormEvent } from "react";
+import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
 import { Failure } from "../../failure";
@@ -167,29 +167,10 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   const [note, setNote] = useState<{ under: "phone" | "email"; text: string } | null>(
     null,
   );
-  const invite = useMutation(
-    trpc.roster.invite.mutationOptions({
-      onSuccess: async (answer) => {
-        if (answer.result === "rejected") {
-          setNote(
-            answer.code === "company_closed"
-              ? { under: "phone", text: t.companyClosed }
-              : answer.code === "phone_taken"
-                ? { under: "phone", text: t.phoneTaken }
-                : { under: "email", text: t.emailTaken },
-          );
-          return;
-        }
-        setPhone("");
-        setEmail("");
-        setName("");
-        setRole("worker");
-        setNote(null);
-        await refresh();
-        onDone(answer.user.id);
-      },
-    }),
-  );
+  // The invitation's id (M10): the same invitation sent again keeps it, so a send whose
+  // answer was lost is answered "invited" and not "taken"; anything changed is a new one.
+  const minted = useRef<{ key: string; id: string } | null>(null);
+  const invite = useMutation(trpc.roster.invite.mutationOptions());
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
@@ -205,12 +186,44 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
       setNote({ under: "phone", text: t.mobileNumberInvalid });
       return;
     }
-    invite.mutate({
+    const invitation = {
       ...(typedPhone !== "" && { phone: typedPhone }),
       ...(typedEmail !== "" && { email: typedEmail }),
       name,
       role,
-    });
+    };
+    const key = JSON.stringify(invitation);
+    if (minted.current?.key !== key) minted.current = { key, id: uuidv7() };
+    invite.mutate(
+      { id: minted.current.id, ...invitation },
+      {
+        onSuccess: (answer) => {
+          if (answer.result === "rejected") {
+            // The id is held elsewhere: nothing was written, and the next send takes a new one.
+            if (answer.code === "id_conflict") {
+              minted.current = null;
+              setNote({ under: "phone", text: t.requestFailed });
+              return;
+            }
+            setNote(
+              answer.code === "company_closed"
+                ? { under: "phone", text: t.companyClosed }
+                : answer.code === "phone_taken"
+                  ? { under: "phone", text: t.phoneTaken }
+                  : { under: "email", text: t.emailTaken },
+            );
+            return;
+          }
+          setPhone("");
+          setEmail("");
+          setName("");
+          setRole("worker");
+          setNote(null);
+          minted.current = null;
+          void refresh().then(() => onDone(answer.user.id));
+        },
+      },
+    );
   };
   return (
     <form

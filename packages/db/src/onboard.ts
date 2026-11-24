@@ -33,6 +33,8 @@ export const onboardingSchema = z.strictObject({
   // normalised here: a number is typed as it will be matched.
   adminPhone: z.string().regex(/^\+1[2-9][0-9]{9}$/, "not a +1 E.164 number"),
   adminEmail: z.email().max(320).optional(),
+  // The Demo company (companies.demo, M8): the one the Demo sign-in may admit people of.
+  demo: z.boolean().default(false),
 });
 
 export type Onboarding = z.input<typeof onboardingSchema>;
@@ -89,8 +91,8 @@ export async function onboard(
   }
 
   const { rows: created } = await executor.execute<{ id: string; database: string }>(sql`
-    INSERT INTO companies (name, timezone)
-    VALUES (${company.companyName}, ${company.timezone})
+    INSERT INTO companies (name, timezone, demo)
+    VALUES (${company.companyName}, ${company.timezone}, ${company.demo})
     RETURNING id, current_database()::text AS database
   `);
   const row = created[0];

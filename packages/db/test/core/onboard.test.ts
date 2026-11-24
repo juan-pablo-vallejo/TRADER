@@ -45,7 +45,11 @@ describe("onboard", () => {
       });
       expect(
         one(await tx.select().from(companies).where(eq(companies.id, result.companyId))),
-      ).toMatchObject({ name: input.companyName, timezone: "America/New_York" });
+      ).toMatchObject({
+        name: input.companyName,
+        timezone: "America/New_York",
+        demo: false,
+      });
       expect(
         one(
           await tx
@@ -69,6 +73,16 @@ describe("onboard", () => {
         phone: null,
         deactivatedAt: null,
       });
+    });
+  });
+
+  // M8: the Demo company is flagged when it is onboarded, and only then.
+  it("flags the company as the Demo company when told to", async () => {
+    await rolledBack(db, async (tx) => {
+      const result = await onboard(tx, { ...input, demo: true });
+      expect(
+        one(await tx.select().from(companies).where(eq(companies.id, result.companyId))),
+      ).toMatchObject({ demo: true });
     });
   });
 

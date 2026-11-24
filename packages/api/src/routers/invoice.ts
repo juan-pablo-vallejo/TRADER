@@ -31,7 +31,7 @@ import {
 } from "../invoices/payments";
 import {
   listInvoices,
-  listOutput,
+  invoiceListOutput,
   readInput,
   readInvoice,
   readOutput,
@@ -48,7 +48,7 @@ import { sendInput, sendInvoice, sendOutput } from "../invoices/send";
 const admin = roleProcedure("admin");
 
 export const invoiceRouter = router({
-  list: admin.output(listOutput).query(({ ctx }) => listInvoices(ctx.tx)),
+  list: admin.output(invoiceListOutput).query(({ ctx }) => listInvoices(ctx.tx)),
   totals: admin.output(totalsOutput).query(({ ctx }) => invoiceTotals(ctx.tx)),
   read: admin
     .input(readInput)

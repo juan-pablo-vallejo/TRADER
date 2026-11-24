@@ -64,7 +64,7 @@ describe("the wire contract", () => {
       ),
       lists,
     };
-    expect(paths).toHaveLength(57);
+    expect(paths).toHaveLength(58);
     await expect(`${JSON.stringify(wire, null, 2)}\n`).toMatchFileSnapshot("./wire.json");
   });
 

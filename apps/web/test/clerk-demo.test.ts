@@ -24,6 +24,8 @@ const KEY = "sk_test_abc";
 const CODE = "a-long-demo-code-0123456789";
 const COMPANY = "0193a5b0-0000-7000-8000-000000000001";
 const TOKEN = "tok_abcdefghijklmnopqrstuvwxyz0123456789";
+// An invitation not yet signed in: found at Clerk by its number.
+const INVITED = { phone: PHONE, subject: null };
 
 type Call = { url: string; init: RequestInit };
 
@@ -54,7 +56,7 @@ const token = () => Response.json({ token: TOKEN }, { status: 200 });
 describe("the Demo door at Clerk", () => {
   it("finds the one user who holds the number and asks a single-use token for them", async () => {
     const c = clerk(users(user("user_abc", PHONE)), token());
-    expect(await c.door.ticket(PHONE)).toBe(TOKEN);
+    expect(await c.door.ticket(INVITED)).toBe(TOKEN);
     expect(c.calls).toHaveLength(2);
     const [list, make] = c.calls;
     expect(list!.url).toBe(
@@ -76,6 +78,24 @@ describe("the Demo door at Clerk", () => {
     expect(TICKET_SECONDS).toBe(60);
   });
 
+  // M9: a bound row's ticket is for its own login, whoever else holds the number now.
+  it("asks a token for a bound person's own login, looking nobody up by number", async () => {
+    const c = clerk(token());
+    expect(await c.door.ticket({ phone: PHONE, subject: "user_own" })).toBe(TOKEN);
+    expect(c.calls).toHaveLength(1);
+    expect(c.calls[0]!.url).toBe("https://api.clerk.com/v1/sign_in_tokens");
+    expect(JSON.parse(String(c.calls[0]!.init.body))).toEqual({
+      user_id: "user_own",
+      expires_in_seconds: TICKET_SECONDS,
+    });
+    // A subject that is not a Clerk user's id is no login of Clerk's: no ticket, no call.
+    const other = clerk();
+    expect(
+      await other.door.ticket({ phone: PHONE, subject: "dev:x@co.test" }),
+    ).toBeNull();
+    expect(other.calls).toHaveLength(0);
+  });
+
   it("gives no ticket, and asks for none, unless exactly one user holds that number", async () => {
     const cases: unknown[][] = [
       [],
@@ -87,30 +107,30 @@ describe("the Demo door at Clerk", () => {
     ];
     for (const list of cases) {
       const c = clerk(users(...list));
-      expect(await c.door.ticket(PHONE)).toBeNull();
+      expect(await c.door.ticket(INVITED)).toBeNull();
       expect(c.calls).toHaveLength(1);
     }
     const unreadable = clerk(Response.json({ data: "x" }, { status: 200 }));
-    expect(await unreadable.door.ticket(PHONE)).toBeNull();
+    expect(await unreadable.door.ticket(INVITED)).toBeNull();
     const noToken = clerk(users(user("user_abc", PHONE)), Response.json({}));
-    expect(await noToken.door.ticket(PHONE)).toBeNull();
+    expect(await noToken.door.ticket(INVITED)).toBeNull();
   });
 
   it("fails on a refusal with the call and the status, and nothing of the person", async () => {
     const refused = (status: number) =>
       Response.json({ errors: [{ message: `about ${PHONE}` }] }, { status });
     const first = clerk(refused(401));
-    const error = await first.door.ticket(PHONE).catch((e: unknown) => e);
+    const error = await first.door.ticket(INVITED).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ClerkDemoError);
     expect(error).toMatchObject({ call: "users", status: 401 });
     expect(String((error as Error).message)).not.toContain(PHONE);
     const second = clerk(users(user("user_abc", PHONE)), refused(422));
-    expect(await second.door.ticket(PHONE).catch((e: unknown) => e)).toMatchObject({
+    expect(await second.door.ticket(INVITED).catch((e: unknown) => e)).toMatchObject({
       call: "sign_in_tokens",
       status: 422,
     });
     const down = clerk(new Error("network"));
-    await expect(down.door.ticket(PHONE)).rejects.toThrow("network");
+    await expect(down.door.ticket(INVITED)).rejects.toThrow("network");
   });
 });
 

@@ -63,6 +63,12 @@ const header = {
 
 export const LIST_LIMIT = 500;
 export const listOutput = z.array(z.strictObject(header));
+// invoice.list: the newest LIST_LIMIT, and whether there are more than it shows (H5). The
+// office says so above the list; a job's own invoices are read whole (jobInvoices).
+export const invoiceListOutput = z.strictObject({
+  items: listOutput,
+  truncated: z.boolean(),
+});
 
 export const readInput = z.strictObject({ invoiceId: z.uuid() });
 export const readOutput = z.strictObject({
@@ -224,13 +230,28 @@ const headerOf = (r: Row, subtotalCents: number, paidCents: number, today: strin
   owedCents: owed(r, subtotalCents + r.taxCents, paidCents),
 });
 
-// Newest first: drafts by when they were made, issued invoices by their number.
+// Newest first: drafts by when they were made, issued invoices by their number. One more
+// than the cap is read, so the answer knows whether it is whole.
 export async function listInvoices(
   tx: Tx,
   now: Date = new Date(),
+): Promise<z.infer<typeof invoiceListOutput>> {
+  const rows = await invoiceRows(tx, now, { limit: LIST_LIMIT + 1 });
+  return { items: rows.slice(0, LIST_LIMIT), truncated: rows.length > LIST_LIMIT };
+}
+
+// One job's invoices, every one of them, in the list's order: what its page decides
+// Invoiced and Paid from (jobs/read.ts). By job_id, which is indexed; never out of a cap.
+export const jobInvoices = (tx: Tx, jobId: string, now: Date = new Date()) =>
+  invoiceRows(tx, now, { jobId });
+
+async function invoiceRows(
+  tx: Tx,
+  now: Date,
+  scope: { limit: number } | { jobId: string },
 ): Promise<z.infer<typeof listOutput>> {
   const today = await invoiceToday(tx, now);
-  const rows = await tx
+  const query = tx
     .select({
       ...columns,
       subtotalCents: sql<number>`coalesce((
@@ -241,12 +262,14 @@ export async function listInvoices(
     .from(invoices)
     .innerJoin(customers, eq(customers.id, invoices.customerId))
     .innerJoin(jobs, eq(jobs.id, invoices.jobId))
+    .where("jobId" in scope ? eq(invoices.jobId, scope.jobId) : undefined)
     .orderBy(
       sql`${invoices.number} desc nulls first`,
       desc(invoices.createdAt),
       desc(invoices.id),
     )
-    .limit(LIST_LIMIT);
+    .$dynamic();
+  const rows = await ("limit" in scope ? query.limit(scope.limit) : query);
   return rows.map((r) => headerOf(r, r.subtotalCents, r.paidCents, today));
 }
 

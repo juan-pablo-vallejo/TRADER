@@ -18,7 +18,7 @@ import { z } from "zod";
 import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
-import { listInvoices, listOutput } from "../invoices/read";
+import { jobInvoices, listOutput } from "../invoices/read";
 import { companyZone, readDayHours } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
 import { job, readJob } from "./list";
@@ -152,7 +152,7 @@ export async function readJobPage(
         compare(a.person.id, b.person.id),
     );
 
-  const invoices = (await listInvoices(tx)).filter((i) => i.job.id === found.id);
+  const invoices = await jobInvoices(tx, found.id, now);
   const standing = invoices.filter((i) => i.state === "issued");
 
   return {

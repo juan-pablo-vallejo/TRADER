@@ -66,6 +66,7 @@ const EXPECTED: Record<string, Gate> = {
   "job.list": ADMIN,
   "job.read": ADMIN,
   "job.create": ADMIN,
+  "job.setLocation": ADMIN,
   "job.update": ADMIN,
   "company.get": ADMIN,
   "company.update": ADMIN,

@@ -1,4 +1,4 @@
-// job.create, update and setStatus. A job is created under an active customer, held FOR SHARE
+// job.create, update, setStatus and setLocation. A job is created under an active customer, held FOR SHARE
 // so a deactivation in flight waits (customers/write.ts). The job row is held FOR NO KEY
 // UPDATE, which conflicts with the FOR SHARE every push takes on it (sync/scope.ts): a status
 // change commits only after the push that read the job, and a later push sees it. `update`
@@ -40,6 +40,18 @@ export const updateInput = z.strictObject({
 });
 
 export type UpdateInput = z.infer<typeof updateInput>;
+
+// The phone's own write (M6): a jobsite's place, set where the admin stands, and nothing
+// else. job.update is a whole-record replace, so a phone sending it would write back
+// whatever facts it last read over what the office typed since.
+export const setLocationInput = z.strictObject({
+  jobId: z.uuid(),
+  location: locationInput,
+});
+
+export type SetLocationInput = z.infer<typeof setLocationInput>;
+
+export const setLocationOutput = z.strictObject({ result: z.literal("updated"), job });
 
 export const setStatusInput = z.strictObject({
   jobId: z.uuid(),
@@ -157,6 +169,18 @@ export async function updateJob(tx: Tx, user: AppUser, input: UpdateInput) {
       notes: input.notes,
       ...locationColumns(input.location),
     })
+    .where(eq(jobs.id, target.id));
+  return answerWith(tx, "updated" as const, target.id);
+}
+
+// FOR NO KEY UPDATE, as setStatus: the location is no key, and a push reading the job's
+// place waits for it (sync/scope.ts).
+export async function setJobLocation(tx: Tx, user: AppUser, input: SetLocationInput) {
+  const target = await lockJob(tx, input.jobId, "no key update");
+  await lockActiveSelf(tx, user, "admin");
+  await tx
+    .update(jobs)
+    .set(locationColumns(input.location))
     .where(eq(jobs.id, target.id));
   return answerWith(tx, "updated" as const, target.id);
 }

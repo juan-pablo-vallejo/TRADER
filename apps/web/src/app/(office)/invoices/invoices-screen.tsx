@@ -82,7 +82,7 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
   );
 }
 
-type Rows = NonNullable<ReturnType<typeof useInvoices>["data"]>;
+type Rows = NonNullable<ReturnType<typeof useInvoices>["data"]>["items"];
 type Row = Rows[number];
 
 function useInvoices() {
@@ -242,12 +242,13 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
               </button>
             ))}
           </div>
+          {list.data.truncated && <Note text={s.truncated(list.data.items.length)} />}
           <DataTable
             caption={s.title}
             columns={columns}
-            rows={list.data.filter((row) => shows(preset, row))}
+            rows={list.data.items.filter((row) => shows(preset, row))}
             rowKey={(i) => i.id}
-            empty={list.data.length === 0 ? s.none : s.noneHere}
+            empty={list.data.items.length === 0 ? s.none : s.noneHere}
           />
         </>
       )}

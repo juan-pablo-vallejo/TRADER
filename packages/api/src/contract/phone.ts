@@ -7,6 +7,7 @@ export const PHONE_PROCEDURES = [
   "assignment.create",
   "assignment.moveToday",
   "demo.signIn",
+  "job.setLocation",
   "job.update",
   "me.get",
   "me.update",

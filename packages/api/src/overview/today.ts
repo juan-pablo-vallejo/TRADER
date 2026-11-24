@@ -26,6 +26,7 @@ import { job, listJobs } from "../jobs/list";
 import { sessionAccounting } from "../labor/accounting";
 import { companyZone } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
+import { groupBy } from "../core/group";
 
 const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
@@ -160,10 +161,7 @@ export async function overviewToday(
           .select()
           .from(workSessionEvents)
           .where(inArray(workSessionEvents.workerId, workerIds));
-  const ledgers = new Map<string, typeof ledger>();
-  for (const row of ledger) {
-    ledgers.set(row.workerId, [...(ledgers.get(row.workerId) ?? []), row]);
-  }
+  const ledgers = groupBy(ledger, (row) => row.workerId);
 
   type Clock = z.infer<typeof clock>;
   type Worked = { clock: Clock; workedMs: number; jobIds: Set<string>; begun: boolean };
@@ -210,10 +208,7 @@ export async function overviewToday(
     worked.set(workerId, mine);
   }
 
-  const shiftsOf = new Map<string, typeof shiftRows>();
-  for (const row of shiftRows) {
-    shiftsOf.set(row.userId, [...(shiftsOf.get(row.userId) ?? []), row]);
-  }
+  const shiftsOf = groupBy(shiftRows, (row) => row.userId);
   const shown = new Set([
     ...shiftsOf.keys(),
     ...[...worked].filter(([, w]) => w.begun).map(([id]) => id),

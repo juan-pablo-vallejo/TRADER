@@ -3,11 +3,13 @@
 // number and one code the owner keeps (the host's environment; never the repository).
 //
 // It admits nobody else. A number is let through only when it is the sign-in number of an
-// active person of the one company the host names (`companyId`): the Demo company in
-// production, the fixture company on staging. D Sierra's people are in another company, so
+// active person of the one company the host names (`companyId`), and that company is flagged
+// as the Demo company in the database (companies.demo, which the owner alone sets: M8): the
+// Demo company in production, the fixture company on staging. D Sierra's people are in another company, so
 // no code, right or wrong, signs anyone in as one of them. What comes back is a single-use
-// ticket from the identity provider for that one person, which the phone redeems as an
-// ordinary session: from there every request is judged as any other.
+// ticket from the identity provider for that one person's own login (M9: the row's bound
+// subject; only an invitation not yet signed in is found by its number), which the phone
+// redeems as an ordinary session: from there every request is judged as any other.
 //
 // One answer for every refusal, so a caller learns nothing of which part was wrong: no
 // door on this host, a wrong code, a number that is not a Demo person's, a provider that
@@ -17,7 +19,7 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
 import type { Db } from "@trader/db";
-import { users } from "@trader/db/schema";
+import { companies, users } from "@trader/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -29,9 +31,11 @@ export type DemoDoor = {
   code: string;
   // The one company whose people the door admits.
   companyId: string;
-  // A single-use sign-in ticket for the person who holds `phone` at the identity provider,
-  // or null when it has none to give. May throw: the network, never a verdict.
-  ticket(phone: string): Promise<string | null>;
+  // A single-use sign-in ticket for the admitted person: their login (`subject`, the row's
+  // identity_subject), or, for an invitation not yet signed in (null), whoever holds `phone`
+  // at the identity provider. Null when it has none to give. May throw: the network, never
+  // a verdict.
+  ticket(person: { phone: string; subject: string | null }): Promise<string | null>;
 };
 
 // The company that reaches nobody outside this deployment: the door's company, in
@@ -66,10 +70,15 @@ const sameSecret = (given: string, kept: string): boolean => {
   return timingSafeEqual(digest(given), digest(kept));
 };
 
-// Whether `phone` is the sign-in number of an active person of the door's company. A
+// The active person of the door's company whose sign-in number `phone` is, when that
+// company is flagged Demo: their login (null for an invitation), or undefined for nobody. A
 // transaction of its own, as the application's role, with that company as its tenant and
 // no identity: row-level security shows it that company's people and nobody else's.
-async function isDemoPerson(db: Db, door: DemoDoor, phone: string): Promise<boolean> {
+async function demoPerson(
+  db: Db,
+  door: DemoDoor,
+  phone: string,
+): Promise<{ subject: string | null } | undefined> {
   await runtimeRoleChecked(db);
   return db.transaction(async (tx) => {
     await tx.execute(sql`
@@ -81,16 +90,18 @@ async function isDemoPerson(db: Db, door: DemoDoor, phone: string): Promise<bool
         set_config('statement_timeout', ${PROTECTED_TIMEOUTS.statementTimeout}, true)
     `);
     const found = await tx
-      .select({ id: users.id })
+      .select({ subject: users.identitySubject })
       .from(users)
+      .innerJoin(companies, eq(companies.id, users.companyId))
       .where(
         and(
           eq(users.companyId, door.companyId),
+          eq(companies.demo, true),
           eq(users.signInPhone, phone),
           isNull(users.deactivatedAt),
         ),
       );
-    return found.length === 1;
+    return found.length === 1 ? found[0] : undefined;
   });
 }
 
@@ -102,9 +113,10 @@ export async function demoSignIn(
 ): Promise<DemoSignInResult> {
   if (door === null) return REFUSED;
   if (!sameSecret(input.code, door.code)) return REFUSED;
-  if (!(await isDemoPerson(db, door, input.phone))) return REFUSED;
+  const person = await demoPerson(db, door, input.phone);
+  if (person === undefined) return REFUSED;
   try {
-    const ticket = await door.ticket(input.phone);
+    const ticket = await door.ticket({ phone: input.phone, subject: person.subject });
     return ticket === null ? REFUSED : { result: "ticket", ticket };
   } catch (error) {
     // The provider did not answer. Reported, and refused like anything else.

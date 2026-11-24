@@ -12,6 +12,7 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
 import {
+  companies,
   customers,
   invoiceLineItems,
   invoices,
@@ -316,6 +317,7 @@ describe("statement budgets", () => {
         .update(users)
         .set({ signInPhone: "+14015550100" })
         .where(eq(users.id, w.worker.id));
+      await tx.update(companies).set({ demo: true }).where(eq(companies.id, w.companyId));
       await asTenant(tx, w.companyId);
       const door: DemoDoor = {
         code: "demo-code",

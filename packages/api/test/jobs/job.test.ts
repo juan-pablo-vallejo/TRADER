@@ -272,6 +272,55 @@ describe("job.update", () => {
   });
 });
 
+// M6: the phone set a location through job.update, a whole-record replace, and so wrote
+// back whatever facts it had read. Its own procedure writes the location and nothing else.
+describe("job.setLocation", () => {
+  it("writes the location alone, leaving every fact the office wrote meanwhile", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const id = await jobIn("a", { name: "Typed by the office" });
+    await owner
+      .update(jobs)
+      .set({ notes: "Gate code 4411", address: "9 Elm St" })
+      .where(eq(jobs.id, id));
+    expect(
+      await job(admin.who).setLocation({
+        jobId: id,
+        location: { lat: 41.8, lng: -71.4, radiusM: 150 },
+      }),
+    ).toMatchObject({
+      result: "updated",
+      job: {
+        name: "Typed by the office",
+        notes: "Gate code 4411",
+        address: "9 Elm St",
+        location: { lat: 41.8, lng: -71.4, radiusM: 150 },
+      },
+    });
+  });
+
+  it("is admin only, answers FORBIDDEN for another company's job, and takes no partial location", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const worker = await member(owner, w, "a", "worker");
+    const theirs = await jobIn("b");
+    const mine = await jobIn("a");
+    const place = { lat: 1, lng: 2, radiusM: 3 };
+    expect(
+      await outcome(job(worker.who).setLocation({ jobId: mine, location: place })),
+    ).toBe("FORBIDDEN");
+    expect(
+      await outcome(job(admin.who).setLocation({ jobId: theirs, location: place })),
+    ).toBe("FORBIDDEN");
+    expect(
+      await outcome(
+        job(admin.who).setLocation({
+          jobId: mine,
+          location: { lat: 1, lng: 2 } as typeof place,
+        }),
+      ),
+    ).toBe("BAD_REQUEST");
+  });
+});
+
 describe("job.setStatus", () => {
   it("writes any status, archived included and back, and answers unchanged for the same", async () => {
     const admin = await member(owner, w, "a", "admin");

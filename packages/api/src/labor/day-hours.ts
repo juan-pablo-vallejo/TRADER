@@ -26,6 +26,7 @@ import { sessionAccounting } from "./accounting";
 import { dayHours, type DayCell } from "./hours";
 import { REASON_ORDER } from "../sync/reasons";
 import { RANGE_REFUSAL, rangeWithinBound } from "./ledger";
+import { groupBy } from "../core/group";
 
 // Every cell of the workers named, whatever its date or job: the caller selects.
 export async function readDayHours(
@@ -39,10 +40,7 @@ export async function readDayHours(
     .from(workSessionEvents)
     .where(inArray(workSessionEvents.workerId, [...workerIds]));
 
-  const ledgers = new Map<string, typeof rows>();
-  for (const r of rows) {
-    ledgers.set(r.workerId, [...(ledgers.get(r.workerId) ?? []), r]);
-  }
+  const ledgers = groupBy(rows, (r) => r.workerId);
   const flags = new Map(rows.map((r) => [r.id, r.flags]));
   return [...ledgers].flatMap(([workerId, ledger]) =>
     dayHours(workerId, sessionAccounting(ledger), timeZone, (id) => flags.get(id) ?? []),

@@ -212,31 +212,61 @@ export function createClerkDirectory(deps: {
       },
     ];
     let changed = false;
+    // What this change added, and each primary it moved, so that a step failing before the
+    // old addresses come off puts the login back as it was (H6): an added, verified address
+    // its roster row does not hold could be bound to another company's invitation.
+    const added: string[] = [];
+    const moved: { path: string; id: string }[] = [];
+    const undo = async () => {
+      try {
+        for (const m of moved) {
+          done(
+            await call(signal, "PATCH", `${m.path}/${segment(m.id)}`, { primary: true }),
+          );
+        }
+        for (const path of added) done(await call(signal, "DELETE", path));
+      } catch {
+        // The change's own failure is the one answered; a retry finishes it (stale, below).
+      }
+    };
     // First what is added, so that "another login has it" is said with nothing changed,
     // and so that the login never stands without an address.
-    for (const kind of kinds) {
-      const { want } = kind;
-      if (want === null) continue;
-      const held = kind.have.find((h) => kind.same(h.value, want));
-      if (held === undefined) {
-        const answer = await call(signal, "POST", kind.path, {
-          user_id: login.id,
-          [kind.field]: want,
-          verified: true,
-          primary: true,
-        });
-        if (onlyExists(answer)) return "held";
-        done(answer);
-        changed = true;
-      } else if (held.id !== kind.primaryId) {
-        done(
-          await call(signal, "PATCH", `${kind.path}/${segment(held.id)}`, {
+    try {
+      for (const kind of kinds) {
+        const { want } = kind;
+        if (want === null) continue;
+        const held = kind.have.find((h) => kind.same(h.value, want));
+        const was = typeof kind.primaryId === "string" ? kind.primaryId : null;
+        if (held === undefined) {
+          const answer = await call(signal, "POST", kind.path, {
+            user_id: login.id,
+            [kind.field]: want,
             verified: true,
             primary: true,
-          }),
-        );
-        changed = true;
+          });
+          if (onlyExists(answer)) {
+            await undo();
+            return "held";
+          }
+          done(answer);
+          const id = (answer.body as { id?: unknown } | null)?.id;
+          if (typeof id === "string") added.push(`${kind.path}/${segment(id)}`);
+          if (was !== null) moved.push({ path: kind.path, id: was });
+          changed = true;
+        } else if (held.id !== kind.primaryId) {
+          done(
+            await call(signal, "PATCH", `${kind.path}/${segment(held.id)}`, {
+              verified: true,
+              primary: true,
+            }),
+          );
+          if (was !== null) moved.push({ path: kind.path, id: was });
+          changed = true;
+        }
       }
+    } catch (error) {
+      await undo();
+      throw error;
     }
     const stale = kinds.flatMap((kind) =>
       kind.have

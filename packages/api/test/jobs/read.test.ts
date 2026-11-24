@@ -1,7 +1,7 @@
 // job.read: the job page's one call. Each of the four steps reached and not reached, the
 // people of the job with their hours on it, its invoices, the gate and the tenant wall.
 // Every test runs in an owner transaction that is always rolled back.
-import { invoiceCounters, jobAssignments, users } from "@trader/db/schema";
+import { invoiceCounters, invoices, jobAssignments, users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -214,6 +214,55 @@ describe("job.read: the four steps", () => {
       await (await w.bill()).void({ invoiceId: only });
       await tx.execute(sql`reset role`);
       expect((await w.read(w.K)).steps).toMatchObject({ invoiced: false, paid: false });
+    });
+  });
+});
+
+// H5: the page read its job's invoices out of the company's newest 500, drafts first, so
+// past that an older job read "not invoiced" and offered Create invoice: billed twice.
+describe("job.read: a job's own invoices", () => {
+  it("finds every invoice of the job, however many the company has", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      await w.invoice(w.J, 50_000);
+      // 500 newer drafts on another job, each sorting ahead of an issued invoice.
+      await tx.insert(invoices).values(
+        Array.from({ length: 500 }, () => ({
+          companyId: w.companyId,
+          customerId: w.customerId,
+          jobId: w.K,
+          currency: "USD",
+          taxCents: 0,
+        })),
+      );
+      const page = await w.read(w.J);
+      expect(page.steps).toMatchObject({ invoiced: true, paid: false });
+      expect(page.invoices.map((i) => i.state)).toEqual(["issued"]);
+    });
+  });
+
+  it("lists the company's newest 500, and says when there are more", async () => {
+    await rolledBack(owner, async (tx) => {
+      const w = await world(tx);
+      const drafts = (n: number) =>
+        tx.insert(invoices).values(
+          Array.from({ length: n }, () => ({
+            companyId: w.companyId,
+            customerId: w.customerId,
+            jobId: w.K,
+            currency: "USD",
+            taxCents: 0,
+          })),
+        );
+      const list = async () => {
+        const answer = await (await w.bill()).list();
+        await tx.execute(sql`reset role`);
+        return { shown: answer.items.length, truncated: answer.truncated };
+      };
+      await drafts(500);
+      expect(await list()).toEqual({ shown: 500, truncated: false });
+      await drafts(1);
+      expect(await list()).toEqual({ shown: 500, truncated: true });
     });
   });
 });

@@ -388,6 +388,44 @@ describe("an address change at Clerk", () => {
     namesNoAddress(c.calls);
   });
 
+  // H6: a change that stopped after adding an address left the login holding a verified
+  // address its roster row does not, which a first sign-in could then bind elsewhere.
+  it("takes an address it added back off, and restores the primary, when a later step fails", async () => {
+    const theirs = login("user_theirs", {
+      phone_numbers: [{ id: "idn_t", phone_number: NEW_PHONE }],
+      primary_phone_number_id: "idn_t",
+    });
+    const held = clerk([signedIn(), theirs]);
+    const before = held.logins.map(stateOf);
+    expect(
+      await held.directory.readdress({
+        id: ROW,
+        subject: "user_bound",
+        email: NEW_EMAIL,
+        phone: NEW_PHONE,
+        fresh: true,
+      }),
+    ).toBe("held");
+    expect(held.logins.map(stateOf)).toEqual(before);
+
+    const failing = clerk([signedIn()], (call) =>
+      call.method === "POST" && call.path === "/phone_numbers"
+        ? Response.json({ errors: [{ code: "upstream" }] }, { status: 500 })
+        : null,
+    );
+    const was = failing.logins.map(stateOf);
+    await expect(
+      failing.directory.readdress({
+        id: ROW,
+        subject: "user_bound",
+        email: NEW_EMAIL,
+        phone: NEW_PHONE,
+        fresh: true,
+      }),
+    ).rejects.toBeInstanceOf(ClerkDirectoryError);
+    expect(failing.logins.map(stateOf)).toEqual(was);
+  });
+
   it("fails when Clerk will not or cannot, carrying the status and codes and nothing of the person", async () => {
     for (const [failing, status] of [
       [(call: Call) => call.method === "GET", 500],

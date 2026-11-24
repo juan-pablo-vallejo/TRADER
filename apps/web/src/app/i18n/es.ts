@@ -360,6 +360,8 @@ export const es: Catalog = {
       paid: "Pagadas",
     },
     noneHere: "No hay facturas que mostrar.",
+    truncated: (shown: number) =>
+      `Se muestran las ${shown} más recientes. Las anteriores están en la página de cada obra.`,
     figures: {
       outstanding: (amount) => `${amount} por cobrar`,
       overdue: (amount) => `${amount} vencido`,

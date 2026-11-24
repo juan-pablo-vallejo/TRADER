@@ -2,7 +2,8 @@
 // trader_app cannot be made here (the role has no password), so the deployed case is a
 // transaction whose session authorization is trader_app, which is what a login sets.
 import type { Db } from "@trader/db";
-import { sql } from "drizzle-orm";
+import { companies } from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { GET } from "../src/app/api/ready/route";
@@ -97,6 +98,37 @@ describe("/api/ready", () => {
       body: '{"ready":false,"commit":null}',
     });
     expect(events).toHaveLength(1);
+  });
+
+  // M8: where a Demo door is configured, whether the database flags its company as Demo.
+  // Unflagged, the door refuses everyone; ready either way, since it can serve.
+  it("says whether the Demo door's company is flagged, where there is a door", async () => {
+    const [made] = await owner
+      .insert(companies)
+      .values({ name: `Ready demo ${Date.now()}`, timezone: "America/New_York" })
+      .returning({ id: companies.id });
+    const id = made!.id;
+    const bodyWith = async (env: Record<string, string>) => {
+      const { reporter } = recordingReporter();
+      const handler = createReadyHandler({
+        getDb: () => loggedInAsApp,
+        reporter,
+        env: { NODE_ENV: "production", ...env },
+      });
+      return (await answer(await handler())).body;
+    };
+    const door = {
+      DEMO_SIGN_IN_CODE: "a-long-demo-code-0123456789",
+      DEMO_COMPANY_ID: id,
+    };
+    try {
+      expect(await bodyWith(door)).toBe('{"ready":true,"commit":null,"demo":false}');
+      await owner.update(companies).set({ demo: true }).where(eq(companies.id, id));
+      expect(await bodyWith(door)).toBe('{"ready":true,"commit":null,"demo":true}');
+      expect(await bodyWith({})).toBe('{"ready":true,"commit":null}');
+    } finally {
+      await owner.delete(companies).where(eq(companies.id, id));
+    }
   });
 
   it("names the commit it was built from, and only a full commit id", async () => {

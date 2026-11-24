@@ -171,7 +171,7 @@ describe("invoice.save", () => {
         totalCents: 12339,
       });
       // The list answers the same totals.
-      expect((await o.bill.list()).find((i) => i.id === id)).toMatchObject({
+      expect((await o.bill.list()).items.find((i) => i.id === id)).toMatchObject({
         state: "draft",
         subtotalCents: 11532,
         totalCents: 12339,
@@ -296,7 +296,7 @@ describe("invoice.issue", () => {
         voidedAt: null,
       });
       // Newest number first in the list.
-      expect((await o.bill.list()).map((i) => i.number)).toEqual([1043, 1042]);
+      expect((await o.bill.list()).items.map((i) => i.number)).toEqual([1043, 1042]);
     });
   });
 
@@ -436,7 +436,7 @@ describe("another company's invoice", () => {
         expect(await outcome(call())).toBe("FORBIDDEN");
       }
       expect(await o.bill.remove({ invoiceId })).toEqual({ result: "unchanged" });
-      expect(await o.bill.list()).toEqual([]);
+      expect(await o.bill.list()).toEqual({ items: [], truncated: false });
       await tx.execute(sql`reset role`);
       const [row] = await tx
         .select({ number: invoices.number, taxCents: invoices.taxCents })

@@ -3,6 +3,7 @@
 // use of an address in the company is `email_taken` or `phone_taken` with nothing written and
 // no error; the person admitted at the identity provider in the same transaction; admin only.
 import type { Db } from "@trader/db";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createContext } from "../../src/core/context";
@@ -22,6 +23,8 @@ import {
   REQUEST_ID,
   testPhone,
   userCount,
+  uuidv7,
+  waitForLockWait,
   userRow,
   world,
   type World,
@@ -376,5 +379,52 @@ describe("roster.invite", () => {
       ),
     ).toBe("INTERNAL_SERVER_ERROR");
     expect(await userCount(owner, [w.a.companyId])).toBe(before);
+  });
+});
+
+// M10: the one office writer that did not re-read its caller under a lock, and whose retry
+// after a dropped response answered "taken" for its own invitation.
+describe("roster.invite, the caller and a retry", () => {
+  it("re-reads the caller under lock: a deactivation committed while it waited refuses", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const before = await userCount(owner, [w.a.companyId]);
+    let result!: Promise<string>;
+    await owner.transaction(async (tx) => {
+      await tx.execute(sql`select 1 from users where id = ${admin.id} for update`);
+      result = outcome(invite(admin.who, { phone: testPhone(), name: "Late" }));
+      await waitForLockWait(owner, '%from "users"%for share%');
+      await tx.execute(
+        sql`update users set deactivated_at = now() where id = ${admin.id}`,
+      );
+    });
+    expect(await result).toBe("UNAUTHORIZED");
+    expect(await userCount(owner, [w.a.companyId])).toBe(before);
+  });
+
+  it("answers a retry of the same invitation as the first call, admitting once", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const { ids, directory } = recordingDirectory();
+    const input = { id: uuidv7(), phone: testPhone(), name: "Retried" };
+    const first = await inviteThrough(admin.who, input, directory);
+    expect(first).toMatchObject({ result: "invited", user: { id: input.id } });
+    const again = await inviteThrough(admin.who, input, directory);
+    expect(again).toEqual(first);
+    expect(ids).toEqual([input.id]);
+    // Another invitation for the same number is still taken.
+    expect(await invite(admin.who, { ...input, id: uuidv7() })).toEqual({
+      result: "rejected",
+      code: "phone_taken",
+    });
+  });
+
+  it("refuses an id another company's row holds, revealing nothing", async () => {
+    const a = await member(owner, w, "a", "admin");
+    const b = await member(owner, w, "b", "admin");
+    const id = uuidv7();
+    await invite(a.who, { id, phone: testPhone(), name: "Theirs" });
+    expect(await invite(b.who, { id, phone: testPhone(), name: "Mine" })).toEqual({
+      result: "rejected",
+      code: "id_conflict",
+    });
   });
 });

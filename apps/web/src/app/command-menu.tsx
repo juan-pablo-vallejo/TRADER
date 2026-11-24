@@ -41,9 +41,9 @@ function Menu({ onClose }: { onClose: () => void }) {
         people: people.data,
         jobs: jobs.data,
         customers: customers.data,
-        invoices: invoices.data,
+        invoices: invoices.data?.items,
       }),
-    [t, people.data, jobs.data, customers.data, invoices.data],
+    [t, people.data, jobs.data, customers.data, invoices.data?.items],
   );
   const found = search(items, query);
   const loading = [people, jobs, customers, invoices].some((q) => q.isPending);

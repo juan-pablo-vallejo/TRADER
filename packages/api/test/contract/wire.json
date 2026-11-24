@@ -3481,166 +3481,179 @@
       "type": "query",
       "input": [],
       "output": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            },
-            "state": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "issued",
-                "void"
-              ]
-            },
-            "status": {
-              "type": "string",
-              "enum": [
-                "draft",
-                "issued",
-                "partly_paid",
-                "paid",
-                "overdue",
-                "void"
-              ]
-            },
-            "dueOn": {
-              "anyOf": [
-                {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
                   "type": "string",
-                  "format": "date",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "number": {
-              "anyOf": [
-                {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "issued",
+                    "void"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "issued",
+                    "partly_paid",
+                    "paid",
+                    "overdue",
+                    "void"
+                  ]
+                },
+                "dueOn": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "number": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "customer": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "job": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "x-type": "date"
+                },
+                "issuedAt": {
+                  "anyOf": [
+                    {
+                      "x-type": "date"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "voidedAt": {
+                  "anyOf": [
+                    {
+                      "x-type": "date"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "subtotalCents": {
                   "type": "integer",
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "customer": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                "taxCents": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
                 },
-                "name": {
-                  "type": "string"
+                "totalCents": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "paidCents": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "owedCents": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
                 }
               },
               "required": [
                 "id",
-                "name"
+                "state",
+                "status",
+                "dueOn",
+                "number",
+                "customer",
+                "job",
+                "currency",
+                "createdAt",
+                "issuedAt",
+                "voidedAt",
+                "subtotalCents",
+                "taxCents",
+                "totalCents",
+                "paidCents",
+                "owedCents"
               ],
               "additionalProperties": false
-            },
-            "job": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "name": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "name"
-              ],
-              "additionalProperties": false
-            },
-            "currency": {
-              "type": "string"
-            },
-            "createdAt": {
-              "x-type": "date"
-            },
-            "issuedAt": {
-              "anyOf": [
-                {
-                  "x-type": "date"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "voidedAt": {
-              "anyOf": [
-                {
-                  "x-type": "date"
-                },
-                {
-                  "type": "null"
-                }
-              ]
-            },
-            "subtotalCents": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
-            },
-            "taxCents": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
-            },
-            "totalCents": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
-            },
-            "paidCents": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
-            },
-            "owedCents": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
             }
           },
-          "required": [
-            "id",
-            "state",
-            "status",
-            "dueOn",
-            "number",
-            "customer",
-            "job",
-            "currency",
-            "createdAt",
-            "issuedAt",
-            "voidedAt",
-            "subtotalCents",
-            "taxCents",
-            "totalCents",
-            "paidCents",
-            "owedCents"
-          ],
-          "additionalProperties": false
-        }
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ],
+        "additionalProperties": false
       }
     },
     "invoice.pdf": {
@@ -5548,6 +5561,160 @@
           "hours",
           "people",
           "invoices"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "job.setLocation": {
+      "type": "mutation",
+      "input": [
+        {
+          "type": "object",
+          "properties": {
+            "jobId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "location": {
+              "type": "object",
+              "properties": {
+                "lat": {
+                  "type": "number",
+                  "minimum": -90,
+                  "maximum": 90
+                },
+                "lng": {
+                  "type": "number",
+                  "minimum": -180,
+                  "maximum": 180
+                },
+                "radiusM": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                }
+              },
+              "required": [
+                "lat",
+                "lng",
+                "radiusM"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "jobId",
+            "location"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "output": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "const": "updated"
+          },
+          "job": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "notes": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "location": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "lat": {
+                        "type": "number",
+                        "minimum": -90,
+                        "maximum": 90
+                      },
+                      "lng": {
+                        "type": "number",
+                        "minimum": -180,
+                        "maximum": 180
+                      },
+                      "radiusM": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "lat",
+                      "lng",
+                      "radiusM"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "open",
+                  "complete",
+                  "archived"
+                ]
+              },
+              "customer": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "name"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "address",
+              "notes",
+              "location",
+              "status",
+              "customer"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "result",
+          "job"
         ],
         "additionalProperties": false
       }
@@ -8050,6 +8217,11 @@
         {
           "type": "object",
           "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
             "email": {
               "type": "string",
               "maxLength": 254,
@@ -8296,7 +8468,8 @@
                 "enum": [
                   "email_taken",
                   "phone_taken",
-                  "company_closed"
+                  "company_closed",
+                  "id_conflict"
                 ]
               }
             },
@@ -12100,6 +12273,7 @@
       "assignment.create",
       "assignment.moveToday",
       "demo.signIn",
+      "job.setLocation",
       "job.update",
       "me.get",
       "me.update",

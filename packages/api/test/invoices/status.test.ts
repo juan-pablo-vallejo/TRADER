@@ -167,7 +167,9 @@ describe("an invoice through its statuses", () => {
       // Paid stays paid, however long after.
       expect((await o.at(id, day(plus(today, 90)))).status).toBe("paid");
       // The list names it the same.
-      expect((await listInvoices(tx, now)).find((i) => i.id === id)?.status).toBe("paid");
+      expect((await listInvoices(tx, now)).items.find((i) => i.id === id)?.status).toBe(
+        "paid",
+      );
     });
   });
 
@@ -183,7 +185,8 @@ describe("an invoice through its statuses", () => {
       expect((await o.at(id, day(due, "23:30"))).status).toBe("issued");
       expect((await o.at(id, day(plus(due, 1), "00:30"))).status).toBe("overdue");
       expect(
-        (await listInvoices(tx, day(plus(due, 30)))).find((i) => i.id === id)?.status,
+        (await listInvoices(tx, day(plus(due, 30)))).items.find((i) => i.id === id)
+          ?.status,
       ).toBe("overdue");
 
       // A part payment does not make it less overdue.

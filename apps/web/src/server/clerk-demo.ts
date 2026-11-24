@@ -1,6 +1,7 @@
 // Clerk behind the Demo sign-in's door (packages/api, core/demo-door.ts). The API decides
 // who is admitted, from its own rows; this file only asks Clerk for a single-use sign-in
-// token for the one user who holds a number, and never for anybody the API did not admit.
+// token for that row's own login (M9), or, for an invitation not yet signed in, the one
+// user who holds its number, and never for anybody the API did not admit.
 //
 // Two documented calls, Clerk's Backend API `GET /v1/users` and `POST /v1/sign_in_tokens`
 // (read 2026-11-19; the same two the smoke test's tickets use, e2e/tickets.ts), made with
@@ -90,10 +91,21 @@ export function createClerkDemoDoor(deps: {
     return response.json() as Promise<unknown>;
   };
 
+  const tokenFor = async (id: string): Promise<string | null> => {
+    const made = await ask("sign_in_tokens", "/sign_in_tokens", {
+      method: "POST",
+      body: JSON.stringify({ user_id: id, expires_in_seconds: TICKET_SECONDS }),
+    });
+    const token = (made as { token?: unknown } | null)?.token;
+    return typeof token === "string" && TOKEN.test(token) ? token : null;
+  };
+
   return {
     code: deps.code,
     companyId: deps.companyId,
-    async ticket(phone) {
+    async ticket({ phone, subject }) {
+      // A bound row: its own login, or none when the subject is not a Clerk user's.
+      if (subject !== null) return USER_ID.test(subject) ? tokenFor(subject) : null;
       const query = new URLSearchParams({ phone_number: phone, limit: "10" });
       const listed = await ask("users", `/users?${query.toString()}`, { method: "GET" });
       // Filtered here as well as by Clerk: a filter Clerk ignored must not hand back
@@ -111,13 +123,7 @@ export function createClerkDemoDoor(deps: {
       if (holders.length !== 1) return null;
       const id = (holders[0] as { id?: unknown }).id;
       if (typeof id !== "string" || !USER_ID.test(id)) return null;
-
-      const made = await ask("sign_in_tokens", "/sign_in_tokens", {
-        method: "POST",
-        body: JSON.stringify({ user_id: id, expires_in_seconds: TICKET_SECONDS }),
-      });
-      const token = (made as { token?: unknown } | null)?.token;
-      return typeof token === "string" && TOKEN.test(token) ? token : null;
+      return tokenFor(id);
     },
   };
 }
