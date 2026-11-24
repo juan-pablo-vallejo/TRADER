@@ -532,7 +532,7 @@ Android user.
       it, as item 10 did. Done when every state has been seen on the iPhone simulator and
       the Android emulator in both languages, a build pointed at staging signs in by code
       and by the Demo door, and the Maestro suite is green on both.
-- [ ] 21d. **Sign in with Google, in the office.** OWNER first: gate 7's Google connection.
+- [x] 21d. **Sign in with Google, in the office.** OWNER first: gate 7's Google connection.
       By the owner's word of 2026-11-23, in place of "no social login". A Google button
       above the field, in Google's own style, its mark drawn by the page and nothing of
       Google's loaded. It signs in a person whose invitation carries that Google address,
@@ -1431,6 +1431,13 @@ Android user.
       running; the band at 390 and the Settings section at 1280, in English. Not seen, so
       21b is not ticked: both in Spanish (`staging.sh look` draws English only). 21d waits
       on the owner's two Google sign-ins.
+- [ ] Items 21d and 21b, the owner's own, on staging at `d2fb40c`, 2026-11-23, read back
+      at Clerk the same evening: his Gmail, before his login held it, was refused ("not
+      on a roster") and Clerk made no login; with it added, Google signed him in to his own
+      login, now linked to that Google account, still one login. Item 21d ticked on that.
+      Then a passkey added in his Chrome on the Mac and used to sign in, saved to Google
+      Password Manager, after Chrome first offered only a phone's QR code. Item 21b waits
+      on its band and section in Spanish.
 
 ## After MVP
 
