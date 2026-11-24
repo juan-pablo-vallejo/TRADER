@@ -634,9 +634,17 @@ Android user.
       `packages/api/test/contract/builds/2026-11-24-f84311c` and replayed with no
       BAD_REQUEST, 500, `invalid_record` or unanswered record. The preview builds are the
       owner's, at the end.
-- [ ] 24e. **Staging, measured.** A latency sample of staging and the tracing trial. Done
+- [x] 24e. **Staging, measured.** A latency sample of staging and the tracing trial. Done
       when the sample is stored. OWNER: flag staging's company as the door's.
-- [ ] 24f. **Ready to release.** `README.md` carries the Demo flag and the minimum builds.
+      Seen 2026-11-24: `scripts/staging.sh sample` on `6e70179`, 35 calls all 200, stored
+      as `~/Library/Caches/TRADER/staging/sample/6e70179….json` (the numbers are in the
+      scorecard below); the trial's transactions in Sentry's `trader-web`, one trace each,
+      named by path, op `trpc.query`, with no tag, user or request. The Demo flag is the
+      owner's, at the end.
+- [x] 24f. **Ready to release.** `README.md` carries the Demo flag and the minimum builds.
+      Seen 2026-11-24: the README's `--demo` and the release runbook's
+      `TRADER_MIN_BUILD_*` step (`d1e9b1a`), ARCHITECTURE's Measured, Migrating and Pool
+      text, and the scorecard below; `check` green on `main`.
 - [ ] 25. **The release.** OWNER merges `main` into `production`. D Sierra and Demo are
       onboarded, the invitations go out from People, Play's tester list holds each Android
       user's Google account, and week one's schedule is entered before the crew starts.
@@ -1605,7 +1613,13 @@ vitest.config.ts`). The runners should be exempt like the readers.
   | Builds with replayed calls              | 0                   | 1 recorded (`2026-11-24-f84311c`); the preview builds are cut from it                                                         |
   | High findings with a failing-first test | 0 of 6              | 6 of 6 (H6's part 2, the tag rule, is Track B)                                                                                |
   | Agent runs per push                     | 0                   | 2: the simplifier (24 to 77 s) and `batch-reviewer` (155 to 345 s a round with a focused prompt; 10,600 s on the range alone) |
-  | Deployed latency sample                 | none                | not taken: `scripts/staging.sh sample` waits on the guard prompt (24e)                                                        |
+  | Deployed latency sample                 | none                | 35 calls on `6e70179`: server 11 to 27 ms median, browser 84 to 115 ms median; one cold `me.get`, 1.5 s in the browser        |
+
+  The sample, per procedure (statements; server ms median, max; browser ms median, max):
+  `me.get` 7, 10 on a new pool; 11.5, 72.3; 84.3, 1484.5 · `company.get` 8; 14, 21; 98,
+  131.6 · `overview.today` 13; 27.2, 41.9; 115.1, 182 · `roster.list` 10; 19.6, 32.6;
+  100.9, 192.4 · `job.list` 11; 22.3, 29.5; 93.8, 122.8 · `invoice.list` 9; 17.8, 29.6;
+  95.3, 156.4 · `labor.hours` (a week) 12; 25.4, 41.3; 100, 138.8.
 
 - [ ] A forged stack (a thrown plain object, whose stack tRPC copies apart from its message)
       can still put a path such as `/srv/packages/+14015550100/x.ts` on the server's own
