@@ -603,6 +603,24 @@ Android user.
       `ASC_API_KEY_ISSUER_ID`, `ASC_API_KEY_P8` and `GOOGLE_SERVICE_ACCOUNT_KEY`. No store
       credential is kept at Expo, so no token of staging's can submit. Done when the
       workflow is on `main`, to be read in the release's pull request.
+- [ ] 24a. **The backend's tools and its reviewer.** The Code Simplifier plugin, the
+      `batch-reviewer` agent, the `backend-change` skill, and the guard's list grown to the
+      files that decide what green means. Done when a server batch has been simplified once
+      and reviewed once by agents that did not write it.
+- [ ] 24b. **Measure and pin.** A timing line and a statement count for every call;
+      statement budgets; a snapshot of every procedure's contract; the phone's procedures
+      named and held to an additive-only rule. Done when a renamed pull field fails a test.
+- [ ] 24c. **What the audit found, server and office.** A void may not leave a session
+      open; a late push is treated as an offline one; the job page reads its own invoices;
+      the Demo door asks the database; the invite re-checks its caller; the rules for a live
+      database. Done when each has a test that failed first.
+- [ ] 24d. **What the audit found, phone.** Settled records pruned after a pull; an older
+      snapshot upcast; every call times out; the job's location set by its own procedure.
+      Done when both phone suites are green and the build's calls are recorded. OWNER: new
+      preview builds.
+- [ ] 24e. **Staging, measured.** A latency sample of staging and the tracing trial. Done
+      when the sample is stored. OWNER: flag staging's company as the door's.
+- [ ] 24f. **Ready to release.** `README.md` carries the Demo flag and the minimum builds.
 - [ ] 25. **The release.** OWNER merges `main` into `production`. D Sierra and Demo are
       onboarded, the invitations go out from People, Play's tester list holds each Android
       user's Google account, and week one's schedule is entered before the crew starts.
@@ -1509,6 +1527,9 @@ In the order it would come back. The owner reorders at will.
     token for a hard production lock; vendor sign-ins for Claude that cannot reach
     production; a browser suite on the demo data in `check`; a Claude Code session of its
     own on the workstation, with the rule for two sessions on one list.
+21. The backend programme's second half: the load baseline, read scaling, the
+    simplification campaign, one money rule, identity before a second contractor, deep load
+    testing, the gates, the generated reference.
 
 **Still to decide:** what triggers the first bill to D Sierra, now that "V1 complete" no
 longer means the old feature list.
