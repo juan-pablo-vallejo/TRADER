@@ -94,7 +94,12 @@ const acknowledgement = z.strictObject({
   flags: z.array(z.enum(entryFlag.enumValues)),
 });
 
-type RepairRejection = RejectionCode | "id_conflict" | "time_in_future" | "repair_stale";
+type RepairRejection =
+  | RejectionCode
+  | "id_conflict"
+  | "time_in_future"
+  | "repair_stale"
+  | "void_leaves_session_open";
 
 // A record, so the compiler holds the wire list to every validation code.
 const REJECTIONS: Record<RepairRejection, true> = {
@@ -119,6 +124,9 @@ const REJECTIONS: Record<RepairRejection, true> = {
   time_in_future: true,
   // Another correction is in effect for the root than the one the office replaced.
   repair_stale: true,
+  // A void of a session the set leaves open: its worker would stay clocked in (H1). The
+  // office sends the void with the session's end.
+  void_leaves_session_open: true,
 };
 
 export const repairOutput = z.discriminatedUnion("result", [
@@ -339,6 +347,19 @@ export async function repairLabor(
         ? {}
         : { conflictingEventId: verdict.conflictingEventId }),
     });
+  }
+
+  // 8b. A void may not leave its session open: a voided open session keeps its worker
+  // clocked in on the server, and every clock-in after it is refused (H1).
+  const voids = input.operations.filter((op) => op.kind === "void");
+  if (voids.length > 0) {
+    const after = replay([...timeline.events, ...candidates]);
+    for (const op of voids) {
+      const session = after.sessions.find((x) => x.rootEventId === op.voidsEventId);
+      if (session !== undefined && !session.complete) {
+        return rejected("void_leaves_session_open", { eventId: op.id });
+      }
+    }
   }
 
   // 9. Each entry's flags: an entry the office writes is `corrected`, added hours

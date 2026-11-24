@@ -203,16 +203,16 @@ describe("sync.push — commits, record by record", () => {
     expect(
       first.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
     ).toEqual(["accepted", "accepted", "time_in_future"]);
-    // The end claims an online capture in October: flagged at its receipt, and the resend
-    // answers from the stored row, never judging it again.
+    // The end claims an online capture in October, sent now: offline by its delay (M3), and
+    // the resend answers from the stored row, never judging it again.
     expect(first.results[1]).toMatchObject({
-      ack: { clockSkewed: true, flags: ["clock_skewed"] },
+      ack: { clockSkewed: false, flags: ["offline"] },
     });
     // The flags were written once, with the rows, and the resend moved neither.
     expect(new Map(rows.map((r) => [r.id, r.flags]))).toEqual(
       new Map([
         [batch[0]!.id, ["offline"]],
-        [batch[1]!.id, ["clock_skewed"]],
+        [batch[1]!.id, ["offline"]],
       ]),
     );
     expect(await ledger()).toEqual(rows);

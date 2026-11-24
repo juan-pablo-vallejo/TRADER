@@ -407,6 +407,8 @@ describe("atomic repairs are not possible one record at a time", () => {
   });
 });
 
+const JOB_C = "0190d000-0000-7000-8000-00000000b003";
+
 describe("job attribution", () => {
   const corrected = () => {
     const ev = builder();
@@ -420,7 +422,9 @@ describe("job attribution", () => {
     return { ev, start, end, fix };
   };
 
-  it("holds an ordinary pause to the session's effective job", () => {
+  // M2: a phone that captured a pause before it learned the office moved the session sends
+  // the job the session had when it started. Refused, it would be refused for good.
+  it("holds an ordinary pause to a job the session's start has carried", () => {
     const { ev, start, end, fix } = corrected();
     const existing = [start, end, fix];
     expect(
@@ -428,6 +432,9 @@ describe("job attribution", () => {
     ).toEqual(ok);
     expect(
       push(existing, ev("paused", at("10:00"), { server: RECEIVED, job: JOB_A })),
+    ).toEqual(ok);
+    expect(
+      push(existing, ev("paused", at("10:00"), { server: RECEIVED, job: JOB_C })),
     ).toEqual(no("job_id_mismatch", fix.id));
   });
 

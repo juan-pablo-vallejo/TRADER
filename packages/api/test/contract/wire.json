@@ -7030,7 +7030,8 @@
                   "job_id_mismatch",
                   "id_conflict",
                   "time_in_future",
-                  "repair_stale"
+                  "repair_stale",
+                  "void_leaves_session_open"
                 ]
               },
               "eventId": {

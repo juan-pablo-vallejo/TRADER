@@ -14,7 +14,13 @@ import { assertReadCommitted, loadWorkerTimeline } from "../labor/timeline";
 import { validateEvent, type RejectionCode } from "../labor/validate";
 import type { AppUser } from "../core/resolve-user";
 import type { LaborPayload, laborAck } from "../contract/labor";
-import { judgeEventTime, laborReasons, type EntryFlag, type Skew } from "./reasons";
+import {
+  capturedOfflineIn,
+  judgeEventTime,
+  laborReasons,
+  type EntryFlag,
+  type Skew,
+} from "./reasons";
 import { judgeStart, lockShift, scheduleEnforced } from "./schedule";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
@@ -133,10 +139,11 @@ export async function pushLaborEvent(
   // caller's own id and the scope, so a retry never re-judges and a caller out of scope learns
   // nothing; before validation, so a future time is named as that. A flagged event goes on at
   // its captured time: the flag is the per-push reading or this one (reasons.ts).
+  const offline = capturedOfflineIn(p, skew.deviceNow);
   const time = judgeEventTime({
     clientTimestamp: p.clientTimestamp,
     receivedAt: timeline.receivedAt,
-    capturedOffline: p.capturedOffline,
+    capturedOffline: offline,
     timeSetByUser: p.timeSetByUser,
   });
   if (time === "future") return rejected("time_in_future");
@@ -177,7 +184,7 @@ export async function pushLaborEvent(
   if (enforced) {
     const start = await judgeStart(tx, p.workerId, p.jobId, p.clientTimestamp);
     if (start.admitted) admittedOn = start.shiftId;
-    else if (p.capturedOffline || scope!.role === "admin") unscheduled = true;
+    else if (offline || scope!.role === "admin") unscheduled = true;
     else return rejected("not_scheduled");
   }
 
@@ -187,7 +194,7 @@ export async function pushLaborEvent(
   const flags: EntryFlag[] = laborReasons({
     type: p.type,
     corrected: false,
-    capturedOffline: p.capturedOffline,
+    capturedOffline: offline,
     timeSetByUser: p.timeSetByUser,
     stamped: scope!.stamps,
     stamp,

@@ -157,14 +157,15 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   // Every accepted labor event by (who, day, type); the repair names one.
   const eventIds = new Map<string, string>();
 
-  // A push as a phone sends it: oldest first, at most 100 records, the device clock right.
-  // Every record must answer `accepted` with exactly its planned reasons.
-  const push = async (who: string, records: Record_[]) => {
+  // A push as a phone sends it: oldest first, at most 100 records, the device clock right
+  // unless `deviceNow` reads it otherwise. Every record must answer `accepted` with exactly
+  // its planned reasons.
+  const push = async (who: string, records: Record_[], deviceNow: () => Date = now) => {
     for (let i = 0; i < records.length; i += MAX_RECORDS) {
       const batch = records.slice(i, i + MAX_RECORDS);
       const out = await as(who).sync.push({
         protocolVersion: 1,
-        deviceNow: now(),
+        deviceNow: deviceNow(),
         records: batch.map(({ reasons: _reasons, ...r }) => r),
       });
       if (out.results.length !== batch.length) {
@@ -341,7 +342,17 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
         if (p.job === null) continue;
         if (p.key === late.who && (day === late.day || day > PRIYA_LAST_DAY)) continue;
         const records = ordinaryDay(p.key, day);
-        await push(p.key, records);
+        const skewed =
+          SCENARIOS.lateOnlineDay.who === p.key && SCENARIOS.lateOnlineDay.day === day;
+        if (!skewed) {
+          await push(p.key, records);
+          continue;
+        }
+        // One push per tap, the phone's clock reading the tap's own time.
+        for (const r of records) {
+          const tapped = (r.payload as { clientTimestamp: Date }).clientTimestamp;
+          await push(p.key, [r], () => tapped);
+        }
       }
     });
     if (day === late.day) {

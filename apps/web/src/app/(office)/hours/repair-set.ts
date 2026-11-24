@@ -179,10 +179,27 @@ export const missingPreview = (
       : [{ type: "ended" as const, at: wallToInstant(draft.end, timeZone) }]),
   ]);
 
-export const voidOperation = (session: LedgerSession): Unminted => ({
-  kind: "void",
-  voidsEventId: session.rootEventId,
-});
+// A void names the session's root. An open session is ended first, in the same set: the
+// server refuses a void that leaves its session open (labor/repair.ts, H1), since its
+// worker would stay clocked in. The end is a minute before now, so no device clock ahead of
+// the server's makes it a future time, and never before the session's last entry.
+export function voidOperation(
+  session: LedgerSession,
+  now: number = Date.now(),
+): Unminted[] {
+  const theVoid: Unminted = { kind: "void", voidsEventId: session.rootEventId };
+  if (session.complete) return [theVoid];
+  const last = Math.max(...inEffect(session).map((e) => e.clientTimestamp.getTime()));
+  return [
+    {
+      kind: "append",
+      type: "ended",
+      jobId: session.job.id,
+      clientTimestamp: new Date(Math.max(last, now - 60_000)),
+    },
+    theVoid,
+  ];
+}
 
 // Gives a set its ids (UUIDv7, from the client that originates the
 // record), one millisecond apart in the set's order: two entries at the same time are placed

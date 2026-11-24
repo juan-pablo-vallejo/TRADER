@@ -8,6 +8,7 @@
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import type { Refusal } from "../core/observe";
 import { instant } from "../core/instant";
 import type { AppUser } from "../core/resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
@@ -171,6 +172,8 @@ export async function pushRecords(
   run: RunRecord,
   clock: () => number = Date.now,
   onRecordFailure: (error: unknown) => void = () => undefined,
+  // Each record answered `rejected`, for the server's own log line (M4).
+  onRefused: (r: Refusal) => void = () => undefined,
 ): Promise<PushOutput> {
   const started = clock();
   const serverNow = new Date(started);
@@ -181,6 +184,9 @@ export async function pushRecords(
   let ran = 0;
   const answer = (result: PushResult) => {
     results.push(result);
+    if (result.result === "rejected") {
+      onRefused({ recordId: result.id, kind: result.kind, code: result.code });
+    }
   };
 
   for (const raw of input.records) {

@@ -274,10 +274,10 @@ describe("labor repair through the route handler", () => {
     );
 
     // A void names the session's root, and a second one is refused.
-    const voided = await repair(createMinter()(workerId, [voidOperation(repaired[0]!)]));
+    const voided = await repair(createMinter()(workerId, voidOperation(repaired[0]!)));
     expect(voided.data).toMatchObject({ result: "accepted" });
     expect(
-      (await repair(createMinter()(workerId, [voidOperation(repaired[0]!)]))).data,
+      (await repair(createMinter()(workerId, voidOperation(repaired[0]!)))).data,
     ).toMatchObject({ result: "rejected", code: "already_voided" });
     // The void took effect when it was saved: nothing of the day counts.
     expect((await ledger(workerId)).data!.sessions).toMatchObject([

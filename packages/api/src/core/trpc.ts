@@ -9,6 +9,7 @@ import superjson from "superjson";
 import type { Db } from "@trader/db";
 
 import type { CallerTimeouts, CallerWaits, Context, Tx } from "./context";
+import type { Refusal } from "./observe";
 import type { VerifiedIdentity } from "./identity";
 import { BindConflict, resolveUser, type AppUser } from "./resolve-user";
 
@@ -44,9 +45,14 @@ export const createCallerFactory = t.createCallerFactory;
 // and the statements it sent, gate and transaction included, as one line to the context's
 // observer (observe.ts). A middleware's `next()` answers a failure as { ok: false } rather
 // than throwing, so a refused call is measured too. Observing never changes an answer.
+// What the call refuses as data is collected through `refused`, one per refusal.
 const measuredProcedure = t.procedure.use(async ({ ctx, path, type, next }) => {
   const started = performance.now();
-  const { value: result, statements } = await metered(() => next());
+  const refusals: Refusal[] = [];
+  const refused = (r: Refusal) => {
+    refusals.push(r);
+  };
+  const { value: result, statements } = await metered(() => next({ ctx: { refused } }));
   try {
     ctx.observe({
       requestId: ctx.requestId,
@@ -56,6 +62,7 @@ const measuredProcedure = t.procedure.use(async ({ ctx, path, type, next }) => {
       statements,
       ok: result.ok,
       code: result.ok ? null : result.error.code,
+      refusals,
     });
   } catch {
     // An observer that fails loses a line, never a call.

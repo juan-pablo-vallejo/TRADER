@@ -826,7 +826,7 @@ export const es: Catalog = {
     "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
   voidSession: "Anular sesión",
   voidSessionEffect:
-    "Las horas de esta sesión dejarán de contar. La sesión y sus registros se conservan.",
+    "Las horas de esta sesión dejarán de contar. Si la sesión sigue abierta, primero se marca la salida. La sesión y sus registros se conservan.",
   addMissingHours: "Agregar horas que faltan",
   missingHoursExplain:
     "Horas que nadie registró: una entrada y, cuando se sabe, la salida. Cuentan de inmediato, con el aviso de hora puesta a mano.",
@@ -863,6 +863,8 @@ export const es: Catalog = {
     time_in_future: "Una de estas horas todavía no ha pasado.",
     repair_stale:
       "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
+    void_leaves_session_open:
+      "Esta sesión sigue abierta; anularla sola dejaría a su trabajador con la entrada marcada. Actualiza y vuelve a anularla.",
   },
 
   week: {

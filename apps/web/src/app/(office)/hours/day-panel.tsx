@@ -605,7 +605,7 @@ function SessionRepair({
             label={t.voidSession}
             effect={t.voidSessionEffect}
             disabled={sending}
-            onConfirm={() => send([voidOperation(session)])}
+            onConfirm={() => send(voidOperation(session))}
           />
         </EditorFooter>
       )}

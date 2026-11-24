@@ -11,13 +11,30 @@ export type EntryFlag = (typeof entryFlag.enumValues)[number];
 // One of the two sources of a labor event's `clock_skewed`; judgeEventTime below is the other.
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
 
-export type Skew = { clockSkewMs: number; clockSkewed: boolean };
+// The push's reading of the device's clock: `deviceNow` as the push carried it, and its skew.
+export type Skew = { clockSkewMs: number; clockSkewed: boolean; deviceNow: Date };
 
 // Signed, device minus server, so a ledger that cannot be backfilled keeps the direction.
 export function measureSkew(deviceNow: Date, serverNow: Date): Skew {
   const clockSkewMs = deviceNow.getTime() - serverNow.getTime();
-  return { clockSkewMs, clockSkewed: Math.abs(clockSkewMs) > CLOCK_SKEW_TOLERANCE_MS };
+  return {
+    clockSkewMs,
+    clockSkewed: Math.abs(clockSkewMs) > CLOCK_SKEW_TOLERANCE_MS,
+    deviceNow,
+  };
 }
+
+// "Captured online" is the phone's word that an entry was sent as it was tapped. One that
+// reaches the server more than two minutes after its tap, by the device's own clock (so no
+// skew enters it), waited somewhere: it is judged as captured offline (the owner's decision
+// 6, M3). Strictly beyond: exactly two minutes is at once. The row keeps what the phone sent.
+export const LATE_PUSH_MS = 2 * 60 * 1000;
+
+export const capturedOfflineIn = (
+  e: { capturedOffline: boolean; clientTimestamp: Date },
+  deviceNow: Date,
+): boolean =>
+  e.capturedOffline || deviceNow.getTime() - e.clientTimestamp.getTime() > LATE_PUSH_MS;
 
 // The server's own check on the time an event claims (invariant 3),
 // against its receipt: the stamp the event is stored with (`server_timestamp`), so the verdict

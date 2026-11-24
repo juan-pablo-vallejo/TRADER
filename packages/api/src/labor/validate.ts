@@ -82,7 +82,8 @@ export function validateEvents(
   const before = replay(existing);
   if (before.violation !== null) throw new LedgerInconsistentError(before.violation);
 
-  const after = replay([...existing, ...candidates]);
+  const all = [...existing, ...candidates];
+  const after = replay(all);
   const v = after.violation;
   if (v !== null) {
     return ids.has(v.sourceEventId)
@@ -91,7 +92,7 @@ export function validateEvents(
   }
 
   for (const candidate of candidates) {
-    const verdict = judgeCandidate(before, after, candidate);
+    const verdict = judgeCandidate(before, after, all, candidate);
     if (verdict !== null) return verdict;
   }
   return { verdict: "accepted" };
@@ -101,6 +102,7 @@ export function validateEvents(
 function judgeCandidate(
   before: Replay,
   after: Replay,
+  all: readonly LaborEvent[],
   candidate: LaborEvent,
 ): Verdict | null {
   const at = (code: RejectionCode, conflictingEventId?: string) =>
@@ -120,12 +122,19 @@ function judgeCandidate(
     }
   } else if (candidate.type !== "started" && candidate.type !== "voided") {
     // Only an ordinary event is held to its session's job, and only now: a later start
-    // correction re-attributes the session and never re-judges it.
-    const session = after.sessions.find(
-      (s) => s.rootEventId === after.sessionOf.get(candidate.id),
-    );
+    // correction re-attributes the session and never re-judges it. Any job the start has
+    // carried will do (M2): a phone that captured a pause or an end before it learned the
+    // office moved the session sends the job it knew, and refused it would be refused for good.
+    const opened = after.sessionOf.get(candidate.id);
+    const session = after.sessions.find((s) => s.rootEventId === opened);
     if (session !== undefined && session.jobId !== candidate.jobId) {
-      return at("job_id_mismatch", session.startedSourceEventId);
+      const carried = all.some(
+        (e) =>
+          e.type === "started" &&
+          (e.id === opened || e.correctsEventId === opened) &&
+          e.jobId === candidate.jobId,
+      );
+      if (!carried) return at("job_id_mismatch", session.startedSourceEventId);
     }
   }
   return null;

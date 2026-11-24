@@ -18,6 +18,7 @@ import {
 
 const NY = "America/New_York";
 const J1 = "00000000-0000-7000-8000-0000000000a1";
+const NOW = Date.parse("2026-07-01T20:00:00Z");
 const J2 = "00000000-0000-7000-8000-0000000000a2";
 
 function event(
@@ -170,8 +171,31 @@ describe("a session's repair set", () => {
     expect(sessionOperations(s, draft, NY)).toEqual({ ok: false, problem: "too_many" });
   });
 
-  it("voids a session by its root", () => {
-    expect(voidOperation(session())).toEqual({ kind: "void", voidsEventId: "start" });
+  it("voids an ended session by its root", () => {
+    const ended = { ...session(), complete: true } as LedgerSession;
+    expect(voidOperation(ended, NOW)).toEqual([{ kind: "void", voidsEventId: "start" }]);
+  });
+
+  // H1: the server refuses a void that leaves its session open.
+  it("ends an open session before voiding it, a minute back or at its last entry", () => {
+    const open = {
+      ...session(),
+      complete: false,
+      events: [event("start", "started", "2026-07-01T11:00:00Z")],
+    } as unknown as LedgerSession;
+    expect(voidOperation(open, Date.parse("2026-07-01T15:00:00Z"))).toEqual([
+      {
+        kind: "append",
+        type: "ended",
+        jobId: J1,
+        clientTimestamp: new Date("2026-07-01T14:59:00Z"),
+      },
+      { kind: "void", voidsEventId: "start" },
+    ]);
+    // Clocked in under a minute ago: the end is at the clock-in, never before it.
+    expect(voidOperation(open, Date.parse("2026-07-01T11:00:30Z"))[0]).toMatchObject({
+      clientTimestamp: new Date("2026-07-01T11:00:00Z"),
+    });
   });
 });
 

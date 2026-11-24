@@ -224,8 +224,9 @@ export const SCENARIOS = {
   // captured, so it says so — captured offline — and carries `offline` (an entry that
   // claimed to be online that long ago would be flagged `clock_skewed` instead).
   backlog: { reasons: ["offline"] as EntryFlag[] },
-  // Luis's second Thursday reached the office claiming an online capture, days after the
-  // fact: the server's receipt comparison flags every event of it, at the time it claims.
+  // Luis's phone ran days behind on his second Thursday and sent each entry as he tapped it:
+  // the push's reading of its clock flags every event, at the time it claims. (Sent days
+  // later instead, it would be an offline capture: sync/reasons.ts, capturedOfflineIn.)
   lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as EntryFlag[] },
   // Omar forgot to clock out and set the time himself on the last day.
   userTimedEnd: {

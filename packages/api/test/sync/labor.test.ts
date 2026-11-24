@@ -32,7 +32,6 @@ afterAll(async () => {
 });
 
 const NOW = new Date();
-const ONLINE = measureSkew(NOW, NOW);
 const SKEWED = measureSkew(new Date(NOW.getTime() + 600_000), NOW);
 // Providence; a stamp at the job, and one 5 km north of it.
 const HERE = { lat: 41.824, lng: -71.4128, accuracyM: 8 };
@@ -69,8 +68,12 @@ function record(
   return { id, schemaVersion: 1, payload };
 }
 
-// One record in a savepoint, as its own transaction would run it.
-const push = (tx: Tx, user: AppUser, r: LaborRecord, skew = ONLINE) =>
+// One record in a savepoint, as its own transaction would run it. Unless a test reads the
+// device's clock itself, the record is sent as it is tapped, by a device whose clock is
+// right: a push later than its tap is an offline capture (reasons.ts, capturedOfflineIn).
+const atTap = (r: LaborRecord) =>
+  measureSkew(r.payload.clientTimestamp, r.payload.clientTimestamp);
+const push = (tx: Tx, user: AppUser, r: LaborRecord, skew = atTap(r)) =>
   tx.transaction((sp) => pushLaborEvent(sp, user, r, skew));
 
 // Back to the owner for fixtures and reads past RLS, then the tenant again.
@@ -158,8 +161,10 @@ describe("sync.push labor — a worker's own day", () => {
   it("stores the event as sent, with the server's stamp, skew and initiator", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, w1 } = await dayFor(tx);
-      const r = record({ workerId: d.w1, jobId: d.J });
-      const answer = await push(tx, w1, r, SKEWED);
+      // A device ten minutes behind, sending as it is tapped.
+      const behind = measureSkew(new Date(Date.now() - 600_000), new Date());
+      const r = record({ workerId: d.w1, jobId: d.J, clientTimestamp: behind.deviceNow });
+      const answer = await push(tx, w1, r, behind);
       const row = await asOwner(
         tx,
         d,
@@ -177,7 +182,7 @@ describe("sync.push labor — a worker's own day", () => {
         jobId: d.J,
         type: "started",
         clockSkewed: true,
-        clockSkewMs: 600_000,
+        clockSkewMs: behind.clockSkewMs,
         locationLat: HERE.lat,
         locationLng: HERE.lng,
         locationAccuracyM: HERE.accuracyM,
@@ -347,7 +352,8 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
       const { d, w1 } = await dayFor(tx);
       const claimed = new Date(Date.now() - HOUR);
       const r = record({ workerId: d.w1, jobId: d.J, clientTimestamp: claimed });
-      // The device's clock is right (ONLINE): only the receipt comparison can flag it.
+      // Sent at its tap by the device's own reading, with no skew measured: only the receipt
+      // comparison can flag it, the backstop when the push's reading says nothing.
       const answer = await push(tx, w1, r);
       expect(answer).toMatchObject({
         result: "accepted",
@@ -369,6 +375,45 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
       // Kept, not replaced: the session starts when the event says it did.
       const [session] = deriveSessions(await readWorkerEvents(tx, d.w1), "UTC");
       expect(session!.startedAt).toEqual(claimed);
+    });
+  });
+
+  // M3 (the owner's decision 6): a push that arrives more than two minutes after its tap,
+  // by the device's own clock, is an offline capture whatever the record says: flagged
+  // `offline`, never `clock_skewed`. The row keeps what the phone sent.
+  it("treats an entry pushed more than two minutes after its tap as captured offline", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, w1 } = await dayFor(tx);
+      const tap = new Date(Date.now() - HOUR);
+      const late = record({ workerId: d.w1, jobId: d.J, clientTimestamp: tap });
+      const deviceNow = new Date();
+      expect(await push(tx, w1, late, measureSkew(deviceNow, deviceNow))).toMatchObject({
+        result: "accepted",
+        ack: { clockSkewed: false, flags: ["offline"] },
+      });
+      expect(await rowOf(tx, d, late.id)).toMatchObject({
+        capturedOffline: false,
+        clockSkewed: false,
+        flags: ["offline"],
+      });
+      // Resent after a dropped response, later still: the same record, answered as stored.
+      const resent = measureSkew(new Date(Date.now() + HOUR), new Date());
+      expect(await push(tx, w1, late, resent)).toMatchObject({
+        result: "duplicate",
+        ack: { clockSkewed: false, flags: ["offline"] },
+      });
+      // Two minutes exactly is still at once.
+      const end = record({
+        workerId: d.w1,
+        jobId: d.J,
+        type: "ended",
+        clientTimestamp: ago(120),
+      });
+      const sent = new Date(end.payload.clientTimestamp.getTime() + 120_000);
+      expect(await push(tx, w1, end, measureSkew(sent, sent))).toMatchObject({
+        result: "accepted",
+        ack: { flags: [] },
+      });
     });
   });
 

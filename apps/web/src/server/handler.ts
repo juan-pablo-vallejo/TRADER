@@ -51,8 +51,18 @@ export type HandlerDependencies = {
   timingHeaders?: () => boolean;
 };
 
-const logToStdout = (line: CallLine): void => {
-  console.log(JSON.stringify({ trader_call: line }));
+// The call's line, then one line per record it refused (M4), each under the call's request
+// id, so a refusal is found by searching for `trader_refusal` alone.
+export const logToStdout = (line: CallLine): void => {
+  const { refusals, ...call } = line;
+  console.log(JSON.stringify({ trader_call: { ...call, refused: refusals.length } }));
+  for (const r of refusals) {
+    console.log(
+      JSON.stringify({
+        trader_refusal: { requestId: line.requestId, path: line.path, ...r },
+      }),
+    );
+  }
 };
 
 // One Server-Timing entry per call. A path is a router's dotted name (letters and dots,

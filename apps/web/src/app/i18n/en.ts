@@ -874,7 +874,7 @@ export const en = {
     "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
   voidSession: "Void session",
   voidSessionEffect:
-    "This session's hours will no longer count. The session and its entries stay on record.",
+    "This session's hours will no longer count. A session still open is clocked out first. The session and its entries stay on record.",
   addMissingHours: "Add missing hours",
   missingHoursExplain:
     "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once, flagged as time set by user.",
@@ -913,6 +913,8 @@ export const en = {
     time_in_future: "One of these times has not happened yet.",
     repair_stale:
       "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
+    void_leaves_session_open:
+      "This session is still open, so voiding it alone would keep its worker clocked in. Refresh, then void it again.",
   },
 
   // The Hours screen as a week: people by days, the presets, the strip of open sessions

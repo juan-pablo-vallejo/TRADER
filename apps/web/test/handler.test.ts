@@ -8,7 +8,12 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vites
 
 import { GET } from "../src/app/api/trpc/[trpc]/route";
 import { getDb } from "../src/server/db";
-import { createTrpcHandler, ENDPOINT, MAX_BATCH_SIZE } from "../src/server/handler";
+import {
+  createTrpcHandler,
+  ENDPOINT,
+  logToStdout,
+  MAX_BATCH_SIZE,
+} from "../src/server/handler";
 import { webIdentity } from "../src/server/identity";
 import {
   invitation,
@@ -147,6 +152,60 @@ describe("the route handler", () => {
       .from(companies)
       .where(eq(companies.id, fixture.companyId));
     expect(company).toBeDefined();
+  });
+
+  it("logs a refused record on a line of its own, under the call's request id", () => {
+    const out: string[] = [];
+    const log = vi.spyOn(console, "log").mockImplementation((l: string) => out.push(l));
+    try {
+      logToStdout({
+        requestId: "r",
+        path: "sync.push",
+        type: "mutation",
+        ms: 1,
+        statements: 4,
+        ok: true,
+        code: null,
+        refusals: [
+          { recordId: "a", kind: "labor_event", code: "no_open_session" },
+          { recordId: "b", kind: null, code: "invalid_record" },
+        ],
+      });
+    } finally {
+      log.mockRestore();
+    }
+    expect(out.map((l) => JSON.parse(l) as unknown)).toEqual([
+      {
+        trader_call: {
+          requestId: "r",
+          path: "sync.push",
+          type: "mutation",
+          ms: 1,
+          statements: 4,
+          ok: true,
+          code: null,
+          refused: 2,
+        },
+      },
+      {
+        trader_refusal: {
+          requestId: "r",
+          path: "sync.push",
+          recordId: "a",
+          kind: "labor_event",
+          code: "no_open_session",
+        },
+      },
+      {
+        trader_refusal: {
+          requestId: "r",
+          path: "sync.push",
+          recordId: "b",
+          kind: null,
+          code: "invalid_record",
+        },
+      },
+    ]);
   });
 
   it("logs one timing line per call, and answers Server-Timing only where asked", async () => {

@@ -70,3 +70,45 @@ it("reports a public call, and an observer that throws changes nothing", async (
   expect(status).toBeDefined();
   expect(lines.map((l) => [l.path, l.ok])).toEqual([["status.get", true]]);
 });
+
+// M4: a refused record leaves a trace on the server, one per refusal, on its call's line:
+// the record's own id (random, the phone's), its kind and the code. Nothing of its payload.
+it("carries each refused sync record on the call's line", async () => {
+  const w = await world(owner);
+  try {
+    const { who } = await member(owner, w, "a", "worker", { label: "refusals" });
+    const lines: CallLine[] = [];
+    const ids = [
+      "01900000-0000-7000-8000-000000000001",
+      "01900000-0000-7000-8000-000000000002",
+    ];
+    const answer = await callerWith(who, (line) => lines.push(line)).sync.push({
+      protocolVersion: 1,
+      deviceNow: new Date(),
+      records: ids.map((id) => ({
+        id,
+        kind: "labor_event",
+        schemaVersion: 1,
+        payload: { secret: "worker@co.test" },
+      })),
+    });
+    expect(answer.results.map((r) => r.result)).toEqual(["rejected", "rejected"]);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]!.refusals).toEqual(
+      ids.map((recordId) => ({ recordId, kind: "labor_event", code: "invalid_record" })),
+    );
+    expect(JSON.stringify(lines[0])).not.toContain("worker@co.test");
+  } finally {
+    await w.cleanup();
+  }
+});
+
+it("carries no refusals on a call that refused nothing", async () => {
+  const lines: CallLine[] = [];
+  await callerWith(null, (line) => lines.push(line)).status.get({
+    protocolVersion: 1,
+    platform: "ios",
+    build: 1,
+  });
+  expect(lines[0]!.refusals).toEqual([]);
+});

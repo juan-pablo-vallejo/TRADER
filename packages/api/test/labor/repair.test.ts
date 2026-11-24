@@ -444,6 +444,33 @@ describe("labor.repair — append, correct, void", () => {
     });
   });
 
+  // H1: a voided session that is still open keeps its worker clocked in on the server, so
+  // every later clock-in is refused. The void of an open session comes with its end.
+  it("refuses a void that leaves its session open, and voids one ended in the same set", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { d, admin } = await world(tx);
+      const start = await ev(tx, d, d.w1, "started", "08:00");
+      await ev(tx, d, d.w1, "paused", "10:00");
+      await asTenant(tx, d.companyId);
+      const lone = voidOf(start);
+      await rejectsWritingNothing(tx, d, () => repair(tx, admin.who, d.w1, [lone]), {
+        code: "void_leaves_session_open",
+        eventId: lone.id,
+      });
+      const end = append("ended", d.J, "10:30");
+      const v = voidOf(start);
+      expect(await repair(tx, admin.who, d.w1, [end, v])).toMatchObject({
+        result: "accepted",
+      });
+      expect(await accounting(tx, d.w1)).toMatchObject([
+        { rootEventId: start, accounting: "voided", eligibleWorkedMs: 0 },
+      ]);
+      // Nothing is left open: the worker clocks in again.
+      const next = append("started", d.J, "11:00");
+      expect((await repair(tx, admin.who, d.w1, [next])).result).toBe("accepted");
+    });
+  });
+
   it("refuses a time after the repair's receipt", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await world(tx);
