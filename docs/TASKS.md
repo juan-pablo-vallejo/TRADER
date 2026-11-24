@@ -1438,6 +1438,19 @@ Android user.
       Then a passkey added in his Chrome on the Mac and used to sign in, saved to Google
       Password Manager, after Chrome first offered only a phone's QR code. Item 21b waits
       on its band and section in Spanish.
+- [ ] Item 21c, first push (`4ead891`), 2026-11-23: the phone's sign-in redesigned. Seen on
+      the iPhone simulator and the Android emulator, with the development stand-in for
+      Clerk, by the Maestro suite green on both: the navy band, the mark, the heading in
+      Bodoni Moda and the red button; an email and a number no roster holds given one
+      sentence; a sign-in by number, the code step saying where the code went; a wrong and
+      an expired code told apart, each cleared; another code after the half minute; Trouble
+      signing in? on the field; all of it in Spanish. Against real Clerk on the Mac, the
+      development identity off: a number no login holds refused by Clerk, a fixture number
+      taken to the code step. Not seen: a right code from Clerk on a phone (OWNER: preview
+      build 1, then a sign-in by texted code on each phone), and an emailed code arriving.
+- [ ] The Maestro suite: a sign-in by number binds a person to that number for good, and
+      every demo person is bound to their email by the time it runs, so `suite.sh` invites
+      one by number alone just before (`Number Sign-in`, +1 401 555 0109).
 
 ## After MVP
 
