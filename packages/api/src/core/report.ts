@@ -127,8 +127,10 @@ function framesOfOne(error: object): string[] {
   const frames: string[] = [];
   for (const line of stack.slice(at + message.length).split("\n")) {
     const m = FRAME.exec(line);
-    if (m === null || m[2]!.includes("/node_modules/")) continue;
-    const file = IN_REPO.exec(m[2]!);
+    if (m === null) continue;
+    const path = m[2]!;
+    if (path.includes("/node_modules/")) continue;
+    const file = IN_REPO.exec(path);
     if (file === null) continue;
     frames.push(`${m[1] ?? "?"} at ${file[1] ?? file[2]}:${m[3]}:${m[4]}`);
     if (frames.length === MAX_FRAMES) break;

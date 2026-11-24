@@ -67,13 +67,12 @@ export function createTrpcHandler(deps: HandlerDependencies) {
     // One id per HTTP request, made here and never read from a header: it exists before the
     // context does, so a request whose context cannot be built is still reported under it.
     const requestId = randomUUID();
-    const { edge } = deps;
-    const logCall = deps.logCall ?? logToStdout;
-    const calls: CallLine[] = [];
-    if (edge !== undefined) {
-      const refusal = guardRequest(req, edge);
+    if (deps.edge !== undefined) {
+      const refusal = guardRequest(req, deps.edge);
       if (refusal !== null) return refusal;
     }
+    const logCall = deps.logCall ?? logToStdout;
+    const calls: CallLine[] = [];
     return fetchRequestHandler({
       endpoint: ENDPOINT,
       router: appRouter,
