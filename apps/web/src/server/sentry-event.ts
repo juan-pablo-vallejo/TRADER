@@ -8,6 +8,8 @@
 // Pure, and free of the SDK at run time, so the tests state the output byte for byte.
 import type { ErrorReport } from "@trader/api";
 import type { ErrorEvent, Event, NodeOptions } from "@sentry/nextjs";
+
+import { scrubTransaction, tracingOn } from "./call-trace";
 import { traderEnvironment } from "./environment";
 
 // The reporter's own events carry this prefix; no other message is ever sent.
@@ -126,7 +128,8 @@ export function scrubEvent(event: Event): ErrorEvent {
   }) as ErrorEvent;
 }
 
-// Sentry.init's options: errors only, from the server only. No default integration (so no
+// Sentry.init's options: errors only, from the server only (staging adds the tracing trial,
+// call-trace.ts). No default integration (so no
 // request, console or HTTP capture and no process-wide handlers), no tracing, no logs, no
 // breadcrumbs, every data-collection switch off, and the allow-list on what is left.
 // `environment` is TRADER's own (environment.ts), then Vercel's for a pull request's
@@ -170,5 +173,17 @@ export function sentryInitOptions(
       frameContextLines: 0,
     },
     beforeSend: (event) => scrubEvent(event),
+    // The tracing trial, staging alone (call-trace.ts): every transaction sampled, each
+    // rebuilt from its allow-list. Elsewhere no transaction is made or sent. `static`, because
+    // under the default span streaming the SDK never calls beforeSendTransaction and the
+    // allow-list would not run (@sentry/core 11.12 options.d.ts). The option goes in v12:
+    // before that upgrade the allow-list moves to beforeSendSpan.
+    ...(tracingOn(env) && {
+      tracesSampleRate: 1,
+      traceLifecycle: "static" as const,
+      beforeSendTransaction: ((event: Event) => scrubTransaction(event)) as NonNullable<
+        NodeOptions["beforeSendTransaction"]
+      >,
+    }),
   };
 }
