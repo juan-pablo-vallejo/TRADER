@@ -1536,6 +1536,23 @@ vitest.config.ts`). The runners should be exempt like the readers.
     pair a real push never makes: the receipt check's backstop is proved only that way.
   - M2's rule also lets an office append name any job the start carried; the Hours panel
     always sends the session's own.
+- [ ] Item 24c, second push (`866954e`, simplified `cb62002` in 60 s, answered `6b8037a`):
+      `batch-reviewer` round 1 CHANGES NEEDED in 303 s (a phone procedure without a budget,
+      the H6 undo under an expired deadline, Squawk against the index rule), round 2 PASS.
+      Seen 2026-11-24 on the demo data at 1280 and 390: Invoices with 501 drafts shows the
+      newest 500 and its note; the job page reads all 501 of its own; an open session voided
+      from Hours is clocked out a minute back, then voided, and leaves "Still on the clock".
+      Staging before 0008: 1 company, 8 users, 2 jobs, 12 events, 6 invoices, 4 shifts, 8
+      migrations. Notes, left as they are:
+  - The truncation note on Invoices is the shared `Note`, red like a refusal.
+  - A voided multi-day session's heading reads "8:00 AM – 7:01 AM" with no second date.
+  - An address change can now hold its two rows for up to 8 s (5 s, then a 3 s undo).
+  - The timeout test proves the undo's own signal by identity; a future undo built from
+    `AbortSignal.any` with the old signal would pass it and still fail.
+  - M9 leaves an unbound Demo invitation's ticket to whoever holds the number at Clerk
+    (Track B's tag rule).
+  - `scripts/staging.sh local` failed once on "an unknown email … Google account nobody
+    holds" (2.7 min) and passed on the rerun; the Clerk development instance was slow.
 - [ ] A forged stack (a thrown plain object, whose stack tRPC copies apart from its message)
       can still put a path such as `/srv/packages/+14015550100/x.ts` on the server's own
       log line: digits and `+` are path characters. No address passes (`@` is refused).
