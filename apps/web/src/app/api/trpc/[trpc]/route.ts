@@ -5,7 +5,7 @@ import { webClosed, webDemo } from "../../../../server/clerk-demo";
 import { getDb } from "../../../../server/db";
 import { webDirectory } from "../../../../server/directory";
 import { originsFrom } from "../../../../server/edge";
-import { traderEnvironment } from "../../../../server/environment";
+import { answersTimings } from "../../../../server/environment";
 import { createTrpcHandler } from "../../../../server/handler";
 import { webIdentity } from "../../../../server/identity";
 import { webMailer } from "../../../../server/mailer";
@@ -24,10 +24,7 @@ const handler = createTrpcHandler({
   closed: webClosed,
   reporter: webReporter,
   edge: { authorizedOrigins: originsFrom(process.env) },
-  // Timings and the request id are answered to a caller on staging and on a development
-  // machine; a production build that names no environment answers none (fails closed).
-  timingHeaders: () =>
-    traderEnvironment(process.env) === "staging" || process.env.NODE_ENV !== "production",
+  timingHeaders: () => answersTimings(process.env),
 });
 
 export { handler as GET, handler as POST };

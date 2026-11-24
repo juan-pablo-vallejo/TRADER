@@ -1494,6 +1494,34 @@ Android user.
       root `pnpm-lock.yaml`, so the deploy skip (only `apps/mobile/` and Markdown) does not
       apply and each push would deploy staging, three deploys against the plan's two. Left
       for the owner to decide.
+- [ ] Items 24a and 24b, the pilot's times, 2026-11-24: the simplifier 77 s; `batch-reviewer`
+      round 1 on the whole range 10,600 s (38 tool calls, CHANGES NEEDED), round 2 on its
+      answer (`7575f82`) 155 s (19 tool calls, CHANGES NEEDED: the admitted Demo door's
+      budget did not check that the door admitted; answered in the next commit, the second
+      and last round); `trader-ws check` 50 to 53 s. Round 1 is too slow to run
+      per batch as it stands: its prompt should name the files and the questions, not the
+      range alone.
+- [ ] OWNER, for the next guard sitting (round 1's findings on `.claude/hooks/guard.mjs`,
+      none against the plan's list):
+  - The root `package.json` is matched case-sensitively, and APFS is not: the path
+    `/Users/juanpablo/documents/trader/package.json` passes free, and this session uses it.
+  - `pnpm pkg set` and `npm pkg set` rewrite the root scripts without naming the file.
+  - A relative path is read from the project root, not from after a `cd`.
+  - Still unguarded and deciding green or a leak: each package's `test` and `typecheck`
+    scripts, `.gitleaksignore`, `.prettierignore`.
+  - Prompts on plain commands: `tsconfig.json` and `vitest.config.ts` named as an argument
+    now ask (`pnpm exec tsc -p tsconfig.json --noEmit`, `vitest run --config
+vitest.config.ts`). The runners should be exempt like the readers.
+- [ ] On staging, `Server-Timing`'s statement count tells a sign-in that found an
+      invitation from one that did not, which the single UNAUTHORIZED otherwise hides.
+      Staging only and fictional data; production answers no timing header.
+- [ ] Measured, for After MVP item 21's load baseline: `sync.push` costs 16 statements per
+      further record (one transaction each, by design), so an outbox of 50 is about 800.
+- [ ] A forged stack (a thrown plain object, whose stack tRPC copies apart from its message)
+      can still put a path such as `/srv/packages/+14015550100/x.ts` on the server's own
+      log line: digits and `+` are path characters. No address passes (`@` is refused).
+      Round 2's note, left as it is: only code in this repository throws, and none throws
+      a plain object with a stack.
 
 ## After MVP
 

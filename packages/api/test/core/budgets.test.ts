@@ -94,9 +94,11 @@ function counter(tx: Tx, who: unknown, demo: DemoDoor | null = null) {
       demo,
     }),
   );
-  // The statements of one call, which must succeed.
-  return async (call: (api: Api) => Promise<unknown>) => {
-    await call(api);
+  // The statements of one call, which must succeed; `answer`, when given, is what it must
+  // answer, so a budget never stands for a path the call did not take.
+  return async (call: (api: Api) => Promise<unknown>, answer?: unknown) => {
+    const value = await call(api);
+    if (answer !== undefined) expect(value).toMatchObject(answer as object);
     const line = lines.at(-1)!;
     expect([line.path, line.ok]).toEqual([line.path, true]);
     return line.statements;
@@ -294,16 +296,20 @@ describe("statement budgets", () => {
       });
       const push = (records: ReturnType<typeof event>[]) => (api: Api) =>
         api.sync.push({ protocolVersion: 1, deviceNow: new Date(), records });
-      out["sync.push"] = await asWorker(push([event("started")]));
+      const accepted = (n: number) => ({
+        results: Array.from({ length: n }, () => ({ result: "accepted" })),
+      });
+      out["sync.push"] = await asWorker(push([event("started")]), accepted(1));
       // A second record's own cost: the difference is what each further record adds.
       out["sync.push, two records"] = await asWorker(
         push([event("paused"), event("resumed")]),
+        accepted(2),
       );
       // No Demo door on this host: refused as data, before any statement.
-      out["demo.signIn"] = await counter(
-        tx,
-        null,
-      )((api) => api.demo.signIn({ phone: "+14015550100", code: "000000" }));
+      out["demo.signIn"] = await counter(tx, null)(
+        (api) => api.demo.signIn({ phone: "+14015550100", code: "000000" }),
+        { result: "refused" },
+      );
       // The door's whole path, up to the provider's ticket: a Demo person's number.
       await tx.execute(sql`reset role`);
       await tx
@@ -320,7 +326,10 @@ describe("statement budgets", () => {
         tx,
         null,
         door,
-      )((api) => api.demo.signIn({ phone: "+14015550100", code: "demo-code" }));
+      )((api) => api.demo.signIn({ phone: "+14015550100", code: "demo-code" }), {
+        result: "ticket",
+        ticket: "ticket",
+      });
       expect(out).toEqual(WRITES);
     });
   });
