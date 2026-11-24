@@ -6,28 +6,45 @@ export type Catalog = {
   appName: string;
   loading: string;
   retry: string;
+  // The sign-in screen (ui/phone-sign-in.tsx, sign-in-steps.ts). The same thing has the
+  // same words as the office's form (apps/web/src/app/i18n, signInForm).
   signIn: {
     title: string;
-    email: string;
-    phone: string;
-    sendCode: string;
-    codeSent: string;
+    helper: string;
+    address: string;
+    send: string;
+    sending: string;
+    badAddress: string;
+    codeTitle: string;
+    codeTexted: (number: string) => string;
+    codeEmailed: (address: string) => string;
     code: string;
-    changeNumber: string;
-    badPhone: string;
-    badCode: string;
+    checking: string;
     submit: string;
-    failed: string;
+    resend: string;
+    resendIn: (seconds: number) => string;
+    change: string;
     notOnRoster: string;
-    // The Demo company's way in, with no text message (ui/phone-sign-in.tsx).
+    codeWrong: string;
+    codeExpired: string;
+    tooMany: string;
+    locked: string;
+    failed: string;
+    trouble: string;
+    troubleNoCode: string;
+    troubleNewPhone: string;
+    troubleNeverInvited: string;
+    // The Demo company's way in, with no text message.
     demo: string;
     demoHelp: string;
+    demoPhone: string;
     demoCode: string;
     demoSubmit: string;
     badDemo: string;
     back: string;
     // A build with no way to sign in yet: said, never an empty screen.
     unavailable: string;
+    // The development stand-in for the provider (sign-in-provider.ts): never in a release.
     developmentOnly: string;
   };
   tabs: { today: string; week: string; crew: string; settings: string };

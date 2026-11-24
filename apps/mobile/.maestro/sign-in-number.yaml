@@ -1,0 +1,24 @@
+# Sign-in by mobile number: the code step says where the code went, as the number is read,
+# and the person lands on Today. ${EMAIL} is the number here (run.sh's address argument):
+# a person suite.sh invited by number alone, whom the number binds. Every selector is a
+# testID, save the sentence this flow is about.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "sign-in-send"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-code"
+    timeout: 30000
+- assertVisible: "We texted it to \\(401\\) 555-0109\\."
+- takeScreenshot: sign-in-code-number
+- tapOn:
+    id: "sign-in-code"
+- inputText: "123456"
+- runFlow:
+    file: parts/landed.yaml

@@ -19,13 +19,13 @@ import {
 
 import { getClerkInstance } from "@clerk/expo";
 
-import { devHeaders } from "./api";
+import { devHeaders, type DevWho } from "./api";
 import { clerkKey, devIdentity } from "./config";
 import { deviceStore } from "./store/device";
 import { SNAPSHOT_KEY } from "./sync/engine";
 import { bearerFrom } from "./token";
 
-export type Session = { kind: "dev"; email: string } | { kind: "clerk" };
+export type Session = ({ kind: "dev" } & DevWho) | { kind: "clerk" };
 
 const KEY = "session";
 
@@ -42,7 +42,7 @@ export async function headersFor(
   session: Session | null | undefined,
 ): Promise<Record<string, string>> {
   if (session === null || session === undefined) return {};
-  if (session.kind === "dev") return devIdentity ? devHeaders(session.email) : {};
+  if (session.kind === "dev") return devIdentity ? devHeaders(session) : {};
   return clerkKey === null ? {} : bearer();
 }
 

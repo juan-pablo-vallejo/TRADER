@@ -1,62 +1,15 @@
-# Launches the development build with nothing kept from a run before and signs in as
-# ${EMAIL} with the development identity. A development build opens on its launcher and
-# must be handed the bundler, as `expo run` does; the three switches are the ones it passes
-# itself (no first-launch sheet, no floating button, no reopening of the last project). On
-# iOS the flow does it. On Android Maestro's openLink cuts the link at its first `&`, so
-# `run.sh` clears the app and opens the link through adb, and passes LAUNCH=adb.
+# Launches the development build fresh (launch.yaml) and signs in as ${EMAIL}, an email or a
+# mobile number, through the sign-in screen with the development stand-in for Clerk
+# (src/sign-in-provider.ts): the address, then the stand-in's code, 123456, whose last digit
+# sends it.
 appId: app.jpteq.trader
 ---
 - runFlow:
-    when:
-      true: ${LAUNCH == "maestro"}
-    commands:
-      # Maestro grants everything on launch unless told: the location is this run's own.
-      - launchApp:
-          clearState: true
-          permissions:
-            location: ${IOS_LOCATION}
-      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
+    file: launch.yaml
 - runFlow:
-    file: location.yaml
-- extendedWaitUntil:
-    visible:
-      id: "sign-in-email|tab-settings"
-    timeout: 120000
-# A session that outlived the reset is signed out first: every run starts from sign-in.
+    file: code.yaml
+    env:
+      ADDRESS: ${EMAIL}
+      CODE: "123456"
 - runFlow:
-    when:
-      visible:
-        id: "tab-settings"
-    commands:
-      - runFlow:
-          file: location.yaml
-      - tapOn:
-          id: "tab-settings"
-      - scrollUntilVisible:
-          element:
-            id: "sign-out"
-      - tapOn:
-          id: "sign-out"
-- tapOn:
-    id: "sign-in-email"
-- inputText: ${EMAIL}
-- tapOn:
-    id: "sign-in-submit"
-- runFlow:
-    file: location.yaml
-# Off the clock, unless the flow says the server already has this person on it (LANDS_ON).
-# The app asks for a location only once its first pull says this person's taps are stamped,
-# so the system's sheet comes a moment after sign-in: wait for it (it may never come: the
-# permission was answered before, or stamps are off), answer it, then look for Today.
-- extendedWaitUntil:
-    visible: "Allow While Using App|While using the app"
-    timeout: 6000
-    optional: true
-- runFlow:
-    file: location.yaml
-- extendedWaitUntil:
-    visible:
-      id: ${LANDS_ON}
-    timeout: 30000
-- runFlow:
-    file: location.yaml
+    file: landed.yaml

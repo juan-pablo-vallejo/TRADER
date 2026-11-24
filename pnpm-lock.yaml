@@ -39,6 +39,9 @@ importers:
       '@clerk/expo':
         specifier: ^4.16.1
         version: 4.16.1(@types/react@19.3.0)(expo-application@58.1.2(expo@58.0.25))(expo-constants@58.0.16)(expo-crypto@58.0.8(expo@58.0.25))(expo-secure-store@58.0.3(expo@58.0.25))(expo@58.0.25)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)(typescript@5.9.3)(zod@4.6.7)
+      '@expo-google-fonts/bodoni-moda':
+        specifier: 0.4.2
+        version: 0.4.2
       '@expo/vector-icons':
         specifier: ^15.1.1
         version: 15.1.1(expo-font@58.0.12)(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
@@ -69,6 +72,9 @@ importers:
       expo-dev-client:
         specifier: ~58.0.20
         version: 58.0.20(expo@58.0.25)(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))
+      expo-font:
+        specifier: ~58.0.12
+        version: 58.0.12(expo@58.0.25)(react-native@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(@react-native/metro-config@0.88.1(@babel/core@7.29.13(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.3.0)(react@19.3.0)(supports-color@8.1.1))(react@19.3.0)
       expo-haptics:
         specifier: ~58.0.8
         version: 58.0.8(expo@58.0.25)
@@ -1283,6 +1289,9 @@ packages:
   '@eslint/plugin-kit@0.7.2':
     resolution: {integrity: sha512-+CNAzxglkrpNf/kKywqQfk74QjtceuOE7Qm+AF8miRvPF/wmmK5+OJOgVh3AVTT3RP2mH3+FOaxlE5v72owk0A==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
+
+  '@expo-google-fonts/bodoni-moda@0.4.2':
+    resolution: {integrity: sha512-fnHVMSHRIU1Pzg27Iv/L5PVq/JpVJSTBHsx3hQZSOjUwsQzAd0hGMoRjT91ck/9Ui0P7d+8si0A/AeV+jzIhMg==}
 
   '@expo-google-fonts/material-symbols@0.4.54':
     resolution: {integrity: sha512-BcwBgi5EX5sA3sCzwPFM9Cp2squg3ugfw+e3OKBvWkZs9bEDkO0QiTeX8AlezS032vyAryikwEOqeJXVs5hNgQ==}
@@ -7190,6 +7199,8 @@ snapshots:
     dependencies:
       '@eslint/core': 1.2.1
       levn: 0.4.1
+
+  '@expo-google-fonts/bodoni-moda@0.4.2': {}
 
   '@expo-google-fonts/material-symbols@0.4.54':
     optional: true

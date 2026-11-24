@@ -1,0 +1,21 @@
+# Just signed in: answers the location sheet if it comes, then waits for ${LANDS_ON}. Off the
+# clock, unless the flow says the server already has this person on it. The app asks for a
+# location only once its first pull says this person's taps are stamped, so the system's
+# sheet comes a moment after sign-in: wait for it (it may never come: the permission was
+# answered before, or stamps are off), answer it, then look for Today.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: location.yaml
+- extendedWaitUntil:
+    visible: "Allow While Using App|While using the app"
+    timeout: 6000
+    optional: true
+- runFlow:
+    file: location.yaml
+- extendedWaitUntil:
+    visible:
+      id: ${LANDS_ON}
+    timeout: 30000
+- runFlow:
+    file: location.yaml

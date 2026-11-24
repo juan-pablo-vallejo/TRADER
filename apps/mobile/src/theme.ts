@@ -3,7 +3,9 @@
 // (15 pt), a target never under 48 pt, the primary button 56 pt.
 // Color: the same names and values as the office's (apps/web/src/app/theme.css); a test
 // fails when the two differ (apps/web/test/theme.test.ts). The accent is the color of
-// every action; `brand` and `brandNavy` belong to the mark, never to a control or a status.
+// every action; `brand` and `brandNavy` belong to the mark, never to a control or a status,
+// save the sign-in screen, which is on D'Sierra's brand as the office's is: its navy band
+// and its one red button (ui/phone-sign-in.tsx).
 export const color = {
   ink: "#111827",
   inkSecondary: "#4B5563",

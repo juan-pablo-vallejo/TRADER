@@ -1,0 +1,29 @@
+# What the field says, before any code is sent, to ${EMAIL}: an address no roster holds.
+# The suite runs it for an email and for a number, which get the same one sentence. Trouble
+# signing in? opens on the field. Nothing here signs in.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "sign-in-send"
+- extendedWaitUntil:
+    visible: "This sign-in is not on a roster. Ask your office."
+    timeout: 30000
+- assertVisible:
+    id: "sign-in-address"
+- assertNotVisible:
+    id: "sign-in-code"
+- takeScreenshot: sign-in-refused
+- scrollUntilVisible:
+    element:
+      id: "sign-in-trouble"
+- tapOn:
+    id: "sign-in-trouble"
+- scrollUntilVisible:
+    element:
+      id: "sign-in-trouble-help"
+- takeScreenshot: sign-in-trouble

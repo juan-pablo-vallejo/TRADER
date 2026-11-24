@@ -1,0 +1,54 @@
+# The sign-in screen in Spanish: chosen in Me, it is kept on the phone through a sign-out,
+# so the screen after it is in Spanish, with its trouble lines, a refused code's sentence
+# and a sign-in. ${EMAIL} signs in.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- tapOn:
+    id: "tab-settings"
+- tapOn:
+    id: "language-es"
+- scrollUntilVisible:
+    element:
+      id: "sign-out"
+- tapOn:
+    id: "sign-out"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-address"
+    timeout: 30000
+- assertVisible: "Acceso del equipo"
+- assertVisible: "Envíame un código"
+# The field has the focus and its keyboard is up. On iOS a drag puts it away
+# (keyboardDismissMode); Android's stays, and Maestro's own command, which fails on iOS's
+# email keyboard, hides it there.
+- scroll
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "sign-in-trouble"
+- tapOn:
+    id: "sign-in-trouble"
+- scrollUntilVisible:
+    element:
+      id: "sign-in-trouble-help"
+- takeScreenshot: sign-in-es
+- runFlow:
+    file: parts/code.yaml
+    env:
+      ADDRESS: ${EMAIL}
+      CODE: "111111"
+- extendedWaitUntil:
+    visible: "Ese código no funcionó. Revísalo o pide uno nuevo."
+    timeout: 15000
+- takeScreenshot: sign-in-code-es
+- tapOn:
+    id: "sign-in-code"
+- inputText: "123456"
+- runFlow:
+    file: parts/landed.yaml

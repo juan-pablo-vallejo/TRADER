@@ -93,6 +93,14 @@ sql "update companies set phone = '(401) 555-0142';
      update jobs set notes = 'Gate code 4411. Park on the street.';"
 api_up
 
+echo "— sign-in: refused, the code step, in Spanish"
+flow sign-in-refused fresh allow nobody.on.a.roster@demo.invalid
+flow sign-in-refused fresh allow 4015550199
+expect "an address no roster holds bound nobody" \
+  "select count(*) from users where identity_subject like 'dev:nobody%' or identity_subject = 'dev:+14015550199'" 0
+flow sign-in-codes fresh allow $LUIS
+flow sign-in-spanish fresh allow $LUIS
+
 echo "— smoke"
 flow smoke
 expect "Me saved the contact phone, and left the sign-in address alone" \
@@ -207,5 +215,15 @@ expect "the shift the admin added is on the server, today, on that jobsite" \
    join jobs j on j.id = a.job_id
    where u.email = '$SAM' and j.name = 'Harbor View unit 4B'
      and a.work_date = (now() at time zone c.timezone)::date" 1
+
+# By number: every demo person is bound to their email by now, so one is invited by number
+# alone, as the office would, and the number binds them.
+echo "— sign-in by number"
+sql "insert into users (company_id, name, role, sign_in_phone)
+     select company_id, 'Number Sign-in', 'worker', '+14015550109' from users
+     where email = '$OFFICE';"
+flow sign-in-number fresh allow 4015550109
+expect "the number bound the person invited by it" \
+  "select identity_subject from users where name = 'Number Sign-in'" "dev:+14015550109"
 
 echo "all flows green on $platform"

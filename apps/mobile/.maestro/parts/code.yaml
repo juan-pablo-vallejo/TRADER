@@ -1,0 +1,15 @@
+# From the sign-in field: ${ADDRESS} typed and sent, then ${CODE} typed into the code step.
+appId: app.jpteq.trader
+---
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${ADDRESS}
+- tapOn:
+    id: "sign-in-send"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-code"
+    timeout: 30000
+- tapOn:
+    id: "sign-in-code"
+- inputText: ${CODE}

@@ -1,289 +1,432 @@
-// Sign-in by a code sent to the person's phone. The identity provider sends and checks the
-// code; this screen
-// only asks for the number and then the code. Nobody signs up here: a number the provider
-// does not know, or one no roster holds, is told to ask the office. Rendered only inside
-// the provider (app/_layout.tsx), in a build that has its key.
-//
-// One other way in, for the Demo company only: its person's number and the demo code, which
-// the API answers with a single-use ticket and no text message (packages/api,
-// core/demo-door.ts). It is what Apple's beta review is given. Everyone else is refused
-// there with one answer, and signs in by the texted code.
-import { useClerk, useSignIn } from "@clerk/expo";
+// The sign-in screen, on D'Sierra's brand as the office's is: a navy band with the mark, the
+// heading in Bodoni Moda, one red button. One field takes a mobile number or an email, then
+// the code sent to it; another code after half a minute; "Trouble signing in?" on every
+// step; and the Demo door. The steps are sign-in-steps.ts, over the provider it is handed
+// (sign-in-provider.ts): Clerk's, or the development stand-in. Nobody signs up here: an
+// address no roster holds is told to ask the office, by the provider before a code is sent
+// or by the server after it.
+import { BodoniModa_700Bold, useFonts } from "@expo-google-fonts/bodoni-moda";
+import { SIGN_IN_CODE_LENGTH, type SignInIdentifier } from "@trader/api/contract";
 import { useRouter } from "expo-router";
-import { useState } from "react";
-import { StyleSheet, Text, TextInput } from "react-native";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import {
+  Keyboard,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type TextStyle,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { createApi } from "../api";
 import { useStrings } from "../i18n";
-import { signInPhone } from "../phone";
-import { bearer, useSession } from "../session";
+import type { Catalog } from "../i18n/catalog";
+import { headersFor, useSession } from "../session";
+import {
+  demoDoor,
+  FIELD,
+  resend,
+  secondsLeft,
+  sendCode,
+  verifyCode,
+  type Form,
+  type Note,
+  type Provider,
+  type Step,
+} from "../sign-in-steps";
 import { color, size, space, type } from "../theme";
-import { Button, Screen, text } from "./controls";
+import { Button, text } from "./controls";
 import { Mark } from "./mark";
 
-export function PhoneSignIn({ apiUrl }: { apiUrl: string }) {
+// What the form says for each refusal, in the screen's language.
+export function sentence(s: Catalog["signIn"], note: Note): string {
+  return {
+    unknown: s.notOnRoster,
+    wrong_code: s.codeWrong,
+    expired_code: s.codeExpired,
+    too_many: s.tooMany,
+    locked: s.locked,
+    failed: s.failed,
+    bad_address: s.badAddress,
+    bad_demo: s.badDemo,
+  }[note];
+}
+
+// A sign-in number as people read it: (401) 555-0108.
+const shown = (e164: string) =>
+  `(${e164.slice(2, 5)}) ${e164.slice(5, 8)}-${e164.slice(8)}`;
+
+export function PhoneSignIn({
+  apiUrl,
+  provider,
+  standIn = false,
+}: {
+  apiUrl: string;
+  provider: Provider;
+  // The development stand-in is the provider: said on the screen, with its code.
+  standIn?: boolean;
+}) {
   const { t } = useStrings();
+  const s = t.signIn;
   const { signIn: keep } = useSession();
-  const { signIn } = useSignIn();
-  const clerk = useClerk();
   const router = useRouter();
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
-  const [demoCode, setDemoCode] = useState("");
-  const [step, setStep] = useState<"phone" | "code" | "demo">("phone");
+  // Until the heading's face has loaded, the system's serif stands in: nothing waits on it.
+  const [fontLoaded] = useFonts({ BodoniModa_700Bold });
+  const [form, setForm] = useState<Form>(FIELD);
+  const [note, setNote] = useState<Note | null>(null);
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<string | null>(null);
+  const [typed, setTyped] = useState("");
+  const [code, setCode] = useState("");
+  const [demoPhone, setDemoPhone] = useState("");
+  const [demoCode, setDemoCode] = useState("");
+  const [trouble, setTrouble] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
-  // This screen is shown to someone the app holds no session for. A session the provider
-  // still keeps on the phone is a stale one (its keychain outlives a cleared app, and an
-  // earlier sign-in may have stopped half-way): it goes first, or the provider refuses the
-  // new sign-in as "already signed in" (seen on staging, 2026-11-19).
-  const forgetStaleSession = async () => {
-    if (clerk.session !== null && clerk.session !== undefined) await clerk.signOut();
-  };
+  // The resend countdown ticks only while there is one to show.
+  const waiting = form.at === "code" ? secondsLeft(form.sentAt, now) : 0;
+  useEffect(() => {
+    if (waiting <= 0) return;
+    const tick = setTimeout(() => setNow(Date.now()), 1000);
+    return () => clearTimeout(tick);
+  }, [waiting, now]);
 
-  const send = async () => {
-    const number = signInPhone(phone);
-    if (number === null) {
-      setNote(t.signIn.badPhone);
-      return;
-    }
+  // One step at a time: busy while it runs, and whatever it threw said as a failure.
+  const run = async (
+    step: () => Promise<Step | "complete" | "incomplete">,
+    to?: SignInIdentifier,
+  ) => {
     setBusy(true);
     setNote(null);
     try {
-      await forgetStaleSession();
-      const started = await signIn.create({ identifier: number });
-      if (started.error !== null) {
-        // The provider does not say whether a number exists, and neither does this.
-        setNote(t.signIn.notOnRoster);
+      const done = await step();
+      if (done === "incomplete") return;
+      if (done === "complete") {
+        await enter(to ?? null);
         return;
       }
-      const sent = await signIn.phoneCode.sendCode({ phoneNumber: number });
-      if (sent.error !== null) {
-        setNote(t.signIn.failed);
-        return;
-      }
-      setCode("");
-      setStep("code");
+      // A refused code is cleared, and so is any code when the step changes.
+      if (done.form.at !== form.at || done.note !== null) setCode("");
+      setForm(done.form);
+      setNote(done.note);
+      setNow(Date.now());
     } catch {
-      setNote(t.signIn.failed);
+      setNote("failed");
     } finally {
       setBusy(false);
     }
   };
 
-  // The provider's sign-in is complete: make it the session, and ask the server whether a
-  // roster holds this person. The provider knows the number; that is the server's to say.
-  const enter = async () => {
-    await signIn.finalize();
+  // The provider has a verified sign-in: make it the phone's session, and ask the server
+  // whether a roster holds this person, which is the server's to say.
+  const enter = async (to: SignInIdentifier | null) => {
+    const session = await provider.finish(to);
     try {
-      await createApi(apiUrl, bearer).me.get.query();
+      await createApi(apiUrl, () => headersFor(session)).me.get.query();
     } catch (error) {
       const refused =
         (error as { data?: { code?: string } } | null)?.data?.code === "UNAUTHORIZED";
-      if (refused) await clerk.signOut();
-      setNote(refused ? t.signIn.notOnRoster : t.signIn.failed);
-      if (refused) setStep("phone");
+      if (refused) {
+        await provider.forgetStale();
+        setForm(FIELD);
+      }
+      setNote(refused ? "unknown" : "failed");
       return;
     }
-    await keep({ kind: "clerk" });
+    await keep(session);
     router.replace("/today");
   };
 
-  const verify = async () => {
-    if (code.trim() === "") return;
-    setBusy(true);
+  // The keyboard goes as the code is asked for, so the answer under the button is seen.
+  const send = () => {
+    Keyboard.dismiss();
+    void run(() => sendCode(provider, typed, Date.now()));
+  };
+  const check = (entered: string) => {
+    if (form.at !== "code") return;
+    void run(() => verifyCode(provider, form, entered), form.to);
+  };
+  const demo = () =>
+    void run(() =>
+      demoDoor(
+        provider,
+        async (phone, given) => {
+          const answer = await createApi(apiUrl, async () => ({})).demo.signIn.mutate({
+            phone,
+            code: given,
+          });
+          return answer.result === "ticket" ? { ticket: answer.ticket } : null;
+        },
+        demoPhone,
+        demoCode,
+      ),
+    );
+  const back = () => {
+    setForm(FIELD);
     setNote(null);
-    try {
-      const checked = await signIn.phoneCode.verifyCode({ code: code.trim() });
-      if (checked.error !== null || signIn.status !== "complete") {
-        setNote(t.signIn.badCode);
-        return;
-      }
-      await enter();
-    } catch {
-      setNote(t.signIn.failed);
-    } finally {
-      setBusy(false);
-    }
+    setCode("");
+    setDemoCode("");
   };
 
-  // The Demo company's way in. The API's one refusal is shown as one sentence: it does not
-  // say which of the number and the code was wrong, and neither does this.
-  const demo = async () => {
-    const number = signInPhone(phone);
-    if (number === null) {
-      setNote(t.signIn.badPhone);
-      return;
-    }
-    if (demoCode.trim() === "") return;
-    setBusy(true);
-    setNote(null);
-    try {
-      const answer = await createApi(apiUrl, bearer).demo.signIn.mutate({
-        phone: number,
-        code: demoCode.trim(),
-      });
-      if (answer.result !== "ticket") {
-        setNote(t.signIn.badDemo);
-        return;
-      }
-      await forgetStaleSession();
-      const redeemed = await signIn.ticket({ ticket: answer.ticket });
-      if (redeemed.error !== null || signIn.status !== "complete") {
-        setNote(t.signIn.failed);
-        return;
-      }
-      setDemoCode("");
-      await enter();
-    } catch {
-      setNote(t.signIn.failed);
-    } finally {
-      setBusy(false);
-    }
-  };
+  const heading = [styles.heading, fontLoaded && styles.bodoni];
 
   return (
-    <Screen testID="sign-in">
-      <Mark />
-      <Text style={text.title}>{t.signIn.title}</Text>
-      {step === "phone" ? (
-        <>
-          <Text style={text.label}>{t.signIn.phone}</Text>
-          <TextInput
-            testID="sign-in-phone"
-            accessibilityLabel={t.signIn.phone}
-            style={[styles.input, styles.large]}
-            autoFocus
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            textContentType="telephoneNumber"
-            autoComplete="tel"
-            returnKeyType="go"
-            onSubmitEditing={() => void send()}
-          />
-          <Button
-            testID="sign-in-send"
-            label={busy ? t.loading : t.signIn.sendCode}
-            disabled={busy}
-            onPress={() => void send()}
-          />
-          <Button
+    <SafeAreaView testID="sign-in" style={styles.screen} edges={["top", "left", "right"]}>
+      <StatusBar style="light" />
+      <View style={styles.band}>
+        <Mark />
+      </View>
+      <ScrollView
+        style={styles.page}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        // Dragged away, the keyboard shows what is under it: the trouble lines.
+        keyboardDismissMode="on-drag"
+      >
+        {form.at === "field" && (
+          <>
+            <Text style={heading} accessibilityRole="header">
+              {s.title}
+            </Text>
+            <Text style={text.body}>{s.helper}</Text>
+            <Text style={text.label}>{s.address}</Text>
+            <TextInput
+              testID="sign-in-address"
+              accessibilityLabel={s.address}
+              style={styles.input}
+              autoFocus
+              value={typed}
+              onChangeText={setTyped}
+              // Letters, digits and an @: a number and an email are both typed here.
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="username"
+              autoComplete="username"
+              maxLength={254}
+              returnKeyType="go"
+              onSubmitEditing={send}
+            />
+            <Button
+              testID="sign-in-send"
+              kind="brand"
+              label={busy ? s.sending : s.send}
+              disabled={busy}
+              onPress={send}
+            />
+          </>
+        )}
+        {form.at === "code" && (
+          <>
+            <Text style={heading} accessibilityRole="header">
+              {s.codeTitle}
+            </Text>
+            <Text style={text.body}>
+              {form.to.kind === "phone"
+                ? s.codeTexted(shown(form.to.phone))
+                : s.codeEmailed(form.to.email)}
+            </Text>
+            <Text style={text.label}>{s.code}</Text>
+            <TextInput
+              testID="sign-in-code"
+              accessibilityLabel={s.code}
+              // The texted code is offered above the keyboard, and one tap fills it: iOS by
+              // `oneTimeCode`, Android by `sms-otp`.
+              style={[styles.input, styles.code]}
+              autoFocus
+              maxLength={SIGN_IN_CODE_LENGTH}
+              value={code}
+              editable={!busy}
+              onChangeText={(entered) => {
+                const digits = entered.replace(/\D/g, "").slice(0, SIGN_IN_CODE_LENGTH);
+                setCode(digits);
+                // The last digit sends it: nobody types a code and then looks for a button.
+                if (digits.length === SIGN_IN_CODE_LENGTH) check(digits);
+              }}
+              keyboardType="number-pad"
+              textContentType="oneTimeCode"
+              autoComplete="sms-otp"
+              returnKeyType="go"
+              onSubmitEditing={() => check(code)}
+            />
+            <Button
+              testID="sign-in-verify"
+              kind="brand"
+              label={busy ? s.checking : s.submit}
+              disabled={busy || code.length < SIGN_IN_CODE_LENGTH}
+              onPress={() => check(code)}
+            />
+            <TextButton
+              testID="sign-in-resend"
+              label={waiting > 0 ? s.resendIn(waiting) : s.resend}
+              disabled={busy || waiting > 0}
+              onPress={() => {
+                if (form.at === "code")
+                  void run(() => resend(provider, form, Date.now()));
+              }}
+            />
+            <TextButton
+              testID="sign-in-change"
+              label={s.change}
+              disabled={busy}
+              onPress={back}
+            />
+          </>
+        )}
+        {form.at === "demo" && (
+          <>
+            <Text style={heading} accessibilityRole="header">
+              {s.demo}
+            </Text>
+            <Text style={text.body}>{s.demoHelp}</Text>
+            <Text style={text.label}>{s.demoPhone}</Text>
+            <TextInput
+              testID="sign-in-demo-phone"
+              accessibilityLabel={s.demoPhone}
+              style={styles.input}
+              value={demoPhone}
+              onChangeText={setDemoPhone}
+              keyboardType="phone-pad"
+              textContentType="telephoneNumber"
+              autoComplete="tel"
+            />
+            <Text style={text.label}>{s.demoCode}</Text>
+            <TextInput
+              testID="sign-in-demo-code"
+              accessibilityLabel={s.demoCode}
+              style={styles.input}
+              value={demoCode}
+              onChangeText={setDemoCode}
+              autoCapitalize="none"
+              autoCorrect={false}
+              secureTextEntry
+              returnKeyType="go"
+              onSubmitEditing={demo}
+            />
+            <Button
+              testID="sign-in-demo-submit"
+              kind="brand"
+              label={busy ? s.checking : s.demoSubmit}
+              disabled={busy}
+              onPress={demo}
+            />
+            <TextButton
+              testID="sign-in-demo-back"
+              label={s.back}
+              disabled={busy}
+              onPress={back}
+            />
+          </>
+        )}
+        {note !== null && (
+          <Text testID="sign-in-note" style={text.attention} accessibilityRole="alert">
+            {sentence(s, note)}
+          </Text>
+        )}
+        {form.at === "field" && (
+          <TextButton
             testID="sign-in-demo"
-            kind="secondary"
-            label={t.signIn.demo}
+            label={s.demo}
             disabled={busy}
             onPress={() => {
               setNote(null);
-              setStep("demo");
+              setForm({ at: "demo" });
             }}
           />
-        </>
-      ) : step === "demo" ? (
-        <>
-          <Text style={text.body}>{t.signIn.demoHelp}</Text>
-          <Text style={text.label}>{t.signIn.phone}</Text>
-          <TextInput
-            testID="sign-in-demo-phone"
-            accessibilityLabel={t.signIn.phone}
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            keyboardType="phone-pad"
-            textContentType="telephoneNumber"
-            autoComplete="tel"
-          />
-          <Text style={text.label}>{t.signIn.demoCode}</Text>
-          <TextInput
-            testID="sign-in-demo-code"
-            accessibilityLabel={t.signIn.demoCode}
-            style={styles.input}
-            value={demoCode}
-            onChangeText={setDemoCode}
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry
-            returnKeyType="go"
-            onSubmitEditing={() => void demo()}
-          />
-          <Button
-            testID="sign-in-demo-submit"
-            label={busy ? t.loading : t.signIn.demoSubmit}
-            disabled={busy}
-            onPress={() => void demo()}
-          />
-          <Button
-            testID="sign-in-demo-back"
-            kind="secondary"
-            label={t.signIn.back}
-            disabled={busy}
-            onPress={() => {
-              setNote(null);
-              setDemoCode("");
-              setStep("phone");
-            }}
-          />
-        </>
-      ) : (
-        <>
-          <Text style={text.body}>{t.signIn.codeSent}</Text>
-          <Text style={text.label}>{t.signIn.code}</Text>
-          <TextInput
-            testID="sign-in-code"
-            accessibilityLabel={t.signIn.code}
-            // The texted code is offered above the keyboard, and one tap fills it: iOS by
-            // `oneTimeCode`, Android by `sms-otp`.
-            style={[styles.input, styles.large, styles.code]}
-            autoFocus
-            maxLength={8}
-            value={code}
-            onChangeText={setCode}
-            keyboardType="number-pad"
-            textContentType="oneTimeCode"
-            autoComplete="sms-otp"
-            returnKeyType="go"
-            onSubmitEditing={() => void verify()}
-          />
-          <Button
-            testID="sign-in-verify"
-            label={busy ? t.loading : t.signIn.submit}
-            disabled={busy}
-            onPress={() => void verify()}
-          />
-          <Button
-            testID="sign-in-change-number"
-            kind="secondary"
-            label={t.signIn.changeNumber}
-            disabled={busy}
-            onPress={() => {
-              setNote(null);
-              setStep("phone");
-            }}
-          />
-        </>
-      )}
-      {note !== null && (
-        <Text testID="sign-in-note" style={text.attention} accessibilityRole="alert">
-          {note}
-        </Text>
-      )}
-    </Screen>
+        )}
+        <TextButton
+          testID="sign-in-trouble"
+          label={s.trouble}
+          disabled={false}
+          expanded={trouble}
+          onPress={() => setTrouble(!trouble)}
+        />
+        {trouble && (
+          <View testID="sign-in-trouble-help" style={styles.trouble}>
+            <Text style={text.secondary}>{s.troubleNoCode}</Text>
+            <Text style={text.secondary}>{s.troubleNewPhone}</Text>
+            <Text style={text.secondary}>{s.troubleNeverInvited}</Text>
+          </View>
+        )}
+        {standIn && (
+          <Text testID="sign-in-stand-in" style={text.secondary}>
+            {s.developmentOnly}
+          </Text>
+        )}
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// What else can be done on a step: a button that reads as a link, 48 pt tall.
+function TextButton({
+  testID,
+  label,
+  disabled,
+  onPress,
+  expanded,
+}: {
+  testID: string;
+  label: string;
+  disabled: boolean;
+  onPress: () => void;
+  expanded?: boolean;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ disabled, ...(expanded !== undefined && { expanded }) }}
+      disabled={disabled}
+      onPress={onPress}
+      style={styles.textButton}
+    >
+      <Text style={[styles.textButtonLabel, disabled && styles.textButtonDisabled]}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
+  // The navy runs up under the clock; the page below it is the app's own.
+  screen: { flex: 1, backgroundColor: color.brandNavy },
+  band: { alignItems: "center", paddingVertical: space[6] },
+  page: { flex: 1, backgroundColor: color.canvas },
+  content: { padding: space[4], gap: space[4], paddingBottom: space[6] * 2 },
+  heading: {
+    ...(type.title as TextStyle),
+    fontSize: 32,
+    lineHeight: 38,
+    fontWeight: "700",
+    color: color.brandNavy,
+  },
+  // Bodoni Moda draws its own weight: a weight asked of it as well would be faked.
+  bodoni: { fontFamily: "BodoniModa_700Bold", fontWeight: "normal" },
   input: {
-    minHeight: size.target,
+    minHeight: 64,
     paddingHorizontal: space[3],
     borderRadius: size.radiusCard,
     borderWidth: 1,
     borderColor: color.controlBorder,
     backgroundColor: color.surface,
     color: color.ink,
-    fontSize: type.body.fontSize,
+    fontSize: 22,
   },
-  // The one field the screen is for: large enough to read at arm's length.
-  large: { minHeight: 64, fontSize: 24, fontVariant: ["tabular-nums"] },
-  code: { letterSpacing: 4, textAlign: "center" },
+  code: { letterSpacing: 6, textAlign: "center", fontVariant: ["tabular-nums"] },
+  textButton: {
+    minHeight: size.target,
+    justifyContent: "center",
+    alignSelf: "flex-start",
+  },
+  textButtonLabel: {
+    ...(type.bodyStrong as TextStyle),
+    color: color.accent,
+    textDecorationLine: "underline",
+  },
+  textButtonDisabled: { color: color.muted, textDecorationLine: "none" },
+  trouble: { gap: space[2] },
 });

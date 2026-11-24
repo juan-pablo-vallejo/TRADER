@@ -19,9 +19,10 @@ export function Button({
   testID: string;
   onPress: () => void;
   disabled?: boolean;
-  kind?: "primary" | "secondary";
+  // `brand`: the sign-in screen's one button, in D'Sierra's red as the office's is.
+  kind?: "primary" | "secondary" | "brand";
 }) {
-  const primary = kind === "primary";
+  const primary = kind !== "secondary";
   return (
     <Pressable
       testID={testID}
@@ -32,6 +33,7 @@ export function Button({
       style={[
         styles.button,
         primary ? styles.primary : styles.secondary,
+        kind === "brand" && styles.brand,
         disabled && primary && styles.disabled,
       ]}
     >
@@ -74,6 +76,7 @@ const styles = StyleSheet.create({
     paddingVertical: space[2],
   },
   primary: { minHeight: size.primary, backgroundColor: color.accent },
+  brand: { backgroundColor: color.brand },
   secondary: {
     minHeight: size.target,
     backgroundColor: color.surface,

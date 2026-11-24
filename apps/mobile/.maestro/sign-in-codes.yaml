@@ -1,0 +1,48 @@
+# The code step: another code only after half a minute, a wrong code and an expired one
+# told apart (the stand-in takes 000000 as expired), each cleared for the next try, then the
+# right one. ${EMAIL} signs in.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "sign-in-send"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-code"
+    timeout: 30000
+- assertVisible:
+    id: "sign-in-resend"
+    enabled: false
+- assertVisible: "Send another code in \\d+ s"
+- tapOn:
+    id: "sign-in-code"
+- inputText: "111111"
+- extendedWaitUntil:
+    visible: "That code did not work. Check it, or ask for a new one."
+    timeout: 15000
+- tapOn:
+    id: "sign-in-code"
+- inputText: "000000"
+- extendedWaitUntil:
+    visible: "That code has expired. Ask for a new one."
+    timeout: 15000
+- takeScreenshot: sign-in-code-expired
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-resend"
+      enabled: true
+    timeout: 40000
+- tapOn:
+    id: "sign-in-resend"
+- extendedWaitUntil:
+    visible: "Send another code in \\d+ s"
+    timeout: 15000
+- tapOn:
+    id: "sign-in-code"
+- inputText: "123456"
+- runFlow:
+    file: parts/landed.yaml

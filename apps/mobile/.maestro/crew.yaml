@@ -32,9 +32,12 @@ appId: app.jpteq.trader
 - takeScreenshot: crew-add
 - tapOn:
     id: "form-save"
-- extendedWaitUntil:
-    visible:
+# The saved note is drawn at the top of the list, which keeps where it was scrolled to:
+# the form's Save is far down it once the crew is long.
+- scrollUntilVisible:
+    element:
       id: "crew-note"
+    direction: UP
     timeout: 30000
 - scrollUntilVisible:
     element: "Sam Carter, .*"
