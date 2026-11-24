@@ -9,6 +9,7 @@ import { describe, expect, it } from "vitest";
 import { createMinter } from "../../src/ids";
 import { recordsFor } from "../../src/sync/clock";
 import {
+  answersOf,
   createSyncer,
   READING_KEY,
   readSnapshot,
@@ -517,5 +518,59 @@ describe("a call that never answers", () => {
     expect(await p.cycle()).toMatchObject({ settled: 1, pulled: false });
     p.srv.hang = null;
     expect(await p.cycle()).toMatchObject({ pulled: true, drained: true });
+  });
+});
+
+// The live transport's reading of the server's answer (sync/provider.tsx).
+describe("the push's answer as the phone reads it", () => {
+  it("reads an acknowledgement only from accepted and duplicate, and passes anything else through", () => {
+    expect(
+      answersOf([
+        { id: "a", kind: "labor_event", result: "accepted", ack: { flags: ["offline"] } },
+        { id: "b", kind: "labor_event", result: "duplicate", ack: { flags: [] } },
+        { id: "c", kind: "labor_event", result: "rejected", code: "no_open_session" },
+        // A newer server's result, with no acknowledgement this build can read.
+        { id: "d", kind: "labor_event", result: "parked" },
+      ]),
+    ).toEqual([
+      { id: "a", result: "accepted", flags: ["offline"] },
+      { id: "b", result: "duplicate", flags: [] },
+      { id: "c", result: "rejected", code: "no_open_session" },
+      { id: "d", result: "parked" },
+    ]);
+  });
+
+  it("acts on one answer per record, an unknown one included", async () => {
+    const p = await phone();
+    const [id] = await p.capture(1);
+    const push = p.srv.transport.push;
+    p.srv.transport.push = async (input) => {
+      const answer = await push(input);
+      // The same id answered twice: unknown first, then accepted.
+      return {
+        ...answer,
+        results: [
+          { id: id!, result: "parked" } as unknown as PushAnswer,
+          ...answer.results,
+        ],
+      };
+    };
+    expect(await p.cycle()).toMatchObject({ settled: 0, drained: false });
+    expect(p.standing(id!)).toBe("pending");
+  });
+
+  it("drops a stored snapshot no upcast step can read, and pulls again", async () => {
+    const p = await phone();
+    await p.cycle();
+    const fresh = (await readSnapshot(p.store))!;
+    await p.store.write(
+      SNAPSHOT_KEY,
+      superjson.stringify({
+        pulledAt: fresh.pulledAt,
+        data: { ...fresh.data, shifts: [null] },
+      }),
+    );
+    expect(await readSnapshot(p.store)).toBeNull();
+    expect(await p.store.read(SNAPSHOT_KEY)).toBeNull();
   });
 });

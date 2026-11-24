@@ -4,15 +4,16 @@
 // beside the others under builds/<date>-<commit>/, and the server must answer every one
 // without BAD_REQUEST or `invalid_record` ("The phone's contract", docs/ARCHITECTURE.md).
 // The inputs are built the way the screens and the sync engine build them. The commit is the
-// one this build's phone source was recorded at; a change to what the phone sends is a new
-// directory, recorded when that build is cut.
+// first whose phone source sends exactly these calls. A kept build's file is never rewritten:
+// when what the phone sends changes, BUILD_DIR names a new directory (that change's commit)
+// and the old one stays for the builds still installed, so `vitest -u` here is a decision.
 import { expect, it } from "vitest";
 
 import { createApi } from "../src/api";
 import { createMinter } from "../src/ids";
 import { recordsFor } from "../src/sync/clock";
 
-const BUILD_DIR = "../../../packages/api/test/contract/builds/2026-11-24-f3fa006";
+const BUILD_DIR = "../../../packages/api/test/contract/builds/2026-11-24-f84311c";
 const T = Date.UTC(2026, 10, 24, 14, 0, 0);
 const WORKER = "01900000-0000-7000-8000-000000000001";
 const OTHER = "01900000-0000-7000-8000-000000000002";

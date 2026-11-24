@@ -209,6 +209,8 @@ describe("where the app opens", () => {
       voided: false,
     };
     expect(opensOnCrew(pull({ sessions: [open] }), NOW)).toBe(false);
+    // Voided while still open, it is open on the server too (H1): their clock, not Crew.
+    expect(opensOnCrew(pull({ sessions: [{ ...open, voided: true }] }), NOW)).toBe(false);
     expect(
       opensOnCrew(
         pull({ sessions: [{ ...open, state: "ended", endedAt: new Date(NOW) }] }),

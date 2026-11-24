@@ -9,7 +9,7 @@
 import type { ServiceState } from "@trader/api/contract";
 import superjson from "superjson";
 
-import type { Snapshot, Store, Transport } from "./types";
+import type { PushAnswer, Snapshot, Store, Transport } from "./types";
 
 // A call that has not answered by now is given up, as one the network failed is (M1): one
 // that never answered held this cycle, and every cycle queued behind it, for good.
@@ -78,6 +78,25 @@ export type CycleResult =
       clockSkewMs: number | null;
     };
 
+// The server's push results as the cycle reads them. A result this build does not know
+// (a newer server's) carries no acknowledgement this build can read: passed through as it
+// is, so the cycle leaves its record pending, and never read as one that was accepted.
+type ServerResult = {
+  id: string;
+  kind: string | null;
+  result: string;
+  code?: string;
+  ack?: { flags?: string[] };
+};
+export const answersOf = (results: readonly ServerResult[]): PushAnswer[] =>
+  results.map((r) =>
+    r.result === "rejected"
+      ? { id: r.id, result: "rejected", code: r.code ?? "" }
+      : r.result === "accepted" || r.result === "duplicate"
+        ? { id: r.id, result: r.result, flags: r.ack?.flags ?? [] }
+        : ({ id: r.id, result: r.result } as unknown as PushAnswer),
+  );
+
 export async function readSnapshot(store: Store): Promise<Snapshot | null> {
   const raw = await store.read(SNAPSHOT_KEY);
   if (raw === null) return null;
@@ -104,8 +123,14 @@ export async function readSnapshot(store: Store): Promise<Snapshot | null> {
     return null;
   }
   let data = kept.data as unknown as Loose;
-  for (let step = shape + 1; step <= SNAPSHOT_SHAPE; step += 1)
-    data = UPCAST[step]!(data);
+  try {
+    for (let step = shape + 1; step <= SNAPSHOT_SHAPE; step += 1)
+      data = UPCAST[step]!(data);
+  } catch {
+    // Stored data no step can read: dropped and pulled again, like an unreadable snapshot.
+    await store.write(SNAPSHOT_KEY, null);
+    return null;
+  }
   return {
     shape: SNAPSHOT_SHAPE,
     pulledAt: kept.pulledAt,
@@ -196,6 +221,7 @@ export async function runCycle(
     await reached();
     clockSkewMs = answer.clockSkewMs;
     const answered = new Set<string>();
+    const unknown = new Set<string>();
     for (const result of answer.results) {
       // An answer for a record this push did not send is not ours to act on.
       if (!ids.includes(result.id) || answered.has(result.id)) continue;
@@ -209,10 +235,10 @@ export async function runCycle(
       } else {
         // An answer a newer server gives that this build does not know: left pending, as
         // if unanswered, and sent again under the same id.
-        answered.delete(result.id);
+        unknown.add(result.id);
       }
     }
-    const omitted = ids.filter((id) => !answered.has(id));
+    const omitted = ids.filter((id) => !answered.has(id) || unknown.has(id));
     if (omitted.length > 0) await store.release(omitted);
     // The server stopped before the end of the batch: the rest waits for the next cycle,
     // so one that never answers cannot spin this one.

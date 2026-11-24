@@ -29,6 +29,7 @@ import {
   readSnapshot,
   runCycle,
   type CycleResult,
+  answersOf,
 } from "./engine";
 import { createFailureLog } from "./failures";
 import { stampsOn } from "./today";
@@ -100,15 +101,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         );
         return {
           clockSkewMs: answer.clockSkewMs,
-          results: answer.results.map((r) =>
-            r.result === "rejected"
-              ? { id: r.id, result: r.result, code: r.code }
-              : {
-                  id: r.id,
-                  result: r.result,
-                  flags: r.kind === "labor_event" ? r.ack.flags : [],
-                },
-          ),
+          // A result this build does not know is passed through, never read as accepted.
+          results: answersOf(answer.results),
         };
       },
       pull: () => seen(api.sync.pull.query({ protocolVersion: 1 })),

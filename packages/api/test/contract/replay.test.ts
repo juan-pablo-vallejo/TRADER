@@ -1,9 +1,13 @@
 // Every released build's calls, replayed (H4). builds/<date>-<commit>/calls.json is what a
 // build sends, recorded through the phone's own client (apps/mobile test/calls.test.ts). A
 // build is used for weeks, so this server must still understand each call of every build
-// kept here: none may be refused as malformed (BAD_REQUEST), and no sync record as
-// `invalid_record`. Refusals of the data itself (unknown ids, a gate) are fine: they say the
-// call was understood. A build is removed from here once TRADER_MIN_BUILD_* has passed it.
+// kept here: none may be refused as malformed (BAD_REQUEST) or fail (INTERNAL_SERVER_ERROR),
+// and every sync record must be answered, none as `invalid_record`: a push stops at a record
+// it cannot read without answering it, which would leave a phone's outbox unsent for good.
+// Refusals of the data itself (unknown ids, a gate) are fine: they say the call was
+// understood. A build is removed from here once TRADER_MIN_BUILD_* has passed it.
+// The input is decoded and sent again by the test client, unbatched: a change to
+// superjson's format or tRPC's batch wrapper is not caught here.
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -66,6 +70,11 @@ export async function replay(call: Recorded) {
     path: call.path,
     code: r.error?.json.data.code ?? null,
     invalid: (records ?? []).filter((x) => x.code === "invalid_record").length,
+    unanswered:
+      call.path === "sync.push"
+        ? ((call.input.json as { records?: unknown[] }).records?.length ?? 0) -
+          (records ?? []).length
+        : 0,
   };
 }
 
@@ -84,19 +93,23 @@ describe("every kept build's calls", () => {
     }
   });
 
-  it("is understood by this server: no BAD_REQUEST, no invalid_record", async () => {
+  it("is understood by this server: no BAD_REQUEST or 500, every record answered", async () => {
     for (const b of builds()) {
       for (const c of b.calls) {
         const r = await replay(c);
         expect({
           build: b.dir,
           ...r,
-          code: r.code === "BAD_REQUEST" ? r.code : "understood",
+          code:
+            r.code === "BAD_REQUEST" || r.code === "INTERNAL_SERVER_ERROR"
+              ? r.code
+              : "understood",
         }).toEqual({
           build: b.dir,
           path: c.path,
           code: "understood",
           invalid: 0,
+          unanswered: 0,
         });
       }
     }
