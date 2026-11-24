@@ -1577,6 +1577,16 @@ vitest.config.ts`). The runners should be exempt like the readers.
     compiling the API on the phone's first call outlasted the 25 s deadline (the suite now
     compiles it first), and a scrolled-to row or button under the tab bar lost its tap
     (`crew.yaml` centres before tapping).
+- [ ] Item 24e's tracing trial (`ee89c6b`, simplified `b39ea49`, answered `af42b9c` and
+      `2291e00`): `batch-reviewer` round 1 CHANGES NEEDED (the docs still said production
+      and staging alike; calls shared one trace; a failed call read "ok"), round 2 CHANGES
+      NEEDED in one point, answered and not reviewed again (two rounds at most): Sentry
+      keeps a status message only from its own list, so a failed call's status is
+      `internal_error` and its tRPC code rides in the span's data. Notes, left as they are:
+  - The envelope test checks the transaction's top-level keys and the header's; nested
+    `contexts` keys are held byte for byte by `call-trace.test.ts`, on `scrubTransaction`.
+  - The trial ends by removing `traceCall` from the route and the staging branch of
+    `sentry-event.ts`; nothing else depends on it.
 - [ ] The backend plan's scorecard, Track A's column, 2026-11-24 (seen unless marked; the
       baseline is the plan's, section J):
 
