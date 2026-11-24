@@ -19,6 +19,7 @@ import { z } from "zod";
 
 import { workDay } from "../assignments/write";
 import type { Tx } from "../core/context";
+import { groupBy } from "../core/group";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { readJob } from "../jobs/list";
@@ -26,7 +27,6 @@ import { sessionAccounting } from "./accounting";
 import { dayHours, type DayCell } from "./hours";
 import { REASON_ORDER } from "../sync/reasons";
 import { RANGE_REFUSAL, rangeWithinBound } from "./ledger";
-import { groupBy } from "../core/group";
 
 // Every cell of the workers named, whatever its date or job: the caller selects.
 export async function readDayHours(

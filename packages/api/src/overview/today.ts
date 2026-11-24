@@ -21,12 +21,12 @@ import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { groupBy } from "../core/group";
 import type { AppUser } from "../core/resolve-user";
 import { job, listJobs } from "../jobs/list";
 import { sessionAccounting } from "../labor/accounting";
 import { companyZone } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
-import { groupBy } from "../core/group";
 
 const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
