@@ -625,10 +625,15 @@ Android user.
       deployed (`d15965d`, `4e58a19`). Staging after 0008: the same 1 company, 8 users, 2
       jobs, 12 events, 6 invoices and 4 shifts, 9 migrations, `/api/ready` `"demo":false`
       until the owner flags it. The pushes' notes are under Found along the way.
-- [ ] 24d. **What the audit found, phone.** Settled records pruned after a pull; an older
+- [x] 24d. **What the audit found, phone.** Settled records pruned after a pull; an older
       snapshot upcast; every call times out; the job's location set by its own procedure.
       Done when both phone suites are green and the build's calls are recorded. OWNER: new
       preview builds.
+      Seen 2026-11-24: the Maestro suite whole and green on the iPhone simulator and by
+      `trader-ws android`, on the tree of `bc1115f`; this build's twelve calls recorded in
+      `packages/api/test/contract/builds/2026-11-24-f84311c` and replayed with no
+      BAD_REQUEST, 500, `invalid_record` or unanswered record. The preview builds are the
+      owner's, at the end.
 - [ ] 24e. **Staging, measured.** A latency sample of staging and the tracing trial. Done
       when the sample is stored. OWNER: flag staging's company as the door's.
 - [ ] 24f. **Ready to release.** `README.md` carries the Demo flag and the minimum builds.
@@ -1557,6 +1562,21 @@ vitest.config.ts`). The runners should be exempt like the readers.
     (Track B's tag rule).
   - `scripts/staging.sh local` failed once on "an unknown email … Google account nobody
     holds" (2.7 min) and passed on the rerun; the Clerk development instance was slow.
+- [ ] Item 24d (`f84311c`, answered `bc1115f`): no server file, so no simplifier pass.
+      `batch-reviewer` round 1 CHANGES NEEDED in 345 s (the replay passed a push that stopped
+      unanswered; the live transport read `ack` from a result it did not know), round 2
+      PASS. Notes, left as they are:
+  - The replay decodes and re-encodes each recorded input, unbatched: a change to
+    superjson's format or tRPC's batch wrapper is not caught there.
+  - `answersOf` types `ack` as optional, so the phone would still compile if the server
+    dropped it; the wire snapshot's additive rule is what holds it.
+  - A whole-push refusal (a gate) counts as unanswered in the replay; it runs as an admin.
+  - The engine has no wrong-clock test of its own; a wrong clock is tested in `ids.test.ts`
+    and `today.test.ts`, as before.
+  - Two faults of the Maestro suite, not of the phone, were fixed on the way: `next dev`
+    compiling the API on the phone's first call outlasted the 25 s deadline (the suite now
+    compiles it first), and a scrolled-to row or button under the tab bar lost its tap
+    (`crew.yaml` centres before tapping).
 - [ ] A forged stack (a thrown plain object, whose stack tRPC copies apart from its message)
       can still put a path such as `/srv/packages/+14015550100/x.ts` on the server's own
       log line: digits and `+` are path characters. No address passes (`@` is refused).
