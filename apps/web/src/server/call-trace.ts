@@ -17,7 +17,8 @@ export const tracingOn = (env: Env): boolean => traderEnvironment(env) === "stag
 
 // A router's dotted name: what a transaction may be called.
 const PATH = /^[a-z][A-Za-z]*(\.[a-z][A-Za-z]*)+$/;
-const HEX = (n: number) => new RegExp(`^[0-9a-f]{${n}}$`);
+const HEX_32 = /^[0-9a-f]{32}$/;
+const HEX_16 = /^[0-9a-f]{16}$/;
 const TOKEN = /^[A-Za-z0-9_.:-]{1,64}$/;
 
 export type CallSpan = {
@@ -59,12 +60,12 @@ export function scrubTransaction(event: Event): Event | null {
     environment: str(event.environment, TOKEN),
     release: str(event.release, TOKEN),
     platform: str(event.platform, TOKEN),
-    event_id: str(event.event_id, HEX(32)),
+    event_id: str(event.event_id, HEX_32),
     spans: [],
     contexts: {
       trace: {
-        trace_id: str(trace.trace_id, HEX(32)),
-        span_id: str(trace.span_id, HEX(16)),
+        trace_id: str(trace.trace_id, HEX_32),
+        span_id: str(trace.span_id, HEX_16),
         op: str(trace.op, TOKEN),
         status: str(trace.status, TOKEN),
         data: {
