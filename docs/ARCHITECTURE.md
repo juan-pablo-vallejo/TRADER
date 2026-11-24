@@ -93,7 +93,9 @@ old shape. `packages/api/test/contract` holds the snapshot and each released bui
 
 **Measured.** Every call writes one timing line (`trader_call`: path, milliseconds,
 statements) to the server's log, and answers it as `Server-Timing` with an `x-request-id`
-everywhere but production; none of it goes to Sentry. Each phone procedure and hot office
+everywhere but production. On staging alone each call is also a Sentry transaction, its
+path, time, statements and code and nothing else (a trial, the owner's decision); production
+sends Sentry no timing. Each phone procedure and hot office
 read has an exact statement budget (`packages/api/test/core/budgets.test.ts`).
 
 **Schema rule.** Free to change until the first production release. After it, a migration

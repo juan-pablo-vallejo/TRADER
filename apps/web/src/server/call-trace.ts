@@ -89,17 +89,24 @@ export function traceCall(line: CallLine, env: Env = process.env): void {
   const span = callSpan(line, Date.now());
   const send = async () => {
     const Sentry = await import("@sentry/nextjs");
-    Sentry.startInactiveSpan({
-      name: span.name,
-      op: span.op,
-      startTime: span.startTime,
-      forceTransaction: true,
-      attributes: span.attributes,
-    }).end(span.endTime);
+    // A trace of its own: nothing forks the scope per request, so without this every call
+    // of a warm instance would share one trace id and Sentry would chain them.
+    Sentry.startNewTrace(() => {
+      const made = Sentry.startInactiveSpan({
+        name: span.name,
+        op: span.op,
+        startTime: span.startTime,
+        forceTransaction: true,
+        attributes: span.attributes,
+      });
+      // A failed call reads as one: its tRPC code is the status (2 is Sentry's error).
+      if (!line.ok) made.setStatus({ code: 2, message: span.attributes.code });
+      made.end(span.endTime);
+    });
     await Sentry.flush(FLUSH_TIMEOUT_MS);
   };
+  const sendQuietly = () => send().catch(() => undefined);
   void import("next/server")
-    .then(({ after }) => after(send))
-    .catch(() => send())
-    .catch(() => undefined);
+    .then(({ after }) => after(sendQuietly))
+    .catch(() => sendQuietly());
 }
