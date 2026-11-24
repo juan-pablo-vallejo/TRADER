@@ -1451,6 +1451,31 @@ Android user.
 - [ ] The Maestro suite: a sign-in by number binds a person to that number for good, and
       every demo person is bound to their email by the time it runs, so `suite.sh` invites
       one by number alone just before (`Number Sign-in`, +1 401 555 0109).
+- [ ] Item 21c, second push (`12ab2af`), 2026-11-23: Face ID or fingerprint, Google and
+      Apple. Seen on the iPhone simulator and the Android emulator, with the development
+      stand-in, by the Maestro suite green on both: the offer after a code, turned on, kept
+      by Sign out and used, turned off in Me, Not now kept for its person, a second person's
+      key replacing the first's, a deactivated person's key refused and gone; Google with an
+      account on a roster and with none; Apple's own button on the iPhone; the offer in
+      Spanish. The built app carries the approved Face ID sentence and its Spanish. Not
+      seen, and not seeable on a simulator: Clerk's real key (the iOS Simulator cannot make
+      one), Google's and Apple's real sheets through Clerk, and whether Clerk's enroll for a
+      second person replaces the first's key or refuses (OWNER: preview build 2, then item
+      22's walk on real phones). The Continue with Google button on the phone has Google's
+      words but not its mark, which the office's has.
+- [ ] OWNER, before preview build 2: Sign in with Apple on the App ID `app.jpteq.trader`.
+      The app now carries the entitlement (app.json, usesAppleSignIn).
+- [ ] Item 21e's open note, answered by item 21c's look-up: `@clerk/backend` 3.27.0 has no
+      call to remove a biometric key, so the server cannot take one off a phone. The phone
+      takes its own off when the server refuses a sign-in that came by it (a deactivated
+      person); a key whose person stays active but changes address keeps working until then.
+- [ ] `pnpm ios` no longer builds for the simulator: with Sign in with Apple's entitlement
+      in the project, Expo's CLI asks for a signing certificate. The working command is in
+      `apps/mobile/.maestro/run.sh`.
+- [ ] Batches B and C are committed and not pushed: Bodoni's and C's packages change the
+      root `pnpm-lock.yaml`, so the deploy skip (only `apps/mobile/` and Markdown) does not
+      apply and each push would deploy staging, three deploys against the plan's two. Left
+      for the owner to decide.
 
 ## After MVP
 
