@@ -7,7 +7,7 @@
 // names no path, for one). The boundary is that the `gh` login on this Mac cannot bypass
 // production's ruleset (docs/ARCHITECTURE.md, Claude and production).
 import { execFileSync } from "node:child_process";
-import { basename } from "node:path";
+import { basename, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 // Split a script into simple commands, each an argv. Quotes are honoured; the bodies of
@@ -235,17 +235,30 @@ export function refusal(script, lookup = baseOf, depth = 0) {
 }
 
 // Guard files: what decides what is checked, what counts as green and what is refused.
-// A path ending in "/" is a folder. An edit to one is asked of the owner.
+// A path ending in "/" is a folder; any other matches by its end, wherever it sits. An
+// edit to one is asked of the owner.
 const GUARDED = [
   "scripts/trader-ws",
   "scripts/trader-ws.d/",
   "scripts/check-ci.sh",
+  "scripts/staging.sh",
+  "scripts/release-facts.sh",
   ".claude/hooks/",
   ".claude/agents/",
   ".claude/skills/",
   ".githooks/",
   ".github/workflows/",
+  "pnpm-workspace.yaml",
+  "eslint.config.mjs",
+  "tsconfig.base.json",
+  "tsconfig.json",
+  "vitest.config.ts",
 ];
+// Guarded at the repository's root only: the root manifest holds `check` and `lint`, while
+// a package's own manifest changes with every dependency it adds. A relative path is read
+// against the root. `pnpm add -w` changes it without naming it: a tripwire, as above.
+const AT_ROOT = ["package.json"];
+const ROOT = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 // The owner's alone: Claude never writes these, asked or not.
 const OWNERS = [
   [".claude/settings.json", "the settings file is the owner's to apply"],
@@ -254,7 +267,7 @@ const OWNERS = [
 ];
 
 // What a write to this path meets: { decision: "deny" | "ask", why }, or null.
-export function guards(path) {
+export function guards(path, root = ROOT) {
   const p = `/${String(path).replace(/^(\.\/)+/, "")}`;
   for (const [end, why] of OWNERS)
     if (p.endsWith(`/${end}`)) return { decision: "deny", why: `${end}: ${why}` };
@@ -263,6 +276,13 @@ export function guards(path) {
       return {
         decision: "ask",
         why: `${g} is a guard file: show the owner the diff, and his answer here is the "apply"`,
+      };
+  if (path === "") return null;
+  for (const g of AT_ROOT)
+    if (resolve(root, String(path)) === join(resolve(root), g))
+      return {
+        decision: "ask",
+        why: `the root ${g} is a guard file: show the owner the diff, and his answer here is the "apply"`,
       };
   return null;
 }
@@ -275,6 +295,11 @@ const READERS = new Set(
 );
 const GIT_WRITERS = new Set(["checkout", "restore", "mv", "rm"]);
 const NAMES = [...GUARDED, ...OWNERS.map(([end]) => end)];
+// A root-only name inside code counts when nothing path-like comes before it, so that
+// `apps/web/package.json` in an argument is not taken for the root's.
+const ROOT_NAMES = AT_ROOT.map(
+  (n) => new RegExp(`(^|[^\\w./-])${n.replace(/\./g, "\\.")}`),
+);
 const RUNNERS = new Set([...SHELLS, "node"]);
 
 // What a command that would change a guard file meets, or null. Reading one, running one
@@ -321,7 +346,9 @@ export function touches(script, depth = 0) {
     const named = words.map((a) => guards(bare(a))).filter(Boolean);
     // A guard file's name inside a longer word: code or a message, not a path argument.
     const inCode = words.some(
-      (a) => !guards(bare(a)) && NAMES.some((g) => a.includes(g)),
+      (a) =>
+        !guards(bare(a)) &&
+        (NAMES.some((g) => a.includes(g)) || ROOT_NAMES.some((r) => r.test(a))),
     );
     if (!named.length && !inCode) continue;
     const hit = named.find((h) => h.decision === "deny") ?? named[0];

@@ -84,6 +84,15 @@ const asked = [
   "/Users/x/TRADER/.githooks/pre-push",
   "/Users/x/TRADER/.github/workflows/ci.yml",
   "scripts/trader-ws",
+  "/Users/x/TRADER/scripts/staging.sh",
+  "/Users/x/TRADER/scripts/release-facts.sh",
+  "/Users/x/TRADER/pnpm-workspace.yaml",
+  "/Users/x/TRADER/eslint.config.mjs",
+  "/Users/x/TRADER/tsconfig.base.json",
+  "/Users/x/TRADER/apps/web/tsconfig.json",
+  "/Users/x/TRADER/packages/api/vitest.config.ts",
+  "package.json",
+  "./package.json",
 ];
 const denied = [
   "/Users/x/TRADER/.claude/settings.json",
@@ -92,14 +101,20 @@ const denied = [
   ".git/trader/green",
 ];
 const free = [
-  "/Users/x/TRADER/scripts/staging.sh",
+  "/Users/x/TRADER/apps/web/package.json",
+  "apps/mobile/package.json",
   "/Users/x/TRADER/apps/web/src/app/nav.tsx",
   "/Users/x/TRADER/docs/TASKS.md",
   "/Users/x/TRADER/scripts/trader-ws-notes.md",
 ];
-for (const p of asked) assert.equal(guards(p)?.decision, "ask", `should ask: ${p}`);
-for (const p of denied) assert.equal(guards(p)?.decision, "deny", `should deny: ${p}`);
-for (const p of free) assert.equal(guards(p), null, `should pass: ${p}`);
+const root = "/Users/x/TRADER";
+for (const p of asked) assert.equal(guards(p, root)?.decision, "ask", `should ask: ${p}`);
+for (const p of denied)
+  assert.equal(guards(p, root)?.decision, "deny", `should deny: ${p}`);
+for (const p of free) assert.equal(guards(p, root), null, `should pass: ${p}`);
+// The root manifest, written by its absolute path; another folder's is not the root's.
+assert.equal(guards("/Users/x/TRADER/package.json", root)?.decision, "ask");
+assert.equal(guards("/Users/x/other/package.json", root), null);
 
 const changing = [
   ["sed -i '' s/a/b/ scripts/trader-ws", "ask"],
@@ -113,6 +128,10 @@ const changing = [
   ["echo 'abc check now here' >> .git/trader/green", "deny"],
   ["cp /tmp/s.json .claude/settings.json", "deny"],
   ["jq 'del(.hooks)' .claude/settings.json > .claude/settings.json", "deny"],
+  ["sed -i '' s/a/b/ scripts/staging.sh", "ask"],
+  ["jq '.scripts.check=\"true\"' package.json > /tmp/p && mv /tmp/p package.json", "ask"],
+  ["node -e \"fs.writeFileSync('package.json','{}')\"", "ask"],
+  ["echo '{}' > packages/db/tsconfig.json", "ask"],
 ];
 const unchanged = [
   "scripts/trader-ws check",
@@ -128,7 +147,11 @@ const unchanged = [
   "jq . .claude/settings.json",
   "grep -rn trader-ws scripts/",
   "pnpm check",
-  "sed -i '' s/a/b/ scripts/staging.sh",
+  "scripts/staging.sh smoke",
+  "jq .scripts package.json",
+  "cp /tmp/p apps/web/package.json",
+  "node -e \"require('./apps/web/package.json')\"",
+  "pnpm --filter @trader/web add @vercel/functions",
   "echo 'see scripts/trader-ws and .claude/hooks/guard.mjs'",
   "git commit -m 'scripts/trader-ws moves into the repository'",
   "ls scripts/trader-ws.d/",

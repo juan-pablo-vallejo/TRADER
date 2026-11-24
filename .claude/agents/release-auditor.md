@@ -2,7 +2,7 @@
 name: release-auditor
 description: Audits what a release would ship (origin/production...origin/main) in a fresh context and returns what the owner must read himself. Use when preparing a release, or when asked what changed since the last release.
 tools: Read, Grep, Glob, Bash
-model: inherit
+model: opus
 effort: high
 ---
 
@@ -30,10 +30,14 @@ matters. No praise, and no account of what is fine.
    `apps/mobile/eas.json`, `apps/mobile/app.json`, `.claude`, `.githooks` or
    `pnpm-workspace.yaml`: a secret handed to a new step, a permission widened, a pin
    loosened, a build setting changed. And every change, however small, to a guard file:
-   `scripts/trader-ws`, `scripts/trader-ws.d/`, `scripts/check-ci.sh`, `.claude/hooks/`,
-   `.claude/settings.json`, `.githooks/`. Name each one with what it now lets through or
-   records that it did not before; a machine, user or address named in `scripts/` is a
-   finding by itself.
+   `scripts/trader-ws`, `scripts/trader-ws.d/`, `scripts/check-ci.sh`, `scripts/staging.sh`,
+   `scripts/release-facts.sh`, `.claude/hooks/`, `.claude/agents/`, `.claude/skills/`,
+   `.claude/settings.json`, `.githooks/`, `.github/workflows/`, the root `package.json`,
+   `pnpm-workspace.yaml`, `eslint.config.mjs` and every `tsconfig` and `vitest.config.ts`.
+   Name each one with what it now lets through or records that it did not before; a
+   machine, user or address named in `scripts/` is a finding by itself. A change to the
+   contract snapshot (`packages/api/test/contract/`) is read against "The phone's
+   contract" in `docs/ARCHITECTURE.md`: anything but an addition is a finding.
 5. **New dependencies.** Each one: what it is for, who publishes it, whether it runs an
    install script.
 6. **Both languages.** A screen or message added in English without Spanish, or the

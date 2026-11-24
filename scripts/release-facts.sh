@@ -25,8 +25,10 @@ git diff --name-only "$range" | awk -F/ '{ k = ($1=="apps"||$1=="packages") ? $1
 
 echo
 echo "## Paths a release is read for"
+# Quoted, so the shell leaves the globs to git, whose `*` also crosses folders.
 for p in .github packages/db/migrations apps/mobile/eas.json apps/mobile/app.json apps/web/vercel.json \
-  apps/web/next.config.ts .claude .githooks .env.example pnpm-workspace.yaml docker-compose.yml; do
+  apps/web/next.config.ts .claude .githooks scripts .env.example pnpm-workspace.yaml docker-compose.yml \
+  package.json eslint.config.mjs '*tsconfig*.json' '*vitest.config.ts' packages/api/test/contract; do
   n=$(git diff --name-only "$range" -- "$p" | wc -l | tr -d ' ')
   [ "$n" = 0 ] || { echo "$p: $n file(s)"; git diff --stat=100 "$range" -- "$p" | sed '$d' | sed 's/^/   /'; }
 done

@@ -62,7 +62,9 @@ read-only for you.
    the office's sign-in also needs `scripts/staging.sh local` green on that tree, on this
    Mac; a change to the phone, its Maestro suite on the iPhone simulator and
    `trader-ws android`, whole, once before the commit. While fixing, run only the flows of
-   the area being worked on.
+   the area being worked on. A batch that changes the server or the phone's sync path is
+   simplified once and reviewed once by agents that did not write it (the `backend-change`
+   skill).
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
    clock. Everything else gets ordinary tests.
 5. Every screen exists in English and Spanish. An invoice to a customer is in English.

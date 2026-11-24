@@ -35,3 +35,5 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
    files itself.
 7. **Push once per batch.** Commits stay local until the batch is whole; one push lands it.
    Never push to find out: a defect seen on staging is first a failing local test.
+8. **Reviewed.** A batch that changes the server or the phone's sync path (the
+   `backend-change` skill) has `batch-reviewer`'s PASS before its last commit.
