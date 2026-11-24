@@ -30,11 +30,14 @@ export function measureSkew(deviceNow: Date, serverNow: Date): Skew {
 // 6, M3). Strictly beyond: exactly two minutes is at once. The row keeps what the phone sent.
 export const LATE_PUSH_MS = 2 * 60 * 1000;
 
-export const capturedOfflineIn = (
+export function capturedOfflineIn(
   e: { capturedOffline: boolean; clientTimestamp: Date },
   deviceNow: Date,
-): boolean =>
-  e.capturedOffline || deviceNow.getTime() - e.clientTimestamp.getTime() > LATE_PUSH_MS;
+): boolean {
+  return (
+    e.capturedOffline || deviceNow.getTime() - e.clientTimestamp.getTime() > LATE_PUSH_MS
+  );
+}
 
 // The server's own check on the time an event claims (invariant 3),
 // against its receipt: the stamp the event is stored with (`server_timestamp`), so the verdict

@@ -56,10 +56,10 @@ export type HandlerDependencies = {
 export const logToStdout = (line: CallLine): void => {
   const { refusals, ...call } = line;
   console.log(JSON.stringify({ trader_call: { ...call, refused: refusals.length } }));
-  for (const r of refusals) {
+  for (const refusal of refusals) {
     console.log(
       JSON.stringify({
-        trader_refusal: { requestId: line.requestId, path: line.path, ...r },
+        trader_refusal: { requestId: call.requestId, path: call.path, ...refusal },
       }),
     );
   }
