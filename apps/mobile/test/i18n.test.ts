@@ -21,9 +21,16 @@ function leaves(tree: Tree, path = ""): [string, Leaf][] {
 const said = (leaf: Leaf) =>
   typeof leaf === "string" ? leaf : (leaf as (name: string) => string)("Ana Ruiz");
 
-// Words that are the same in both languages on purpose: the product's name, and each
-// language's own name for itself, shown where the language is chosen.
-const SAME = new Set(["appName", "settings.english", "settings.spanish"]);
+// Words that are the same in both languages on purpose: the product's name, each
+// language's own name for itself, shown where the language is chosen, and Apple's names
+// for an iPhone's lock, which are not translated.
+const SAME = new Set([
+  "appName",
+  "settings.english",
+  "settings.spanish",
+  "biometric.names.faceId",
+  "biometric.names.touchId",
+]);
 
 describe("the catalogs", () => {
   const english = leaves(en as unknown as Tree);

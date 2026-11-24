@@ -1,17 +1,25 @@
 // The sign-in screen, on D'Sierra's brand as the office's is: a navy band with the mark, the
 // heading in Bodoni Moda, one red button. One field takes a mobile number or an email, then
 // the code sent to it; another code after half a minute; "Trouble signing in?" on every
-// step; and the Demo door. The steps are sign-in-steps.ts, over the provider it is handed
-// (sign-in-provider.ts): Clerk's, or the development stand-in. Nobody signs up here: an
-// address no roster holds is told to ask the office, by the provider before a code is sent
-// or by the server after it.
+// step; and the Demo door. Above the field: Face ID or fingerprint where this phone holds a
+// key, Google, and Apple's own button on an iPhone. The steps are sign-in-steps.ts, over the
+// provider it is handed (sign-in-provider.ts): Clerk's, or the development stand-in. Nobody
+// signs up here: an address or an account no roster holds is told to ask the office, by the
+// provider or by the server. After a sign-in by code, a phone that can is offered a key
+// (biometric-rules.ts, app/biometric-offer.tsx).
 import { BodoniModa_700Bold, useFonts } from "@expo-google-fonts/bodoni-moda";
 import { SIGN_IN_CODE_LENGTH, type SignInIdentifier } from "@trader/api/contract";
+import {
+  AppleAuthenticationButton,
+  AppleAuthenticationButtonStyle,
+  AppleAuthenticationButtonType,
+} from "expo-apple-authentication";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
   Keyboard,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,21 +31,31 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { createApi } from "../api";
+import {
+  offersBiometric,
+  offersKeySignIn,
+  revokesKey,
+  type SignedInBy,
+} from "../biometric-rules";
+import { DECLINED_BY, KEY_FOR, useBiometrics } from "../biometrics";
 import { useStrings } from "../i18n";
 import type { Catalog } from "../i18n/catalog";
-import { headersFor, useSession } from "../session";
+import { headersFor, useSession, type Session } from "../session";
 import {
   demoDoor,
   FIELD,
   resend,
   secondsLeft,
   sendCode,
+  socialSignIn,
   verifyCode,
   type Form,
   type Note,
   type Provider,
+  type Social,
   type Step,
 } from "../sign-in-steps";
+import { deviceStore } from "../store/device";
 import { color, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
@@ -85,6 +103,20 @@ export function PhoneSignIn({
   const [demoCode, setDemoCode] = useState("");
   const [trouble, setTrouble] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const biometrics = useBiometrics();
+  // Whether this phone holds a key that signs someone in: asked once, as the screen opens.
+  const [keyReady, setKeyReady] = useState(false);
+  useEffect(() => {
+    let live = true;
+    void (async () => {
+      const reason = await biometrics.availability();
+      const keyFor = await deviceStore.read(KEY_FOR);
+      if (live) setKeyReady(offersKeySignIn(reason, keyFor));
+    })();
+    return () => {
+      live = false;
+    };
+  }, [biometrics]);
 
   // The resend countdown ticks only while there is one to show.
   const waiting = form.at === "code" ? secondsLeft(form.sentAt, now) : 0;
@@ -97,7 +129,8 @@ export function PhoneSignIn({
   // One step at a time: busy while it runs, and whatever it threw said as a failure.
   const run = async (
     step: () => Promise<Step | "complete" | "incomplete">,
-    to?: SignInIdentifier,
+    to: SignInIdentifier | null = null,
+    by: SignedInBy = "code",
   ) => {
     setBusy(true);
     setNote(null);
@@ -105,7 +138,7 @@ export function PhoneSignIn({
       const done = await step();
       if (done === "incomplete") return;
       if (done === "complete") {
-        await enter(to ?? null);
+        await admit(await provider.finish(to), by);
         return;
       }
       // A refused code is cleared, and so is any code when the step changes.
@@ -120,16 +153,23 @@ export function PhoneSignIn({
     }
   };
 
-  // The provider has a verified sign-in: make it the phone's session, and ask the server
-  // whether a roster holds this person, which is the server's to say.
-  const enter = async (to: SignInIdentifier | null) => {
-    const session = await provider.finish(to);
+  // Every way in ends here. The provider has a session: ask the server whether a roster
+  // holds this person, which is the server's to say. Refused after a sign-in by the key
+  // (deactivated, or no longer on a roster), the key goes too. Admitted after a code, a phone
+  // that can is offered a key; everyone else goes to Today.
+  const admit = async (session: Session, by: SignedInBy) => {
+    let who: string;
     try {
-      await createApi(apiUrl, () => headersFor(session)).me.get.query();
+      who = (await createApi(apiUrl, () => headersFor(session)).me.get.query()).id;
     } catch (error) {
       const refused =
         (error as { data?: { code?: string } } | null)?.data?.code === "UNAUTHORIZED";
       if (refused) {
+        if (revokesKey(by)) {
+          await biometrics.revokeHere();
+          await deviceStore.write(KEY_FOR, null);
+          setKeyReady(false);
+        }
         await provider.forgetStale();
         setForm(FIELD);
       }
@@ -137,7 +177,50 @@ export function PhoneSignIn({
       return;
     }
     await keep(session);
+    if (by === "code") {
+      const offered = offersBiometric({
+        by,
+        reason: await biometrics.availability(),
+        keyFor: await deviceStore.read(KEY_FOR),
+        declinedBy: await deviceStore.read(DECLINED_BY),
+        who,
+      });
+      if (offered) {
+        router.replace({ pathname: "/biometric-offer", params: { who } });
+        return;
+      }
+    }
     router.replace("/today");
+  };
+
+  // Google or Apple: a session from the provider's own sheet, or why not.
+  const withSocial = async (kind: Social) => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const done = await socialSignIn(provider, kind, typed);
+      if ("session" in done) await admit(done.session, kind);
+      else setNote(done.note);
+    } catch {
+      setNote("failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // The phone's own lock. A sheet the person closed says nothing.
+  const withKey = async () => {
+    setBusy(true);
+    setNote(null);
+    try {
+      const signedIn = await biometrics.signIn();
+      if (signedIn.ok) await admit(signedIn.session, "biometric");
+      else if (!signedIn.cancelled) setNote("failed");
+    } catch {
+      setNote("failed");
+    } finally {
+      setBusy(false);
+    }
   };
 
   // The keyboard goes as the code is asked for, so the answer under the button is seen.
@@ -150,19 +233,22 @@ export function PhoneSignIn({
     void run(() => verifyCode(provider, form, entered), form.to);
   };
   const demo = () =>
-    void run(() =>
-      demoDoor(
-        provider,
-        async (phone, given) => {
-          const answer = await createApi(apiUrl, async () => ({})).demo.signIn.mutate({
-            phone,
-            code: given,
-          });
-          return answer.result === "ticket" ? { ticket: answer.ticket } : null;
-        },
-        demoPhone,
-        demoCode,
-      ),
+    void run(
+      () =>
+        demoDoor(
+          provider,
+          async (phone, given) => {
+            const answer = await createApi(apiUrl, async () => ({})).demo.signIn.mutate({
+              phone,
+              code: given,
+            });
+            return answer.result === "ticket" ? { ticket: answer.ticket } : null;
+          },
+          demoPhone,
+          demoCode,
+        ),
+      null,
+      "demo",
     );
   const back = () => {
     setForm(FIELD);
@@ -185,19 +271,53 @@ export function PhoneSignIn({
         keyboardShouldPersistTaps="handled"
         // Dragged away, the keyboard shows what is under it: the trouble lines.
         keyboardDismissMode="on-drag"
+        // The page scrolls clear of the keyboard, so Send is never under it.
+        automaticallyAdjustKeyboardInsets
       >
         {form.at === "field" && (
           <>
             <Text style={heading} accessibilityRole="header">
               {s.title}
             </Text>
+            {keyReady && (
+              <Button
+                testID="sign-in-key"
+                kind="secondary"
+                label={s.keySignIn(t.biometric.names[biometrics.name])}
+                disabled={busy}
+                onPress={() => void withKey()}
+              />
+            )}
+            <Button
+              testID="sign-in-google"
+              kind="secondary"
+              label={s.google}
+              disabled={busy}
+              onPress={() => void withSocial("google")}
+            />
+            {/* Apple's own button, in its words and drawing, as its guidelines ask. */}
+            {Platform.OS === "ios" && (
+              <View testID="sign-in-apple" style={styles.apple}>
+                <AppleAuthenticationButton
+                  buttonType={AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={AppleAuthenticationButtonStyle.BLACK}
+                  cornerRadius={size.radiusPrimary}
+                  style={styles.appleButton}
+                  onPress={() => {
+                    if (!busy) void withSocial("apple");
+                  }}
+                />
+              </View>
+            )}
+            <Text style={[text.secondary, styles.or]}>{s.or}</Text>
             <Text style={text.body}>{s.helper}</Text>
             <Text style={text.label}>{s.address}</Text>
             <TextInput
               testID="sign-in-address"
               accessibilityLabel={s.address}
               style={styles.input}
-              autoFocus
+              // No focus as the screen opens: the keyboard would cover what is above the
+              // field before it has been read, and Send under it.
               value={typed}
               onChangeText={setTyped}
               // Letters, digits and an @: a number and an email are both typed here.
@@ -429,4 +549,7 @@ const styles = StyleSheet.create({
   },
   textButtonDisabled: { color: color.muted, textDecorationLine: "none" },
   trouble: { gap: space[2] },
+  apple: { minHeight: size.target },
+  appleButton: { height: size.target, width: "100%" },
+  or: { textAlign: "center" },
 });

@@ -9,8 +9,8 @@ appId: app.jpteq.trader
 - tapOn:
     id: "sign-in-address"
 - inputText: ${EMAIL}
-- tapOn:
-    id: "sign-in-send"
+# Go on the keyboard: what a person does with it up, and what Send does.
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "sign-in-code"

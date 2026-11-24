@@ -1,0 +1,111 @@
+# Face ID or fingerprint sign-in, with the development stand-in for Clerk's key
+# (src/biometrics.ts): offered after a sign-in by code and turned on; Sign out keeps it and
+# the sign-in screen offers it; a sign-in by it is offered nothing; Me turns it off; "Not
+# now" is kept for its person; a second person's key replaces the first's. ${EMAIL} is the
+# first person, Ana Ruiz the second.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- runFlow:
+    file: parts/code.yaml
+    env:
+      ADDRESS: ${EMAIL}
+      CODE: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer"
+    timeout: 30000
+- takeScreenshot: biometric-offer
+- tapOn:
+    id: "biometric-on"
+- runFlow:
+    file: parts/landed.yaml
+- tapOn:
+    id: "tab-settings"
+- scrollUntilVisible:
+    element:
+      id: "biometric-me-on"
+    centerElement: true
+- takeScreenshot: biometric-me
+- runFlow:
+    file: parts/sign-out.yaml
+# Sign out kept the key: the screen offers it, and a sign-in by it offers nothing more.
+- assertVisible:
+    id: "sign-in-key"
+- takeScreenshot: sign-in-key
+- tapOn:
+    id: "sign-in-key"
+- runFlow:
+    file: parts/landed.yaml
+- assertNotVisible:
+    id: "biometric-offer"
+# Off in Me: the sign-in screen no longer offers it.
+- tapOn:
+    id: "tab-settings"
+- scrollUntilVisible:
+    element:
+      id: "biometric-me-off"
+    centerElement: true
+- tapOn:
+    id: "biometric-me-off"
+- runFlow:
+    file: parts/sign-out.yaml
+- assertNotVisible:
+    id: "sign-in-key"
+# Not now, kept for this person: their next sign-in by code is not offered it.
+- runFlow:
+    file: parts/code.yaml
+    env:
+      ADDRESS: ${EMAIL}
+      CODE: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer"
+    timeout: 30000
+- tapOn:
+    id: "biometric-not-now"
+- runFlow:
+    file: parts/landed.yaml
+- runFlow:
+    file: parts/sign-out.yaml
+- runFlow:
+    file: parts/code.yaml
+    env:
+      ADDRESS: ${EMAIL}
+      CODE: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 30000
+- assertNotVisible:
+    id: "biometric-offer"
+- runFlow:
+    file: parts/sign-out.yaml
+# A second person signing in by code is offered their own, which replaces the first's.
+- runFlow:
+    file: parts/code.yaml
+    env:
+      ADDRESS: "ana.ruiz@demo.invalid"
+      CODE: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer"
+    timeout: 30000
+- tapOn:
+    id: "biometric-on"
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 30000
+- runFlow:
+    file: parts/sign-out.yaml
+- tapOn:
+    id: "sign-in-key"
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 30000
+- tapOn:
+    id: "tab-settings"
+- assertVisible: "Ana Ruiz"

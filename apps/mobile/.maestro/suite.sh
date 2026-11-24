@@ -216,6 +216,13 @@ expect "the shift the admin added is on the server, today, on that jobsite" \
    where u.email = '$SAM' and j.name = 'Harbor View unit 4B'
      and a.work_date = (now() at time zone c.timezone)::date" 1
 
+echo "— Face ID or fingerprint, Google and Apple"
+flow biometric fresh allow $LUIS
+flow social fresh allow $LUIS
+flow biometric-key-set fresh allow $OMAR
+sql "update users set deactivated_at = now() where email = '$OMAR';"
+flow biometric-key-refused resume
+
 # By number: every demo person is bound to their email by now, so one is invited by number
 # alone, as the office would, and the number binds them.
 echo "— sign-in by number"

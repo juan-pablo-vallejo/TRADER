@@ -11,6 +11,11 @@ export type Catalog = {
   signIn: {
     title: string;
     helper: string;
+    // Above the field: Google's and Apple's own words for their buttons, and the phone's lock.
+    google: string;
+    apple: string;
+    or: string;
+    keySignIn: (name: string) => string;
     address: string;
     send: string;
     sending: string;
@@ -46,6 +51,21 @@ export type Catalog = {
     unavailable: string;
     // The development stand-in for the provider (sign-in-provider.ts): never in a release.
     developmentOnly: string;
+  };
+  // Face ID or fingerprint sign-in (biometrics.ts): its name on this phone, the offer after a
+  // code sign-in (app/biometric-offer.tsx), and its switch in Me.
+  biometric: {
+    names: { faceId: string; touchId: string; fingerprint: string };
+    offerTitle: string;
+    offerBody: (name: string) => string;
+    prompt: string;
+    turnOn: (name: string) => string;
+    notNow: string;
+    failed: string;
+    meLabel: (name: string) => string;
+    on: string;
+    off: string;
+    meHelp: string;
   };
   tabs: { today: string; week: string; crew: string; settings: string };
   today: {

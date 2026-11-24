@@ -35,6 +35,7 @@ appId: app.jpteq.trader
       - scrollUntilVisible:
           element:
             id: "sign-out"
+          centerElement: true
       - tapOn:
           id: "sign-out"
 - extendedWaitUntil:

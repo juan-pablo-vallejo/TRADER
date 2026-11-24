@@ -1,6 +1,6 @@
 # The sign-in screen in Spanish: chosen in Me, it is kept on the phone through a sign-out,
 # so the screen after it is in Spanish, with its trouble lines, a refused code's sentence
-# and a sign-in. ${EMAIL} signs in.
+# and a sign-in, then the key's offer. ${EMAIL} signs in first, Ana Ruiz second.
 appId: app.jpteq.trader
 ---
 - runFlow:
@@ -12,6 +12,7 @@ appId: app.jpteq.trader
 - scrollUntilVisible:
     element:
       id: "sign-out"
+    centerElement: true
 - tapOn:
     id: "sign-out"
 - extendedWaitUntil:
@@ -20,15 +21,6 @@ appId: app.jpteq.trader
     timeout: 30000
 - assertVisible: "Acceso del equipo"
 - assertVisible: "Envíame un código"
-# The field has the focus and its keyboard is up. On iOS a drag puts it away
-# (keyboardDismissMode); Android's stays, and Maestro's own command, which fails on iOS's
-# email keyboard, hides it there.
-- scroll
-- runFlow:
-    when:
-      platform: Android
-    commands:
-      - hideKeyboard
 - scrollUntilVisible:
     element:
       id: "sign-in-trouble"
@@ -38,10 +30,12 @@ appId: app.jpteq.trader
     element:
       id: "sign-in-trouble-help"
 - takeScreenshot: sign-in-es
+# Signed in again by someone with no answer to the key's offer kept on this phone: the
+# offer, in Spanish, comes after their code.
 - runFlow:
     file: parts/code.yaml
     env:
-      ADDRESS: ${EMAIL}
+      ADDRESS: "ana.ruiz@demo.invalid"
       CODE: "111111"
 - extendedWaitUntil:
     visible: "Ese código no funcionó. Revísalo o pide uno nuevo."
@@ -50,5 +44,12 @@ appId: app.jpteq.trader
 - tapOn:
     id: "sign-in-code"
 - inputText: "123456"
+# The offer after a code, in Spanish.
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer"
+    timeout: 30000
+- assertVisible: "Entra más rápido"
+- takeScreenshot: biometric-offer-es
 - runFlow:
     file: parts/landed.yaml

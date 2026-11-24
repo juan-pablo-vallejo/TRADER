@@ -24,7 +24,8 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
    real Clerk on this Mac only, which records the `clerk` line the pre-push hook asks for. A
    phone screen or the sync path under `apps/mobile`: also
    `apps/mobile/.maestro/suite.sh ios <udid>` here and `trader-ws android`, then
-   `trader-ws wait android`.
+   `trader-ws wait android`, whole, once before the commit. While fixing, only the flows of
+   the area being worked on (`.maestro/run.sh`).
 4. **Workstation off.** The session's first lines say so. `trader-ws check --local` runs the
    same steps here and records the same line. Android waits for the workstation.
 5. **Commit what was checked.** `git add -A`, then `git write-tree` prints the tree the

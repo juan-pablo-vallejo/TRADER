@@ -13,7 +13,8 @@
       "infoPlist": {},
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "usesAppleSignIn": true
     },
     "android": {
       "package": "app.jpteq.trader",
@@ -61,7 +62,20 @@
           "organization": "jpteq",
           "project": "trader-phone"
         }
-      ]
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "TRADER uses Face ID to sign you in without a code."
+        }
+      ],
+      [
+        "@clerk/expo",
+        {
+          "faceIDPermission": "TRADER uses Face ID to sign you in without a code."
+        }
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
@@ -76,6 +90,9 @@
         "projectId": "553bbd70-016e-421c-9620-ce0dad819fa6"
       }
     },
-    "owner": "jpteq"
+    "owner": "jpteq",
+    "locales": {
+      "es": "./locales/es.json"
+    }
   }
 }

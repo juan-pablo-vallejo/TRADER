@@ -6,6 +6,10 @@ export const es: Catalog = {
   retry: "Intentar de nuevo",
   signIn: {
     title: "Acceso del equipo",
+    google: "Continuar con Google",
+    apple: "Continuar con Apple",
+    or: "o",
+    keySignIn: (name) => `Entrar con ${name}`,
     helper: "Escribe tu número de celular o tu correo. Te enviaremos un código.",
     address: "Número de celular o correo",
     send: "Envíame un código",
@@ -44,6 +48,20 @@ export const es: Catalog = {
     unavailable: "El inicio de sesión todavía no es parte de esta versión.",
     developmentOnly:
       "Inicio de sesión de desarrollo: no se envía ningún código, y el código es 123456. No está en una versión publicada.",
+  },
+  biometric: {
+    names: { faceId: "Face ID", touchId: "Touch ID", fingerprint: "huella digital" },
+    offerTitle: "Entra más rápido",
+    offerBody: (name) =>
+      `La próxima vez, entra con ${name} en lugar de un código. El código de tu teléfono también sirve.`,
+    prompt: "Entrar a TRADER",
+    turnOn: (name) => `Activar ${name}`,
+    notNow: "Ahora no",
+    failed: "No funcionó. Puedes activarlo después en Yo.",
+    meLabel: (name) => `Entrar con ${name}`,
+    on: "Activado",
+    off: "Desactivado",
+    meHelp: "Solo en este teléfono. Cerrar sesión lo conserva.",
   },
   tabs: { today: "Hoy", week: "Semana", crew: "Cuadrilla", settings: "Yo" },
   today: {

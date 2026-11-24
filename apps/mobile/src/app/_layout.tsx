@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { maybeCompleteAuthSession } from "expo-web-browser";
 import { useEffect } from "react";
 import { Text } from "react-native";
 
@@ -17,6 +18,8 @@ import { Screen, text } from "../ui/controls";
 // Before anything is drawn, so an error in the first render is reported too. With no DSN
 // in the build this does nothing (report.ts).
 startReporting();
+// Google's sheet, closed by the redirect it was waiting for (sign-in-provider.ts).
+maybeCompleteAuthSession();
 
 function RootLayout() {
   const pathname = usePathname();

@@ -1,0 +1,28 @@
+# From anywhere in the app: Me, then Sign out, back on the sign-in field. A tab tap made
+# while a screen is still settling can land on its neighbour, so Me is asked for until it
+# is there.
+appId: app.jpteq.trader
+---
+- repeat:
+    while:
+      notVisible:
+        id: "settings"
+    times: 3
+    commands:
+      - tapOn:
+          id: "tab-settings"
+      - extendedWaitUntil:
+          visible:
+            id: "settings"
+          timeout: 5000
+          optional: true
+- scrollUntilVisible:
+    element:
+      id: "sign-out"
+    centerElement: true
+- tapOn:
+    id: "sign-out"
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-address"
+    timeout: 30000

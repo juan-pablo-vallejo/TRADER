@@ -1,19 +1,22 @@
-// Me: the language, the person's own name and contact phone, the build they are on, and the
-// way out. The name and the phone are the person's to write (`me.update`); the number they
+// Me: the language, the person's own name and contact phone, Face ID or fingerprint sign-in
+// on this phone, the build they are on, and the way out. The name and the phone are the person's to write (`me.update`); the number they
 // sign in with is the office's, and is not here. Saving needs a connection and says so when
 // it has none. Signing out never discards an entry: what has not been sent stays in the
 // outbox under its owner and goes when they sign in again, and the screen says so before
 // the button.
 import { useRouter } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Keyboard, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { createApi } from "../../api";
+import { keySwitch } from "../../biometric-rules";
+import { KEY_FOR, useBiometrics } from "../../biometrics";
 import { apiUrl, BUILD } from "../../config";
 import { useStrings } from "../../i18n";
 import { useReminders } from "../../reminders";
 import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
+import { deviceStore } from "../../store/device";
 import { useSync } from "../../sync/provider";
 import { color, size, space, type } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
@@ -38,6 +41,39 @@ export default function Me() {
   const reminders = useReminders();
   const [remindersRefused, setRemindersRefused] = useState(false);
   const [reported, setReported] = useState(false);
+  // The phone's key: on for this person's, off for none or another's, absent where none can
+  // be (biometric-rules.ts). Sign out leaves it where it is.
+  const biometrics = useBiometrics();
+  const who = snapshot?.data.me.id ?? null;
+  const [key, setKey] = useState<"on" | "off" | "absent">("absent");
+  const [keyBusy, setKeyBusy] = useState(false);
+  const [keyFailed, setKeyFailed] = useState(false);
+  const readKey = useCallback(async () => {
+    if (who === null) return;
+    setKey(
+      keySwitch(await biometrics.availability(), await deviceStore.read(KEY_FOR), who),
+    );
+  }, [biometrics, who]);
+  useEffect(() => {
+    void readKey();
+  }, [readKey]);
+  const setKeyOn = async (on: boolean) => {
+    if (who === null || session === null || session === undefined) return;
+    // The side already chosen does nothing.
+    if (on === (key === "on")) return;
+    setKeyBusy(true);
+    setKeyFailed(false);
+    if (on) {
+      const made = await biometrics.enroll(session, t.biometric.prompt);
+      if (made) await deviceStore.write(KEY_FOR, who);
+      else setKeyFailed(true);
+    } else {
+      await biometrics.revokeHere();
+      await deviceStore.write(KEY_FOR, null);
+    }
+    await readKey();
+    setKeyBusy(false);
+  };
 
   // The name comes with the pull; the contact phone only from the server, when reachable.
   useEffect(() => {
@@ -193,6 +229,40 @@ export default function Me() {
           <Text testID="reminders-refused" style={text.attention}>
             {t.reminders.refused}
           </Text>
+        )}
+
+        {key !== "absent" && (
+          <>
+            <Text style={text.label}>
+              {t.biometric.meLabel(t.biometric.names[biometrics.name])}
+            </Text>
+            <View style={styles.pair}>
+              <View style={styles.fill}>
+                <Button
+                  testID="biometric-me-on"
+                  kind={key === "on" ? "primary" : "secondary"}
+                  label={t.biometric.on}
+                  disabled={keyBusy}
+                  onPress={() => void setKeyOn(true)}
+                />
+              </View>
+              <View style={styles.fill}>
+                <Button
+                  testID="biometric-me-off"
+                  kind={key === "on" ? "secondary" : "primary"}
+                  label={t.biometric.off}
+                  disabled={keyBusy}
+                  onPress={() => void setKeyOn(false)}
+                />
+              </View>
+            </View>
+            <Text style={text.secondary}>{t.biometric.meHelp}</Text>
+            {keyFailed && (
+              <Text testID="biometric-me-failed" style={text.attention}>
+                {t.biometric.failed}
+              </Text>
+            )}
+          </>
         )}
 
         {unsent > 0 && (

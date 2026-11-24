@@ -1,0 +1,12 @@
+# The office deactivated the person whose key this phone holds: a sign-in by it is refused
+# by the server, said as an address no roster holds, and the key goes.
+appId: app.jpteq.trader
+---
+- tapOn:
+    id: "sign-in-key"
+- extendedWaitUntil:
+    visible: "This sign-in is not on a roster. Ask your office."
+    timeout: 30000
+- assertNotVisible:
+    id: "sign-in-key"
+- takeScreenshot: biometric-key-refused

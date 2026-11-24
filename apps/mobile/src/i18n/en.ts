@@ -6,6 +6,10 @@ export const en: Catalog = {
   retry: "Try again",
   signIn: {
     title: "Team sign-in",
+    google: "Continue with Google",
+    apple: "Continue with Apple",
+    or: "or",
+    keySignIn: (name) => `Sign in with ${name}`,
     helper: "Enter your mobile number or email. We'll send you a code.",
     address: "Mobile number or email",
     send: "Send me a code",
@@ -41,6 +45,20 @@ export const en: Catalog = {
     unavailable: "Sign-in is not part of this build yet.",
     developmentOnly:
       "Development sign-in: no code is sent, and 123456 is the code. It is not in a release build.",
+  },
+  biometric: {
+    names: { faceId: "Face ID", touchId: "Touch ID", fingerprint: "fingerprint" },
+    offerTitle: "Sign in faster",
+    offerBody: (name) =>
+      `Next time, sign in with ${name} instead of a code. Your phone's passcode works too.`,
+    prompt: "Sign in to TRADER",
+    turnOn: (name) => `Turn on ${name}`,
+    notNow: "Not now",
+    failed: "That did not work. You can turn it on later in Me.",
+    meLabel: (name) => `Sign in with ${name}`,
+    on: "On",
+    off: "Off",
+    meHelp: "On this phone only. Signing out keeps it.",
   },
   tabs: { today: "Today", week: "Week", crew: "Crew", settings: "Me" },
   today: {

@@ -33,7 +33,17 @@ export type Provider = {
   redeem(ticket: string): Promise<Answer>;
   // A sign-in the provider has verified, made the phone's session.
   finish(to: SignInIdentifier | null): Promise<Session>;
+  // Google by the phone's own browser sheet, or Apple's own sheet on an iPhone: a session,
+  // or why not. `hint` is what the field holds, which only the development stand-in reads.
+  social(kind: Social, hint: string): Promise<SocialAnswer>;
 };
+
+export type Social = "google" | "apple";
+
+export type SocialAnswer =
+  | { ok: true; session: Session }
+  // `cancelled`: the person closed the sheet, which says nothing.
+  | { ok: false; code: string | undefined; cancelled: boolean };
 
 // What the form says under its field: a refusal, by name; a field that is neither a number
 // nor an email; a Demo number and code the door did not take.
@@ -110,4 +120,19 @@ export async function demoDoor(
   await p.forgetStale();
   const redeemed = await p.redeem(answer.ticket);
   return redeemed.ok ? "complete" : { form, note: "failed" };
+}
+
+// Google or Apple. An account no login holds comes back from the provider with no session
+// (Clerk's answer is a sign-up, which is never completed here, and the instance refuses
+// sign-ups besides): it is told to ask the office, as an unknown address is.
+export async function socialSignIn(
+  p: Provider,
+  kind: Social,
+  hint: string,
+): Promise<Step | { session: Session }> {
+  await p.forgetStale();
+  const answer = await p.social(kind, hint);
+  if (answer.ok) return { session: answer.session };
+  if (answer.cancelled) return { form: FIELD, note: null };
+  return { form: FIELD, note: answer.code === undefined ? "failed" : "unknown" };
 }

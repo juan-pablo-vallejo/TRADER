@@ -8,7 +8,9 @@ import {
   resend,
   secondsLeft,
   sendCode,
+  socialSignIn,
   verifyCode,
+  type SocialAnswer,
   type Answer,
   type Form,
   type Provider,
@@ -17,7 +19,11 @@ import {
 const OK: Answer = { ok: true };
 const no = (code: string | undefined): Answer => ({ ok: false, code });
 
-function provider(answers: Partial<Record<"send" | "verify" | "redeem", Answer>> = {}) {
+function provider(
+  answers: Partial<Record<"send" | "verify" | "redeem", Answer>> & {
+    social?: SocialAnswer;
+  } = {},
+) {
   const asked: string[] = [];
   const p: Provider = {
     forgetStale: async () => {
@@ -36,6 +42,10 @@ function provider(answers: Partial<Record<"send" | "verify" | "redeem", Answer>>
       return answers.redeem ?? OK;
     },
     finish: async () => ({ kind: "clerk" }),
+    social: async (kind) => {
+      asked.push(`social ${kind}`);
+      return answers.social ?? { ok: true, session: { kind: "clerk" } };
+    },
   };
   return { p, asked };
 }
@@ -160,6 +170,34 @@ describe("the Demo door", () => {
     });
     expect(await demoDoor(p, door("t1"), "401 555 0108", "c")).toEqual({
       form: { at: "demo" },
+      note: "failed",
+    });
+  });
+});
+
+describe("Google and Apple", () => {
+  it("make a session, a stale one ended first", async () => {
+    const { p, asked } = provider();
+    expect(await socialSignIn(p, "google", "")).toEqual({ session: { kind: "clerk" } });
+    expect(asked).toEqual(["forgetStale", "social google"]);
+  });
+
+  it("tell an account no login holds to ask the office, and say nothing of a closed sheet", async () => {
+    for (const code of ["external_account_not_found", "not_allowed_access", "sign_up"]) {
+      const { p } = provider({ social: { ok: false, code, cancelled: false } });
+      expect(await socialSignIn(p, "apple", "")).toEqual({
+        form: FIELD,
+        note: "unknown",
+      });
+    }
+    const closed = provider({ social: { ok: false, code: "cancel", cancelled: true } });
+    expect(await socialSignIn(closed.p, "google", "")).toEqual({
+      form: FIELD,
+      note: null,
+    });
+    const lost = provider({ social: { ok: false, code: undefined, cancelled: false } });
+    expect(await socialSignIn(lost.p, "google", "")).toEqual({
+      form: FIELD,
       note: "failed",
     });
   });

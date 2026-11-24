@@ -1,0 +1,54 @@
+# Google, and Apple's own button on an iPhone, with the development stand-in, which signs in
+# as the account whose email the field holds (src/sign-in-provider.ts): ${EMAIL} lands on
+# Today and is offered no key; an empty field is an account no roster holds, told to ask the
+# office.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- assertVisible:
+    id: "sign-in-google"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - assertVisible:
+          id: "sign-in-apple"
+- runFlow:
+    when:
+      platform: Android
+    commands:
+      - assertNotVisible:
+          id: "sign-in-apple"
+- takeScreenshot: sign-in-social
+- tapOn:
+    id: "sign-in-google"
+- extendedWaitUntil:
+    visible: "This sign-in is not on a roster. Ask your office."
+    timeout: 30000
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${EMAIL}
+- tapOn:
+    id: "sign-in-google"
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 30000
+- assertNotVisible:
+    id: "biometric-offer"
+- runFlow:
+    when:
+      platform: iOS
+    commands:
+      - runFlow:
+          file: parts/sign-out.yaml
+      - tapOn:
+          id: "sign-in-address"
+      - inputText: ${EMAIL}
+      - tapOn:
+          id: "sign-in-apple"
+      - extendedWaitUntil:
+          visible:
+            id: "tab-settings"
+          timeout: 30000

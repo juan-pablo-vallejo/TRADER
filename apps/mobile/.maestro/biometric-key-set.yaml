@@ -1,0 +1,25 @@
+# ${EMAIL} signs in by code and turns the key on, then signs out: suite.sh then deactivates
+# them, and biometric-key-refused.yaml tries the key.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- runFlow:
+    file: parts/code.yaml
+    env:
+      ADDRESS: ${EMAIL}
+      CODE: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer"
+    timeout: 30000
+- tapOn:
+    id: "biometric-on"
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 30000
+- runFlow:
+    file: parts/sign-out.yaml
+- assertVisible:
+    id: "sign-in-key"

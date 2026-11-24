@@ -5,6 +5,19 @@
 # answered before, or stamps are off), answer it, then look for Today.
 appId: app.jpteq.trader
 ---
+# After a sign-in by code a phone that can is offered Face ID or fingerprint once
+# (app/biometric-offer.tsx): a flow that is not about it says Not now.
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer|${LANDS_ON}|tab-settings"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "biometric-offer"
+    commands:
+      - tapOn:
+          id: "biometric-not-now"
 - runFlow:
     file: location.yaml
 - extendedWaitUntil:

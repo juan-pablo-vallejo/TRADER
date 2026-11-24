@@ -8,8 +8,8 @@ appId: app.jpteq.trader
 - tapOn:
     id: "sign-in-address"
 - inputText: ${EMAIL}
-- tapOn:
-    id: "sign-in-send"
+# Go on the keyboard: what a person does with it up, and what Send does.
+- pressKey: Enter
 - extendedWaitUntil:
     visible: "This sign-in is not on a roster. Ask your office."
     timeout: 30000

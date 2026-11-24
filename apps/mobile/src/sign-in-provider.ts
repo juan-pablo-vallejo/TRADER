@@ -5,11 +5,14 @@
 // text message: it asks the local server whether a roster holds the address, takes 123456
 // as the code and 000000 as one that has expired, and signs in with the development
 // headers. `__DEV__` is false in every release build, so the stand-in is never chosen there.
-import { useClerk, useSignIn } from "@clerk/expo";
-import type { SignInIdentifier } from "@trader/api/contract";
+import { useClerk, useSignIn, useSSO } from "@clerk/expo";
+import { useSignInWithApple } from "@clerk/expo/apple";
+import { signInIdentifier, type SignInIdentifier } from "@trader/api/contract";
+import { makeRedirectUri } from "expo-auth-session";
+import { Platform } from "react-native";
 
 import { createApi, devHeaders, type DevWho } from "./api";
-import type { Answer, Provider } from "./sign-in-steps";
+import type { Answer, Provider, SocialAnswer } from "./sign-in-steps";
 
 // Clerk's own name for why a call was refused. Its errors carry a list of them, or one.
 function codeOf(error: unknown): string | undefined {
@@ -23,9 +26,53 @@ const answer = ({ error }: { error: unknown }): Answer =>
     ? { ok: true }
     : { ok: false, code: codeOf(error) };
 
+// A closed sheet: the browser's dismissal, or Apple's own cancel code.
+const closedSheet = (error: unknown): boolean => {
+  const code = codeOf(error) ?? (error as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /cancel/i.test(code);
+};
+
 export function useClerkProvider(): Provider {
   const clerk = useClerk();
   const { signIn } = useSignIn();
+  const { startSSOFlow } = useSSO();
+  const { startAppleAuthenticationFlow } = useSignInWithApple();
+  // Google: the phone's browser sheet comes back to trader://sso-callback (app.json's
+  // scheme; Clerk's allowed redirects list it). Apple: its own sheet, on an iPhone alone.
+  // A result with no session is an account no login holds, for which Clerk starts a
+  // sign-up: it is never activated here, and the instance refuses sign-ups besides.
+  const social = async (kind: "google" | "apple"): Promise<SocialAnswer> => {
+    try {
+      const result =
+        kind === "google"
+          ? await startSSOFlow({
+              strategy: "oauth_google",
+              redirectUrl: makeRedirectUri({ scheme: "trader", path: "sso-callback" }),
+            })
+          : Platform.OS === "ios"
+            ? await startAppleAuthenticationFlow()
+            : null;
+      if (result === null) return { ok: false, code: undefined, cancelled: false };
+      const browser = (result as { authSessionResult?: { type?: string } })
+        .authSessionResult;
+      if (
+        browser !== undefined &&
+        browser.type !== "success" &&
+        result.createdSessionId === null
+      ) {
+        return { ok: false, code: undefined, cancelled: true };
+      }
+      if (result.createdSessionId === null || result.setActive === undefined) {
+        return { ok: false, code: "external_account_not_found", cancelled: false };
+      }
+      await result.setActive({ session: result.createdSessionId });
+      return { ok: true, session: { kind: "clerk" } };
+    } catch (error) {
+      return closedSheet(error)
+        ? { ok: false, code: undefined, cancelled: true }
+        : { ok: false, code: codeOf(error) ?? undefined, cancelled: false };
+    }
+  };
   // A step Clerk answered without error but left short of a session: a second factor or a
   // check this instance asks of nobody, and nothing this screen can answer.
   const complete = (done: Answer): Answer =>
@@ -53,6 +100,7 @@ export function useClerkProvider(): Provider {
       await signIn.finalize();
       return { kind: "clerk" };
     },
+    social,
   };
 }
 
@@ -89,6 +137,27 @@ export function standInProvider(apiUrl: string): Provider {
     finish: async (to) => {
       if (to === null) throw new Error("the stand-in signs in by an address only");
       return { kind: "dev", ...who(to) };
+    },
+    // Google or Apple, as the account whose email the field holds: the stand-in has no
+    // sheet to pick one in. With none there, it is an account no roster holds.
+    social: async (_kind, hint) => {
+      const typed = signInIdentifier(hint);
+      const to: SignInIdentifier =
+        typed !== null && typed.kind === "email"
+          ? typed
+          : { kind: "email", email: "nobody.on.a.roster@demo.invalid" };
+      try {
+        await createApi(apiUrl, () => devHeaders(who(to))).me.get.query();
+        return { ok: true, session: { kind: "dev", ...who(to) } };
+      } catch (error) {
+        const refused =
+          (error as { data?: { code?: string } } | null)?.data?.code === "UNAUTHORIZED";
+        return {
+          ok: false,
+          code: refused ? "external_account_not_found" : undefined,
+          cancelled: false,
+        };
+      }
     },
   };
 }
