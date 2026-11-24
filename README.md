@@ -132,6 +132,13 @@ only the owner merges it.
    profile and sends it to TestFlight and to Play's internal track.
 4. Check `https://app.jpteq.app/api/ready`, one office screen, and D Sierra's homepage at
    `https://dsierrapainting.jpteq.app`.
+5. The first release only: when TestFlight and Play's internal track show its build
+   numbers, set `TRADER_MIN_BUILD_IOS` and `TRADER_MIN_BUILD_ANDROID` to them in Vercel →
+   production project → Settings → Environment Variables, then redeploy. Every older build,
+   the preview builds included, is then asked to update, so only one generation of the
+   phone ever reaches production ("The phone's contract", `docs/ARCHITECTURE.md`). Raise
+   them later only when a release needs it, and remove that build's folder under
+   `packages/api/test/contract/builds/` in the same change.
 
 ### Undo a release
 
@@ -266,8 +273,12 @@ Once, in this order.
      --admin-name '<name>' --admin-phone +1XXXXXXXXXX
    DATABASE_URL="${OWNER_URL:?paste it again, as in step 2}" pnpm --filter @trader/db onboard \
      --company 'Demo' --timezone America/New_York --next-invoice 1 \
-     --admin-name 'Demo Admin' --admin-phone +1XXXXXXXXXX
+     --admin-name 'Demo Admin' --admin-phone +1XXXXXXXXXX --demo
    ```
+
+   `--demo` flags the Demo company in the database: the Demo sign-in admits people of a
+   flagged company only, so without it the door refuses everyone. `/api/ready` answers
+   `"demo": true` once the Demo pair points at it.
 
    `--next-invoice` is where the contractor's own number series continues. Onboarding tells
    Clerk nothing: create each admin in Clerk with the same number, and their first sign-in

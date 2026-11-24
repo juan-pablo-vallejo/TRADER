@@ -1577,6 +1577,26 @@ vitest.config.ts`). The runners should be exempt like the readers.
     compiling the API on the phone's first call outlasted the 25 s deadline (the suite now
     compiles it first), and a scrolled-to row or button under the tab bar lost its tap
     (`crew.yaml` centres before tapping).
+- [ ] The backend plan's scorecard, Track A's column, 2026-11-24 (seen unless marked; the
+      baseline is the plan's, section J):
+
+  | Metric                                  | Baseline            | After Track A                                                                                                                 |
+  | --------------------------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+  | Per-procedure timing                    | none                | every call: a `trader_call` line, Server-Timing off production                                                                |
+  | Error location                          | none                | frames on the server's own error line                                                                                         |
+  | CI on `main`                            | 30 of 30 green      | 30 of 30 green                                                                                                                |
+  | CI check job; whole run                 | 173 s; 312 s median | 158 to 176 s; 281 to 337 s (last three)                                                                                       |
+  | `pnpm check` (workstation)              | 37 to 48 s          | 45 to 57 s, `trader-ws check`                                                                                                 |
+  | Round trips per protected call          | 7 (counted)         | `me.get` 6 in a test, 7 deployed (the role check, once per pool); 5 is Track B                                                |
+  | Round trips per pushed record           | 18 to 24 (counted)  | 18, then 16 for each further record: pinned                                                                                   |
+  | Quadratic grouping sites                | 5                   | 0 (`core/group.ts`)                                                                                                           |
+  | Procedures pinned by a snapshot         | 0 of 57             | 58 of 58 (`wire.json`; `job.setLocation` added)                                                                               |
+  | Phone procedures under a rule           | 3 of 11             | 12 of 12 (`PHONE_PROCEDURES`, the scan, the budgets)                                                                          |
+  | Builds with replayed calls              | 0                   | 1 recorded (`2026-11-24-f84311c`); the preview builds are cut from it                                                         |
+  | High findings with a failing-first test | 0 of 6              | 6 of 6 (H6's part 2, the tag rule, is Track B)                                                                                |
+  | Agent runs per push                     | 0                   | 2: the simplifier (24 to 77 s) and `batch-reviewer` (155 to 345 s a round with a focused prompt; 10,600 s on the range alone) |
+  | Deployed latency sample                 | none                | not taken: `scripts/staging.sh sample` waits on the guard prompt (24e)                                                        |
+
 - [ ] A forged stack (a thrown plain object, whose stack tRPC copies apart from its message)
       can still put a path such as `/srv/packages/+14015550100/x.ts` on the server's own
       log line: digits and `+` are path characters. No address passes (`@` is refused).
