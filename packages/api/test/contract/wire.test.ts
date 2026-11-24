@@ -42,7 +42,7 @@ function procedureSchemas(path: string) {
   };
 }
 
-// The contract's plain lists (string arrays and objects of them), by export name.
+// The contract's plain lists (its exported string arrays), by export name.
 const lists = Object.fromEntries(
   Object.entries(contract)
     .filter(([, v]) => Array.isArray(v) && v.every((m) => typeof m === "string"))

@@ -8,12 +8,20 @@
 // procedure's own transaction is a savepoint, so `savepoint` and `release` stand where a
 // deployed call sends `begin` and `commit`, one for one. The role check runs once per pool
 // in production; it is taken first here so that no budget carries it.
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
-import { jobAssignments } from "@trader/db/schema";
+import {
+  customers,
+  invoiceLineItems,
+  invoices,
+  jobAssignments,
+  jobs,
+  users,
+} from "@trader/db/schema";
 
 import { createContext, type Tx } from "../../src/core/context";
+import type { DemoDoor } from "../../src/core/demo-door";
 import { localDirectory } from "../../src/core/identity";
 import type { CallLine } from "../../src/core/observe";
 import { createCallerFactory, runtimeRoleChecked } from "../../src/core/trpc";
@@ -52,8 +60,8 @@ const READS = {
   "customer.list": 7,
   "invoice.list": 8,
   "invoice.totals": 9,
-  "labor.hours": 9,
-  "labor.ledger": 9,
+  "labor.hours": 11,
+  "labor.ledger": 11,
   "assignment.week": 9,
   "company.get": 7,
 } as const;
@@ -63,13 +71,16 @@ const WRITES = {
   "assignment.create": 12,
   "assignment.moveToday": 14,
   "sync.push": 18,
+  // Each further record adds 16: a push is one transaction per record, by design (sync/push.ts).
+  "sync.push, two records": 34,
   "demo.signIn": 0,
+  "demo.signIn, admitted": 4,
 } as const;
 
 const callerOf = createCallerFactory(appRouter);
 type Api = ReturnType<typeof callerOf>;
 
-function counter(tx: Tx, who: unknown) {
+function counter(tx: Tx, who: unknown, demo: DemoDoor | null = null) {
   const lines: CallLine[] = [];
   const api: Api = callerOf(
     createContext({
@@ -80,6 +91,7 @@ function counter(tx: Tx, who: unknown) {
       requestId: REQUEST_ID,
       waits: "inherit",
       observe: (line) => lines.push(line),
+      demo,
     }),
   );
   // The statements of one call, which must succeed.
@@ -97,40 +109,89 @@ type World = WorkDay & {
   today: string;
 };
 
-// A company with an admin, a worker on today's shift, two jobs and a day of history.
+// A company with an admin, a worker on today's shift, two jobs, a draft invoice and a day of
+// history.
 async function world(tx: Tx): Promise<World> {
   const d = await workDayIn(tx);
   const admin = await boundIn(tx, d.companyId, "admin");
   const worker = await boundIn(tx, d.companyId, "worker");
   const today = workDate(new Date(), NY);
-  await tx.insert(jobAssignments).values({
-    id: uuidv7(),
-    companyId: d.companyId,
-    userId: worker.id,
-    jobId: d.J,
-    workDate: today,
-    expectedStart: "00:00",
-    expectedEnd: "23:59",
-  });
-  await history(tx, d, [worker.id, d.w1]);
+  await shift(tx, d.companyId, worker.id, d.J, today);
+  await history(tx, d, [worker.id, d.w1], 1);
+  await invoiceIn(tx, d.companyId, d.customerId, d.J, 1);
   return { ...d, admin, worker, today };
 }
 
-// A finished day yesterday for each worker: what grows with time.
-async function history(tx: Tx, d: WorkDay, workers: string[]) {
-  const y = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+const shift = (tx: Tx, companyId: string, userId: string, jobId: string, day: string) =>
+  tx.insert(jobAssignments).values({
+    id: uuidv7(),
+    companyId,
+    userId,
+    jobId,
+    workDate: day,
+    expectedStart: "00:00",
+    expectedEnd: "23:59",
+  });
+
+const daysAgo = (n: number) =>
+  new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+
+// A finished day, `ago` days back, for each worker: what grows with time.
+async function history(tx: Tx, d: WorkDay, workers: string[], ago: number) {
+  const y = daysAgo(ago);
   for (const worker of workers) {
     await eventIn(tx, d, { worker, job: d.J, type: "started", client: `${y}T13:00:00Z` });
     await eventIn(tx, d, { worker, job: d.J, type: "ended", client: `${y}T21:00:00Z` });
   }
 }
 
-// More of everything the reads walk: workers, jobs and their history.
+// A draft invoice for the job with `lines` lines.
+async function invoiceIn(
+  tx: Tx,
+  companyId: string,
+  customerId: string,
+  jobId: string,
+  lines: number,
+) {
+  const [row] = await tx
+    .insert(invoices)
+    .values({ companyId, customerId, jobId, currency: "USD", taxCents: 0 })
+    .returning({ id: invoices.id });
+  for (let position = 1; position <= lines; position++) {
+    await tx.insert(invoiceLineItems).values({
+      companyId,
+      invoiceId: row!.id,
+      currency: "USD",
+      position,
+      description: `Line ${position}`,
+      quantity: "1",
+      unitPriceCents: 1000,
+      amountCents: 1000,
+    });
+  }
+}
+
+// More of everything each read walks: workers on today's shifts and their history, the
+// worker's own earlier day, customers, jobs and invoices.
 async function grow(tx: Tx, w: World) {
   await tx.execute(sql`reset role`);
   const more: string[] = [];
   for (let i = 0; i < 4; i++) more.push((await boundIn(tx, w.companyId, "worker")).id);
-  await history(tx, w, [...more, w.w2]);
+  for (const id of more) await shift(tx, w.companyId, id, w.K, w.today);
+  await history(tx, w, [...more, w.w2], 1);
+  await history(tx, w, [w.worker.id], 2);
+  for (let i = 0; i < 3; i++) {
+    const [c] = await tx
+      .insert(customers)
+      .values({ companyId: w.companyId, name: `Customer ${i}` })
+      .returning({ id: customers.id });
+    const [j] = await tx
+      .insert(jobs)
+      .values({ companyId: w.companyId, customerId: c!.id, name: `Job ${i}` })
+      .returning({ id: jobs.id });
+    await invoiceIn(tx, w.companyId, c!.id, j!.id, 2);
+    await invoiceIn(tx, w.companyId, w.customerId, w.J, 2);
+  }
   await asTenant(tx, w.companyId);
 }
 
@@ -146,9 +207,9 @@ const reads = (w: World): Record<keyof typeof READS, (api: Api) => Promise<unkno
   "customer.list": (api) => api.customer.list(),
   "invoice.list": (api) => api.invoice.list(),
   "invoice.totals": (api) => api.invoice.totals(),
-  "labor.hours": (api) => api.labor.hours({ from: w.today, to: w.today }),
+  "labor.hours": (api) => api.labor.hours({ from: daysAgo(2), to: w.today }),
   "labor.ledger": (api) =>
-    api.labor.ledger({ workerId: w.worker.id, from: w.today, to: w.today }),
+    api.labor.ledger({ workerId: w.worker.id, from: daysAgo(2), to: w.today }),
   "assignment.week": (api) => api.assignment.week({ weekStart: mondayOf(w.today) }),
   "company.get": (api) => api.company.get(),
 });
@@ -217,33 +278,49 @@ describe("statement budgets", () => {
           expectedEnd: "16:00",
         }),
       );
-      out["sync.push"] = await asWorker((api) =>
-        api.sync.push({
-          protocolVersion: 1,
-          deviceNow: new Date(),
-          records: [
-            {
-              id: uuidv7(),
-              kind: "labor_event",
-              schemaVersion: 1,
-              payload: {
-                workerId: w.worker.id,
-                jobId: w.K,
-                type: "started",
-                clientTimestamp: new Date(),
-                location: null,
-                timeSetByUser: false,
-                capturedOffline: false,
-              },
-            },
-          ],
-        }),
+      const event = (type: "started" | "paused" | "resumed") => ({
+        id: uuidv7(),
+        kind: "labor_event" as const,
+        schemaVersion: 1,
+        payload: {
+          workerId: w.worker.id,
+          jobId: w.K,
+          type,
+          clientTimestamp: new Date(),
+          location: null,
+          timeSetByUser: false,
+          capturedOffline: false,
+        },
+      });
+      const push = (records: ReturnType<typeof event>[]) => (api: Api) =>
+        api.sync.push({ protocolVersion: 1, deviceNow: new Date(), records });
+      out["sync.push"] = await asWorker(push([event("started")]));
+      // A second record's own cost: the difference is what each further record adds.
+      out["sync.push, two records"] = await asWorker(
+        push([event("paused"), event("resumed")]),
       );
       // No Demo door on this host: refused as data, before any statement.
       out["demo.signIn"] = await counter(
         tx,
         null,
       )((api) => api.demo.signIn({ phone: "+14015550100", code: "000000" }));
+      // The door's whole path, up to the provider's ticket: a Demo person's number.
+      await tx.execute(sql`reset role`);
+      await tx
+        .update(users)
+        .set({ signInPhone: "+14015550100" })
+        .where(eq(users.id, w.worker.id));
+      await asTenant(tx, w.companyId);
+      const door: DemoDoor = {
+        code: "demo-code",
+        companyId: w.companyId,
+        ticket: async () => "ticket",
+      };
+      out["demo.signIn, admitted"] = await counter(
+        tx,
+        null,
+        door,
+      )((api) => api.demo.signIn({ phone: "+14015550100", code: "demo-code" }));
       expect(out).toEqual(WRITES);
     });
   });

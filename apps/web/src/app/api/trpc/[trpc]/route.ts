@@ -24,8 +24,10 @@ const handler = createTrpcHandler({
   closed: webClosed,
   reporter: webReporter,
   edge: { authorizedOrigins: originsFrom(process.env) },
-  // Timings and the request id are answered to a caller everywhere but production.
-  timingHeaders: () => traderEnvironment(process.env) !== "production",
+  // Timings and the request id are answered to a caller on staging and on a development
+  // machine; a production build that names no environment answers none (fails closed).
+  timingHeaders: () =>
+    traderEnvironment(process.env) === "staging" || process.env.NODE_ENV !== "production",
 });
 
 export { handler as GET, handler as POST };

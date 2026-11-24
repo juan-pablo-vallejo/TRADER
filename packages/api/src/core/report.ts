@@ -111,10 +111,12 @@ export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
 // "function at file:line:col", the file only from this repository's `packages/` or `apps/`
 // (a built server's `.next/` too) and never under node_modules. Only the stack after its
 // own header (`Name: message`) is read, so nothing a message holds is taken for a frame; a
-// stack whose header cannot be found gives none. The deepest error on the chain with a
+// stack whose header cannot be found gives none. A stack set apart from its message (a thrown
+// plain object, which tRPC copies as both) can still carry lines of its own: a path takes no
+// `@`, so no address passes for one. The deepest error on the chain with a
 // frame wins: that is where the failure began.
 const FRAME =
-  /^\s+at (?:(?:async |new )?([A-Za-z0-9_$.<>]{1,80}) \()?(?:file:\/\/)?(\/[A-Za-z0-9_.@[\]()+/-]{1,300}\.(?:[mc]?[jt]sx?)):(\d{1,6}):(\d{1,6})\)?$/;
+  /^\s+at (?:(?:async |new )?([A-Za-z0-9_$.<>]{1,80}) \()?(?:file:\/\/)?(\/[A-Za-z0-9_.[\]()+/-]{1,300}\.(?:[mc]?[jt]sx?)):(\d{1,6}):(\d{1,6})\)?$/;
 const IN_REPO = /\/(?:packages|apps)\/(.+)$|\/(\.next\/.+)$/;
 const MAX_FRAMES = 8;
 

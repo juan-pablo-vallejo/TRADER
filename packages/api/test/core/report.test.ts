@@ -266,6 +266,16 @@ describe("frames on the log line", () => {
     expect(framesOf("plain")).toEqual([]);
   });
 
+  it("takes no address for a path in a stack set apart from its message", () => {
+    // A thrown plain object: tRPC copies its stack and message separately.
+    const thrown = {
+      message: "x",
+      stack: "x\n    at f (/srv/packages/worker@co.test/x.ts:1:1)",
+    };
+    expect(JSON.stringify(framesOf(internal(thrown)))).not.toContain("worker");
+    expect(framesOf(thrown)).toEqual([]);
+  });
+
   it("puts frames on the log line beside the event, which stays as it was", () => {
     const { reporter, events } = recordingReporter();
     const lines: string[] = [];
