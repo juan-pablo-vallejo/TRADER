@@ -70,10 +70,10 @@ export function memoryStore(): Store & { rows: OutboxRecord[]; kv: Map<string, s
       return Promise.resolve();
     },
     records: (ownerId) => Promise.resolve(sorted().filter((r) => r.ownerId === ownerId)),
-    prune(ownerId, known) {
+    prune(ownerId) {
       for (let i = rows.length - 1; i >= 0; i -= 1) {
         const r = rows[i]!;
-        if (r.ownerId === ownerId && r.standing === "settled" && known.includes(r.id)) {
+        if (r.ownerId === ownerId && r.standing === "settled") {
           rows.splice(i, 1);
         }
       }

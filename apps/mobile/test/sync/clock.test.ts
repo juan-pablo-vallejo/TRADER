@@ -148,9 +148,11 @@ describe("the clock's state", () => {
       jobId: J,
       since: new Date(T0 - 3_600_000),
     });
+    // H1: a session voided while still open is still open on the server, which refuses a
+    // clock-in on top of it; the phone reads it the same way, so Clock out stays offered.
     expect(
       clockState(snapshot({ sessions: [{ ...open("working"), voided: true }] }), []),
-    ).toEqual({ status: "off" });
+    ).toEqual({ status: "working", jobId: J, since: new Date(T0 - 3_600_000) });
   });
 
   it("applies this phone's records the snapshot does not show yet, in order", () => {

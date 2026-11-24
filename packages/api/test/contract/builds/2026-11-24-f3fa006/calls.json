@@ -1,0 +1,177 @@
+[
+  {
+    "path": "me.get",
+    "type": "query",
+    "input": {
+      "json": null,
+      "meta": {
+        "values": [
+          "undefined"
+        ],
+        "v": 1
+      }
+    }
+  },
+  {
+    "path": "status.get",
+    "type": "query",
+    "input": {
+      "json": {
+        "protocolVersion": 1,
+        "platform": "ios",
+        "build": 1
+      }
+    }
+  },
+  {
+    "path": "sync.push",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "protocolVersion": 1,
+        "deviceNow": "2026-11-24T14:00:01.000Z",
+        "records": [
+          {
+            "id": "01a20ddb-3700-7000-8909-090909090909",
+            "kind": "labor_event",
+            "schemaVersion": 1,
+            "payload": {
+              "workerId": "01900000-0000-7000-8000-000000000001",
+              "jobId": "01900000-0000-7000-8000-00000000000a",
+              "type": "started",
+              "clientTimestamp": "2026-11-24T14:00:00.000Z",
+              "location": {
+                "lat": 41.82,
+                "lng": -71.41,
+                "accuracyM": 8
+              },
+              "timeSetByUser": false,
+              "capturedOffline": false
+            }
+          }
+        ]
+      },
+      "meta": {
+        "values": {
+          "deviceNow": [
+            "Date"
+          ],
+          "records.0.payload.clientTimestamp": [
+            "Date"
+          ]
+        },
+        "v": 1
+      }
+    }
+  },
+  {
+    "path": "sync.pull",
+    "type": "query",
+    "input": {
+      "json": {
+        "protocolVersion": 1
+      }
+    }
+  },
+  {
+    "path": "me.update",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "name": "Luis Herrera",
+        "phone": "+14015550101"
+      }
+    }
+  },
+  {
+    "path": "me.update",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "name": "Luis Herrera",
+        "phone": null
+      }
+    }
+  },
+  {
+    "path": "overview.today",
+    "type": "query",
+    "input": {
+      "json": null,
+      "meta": {
+        "values": [
+          "undefined"
+        ],
+        "v": 1
+      }
+    }
+  },
+  {
+    "path": "roster.list",
+    "type": "query",
+    "input": {
+      "json": null,
+      "meta": {
+        "values": [
+          "undefined"
+        ],
+        "v": 1
+      }
+    }
+  },
+  {
+    "path": "assignment.create",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "userId": "01900000-0000-7000-8000-000000000002",
+        "jobId": "01900000-0000-7000-8000-00000000000a",
+        "expectedStart": "07:00",
+        "expectedEnd": "15:30",
+        "days": [
+          {
+            "id": "01a20ddb-3700-7001-8909-090909090909",
+            "workDate": "2026-11-24"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "path": "assignment.moveToday",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "id": "01a20ddb-3700-7002-8909-090909090909",
+        "userId": "01900000-0000-7000-8000-000000000002",
+        "jobId": "01900000-0000-7000-8000-00000000000a",
+        "at": "11:30",
+        "expectedEnd": "15:30"
+      }
+    }
+  },
+  {
+    "path": "job.setLocation",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "jobId": "01900000-0000-7000-8000-00000000000a",
+        "location": {
+          "lat": 41.82,
+          "lng": -71.41,
+          "radiusM": 150
+        }
+      }
+    }
+  },
+  {
+    "path": "demo.signIn",
+    "type": "mutation",
+    "input": {
+      "json": {
+        "phone": "+14015550100",
+        "code": "a-long-demo-code"
+      }
+    }
+  }
+]

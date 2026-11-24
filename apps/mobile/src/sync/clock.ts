@@ -19,13 +19,15 @@ export type ClockState =
 
 // The open session the server knows of, then every record of this phone the snapshot does
 // not show yet, in the order they were captured. A rejected record changes nothing: the
-// server refused it, and the screen says so beside it.
+// server refused it, and the screen says so beside it. A voided session still open is open:
+// the server's fold reads it so and refuses a clock-in on top of it (packages/api
+// labor/fold.ts; H1), and the office now ends one before voiding it.
 export function clockState(
   snapshot: PullOutput | null,
   records: readonly OutboxRecord[],
 ): ClockState {
   let state: ClockState = { status: "off" };
-  const open = snapshot?.sessions.find((s) => s.endedAt === null && !s.voided);
+  const open = snapshot?.sessions.find((s) => s.endedAt === null);
   if (open !== undefined && open.state !== "ended") {
     state = { status: open.state, jobId: open.jobId, since: open.startedAt };
   }

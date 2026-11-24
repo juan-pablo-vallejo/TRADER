@@ -68,7 +68,8 @@ const record = (row: typeof outbox.$inferSelect): OutboxRecord => ({
   id: row.id,
   ownerId: row.ownerId,
   kind: "labor_event",
-  schemaVersion: 1,
+  // As stored: the version it was captured under, never this build's.
+  schemaVersion: row.schemaVersion,
   payload: superjson.parse<LaborPayload>(row.payload),
   standing: row.standing,
   syncingSince: row.syncingSince,
@@ -168,20 +169,11 @@ export const deviceStore: Store = {
         .all()
         .map(record),
     ),
-  prune: (ownerId, known) =>
+  prune: (ownerId) =>
     done(() => {
-      // In pieces: SQLite bounds the number of values one statement may bind.
-      for (let i = 0; i < known.length; i += 500) {
-        db.delete(outbox)
-          .where(
-            and(
-              eq(outbox.ownerId, ownerId),
-              eq(outbox.standing, "settled"),
-              inArray(outbox.id, known.slice(i, i + 500)),
-            ),
-          )
-          .run();
-      }
+      db.delete(outbox)
+        .where(and(eq(outbox.ownerId, ownerId), eq(outbox.standing, "settled")))
+        .run();
     }),
   read: (key) =>
     done(() => db.select().from(kv).where(eq(kv.key, key)).get()?.value ?? null),

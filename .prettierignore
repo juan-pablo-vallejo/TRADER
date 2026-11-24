@@ -18,3 +18,5 @@ apps/mobile/expo-env.d.ts
 
 # The wire contract snapshot, written by its test (packages/api/test/contract/wire.test.ts).
 packages/api/test/contract/wire.json
+# Each build's recorded calls, written by apps/mobile/test/calls.test.ts.
+packages/api/test/contract/builds/

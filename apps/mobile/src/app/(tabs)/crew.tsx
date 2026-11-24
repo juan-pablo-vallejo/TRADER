@@ -397,16 +397,9 @@ export default function CrewTab() {
     try {
       const fix = await currentFix();
       if (fix === null) return setProblem("noFix");
-      // `job.update` replaces the job's facts whole, so they are read again first: what
-      // the office typed a minute ago is sent back as it is, with the location beside it.
-      const fresh = (await api.overview.today.query()).jobs.find((j) => j.id === id);
-      if (fresh === undefined) return setProblem("failed");
-      const answer = await api.job.update.mutate({
+      // The place alone (M6): job.setLocation writes nothing the office typed.
+      const answer = await api.job.setLocation.mutate({
         jobId: id,
-        customerId: fresh.customer.id,
-        name: fresh.name,
-        address: fresh.address,
-        notes: fresh.notes,
         location: { ...fix, radiusM: SET_RADIUS_M },
       });
       if (answer.result !== "updated") return setProblem("failed");

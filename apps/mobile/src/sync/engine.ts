@@ -11,6 +11,25 @@ import superjson from "superjson";
 
 import type { Snapshot, Store, Transport } from "./types";
 
+// A call that has not answered by now is given up, as one the network failed is (M1): one
+// that never answered held this cycle, and every cycle queued behind it, for good.
+export const CALL_DEADLINE_MS = 25_000;
+
+const within = <T>(call: () => Promise<T>, ms: number): Promise<T> =>
+  new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`no answer in ${ms} ms`)), ms);
+    call().then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timer);
+        reject(error instanceof Error ? error : new Error(String(error)));
+      },
+    );
+  });
+
 // A record stuck `syncing` is reclaimed after two minutes.
 export const RECLAIM_MS = 2 * 60_000;
 // The server takes at most this many records in a push (its MAX_RECORDS).
@@ -18,10 +37,30 @@ export const BATCH = 100;
 
 export const SNAPSHOT_KEY = "snapshot";
 // The pull's shape as this build reads it. Raise it in the commit that changes what a pull
-// answers (packages/api, contract/pull.ts): a snapshot stored under another number is
-// thrown away and pulled again, so no screen ever reads a field an older build never
-// stored. 2: the company's phone, `locationStamps`, each job's notes (2026-11-19).
+// answers (packages/api, contract/pull.ts), and add the step from the shape before to
+// UPCAST: a snapshot an older build stored is read as this build's (H3: thrown away, it
+// left a phone that updated overnight with nothing to clock in to until its first pull).
+// A shape this build does not know, newer or unreadable, is thrown away and pulled again.
+// 2: the company's phone, `locationStamps`, each job's notes (2026-11-19).
 export const SNAPSHOT_SHAPE = 2;
+
+type Loose = Record<string, unknown>;
+const withNotes = (job: unknown) => ({ notes: null, ...(job as Loose) });
+
+// Each step takes a snapshot's data from the shape before it to its own. A build before
+// shape 2 stored none (`undefined`, read as 1).
+const UPCAST: Record<number, (data: Loose) => Loose> = {
+  2: (data) => ({
+    locationStamps: true,
+    ...data,
+    company: { phone: null, ...(data.company as Loose) },
+    jobs: ((data.jobs as unknown[] | undefined) ?? []).map(withNotes),
+    shifts: ((data.shifts as Loose[] | undefined) ?? []).map((s) => ({
+      ...s,
+      job: withNotes(s.job),
+    })),
+  }),
+};
 export const READING_KEY = "reachability";
 
 export type CycleResult =
@@ -46,22 +85,32 @@ export async function readSnapshot(store: Store): Promise<Snapshot | null> {
   try {
     kept = superjson.parse<Partial<Snapshot> | null>(raw);
   } catch {
-    // Not a snapshot at all: gone, like one of another shape.
+    // Not a snapshot at all: gone, like one of a shape this build does not know.
   }
+  const shape = kept?.shape ?? 1;
   if (
     kept === null ||
     typeof kept !== "object" ||
-    kept.shape !== SNAPSHOT_SHAPE ||
+    !Number.isInteger(shape) ||
+    shape < 1 ||
+    shape > SNAPSHOT_SHAPE ||
     typeof kept.pulledAt !== "number" ||
     typeof kept.data !== "object" ||
     kept.data === null
   ) {
-    // An older build's, or unreadable. The outbox is another table and is not touched:
+    // Unreadable, or a newer build's. The outbox is another table and is not touched:
     // nothing captured is lost, and the next cycle pulls afresh.
     await store.write(SNAPSHOT_KEY, null);
     return null;
   }
-  return kept as Snapshot;
+  let data = kept.data as unknown as Loose;
+  for (let step = shape + 1; step <= SNAPSHOT_SHAPE; step += 1)
+    data = UPCAST[step]!(data);
+  return {
+    shape: SNAPSHOT_SHAPE,
+    pulledAt: kept.pulledAt,
+    data: data as Snapshot["data"],
+  };
 }
 
 export async function runCycle(
@@ -71,20 +120,42 @@ export async function runCycle(
   // Told of every call that threw, for the error report (sync/failures.ts). What a cycle
   // does about a thrown call does not depend on it.
   failed: (stage: "status" | "push" | "pull", error: unknown) => void = () => undefined,
+  deadlineMs: number = CALL_DEADLINE_MS,
 ): Promise<CycleResult> {
   await store.reclaim(now() - RECLAIM_MS);
   // The last time the API answered at all: what a capture reads to say it was online.
   const reached = () => store.write(READING_KEY, String(now()));
 
+  const pull = async (): Promise<string | null> => {
+    try {
+      const data = await within(() => transport.pull(), deadlineMs);
+      const snapshot: Snapshot = { shape: SNAPSHOT_SHAPE, pulledAt: now(), data };
+      await store.write(SNAPSHOT_KEY, superjson.stringify(snapshot));
+      await reached();
+      // Every settled record goes once a pull has succeeded (H2): the server has it, and the
+      // pull read what was committed after it settled, so the snapshot shows it with its
+      // flags, or it is older than the pull's window and no longer the clock's business.
+      // Kept, one beyond the window was replayed into the clock for good. Cycles never
+      // overlap (createSyncer), so no push is settling one while this runs.
+      await store.prune(data.me.id);
+      return data.me.id;
+    } catch (error) {
+      failed("pull", error);
+      return null;
+    }
+  };
   let state: ServiceState;
   try {
-    state = await transport.status();
+    state = await within(() => transport.status(), deadlineMs);
   } catch (error) {
     failed("status", error);
     return { outcome: "unreachable" };
   }
   await reached();
   if (state === "paused" || state === "update_required") {
+    // Held, the outbox is not touched. A phone with no snapshot still pulls once, so it has
+    // its jobs to clock in to: no state stops a capture (packages/api core/status.ts, H3).
+    if ((await readSnapshot(store)) === null) await pull();
     return { outcome: "held", state };
   }
 
@@ -92,24 +163,6 @@ export async function runCycle(
   let rejected = 0;
   let drained = true;
   let clockSkewMs: number | null = null;
-  const pull = async (): Promise<string | null> => {
-    try {
-      const data = await transport.pull();
-      const snapshot: Snapshot = { shape: SNAPSHOT_SHAPE, pulledAt: now(), data };
-      await store.write(SNAPSHOT_KEY, superjson.stringify(snapshot));
-      await reached();
-      // A settled record goes once the snapshot shows it: the entry counts, and its flags
-      // are the snapshot's from here on.
-      await store.prune(
-        data.me.id,
-        data.events.map((e) => e.id),
-      );
-      return data.me.id;
-    } catch (error) {
-      failed("pull", error);
-      return null;
-    }
-  };
   // Whose records to send is what the last pull said, never what a record claims. With no
   // snapshot — the first cycle after a sign-in — a pull comes first to learn it.
   const owner = (await readSnapshot(store))?.data.me.id ?? (await pull());
@@ -120,15 +173,19 @@ export async function runCycle(
     await store.claim(ids, now());
     let answer: Awaited<ReturnType<Transport["push"]>>;
     try {
-      answer = await transport.push({
-        deviceNow: new Date(now()),
-        records: batch.map((r) => ({
-          id: r.id,
-          kind: r.kind,
-          schemaVersion: r.schemaVersion,
-          payload: r.payload,
-        })),
-      });
+      answer = await within(
+        () =>
+          transport.push({
+            deviceNow: new Date(now()),
+            records: batch.map((r) => ({
+              id: r.id,
+              kind: r.kind,
+              schemaVersion: r.schemaVersion,
+              payload: r.payload,
+            })),
+          }),
+        deadlineMs,
+      );
     } catch (error) {
       failed("push", error);
       // The server may have written them; the resend answers `duplicate`.
@@ -146,9 +203,13 @@ export async function runCycle(
       if (result.result === "rejected") {
         await store.reject(result.id, result.code);
         rejected += 1;
-      } else {
+      } else if (result.result === "accepted" || result.result === "duplicate") {
         await store.settle(result.id, result.flags);
         settled += 1;
+      } else {
+        // An answer a newer server gives that this build does not know: left pending, as
+        // if unanswered, and sent again under the same id.
+        answered.delete(result.id);
       }
     }
     const omitted = ids.filter((id) => !answered.has(id));

@@ -13,18 +13,23 @@ appId: app.jpteq.trader
       id: "crew-count-expected"
     timeout: 30000
 - takeScreenshot: crew
+# Centred: just scrolled into view, the button can sit under the tab bar, which then takes
+# the tap (seen on the iPhone 17 simulator once the crew list grew, 2026-11-24).
 - scrollUntilVisible:
     element:
       id: "crew-add"
+    centerElement: true
 - tapOn:
     id: "crew-add"
 - assertVisible:
     id: "add-sheet"
 - scrollUntilVisible:
     element: "Sam Carter"
+    centerElement: true
 - tapOn: "Sam Carter"
 - scrollUntilVisible:
     element: "Harbor View unit 4B"
+    centerElement: true
 - tapOn: "Harbor View unit 4B"
 - scrollUntilVisible:
     element:
@@ -41,6 +46,7 @@ appId: app.jpteq.trader
     timeout: 30000
 - scrollUntilVisible:
     element: "Sam Carter, .*"
+    centerElement: true
 - tapOn: "Sam Carter, .*"
 - assertVisible:
     id: "person-status-expected"
@@ -50,12 +56,14 @@ appId: app.jpteq.trader
 - scrollUntilVisible:
     element:
       id: "person-close"
+    centerElement: true
 - tapOn:
     id: "person-close"
 - scrollUntilVisible:
     element:
       id: "crew-view-job"
     direction: UP
+    centerElement: true
 - tapOn:
     id: "crew-view-job"
 - assertVisible:

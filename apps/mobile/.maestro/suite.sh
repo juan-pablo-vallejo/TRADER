@@ -52,6 +52,10 @@ api_up() {
     [ "$n" -lt 90 ] || { echo "the API did not start" >&2; exit 1; }
     sleep 1
   done
+  # `next dev` compiles a route on its first request, and the API's took longer than the
+  # phone's 25 s deadline on a request (src/api.ts): compiled here, before any flow asks.
+  curl -s -o /dev/null --max-time 120 \
+    "http://localhost:3000/api/trpc/status.get?input=%7B%22json%22%3A%7B%22protocolVersion%22%3A1%2C%22platform%22%3A%22ios%22%2C%22build%22%3A1%7D%7D"
 }
 api_down() {
   if [ -n "$api_pid" ]; then

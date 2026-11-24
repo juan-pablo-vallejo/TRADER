@@ -13,7 +13,9 @@ export type OutboxRecord = {
   // Who was signed in when it was captured: a push sends only its own person's records.
   ownerId: string;
   kind: "labor_event";
-  schemaVersion: 1;
+  // The payload's version as it was written: a record is sent as captured, never re-read
+  // as a newer version (the server upcasts, sync/push.ts PAYLOADS).
+  schemaVersion: number;
   payload: LaborPayload;
   standing: Standing;
   // When the push that holds it began; a record left `syncing` is reclaimed (engine.ts).
@@ -38,8 +40,8 @@ export interface Store {
   reject(id: string, code: string): Promise<void>;
   // Every record of one person, oldest first.
   records(ownerId: string): Promise<OutboxRecord[]>;
-  // Settled records the server's snapshot now shows are no longer needed here.
-  prune(ownerId: string, known: string[]): Promise<void>;
+  // Every settled record of one person: once a pull has succeeded, none is needed here.
+  prune(ownerId: string): Promise<void>;
   read(key: string): Promise<string | null>;
   write(key: string, value: string | null): Promise<void>;
 }
@@ -56,7 +58,7 @@ export type Transport = {
     records: {
       id: string;
       kind: "labor_event";
-      schemaVersion: 1;
+      schemaVersion: number;
       payload: LaborPayload;
     }[];
   }): Promise<{ clockSkewMs: number; results: PushAnswer[] }>;

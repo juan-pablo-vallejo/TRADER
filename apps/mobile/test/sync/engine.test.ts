@@ -39,6 +39,12 @@ function server() {
     failBefore: false,
     answerOnly: null as number | null,
     refuse: new Map<string, string>(),
+    // Ids the pull no longer shows: older than its window.
+    beyondWindow: new Set<string>(),
+    // An answer this build does not know, for these ids.
+    unknownResult: new Set<string>(),
+    // A call that never answers.
+    hang: null as "status" | "push" | "pull" | null,
     transport: null as unknown as Transport,
   };
   const snapshot = (): PullOutput => ({
@@ -50,23 +56,31 @@ function server() {
     shifts: [],
     jobs: [],
     sessions: [],
-    events: [...accepted.keys()].map((id) => ({
-      id,
-      type: "started",
-      jobId: JOB,
-      clientTimestamp: new Date(T0),
-      serverTimestamp: new Date(T0),
-      clockSkewed: false,
-      correctsEventId: null,
-      voidsEventId: null,
-      flags: s.flagged.get(id) ?? [],
-    })),
+    events: [...accepted.keys()]
+      .filter((id) => !s.beyondWindow.has(id))
+      .map((id) => ({
+        id,
+        type: "started",
+        jobId: JOB,
+        clientTimestamp: new Date(T0),
+        serverTimestamp: new Date(T0),
+        clockSkewed: false,
+        correctsEventId: null,
+        voidsEventId: null,
+        flags: s.flagged.get(id) ?? [],
+      })),
   });
+  const never = <T>() => new Promise<T>(() => undefined);
   s.transport = {
     status: () =>
-      s.statusDown ? Promise.reject(new Error("offline")) : Promise.resolve(s.state),
+      s.hang === "status"
+        ? never()
+        : s.statusDown
+          ? Promise.reject(new Error("offline"))
+          : Promise.resolve(s.state),
     push: ({ records }) => {
       s.pushes.push(records.map((r) => r.id));
+      if (s.hang === "push") return never();
       if (s.failBefore) {
         s.failBefore = false;
         return Promise.reject(new Error("no route"));
@@ -76,6 +90,9 @@ function server() {
       const results: PushAnswer[] = taken.map((r) => {
         const code = s.refuse.get(r.id);
         if (code !== undefined) return { id: r.id, result: "rejected", code };
+        if (s.unknownResult.has(r.id)) {
+          return { id: r.id, result: "parked", flags: [] } as unknown as PushAnswer;
+        }
         const seen = accepted.has(r.id);
         accepted.set(r.id, (accepted.get(r.id) ?? 0) + 1);
         return {
@@ -91,7 +108,11 @@ function server() {
       return Promise.resolve({ clockSkewMs: 0, results });
     },
     pull: () =>
-      s.pullDown ? Promise.reject(new Error("offline")) : Promise.resolve(snapshot()),
+      s.hang === "pull"
+        ? never()
+        : s.pullDown
+          ? Promise.reject(new Error("offline"))
+          : Promise.resolve(snapshot()),
   };
   return s;
 }
@@ -124,7 +145,7 @@ async function phone() {
     now,
     capture,
     advance: (ms: number) => (clock += ms),
-    cycle: () => runCycle(store, srv.transport, now),
+    cycle: () => runCycle(store, srv.transport, now, undefined, 50),
     standing: (id: string) => store.rows.find((r) => r.id === id)?.standing,
   };
 }
@@ -192,7 +213,9 @@ describe("a cycle", () => {
     expect(p.store.rows.map((r) => r.id)).toEqual([ids[0]]);
   });
 
-  it("throws away a snapshot an older build stored, or one it cannot read, and pulls again", async () => {
+  // H3: a snapshot thrown away left a phone that updated overnight with nothing to clock in
+  // to until its first pull. An older shape is read as the current one.
+  it("reads a snapshot an older build stored as this build's, and throws away only an unreadable one", async () => {
     const p = await phone();
     const [id] = await p.capture(1);
     await p.cycle();
@@ -200,9 +223,35 @@ describe("a cycle", () => {
     expect(fresh).toMatchObject({ shape: SNAPSHOT_SHAPE });
     // As a build before 2026-11-19 stored it: no shape, and none of the newer fields.
     const { shape: _shape, ...older } = fresh!;
+    const { phone: _phone, ...company } = older.data.company;
+    const { locationStamps: _stamps, ...data } = older.data;
+    const before = {
+      ...older,
+      data: {
+        ...data,
+        company,
+        jobs: [{ id: JOB, name: "J", address: null, status: "open" }],
+      },
+    };
     for (const stored of [
-      superjson.stringify(older),
-      superjson.stringify({ ...fresh, shape: SNAPSHOT_SHAPE - 1 }),
+      superjson.stringify(before),
+      superjson.stringify({ ...before, shape: 1 }),
+    ]) {
+      await p.store.write(SNAPSHOT_KEY, stored);
+      const read = await readSnapshot(p.store);
+      expect(read).toMatchObject({
+        shape: SNAPSHOT_SHAPE,
+        pulledAt: fresh!.pulledAt,
+        data: {
+          company: { phone: null },
+          locationStamps: true,
+          jobs: [{ id: JOB, notes: null }],
+        },
+      });
+      expect(read?.data.events.map((e) => e.id)).toEqual([id]);
+    }
+    for (const stored of [
+      superjson.stringify({ ...fresh, shape: SNAPSHOT_SHAPE + 1 }),
       superjson.stringify(null),
       "not json at all",
     ]) {
@@ -210,11 +259,33 @@ describe("a cycle", () => {
       expect(await readSnapshot(p.store)).toBeNull();
       // Gone from the store too, so every later read agrees.
       expect(await p.store.read(SNAPSHOT_KEY)).toBeNull();
-      // The next cycle pulls afresh, and the entry already sent is not sent again.
       await p.cycle();
       expect(await readSnapshot(p.store)).toMatchObject({ shape: SNAPSHOT_SHAPE });
     }
-    expect((await readSnapshot(p.store))?.data.events.map((e) => e.id)).toEqual([id]);
+  });
+
+  // H2: a settled record the pull no longer shows (older than its window) was never pruned,
+  // and was replayed into the clock.
+  it("prunes every settled record once a pull has succeeded, shown or not", async () => {
+    const p = await phone();
+    const [old, recent] = await p.capture(2);
+    p.srv.pullDown = true;
+    await p.cycle();
+    expect([old, recent].map((id) => p.standing(id!))).toEqual(["settled", "settled"]);
+    p.srv.pullDown = false;
+    p.srv.beyondWindow.add(old!);
+    await p.cycle();
+    expect(p.store.rows).toEqual([]);
+  });
+
+  it("keeps a record whose answer this build does not know pending, under the same id", async () => {
+    const p = await phone();
+    const [id] = await p.capture(1);
+    p.srv.unknownResult.add(id!);
+    expect(await p.cycle()).toMatchObject({ settled: 0, rejected: 0, drained: false });
+    expect(p.standing(id!)).toBe("pending");
+    p.srv.unknownResult.clear();
+    expect(await p.cycle()).toMatchObject({ settled: 1, drained: true });
   });
 
   it("drops a flagged record like any other once the snapshot shows it, flags and all", async () => {
@@ -336,6 +407,21 @@ describe("the service's state", () => {
     },
   );
 
+  // H3: under a hold, a phone with no snapshot had nothing to clock in to.
+  it.each(["paused", "update_required"] as const)(
+    "pulls once under %s when it has no snapshot, and sends nothing",
+    async (state) => {
+      const p = await phone();
+      const ids = await p.capture(1);
+      await p.store.write(SNAPSHOT_KEY, null);
+      p.srv.state = state;
+      expect(await p.cycle()).toEqual({ outcome: "held", state });
+      expect(await readSnapshot(p.store)).not.toBeNull();
+      expect(p.srv.pushes).toEqual([]);
+      expect(ids.map(p.standing)).toEqual(["pending"]);
+    },
+  );
+
   it("pulls and keeps the outbox under read_only", async () => {
     const p = await phone();
     const ids = await p.capture(2);
@@ -410,5 +496,26 @@ describe("coalesced triggers", () => {
     });
     await expect(request()).rejects.toThrow("boom");
     expect(await request()).toBe(2);
+  });
+});
+
+// M1: a call that never answered held the cycle, and every later one behind it, for good.
+describe("a call that never answers", () => {
+  it("is given up at the deadline, as the network failing is, at every stage", async () => {
+    const p = await phone();
+    const ids = await p.capture(1);
+    p.srv.hang = "status";
+    expect(await p.cycle()).toEqual({ outcome: "unreachable" });
+    p.srv.hang = "push";
+    expect(await p.cycle()).toMatchObject({
+      outcome: "synced",
+      settled: 0,
+      drained: false,
+    });
+    expect(ids.map(p.standing)).toEqual(["pending"]);
+    p.srv.hang = "pull";
+    expect(await p.cycle()).toMatchObject({ settled: 1, pulled: false });
+    p.srv.hang = null;
+    expect(await p.cycle()).toMatchObject({ pulled: true, drained: true });
   });
 });
