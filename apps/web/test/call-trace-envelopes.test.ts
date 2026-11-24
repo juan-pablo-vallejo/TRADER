@@ -48,8 +48,9 @@ async function sentFrom(env: Record<string, string | undefined>, work: () => voi
   await new Promise((r) => setTimeout(r, 300));
   await Sentry.flush(2000);
   await Sentry.close(2000);
-  return sent.flatMap(([, items]) => items);
+  return sent;
 }
+const itemsOf = (sent: Envelope[]) => sent.flatMap(([, items]) => items);
 
 describe("the tracing trial, as sent", () => {
   it("sends one allow-listed transaction per call on staging, each its own trace", async () => {
@@ -58,13 +59,15 @@ describe("the tracing trial, as sent", () => {
       SENTRY_DSN: DSN,
       VERCEL_GIT_COMMIT_SHA: COMMIT,
     };
-    const items = await sentFrom(env, () => {
+    const sent = await sentFrom(env, () => {
       traceCall(line, env);
       traceCall(
         { ...line, path: "sync.push", type: "mutation", ok: true, code: null },
         env,
       );
     });
+    const items = itemsOf(sent);
+    const headers = sent.map(([header]) => header);
     const transactions = items
       .filter(([h]) => h.type === "transaction")
       .map(([, e]) => e);
@@ -100,9 +103,19 @@ describe("the tracing trial, as sent", () => {
     );
     expect(new Set(traces.map((t) => t.trace_id)).size).toBe(2);
     const failed = transactions.find((t) => t.transaction === "me.get")!;
-    expect((failed.contexts as { trace: { status: string } }).trace.status).not.toBe(
-      "ok",
-    );
+    const failedTrace = (
+      failed.contexts as { trace: { status: string; data: Record<string, unknown> } }
+    ).trace;
+    expect(failedTrace.status).toBe("internal_error");
+    expect(failedTrace.data.code).toBe("UNAUTHORIZED");
+    // The envelope's own header carries nothing either: no trace context, no person.
+    for (const header of headers) {
+      expect(Object.keys(header as object).sort()).toEqual([
+        "event_id",
+        "sdk",
+        "sent_at",
+      ]);
+    }
     const json = JSON.stringify(transactions);
     expect(json).not.toMatch(/worker|secret|cookie|\+1401/);
     expect(json).not.toContain(REQUEST);
@@ -112,11 +125,11 @@ describe("the tracing trial, as sent", () => {
   it("sends nothing from production, or with no environment named", async () => {
     for (const named of [{ TRADER_ENVIRONMENT: "production" }, {}]) {
       const env = { ...named, SENTRY_DSN: DSN };
-      const items = await sentFrom(env, () => {
+      const sent = await sentFrom(env, () => {
         traceCall(line, env);
         Sentry.startInactiveSpan({ name: "forced", forceTransaction: true }).end();
       });
-      expect(items).toEqual([]);
+      expect(itemsOf(sent)).toEqual([]);
     }
   });
 });

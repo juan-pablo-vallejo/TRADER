@@ -99,8 +99,10 @@ export function traceCall(line: CallLine, env: Env = process.env): void {
         forceTransaction: true,
         attributes: span.attributes,
       });
-      // A failed call reads as one: its tRPC code is the status (2 is Sentry's error).
-      if (!line.ok) made.setStatus({ code: 2, message: span.attributes.code });
+      // A failed call reads as one. Sentry keeps a status message only from its own list,
+      // which no tRPC code is on, so the status is "internal_error" (code 2) and the tRPC
+      // code rides in the span's data.
+      if (!line.ok) made.setStatus({ code: 2 });
       made.end(span.endTime);
     });
     await Sentry.flush(FLUSH_TIMEOUT_MS);
