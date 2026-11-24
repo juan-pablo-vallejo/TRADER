@@ -603,13 +603,20 @@ Android user.
       `ASC_API_KEY_ISSUER_ID`, `ASC_API_KEY_P8` and `GOOGLE_SERVICE_ACCOUNT_KEY`. No store
       credential is kept at Expo, so no token of staging's can submit. Done when the
       workflow is on `main`, to be read in the release's pull request.
-- [ ] 24a. **The backend's tools and its reviewer.** The Code Simplifier plugin, the
+- [x] 24a. **The backend's tools and its reviewer.** The Code Simplifier plugin, the
       `batch-reviewer` agent, the `backend-change` skill, and the guard's list grown to the
       files that decide what green means. Done when a server batch has been simplified once
-      and reviewed once by agents that did not write it.
-- [ ] 24b. **Measure and pin.** A timing line and a statement count for every call;
+      and reviewed once by agents that did not write it. Seen 2026-11-24: 24b simplified
+      (`0940eb2`) and reviewed in two rounds (`7575f82`, `4fc493c`); the guard's test 37
+      refused, 21 allowed. The pilot's times are under Found along the way.
+- [x] 24b. **Measure and pin.** A timing line and a statement count for every call;
       statement budgets; a snapshot of every procedure's contract; the phone's procedures
       named and held to an additive-only rule. Done when a renamed pull field fails a test.
+      Seen 2026-11-24: a renamed pull field, an edited payload, a twelfth phone call and a
+      planted statement each turned a test red with typecheck green. On staging at
+      `4fc493c`: `trader_call` lines in the runtime log, and `Server-Timing` with
+      `x-request-id` on `status.get`. A deployed `me.get` counts 7 against its budget's 6:
+      the role check, once per pool, which the budgets leave out.
 - [ ] 24c. **What the audit found, server and office.** A void may not leave a session
       open; a late push is treated as an offline one; the job page reads its own invoices;
       the Demo door asks the database; the invite re-checks its caller; the rules for a live
