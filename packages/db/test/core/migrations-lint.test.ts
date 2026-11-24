@@ -2,8 +2,10 @@
 // the lock safety no other check reads. New means 0008 and later; the eight before them were
 // written before the rule and run on no live database. Squawk is told each file runs in the
 // transaction drizzle-kit wraps the pending migrations in, and the server's major version.
-// `require-statement-timeout` is left off: the approved rule bounds a lock's wait
-// (lock_timeout), and a statement that only touches the catalog needs no second limit.
+// Two rules are left off. `require-statement-timeout`: the approved rule bounds a lock's
+// wait (lock_timeout), and a statement that only touches the catalog needs no second limit.
+// `require-concurrent-index-creation`: every pending migration runs in one transaction, where
+// CONCURRENTLY cannot run, so the approved rule builds an index plainly.
 import { execFileSync } from "node:child_process";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -26,7 +28,7 @@ export function squawk(files: string[]): { ok: boolean; out: string } {
       [
         "--assume-in-transaction",
         "--pg-version=18.0",
-        "--exclude=require-statement-timeout",
+        "--exclude=require-statement-timeout,require-concurrent-index-creation",
         "--reporter=gcc",
         ...files,
       ],

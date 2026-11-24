@@ -13,7 +13,8 @@
 //
 // One answer for every refusal, so a caller learns nothing of which part was wrong: no
 // door on this host, a wrong code, a number that is not a Demo person's, a provider that
-// did not answer. The code is compared in constant time. Request rates are the firewall's
+// did not answer. (Whether a host has a door, and whether its company is flagged, is no
+// secret: /api/ready says so, M8.) The code is compared in constant time. Request rates are the firewall's
 // (apps/web, edge.ts); the code is long enough that guessing it is not a plan.
 // Consumed by routers/demo.ts; the door itself is the host's (apps/web, clerk-demo.ts).
 import { createHash, timingSafeEqual } from "node:crypto";

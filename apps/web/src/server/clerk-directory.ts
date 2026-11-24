@@ -46,6 +46,8 @@ export const ADMIT_TIMEOUT_MS = 5_000;
 // roster.setEmail and roster.setSignInPhone wait on this inside their transaction, with the
 // person's row locked: one deadline for every call a change makes, not one each.
 export const READDRESS_TIMEOUT_MS = 5_000;
+// What putting a failed change back may take, after it (H6).
+export const UNDO_TIMEOUT_MS = 3_000;
 
 const EXISTS = "form_identifier_exists";
 
@@ -217,7 +219,10 @@ export function createClerkDirectory(deps: {
     // its roster row does not hold could be bound to another company's invitation.
     const added: string[] = [];
     const moved: { path: string; id: string }[] = [];
+    // Its own deadline: a change that failed by running out of time has no time left on its
+    // signal, and an undo under it would fail at once.
     const undo = async () => {
+      const signal = AbortSignal.timeout(UNDO_TIMEOUT_MS);
       try {
         for (const m of moved) {
           done(

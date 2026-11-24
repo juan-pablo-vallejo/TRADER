@@ -21,6 +21,7 @@ import {
   users,
 } from "@trader/db/schema";
 
+import { PHONE_PROCEDURES } from "../../src/contract";
 import { createContext, type Tx } from "../../src/core/context";
 import type { DemoDoor } from "../../src/core/demo-door";
 import { localDirectory } from "../../src/core/identity";
@@ -69,6 +70,7 @@ const READS = {
 const WRITES = {
   "me.update": 7,
   "job.update": 10,
+  "job.setLocation": 10,
   "assignment.create": 12,
   "assignment.moveToday": 14,
   "sync.push": 18,
@@ -227,6 +229,11 @@ function mondayOf(day: string): string {
 const AS_WORKER = new Set(["me.get", "sync.pull", "status.get"]);
 
 describe("statement budgets", () => {
+  it("has a budget for every phone procedure", () => {
+    const budgeted = new Set([...Object.keys(READS), ...Object.keys(WRITES)]);
+    expect(PHONE_PROCEDURES.filter((p) => !budgeted.has(p))).toEqual([]);
+  });
+
   it("holds every read to its budget, at two sizes of company", async () => {
     await rolledBack(owner, async (tx) => {
       const w = await world(tx);
@@ -262,6 +269,12 @@ describe("statement budgets", () => {
       );
       out["job.update"] = await asAdmin((api) =>
         api.job.update({ jobId: w.K, customerId: w.customerId, name: "K renamed" }),
+      );
+      out["job.setLocation"] = await asAdmin((api) =>
+        api.job.setLocation({
+          jobId: w.K,
+          location: { lat: 41.8, lng: -71.4, radiusM: 150 },
+        }),
       );
       out["assignment.create"] = await asAdmin((api) =>
         api.assignment.create({

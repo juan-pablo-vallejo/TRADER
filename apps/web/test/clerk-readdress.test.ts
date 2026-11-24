@@ -149,6 +149,10 @@ function clerk(
     };
     expect(new Headers(init?.headers).get("authorization")).toBe(`Bearer ${KEY}`);
     calls.push(call);
+    // As fetch does: a call on a signal already aborted fails at once.
+    if ((init?.signal as AbortSignal | undefined)?.aborted === true) {
+      return Promise.reject(new DOMException("aborted", "AbortError"));
+    }
     const other = instead(call);
     if (other instanceof Error) return Promise.reject(other);
     return Promise.resolve(other ?? answer(call));
@@ -424,6 +428,32 @@ describe("an address change at Clerk", () => {
       }),
     ).rejects.toBeInstanceOf(ClerkDirectoryError);
     expect(failing.logins.map(stateOf)).toEqual(was);
+  });
+
+  // A change that ran out of time has no time left on its signal: the undo takes its own.
+  it("takes an added address back off when a later step times out", async () => {
+    let failed: AbortSignal | undefined;
+    const slow = clerk([signedIn()], (call) => {
+      if (call.method !== "POST" || call.path !== "/phone_numbers") return null;
+      failed = call.signal as AbortSignal;
+      return new DOMException("timed out", "TimeoutError");
+    });
+    const was = slow.logins.map(stateOf);
+    await expect(
+      slow.directory.readdress({
+        id: ROW,
+        subject: "user_bound",
+        email: NEW_EMAIL,
+        phone: NEW_PHONE,
+        fresh: true,
+      }),
+    ).rejects.toThrow("timed out");
+    expect(slow.logins.map(stateOf)).toEqual(was);
+    const undone = slow.calls.slice(
+      slow.calls.map((c) => c.signal).lastIndexOf(failed) + 1,
+    );
+    expect(undone.map((c) => c.method)).toEqual(["PATCH", "DELETE"]);
+    for (const c of undone) expect(c.signal).not.toBe(failed);
   });
 
   it("fails when Clerk will not or cannot, carrying the status and codes and nothing of the person", async () => {
