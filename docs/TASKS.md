@@ -1524,6 +1524,18 @@ vitest.config.ts`). The runners should be exempt like the readers.
       Staging only and fictional data; production answers no timing header.
 - [ ] Measured, for After MVP item 21's load baseline: `sync.push` costs 16 statements per
       further record (one transaction each, by design), so an outbox of 50 is about 800.
+- [ ] Item 24c, first push (`f2a0207`, simplified `c5e6d6e` in 39 s): `batch-reviewer` PASS
+      on the first round, 263 s with a prompt that named the files and the questions (round
+      1 of 24b took 10,600 s on the range alone). Its notes, left as they are:
+  - An office browser more than a minute fast is refused `time_in_future` when it voids an
+    open session, since the end it sends is its own now less 60 s. The refusal says so;
+    the clock is the browser's.
+  - `trader_refusal` lines are written as records are answered. A call that then fails
+    before any record ran (a deactivated caller) has logged refusals it never answered.
+  - The labor suite's default push reads the device's clock at the tap with no skew, a
+    pair a real push never makes: the receipt check's backstop is proved only that way.
+  - M2's rule also lets an office append name any job the start carried; the Hours panel
+    always sends the session's own.
 - [ ] A forged stack (a thrown plain object, whose stack tRPC copies apart from its message)
       can still put a path such as `/srv/packages/+14015550100/x.ts` on the server's own
       log line: digits and `+` are path characters. No address passes (`@` is refused).
