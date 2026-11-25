@@ -133,32 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**The tracing trial ends** (backend-change)
-
-- `call-trace.ts`, its tests and the staging branch of `sentry-event.ts` go; the timing line
-  and `Server-Timing` stay.
-- Done when: `git grep -nP 'tracing trial|traceCall' -- apps packages` is empty.
-- See it working: staging answers `Server-Timing`; Sentry's `trader-web` gets no new
-  transaction.
-
-**A voided clock-in unlocks its shift** (backend-change)
-
-- A shift whose every clock-in has been voided can be edited, moved or removed again, and
-  Today reads the person as off the clock. No entry is touched.
-- Done when: failure tests first; no statement budget grows.
-- See it working: staging: void, then move the shift.
-
-**Creates keep their id** (backend-change)
-
-- `job.create` and `customer.create` require an id the office makes when the form opens and
-  keeps on retry, and answer created, duplicate or an id conflict, as a shift's create does.
-  An invitation requires its id. Every id a client makes is checked as UUID version 7, the
-  phone's two included.
-- `wire.json`: `job.create`, `customer.create`, `roster.invite` and the nine ids; the diff
-  shown to the owner.
-- Done when: failing-first tests: a dropped response, a duplicate send.
-- See it working: staging, both languages, reviewed; both suites whole.
-
 **Dead code goes** (backend-change)
 
 - The two procedures nothing calls (`assignment.list`, `assignment.mine`), the one-value
@@ -440,6 +414,14 @@ the iPhone simulator and `trader-ws android`.
   out.
 - Done when: a test for each.
 - See it working: staging, both languages, reviewed.
+
+**Phone: the Android suite's wrong-code step**
+
+- On the workstation's emulator, `sign-in-codes` types 111111 and the field is then empty
+  with no refusal shown, three runs in a row; the step runs on the phone alone (the
+  development stand-in compares the code) and passes on the iPhone simulator. Find whether
+  the keyboard, the emulator or the screen drops the sentence, and fix that.
+- Done when: `trader-ws android` is whole and green.
 
 ### The owner's
 
