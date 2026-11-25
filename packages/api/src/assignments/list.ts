@@ -133,10 +133,9 @@ export async function weekAssignments(
     weekStart: input.weekStart,
     timezone: company.timezone,
     days,
-    shifts: rows.map((r) => ({
-      ...r,
-      locked: markOf.get(r.id)?.lockedAt != null,
-      copyId: markOf.get(r.id)?.copyId ?? null,
-    })),
+    shifts: rows.map((r) => {
+      const mark = markOf.get(r.id);
+      return { ...r, locked: mark?.lockedAt != null, copyId: mark?.copyId ?? null };
+    }),
   };
 }

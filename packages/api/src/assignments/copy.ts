@@ -297,7 +297,7 @@ export async function undoCopy(
 
   // Removing shifts takes nothing from the ones that stay, so no clock-in already admitted
   // is touched and the day still resolves. Nothing is judged here.
-  const copied = new Set(rows.map((r) => r.id));
-  await tx.delete(jobAssignments).where(inArray(jobAssignments.id, [...copied]));
+  const copied = rows.map((r) => r.id);
+  await tx.delete(jobAssignments).where(inArray(jobAssignments.id, copied));
   return { result: "undone", removed: rows.length };
 }

@@ -126,10 +126,9 @@ async function sendsOf(tx: Tx, userId?: string): Promise<Send[]> {
     })
     .from(invitationSends)
     .innerJoin(sender, eq(sender.id, invitationSends.sentByUserId));
-  const rows = await (
+  return (
     userId === undefined ? query : query.where(eq(invitationSends.userId, userId))
   ).orderBy(desc(invitationSends.createdAt), desc(invitationSends.id));
-  return rows;
 }
 
 type Changed = z.infer<typeof addressChange> & { userId: string };

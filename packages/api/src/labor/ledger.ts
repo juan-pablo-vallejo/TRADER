@@ -174,7 +174,10 @@ export async function workerLedger(
 
   // Every event of the kept sessions, whatever its own time: a correction or a void belongs
   // to the session of the root it names.
-  const eventsOf = new Map<string, { row: (typeof ledger)[number]; effect: string }[]>();
+  const eventsOf = new Map<
+    string,
+    { row: (typeof ledger)[number]; effect: LedgerEvent["effect"] }[]
+  >();
   for (const row of ledger) {
     const { sessionRootEventId, effect } = eventEffect(structural, row);
     if (!keptRoots.has(sessionRootEventId)) continue;
@@ -223,25 +226,23 @@ export async function workerLedger(
           a.row.serverTimestamp.getTime() - b.row.serverTimestamp.getTime() ||
           compareIds(a.row.id, b.row.id),
       )
-      .map(({ row, effect }) => {
-        return {
-          id: row.id,
-          type: row.type,
-          job: named(jobNames, row.jobId),
-          clientTimestamp: row.clientTimestamp,
-          serverTimestamp: row.serverTimestamp,
-          initiator: named(names, row.initiatorUserId),
-          clockSkewed: row.clockSkewed,
-          clockSkewMs: row.clockSkewMs,
-          timeSetByUser: row.timeSetByUser,
-          capturedOffline: row.capturedOffline,
-          hasLocation: row.locationLat !== null,
-          correctsEventId: row.correctsEventId,
-          voidsEventId: row.voidsEventId,
-          effect: effect as LedgerEvent["effect"],
-          flags: row.flags,
-        };
-      });
+      .map(({ row, effect }) => ({
+        id: row.id,
+        type: row.type,
+        job: named(jobNames, row.jobId),
+        clientTimestamp: row.clientTimestamp,
+        serverTimestamp: row.serverTimestamp,
+        initiator: named(names, row.initiatorUserId),
+        clockSkewed: row.clockSkewed,
+        clockSkewMs: row.clockSkewMs,
+        timeSetByUser: row.timeSetByUser,
+        capturedOffline: row.capturedOffline,
+        hasLocation: row.locationLat !== null,
+        correctsEventId: row.correctsEventId,
+        voidsEventId: row.voidsEventId,
+        effect,
+        flags: row.flags,
+      }));
     return {
       rootEventId: s.rootEventId,
       workDate: day,

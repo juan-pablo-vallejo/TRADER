@@ -70,8 +70,6 @@ export class DemoFailure extends Error {
   }
 }
 
-const MAX_RECORDS = MAX_PUSH_RECORDS;
-
 // The application's router as a server-side caller: the same procedures the route handler
 // serves, called in-process with a context built per persona.
 const makeCaller = createCallerFactory(appRouter);
@@ -162,8 +160,8 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   // unless `deviceNow` reads it otherwise. Every record must answer `accepted` with exactly
   // its planned reasons.
   const push = async (who: string, records: Record_[], deviceNow: () => Date = now) => {
-    for (let i = 0; i < records.length; i += MAX_RECORDS) {
-      const batch = records.slice(i, i + MAX_RECORDS);
+    for (let i = 0; i < records.length; i += MAX_PUSH_RECORDS) {
+      const batch = records.slice(i, i + MAX_PUSH_RECORDS);
       const out = await as(who).sync.push({
         protocolVersion: 1,
         deviceNow: deviceNow(),
