@@ -6,7 +6,7 @@ import type { LaborPayload } from "@trader/api/contract";
 import * as Location from "expo-location";
 
 // How old a reading may be and still say where a tap happened.
-export const LOCATION_FRESH_MS = 2 * 60_000;
+const LOCATION_FRESH_MS = 2 * 60_000;
 
 type Reading = { at: number; value: NonNullable<LaborPayload["location"]> };
 let last: Reading | null = null;

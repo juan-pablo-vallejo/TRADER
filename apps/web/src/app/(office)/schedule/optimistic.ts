@@ -10,7 +10,7 @@
 // written. Pure but for the cache it is handed.
 import type { Week, WeekShift } from "./schedule-view";
 
-export type Plan = { workDate: string; expectedStart: string; expectedEnd: string };
+type Plan = { workDate: string; expectedStart: string; expectedEnd: string };
 export type Change =
   | { kind: "update"; shift: WeekShift; to: Plan }
   | { kind: "remove"; shift: WeekShift }

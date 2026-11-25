@@ -196,7 +196,7 @@ const PAID = sql<number>`coalesce((
 
 // The company's today, which an invoice's status is read against. Under RLS the one
 // company visible is the caller's.
-export async function invoiceToday(tx: Tx, now: Date = new Date()): Promise<string> {
+async function invoiceToday(tx: Tx, now: Date = new Date()): Promise<string> {
   const [company] = await tx.select({ timezone: companies.timezone }).from(companies);
   if (company === undefined) throw new Error("the caller's company is not visible");
   return workDate(now, company.timezone);

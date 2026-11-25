@@ -121,13 +121,13 @@ export async function loadDay(tx: Tx, userId: string, workDate: string): Promise
   return dayOf(await loadDays(tx, workDate, workDate, [userId]), userId, workDate);
 }
 
-export type DayRefusal =
+type DayRefusal =
   // The day does not resolve: every issue of the failing stage.
   | { code: "schedule"; issues: Issue[] }
   // The write would change what admitted a clock-in already made on `shiftId`.
   | { code: "authorization"; shiftId: string };
 
-export type DayJudgement =
+type DayJudgement =
   { ok: true; resolved: ResolvedDay } | { ok: false; refusal: DayRefusal };
 
 export function judgeDay(day: Pick<Day, "shifts">): DayJudgement {
@@ -149,7 +149,7 @@ const time = z.string();
 const pair = z.tuple([z.uuid(), z.uuid()]);
 
 // eligibility.ts's `Issue`, on the wire.
-export const issueSchema = z.discriminatedUnion("code", [
+const issueSchema = z.discriminatedUnion("code", [
   z.strictObject({ code: z.literal("duplicate_shift_id"), shiftId: z.uuid() }),
   z.strictObject({ code: z.literal("invalid_interval"), shiftId: z.uuid() }),
   z.strictObject({ code: z.literal("duplicate_shift"), shiftIds: pair }),

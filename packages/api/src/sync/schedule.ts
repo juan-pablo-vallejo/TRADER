@@ -28,7 +28,7 @@ export async function scheduleEnforced(tx: Tx): Promise<boolean> {
   return company.enforced;
 }
 
-export type StartJudgement = { admitted: true; shiftId: string } | { admitted: false };
+type StartJudgement = { admitted: true; shiftId: string } | { admitted: false };
 
 export async function judgeStart(
   tx: Tx,

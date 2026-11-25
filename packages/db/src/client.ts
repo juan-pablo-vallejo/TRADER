@@ -1,5 +1,5 @@
-// The Drizzle client behind the driver seam. The driver comes from DATABASE_DRIVER (see
-// env.ts); `pg` is the only branch, deployed as well.
+// The Drizzle client over node-postgres, here and deployed: Neon's pooled endpoint is plain
+// Postgres over TCP on the Node runtime.
 // Lazy by design: nothing connects or validates at module load, so importing the package
 // never fails in a process that merely wants the types.
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -26,27 +26,23 @@ export function createDb(
   env: Record<string, string | undefined> = process.env,
   tuning: { minMax?: number; idleTimeoutMillis?: number } = {},
 ) {
-  // One parse: the driver, the connection and the pool's size come from one validated record.
-  const { driver, connection, poolMax } = parseDatabaseEnv(env);
-  switch (driver) {
-    case "pg": {
-      // A pool, not a single client: tests and the API run concurrent queries.
-      const pool = new Pool({
-        ...connection,
-        max: Math.max(poolMax, tuning.minMax ?? 0),
-        connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
-        ...(tuning.idleTimeoutMillis !== undefined && {
-          idleTimeoutMillis: tuning.idleTimeoutMillis,
-        }),
-      });
-      // An idle client whose server went away (a restart, Neon scaling to zero) emits `error`
-      // on the pool; with no listener Node treats it as uncaught and the process exits. The
-      // pool has already discarded the client, so logging is all there is to do.
-      pool.on("error", (error) => console.error(describePoolError(error)));
-      // The meter counts statements through the logger hook and does nothing else (meter.ts).
-      return drizzle({ client: pool, logger: statementLogger });
-    }
-  }
+  // One parse: the connection and the pool's size come from one validated record.
+  const { connection, poolMax } = parseDatabaseEnv(env);
+  // A pool, not a single client: tests and the API run concurrent queries.
+  const pool = new Pool({
+    ...connection,
+    max: Math.max(poolMax, tuning.minMax ?? 0),
+    connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+    ...(tuning.idleTimeoutMillis !== undefined && {
+      idleTimeoutMillis: tuning.idleTimeoutMillis,
+    }),
+  });
+  // An idle client whose server went away (a restart, Neon scaling to zero) emits `error` on
+  // the pool; with no listener Node treats it as uncaught and the process exits. The pool has
+  // already discarded the client, so logging is all there is to do.
+  pool.on("error", (error) => console.error(describePoolError(error)));
+  // The meter counts statements through the logger hook and does nothing else (meter.ts).
+  return drizzle({ client: pool, logger: statementLogger });
 }
 
 export type Db = ReturnType<typeof createDb>;

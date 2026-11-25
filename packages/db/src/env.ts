@@ -9,11 +9,6 @@ import { z } from "zod";
 const LOCAL_HOST = "127.0.0.1";
 const LOCAL_PORT = 5432;
 
-// `pg` is the only driver, deployed as well: Neon's pooled endpoint is plain Postgres over
-// TCP on the Node runtime. The seam stays
-// for a runtime that cannot open a socket; any other value is a validation error, not a
-// stub that fails later.
-const driverSchema = z.object({ DATABASE_DRIVER: z.enum(["pg"]).default("pg") });
 const urlSchema = z.object({ DATABASE_URL: z.string().min(1) });
 // Connections one server instance may hold. pg's own default, stated so it is a decision: a
 // deployment sizes it against the database's connection limit and its instance count.
@@ -26,10 +21,8 @@ const composeSchema = z.object({
   POSTGRES_DB: z.string().min(1),
 });
 
-export type DatabaseDriver = z.infer<typeof driverSchema>["DATABASE_DRIVER"];
-
 // Both shapes are what pg.Pool takes as its config and drizzle-kit takes as dbCredentials.
-export type DatabaseConnection =
+type DatabaseConnection =
   | { connectionString: string }
   | {
       host: string;
@@ -40,8 +33,7 @@ export type DatabaseConnection =
       ssl: false;
     };
 
-export type DatabaseEnv = {
-  driver: DatabaseDriver;
+type DatabaseEnv = {
   connection: DatabaseConnection;
   poolMax: number;
 };
@@ -54,15 +46,13 @@ const withoutBlanks = (env: Record<string, string | undefined>) =>
 // DATABASE_URL unset: all three compose variables are required.
 export function parseDatabaseEnv(env: Record<string, string | undefined>): DatabaseEnv {
   const clean = withoutBlanks(env);
-  const driver = driverSchema.parse(clean).DATABASE_DRIVER;
   const poolMax = poolSchema.parse(clean).DATABASE_POOL_MAX;
   if (clean.DATABASE_URL !== undefined) {
     const { DATABASE_URL } = urlSchema.parse(clean);
-    return { driver, poolMax, connection: { connectionString: DATABASE_URL } };
+    return { poolMax, connection: { connectionString: DATABASE_URL } };
   }
   const { POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB } = composeSchema.parse(clean);
   return {
-    driver,
     poolMax,
     connection: {
       host: LOCAL_HOST,
@@ -81,12 +71,6 @@ export function databaseConnection(
   env: Record<string, string | undefined> = process.env,
 ): DatabaseConnection {
   return parseDatabaseEnv(env).connection;
-}
-
-export function databaseDriver(
-  env: Record<string, string | undefined> = process.env,
-): DatabaseDriver {
-  return parseDatabaseEnv(env).driver;
 }
 
 // Refuses a deployed database. Tests commit fixtures and create and drop databases, and the
@@ -111,7 +95,7 @@ export function assertLocalDatabase(
 // sanctioned migrators it is: the deploy job (.github/workflows/ci.yml), or the owner
 // following the runbook (README.md). The local compose database and CI's container, reached through
 // POSTGRES_*, need no purpose.
-export const MIGRATE_PURPOSES = ["deploy", "owner"] as const;
+const MIGRATE_PURPOSES = ["deploy", "owner"] as const;
 
 export function assertMigrationPurpose(env: Record<string, string | undefined>): void {
   if ((env.DATABASE_URL ?? "") === "") return;

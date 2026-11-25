@@ -8,7 +8,7 @@ import { wallClock } from "./clock";
 
 export type Crew = Awaited<ReturnType<Api["overview"]["today"]["query"]>>;
 export type CrewPerson = Crew["people"][number];
-export type CrewJob = Crew["jobs"][number];
+type CrewJob = Crew["jobs"][number];
 
 const QUARTER = 15;
 // The last quarter hour of a day, and its last minute: a shift ends the day it starts.
@@ -49,7 +49,7 @@ export function coveringShift(
   return person.shifts.find((s) => s.start <= minute && minute < s.end) ?? null;
 }
 
-export type JobGroup = {
+type JobGroup = {
   job: CrewJob;
   // On the clock or on a break at this job now.
   here: { person: CrewPerson; status: CrewStatus }[];

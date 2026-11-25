@@ -47,7 +47,7 @@ export type Summary = {
   assignments: number;
 };
 
-export type RunOptions = {
+type RunOptions = {
   app: Db;
   bootstrap: (company: SeedCompany) => Promise<void>;
   // YYYY-MM-DD, a Monday: the first of ten working days.

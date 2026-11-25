@@ -25,7 +25,7 @@ import { type EdgeDependencies, guardRequest } from "./edge";
 export const ENDPOINT = "/api/trpc";
 export const MAX_BATCH_SIZE = 10;
 
-export type HandlerDependencies = {
+type HandlerDependencies = {
   getDb: () => Db;
   identity: IdentityAdapter;
   directory: IdentityDirectory;
@@ -71,7 +71,7 @@ export const logToStdout = (line: CallLine): void => {
 
 // One Server-Timing entry per call. A path is a router's dotted name (letters and dots,
 // core/report.ts's PATH), so it needs no escaping inside the quoted description.
-export const serverTiming = (calls: readonly CallLine[]): string =>
+const serverTiming = (calls: readonly CallLine[]): string =>
   calls
     .map((c) => `call;desc="${c.path}, ${c.statements} statements";dur=${c.ms}`)
     .join(", ");

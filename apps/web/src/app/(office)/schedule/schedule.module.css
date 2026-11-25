@@ -32,16 +32,14 @@
   gap: var(--space-3) var(--space-6);
 }
 .view,
-.days,
-.holder {
+.days {
   border: 0;
   margin: 0;
   padding: 0;
   min-width: 0;
 }
 .view legend,
-.days legend,
-.holder legend {
+.days legend {
   padding: 0;
   margin-bottom: var(--space-1);
 }
@@ -114,9 +112,7 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
-.cardNote {
-  color: var(--ink-secondary);
-}
+
 .count {
   margin: 0 0 var(--space-2);
   color: var(--ink-secondary);
@@ -198,9 +194,7 @@
 .overlap p {
   margin: 0 0 var(--space-2);
 }
-.meta {
-  color: var(--ink-secondary);
-}
+
 .preview ul,
 .copyList {
   margin: var(--space-1) 0 0;

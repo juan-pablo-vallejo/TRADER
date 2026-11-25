@@ -12,13 +12,13 @@ import type { Tx } from "../core/context";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden, unauthorized } from "../core/trpc";
 
-export type LockedTarget = {
+type LockedTarget = {
   id: string;
   role: AppUser["role"];
   deactivatedAt: Date | null;
 };
 
-export type RosterLock = {
+type RosterLock = {
   target: LockedTarget;
   // Active admins other than the target, as locked. Zero means the target is the last one.
   otherActiveAdmins: number;

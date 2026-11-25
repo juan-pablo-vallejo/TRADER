@@ -23,7 +23,7 @@ export async function lockActiveSelf(
   if (self.role !== role) throw forbidden();
 }
 
-export type LockedUser = {
+type LockedUser = {
   id: string;
   name: string;
   deactivatedAt: Date | null;

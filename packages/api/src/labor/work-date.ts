@@ -22,7 +22,7 @@ export function workDate(instant: Date, timeZone: string): string {
   return `${part("year").padStart(4, "0")}-${part("month")}-${part("day")}`;
 }
 
-export type DerivedSession = Session & { workDate: string };
+type DerivedSession = Session & { workDate: string };
 
 // A session belongs wholly to the date of its effective start: a shift from
 // 22:00 to 02:00 is four hours on the first day. Every event of the session takes that date.

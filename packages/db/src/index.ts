@@ -1,13 +1,5 @@
 export { createDb, type Db } from "./client";
-export {
-  assertLocalDatabase,
-  databaseConnection,
-  databaseDriver,
-  parseDatabaseEnv,
-  type DatabaseConnection,
-  type DatabaseDriver,
-  type DatabaseEnv,
-} from "./env";
+export { assertLocalDatabase, parseDatabaseEnv } from "./env";
 export { assertLoginRole, assertRuntimeRole } from "./guard";
 export { metered } from "./meter";
-export { SEED, seed, type SeedCompany, type SeedResult } from "./seed";
+export { seed, type SeedCompany } from "./seed";

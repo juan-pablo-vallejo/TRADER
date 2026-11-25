@@ -46,7 +46,6 @@ describe("deployEnvFaults", () => {
     ["DATABASE_URL", { DATABASE_URL: "db.example.test/neondb" }],
     ["DATABASE_URL", { DATABASE_URL: "https://db.example.test/neondb" }],
     ["DATABASE_POOL_MAX", { DATABASE_POOL_MAX: "0" }],
-    ["DATABASE_DRIVER", { DATABASE_DRIVER: "neon" }],
     ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", { NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "" }],
     ["CLERK_SECRET_KEY", { CLERK_SECRET_KEY: "pk_test_abc" }],
     ["CLERK_AUTHORIZED_PARTIES", { CLERK_AUTHORIZED_PARTIES: "" }],

@@ -59,7 +59,7 @@ export const inviteInput = z
     },
   );
 
-export type InviteInput = z.infer<typeof inviteInput>;
+type InviteInput = z.infer<typeof inviteInput>;
 
 export const inviteOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("invited"), user: rosterUser }),
@@ -75,7 +75,7 @@ export const inviteOutput = z.discriminatedUnion("result", [
   }),
 ]);
 
-export type InviteResult = z.infer<typeof inviteOutput>;
+type InviteResult = z.infer<typeof inviteOutput>;
 
 export async function rosterInvite(
   tx: Tx,

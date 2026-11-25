@@ -1,8 +1,7 @@
-/* The office data table: sticky header, 44 px rows, numbers right aligned,
-   no zebra striping; status words in ink-secondary, an exception as a pill; an Edit toggle per
-   row opening an editor row beneath it. Narrow: each row two lines — its name, then the other
-   cells joined by a middle dot, an empty one omitted — the editor inside the card, every
-   stretching control full width — the destructive button never. */
+/* The office data table: sticky header, 44 px rows, numbers right aligned, no zebra
+   striping; status words in ink-secondary. A row's record opens in a side panel. Narrow: each
+   row two lines — its name, then the other cells joined by a middle dot, an empty one
+   omitted — every stretching control full width, the destructive button never. */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -36,11 +35,6 @@
 }
 .attention {
   color: var(--attention);
-}
-.editor td {
-  height: auto;
-  padding: var(--space-4) var(--space-3);
-  background: var(--canvas);
 }
 
 /* A row's name as a link to that record's own page: the whole row height is its target.
@@ -103,37 +97,6 @@
   color: var(--accent);
 }
 
-/* A row's own buttons, where the row is acted on in place and not through an editor:
-   trailing, and wide enough for the sentence a destructive action shows. */
-.table td.act {
-  width: 1%;
-  min-width: 15rem;
-  padding-top: var(--space-2);
-  padding-bottom: var(--space-2);
-}
-.act p {
-  margin: 0;
-}
-
-/* Status pill: 24 pt, the tint plus the word. Office record states are words; only
-   an exception is a pill. */
-.pill {
-  display: inline-block;
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-primary);
-  white-space: nowrap;
-}
-.pillPending {
-  composes: pill;
-  background: color-mix(in srgb, var(--pending) 10%, var(--surface));
-  color: var(--pending);
-}
-.pillAttention {
-  composes: pill;
-  background: color-mix(in srgb, var(--attention) 10%, var(--surface));
-  color: var(--attention);
-}
-
 /* Inside an editor: sections 24 apart, and the footer where a destructive button stands last
    and alone, one hairline above it. */
 .section h3 {
@@ -156,7 +119,7 @@
 /* Rows the narrow way whenever the content column is under 720 px: every
    narrow viewport, and a wide one whose table would not fit beside the navigation. A container
    query cannot read a custom property either, so 720 is written here and nowhere else. The
-   cells flow as one line of text after the row's name; the toggle sits at the row's right. */
+   cells flow as one line of text after the row's name. */
 @container (max-width: 719px) {
   .table,
   .table thead,
@@ -179,16 +142,12 @@
     border-radius: var(--radius-card);
     margin-bottom: var(--space-2);
   }
-  .table tbody tr:not(.editor) {
+  .table tbody tr {
     min-height: var(--target);
     box-sizing: border-box;
     padding: var(--space-3) var(--space-4);
   }
-  /* Room at the right for the row's toggle, only where a row draws one. */
-  .table tbody tr:not(.editor):has(> td.toggle) {
-    padding-right: calc(var(--space-6) * 3 + var(--space-4));
-  }
-  .table tr:not(.editor) td {
+  .table tr td {
     display: inline;
     height: auto;
     border: 0;
@@ -198,13 +157,13 @@
     color: var(--ink-secondary);
     overflow-wrap: anywhere;
   }
-  .table tr:not(.editor) td:first-child {
+  .table tr td:first-child {
     display: block;
     font-size: 17px;
     line-height: 24px;
     color: var(--ink);
   }
-  .table tr:not(.editor) td[data-empty] {
+  .table tr td[data-empty] {
     display: none;
   }
   /* 48 pt of target around a one-line name link, without making the row taller: its own
@@ -217,41 +176,18 @@
   }
   /* This label rule and the separator rules below must keep equal specificity, the `number`
      one last: a :not() added to one and not the other drops the label from narrow rows. */
-  .table tr:not(.editor) td.number::before {
+  .table tr td.number::before {
     content: attr(data-label) " ";
   }
-  .table
-    tr:not(.editor)
-    td:not(:first-child):not(.toggle):not([data-empty])
-    ~ td:not(.toggle):not(.act):not([data-empty])::before {
+  .table tr td:not(:first-child):not([data-empty]) ~ td:not([data-empty])::before {
     content: "\00a0· ";
   }
   /* The row's buttons take the line beneath its text, full width of the card. */
-  .table tr:not(.editor) td.act {
-    display: block;
-    min-width: 0;
-    width: auto;
-    margin: var(--space-2) calc(-1 * (var(--space-6) * 3)) 0 0;
-  }
-  .table
-    tr:not(.editor)
-    td:not(:first-child):not(.toggle):not([data-empty])
-    ~ td.number:not(.act):not([data-empty])::before {
+
+  .table tr td:not(:first-child):not([data-empty]) ~ td.number:not([data-empty])::before {
     content: "\00a0· " attr(data-label) " ";
   }
-  .table tr:not(.editor) td.toggle {
-    position: absolute;
-    top: 0;
-    right: var(--space-2);
-  }
-  .editor {
-    margin-top: calc(-1 * var(--space-2) - var(--hairline));
-  }
-  .editor td {
-    display: block;
-    border: 0;
-    padding: var(--space-4);
-  }
+
   /* A group's heading is a line of its own, not a card; the totals are a card like a
      row, set apart; a cell's button is a line of the row's text with a full target. */
   .table tbody tr.group {
@@ -290,11 +226,11 @@
      of its own, its column's name at the left and its figure at the right, where the
      joined line of a plain table would run seven figures together. `important`: the
      separator rules above are longer selectors and would put their dot back. */
-  .table.lines tbody tr:not(.editor):not(.group),
+  .table.lines tbody tr:not(.group),
   .table.lines tfoot tr {
     padding-right: var(--space-4);
   }
-  .table.lines tr:not(.editor) td:not(:first-child):not([data-empty]) {
+  .table.lines tr td:not(:first-child):not([data-empty]) {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -302,13 +238,13 @@
     min-height: 32px;
     font-variant-numeric: tabular-nums;
   }
-  .table.lines tr:not(.editor) td:not(:first-child):not([data-empty])::before {
+  .table.lines tr td:not(:first-child):not([data-empty])::before {
     content: attr(data-label) !important;
     flex: none;
   }
   /* A day's line is the target, as tall as the density asks: its button takes the room
      beside the day's name, which stays the cell's own label. */
-  .table.lines tr:not(.editor) td:has(> .cellOpen) {
+  .table.lines tr td:has(> .cellOpen) {
     min-height: var(--target);
   }
   .table.lines .cellOpen {

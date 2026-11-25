@@ -32,7 +32,7 @@ export type ErrorReporter = {
   report(event: ErrorReport, detail?: ReportDetail): void | Promise<void>;
 };
 
-export type ReportWhere = {
+type ReportWhere = {
   source: "request" | "push_record";
   path: string | null | undefined;
   type: string | undefined;

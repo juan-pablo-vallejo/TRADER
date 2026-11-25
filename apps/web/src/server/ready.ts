@@ -23,7 +23,7 @@ import { sql } from "drizzle-orm";
 
 import { demoEnv } from "./clerk-demo";
 
-export type ReadyDependencies = {
+type ReadyDependencies = {
   getDb: () => Db;
   reporter: ErrorReporter;
   env: Record<string, string | undefined>;

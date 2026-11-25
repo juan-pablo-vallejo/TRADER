@@ -20,7 +20,7 @@ import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { SyncChip } from "../../ui/sync-chip";
 
 // Older than this, the schedule on the phone is said to be possibly out of date.
-export const STALE_MS = 60 * 60_000;
+const STALE_MS = 60 * 60_000;
 
 export default function Week() {
   const { t, language } = useStrings();

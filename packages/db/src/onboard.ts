@@ -17,7 +17,7 @@ const INT4_MAX = 2_147_483_647;
 const text = (max: number) => z.string().trim().min(1).max(max);
 const counter = z.coerce.number().int().min(1).max(INT4_MAX);
 
-export const onboardingSchema = z.strictObject({
+const onboardingSchema = z.strictObject({
   companyName: text(200),
   // An IANA zone this runtime knows; work_date is derived in it.
   timezone: z
@@ -39,7 +39,7 @@ export const onboardingSchema = z.strictObject({
 
 export type Onboarding = z.input<typeof onboardingSchema>;
 
-export type OnboardingResult = {
+type OnboardingResult = {
   currentUser: string;
   database: string;
   companyId: string;

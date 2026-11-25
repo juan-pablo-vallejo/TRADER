@@ -26,7 +26,7 @@ export const BUDGET_MS = 8_000;
 
 // One kind today. The envelope keeps the field so a later kind is a new member here and a
 // parser below, never a new wire shape.
-export const RECORD_KINDS = ["labor_event"] as const;
+const RECORD_KINDS = ["labor_event"] as const;
 type Kind = (typeof RECORD_KINDS)[number];
 
 // The envelope every record travels in: its id, what it is, the shape it was written in.
@@ -106,7 +106,7 @@ const code = z.string().regex(/^[a-z_]+$/);
 const kind = z.enum(RECORD_KINDS);
 const success = z.enum(["accepted", "duplicate"]);
 
-export const pushResult = z.union([
+const pushResult = z.union([
   z.strictObject({
     id: z.uuid(),
     kind: z.literal("labor_event"),
@@ -130,7 +130,7 @@ export const pushOutput = z.strictObject({
   results: z.array(pushResult),
 });
 
-export type PushOutput = z.infer<typeof pushOutput>;
+type PushOutput = z.infer<typeof pushOutput>;
 
 // A caller transaction (trpc.ts, inCallerTransaction): the protected sequence, then `body`.
 export type RunRecord = <T>(body: (tx: Tx, user: AppUser) => Promise<T>) => Promise<T>;

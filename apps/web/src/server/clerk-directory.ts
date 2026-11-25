@@ -47,7 +47,7 @@ export const ADMIT_TIMEOUT_MS = 5_000;
 // person's row locked: one deadline for every call a change makes, not one each.
 export const READDRESS_TIMEOUT_MS = 5_000;
 // What putting a failed change back may take, after it (H6).
-export const UNDO_TIMEOUT_MS = 3_000;
+const UNDO_TIMEOUT_MS = 3_000;
 
 const EXISTS = "form_identifier_exists";
 

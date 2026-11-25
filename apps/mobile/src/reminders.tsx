@@ -33,7 +33,7 @@ import { color } from "./theme";
 const KEY = "reminders";
 const CHANNEL = "shifts";
 
-export type RemindersSetting = "on" | "off" | null;
+type RemindersSetting = "on" | "off" | null;
 
 type Value = {
   // Null until the person has been asked.

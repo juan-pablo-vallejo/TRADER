@@ -6,7 +6,7 @@ import { LedgerInconsistentError, replay, type LaborEvent, type Replay } from ".
 
 export type Accounting = "eligible" | "voided";
 
-export type SessionAccounting = {
+type SessionAccounting = {
   rootEventId: string;
   accounting: Accounting;
   // Worked milliseconds that count: zero when voided.
@@ -37,7 +37,7 @@ export function sessionAccounting(ledger: readonly LaborEvent[]): {
 // Where one event stands against the live timeline: its session, and whether it is
 // what the session is made of — the source in effect for its root, a superseded one, or the
 // session's void. Every accepted event maps; one that does not means an inconsistent ledger.
-export type EventEffect = {
+type EventEffect = {
   sessionRootEventId: string;
   effect: "in_effect" | "superseded" | "void";
 };

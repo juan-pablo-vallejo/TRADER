@@ -118,7 +118,7 @@ export const ledgerOutput = z.strictObject({
   sessions: z.array(session),
 });
 
-export type LedgerOutput = z.infer<typeof ledgerOutput>;
+type LedgerOutput = z.infer<typeof ledgerOutput>;
 type LedgerEvent = z.infer<typeof event>;
 
 const compareIds = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);

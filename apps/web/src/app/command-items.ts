@@ -24,7 +24,7 @@ export const ASKS = {
   export: "/hours?do=export",
 } as const;
 
-export type Lists = {
+type Lists = {
   people?: readonly { id: string; name: string; deactivatedAt: Date | null }[];
   jobs?: readonly { id: string; name: string; customer: { name: string } }[];
   customers?: readonly { id: string; name: string }[];
@@ -89,7 +89,7 @@ export const folded = (text: string) =>
     .toLowerCase()
     .trim();
 
-export const SHOWN = 12;
+const SHOWN = 12;
 
 // What a query finds, best first. Nothing typed is the four actions. Otherwise every
 // typed word must be somewhere in the item's words; an item whose own name starts with

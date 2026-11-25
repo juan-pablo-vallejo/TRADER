@@ -9,7 +9,7 @@ import type { Tx } from "../core/context";
 import { serverClock } from "../core/clock";
 import type { LaborEvent } from "./fold";
 
-export type WorkerTimeline = {
+type WorkerTimeline = {
   events: LaborEvent[];
   // The newest receipt stamp committed for the worker, or null for a worker with no events.
   baselineStamp: Date | null;
@@ -73,7 +73,7 @@ export async function readWorkerEvents(tx: Tx, workerId: string): Promise<LaborE
 }
 
 // The newest receipt stamp among `events`, or null for none.
-export function newestStamp(events: readonly LaborEvent[]): Date | null {
+function newestStamp(events: readonly LaborEvent[]): Date | null {
   if (events.length === 0) return null;
   return new Date(Math.max(...events.map((e) => e.serverTimestamp.getTime())));
 }

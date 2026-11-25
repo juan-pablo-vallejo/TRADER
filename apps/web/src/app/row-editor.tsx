@@ -1,61 +1,11 @@
-// The row editor: a table row's Edit toggle and the editor row that
-// opens beneath it, plus the two pieces every editor is built from — a section and the footer
-// where a destructive button stands last and alone — and the destructive action itself, which
-// says what it will do before it does it.
+// The two pieces every editor is built from — a section, and the footer where a destructive
+// button stands last and alone — and the destructive action itself, which says what it will do
+// before it does it.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
 import { useStrings } from "./i18n";
 import table from "./table.module.css";
-
-const editorId = (rowId: string) => `editor-${rowId}`;
-
-// `label` names what the toggle opens when it is not an editor of the row's own fields, and
-// `closeLabel` what shuts it where "Close" would be read as an action on the row itself.
-export function RowToggle({
-  rowId,
-  open,
-  onToggle,
-  label,
-  closeLabel,
-}: {
-  rowId: string;
-  open: boolean;
-  onToggle: () => void;
-  label?: string;
-  closeLabel?: string;
-}) {
-  const { t } = useStrings();
-  return (
-    <td className={table.toggle}>
-      <button
-        type="button"
-        className={controls.textAction}
-        aria-expanded={open}
-        aria-controls={editorId(rowId)}
-        onClick={onToggle}
-      >
-        {open ? (closeLabel ?? t.close) : (label ?? t.edit)}
-      </button>
-    </td>
-  );
-}
-
-export function EditorRow({
-  rowId,
-  colSpan,
-  children,
-}: {
-  rowId: string;
-  colSpan: number;
-  children: ReactNode;
-}) {
-  return (
-    <tr className={table.editor} id={editorId(rowId)}>
-      <td colSpan={colSpan}>{children}</td>
-    </tr>
-  );
-}
 
 // A section of an editor; the heading is for a section holding more than one field.
 export function EditorSection({

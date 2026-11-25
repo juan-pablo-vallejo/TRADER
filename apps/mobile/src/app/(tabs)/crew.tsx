@@ -7,7 +7,7 @@
 // and every minute after, and never kept on the phone: when the server cannot be reached
 // the tab says so and shows nothing, because an hour-old "on the clock" read as current
 // is worse than no answer. Every write here is the office's own procedure
-// (`assignment.create`, `assignment.moveToday`, `job.update`), made with a connection.
+// (`assignment.create`, `assignment.moveToday`, `job.setLocation`), made with a connection.
 //
 // A status is named by the one function the office shares (`@trader/api/contract`,
 // crewStatus). The forms always carry an end time: `assignment.moveToday` answers
@@ -58,7 +58,7 @@ import { Button, Screen, text } from "../../ui/controls";
 import { Sheet } from "../../ui/sheet";
 
 // The radius a jobsite gets when its location is set from the phone.
-export const SET_RADIUS_M = 200;
+const SET_RADIUS_M = 200;
 
 const mint = createMinter((count) => Crypto.getRandomBytes(count));
 

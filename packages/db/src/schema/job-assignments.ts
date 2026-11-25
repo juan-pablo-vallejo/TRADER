@@ -21,8 +21,8 @@ import { workSessionEvents } from "./work-session-events";
 // Nothing that counts labor reads this table — not the fold or invoices; the push reads it
 // only where the company's schedule is enforced (api sync/schedule.ts). A row here widens no
 // read but one: the planned person sees that job's name and
-// address. Written by the office (api assignments/write.ts), read by `assignment.list` and
-// `assignment.mine`.
+// address. Written by the office (api assignments/write.ts), read by `assignment.week` and
+// by the phone's pull (api sync/pull.ts).
 //
 // work_date is the calendar day in companies.timezone as the office wrote it: a business key,
 // never derived from an instant. expected_start and expected_end are wall-clock times on that

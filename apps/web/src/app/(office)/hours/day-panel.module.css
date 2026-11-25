@@ -1,16 +1,5 @@
-/* The labor ledger's own layout: the lookup grid, the lines above the days, the gap between
-   one session and the next. The tables themselves are table.module.css. */
-.lookupGrid {
-  display: grid;
-  gap: 0 var(--space-3);
-}
-.explain {
-  margin: 0 0 var(--space-4);
-  color: var(--ink-secondary);
-}
-.heading {
-  margin: 0 0 var(--space-1);
-}
+/* The day panel's own layout: the lines above the day, the gap between one session and the
+   next. The tables themselves are table.module.css. */
 .line {
   margin: 0 0 var(--space-2);
   color: var(--ink-secondary);
@@ -34,9 +23,7 @@
   gap: var(--space-1) var(--space-2);
 }
 /* An entry a correction replaced: kept, and read as history. */
-.replaced td {
-  color: var(--ink-secondary);
-}
+
 /* Repair: the line of actions under a session or under the person, the editor that opens
    beneath it, and its fields — one column narrow, two wide. */
 .actions {
@@ -64,9 +51,6 @@
 }
 
 @media (min-width: 768px) {
-  .lookupGrid {
-    grid-template-columns: 2fr 1fr 1fr;
-  }
 }
 /* Two to a row only where each control keeps its whole date and time beside the navigation.
    `minmax(0, …)`: a control's own width must never widen the page. */

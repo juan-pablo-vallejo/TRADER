@@ -104,8 +104,8 @@ export function useClerkProvider(): Provider {
   };
 }
 
-export const STAND_IN_CODE = "123456";
-export const STAND_IN_EXPIRED = "000000";
+const STAND_IN_CODE = "123456";
+const STAND_IN_EXPIRED = "000000";
 
 const who = (to: SignInIdentifier): DevWho =>
   to.kind === "phone" ? { phone: to.phone } : { email: to.email };

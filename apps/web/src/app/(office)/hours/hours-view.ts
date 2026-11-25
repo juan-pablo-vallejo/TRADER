@@ -22,7 +22,7 @@ export const MAX_RANGE_DAYS = 31;
 // this week, everything. `person` narrows the screen to one person's hours (their id), as
 // the link in their panel on People does.
 export const HOURS_FILTERS = { range: "this", from: "", to: "", flagged: "", person: "" };
-export type HoursFilters = typeof HOURS_FILTERS;
+type HoursFilters = typeof HOURS_FILTERS;
 
 // A person and a day in the address: the day panel a cell opens. Both or neither.
 export const DAY_FILTERS = { who: "", day: "" };

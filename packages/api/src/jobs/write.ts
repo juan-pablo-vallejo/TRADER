@@ -60,7 +60,7 @@ export const setStatusInput = z.strictObject({
   status: z.enum(jobStatus.enumValues),
 });
 
-export type SetStatusInput = z.infer<typeof setStatusInput>;
+type SetStatusInput = z.infer<typeof setStatusInput>;
 
 export const createOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("created"), job }),

@@ -12,24 +12,7 @@
   margin: 0 0 var(--space-4);
   color: var(--ink-secondary);
 }
-.state {
-  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
-  color: var(--ink);
-}
-.explain + .links {
-  margin: calc(-1 * var(--space-4)) 0 var(--space-2);
-}
-.links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--target);
-}
-.section {
-  margin: 0 0 var(--space-6);
-}
-.section h2 {
-  margin: 0 0 var(--space-1);
-}
+
 .total {
   margin: 0 0 var(--space-4);
   font-variant-numeric: tabular-nums;
@@ -47,9 +30,6 @@
 }
 
 @media (min-width: 768px) {
-  .links a {
-    min-height: var(--row);
-  }
   .lookupGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

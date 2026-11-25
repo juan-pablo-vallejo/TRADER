@@ -82,7 +82,8 @@ async function office(tx: Tx) {
   const admin = await boundIn(tx, day.companyId, "admin");
   const list = async () => {
     await asTenant(tx, day.companyId);
-    return appCallerIn(tx, admin.who).assignment.list(WEEK);
+    return (await appCallerIn(tx, admin.who).assignment.week({ weekStart: WEEK.from }))
+      .shifts;
   };
   const plan = async (userId: string, jobId: string) => {
     await asTenant(tx, day.companyId);

@@ -124,7 +124,7 @@ export const EARLY_MINUTES = 15;
 const minutes = (wall: string) =>
   Number(wall.slice(0, 2)) * 60 + Number(wall.slice(3, 5));
 
-export type Offer =
+type Offer =
   // A shift the server would admit a start on now.
   | { kind: "eligible"; shift: Shift }
   // Shifts today, none of them now: the next one's start, if any is left.

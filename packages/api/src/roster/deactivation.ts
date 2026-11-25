@@ -23,7 +23,7 @@ export const reactivateOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("unchanged"), user: rosterUser }),
 ]);
 
-export type ReactivateResult = z.infer<typeof reactivateOutput>;
+type ReactivateResult = z.infer<typeof reactivateOutput>;
 
 export async function deactivate(
   tx: Tx,

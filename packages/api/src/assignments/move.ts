@@ -45,7 +45,7 @@ export const endEarlyInput = z.strictObject({
   expectedEnd: wallTime,
 });
 
-export type EndEarlyInput = z.infer<typeof endEarlyInput>;
+type EndEarlyInput = z.infer<typeof endEarlyInput>;
 
 export const endEarlyOutput = z.union([
   z.strictObject({ result: z.enum(["updated", "unchanged"]) }),
@@ -106,7 +106,7 @@ export const moveTodayInput = z
     path: ["expectedEnd"],
   });
 
-export type MoveTodayInput = z.infer<typeof moveTodayInput>;
+type MoveTodayInput = z.infer<typeof moveTodayInput>;
 
 const moved = z.strictObject({
   id: z.uuid(),

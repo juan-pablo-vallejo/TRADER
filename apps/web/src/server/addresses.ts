@@ -59,7 +59,7 @@ export function getAppUrl(env: Env): string | null {
   return first === undefined ? null : `${first.origin}/get`;
 }
 
-export const isApiPath = (pathname: string): boolean =>
+const isApiPath = (pathname: string): boolean =>
   pathname === "/api" || pathname.startsWith("/api/") || pathname.startsWith("/trpc");
 
 export function addressFor(

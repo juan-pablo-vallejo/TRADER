@@ -8,8 +8,7 @@ import { expect, test, type Page } from "@playwright/test";
 const ADMIN = "office@demo.invalid";
 const WORKER = "luis.herrera@demo.invalid";
 const FIXTURE_CUSTOMER = "Browser Suite Customer";
-// Every screen of the office's menu. `/profile` is an old address that answers with
-// Settings, and is asked for once below.
+// Every screen of the office's menu.
 const SCREENS = [
   "/today",
   "/schedule",
@@ -64,8 +63,13 @@ test("every office screen opens for an admin, with nothing thrown or refused", a
     expect(wrong, `${screen}: nothing went wrong`).toEqual([]);
   }
 
+  // An address that is no screen is answered inside the office, as not found.
   await page.goto("/profile");
-  await page.waitForURL((url) => url.pathname === "/settings");
+  await expect(
+    page.getByRole("heading", { name: "There is no page at this address." }),
+  ).toBeVisible();
+  // That 404 was asked for: it is not something that went wrong.
+  wrong.length = 0;
 
   // One job, by the first link to one on the list.
   await page.goto("/jobs");

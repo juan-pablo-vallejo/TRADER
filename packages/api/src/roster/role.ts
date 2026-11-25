@@ -18,7 +18,7 @@ export const setRoleInput = z.strictObject({
   role: z.enum(ROLES),
 });
 
-export type SetRoleInput = z.infer<typeof setRoleInput>;
+type SetRoleInput = z.infer<typeof setRoleInput>;
 
 export const changeOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("updated"), user: rosterUser }),

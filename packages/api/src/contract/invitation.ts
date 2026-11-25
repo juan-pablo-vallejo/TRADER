@@ -32,7 +32,7 @@ export const invitationSubject = (company: string): string =>
 // `verified` once the person has signed in, which is the proof that an address is theirs;
 // `sent` when an invitation went to an address they still have; `not_sent` otherwise.
 export const INVITATION_STATUSES = ["not_sent", "sent", "verified"] as const;
-export type InvitationStatus = (typeof INVITATION_STATUSES)[number];
+type InvitationStatus = (typeof INVITATION_STATUSES)[number];
 
 export function invitationStatus(person: {
   // Whether a sign-in has been bound to the person's roster row.

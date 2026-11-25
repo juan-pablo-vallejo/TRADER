@@ -51,7 +51,7 @@ const ABOUT_THE_FIELD: ReadonlySet<Note> = new Set<Note>([
   "bad_address",
 ]);
 // How long Clerk's script may take before the form says it has not come.
-export const CLERK_LOAD_WAIT_MS = 10_000;
+const CLERK_LOAD_WAIT_MS = 10_000;
 
 // Clerk's script, given its time: false while it may still come, true once it has failed
 // or the wait is over with nothing loaded. Shared with the Google return (sso-callback).

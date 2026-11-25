@@ -64,7 +64,7 @@ export type Target = {
   drop: () => Promise<void>;
 };
 
-export type PrepareOptions = {
+type PrepareOptions = {
   env: Env;
   name: string;
   reset: boolean;

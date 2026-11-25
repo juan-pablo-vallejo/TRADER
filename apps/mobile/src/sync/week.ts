@@ -16,8 +16,8 @@ const ORDER: readonly Flag[] = [
   "unscheduled",
 ];
 
-export type HoursSession = { session: Session; flags: Flag[] };
-export type HoursDay = { day: string; workedMs: number; sessions: HoursSession[] };
+type HoursSession = { session: Session; flags: Flag[] };
+type HoursDay = { day: string; workedMs: number; sessions: HoursSession[] };
 
 // A session's flags: those of the person's own entries on that job from its clock-in to
 // its clock-out (to the end of time while it is open). Each flag once.

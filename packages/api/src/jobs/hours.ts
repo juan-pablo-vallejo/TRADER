@@ -15,7 +15,7 @@ import { companyZone, readDayHours } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
 import { job, listJobs } from "./list";
 
-export const jobWithHours = job.extend({
+const jobWithHours = job.extend({
   // Integer hundredths of an hour, as everywhere.
   hours: z.strictObject({
     week: z.number().int().nonnegative(),

@@ -12,7 +12,7 @@ import { useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
 import { useStrings } from "../i18n";
 import styles from "./home.module.css";
 
-export type GalleryPhoto = { image: StaticImageData; alt: string };
+type GalleryPhoto = { image: StaticImageData; alt: string };
 
 export function Gallery({ photos }: { photos: GalleryPhoto[] }) {
   const { t } = useStrings();

@@ -1,21 +1,5 @@
-/* The People screen's own layout: the invite form's grid and the editor's two columns on wide.
-   The data table itself is table.module.css. */
-.editorGrid {
-  display: grid;
-  gap: var(--space-6);
-}
-.history {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.history li {
-  display: flex;
-  justify-content: space-between;
-  min-height: var(--row);
-  align-items: center;
-  border-bottom: var(--hairline) solid var(--border);
-}
+/* The People screen's own layout: the invite form's grid, and a person's panel. The data
+   table itself is table.module.css. */
 .inviteGrid {
   display: grid;
   gap: 0 var(--space-3);
@@ -39,9 +23,6 @@
 
 @media (min-width: 768px) {
   .inviteGrid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .editorGrid {
     grid-template-columns: 1fr 1fr;
   }
 }

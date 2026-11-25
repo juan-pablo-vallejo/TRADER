@@ -16,13 +16,13 @@ import { stampsOn } from "./scope";
 
 // Today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
-export const WINDOW_DAYS = 14;
+const WINDOW_DAYS = 14;
 
 export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
 
 // The caller's shifts are read from the Monday of the current week for this many days: this
 // week whole, and the next, so Sunday evening already shows Monday.
-export const SHIFT_DAYS = 14;
+const SHIFT_DAYS = 14;
 
 // YYYY-MM-DD minus `days`, on the calendar (no zone: a date is a date).
 function daysBefore(date: string, days: number): string {

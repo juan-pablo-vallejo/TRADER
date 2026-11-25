@@ -1,5 +1,5 @@
-export { createContext, type Context } from "./core/context";
-export type { CallLine, CallObserver, Refusal } from "./core/observe";
+export { createContext } from "./core/context";
+export type { CallLine, Refusal } from "./core/observe";
 export type { ClosedCompany, DemoDoor } from "./core/demo-door";
 export {
   createDevIdentityAdapter,
@@ -26,26 +26,7 @@ export {
   type ErrorReporter,
   type ReportDetail,
 } from "./core/report";
-export type { AppUser } from "./core/resolve-user";
 export { appRouter, type AppRouter } from "./router";
-export {
-  invalidConfigVars,
-  STATES,
-  type ServiceState,
-  type StatusClient,
-} from "./core/status";
-export {
-  createCallerFactory,
-  protectedProcedure,
-  publicProcedure,
-  roleProcedure,
-  router,
-  syncProcedure,
-} from "./core/trpc";
-export {
-  type Mail,
-  type Mailer,
-  type MailResult,
-  restrictedTo,
-  unconfiguredMailer,
-} from "./core/mailer";
+export { invalidConfigVars } from "./core/status";
+export { createCallerFactory, router } from "./core/trpc";
+export { type Mail, type Mailer, restrictedTo, unconfiguredMailer } from "./core/mailer";

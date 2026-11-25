@@ -143,7 +143,7 @@ export const repairOutput = z.discriminatedUnion("result", [
   }),
 ]);
 
-export type RepairResult = z.infer<typeof repairOutput>;
+type RepairResult = z.infer<typeof repairOutput>;
 type Acknowledgement = z.infer<typeof acknowledgement>;
 
 const rejected = (

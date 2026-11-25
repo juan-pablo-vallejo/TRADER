@@ -20,7 +20,7 @@ type Env = Record<string, string | undefined>;
 
 export const RESEND_URL = "https://api.resend.com/emails";
 // Inside invoice.send's transaction, which holds the invoice's row: short.
-export const MAIL_TIMEOUT_MS = 8_000;
+const MAIL_TIMEOUT_MS = 8_000;
 
 const blank = (value: string | undefined) => value === undefined || value.trim() === "";
 

@@ -19,7 +19,7 @@ import { createPortal } from "react-dom";
 import controls from "./controls.module.css";
 import styles from "./toast.module.css";
 
-export const TOAST_MS = 7000;
+const TOAST_MS = 7000;
 
 // Where the toast is drawn: the last modal panel opened, or the page.
 function host(): Element {

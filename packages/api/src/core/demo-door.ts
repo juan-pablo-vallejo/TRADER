@@ -59,7 +59,7 @@ export const demoSignInOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("refused") }),
 ]);
 
-export type DemoSignInResult = z.infer<typeof demoSignInOutput>;
+type DemoSignInResult = z.infer<typeof demoSignInOutput>;
 
 const REFUSED: DemoSignInResult = { result: "refused" };
 

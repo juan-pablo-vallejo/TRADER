@@ -13,7 +13,7 @@ import { type ClockState, wallClock } from "./clock";
 
 type Shift = PullOutput["shifts"][number];
 
-export type Reminder = {
+type Reminder = {
   // Stable for one shift and one kind at one time: scheduling the same set twice changes
   // nothing, and a shift whose time the office moved is a different reminder.
   id: string;
@@ -31,7 +31,7 @@ export type Reminder = {
 };
 
 // How long after its time a reminder is still left for the phone to deliver.
-export const LATE_MS = 15 * 60_000;
+const LATE_MS = 15 * 60_000;
 
 // iOS keeps 64 pending notifications for an app and silently drops the rest. Two weeks of
 // shifts is far under it; the cap is here so a strange schedule cannot starve the nearest.

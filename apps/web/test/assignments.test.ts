@@ -32,16 +32,16 @@ const as = (email: string) => ({
   [DEV_EMAIL_HEADER]: email,
 });
 
-const WEEK = { from: "2026-11-16", to: "2026-11-22" };
+const WEEK = { weekStart: "2026-11-16" };
 
 describe("assignments through the route handler", () => {
   it("answers 401 anonymous and 403 as a worker, never cached", async () => {
-    const anonymous = await query(GET, "assignment.list", { input: WEEK });
+    const anonymous = await query(GET, "assignment.week", { input: WEEK });
     expect(anonymous.status).toBe(401);
     expect(anonymous.headers.get("cache-control")).toBe("no-store");
     const worker = await invitation(owner);
     try {
-      const r = await query(GET, "assignment.list", {
+      const r = await query(GET, "assignment.week", {
         input: WEEK,
         headers: as(worker.email),
       });
@@ -64,7 +64,7 @@ describe("assignments through the route handler", () => {
     }
   });
 
-  it("plans a week by POST, lists it by GET with the flag, and shows the worker their own", async () => {
+  it("plans a week by POST and reads it by GET with the flag", async () => {
     const email = `painter-${admin.run}@web.test`;
     const [painter] = await owner
       .insert(users)
@@ -101,12 +101,13 @@ describe("assignments through the route handler", () => {
       days: sent.map((d) => ({ ...d, result: "created" })),
     });
 
-    const list = await query(GET, "assignment.list", {
+    const list = await query(GET, "assignment.week", {
       input: WEEK,
       headers: as(admin.email),
     });
     expect(list.status).toBe(200);
-    const rows = list.body.result?.data.json as Record<string, unknown>[];
+    const rows = (list.body.result?.data.json as { shifts: Record<string, unknown>[] })
+      .shifts;
     expect(rows.map((r) => r.workDate)).toEqual(days);
     // Planned, and the office is told the worker may clock in there.
     expect(rows[0]).toMatchObject({
@@ -117,23 +118,5 @@ describe("assignments through the route handler", () => {
       mayClockIn: true,
       blockedBy: null,
     });
-
-    const mine = await query(GET, "assignment.mine", { input: WEEK, headers: as(email) });
-    expect(mine.status).toBe(200);
-    const own = mine.body.result?.data.json as Record<string, unknown>[];
-    expect(own).toHaveLength(5);
-    expect(own[0]).toEqual({
-      id: rows[0]!.id,
-      workDate: "2026-11-16",
-      expectedStart: "07:00",
-      expectedEnd: "15:30",
-      job: { id: job!.id, name: "Porch", address: "1 Main St" },
-    });
-    // The admin planned nobody on themselves.
-    const none = await query(GET, "assignment.mine", {
-      input: WEEK,
-      headers: as(admin.email),
-    });
-    expect(none.body.result?.data.json).toEqual([]);
   });
 });

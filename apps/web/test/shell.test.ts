@@ -73,7 +73,6 @@ describe("the three layouts", () => {
       "people",
       "today",
       "settings",
-      "profile",
     ]) {
       expect(existsSync(at(`(office)/${screen}/page.tsx`)), screen).toBe(true);
     }

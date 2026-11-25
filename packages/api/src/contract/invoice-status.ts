@@ -18,7 +18,7 @@ export const INVOICE_STATUSES = [
 ] as const;
 export type InvoiceStatus = (typeof INVOICE_STATUSES)[number];
 
-export type InvoiceFacts = {
+type InvoiceFacts = {
   // Null until issued.
   number: number | null;
   voided: boolean;

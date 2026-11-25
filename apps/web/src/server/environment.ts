@@ -5,8 +5,8 @@
 // (deploy-env.ts).
 type Env = Record<string, string | undefined>;
 
-export const TRADER_ENVIRONMENTS = ["staging", "production"] as const;
-export type TraderEnvironment = (typeof TRADER_ENVIRONMENTS)[number];
+const TRADER_ENVIRONMENTS = ["staging", "production"] as const;
+type TraderEnvironment = (typeof TRADER_ENVIRONMENTS)[number];
 
 export function traderEnvironment(env: Env): TraderEnvironment | null {
   const value = env.TRADER_ENVIRONMENT ?? "";

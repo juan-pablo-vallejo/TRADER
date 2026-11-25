@@ -19,14 +19,14 @@ import type { Session } from "./session";
 import { deviceStore } from "./store/device";
 
 // What the phone's lock is called on it: an iPhone's face or finger, any Android's.
-export type KeyName = "faceId" | "touchId" | "fingerprint";
+type KeyName = "faceId" | "touchId" | "fingerprint";
 
-export type KeySignIn =
+type KeySignIn =
   | { ok: true; session: Session }
   // `cancelled`: the person closed the system's sheet, which says nothing.
   | { ok: false; cancelled: boolean };
 
-export type Biometrics = {
+type Biometrics = {
   name: KeyName;
   availability(): Promise<Unavailable | null>;
   // A key for whoever is signed in now; false when it was not made (cancelled, refused).

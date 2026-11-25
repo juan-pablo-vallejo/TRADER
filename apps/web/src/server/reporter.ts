@@ -18,7 +18,7 @@ import { toSentryEvent } from "./sentry-event";
 
 const FLUSH_TIMEOUT_MS = 2_000;
 
-export type ReporterDependencies = {
+type ReporterDependencies = {
   // Whether a Sentry address is configured now; read per report, never at module load.
   configured: () => boolean;
   send: (event: Event) => Promise<void>;

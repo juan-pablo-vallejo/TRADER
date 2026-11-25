@@ -33,18 +33,16 @@ export function offersPasskey(input: {
 }
 
 // Why a passkey was not added, removed or used.
-export const PASSKEY_FAILURES = [
+export type PasskeyFailure =
   // Clerk wants a sign-in more recent than this one.
-  "sign_in_again",
+  | "sign_in_again"
   // The person closed the browser's sheet: nothing happened, and nothing is wrong.
-  "cancelled",
+  | "cancelled"
   // This device already holds one for them.
-  "exists",
+  | "exists"
   // The browser, or this address, cannot do passkeys.
-  "unsupported",
-  "failed",
-] as const;
-export type PasskeyFailure = (typeof PASSKEY_FAILURES)[number];
+  | "unsupported"
+  | "failed";
 
 const BY_CODE: Record<string, PasskeyFailure> = {
   session_reverification_required: "sign_in_again",

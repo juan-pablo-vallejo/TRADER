@@ -12,7 +12,7 @@ import type { ErrorEvent, Event, NodeOptions } from "@sentry/nextjs";
 import { traderEnvironment } from "./environment";
 
 // The reporter's own events carry this prefix; no other message is ever sent.
-export const MESSAGE_PREFIX = "trader_error";
+const MESSAGE_PREFIX = "trader_error";
 
 // An ErrorReport's fields are already held to these alphabets by the API (core/report.ts);
 // they are checked again here because this is the last code before the network.

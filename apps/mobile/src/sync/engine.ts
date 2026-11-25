@@ -33,7 +33,7 @@ const within = <T>(call: () => Promise<T>, ms: number): Promise<T> =>
 // A record stuck `syncing` is reclaimed after two minutes.
 export const RECLAIM_MS = 2 * 60_000;
 // The server takes at most this many records in a push (its MAX_RECORDS).
-export const BATCH = 100;
+const BATCH = 100;
 
 export const SNAPSHOT_KEY = "snapshot";
 // The pull's shape as this build reads it. Raise it in the commit that changes what a pull

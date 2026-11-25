@@ -1,7 +1,5 @@
-// The weekly schedule. The writers and the office reads are
-// admin only, at the gate. What a shift
-// may name is judged inside each writer. `mine` admits
-// any active user and takes no person: it answers with the caller's own shifts.
+// The weekly schedule. The writers and the office reads are admin only, at the gate. What a
+// shift may name is judged inside each writer.
 import {
   confirmCopy,
   copyConfirmInput,
@@ -13,17 +11,7 @@ import {
   previewCopy,
   undoCopy,
 } from "../assignments/copy";
-import {
-  listAssignments,
-  listInput,
-  listOutput,
-  mineInput,
-  mineOutput,
-  ownAssignments,
-  weekAssignments,
-  weekInput,
-  weekOutput,
-} from "../assignments/list";
+import { weekAssignments, weekInput, weekOutput } from "../assignments/list";
 import {
   endEarlyInput,
   endEarlyOutput,
@@ -43,21 +31,13 @@ import {
   updateInput,
   updateOutput,
 } from "../assignments/write";
-import { protectedProcedure, roleProcedure, router } from "../core/trpc";
+import { roleProcedure, router } from "../core/trpc";
 
 export const assignmentRouter = router({
-  list: roleProcedure("admin")
-    .input(listInput)
-    .output(listOutput)
-    .query(({ ctx, input }) => listAssignments(ctx.tx, input)),
   week: roleProcedure("admin")
     .input(weekInput)
     .output(weekOutput)
     .query(({ ctx, input }) => weekAssignments(ctx.tx, input)),
-  mine: protectedProcedure
-    .input(mineInput)
-    .output(mineOutput)
-    .query(({ ctx, input }) => ownAssignments(ctx.tx, ctx.user, input)),
   create: roleProcedure("admin")
     .input(createInput)
     .output(createOutput)

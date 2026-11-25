@@ -23,12 +23,7 @@ const RANK: Record<ServiceState, number> = {
 
 type Platform = (typeof PLATFORMS)[number];
 
-export const CONFIG_VARS = [
-  "TRADER_SYNC_MODE",
-  "TRADER_MIN_BUILD_IOS",
-  "TRADER_MIN_BUILD_ANDROID",
-] as const;
-type ConfigVar = (typeof CONFIG_VARS)[number];
+type ConfigVar = "TRADER_SYNC_MODE" | "TRADER_MIN_BUILD_IOS" | "TRADER_MIN_BUILD_ANDROID";
 const MIN_BUILD: Record<Platform, ConfigVar> = {
   ios: "TRADER_MIN_BUILD_IOS",
   android: "TRADER_MIN_BUILD_ANDROID",
@@ -38,7 +33,7 @@ const MIN_BUILD: Record<Platform, ConfigVar> = {
 // native build number, a positive integer increasing within its platform; `z.int()` is bounded
 // to safe integers.
 export type StatusClient = z.infer<typeof statusInput>;
-export type ProtocolRange = { min: number; max: number };
+type ProtocolRange = { min: number; max: number };
 
 const MODES = ["read_only", "paused"] as const;
 const BUILD = /^[1-9][0-9]{0,14}$/;
@@ -55,7 +50,7 @@ function minimumBuild(value: string | undefined): number | null {
   return Number.isSafeInteger(n) ? n : null;
 }
 
-// The kill-switch variables that do not parse, by name, in CONFIG_VARS order. Also read at
+// The kill-switch variables that do not parse, by name, in the order below. Also read at
 // start by the deployment's environment check (apps/web, deploy-env.ts), which refuses to
 // start on any; a running server that meets one answers `paused` below.
 export function invalidConfigVars(env: Record<string, string | undefined>): ConfigVar[] {

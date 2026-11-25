@@ -22,9 +22,6 @@
 // One person's shift on one day. `start` and `end` are HH:MM on a 24-hour clock.
 export type Shift = { id: string; jobId: string; start: string; end: string };
 
-// HH:MM, the start included and the end excluded.
-export type Window = { start: string; end: string };
-
 export type Issue =
   | { code: "duplicate_shift_id"; shiftId: string }
   // The end is not after the start: an empty shift, or one across midnight.
@@ -34,7 +31,7 @@ export type Issue =
   // Two shifts share the time from `start` to `end`.
   | { code: "overlap"; shiftIds: [string, string]; start: string; end: string };
 
-export type Segment = { start: string; end: string; shiftId: string; jobId: string };
+type Segment = { start: string; end: string; shiftId: string; jobId: string };
 
 export type ResolvedDay = {
   result: "resolved";
@@ -163,7 +160,7 @@ export function resolveDay(shifts: readonly Shift[]): DayResolution {
 // How long before the next shift a start is admitted.
 export const EARLY_MINUTES = 15;
 
-export type StartAdmission =
+type StartAdmission =
   // The start falls in this shift.
   | { result: "scheduled"; shiftId: string; jobId: string }
   // It falls in none, and this one starts next, `minutesEarly` from now: 1 to 15.

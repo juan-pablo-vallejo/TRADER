@@ -5,7 +5,7 @@
 const PUBLISHABLE_KEY = /^pk_(test|live)_\S+$/;
 const SECRET_KEY = /^sk_(test|live)_\S+$/;
 
-export type ClerkEnv = {
+type ClerkEnv = {
   publishableKey: string;
   secretKey: string;
   // The origins a session token may have been issued to (Clerk, `authorizedParties`): the

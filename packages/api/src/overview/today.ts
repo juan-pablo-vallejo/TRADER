@@ -117,7 +117,7 @@ export const todayOutput = z.strictObject({
   }),
 });
 
-export type TodayOutput = z.infer<typeof todayOutput>;
+type TodayOutput = z.infer<typeof todayOutput>;
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 

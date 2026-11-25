@@ -14,7 +14,7 @@ type Holder = { [KEY]?: Db };
 // may batch, since each holds a connection while it runs, and idle clients closed after five
 // seconds. attachDatabasePool lets Vercel keep a function alive until an idle client is
 // closed, rather than suspend it holding one; outside Vercel it does nothing.
-export const IDLE_TIMEOUT_MS = 5_000;
+const IDLE_TIMEOUT_MS = 5_000;
 
 export function serverDb(env: Record<string, string | undefined>): Db {
   const db = createDb(env, {

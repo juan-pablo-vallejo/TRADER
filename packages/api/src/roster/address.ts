@@ -63,7 +63,7 @@ export const addressOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("repaired"), user: rosterUser }),
   z.strictObject({ result: z.literal("rejected"), code: z.enum(REFUSALS) }),
 ]);
-export type AddressResult = z.infer<typeof addressOutput>;
+type AddressResult = z.infer<typeof addressOutput>;
 
 type Change =
   | { userId: string; field: "email"; value: string | null }

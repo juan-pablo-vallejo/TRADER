@@ -40,7 +40,7 @@ export type ViolationCode =
   | "void_target_not_started"
   | "already_voided";
 
-export type Violation = {
+type Violation = {
   code: ViolationCode;
   // The row whose values are in effect where the timeline breaks: an event, or the winning
   // correction standing in for it. Never the root a correction replaced.
@@ -60,7 +60,7 @@ export class LedgerInconsistentError extends Error {
 // One instant per event for ordering, intervals and work date: the time it was captured with,
 // flagged or not (invariant 3). A suspicious time is flagged for the office, never replaced
 // by the receipt.
-export const effectiveAt = (e: LaborEvent): Date => e.clientTimestamp;
+const effectiveAt = (e: LaborEvent): Date => e.clientTimestamp;
 
 const compareIds = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 

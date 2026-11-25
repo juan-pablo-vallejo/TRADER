@@ -23,7 +23,7 @@ type WithoutId<T> = T extends unknown ? Omit<T, "id"> : never;
 export type Unminted = WithoutId<Operation>;
 
 // The most one call takes (labor/repair.ts).
-export const MAX_OPERATIONS = 20;
+const MAX_OPERATIONS = 20;
 
 type Positional = "started" | "paused" | "resumed" | "ended";
 export type AddedType = Exclude<Positional, "started">;

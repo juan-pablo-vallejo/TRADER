@@ -40,11 +40,11 @@ export type Words = Record<Language, string>;
 // A photo of their own work, with what it shows.
 export type Photo = { image: StaticImageData; alt: Words };
 // One job twice: as they found it or mid-work, and finished. `job` names it under the two.
-export type Pair = { job: Words; before: Photo; after: Photo };
+type Pair = { job: Words; before: Photo; after: Photo };
 // One of the four things a customer checks first: the large line, and the small one under it.
-export type Fact = { figure: Words; label: Words };
+type Fact = { figure: Words; label: Words };
 
-export type HomeContent = {
+type HomeContent = {
   name: string;
   // As a contract names them.
   legalName: string;

@@ -14,7 +14,7 @@ import type { AppUser } from "../core/resolve-user";
 import { unauthorized } from "../core/trpc";
 import type { JobPlace } from "./reasons";
 
-export type PushScope = {
+type PushScope = {
   // The caller's role as locked now, never the resolved one: a change committed since the
   // record's resolution is seen.
   role: Role;

@@ -39,7 +39,7 @@ export type LaborRejection =
   // worker's admits on that job at that minute. Nothing is written; they ask the office.
   | "not_scheduled";
 
-export type LaborResult =
+type LaborResult =
   | { result: "accepted" | "duplicate"; ack: z.infer<typeof laborAck> }
   | { result: "rejected"; code: LaborRejection; conflictingId?: string };
 

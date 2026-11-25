@@ -22,7 +22,7 @@ type Env = Record<string, string | undefined>;
 
 const CLERK_API = "https://api.clerk.com/v1";
 export const TICKET_SECONDS = 60;
-export const TICKET_TIMEOUT_MS = 5_000;
+const TICKET_TIMEOUT_MS = 5_000;
 
 // Long enough that guessing it is not a plan, and typed by a reviewer once: 16 to 128
 // characters, none of them a space.

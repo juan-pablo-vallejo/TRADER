@@ -135,7 +135,7 @@ export const CUSTOMERS = [
   },
 ] as const;
 
-export type JobPlan = {
+type JobPlan = {
   key: string;
   name: string;
   customer: (typeof CUSTOMERS)[number]["key"];

@@ -8,7 +8,7 @@ import type { CycleResult } from "./engine";
 import type { OutboxRecord } from "./types";
 
 // The server tolerates five minutes of skew before it flags an entry.
-export const SKEW_MS = 5 * 60_000;
+const SKEW_MS = 5 * 60_000;
 
 // Time worked in the session the clock is in, breaks left out: from its clock-in, through
 // every break start and end the phone knows of, to `now`. The pull's events first, then

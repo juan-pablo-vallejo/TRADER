@@ -8,7 +8,6 @@ export const PHONE_PROCEDURES = [
   "assignment.moveToday",
   "demo.signIn",
   "job.setLocation",
-  "job.update",
   "me.get",
   "me.update",
   "overview.today",
@@ -17,5 +16,3 @@ export const PHONE_PROCEDURES = [
   "sync.pull",
   "sync.push",
 ] as const;
-
-export type PhoneProcedure = (typeof PHONE_PROCEDURES)[number];

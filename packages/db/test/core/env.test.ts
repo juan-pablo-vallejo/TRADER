@@ -17,7 +17,6 @@ const compose = {
 describe("parseDatabaseEnv", () => {
   it("derives the local connection from the three compose variables", () => {
     expect(parseDatabaseEnv(compose)).toEqual({
-      driver: "pg",
       poolMax: 10,
       connection: {
         host: "127.0.0.1",
@@ -32,7 +31,6 @@ describe("parseDatabaseEnv", () => {
 
   it("accepts DATABASE_URL alone, with no POSTGRES_* variables", () => {
     expect(parseDatabaseEnv({ DATABASE_URL: "postgres://u:p@h/d" })).toEqual({
-      driver: "pg",
       poolMax: 10,
       connection: { connectionString: "postgres://u:p@h/d" },
     });
@@ -47,12 +45,6 @@ describe("parseDatabaseEnv", () => {
     const { POSTGRES_PASSWORD: _omitted, ...noPassword } = compose;
     expect(() => parseDatabaseEnv(noPassword)).toThrow(ZodError);
     expect(() => parseDatabaseEnv({ ...compose, POSTGRES_PASSWORD: "" })).toThrow(
-      ZodError,
-    );
-  });
-
-  it("rejects a driver other than pg", () => {
-    expect(() => parseDatabaseEnv({ ...compose, DATABASE_DRIVER: "neon" })).toThrow(
       ZodError,
     );
   });

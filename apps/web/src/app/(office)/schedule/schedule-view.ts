@@ -26,7 +26,7 @@ export function mondayOf(day: string): string {
 // employee and everyone are the defaults, so the plain address is the plain screen.
 export type View = "employee" | "jobsite";
 export const SCHEDULE_FILTERS = { week: "", day: "", view: "employee", who: "" };
-export type ScheduleFilters = typeof SCHEDULE_FILTERS;
+type ScheduleFilters = typeof SCHEDULE_FILTERS;
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 // A real calendar day: "2026-13-40" has the shape and is no day.

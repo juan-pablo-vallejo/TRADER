@@ -27,7 +27,7 @@ export const MAIL_FAILURES = [
   // The service could not be reached, or did not answer in time.
   "provider_unreachable",
 ] as const;
-export type MailFailure = (typeof MAIL_FAILURES)[number];
+type MailFailure = (typeof MAIL_FAILURES)[number];
 
 export interface Mailer {
   send(mail: Mail): Promise<MailResult>;

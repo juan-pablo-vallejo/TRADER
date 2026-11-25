@@ -4,7 +4,7 @@
 // A value that is not an https address is no link: the page then says to ask the office.
 type Env = Record<string, string | undefined>;
 
-export type AppLinks = { ios: string | null; android: string | null };
+type AppLinks = { ios: string | null; android: string | null };
 
 const link = (value: string | undefined): string | null => {
   const typed = (value ?? "").trim();

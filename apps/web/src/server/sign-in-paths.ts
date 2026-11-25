@@ -38,7 +38,7 @@ export function returnPath(redirectUrl: string | string[] | undefined): string {
 // Where the browser comes back to from Google when the sign-in was not finished there
 // (sign-in/sso-callback/page.tsx), carrying where the person was going; and the sign-in
 // page as it is shown to someone whose Google account no roster holds.
-export const SSO_CALLBACK_PATH = "/sign-in/sso-callback";
+const SSO_CALLBACK_PATH = "/sign-in/sso-callback";
 const carrying = (path: string, returnTo: string, more = ""): string => {
   const query = [
     more,

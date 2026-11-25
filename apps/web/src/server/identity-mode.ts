@@ -7,7 +7,7 @@ import { devIdentityEnabled } from "@trader/api";
 
 import { DEV_SIGN_IN_PATH, SIGN_IN_PATH } from "./sign-in-paths";
 
-export type IdentityMode = "dev" | "clerk";
+type IdentityMode = "dev" | "clerk";
 
 export const identityMode = (env: Record<string, string | undefined>): IdentityMode =>
   devIdentityEnabled(env) ? "dev" : "clerk";

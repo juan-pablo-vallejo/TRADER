@@ -12,7 +12,7 @@ export type Person = Today["people"][number];
 // The most rows the attention band shows before it says how many more there are.
 export const ATTENTION_ROWS = 10;
 
-export type Attention =
+type Attention =
   // A session left open from an earlier day: Fix opens that day's panel in Hours.
   | {
       kind: "open";
@@ -71,7 +71,7 @@ export function attention(today: Today, minute: string): Attention[] {
   return [...open, ...late];
 }
 
-export type Bands = {
+type Bands = {
   // On the clock or on a break, in the server's order (by name).
   working: Person[];
   expected: Person[];

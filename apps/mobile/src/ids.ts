@@ -2,7 +2,7 @@
 // one minter never go backwards: within one millisecond the 12 bits after the version count
 // up, so the `ended` and the `started` of a job switch keep the order they were made in.
 // The random bytes are handed in: the phone's come from `expo-crypto`, a test's from a seed.
-export type RandomBytes = (count: number) => Uint8Array;
+type RandomBytes = (count: number) => Uint8Array;
 
 const hex = (bytes: Uint8Array) =>
   Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");

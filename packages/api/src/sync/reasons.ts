@@ -28,7 +28,7 @@ export function measureSkew(deviceNow: Date, serverNow: Date): Skew {
 // reaches the server more than two minutes after its tap, by the device's own clock (so no
 // skew enters it), waited somewhere: it is judged as captured offline (the owner's decision
 // 6, M3). Strictly beyond: exactly two minutes is at once. The row keeps what the phone sent.
-export const LATE_PUSH_MS = 2 * 60 * 1000;
+const LATE_PUSH_MS = 2 * 60 * 1000;
 
 export function capturedOfflineIn(
   e: { capturedOffline: boolean; clientTimestamp: Date },
@@ -47,7 +47,7 @@ export function capturedOfflineIn(
 // receipt by more than the tolerance; it is stored at that time and flagged for the
 // office. An offline or user-timed event already carries its own flag, however old.
 // Strict on both sides, as measureSkew is: exactly the tolerance is neither.
-export type EventTimeVerdict = "plausible" | "skewed" | "future";
+type EventTimeVerdict = "plausible" | "skewed" | "future";
 
 export function judgeEventTime(e: {
   clientTimestamp: Date;

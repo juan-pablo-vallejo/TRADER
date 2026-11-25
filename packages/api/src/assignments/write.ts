@@ -39,7 +39,7 @@ import {
 } from "./day";
 
 // The days one `create` may plan: two working weeks.
-export const MAX_DAYS = 14;
+const MAX_DAYS = 14;
 
 // A wall-clock time to the minute, 24-hour, as `<input type="time">` writes it.
 export const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
@@ -92,7 +92,7 @@ export const removeInput = z.strictObject({ assignmentId: z.uuid() });
 
 export type CreateInput = z.infer<typeof createInput>;
 export type UpdateInput = z.infer<typeof updateInput>;
-export type RemoveInput = z.infer<typeof removeInput>;
+type RemoveInput = z.infer<typeof removeInput>;
 
 const dayKey = { id: z.uuid(), workDate: z.iso.date() };
 

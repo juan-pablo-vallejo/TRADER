@@ -26,7 +26,7 @@ export const LAST_CHANGED = "2026-11-23";
 export const OPERATOR: string | null = "JPTEQ LLC";
 export const PRIVACY_CONTACT: string | null = "privacy@jpteq.app";
 
-export type Section = { heading: string; paragraphs: string[] };
+type Section = { heading: string; paragraphs: string[] };
 export type Document = { title: string; intro: string; sections: Section[] };
 
 export const PRIVACY: Record<Language, Document> = {
