@@ -129,7 +129,7 @@ export function SignInForm({
 
   const sentence = (which: Note): string =>
     ({
-      unknown: t.notOnRoster,
+      unknown: t.signInNotAdded,
       wrong_code: s.codeWrong,
       expired_code: s.codeExpired,
       too_many: s.tooMany,

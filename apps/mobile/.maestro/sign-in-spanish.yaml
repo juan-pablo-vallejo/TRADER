@@ -49,7 +49,7 @@ appId: app.jpteq.trader
     visible:
       id: "biometric-offer"
     timeout: 30000
-- assertVisible: "Entra más rápido"
+- assertVisible: "Inicia sesión más rápido"
 - takeScreenshot: biometric-offer-es
 - runFlow:
     file: parts/landed.yaml

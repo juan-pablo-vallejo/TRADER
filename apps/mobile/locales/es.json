@@ -1,5 +1,5 @@
 {
   "ios": {
-    "NSFaceIDUsageDescription": "TRADER usa Face ID para que entres sin un código."
+    "NSFaceIDUsageDescription": "TRADER usa Face ID para que inicies sesión sin un código."
   }
 }

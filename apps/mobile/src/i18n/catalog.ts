@@ -29,7 +29,7 @@ export type Catalog = {
     resend: string;
     resendIn: (seconds: number) => string;
     change: string;
-    notOnRoster: string;
+    notAdded: string;
     codeWrong: string;
     codeExpired: string;
     tooMany: string;

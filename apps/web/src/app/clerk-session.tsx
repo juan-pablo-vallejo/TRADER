@@ -60,7 +60,7 @@ export function ClerkRefused() {
   const signIn = useSignInHref();
   if (!isLoaded) return null;
   if (isSignedIn) {
-    return <EmptyState text={t.notOnRoster} action={<ClerkSignOut />} />;
+    return <EmptyState text={t.signInNotAdded} action={<ClerkSignOut />} />;
   }
   return (
     <EmptyState text={t.signInToContinue} action={<a href={signIn}>{t.signIn}</a>} />

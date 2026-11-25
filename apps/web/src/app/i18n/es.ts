@@ -1,6 +1,6 @@
 // The office's Spanish catalog, held to the English one's keys by the compiler. The
 // trade's words are the phone's (apps/mobile/src/i18n/es.ts): a shift is a "turno", a
-// jobsite an "obra", a clock-in "entrada", a break "descanso", the roster "plantilla".
+// job an "obra", a clock-in "entrada", a break "descanso", People "Personal".
 // What a customer receives (the invoice, its PDF, its email) is not here: it is English.
 import { MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
 
@@ -43,10 +43,10 @@ export const es: Catalog = {
   get: {
     title: "Obtén la aplicación TRADER",
     explain:
-      "La aplicación a la que te invitó tu oficina: tu semana, y marcar entrada y salida.",
+      "La aplicación a la que te invitó la oficina: tu semana, y marcar entrada y salida.",
     iphone: "Obtenerla para iPhone",
     android: "Obtenerla para Android",
-    askOffice: "El enlace todavía no está aquí. Pídeselo a tu oficina.",
+    askOffice: "El enlace todavía no está aquí. Pídeselo a la oficina.",
     androidNote:
       "En Android la oficina primero tiene que agregar tu cuenta de Google a la lista de pruebas. Si la página dice que la aplicación no está disponible, pídeles que te agreguen.",
     thenSignIn:
@@ -125,12 +125,12 @@ export const es: Catalog = {
     thisWeek: "Esta semana",
     weekOf: (from, to) => `${from} – ${to}`,
     view: "Vista",
-    byEmployee: "Por persona",
+    byPerson: "Por persona",
     byJobsite: "Por obra",
-    employee: "Persona",
+    person: "Persona",
     jobsite: "Obra",
-    allEmployees: "Todo el personal",
-    showEmployee: "Mostrar",
+    everyone: "Todo el personal",
+    showPerson: "Mostrar",
     day: "Día",
     addShift: "Agregar turno",
     addShiftFor: (name, day) => `Agregar un turno para ${name} el ${day}`,
@@ -158,7 +158,7 @@ export const es: Catalog = {
     moved: "Listo, movido. Cambia de obra en su propio teléfono.",
     moveNotNow: "Mover es para un turno que está en curso hoy.",
     sameJob: "Ya está en esa obra.",
-    correctInLabor: "Corregir la asistencia en Horas",
+    correctInLabor: "Corregir en Horas",
     shiftOf: (name) => `Turno — ${name}`,
     openShift: (name, jobsite, hours, day) => `${name}, ${jobsite}, ${hours}, ${day}`,
     days: "Días",
@@ -197,7 +197,7 @@ export const es: Catalog = {
       started: (shift) =>
         `Alguien ya marcó entrada en ${shift}, y esto cambiaría lo que lo permitió.`,
       locked:
-        "Alguien marcó entrada en este turno, así que no puede cambiar. Corrige la asistencia en Horas.",
+        "Alguien marcó entrada en este turno, así que no puede cambiar. Corrige sus horas en Horas.",
       stale: "Este turno cambió mientras tanto. Cierra esto e inténtalo de nuevo.",
       userInactive: "Esa persona está desactivada.",
       jobArchived: "Esa obra está archivada.",
@@ -239,10 +239,9 @@ export const es: Catalog = {
     title: "Hoy",
     attention: "Requiere atención",
     attentionClear: "Nada requiere atención.",
-    stillOpen: (name, job, day) =>
-      `${name} sigue con la entrada marcada en ${job} desde el ${day}.`,
-    fix: "Corregir",
-    fixOf: (name) => `Corregir en Horas la sesión abierta de ${name}`,
+    stillOpen: (name, job, day) => `${name} sigue trabajando en ${job} desde el ${day}.`,
+    correct: "Corregir",
+    correctOf: (name) => `Corregir en Horas el tiempo de ${name}`,
     late: (name, job, start) =>
       end(`${name} va tarde a ${job}, que empezó a ${las(start)} ${start}`),
     call: "Llamar",
@@ -250,7 +249,7 @@ export const es: Catalog = {
     noNumber: "Sin número",
     more: (n) => (n === 1 ? "Y 1 más" : `Y ${n} más`),
     onTheClock: "Trabajando ahora",
-    nobodyWorking: "Nadie tiene la entrada marcada.",
+    nobodyWorking: "Nadie está trabajando.",
     at: (job, since) => `${job}, desde ${las(since)} ${since}`,
     onBreakAt: (job, since) => `En descanso. ${job}, desde ${las(since)} ${since}`,
     expected: "Por llegar",
@@ -258,7 +257,7 @@ export const es: Catalog = {
     done: "Terminaron por hoy",
     worked: (hours) => `${hours} trabajadas`,
     money: "Dinero",
-    owed: (amount) => `Los clientes deben ${amount}`,
+    owed: (amount) => `${amount} por cobrar`,
     owedInvoices: (n) => (n === 1 ? "en 1 factura" : `en ${n} facturas`),
     nothingOwed: "No se debe nada.",
     overdue: (amount) => `${amount} vencido`,
@@ -308,12 +307,12 @@ export const es: Catalog = {
       "Se muestra, no se cambia aquí: las horas ya registradas se ponen en sus días según ella.",
     saveCompany: "Guardar empresa",
     clock: "Reloj de horas",
-    on: "Sí",
-    off: "No",
+    on: "Activado",
+    off: "Desactivado",
     enforcement: "Exigir el horario",
     enforcementIs: {
-      on: "Sí: una persona marca entrada solo en un turno suyo, desde 15 minutos antes de que empiece.",
-      off: "No: una persona marca entrada en cualquier obra abierta, a cualquier hora.",
+      on: "Activado: una persona marca entrada solo en un turno suyo, desde 15 minutos antes de que empiece.",
+      off: "Desactivado: una persona marca entrada en cualquier obra abierta, a cualquier hora.",
     },
     enforcementTurnOn: "Exigir el horario",
     enforcementTurnOff: "Dejar de exigir el horario",
@@ -323,14 +322,14 @@ export const es: Catalog = {
     },
     stamps: "Ubicación al marcar",
     stampsIs: {
-      on: "Sí: cada vez que alguien marca se anota dónde está el teléfono, y marcar lejos de la obra deja un aviso.",
-      off: "No: al marcar no se anota ninguna ubicación, y no queda ningún aviso por ella.",
+      on: "Activado: cada vez que alguien marca se anota dónde está el teléfono, y marcar lejos de la obra deja un aviso.",
+      off: "Desactivado: al marcar no se anota ninguna ubicación, y no queda ningún aviso por ella.",
     },
     stampsTurnOn: "Activar la ubicación al marcar",
     stampsTurnOff: "Desactivar la ubicación al marcar",
     stampsEffect: {
-      on: "Desde la próxima vez que cada teléfono sincronice, pedirá la ubicación del teléfono y la anotará cada vez que alguien marque. Quienes tengan No en su propia fila siguen sin ella.",
-      off: "Desde la próxima vez que cada teléfono sincronice, al marcar no se anotará ninguna ubicación. Quienes tengan Sí en su propia fila la siguen teniendo.",
+      on: "Desde la próxima vez que cada teléfono sincronice, pedirá la ubicación del teléfono y la anotará cada vez que alguien marque. Quienes tengan Desactivado en su propia fila siguen sin ella.",
+      off: "Desde la próxima vez que cada teléfono sincronice, al marcar no se anotará ninguna ubicación. Quienes tengan Activado en su propia fila la siguen teniendo.",
     },
     me: "Yo",
   },
@@ -430,7 +429,7 @@ export const es: Catalog = {
     sendTo: "Enviar a",
     send: "Enviar factura",
     sendSent: "Enviada.",
-    sendFailed: "Ese envío no salió. Puedes enviarla de nuevo.",
+    sendFailed: "No se pudo completar. Puedes enviarla de nuevo.",
     noSends: "Todavía no se ha enviado.",
     sentTo: (to, by, at) => `Enviada a ${to} por ${by}, ${at}`,
     failedTo: (to, by, at) => `No se envió a ${to} (lo intentó ${by}, ${at})`,
@@ -455,7 +454,7 @@ export const es: Catalog = {
       void: "Esta factura está anulada, así que sus pagos quedan como están.",
       already_reversed: "Ese pago ya está revertido.",
       is_reversal: "Una reversión no se puede revertir.",
-      id_conflict: "Eso no se pudo hacer. Inténtalo de nuevo.",
+      id_conflict: "No se pudo completar. Inténtalo de nuevo.",
     },
     isIssued: "Esta factura está emitida y ya no se puede cambiar.",
     owed: "Por cobrar",
@@ -495,13 +494,13 @@ export const es: Catalog = {
 
   loading: "Cargando…",
   signInToContinue: "Inicia sesión para continuar.",
-  notOnRoster: "Este acceso no está en ninguna plantilla. Pregunta en tu oficina.",
+  signInNotAdded: "Ninguna empresa ha agregado este acceso. Pregunta en la oficina.",
   signInNotSetUp: "El inicio de sesión no está configurado en este servidor.",
   signInForm: {
     google: "Continuar con Google",
     or: "o",
     googleRefused:
-      "Esa cuenta de Google no está en ninguna plantilla. Pregunta en tu oficina.",
+      "Ninguna empresa ha agregado esa cuenta de Google. Pregunta en la oficina.",
     signingIn: "Iniciando tu sesión…",
     notLoaded:
       "No se pudo cargar el inicio de sesión. Revisa tu conexión y vuelve a cargar esta página.",
@@ -525,19 +524,19 @@ export const es: Catalog = {
     codeExpired: "Ese código venció. Pide uno nuevo.",
     tooMany: "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",
     locked:
-      "Este acceso está bloqueado por ahora. Inténtalo más tarde o pregunta en tu oficina.",
-    failed: "No funcionó. Revisa tu conexión e inténtalo de nuevo.",
-    unfinished: "El inicio de sesión no pudo terminar aquí. Pregunta en tu oficina.",
+      "Este acceso está bloqueado por ahora. Inténtalo más tarde o pregunta en la oficina.",
+    failed: "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.",
+    unfinished: "El inicio de sesión no pudo terminar aquí. Pregunta en la oficina.",
     trouble: "¿Problemas para iniciar sesión?",
     troubleNoCode:
       "¿No llegó el código? Espera 30 segundos y pide otro. También puedes usar tu correo si la oficina lo tiene.",
     troubleNewDevice:
-      "¿Teléfono nuevo, llave de acceso perdida o Face ID no funciona? Entra con un código. Después actívalo de nuevo.",
+      "¿Teléfono nuevo, llave de acceso perdida o Face ID no funciona? Inicia sesión con un código. Después actívalo de nuevo.",
     troubleNeverInvited:
-      "¿Nunca te invitaron? Solo tu oficina puede agregarte. Pregúntales.",
+      "¿Nunca te invitaron? Solo la oficina puede agregarte. Pregúntales.",
   },
   notPermitted: "No tienes permiso.",
-  requestFailed: "Eso no se pudo hacer. No se guardó nada; inténtalo de nuevo.",
+  requestFailed: "No se pudo completar. No se guardó nada. Inténtalo de nuevo.",
   loadFailed: "Esta página no cargó.",
   refreshFailed: (time: string) =>
     `No se pudo actualizar: esto es lo último leído (${time}).`,
@@ -552,16 +551,16 @@ export const es: Catalog = {
 
   details: "Datos",
 
-  emptyRoster: "Todavía no hay nadie en la plantilla.",
-  addPerson: "Agregar una persona",
-  addToRoster: "Agregar a la plantilla",
+  emptyPeople: "Todavía no se ha invitado a nadie.",
+  addPerson: "Invitar a una persona",
+  invite: "Invitar",
   name: "Nombre",
   role: "Rol",
   status: "Estado",
   edit: "Editar",
   close: "Cerrar",
-  emailTaken: "Alguien de esta plantilla ya tiene ese correo.",
-  phoneTaken: "Alguien de esta plantilla ya tiene ese número de celular.",
+  emailTaken: "Otra persona ya tiene ese correo.",
+  phoneTaken: "Otra persona ya tiene ese número de celular.",
   companyClosed: "Esta empresa de demostración no puede invitar a nadie.",
   mobileNumber: "Número de celular",
   signInAddress: "Acceso",
@@ -581,14 +580,14 @@ export const es: Catalog = {
     sent: "Enviada · sin verificar",
     verified: "Verificado",
   },
-  deactivated: "Desactivado",
+  deactivated: "Desactivada",
   roles: { admin: "Administrador", worker: "Trabajador" },
   passkeys: {
     title: "Llaves de acceso",
     explain:
       "Una llave de acceso te inicia la sesión en la oficina con el bloqueo de este dispositivo, sin código. Tu cara o tu huella nunca sale del dispositivo.",
     offer:
-      "Entra más rápido la próxima vez: agrega una llave de acceso, y el bloqueo de este dispositivo te inicia la sesión sin código.",
+      "Inicia sesión más rápido la próxima vez: agrega una llave de acceso, y el bloqueo de este dispositivo te inicia la sesión sin código.",
     add: "Agregar una llave de acceso",
     notNow: "Ahora no",
     added: "Llave de acceso agregada. La próxima vez, elige Usar una llave de acceso.",
@@ -600,7 +599,7 @@ export const es: Catalog = {
     neverUsed: "nunca usada",
     remove: "Quitar",
     removeEffect: (name) =>
-      `${name} ya no te iniciará la sesión. Puedes seguir entrando con un código, y agregar otra llave de acceso.`,
+      `${name} ya no te iniciará la sesión. Puedes seguir iniciando sesión con un código, y agregar otra llave de acceso.`,
     signInAgain: "Iniciar sesión de nuevo",
     failures: {
       sign_in_again:
@@ -608,7 +607,7 @@ export const es: Catalog = {
       cancelled: "No se cambió nada.",
       exists: "Este dispositivo ya tiene una llave de acceso tuya.",
       unsupported: "Este navegador no puede usar llaves de acceso.",
-      failed: "Eso no funcionó. Inténtalo de nuevo.",
+      failed: "No se pudo completar. Inténtalo de nuevo.",
     },
   },
   personPanel: {
@@ -623,7 +622,7 @@ export const es: Catalog = {
     location: "Ubicación al marcar",
     locationExplain:
       "Si al marcar se anota dónde está el teléfono. Como la empresa sigue el ajuste de todos.",
-    locationAs: { company: "Como la empresa", on: "Sí", off: "No" },
+    locationAs: { company: "Como la empresa", on: "Activado", off: "Desactivado" },
     saveLocation: "Guardar ubicación",
     numbers: "Números",
     signInNumber: (number) => `Acceso: ${number}`,
@@ -642,7 +641,7 @@ export const es: Catalog = {
     byEmail: (by, at) => `Por correo, enviada por ${by}, ${at}`,
     emailNotSent: (by, at) => `El correo no salió (lo intentó ${by}, ${at})`,
     refused: {
-      id_conflict: "Eso no salió. Inténtalo de nuevo.",
+      id_conflict: "No se pudo completar. Inténtalo de nuevo.",
       deactivated: "Esta persona está desactivada. No se envió nada.",
       signed_in: "Ya inició sesión. No se envió nada.",
       no_email: "No tiene correo anotado.",
@@ -675,8 +674,8 @@ export const es: Catalog = {
         "Las direcciones de acceso de un administrador no se cambian aquí. Pide ayuda al soporte de TRADER: support@jpteq.app",
       deactivated: "Esta persona está desactivada. No se cambió nada.",
       last_address: "Necesita una dirección para iniciar sesión. Dale primero la otra.",
-      email_taken: "Alguien de esta plantilla ya tiene ese correo.",
-      phone_taken: "Alguien de esta plantilla ya tiene ese número de celular.",
+      email_taken: "Otra persona ya tiene ese correo.",
+      phone_taken: "Otra persona ya tiene ese número de celular.",
       address_held: "Esa dirección no se puede usar. No se cambió nada.",
       no_login:
         "Esta persona aún no tiene un acceso que cambiar. Se podrá cambiar cuando haya iniciado sesión.",
@@ -788,17 +787,17 @@ export const es: Catalog = {
     "Este cliente está desactivado. Reactívalo, o pasa primero la obra a otro cliente.",
   hasInvoices: "Esta obra tiene facturas; su cliente ya no puede cambiar.",
   archivedNote:
-    "Las obras archivadas salen de la lista de los teléfonos en la siguiente sincronización; quien tenga la entrada marcada todavía puede marcar salida.",
+    "Las obras archivadas salen de la lista de los teléfonos en la siguiente sincronización; quien siga trabajando allí todavía puede marcar salida.",
   person: "Persona",
   chooseJob: "Elige una obra",
   planFrom: "Desde",
   planThrough: "Hasta",
   date: "Fecha",
 
-  ledgerRange: "Elige hasta 31 días, el primero no después del último.",
-  emptyLedger: "No hay horas registradas para esta persona en estos días.",
-  ledgerOpenSession: (day) =>
-    `Una sesión que empezó el ${day} sigue abierta. No puede marcar entrada de nuevo hasta que se termine o se corrija.`,
+  hoursRange: "Elige hasta 31 días, el primero no después del último.",
+  emptyHours: "No hay horas registradas para esta persona en estos días.",
+  hoursOpenSince: (day) =>
+    `Sigue trabajando desde el ${day}. No puede marcar entrada de nuevo hasta que ese tiempo se termine o se corrija.`,
   sessionCounts: {
     eligible: "Cuenta",
     voided: "Anulada",
@@ -821,10 +820,10 @@ export const es: Catalog = {
   previewOpen: (worked) =>
     `Estas horas dan ${worked} trabajadas hasta ahora, sin salida.`,
   previewNone: "Escribe todas las horas, en orden, para ver cuánto dan.",
-  entryVoids: "Anula esta sesión",
+  entryVoids: "Anula este tiempo",
   reasonTags: {
     offline: "sin conexión",
-    corrected: "editado",
+    corrected: "corregido",
     user_timed: "hora puesta a mano",
     location: "ubicación",
     clock_skewed: "reloj desajustado",
@@ -853,12 +852,12 @@ export const es: Catalog = {
     "Escribe una fecha y una hora. Una hora que los relojes se saltaron ese día no se puede usar.",
   correctionTooMany: "Máximo 20 cambios a la vez. Guarda algunos y después haz el resto.",
   correctionUnsent:
-    "Eso no se pudo hacer. Inténtalo de nuevo: se envía la misma corrección, así que no puede quedar anotada dos veces.",
+    "No se pudo completar. Inténtalo de nuevo: se envía la misma corrección, así que no puede quedar anotada dos veces.",
   correctionChanged:
     "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
-  voidSession: "Anular sesión",
+  voidSession: "Anular este tiempo",
   voidSessionEffect:
-    "Las horas de esta sesión dejarán de contar. Si la sesión sigue abierta, primero se marca la salida. La sesión y sus registros se conservan.",
+    "Este tiempo dejará de contar. Si sigue abierto, primero se marca la salida. Sus registros se conservan.",
   addMissingHours: "Agregar horas que faltan",
   missingHoursExplain:
     "Horas que nadie registró: una entrada y, cuando se sabe, la salida. Cuentan de inmediato, con el aviso de hora puesta a mano.",
@@ -868,9 +867,9 @@ export const es: Catalog = {
   jobOptionArchived: (name) => `${name} · archivada`,
   correctionRejected: {
     no_open_session:
-      "No hay ninguna sesión abierta a esa hora para uno de estos registros. Revisa las horas.",
+      "No estaba trabajando a esa hora para uno de estos registros. Revisa las horas.",
     session_already_open:
-      "Ya tiene la entrada marcada a esa hora. Termina o corrige primero esa sesión.",
+      "Ya estaba trabajando a esa hora. Termina o corrige primero ese tiempo.",
     not_paused: "Un fin de descanso necesita antes un inicio de descanso.",
     already_paused: "Ya está en descanso a esa hora.",
     target_missing:
@@ -883,20 +882,21 @@ export const es: Catalog = {
     correction_job_mismatch: "Solo una entrada puede pasar a otra obra.",
     void_target_not_started:
       "Estos registros cambiaron desde que se mostraron. Muéstralos de nuevo y después corrige.",
-    already_voided: "Esta sesión ya está anulada.",
+    already_voided: "Este tiempo ya está anulado.",
     breaks_following_event:
       "Esa hora dejaría un registro fuera de orden con los que siguen. Cámbialos en la misma corrección.",
     correction_superseded:
       "Estos registros cambiaron desde que se mostraron. Muéstralos de nuevo y después corrige.",
     correction_moves_session:
-      "Esa hora pasaría un registro a otra sesión. Déjalo dentro de la suya.",
-    job_id_mismatch: "Un registro agregado debe ser de la obra de la sesión.",
-    id_conflict: "Eso no se pudo hacer. No se guardó nada; guarda de nuevo.",
+      "Esa hora pasaría un registro a otro tramo de trabajo. Déjalo entre su propia entrada y su salida.",
+    job_id_mismatch:
+      "Un registro agregado debe ser de la misma obra que el resto de ese tiempo.",
+    id_conflict: "No se pudo completar. No se guardó nada. Guarda de nuevo.",
     time_in_future: "Una de estas horas todavía no ha pasado.",
     correction_stale:
       "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
     void_leaves_session_open:
-      "Esta sesión sigue abierta; anularla sola dejaría a su trabajador con la entrada marcada. Actualiza y vuelve a anularla.",
+      "Este tiempo sigue abierto; anularlo solo dejaría a la persona trabajando. Actualiza y vuelve a anularlo.",
   },
 
   week: {
@@ -910,11 +910,11 @@ export const es: Catalog = {
     total: "Suma",
     allPeople: "Todos",
     openDay: (name, day) => `${name}, ${day}: abrir los registros`,
-    openHeading: "Siguen con la entrada marcada",
+    openHeading: "Siguen trabajando",
     openSince: (name, job, day) => `${name} en ${job}, desde el ${day}`,
     openExplain:
       "Todavía no hay salida, así que este tiempo no está en ninguna cifra de abajo.",
-    stillOpenBadge: "sin salida",
+    stillOpenBadge: "trabajando",
     emptyFlagged: "No hay avisos en estos días.",
     export: "Exportar para nómina",
     exportTitle: "Exportar horas para nómina",
@@ -927,10 +927,10 @@ export const es: Catalog = {
           : `${n} registros con avisos que quizá quieras revisar antes.`,
     exportOpen: (n) =>
       n === 0
-        ? "Nadie sigue con la entrada marcada."
+        ? "Nadie sigue trabajando."
         : n === 1
-          ? "1 sesión sigue abierta. Su tiempo no está en el archivo."
-          : `${n} sesiones siguen abiertas. Su tiempo no está en el archivo.`,
+          ? "1 persona sigue trabajando. Ese tiempo no está en el archivo."
+          : `${n} personas siguen trabajando. Ese tiempo no está en el archivo.`,
     exportHolds:
       "Una fila por persona, día y obra, con los avisos de cada fila. Solo horas: sin tarifas y sin pagos. Nada queda fijo: las mismas fechas más adelante dan las horas como estén entonces.",
     download: "Descargar CSV",
@@ -941,8 +941,8 @@ export const es: Catalog = {
   timesIn: (zone) => `Horas en ${zone}.`,
   worked: "Trabajado",
   breaks: "Descansos",
-  stillOpen: "Sigue abierta",
-  sessionEdited: "Editada",
+  stillOpen: "Sigue trabajando",
+  timeCorrected: "Corregido",
   duration: (h, m) => `${h} h ${String(m).padStart(2, "0")} min`,
 
   contactPhone: "Teléfono de contacto",

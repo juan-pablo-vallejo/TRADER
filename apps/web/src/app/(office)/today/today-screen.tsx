@@ -144,9 +144,9 @@ function Shown({ today, now }: { today: Today; now: number }) {
                   <Link
                     className={controls.secondary}
                     href={fixHref(row)}
-                    aria-label={s.fixOf(row.person.name)}
+                    aria-label={s.correctOf(row.person.name)}
                   >
-                    {s.fix}
+                    {s.correct}
                   </Link>
                 </li>
               ) : (

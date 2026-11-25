@@ -74,7 +74,7 @@ test("Continue with Google leaves for accounts.google.com", async ({ page }) => 
 
 // An address nobody's login holds, at Clerk's reserved test domain: no mail is ever sent.
 const NOBODY = "nobody.invited+clerk_test@example.com";
-const NOT_ON_ROSTER = "This sign-in is not on a roster. Ask your office.";
+const NOT_ADDED = "No company has added this sign-in. Ask the office.";
 
 test("an address filled before the script arrives is kept and answered", async ({
   page,
@@ -98,7 +98,7 @@ test("an address filled before the script arrives is kept and answered", async (
   );
   await expect(field).toHaveValue(NOBODY);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.locator("#sign-in-note")).toHaveText(NOT_ON_ROSTER);
+  await expect(page.locator("#sign-in-note")).toHaveText(NOT_ADDED);
 });
 
 test("an unknown email is told to ask the office, and so is a Google account nobody holds", async ({
@@ -107,7 +107,7 @@ test("an unknown email is told to ask the office, and so is a Google account nob
   await openSignIn(page);
   await page.locator("#sign-in-address").fill(NOBODY);
   await page.getByRole("button", { name: "Send me a code" }).click();
-  await expect(page.locator("#sign-in-note")).toHaveText(NOT_ON_ROSTER);
+  await expect(page.locator("#sign-in-note")).toHaveText(NOT_ADDED);
   // Still the first step: nothing was sent, so there is no code to ask for.
   await expect(page.locator("#sign-in-code")).toHaveCount(0);
 
@@ -118,7 +118,7 @@ test("an unknown email is told to ask the office, and so is a Google account nob
     (url) => url.pathname === "/sign-in" && url.search.includes("refused"),
   );
   await expect(page.locator("#sign-in-note")).toHaveText(
-    "That did not work. Check your connection and try again.",
+    "That did not go through. Check your connection and try again.",
   );
   await expect(page.locator("#sign-in-address")).toHaveAttribute("aria-invalid", "false");
 });
@@ -155,7 +155,7 @@ test.describe("in Spanish on a phone", () => {
     await page.locator("#sign-in-address").fill(NOBODY);
     await page.locator('button[type="submit"]').click();
     await expect(page.locator("#sign-in-note")).toHaveText(
-      "Este acceso no está en ninguna plantilla. Pregunta en tu oficina.",
+      "Ninguna empresa ha agregado este acceso. Pregunta en la oficina.",
     );
     const sideways = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
@@ -225,11 +225,11 @@ test("a worker given an email by the office is signed out everywhere", async ({
   const email = "readdress.fixture+clerk_test@example.com";
   await signInAs(page, ADMIN_PHONE);
   await page.goto("/people");
-  await page.getByRole("button", { name: "Add a person" }).click();
-  const form = page.getByRole("form", { name: "Add a person" });
+  await page.getByRole("button", { name: "Invite a person" }).click();
+  const form = page.getByRole("form", { name: "Invite a person" });
   await form.getByLabel("Mobile number").fill(READDRESS_PHONE.slice(2));
   await form.getByLabel("Name").fill(name);
-  await form.getByRole("button", { name: "Add to roster" }).click();
+  await form.getByRole("button", { name: "Invite", exact: true }).click();
   await expect(
     page.getByText(`${name} is invited. Now tell them where to get the app.`),
   ).toBeVisible();

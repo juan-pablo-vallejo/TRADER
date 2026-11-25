@@ -24,7 +24,7 @@ appId: app.jpteq.trader
 - tapOn:
     id: "sign-in-google"
 - extendedWaitUntil:
-    visible: "This sign-in is not on a roster. Ask your office."
+    visible: "No company has added this sign-in. Ask the office."
     timeout: 30000
 - tapOn:
     id: "sign-in-address"

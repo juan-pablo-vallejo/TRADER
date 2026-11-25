@@ -138,7 +138,7 @@ function Grid({
       <thead>
         <tr>
           <th scope="col" className="label">
-            {view === "employee" ? s.employee : s.jobsite}
+            {view === "employee" ? s.person : s.jobsite}
           </th>
           {week.days.map((day) => (
             <th
@@ -462,19 +462,19 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
                   checked={view === v}
                   onChange={() => setFilters({ view: v })}
                 />
-                <span>{v === "employee" ? s.byEmployee : s.byJobsite}</span>
+                <span>{v === "employee" ? s.byPerson : s.byJobsite}</span>
               </label>
             ))}
           </fieldset>
           {view === "employee" && (
-            <Field id="schedule-only" label={s.showEmployee}>
+            <Field id="schedule-only" label={s.showPerson}>
               <select
                 id="schedule-only"
                 className={controls.select}
                 value={person}
                 onChange={(e) => setFilters({ who: e.target.value })}
               >
-                <option value="">{s.allEmployees}</option>
+                <option value="">{s.everyone}</option>
                 {all.map((row) => (
                   <option key={row.id} value={row.id}>
                     {row.name}

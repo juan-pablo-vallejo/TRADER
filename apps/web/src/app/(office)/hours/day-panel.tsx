@@ -283,9 +283,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
       </p>
       {openElsewhere && r.openSession !== null && (
         <div className={controls.banner} role="status">
-          <p className="body-strong">
-            {t.ledgerOpenSession(f.day(r.openSession.workDate))}
-          </p>
+          <p className="body-strong">{t.hoursOpenSince(f.day(r.openSession.workDate))}</p>
         </div>
       )}
       <div className={styles.actions}>
@@ -310,7 +308,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
         />
       )}
       {r.sessions.length === 0 ? (
-        <EmptyState text={t.emptyLedger} />
+        <EmptyState text={t.emptyHours} />
       ) : (
         r.sessions.map((s) => (
           <div key={s.rootEventId} className={styles.session}>
@@ -329,7 +327,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                   `${t.worked} ${f.duration(s.structuralWorkedMs)}`,
                   s.breakMs === 0 ? null : `${t.breaks} ${f.duration(s.breakMs)}`,
                   s.job.status === "archived" ? t.jobStatus.archived : null,
-                  s.corrected ? t.sessionEdited : null,
+                  s.corrected ? t.timeCorrected : null,
                   t.sessionCounts[s.accounting],
                 ]
                   .filter((part) => part !== null)

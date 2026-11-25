@@ -328,7 +328,7 @@ test("a failed refresh keeps the rows on Today, Schedule, Hours, an invoice and 
       `${screen.path}: the line`,
     ).toBeVisible();
     await expect(screen.rows(page), `${screen.path}: the rows stay`).toBeVisible();
-    await expect(page.getByText("This page didn't load.")).toHaveCount(0);
+    await expect(page.getByText("This page did not load.")).toHaveCount(0);
   }
 
   // A day's panel on Hours.

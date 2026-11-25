@@ -159,7 +159,7 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
             />
             {refused && (
               <p id="hours-range" className={`secondary ${controls.error}`} role="alert">
-                {t.ledgerRange}
+                {t.hoursRange}
               </p>
             )}
           </Field>

@@ -41,10 +41,10 @@ export const en = {
   },
   get: {
     title: "Get the TRADER app",
-    explain: "The app your office invited you to: your week, and clocking in and out.",
+    explain: "The app the office invited you to: your week, and clocking in and out.",
     iphone: "Get it for iPhone",
     android: "Get it for Android",
-    askOffice: "The link is not here yet. Ask your office for it.",
+    askOffice: "The link is not here yet. Ask the office for it.",
     androidNote:
       "On Android the office must first add your Google account to the testers. If the page says the app is not available, ask them to add you.",
     thenSignIn:
@@ -121,7 +121,7 @@ export const en = {
   customers: "Customers",
   jobs: "Jobs",
   // The Weekly Schedule screen: a shift is a "Shift", a job a
-  // "Jobsite". One namespace, so its many words cannot collide with the flat keys above.
+  // "Job". One namespace, so its many words cannot collide with the flat keys above.
   schedule: {
     title: "Weekly Schedule",
     explain: "Planned shifts only. Hours worked and corrections are on the Hours screen.",
@@ -133,12 +133,12 @@ export const en = {
     thisWeek: "This week",
     weekOf: (from: string, to: string) => `${from} – ${to}`,
     view: "View",
-    byEmployee: "By employee",
-    byJobsite: "By jobsite",
-    employee: "Employee",
-    jobsite: "Jobsite",
-    allEmployees: "All employees",
-    showEmployee: "Show",
+    byPerson: "By person",
+    byJobsite: "By job",
+    person: "Person",
+    jobsite: "Job",
+    everyone: "Everyone",
+    showPerson: "Show",
     day: "Day",
     addShift: "Add shift",
     addShiftFor: (name: string, day: string) => `Add a shift for ${name} on ${day}`,
@@ -147,7 +147,7 @@ export const en = {
     people: (n: number) => (n === 1 ? "1 person" : `${n} people`),
     locked: "Started",
     lockedExplain:
-      "Someone has clocked in on this shift, so its jobsite, day and start are fixed. It can end early, and the person can move to another jobsite.",
+      "Someone has clocked in on this shift, so its job, day and start are fixed. It can end early, and the person can move to another job.",
     addToday: "Add",
     personWeek: (name: string) => `${name}'s week`,
     personWeekEmpty: "No shifts this week yet.",
@@ -158,15 +158,15 @@ export const en = {
     endedEarly: "The shift now ends earlier.",
     notEarlier: "Choose a time before the end the shift has now.",
     notAfterStart: "Choose a time after the shift's start.",
-    move: "Move to another jobsite",
+    move: "Move to another job",
     moveTo: "Move to",
     moveNow: (time: string) => `Moves at ${time}, the time now.`,
     moveEffect: (name: string, from: string, to: string, at: string, end: string) =>
-      `From ${at}, ${name} is scheduled at ${to} until ${end}, and the shift at ${from} ends at ${at}. They switch jobsite on their own phone.`,
-    moved: "Moved. They switch jobsite on their own phone.",
+      `From ${at}, ${name} is scheduled at ${to} until ${end}, and the shift at ${from} ends at ${at}. They switch job on their own phone.`,
+    moved: "Moved. They switch job on their own phone.",
     moveNotNow: "Moving is for a shift that is under way today.",
-    sameJob: "They are already on that jobsite.",
-    correctInLabor: "Correct attendance in Hours",
+    sameJob: "They are already on that job.",
+    correctInLabor: "Correct in Hours",
     shiftOf: (name: string) => `Shift — ${name}`,
     openShift: (name: string, jobsite: string, hours: string, day: string) =>
       `${name}, ${jobsite}, ${hours}, ${day}`,
@@ -196,8 +196,7 @@ export const en = {
     overlap: (other: string, hours: string) => `Overlaps ${other} during ${hours}.`,
     thisShift: "This shift",
     cannotSave: "This cannot be saved:",
-    overlapRefused:
-      "One person is on one jobsite at a time. Change the hours or the day.",
+    overlapRefused: "One person is on one job at a time. Change the hours or the day.",
     overlapsHeading: "Overlaps",
     issue: {
       duplicate: "That shift already exists.",
@@ -209,10 +208,10 @@ export const en = {
       started: (shift: string) =>
         `Someone has already clocked in on ${shift}, and this would change what allowed it.`,
       locked:
-        "Someone has clocked in on this shift, so it cannot change. Correct attendance in Hours.",
+        "Someone has clocked in on this shift, so it cannot change. Correct its hours in Hours.",
       stale: "This shift changed meanwhile. Close this and try again.",
-      userInactive: "That employee is deactivated.",
-      jobArchived: "That jobsite is archived.",
+      userInactive: "That person is deactivated.",
+      jobArchived: "That job is archived.",
     },
     copyTitle: "Copy last week",
     copyExplain: (from: string, to: string) =>
@@ -235,8 +234,8 @@ export const en = {
       `A copy of ${n === 1 ? "1 shift" : `${n} shifts`} cannot be undone: someone has clocked in on one of them.`,
     undone: (n: number) => (n === 1 ? "Removed 1 shift." : `Removed ${n} shifts.`),
     leftOut: {
-      user_inactive: "deactivated employee",
-      job_archived: "archived jobsite",
+      user_inactive: "deactivated person",
+      job_archived: "archived job",
       duplicate: "already there",
       overlap: "would overlap",
       started: "someone has already clocked in that day",
@@ -257,8 +256,8 @@ export const en = {
     attentionClear: "Nothing needs attention.",
     stillOpen: (name: string, job: string, day: string) =>
       `${name} is still on the clock at ${job} since ${day}.`,
-    fix: "Fix",
-    fixOf: (name: string) => `Fix ${name}'s open session in Hours`,
+    correct: "Correct",
+    correctOf: (name: string) => `Correct ${name}'s time in Hours`,
     late: (name: string, job: string, start: string) =>
       `${name} is late for ${job}, which started at ${start}.`,
     call: "Call",
@@ -274,7 +273,7 @@ export const en = {
     done: "Done for today",
     worked: (hours: string) => `${hours} worked`,
     money: "Money",
-    owed: (amount: string) => `${amount} owed by customers`,
+    owed: (amount: string) => `${amount} owed`,
     owedInvoices: (n: number) => (n === 1 ? "on 1 invoice" : `on ${n} invoices`),
     nothingOwed: "Nothing is owed.",
     overdue: (amount: string) => `${amount} overdue`,
@@ -329,13 +328,13 @@ export const en = {
     enforcement: "Schedule enforcement",
     enforcementIs: {
       on: "On: a person clocks in only on a shift of theirs, from 15 minutes before it starts.",
-      off: "Off: a person clocks in on any open jobsite, at any time.",
+      off: "Off: a person clocks in on any open job, at any time.",
     },
     enforcementTurnOn: "Turn enforcement on",
     enforcementTurnOff: "Turn enforcement off",
     enforcementEffect: {
       on: "From the next time each phone syncs, a person can clock in only on a shift of theirs. Anyone with no shift today will not be able to start the clock until the office adds one.",
-      off: "From the next time each phone syncs, anyone can clock in on any open jobsite at any time, with or without a shift.",
+      off: "From the next time each phone syncs, anyone can clock in on any open job at any time, with or without a shift.",
     },
     stamps: "Location stamps",
     stampsIs: {
@@ -357,7 +356,7 @@ export const en = {
     explain:
       "A draft is yours to change. Issuing gives it the next number and freezes it; after that the only change is to void it.",
     newDraft: "New invoice",
-    job: "Jobsite",
+    job: "Job",
     currency: "Currency",
     start: "Start draft",
     none: "No invoices yet.",
@@ -447,7 +446,7 @@ export const en = {
     sendTo: "Send to",
     send: "Send invoice",
     sendSent: "Sent.",
-    sendFailed: "That send did not go. You can send it again.",
+    sendFailed: "That did not go through. You can send it again.",
     noSends: "Not sent yet.",
     sentTo: (to: string, by: string, at: string) => `Sent to ${to} by ${by}, ${at}`,
     failedTo: (to: string, by: string, at: string) =>
@@ -514,7 +513,7 @@ export const en = {
   // States every screen can be in
   loading: "Loading…",
   signInToContinue: "Sign in to continue.",
-  notOnRoster: "This sign-in is not on a roster. Ask your office.",
+  signInNotAdded: "No company has added this sign-in. Ask the office.",
   signInNotSetUp: "Sign-in is not set up on this server.",
   // The sign-in page ((auth)/sign-in-frame.tsx) and its form (sign-in/sign-in-form.tsx):
   // one field for a mobile number or an email, then the code. The same thing has the same
@@ -524,13 +523,13 @@ export const en = {
     // (developers.google.com/identity/branding-guidelines, read 2026-11-23).
     google: "Continue with Google",
     or: "or",
-    googleRefused: "That Google account is not on a roster. Ask your office.",
+    googleRefused: "No company has added that Google account. Ask the office.",
     signingIn: "Signing you in…",
     notLoaded: "Sign-in could not load. Check your connection, then reload this page.",
     backToSignIn: "Back to sign-in",
     usePasskey: "Use a passkey",
     passkeyFailed: "That passkey did not work. Sign in with a code.",
-    helper: "Enter your mobile number or email. We'll send you a code.",
+    helper: "Enter your mobile number or email. We will send you a code.",
     address: "Mobile number or email",
     send: "Send me a code",
     sending: "Sending…",
@@ -546,19 +545,19 @@ export const en = {
     codeWrong: "That code did not work. Check it, or ask for a new one.",
     codeExpired: "That code has expired. Ask for a new one.",
     tooMany: "Too many tries. Wait a few minutes, then try again.",
-    locked: "This sign-in is locked for now. Try again later, or ask your office.",
-    failed: "That did not work. Check your connection and try again.",
-    unfinished: "Sign-in could not finish here. Ask your office.",
+    locked: "This sign-in is locked for now. Try again later, or ask the office.",
+    failed: "That did not go through. Check your connection and try again.",
+    unfinished: "Sign-in could not finish here. Ask the office.",
     trouble: "Trouble signing in?",
     troubleNoCode:
       "No code yet? Wait 30 seconds, then ask for a new one. You can also use your email if the office has it.",
     troubleNewDevice:
       "New phone, lost passkey, or Face ID not working? Sign in with a code. Then turn it on again.",
-    troubleNeverInvited: "Never invited? Only your office can add you. Ask them.",
+    troubleNeverInvited: "Never invited? Only the office can add you. Ask them.",
   },
   notPermitted: "Not permitted.",
-  requestFailed: "That didn't go through. Nothing was saved; try again.",
-  loadFailed: "This page didn't load.",
+  requestFailed: "That did not go through. Nothing was saved. Try again.",
+  loadFailed: "This page did not load.",
   refreshFailed: (time: string) => `Could not refresh: this is as of ${time}.`,
   loadFailedHelp: "Nothing was changed. Check the connection and try again.",
   tryAgain: "Try again",
@@ -573,17 +572,17 @@ export const en = {
   // Editors and create forms
   details: "Details",
 
-  // Roster
-  emptyRoster: "Nobody is on the roster yet.",
-  addPerson: "Add a person",
-  addToRoster: "Add to roster",
+  // People
+  emptyPeople: "Nobody has been invited yet.",
+  addPerson: "Invite a person",
+  invite: "Invite",
   name: "Name",
   role: "Role",
   status: "Status",
   edit: "Edit",
   close: "Close",
-  emailTaken: "Someone on this roster already has that email.",
-  phoneTaken: "Someone on this roster already has that mobile number.",
+  emailTaken: "Another person already has that email.",
+  phoneTaken: "Another person already has that mobile number.",
   // The Demo company in production (packages/api, core/demo-door.ts).
   companyClosed: "This demo company cannot invite anyone.",
   mobileNumber: "Mobile number",
@@ -634,7 +633,7 @@ export const en = {
       cancelled: "Nothing was changed.",
       exists: "This device already has a passkey for you.",
       unsupported: "This browser cannot use passkeys.",
-      failed: "That did not work. Try again.",
+      failed: "That did not go through. Try again.",
     },
   },
   // A person, opened from their row in a side panel.
@@ -670,7 +669,7 @@ export const en = {
     byEmail: (by: string, at: string) => `By email, sent by ${by}, ${at}`,
     emailNotSent: (by: string, at: string) => `Email not sent (tried by ${by}, ${at})`,
     refused: {
-      id_conflict: "That did not go. Try again.",
+      id_conflict: "That did not go through. Try again.",
       deactivated: "They are deactivated. Nothing was sent.",
       signed_in: "They have already signed in. Nothing was sent.",
       no_email: "They have no email on record.",
@@ -704,8 +703,8 @@ export const en = {
       deactivated: "They are deactivated. Nothing was changed.",
       last_address:
         "They need one address to sign in with. Give them the other one first.",
-      email_taken: "Someone on this roster already has that email.",
-      phone_taken: "Someone on this roster already has that mobile number.",
+      email_taken: "Another person already has that email.",
+      phone_taken: "Another person already has that mobile number.",
       address_held: "That address cannot be used. Nothing was changed.",
       no_login:
         "This person has no sign-in to change yet. It can be changed once they have signed in.",
@@ -824,18 +823,18 @@ export const en = {
     "This customer is deactivated. Reactivate them, or move the job to another customer first.",
   hasInvoices: "This job has invoices; its customer can no longer change.",
   archivedNote:
-    "Archived jobs leave the phones' job list on the next sync; open sessions still clock out.",
+    "Archived jobs leave the phones' job list on the next sync; anyone still on the clock there can still clock out.",
   person: "Person",
   chooseJob: "Choose a job",
   planFrom: "From",
   planThrough: "Through",
   date: "Date",
 
-  // Labor ledger
-  ledgerRange: "Choose up to 31 days, the first no later than the last.",
-  emptyLedger: "No hours are recorded for this person on these days.",
-  ledgerOpenSession: (day: string) =>
-    `A session started ${day} is still open. They cannot clock in again until it is ended or corrected.`,
+  // Hours
+  hoursRange: "Choose up to 31 days, the first no later than the last.",
+  emptyHours: "No hours are recorded for this person on these days.",
+  hoursOpenSince: (day: string) =>
+    `Still on the clock since ${day}. They cannot clock in again until that time is ended or corrected.`,
   sessionCounts: {
     eligible: "Counts",
     voided: "Voided",
@@ -860,10 +859,10 @@ export const en = {
   previewOpen: (worked: string) =>
     `These times give ${worked} worked so far, with no clock out.`,
   previewNone: "Enter every time, in order, to see the hours they give.",
-  entryVoids: "Voids this session",
+  entryVoids: "Voids this time",
   reasonTags: {
     offline: "offline",
-    corrected: "edited",
+    corrected: "corrected",
     user_timed: "time set by user",
     location: "location",
     clock_skewed: "clock skew",
@@ -877,7 +876,7 @@ export const en = {
   hoursValue: (hours: string) => `${hours} h`,
   emptyReconciliation: "No hours are recorded on these days.",
 
-  // Labor correction, on the ledger
+  // Correcting hours
   correct: "Correct",
   correctionOf: (job: string, started: string) => `Correct ${job}, ${started}`,
   correctionExplain:
@@ -893,12 +892,12 @@ export const en = {
     "Enter a date and a time. A time the clocks skipped that day cannot be used.",
   correctionTooMany: "At most 20 changes at a time. Save some, then make the rest.",
   correctionUnsent:
-    "That didn't go through. Try again: the same correction is sent, so it cannot be recorded twice.",
+    "That did not go through. Try again: the same correction is sent, so it cannot be recorded twice.",
   correctionChanged:
-    "This ledger changed since it was shown. It has been refreshed: check it, then correct it again.",
-  voidSession: "Void session",
+    "These hours changed since they were shown. They have been refreshed: check them, then correct them again.",
+  voidSession: "Void this time",
   voidSessionEffect:
-    "This session's hours will no longer count. A session still open is clocked out first. The session and its entries stay on record.",
+    "This time will no longer count. If it is still on the clock, it is clocked out first. Its entries stay on record.",
   addMissingHours: "Add missing hours",
   missingHoursExplain:
     "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once, flagged as time set by user.",
@@ -910,38 +909,38 @@ export const en = {
   // list to the server's codes.
   correctionRejected: {
     no_open_session:
-      "There is no open session at that time for one of these entries. Check the times.",
+      "They were not on the clock at that time for one of these entries. Check the times.",
     session_already_open:
-      "They are already clocked in at that time. End or correct that session first.",
+      "They are already on the clock at that time. End or correct that time first.",
     not_paused: "A break end needs a break start before it.",
     already_paused: "They are already on a break at that time.",
     target_missing:
-      "This ledger changed since it was shown. Show the ledger again, then correct it.",
+      "These hours changed since they were shown. Show them again, then correct them.",
     target_is_correction:
-      "This ledger changed since it was shown. Show the ledger again, then correct it.",
+      "These hours changed since they were shown. Show them again, then correct them.",
     correction_of_void: "A void cannot be corrected.",
     correction_type_mismatch:
-      "This ledger changed since it was shown. Show the ledger again, then correct it.",
+      "These hours changed since they were shown. Show them again, then correct them.",
     correction_job_mismatch: "Only a clock in can move to another job.",
     void_target_not_started:
-      "This ledger changed since it was shown. Show the ledger again, then correct it.",
-    already_voided: "This session is already voided.",
+      "These hours changed since they were shown. Show them again, then correct them.",
+    already_voided: "This time is already voided.",
     breaks_following_event:
       "That time would put an entry out of order with the ones after it. Change those in the same correction.",
     correction_superseded:
-      "This ledger changed since it was shown. Show the ledger again, then correct it.",
+      "These hours changed since they were shown. Show them again, then correct them.",
     correction_moves_session:
-      "That time would move an entry into another session. Keep it inside its own.",
-    job_id_mismatch: "An added entry must be on the session's job.",
-    id_conflict: "That didn't go through. Nothing was saved; save again.",
+      "That time would move an entry into another stretch on the clock. Keep it between its own clock in and clock out.",
+    job_id_mismatch: "An added entry must be on the same job as the rest of that time.",
+    id_conflict: "That did not go through. Nothing was saved. Save again.",
     time_in_future: "One of these times has not happened yet.",
     correction_stale:
-      "This ledger changed since it was shown. It has been refreshed: check it, then correct it again.",
+      "These hours changed since they were shown. They have been refreshed: check them, then correct them again.",
     void_leaves_session_open:
-      "This session is still open, so voiding it alone would keep its worker clocked in. Refresh, then void it again.",
+      "This time is still on the clock, so voiding it alone would leave them clocked in. Refresh, then void it again.",
   },
 
-  // The Hours screen as a week: people by days, the presets, the strip of open sessions
+  // The Hours screen as a week: people by days, the presets, the strip of who is still on the clock
   // and the export's dialog.
   week: {
     thisWeek: "This week",
@@ -950,7 +949,7 @@ export const en = {
     flaggedOnly: "Flagged only",
     show: "Show these dates",
     caption: (range: string) => `Hours by person and day, ${range}`,
-    listCaption: (range: string) => `Hours by person, date and jobsite, ${range}`,
+    listCaption: (range: string) => `Hours by person, date and job, ${range}`,
     total: "Total",
     allPeople: "Everyone",
     openDay: (name: string, day: string) => `${name}, ${day}: open the entries`,
@@ -973,10 +972,10 @@ export const en = {
       n === 0
         ? "Nobody is still on the clock."
         : n === 1
-          ? "1 session is still open. Its time is not in the file."
-          : `${n} sessions are still open. Their time is not in the file.`,
+          ? "1 person is still on the clock. That time is not in the file."
+          : `${n} people are still on the clock. That time is not in the file.`,
     exportHolds:
-      "One row per person, day and jobsite, with each row's flags. Hours only: no rates and no pay. Nothing is frozen: the same dates later give the hours as they are then.",
+      "One row per person, day and job, with each row's flags. Hours only: no rates and no pay. Nothing is frozen: the same dates later give the hours as they are then.",
     download: "Download CSV",
     downloaded: (filename: string) => `Saved ${filename}.`,
   },
@@ -985,11 +984,11 @@ export const en = {
   timesIn: (zone: string) => `Times in ${zone}.`,
   worked: "Worked",
   breaks: "Breaks",
-  stillOpen: "Still open",
-  sessionEdited: "Edited",
+  stillOpen: "Still on the clock",
+  timeCorrected: "Corrected",
   duration: (h: number, m: number) => `${h} h ${String(m).padStart(2, "0")} min`,
 
-  // Profile
+  // Me
   contactPhone: "Contact phone",
   managedBySignIn: "The office changes it.",
   adminAddressesCaption: "Ask TRADER support to change it: support@jpteq.app",

@@ -67,7 +67,7 @@ const TYPING_WONT_HELP = new Set<Note>(["expired_code", "too_many", "locked"]);
 // What the form says for each refusal, in the screen's language.
 export function sentence(s: Catalog["signIn"], note: Note): string {
   return {
-    unknown: s.notOnRoster,
+    unknown: s.notAdded,
     wrong_code: s.codeWrong,
     expired_code: s.codeExpired,
     too_many: s.tooMany,

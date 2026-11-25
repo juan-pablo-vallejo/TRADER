@@ -121,7 +121,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
           <PeopleTable
             rows={list.data}
             onOpen={(id) => setFilters({ person: id })}
-            empty={t.emptyRoster}
+            empty={t.emptyPeople}
           />
           {opened !== undefined && (
             <PersonPanel
@@ -288,7 +288,7 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
       <p className={`secondary ${controls.caption}`}>{t.inviteAddressHint}</p>
       {invite.isError && <Note text={t.requestFailed} />}
       <WriteButton type="submit" className={controls.primary} pending={invite.isPending}>
-        {t.addToRoster}
+        {t.invite}
       </WriteButton>
     </form>
   );

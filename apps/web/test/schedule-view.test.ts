@@ -147,16 +147,16 @@ describe("a refusal in words", () => {
 
   it("says each refusal a write can answer", () => {
     expect(refusalText(S, { code: "locked" }, label, F)).toContain(
-      "Correct attendance in Hours",
+      "Correct its hours in Hours",
     );
     expect(refusalText(S, { code: "started", shiftId: id(101) }, label, F)).toContain(
       "already clocked in on shift 101",
     );
     expect(refusalText(S, { code: "user_inactive" }, label, F)).toBe(
-      "That employee is deactivated.",
+      "That person is deactivated.",
     );
     expect(refusalText(S, { code: "job_archived" }, label, F)).toBe(
-      "That jobsite is archived.",
+      "That job is archived.",
     );
     expect(
       refusalText(

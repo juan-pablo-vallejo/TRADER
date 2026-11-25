@@ -566,7 +566,7 @@ export function AddShift({
     <Drawer title={s.addShift} onClose={() => onClose(null)} wide={userId !== ""}>
       <div className={userId === "" ? undefined : styles.beside}>
         <form onSubmit={submit} className={styles.form}>
-          <Field id={`${formId}-person`} label={s.employee}>
+          <Field id={`${formId}-person`} label={s.person}>
             <select
               id={`${formId}-person`}
               className={controls.select}

@@ -54,3 +54,61 @@ describe("the catalogs", () => {
     expect(es.today.clockInAt("Elm St porch")).toContain("Elm St porch");
   });
 });
+
+// Every wording a leaf can produce: with names in its blanks, and with one and with many.
+const wordings = (leaf: Leaf) =>
+  typeof leaf === "string"
+    ? [leaf]
+    : [
+        ["Ana Ruiz", "B", "C"],
+        [1, 1, 1],
+        [2, 2, 2],
+      ].map((args) => (leaf as (...args: unknown[]) => string)(...args));
+
+// A whole word or phrase, whatever its letters: JavaScript's \b ends a word at an accent.
+const word = (alternatives: string) =>
+  new RegExp(`(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`, "iu");
+
+// Words the phone no longer shows: the office's list (apps/web/test/i18n.test.ts) but for
+// the work session, which only the office leaves unnamed, and the phone's own: a shift
+// reminder is a "recordatorio", a flag stays an "aviso". "jobsite" stays only in a sentence
+// about a place.
+const RETIRED = {
+  both: [
+    word("roster|repair\\p{L}*|ledger|plantilla"),
+    word("attendance|asistencia|employees?|edited|editad[oa]|editó|fix|profile|perfil"),
+  ],
+  en: [
+    word("\\p{L}+n't|(?:we|you|they|it|that|there)'(?:ll|re|ve|d|s)"),
+    word("your office"),
+  ],
+  es: [
+    word("entrar|entra|entrando|entrada marcada|tu oficina|activados|desactivados"),
+    word("avisos|avisarte"),
+    /^(Sí|No)(:|$)/,
+  ],
+};
+const PLACE = word("location|away from|standing at");
+
+describe("the phone's words", () => {
+  it("leave out every retired word, in both languages", () => {
+    const found: string[] = [];
+    for (const [language, catalog] of [
+      ["en", en],
+      ["es", es],
+    ] as const) {
+      const rules = [...RETIRED.both, ...RETIRED[language]];
+      for (const [key, leaf] of leaves(catalog as unknown as Tree)) {
+        for (const text of wordings(leaf)) {
+          for (const rule of rules) {
+            if (rule.test(text)) found.push(`${language} ${key}: ${text}`);
+          }
+          if (word("jobsites?").test(text) && !PLACE.test(text)) {
+            found.push(`${language} ${key}: ${text}`);
+          }
+        }
+      }
+    }
+    expect([...new Set(found)]).toEqual([]);
+  });
+});

@@ -83,6 +83,64 @@ describe("the office's catalogs", () => {
   });
 });
 
+// Every wording a leaf can produce: with names in its blanks, and with one and with many.
+const wordings = (leaf: Leaf) =>
+  typeof leaf === "string"
+    ? [leaf]
+    : [
+        ["Ana Ruiz", "B", "C", "D"],
+        [1, 1, 1, 1],
+        [2, 2, 2, 2],
+      ].map((args) => (leaf as (...args: unknown[]) => string)(...args));
+
+// A whole word or phrase, whatever its letters: JavaScript's \b ends a word at an accent.
+const word = (alternatives: string) =>
+  new RegExp(`(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`, "iu");
+
+// Words the office no longer shows, one word per thing per language: People and Personal,
+// Hours, Correct, "corrected", "Iniciar sesión", "Trabajando", no noun for a work session,
+// On and Off, full forms, "the office". "jobsite" stays only in a sentence about a place.
+const RETIRED = {
+  both: [
+    word("roster|repair\\p{L}*|ledger|plantilla"),
+    word("attendance|asistencia|employees?|edited|editad[oa]|editó|fix|profile|perfil"),
+  ],
+  en: [
+    word("sessions?"),
+    word("\\p{L}+n't|(?:we|you|they|it|that|there)'(?:ll|re|ve|d|s)"),
+    word("your office"),
+  ],
+  es: [
+    word("entrar|entra|entrando|entrada marcada|tu oficina|activados|desactivados"),
+    word("anular sesión|sesión abierta|sesiones"),
+    /^(Sí|No)(:|$)/,
+  ],
+};
+const PLACE = word("location|away from|standing at");
+
+describe("the office's words", () => {
+  it("leave out every retired word, in both languages", () => {
+    const found: string[] = [];
+    for (const [language, catalog] of [
+      ["en", en],
+      ["es", es],
+    ] as const) {
+      const rules = [...RETIRED.both, ...RETIRED[language]];
+      for (const [key, leaf] of leaves(catalog as unknown as Tree)) {
+        for (const text of wordings(leaf)) {
+          for (const rule of rules) {
+            if (rule.test(text)) found.push(`${language} ${key}: ${text}`);
+          }
+          if (word("jobsites?").test(text) && !PLACE.test(text)) {
+            found.push(`${language} ${key}: ${text}`);
+          }
+        }
+      }
+    }
+    expect([...new Set(found)]).toEqual([]);
+  });
+});
+
 describe("the language a page is drawn in", () => {
   it("is the person's own choice when they made one", () => {
     expect(chooseLanguage("es", "en-US,en;q=0.9")).toBe("es");
