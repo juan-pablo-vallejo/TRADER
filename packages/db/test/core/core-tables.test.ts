@@ -12,16 +12,16 @@ const TABLES = [
   "address_changes",
   "companies",
   "customers",
+  "entries",
   "invitation_sends",
   "invoice_counters",
   "invoice_line_items",
   "invoice_payments",
   "invoice_sends",
   "invoices",
-  "job_assignments",
   "jobs",
+  "shifts",
   "users",
-  "work_session_events",
 ];
 
 const TENANT_TABLES = TABLES.filter((t) => t !== "companies");
@@ -31,6 +31,10 @@ const TRIGGERS = [
   "address_changes_no_delete",
   "address_changes_no_truncate",
   "address_changes_no_update",
+  "entries_check_references",
+  "entries_no_delete",
+  "entries_no_truncate",
+  "entries_no_update",
   "invitation_sends_no_delete",
   "invitation_sends_no_truncate",
   "invitation_sends_no_update",
@@ -44,14 +48,10 @@ const TRIGGERS = [
   "invoice_sends_no_truncate",
   "invoice_sends_no_update",
   "invoices_check_mutation",
-  "job_assignments_check_insert",
-  "job_assignments_check_mutation",
-  "job_assignments_check_truncate",
+  "shifts_check_insert",
+  "shifts_check_mutation",
+  "shifts_check_truncate",
   "users_identity_guard",
-  "work_session_events_check_references",
-  "work_session_events_no_delete",
-  "work_session_events_no_truncate",
-  "work_session_events_no_update",
 ];
 
 let db: Db;

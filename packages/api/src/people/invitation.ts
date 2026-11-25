@@ -217,7 +217,7 @@ export async function noteInvitation(
   input: z.infer<typeof invitationInput>,
 ): Promise<z.infer<typeof noteInvitationOutput>> {
   const person = await lockPerson(tx, user, input.userId);
-  const before = await madeBefore(tx, input, "text");
+  const before = await madeBefore(tx, input, "whatsapp");
   if (before !== undefined) {
     return before.mine ? { result: "duplicate" } : refused("id_conflict");
   }
@@ -227,7 +227,7 @@ export async function noteInvitation(
   await record(tx, user, {
     id: input.id,
     userId: input.userId,
-    channel: "text",
+    channel: "whatsapp",
     recipient: person.signInPhone,
     outcome: "sent",
   });

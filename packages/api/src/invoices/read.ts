@@ -18,7 +18,7 @@ import {
   invoices,
   jobs,
   users,
-  workSessionEvents,
+  entries,
 } from "@trader/db/schema";
 import { asc, desc, eq, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
@@ -470,9 +470,9 @@ export async function suggestLines(
   if (invoice === undefined) throw forbidden();
   const timezone = await companyZone(tx, user.companyId);
   const workers = await tx
-    .selectDistinct({ id: workSessionEvents.workerId })
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.jobId, invoice.jobId));
+    .selectDistinct({ id: entries.workerId })
+    .from(entries)
+    .where(eq(entries.jobId, invoice.jobId));
   const cells = await readDayHours(
     tx,
     workers.map((w) => w.id),

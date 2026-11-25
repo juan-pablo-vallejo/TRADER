@@ -3,7 +3,7 @@
 // worked so far, the sessions left open from an earlier day, the jobs named, the gate, and
 // the tenant wall. Every test runs in an owner transaction that is always rolled back,
 // each read as trader_app.
-import { invoiceCounters, jobAssignments, jobs, users } from "@trader/db/schema";
+import { invoiceCounters, shifts, jobs, users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -53,7 +53,7 @@ async function world(tx: Tx) {
     workDate = DAY,
   ) => {
     const id = uuidv7();
-    await tx.insert(jobAssignments).values({
+    await tx.insert(shifts).values({
       id,
       companyId: d.companyId,
       userId,
@@ -209,9 +209,9 @@ describe("overview.today", () => {
         client: at("11:00"),
       });
       await tx
-        .update(jobAssignments)
+        .update(shifts)
         .set({ lockedAt: new Date(at("07:00")), lockedByEventId: start })
-        .where(eq(jobAssignments.id, morning));
+        .where(eq(shifts.id, morning));
       const answer = await w.read("11:30");
       expect(of(answer, w.w1)!.shifts.map((s) => s.clockedIn)).toEqual([true, false]);
       expect(crewStatus(of(answer, w.w1)!, "11:30")).toBe("expected");

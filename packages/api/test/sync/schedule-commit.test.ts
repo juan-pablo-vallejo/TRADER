@@ -2,7 +2,7 @@
 // and the proof that a push never reads the schedule while enforcement is off. In a
 // disposable database (helpers.ts): a punch lock can never be removed, two connections must
 // see the same rows, and the lock-wait probe reads every backend of its database.
-import { companies, jobAssignments, workSessionEvents } from "@trader/db/schema";
+import { companies, shifts, entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -54,7 +54,7 @@ async function world(enforced: boolean) {
     const admin = await boundIn(tx, d.companyId, "admin");
     const ana = await boundIn(tx, d.companyId, "worker");
     const [shift] = await tx
-      .insert(jobAssignments)
+      .insert(shifts)
       .values({
         companyId: d.companyId,
         userId: ana.id,
@@ -63,7 +63,7 @@ async function world(enforced: boolean) {
         expectedStart: "07:00",
         expectedEnd: "15:30",
       })
-      .returning({ id: jobAssignments.id });
+      .returning({ id: shifts.id });
     await tx
       .update(companies)
       .set({ scheduleEnforced: enforced })
@@ -105,11 +105,11 @@ const shiftRow = async (id: string) =>
   (
     await D.owner
       .select({
-        expectedStart: jobAssignments.expectedStart,
-        lockedByEventId: jobAssignments.lockedByEventId,
+        expectedStart: shifts.expectedStart,
+        lockedByEventId: shifts.lockedByEventId,
       })
-      .from(jobAssignments)
-      .where(eq(jobAssignments.id, id))
+      .from(shifts)
+      .where(eq(shifts.id, id))
   )[0]!;
 
 const dayLock = (userId: string) =>
@@ -119,7 +119,7 @@ describe("with enforcement off", () => {
   it("a push never reads the schedule: it completes while the table is locked against every reader", async () => {
     const d = await world(false);
     await D.owner.transaction(async (tx) => {
-      await tx.execute(sql`lock table job_assignments in access exclusive mode`);
+      await tx.execute(sql`lock table shifts in access exclusive mode`);
       // A worker's own start with no shift, as before the schedule existed.
       const answer = await start(d.who, d.userId, d.J);
       expect(answer).toMatchObject({ result: "accepted" });
@@ -132,9 +132,9 @@ describe("with enforcement on", () => {
     const d = await world(true);
     let pushed!: ReturnType<typeof start>;
     await D.owner.transaction(async (tx) => {
-      await tx.execute(sql`lock table job_assignments in access exclusive mode`);
+      await tx.execute(sql`lock table shifts in access exclusive mode`);
       pushed = start(d.ana.who, d.ana.id, d.J);
-      await waitForLockWait(D.owner, "%from job_assignments a%", {
+      await waitForLockWait(D.owner, "%from shifts a%", {
         waitEvent: "relation",
       });
     });
@@ -148,7 +148,7 @@ describe("with enforcement on", () => {
       // The office's write, not yet committed: the day's lock, then the shift moved to noon.
       await tx.execute(dayLock(d.ana.id));
       await tx.execute(
-        sql`update job_assignments set expected_start = '12:00' where id = ${d.shiftId}`,
+        sql`update shifts set expected_start = '12:00' where id = ${d.shiftId}`,
       );
       pushed = start(d.ana.who, d.ana.id, d.J);
       await waitForLockWait(D.owner, "select pg_advisory_xact_lock(hashtextextended(%", {
@@ -171,11 +171,9 @@ describe("with enforcement on", () => {
     await D.owner.transaction(async (tx) => {
       // The shift's row held: the push is admitted, writes its event, and waits to lock it —
       // holding the day's lock, which the office's edit then queues on.
-      await tx.execute(
-        sql`select 1 from job_assignments where id = ${d.shiftId} for update`,
-      );
+      await tx.execute(sql`select 1 from shifts where id = ${d.shiftId} for update`);
       pushed = start(d.ana.who, d.ana.id, d.J);
-      await waitForLockWait(D.owner, "%update job_assignments set locked_at%");
+      await waitForLockWait(D.owner, "%update shifts set locked_at%");
       edited = caller(d.admin.who).shift.update({
         shiftId: d.shiftId,
         workDate: DAY,
@@ -193,9 +191,9 @@ describe("with enforcement on", () => {
     const row = await shiftRow(d.shiftId);
     expect(row.expectedStart).toBe("07:00:00");
     const [event] = await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.workerId, d.ana.id));
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.workerId, d.ana.id));
     expect(row.lockedByEventId).toBe(event!.id);
   });
 });

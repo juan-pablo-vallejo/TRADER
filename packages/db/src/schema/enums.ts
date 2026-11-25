@@ -16,7 +16,7 @@ export const jobStatus = pgEnum("job_status", ["open", "complete", "archived"]);
 // on the new one, two events that sync independently, so "one open session" stays a property
 // of the fold. `voided` is an appended event that nullifies a whole session; it names that
 // session's `started` event in `voids_event_id`, a tie held by a trigger.
-export const workSessionEventType = pgEnum("work_session_event_type", [
+export const entryType = pgEnum("entry_type", [
   "started",
   "paused",
   "resumed",

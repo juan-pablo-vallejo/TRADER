@@ -1,7 +1,7 @@
 // The locked timeline read, against Postgres. Every test runs in transactions that are always
 // rolled back: a labor event can never be deleted once committed, so none ever is.
 import { createDb, type Db } from "@trader/db";
-import { companies, customers, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { companies, customers, jobs, users, entries } from "@trader/db/schema";
 import { DrizzleQueryError, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -80,7 +80,7 @@ async function event(
   server?: string,
 ) {
   const id = uuidv7();
-  await tx.insert(workSessionEvents).values({
+  await tx.insert(entries).values({
     id,
     companyId: refs.companyId,
     workerId: refs.workerId,

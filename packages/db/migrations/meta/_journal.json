@@ -5,71 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1795052737404,
+      "when": 1795642620531,
       "tag": "0000_baseline",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1795110847388,
-      "tag": "0001_settings_and_location",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1795112034821,
-      "tag": "0002_end_a_started_shift_early",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1795160090145,
-      "tag": "0003_invoice_due_date",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1795160707183,
-      "tag": "0004_invoice_print_copy",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1795186971725,
-      "tag": "0005_invoice_print_names",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1795467445007,
-      "tag": "0006_invitation_sends",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1795470163204,
-      "tag": "0007_address_changes",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1795520538600,
-      "tag": "0008_demo_flag",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1795617404720,
-      "tag": "0009_a_voided_clock_in_frees_its_shift",
       "breakpoints": true
     }
   ]

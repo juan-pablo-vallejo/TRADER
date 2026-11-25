@@ -4,7 +4,7 @@
 // An accepted event counts toward hours at once. Answers `accepted` or `duplicate` with an
 // acknowledgement of fixed facts only, or `rejected` with a code, writing nothing. Anything
 // thrown is the loop's: the record is omitted and retried.
-import { workSessionEvents } from "@trader/db/schema";
+import { entries } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { type z } from "zod";
 
@@ -43,7 +43,7 @@ type LaborResult =
   | { result: "accepted" | "duplicate"; ack: z.infer<typeof laborAck> }
   | { result: "rejected"; code: LaborRejection; conflictingId?: string };
 
-type Prior = typeof workSessionEvents.$inferSelect;
+type Prior = typeof entries.$inferSelect;
 
 const rejected = (code: LaborRejection, conflictingId?: string): LaborResult => ({
   result: "rejected",
@@ -79,10 +79,7 @@ const same = (row: Prior, user: AppUser, r: LaborRecord) => {
 };
 
 async function byId(tx: Tx, id: string): Promise<Prior | undefined> {
-  const [row] = await tx
-    .select()
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.id, id));
+  const [row] = await tx.select().from(entries).where(eq(entries.id, id));
   return row;
 }
 
@@ -207,7 +204,7 @@ export async function pushLaborEvent(
   // push committed this id (seen above, then) or another tenant holds it (invisible): that is
   // `id_conflict`, and says nothing more.
   const [inserted] = await tx
-    .insert(workSessionEvents)
+    .insert(entries)
     .values({
       id: r.id,
       companyId: user.companyId,

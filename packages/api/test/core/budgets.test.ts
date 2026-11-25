@@ -16,7 +16,7 @@ import {
   customers,
   invoiceLineItems,
   invoices,
-  jobAssignments,
+  shifts,
   jobs,
   users,
 } from "@trader/db/schema";
@@ -128,7 +128,7 @@ async function world(tx: Tx): Promise<World> {
 }
 
 const shift = (tx: Tx, companyId: string, userId: string, jobId: string, day: string) =>
-  tx.insert(jobAssignments).values({
+  tx.insert(shifts).values({
     id: uuidv7(),
     companyId,
     userId,

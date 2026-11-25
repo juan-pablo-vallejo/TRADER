@@ -3,7 +3,7 @@
 // rollback surviving a commit, or a correction holding at a true COMMIT; these do. A holder
 // transaction takes a lock first; the calls are started against it, seen waiting in
 // pg_stat_activity (waitForLockWait, no sleeps), and the holder then ends.
-import { users, workSessionEvents } from "@trader/db/schema";
+import { users, entries } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -147,8 +147,8 @@ const workerWaiters = (n: number) =>
 async function counts(companyId: string) {
   const [e] = await D.owner
     .select({ n: sql<number>`count(*)::int` })
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.companyId, companyId));
+    .from(entries)
+    .where(eq(entries.companyId, companyId));
   return { events: e!.n };
 }
 
@@ -195,19 +195,12 @@ describe("labor.correct — retries and ids, committed", () => {
     });
     expect(await counts(x.d.companyId)).toEqual(before);
     expect(await counts(other.d.companyId)).toEqual(theirs);
+    expect(await D.owner.select().from(entries).where(eq(entries.id, fresh.id))).toEqual(
+      [],
+    );
     expect(
-      await D.owner
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, fresh.id)),
-    ).toEqual([]);
-    expect(
-      (
-        await D.owner
-          .select()
-          .from(workSessionEvents)
-          .where(eq(workSessionEvents.id, other.start))
-      )[0]!.companyId,
+      (await D.owner.select().from(entries).where(eq(entries.id, other.start)))[0]!
+        .companyId,
     ).toBe(other.d.companyId);
   });
 
@@ -231,9 +224,9 @@ describe("labor.correct — retries and ids, committed", () => {
     ]);
 
     const stored = await D.owner
-      .select({ id: workSessionEvents.id, flags: workSessionEvents.flags })
-      .from(workSessionEvents)
-      .where(inArray(workSessionEvents.id, [theirs.id, start.id, end.id, fix.id]));
+      .select({ id: entries.id, flags: entries.flags })
+      .from(entries)
+      .where(inArray(entries.id, [theirs.id, start.id, end.id, fix.id]));
     expect(new Map(stored.map((r) => [r.id, r.flags]))).toEqual(
       new Map([
         [theirs.id, ["corrected", "user_timed"]],
@@ -249,9 +242,7 @@ describe("labor.correct — what a correction leaves behind", () => {
   it("leaves the corrected entry's original event exactly as it was, column for column", async () => {
     const x = await world();
     const row = async (id: string) =>
-      (
-        await D.owner.select().from(workSessionEvents).where(eq(workSessionEvents.id, id))
-      )[0];
+      (await D.owner.select().from(entries).where(eq(entries.id, id)))[0];
     const original = await row(x.end);
     expect(original).toBeDefined();
 
@@ -274,9 +265,9 @@ describe("labor.correct — what a correction leaves behind", () => {
     // The hours follow the correction in effect; the two it replaced are still rows.
     expect(await accounting(x.w.id)).toMatchObject([{ eligibleWorkedMs: 6.5 * HOUR }]);
     const kept = await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(inArray(workSessionEvents.id, [x.end, first.id, second.id]));
+      .select({ id: entries.id })
+      .from(entries)
+      .where(inArray(entries.id, [x.end, first.id, second.id]));
     expect(kept).toHaveLength(3);
   });
 });
@@ -303,9 +294,9 @@ describe("labor.correct — concurrent corrections, committed", () => {
       conflictingEventId: winner.id,
     });
     const corrections = await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.correctsEventId, x.end));
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.correctsEventId, x.end));
     expect(corrections).toEqual([{ id: winner.id }]);
   });
 
@@ -325,9 +316,9 @@ describe("labor.correct — concurrent corrections, committed", () => {
       code: "already_voided",
     });
     const voids = await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.voidsEventId, x.start));
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.voidsEventId, x.start));
     expect(voids).toHaveLength(1);
     // Committed, the void is in effect: nothing of the session counts.
     expect(await accounting(x.w.id)).toMatchObject([

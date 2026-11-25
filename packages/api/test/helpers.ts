@@ -1,21 +1,14 @@
 // Shared by the API tests. Unlike the schema tests, nothing here can run in a rolled-back
 // transaction: the code under test opens its own. Fixtures are therefore committed by the
 // owner, under company names with a random suffix, and deleted afterwards. No fixture writes
-// a work_session_event, so the deletes are always allowed. Procedures that write append-only
+// an entry, so the deletes are always allowed. Procedures that write append-only
 // rows (labor) run through the rolled-back calls further down or in a disposable database
 // instead.
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
-import {
-  companies,
-  customers,
-  jobs,
-  jobAssignments,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { companies, customers, jobs, shifts, users, entries } from "@trader/db/schema";
 import type { AnyRouter } from "@trpc/server";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { DrizzleQueryError, eq, inArray, sql } from "drizzle-orm";
@@ -149,7 +142,7 @@ export async function world(owner: Db) {
   // In reference order: a test may have written any of these.
   const cleanup = async () => {
     const ids = [a.companyId, b.companyId];
-    await owner.delete(jobAssignments).where(inArray(jobAssignments.companyId, ids));
+    await owner.delete(shifts).where(inArray(shifts.companyId, ids));
     await owner.delete(jobs).where(inArray(jobs.companyId, ids));
     await owner.delete(customers).where(inArray(customers.companyId, ids));
     await owner.delete(users).where(inArray(users.companyId, ids));
@@ -479,7 +472,7 @@ type EventInput = {
 export async function eventIn(tx: Tx, day: WorkDay, e: EventInput): Promise<string> {
   const server = new Date(e.server ?? e.client);
   const id = uuidv7(server.getTime());
-  await tx.insert(workSessionEvents).values({
+  await tx.insert(entries).values({
     id,
     companyId: day.companyId,
     workerId: e.worker,

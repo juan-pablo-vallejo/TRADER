@@ -2,7 +2,7 @@
 // writer for that worker until the transaction ends. Every writer of labor events follows one
 // path — loadWorkerTimeline, validateEvent, insert, commit — in one transaction, so two
 // concurrent pushes for a worker cannot each validate against a timeline missing the other.
-import { workSessionEvents } from "@trader/db/schema";
+import { entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 
 import type { Tx } from "../core/context";
@@ -58,18 +58,18 @@ export async function loadWorkerTimeline(
 export async function readWorkerEvents(tx: Tx, workerId: string): Promise<LaborEvent[]> {
   return tx
     .select({
-      id: workSessionEvents.id,
-      workerId: workSessionEvents.workerId,
-      jobId: workSessionEvents.jobId,
-      type: workSessionEvents.type,
-      clientTimestamp: workSessionEvents.clientTimestamp,
-      serverTimestamp: workSessionEvents.serverTimestamp,
-      clockSkewed: workSessionEvents.clockSkewed,
-      voidsEventId: workSessionEvents.voidsEventId,
-      correctsEventId: workSessionEvents.correctsEventId,
+      id: entries.id,
+      workerId: entries.workerId,
+      jobId: entries.jobId,
+      type: entries.type,
+      clientTimestamp: entries.clientTimestamp,
+      serverTimestamp: entries.serverTimestamp,
+      clockSkewed: entries.clockSkewed,
+      voidsEventId: entries.voidsEventId,
+      correctsEventId: entries.correctsEventId,
     })
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.workerId, workerId));
+    .from(entries)
+    .where(eq(entries.workerId, workerId));
 }
 
 // The newest receipt stamp among `events`, or null for none.

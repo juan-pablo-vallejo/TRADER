@@ -3,7 +3,7 @@
 // in the order push meets them: a deactivated person cannot push at all; an archived job
 // takes no clock-in from anyone. The flag is read without locks and is true of the moment of
 // the read. It never blocks a write (write.ts). Plain reads under RLS.
-import { companies, jobAssignments, jobs, jobStatus, users } from "@trader/db/schema";
+import { companies, shifts, jobs, jobStatus, users } from "@trader/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";
 
@@ -42,10 +42,10 @@ async function plannedShifts(
 ): Promise<z.infer<typeof planned>[]> {
   const rows = await tx
     .select({
-      id: jobAssignments.id,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      expectedEnd: jobAssignments.expectedEnd,
+      id: shifts.id,
+      workDate: shifts.workDate,
+      expectedStart: shifts.expectedStart,
+      expectedEnd: shifts.expectedEnd,
       workerId: users.id,
       workerName: users.name,
       workerDeactivatedAt: users.deactivatedAt,
@@ -53,15 +53,15 @@ async function plannedShifts(
       jobName: jobs.name,
       jobStatus: jobs.status,
     })
-    .from(jobAssignments)
-    .innerJoin(users, eq(users.id, jobAssignments.userId))
-    .innerJoin(jobs, eq(jobs.id, jobAssignments.jobId))
-    .where(and(gte(jobAssignments.workDate, from), lte(jobAssignments.workDate, to)))
+    .from(shifts)
+    .innerJoin(users, eq(users.id, shifts.userId))
+    .innerJoin(jobs, eq(jobs.id, shifts.jobId))
+    .where(and(gte(shifts.workDate, from), lte(shifts.workDate, to)))
     .orderBy(
-      asc(jobAssignments.workDate),
-      asc(jobAssignments.expectedStart),
+      asc(shifts.workDate),
+      asc(shifts.expectedStart),
       asc(byName(users.name)),
-      asc(jobAssignments.id),
+      asc(shifts.id),
     )
     .limit(LIST_LIMIT);
 
@@ -117,12 +117,12 @@ export async function weekShifts(
   const rows = await plannedShifts(tx, from, to);
   const marks = await tx
     .select({
-      id: jobAssignments.id,
-      lockedAt: jobAssignments.lockedAt,
-      copyId: jobAssignments.copyId,
+      id: shifts.id,
+      lockedAt: shifts.lockedAt,
+      copyId: shifts.copyId,
     })
-    .from(jobAssignments)
-    .where(and(gte(jobAssignments.workDate, from), lte(jobAssignments.workDate, to)));
+    .from(shifts)
+    .where(and(gte(shifts.workDate, from), lte(shifts.workDate, to)));
   const markOf = new Map(marks.map((m) => [m.id, m]));
   const [company] = await tx.select({ timezone: companies.timezone }).from(companies);
   if (company === undefined) throw new Error("the caller's company is not visible");

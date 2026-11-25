@@ -2,13 +2,7 @@
 // Postgres, in rolled-back owner transactions: each record's caller transaction is a savepoint
 // of it. What a commit proves is sync/push-commit.test.ts's; the loop's stop rules are also
 // proved here without a database, through pushRecords with a stand-in runner.
-import {
-  companies,
-  jobAssignments,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { companies, shifts, jobs, users, entries } from "@trader/db/schema";
 import { TRPCError } from "@trpc/server";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
@@ -107,10 +101,7 @@ describe("sync.push — who may call", () => {
         },
       );
       const events = await asOwner(tx, d.companyId, () =>
-        tx
-          .select()
-          .from(workSessionEvents)
-          .where(eq(workSessionEvents.companyId, d.companyId)),
+        tx.select().from(entries).where(eq(entries.companyId, d.companyId)),
       );
       expect(events).toEqual([]);
     });
@@ -713,7 +704,7 @@ describe("sync.push — a start, by the schedule switch", () => {
       async () =>
         (
           await tx
-            .insert(jobAssignments)
+            .insert(shifts)
             .values({
               companyId: d.companyId,
               userId,
@@ -722,7 +713,7 @@ describe("sync.push — a start, by the schedule switch", () => {
               expectedStart: "07:00",
               expectedEnd: "15:30",
             })
-            .returning({ id: jobAssignments.id })
+            .returning({ id: shifts.id })
         )[0]!.id,
     );
   const lockOf = (tx: Tx, d: Day, shiftId: string) =>
@@ -732,14 +723,14 @@ describe("sync.push — a start, by the schedule switch", () => {
       async () =>
         (
           await tx
-            .select({ by: jobAssignments.lockedByEventId })
-            .from(jobAssignments)
-            .where(eq(jobAssignments.id, shiftId))
+            .select({ by: shifts.lockedByEventId })
+            .from(shifts)
+            .where(eq(shifts.id, shiftId))
         )[0]!.by,
     );
   const eventCount = (tx: Tx, d: Day) =>
     asOwner(tx, d.companyId, () =>
-      tx.$count(workSessionEvents, eq(workSessionEvents.companyId, d.companyId)),
+      tx.$count(entries, eq(entries.companyId, d.companyId)),
     );
   // One record's answer: its result and flags, or its code when refused.
   const one = async (tx: Tx, who: unknown, record: unknown) => {
@@ -756,13 +747,13 @@ describe("sync.push — a start, by the schedule switch", () => {
         (
           await tx
             .select({
-              lat: workSessionEvents.locationLat,
-              lng: workSessionEvents.locationLng,
-              accuracyM: workSessionEvents.locationAccuracyM,
-              flags: workSessionEvents.flags,
+              lat: entries.locationLat,
+              lng: entries.locationLng,
+              accuracyM: entries.locationAccuracyM,
+              flags: entries.flags,
             })
-            .from(workSessionEvents)
-            .where(eq(workSessionEvents.id, id))
+            .from(entries)
+            .where(eq(entries.id, id))
         )[0],
     );
 

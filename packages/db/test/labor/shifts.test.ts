@@ -1,4 +1,4 @@
-// Dated shifts: the job_assignments table, asserted against
+// Dated shifts: the shifts table, asserted against
 // the migrated container. Rolled-back transactions throughout; see helpers.ts. The catalog
 // side — FORCE, the policy, the grant matrix — is row-level-security.test.ts's and
 // app-role.test.ts's.
@@ -6,13 +6,7 @@ import { eq, sql, type SQL } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import {
-  customers,
-  jobAssignments,
-  jobs,
-  users,
-  workSessionEvents,
-} from "../../src/schema";
+import { customers, shifts, jobs, users, entries } from "../../src/schema";
 import {
   asApp,
   fixture,
@@ -29,8 +23,8 @@ type Refs = Awaited<ReturnType<typeof fixture>>;
 
 const plan = (
   refs: Refs,
-  over: Partial<typeof jobAssignments.$inferInsert> = {},
-): typeof jobAssignments.$inferInsert => ({
+  over: Partial<typeof shifts.$inferInsert> = {},
+): typeof shifts.$inferInsert => ({
   companyId: refs.companyId,
   userId: refs.workerId,
   jobId: refs.jobId,
@@ -40,8 +34,8 @@ const plan = (
   ...over,
 });
 
-const failed = (tx: Tx, row: typeof jobAssignments.$inferInsert) =>
-  pgError(tx.transaction((sp: Tx) => sp.insert(jobAssignments).values(row)));
+const failed = (tx: Tx, row: typeof shifts.$inferInsert) =>
+  pgError(tx.transaction((sp: Tx) => sp.insert(shifts).values(row)));
 
 // A statement the schedule's guards refuse: its SQLSTATE and the constraint it names.
 async function raised(tx: Tx, statement: SQL) {
@@ -52,19 +46,17 @@ async function raised(tx: Tx, statement: SQL) {
   return { code: error.code, constraint: error.constraint };
 }
 
-async function insertShift(tx: Tx, row: typeof jobAssignments.$inferInsert) {
-  return one(
-    await tx.insert(jobAssignments).values(row).returning({ id: jobAssignments.id }),
-  ).id;
+async function insertShift(tx: Tx, row: typeof shifts.$inferInsert) {
+  return one(await tx.insert(shifts).values(row).returning({ id: shifts.id })).id;
 }
 
 // A clock-in of the fixture's worker on its job, and the shift locked by it.
 async function lockedShift(tx: Tx, refs: Refs) {
   const shift = await insertShift(tx, plan(refs));
   const event = started(refs);
-  await tx.insert(workSessionEvents).values(event);
+  await tx.insert(entries).values(event);
   await tx.execute(sql`
-    update job_assignments set locked_at = now(), locked_by_event_id = ${event.id}
+    update shifts set locked_at = now(), locked_by_event_id = ${event.id}
     where id = ${shift}
   `);
   return { shift, eventId: event.id };
@@ -93,14 +85,14 @@ afterAll(async () => {
   await db.$client.end();
 });
 
-describe("job_assignments", () => {
+describe("shifts", () => {
   it("keeps the day and the wall-clock times as written", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       // 02:30 does not exist on the wall in New York on 2027-03-14; it is kept all the same.
       const row = one(
         await tx
-          .insert(jobAssignments)
+          .insert(shifts)
           .values(
             plan(refs, {
               workDate: "2027-03-14",
@@ -127,7 +119,7 @@ describe("job_assignments", () => {
       ]) {
         const error = await failed(tx, plan(refs, over));
         expect(error.code).toBe("23514");
-        expect(error.message).toContain("job_assignments_end_after_start");
+        expect(error.message).toContain("shifts_end_after_start");
       }
     });
   });
@@ -135,23 +127,21 @@ describe("job_assignments", () => {
   it("refuses the same shift twice and keeps one job twice in a day at other times", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
-      await tx.insert(jobAssignments).values(plan(refs));
+      await tx.insert(shifts).values(plan(refs));
       const again = await failed(tx, plan(refs));
       expect(again.code).toBe("23505");
-      expect(again.message).toContain("job_assignments_exact_shift_unique");
+      expect(again.message).toContain("shifts_exact_shift_unique");
       // The same job later that day, another job at overlapping times, the same shift on
       // another day: each is a shift of its own. Whether two overlap is the writers' question.
       await tx
-        .insert(jobAssignments)
+        .insert(shifts)
         .values(plan(refs, { expectedStart: "16:00", expectedEnd: "18:00" }));
-      await tx
-        .insert(jobAssignments)
-        .values(plan(refs, { jobId: await secondJob(tx, refs) }));
-      await tx.insert(jobAssignments).values(plan(refs, { workDate: "2026-11-17" }));
+      await tx.insert(shifts).values(plan(refs, { jobId: await secondJob(tx, refs) }));
+      await tx.insert(shifts).values(plan(refs, { workDate: "2026-11-17" }));
       const rows = await tx
-        .select({ id: jobAssignments.id })
-        .from(jobAssignments)
-        .where(eq(jobAssignments.companyId, refs.companyId));
+        .select({ id: shifts.id })
+        .from(shifts)
+        .where(eq(shifts.companyId, refs.companyId));
       expect(rows).toHaveLength(4);
     });
   });
@@ -163,9 +153,9 @@ describe("job_assignments", () => {
       const job = await secondJob(tx, refs);
       const moved = await raised(
         tx,
-        sql`update job_assignments set job_id = ${job} where id = ${shift}`,
+        sql`update shifts set job_id = ${job} where id = ${shift}`,
       );
-      expect(moved).toEqual({ code: "23000", constraint: "job_assignments_identity" });
+      expect(moved).toEqual({ code: "23000", constraint: "shifts_identity" });
     });
   });
 
@@ -175,10 +165,10 @@ describe("job_assignments", () => {
       const b = await fixture(tx);
       const person = await failed(tx, plan(a, { userId: b.workerId }));
       expect(person.code).toBe("23503");
-      expect(person.message).toContain("job_assignments_company_id_user_id_fk");
+      expect(person.message).toContain("shifts_company_id_user_id_fk");
       const job = await failed(tx, plan(a, { jobId: b.jobId }));
       expect(job.code).toBe("23503");
-      expect(job.message).toContain("job_assignments_company_id_job_id_fk");
+      expect(job.message).toContain("shifts_company_id_job_id_fk");
     });
   });
 
@@ -186,55 +176,49 @@ describe("job_assignments", () => {
     await rolledBack(db, async (tx) => {
       const a = await fixture(tx);
       const b = await fixture(tx);
-      await tx.insert(jobAssignments).values(plan(b));
+      await tx.insert(shifts).values(plan(b));
       await asApp(tx, a.companyId);
-      await tx.insert(jobAssignments).values(plan(a));
+      await tx.insert(shifts).values(plan(a));
       // Another tenant's row cannot be written (WITH CHECK) …
       expect(
-        await sqlstate(
-          tx.transaction((sp: Tx) => sp.insert(jobAssignments).values(plan(b))),
-        ),
+        await sqlstate(tx.transaction((sp: Tx) => sp.insert(shifts).values(plan(b)))),
       ).toBe("42501");
       // … nor seen, edited or removed: each statement reaches the tenant's one row.
-      expect(
-        await tx.select({ id: jobAssignments.id }).from(jobAssignments),
-      ).toHaveLength(1);
-      const edited = await tx.execute(
-        sql`update job_assignments set expected_end = '16:00'`,
-      );
+      expect(await tx.select({ id: shifts.id }).from(shifts)).toHaveLength(1);
+      const edited = await tx.execute(sql`update shifts set expected_end = '16:00'`);
       expect(edited.rowCount).toBe(1);
-      const gone = await tx.execute(sql`delete from job_assignments`);
+      const gone = await tx.execute(sql`delete from shifts`);
       expect(gone.rowCount).toBe(1);
       await tx.execute(sql`reset role`);
       const { rows } = await tx.execute<{ expected_end: string }>(
-        sql`select expected_end::text from job_assignments where company_id = ${b.companyId}`,
+        sql`select expected_end::text from shifts where company_id = ${b.companyId}`,
       );
       expect(rows).toEqual([{ expected_end: "15:30:00" }]);
     });
   });
 });
 
-describe("job_assignments, the punch lock", () => {
+describe("shifts, the punch lock", () => {
   it("creates a shift unlocked and keeps the two lock columns together", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       const event = started(refs);
-      await tx.insert(workSessionEvents).values(event);
+      await tx.insert(entries).values(event);
       const born = (await failed(
         tx,
         plan(refs, { lockedAt: new Date(), lockedByEventId: event.id }),
       )) as { code?: string; constraint?: string };
       expect(born.code).toBe("23000");
-      expect(born.constraint).toBe("job_assignments_created_unlocked");
+      expect(born.constraint).toBe("shifts_created_unlocked");
       const shift = await insertShift(tx, plan(refs));
       const half = await raised(
         tx,
         // The event without the instant: the trigger answers first for the other half.
-        sql`update job_assignments set locked_by_event_id = ${event.id} where id = ${shift}`,
+        sql`update shifts set locked_by_event_id = ${event.id} where id = ${shift}`,
       );
       expect(half).toEqual({
         code: "23514",
-        constraint: "job_assignments_lock_complete",
+        constraint: "shifts_lock_complete",
       });
     });
   });
@@ -244,9 +228,9 @@ describe("job_assignments, the punch lock", () => {
       const refs = await fixture(tx);
       const shift = await insertShift(tx, plan(refs));
       const lock = (eventId: string) =>
-        sql`update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+        sql`update shifts set locked_at = now(), locked_by_event_id = ${eventId}
             where id = ${shift}`;
-      const refused = { code: "23000", constraint: "job_assignments_lock_event" };
+      const refused = { code: "23000", constraint: "shifts_lock_event" };
 
       // Another person's clock-in on the same job.
       const other = one(
@@ -256,23 +240,23 @@ describe("job_assignments, the punch lock", () => {
           .returning({ id: users.id }),
       );
       const theirs = { ...started(refs), workerId: other.id, initiatorUserId: other.id };
-      await tx.insert(workSessionEvents).values(theirs);
+      await tx.insert(entries).values(theirs);
       expect(await raised(tx, lock(theirs.id))).toEqual(refused);
 
       // The person's own clock-in on another job.
       const elsewhere = { ...started(refs), jobId: await secondJob(tx, refs) };
-      await tx.insert(workSessionEvents).values(elsewhere);
+      await tx.insert(entries).values(elsewhere);
       expect(await raised(tx, lock(elsewhere.id))).toEqual(refused);
 
       // The person's own clock-in on this job, and then its end: only the start locks.
       const mine = started(refs);
-      await tx.insert(workSessionEvents).values(mine);
+      await tx.insert(entries).values(mine);
       const end = {
         ...started(refs),
         type: "ended" as const,
         clientTimestamp: new Date(Date.now() + 1000),
       };
-      await tx.insert(workSessionEvents).values(end);
+      await tx.insert(entries).values(end);
       expect(await raised(tx, lock(end.id))).toEqual(refused);
       const locked = await tx.execute(lock(mine.id));
       expect(locked.rowCount).toBe(1);
@@ -284,24 +268,24 @@ describe("job_assignments, the punch lock", () => {
       const refs = await fixture(tx);
       const { shift } = await lockedShift(tx, refs);
       const again = started(refs);
-      await tx.insert(workSessionEvents).values(again);
-      const refused = { code: "23000", constraint: "job_assignments_locked" };
+      await tx.insert(entries).values(again);
+      const refused = { code: "23000", constraint: "shifts_locked" };
       for (const statement of [
-        sql`update job_assignments set work_date = '2026-11-17' where id = ${shift}`,
-        sql`update job_assignments set expected_start = '06:00' where id = ${shift}`,
-        sql`update job_assignments set expected_end = '16:00' where id = ${shift}`,
-        sql`update job_assignments set locked_at = null, locked_by_event_id = null
+        sql`update shifts set work_date = '2026-11-17' where id = ${shift}`,
+        sql`update shifts set expected_start = '06:00' where id = ${shift}`,
+        sql`update shifts set expected_end = '16:00' where id = ${shift}`,
+        sql`update shifts set locked_at = null, locked_by_event_id = null
             where id = ${shift}`,
-        sql`update job_assignments set locked_by_event_id = ${again.id} where id = ${shift}`,
-        sql`update job_assignments set locked_at = locked_at + interval '1 second'
+        sql`update shifts set locked_by_event_id = ${again.id} where id = ${shift}`,
+        sql`update shifts set locked_at = locked_at + interval '1 second'
             where id = ${shift}`,
-        sql`delete from job_assignments where id = ${shift}`,
+        sql`delete from shifts where id = ${shift}`,
       ]) {
         expect(await raised(tx, statement)).toEqual(refused);
       }
       // What the lock does not cover may still be written.
       const touched = await tx.execute(
-        sql`update job_assignments set updated_at = now() where id = ${shift}`,
+        sql`update shifts set updated_at = now() where id = ${shift}`,
       );
       expect(touched.rowCount).toBe(1);
       // An unlocked neighbour is edited and removed as before.
@@ -309,10 +293,8 @@ describe("job_assignments, the punch lock", () => {
         tx,
         plan(refs, { expectedStart: "16:00", expectedEnd: "18:00" }),
       );
-      await tx.execute(
-        sql`update job_assignments set expected_end = '19:00' where id = ${free}`,
-      );
-      const gone = await tx.execute(sql`delete from job_assignments where id = ${free}`);
+      await tx.execute(sql`update shifts set expected_end = '19:00' where id = ${free}`);
+      const gone = await tx.execute(sql`delete from shifts where id = ${free}`);
       expect(gone.rowCount).toBe(1);
     });
   });
@@ -326,20 +308,20 @@ describe("job_assignments, the punch lock", () => {
         ...started(refs),
         clientTimestamp: new Date("2026-11-16T12:05:40Z"),
       };
-      await tx.insert(workSessionEvents).values(event);
+      await tx.insert(entries).values(event);
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${event.id}
+        update shifts set locked_at = now(), locked_by_event_id = ${event.id}
         where id = ${shift}
       `);
       const end = async () =>
         one(
           await tx
-            .select({ end: jobAssignments.expectedEnd })
-            .from(jobAssignments)
-            .where(eq(jobAssignments.id, shift)),
+            .select({ end: shifts.expectedEnd })
+            .from(shifts)
+            .where(eq(shifts.id, shift)),
         ).end;
       const to = (time: string) =>
-        sql`update job_assignments set expected_end = ${time} where id = ${shift}`;
+        sql`update shifts set expected_end = ${time} where id = ${shift}`;
 
       // Earlier, and after the clock-in: written. Again, earlier still.
       expect((await tx.execute(to("12:00"))).rowCount).toBe(1);
@@ -349,22 +331,22 @@ describe("job_assignments, the punch lock", () => {
       expect(await end()).toBe("07:06:00");
 
       // At the clock-in's minute, or before it: refused, by a name of its own.
-      const beforeClockIn = { code: "23000", constraint: "job_assignments_locked_end" };
+      const beforeClockIn = { code: "23000", constraint: "shifts_locked_end" };
       expect(await raised(tx, to("07:05"))).toEqual(beforeClockIn);
       expect(await raised(tx, to("07:01"))).toEqual(beforeClockIn);
       // Later again, even back to where it was: refused. A trim is not undone.
-      const locked = { code: "23000", constraint: "job_assignments_locked" };
+      const locked = { code: "23000", constraint: "shifts_locked" };
       expect(await raised(tx, to("07:07"))).toEqual(locked);
       expect(await raised(tx, to("15:30"))).toEqual(locked);
       // A trim that also moves anything else is refused whole.
       for (const statement of [
-        sql`update job_assignments set expected_end = '07:06', expected_start = '06:00'
+        sql`update shifts set expected_end = '07:06', expected_start = '06:00'
             where id = ${shift}`,
-        sql`update job_assignments set expected_end = '07:06', work_date = '2026-11-17'
+        sql`update shifts set expected_end = '07:06', work_date = '2026-11-17'
             where id = ${shift}`,
-        sql`update job_assignments set expected_end = '07:06', locked_at = null,
+        sql`update shifts set expected_end = '07:06', locked_at = null,
             locked_by_event_id = null where id = ${shift}`,
-        sql`delete from job_assignments where id = ${shift}`,
+        sql`delete from shifts where id = ${shift}`,
       ]) {
         expect(await raised(tx, statement)).toEqual(locked);
       }
@@ -372,9 +354,9 @@ describe("job_assignments, the punch lock", () => {
       // The clock event is as it was written: nothing here touches it.
       const kept = one(
         await tx
-          .select({ at: workSessionEvents.clientTimestamp })
-          .from(workSessionEvents)
-          .where(eq(workSessionEvents.id, event.id)),
+          .select({ at: entries.clientTimestamp })
+          .from(entries)
+          .where(eq(entries.id, event.id)),
       );
       expect(kept.at.toISOString()).toBe("2026-11-16T12:05:40.000Z");
     });
@@ -388,22 +370,22 @@ describe("job_assignments, the punch lock", () => {
         ...started(refs),
         clientTimestamp: new Date("2026-11-16T12:05:00Z"),
       };
-      await tx.insert(workSessionEvents).values(event);
+      await tx.insert(entries).values(event);
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${event.id}
+        update shifts set locked_at = now(), locked_by_event_id = ${event.id}
         where id = ${shift}
       `);
       await asApp(tx, refs.companyId);
       const trimmed = await tx.execute(
-        sql`update job_assignments set expected_end = '11:00' where id = ${shift}`,
+        sql`update shifts set expected_end = '11:00' where id = ${shift}`,
       );
       expect(trimmed.rowCount).toBe(1);
       expect(
         await raised(
           tx,
-          sql`update job_assignments set expected_end = '07:00' where id = ${shift}`,
+          sql`update shifts set expected_end = '07:00' where id = ${shift}`,
         ),
-      ).toEqual({ code: "23000", constraint: "job_assignments_locked_end" });
+      ).toEqual({ code: "23000", constraint: "shifts_locked_end" });
     });
   });
 
@@ -411,52 +393,52 @@ describe("job_assignments, the punch lock", () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       const { shift, eventId } = await lockedShift(tx, refs);
-      const refused = { code: "23000", constraint: "job_assignments_locked" };
-      const unlock = sql`update job_assignments set locked_at = null, locked_by_event_id = null
+      const refused = { code: "23000", constraint: "shifts_locked" };
+      const unlock = sql`update shifts set locked_at = null, locked_by_event_id = null
           where id = ${shift}`;
       // While its clock-in stands, the lock holds.
       expect(await raised(tx, unlock)).toEqual(refused);
       await tx
-        .insert(workSessionEvents)
+        .insert(entries)
         .values({ ...started(refs), type: "voided", voidsEventId: eventId });
       // Voided, the lock may move to another clock-in of the same person on the same job
       // that is not voided, and not to one that is.
       const voidedToo = started(refs);
-      await tx.insert(workSessionEvents).values(voidedToo);
+      await tx.insert(entries).values(voidedToo);
       await tx
-        .insert(workSessionEvents)
+        .insert(entries)
         .values({ ...started(refs), type: "voided", voidsEventId: voidedToo.id });
       expect(
         await raised(
           tx,
-          sql`update job_assignments set locked_by_event_id = ${voidedToo.id}
+          sql`update shifts set locked_by_event_id = ${voidedToo.id}
               where id = ${shift}`,
         ),
       ).toEqual(refused);
       const stands = started(refs);
-      await tx.insert(workSessionEvents).values(stands);
+      await tx.insert(entries).values(stands);
       const moved = await tx.execute(
-        sql`update job_assignments set locked_by_event_id = ${stands.id} where id = ${shift}`,
+        sql`update shifts set locked_by_event_id = ${stands.id} where id = ${shift}`,
       );
       expect(moved.rowCount).toBe(1);
       // That one voided too, the shift is free, with its day and times as they were.
       await tx
-        .insert(workSessionEvents)
+        .insert(entries)
         .values({ ...started(refs), type: "voided", voidsEventId: stands.id });
       expect(
         await raised(
           tx,
-          sql`update job_assignments set locked_at = null, locked_by_event_id = null,
+          sql`update shifts set locked_at = null, locked_by_event_id = null,
               expected_end = '16:00' where id = ${shift}`,
         ),
       ).toEqual(refused);
       expect((await tx.execute(unlock)).rowCount).toBe(1);
       const freed = await tx.execute(
-        sql`update job_assignments set expected_end = '16:00' where id = ${shift}`,
+        sql`update shifts set expected_end = '16:00' where id = ${shift}`,
       );
       expect(freed.rowCount).toBe(1);
       expect(
-        (await tx.execute(sql`delete from job_assignments where id = ${shift}`)).rowCount,
+        (await tx.execute(sql`delete from shifts where id = ${shift}`)).rowCount,
       ).toBe(1);
     });
   });
@@ -466,16 +448,16 @@ describe("job_assignments, the punch lock", () => {
       const refs = await fixture(tx);
       const { shift, eventId } = await lockedShift(tx, refs);
       await tx
-        .insert(workSessionEvents)
+        .insert(entries)
         .values({ ...started(refs), type: "voided", voidsEventId: eventId });
-      const refused = { code: "23000", constraint: "job_assignments_locked" };
+      const refused = { code: "23000", constraint: "shifts_locked" };
       // A correction of the voided clock-in is a `started` row too, and never takes the lock.
       const correction = { ...started(refs), correctsEventId: eventId };
-      await tx.insert(workSessionEvents).values(correction);
+      await tx.insert(entries).values(correction);
       expect(
         await raised(
           tx,
-          sql`update job_assignments set locked_by_event_id = ${correction.id}
+          sql`update shifts set locked_by_event_id = ${correction.id}
               where id = ${shift}`,
         ),
       ).toEqual(refused);
@@ -485,29 +467,29 @@ describe("job_assignments, the punch lock", () => {
         plan(refs, { expectedStart: "16:00", expectedEnd: "18:00" }),
       );
       const holder = started(refs);
-      await tx.insert(workSessionEvents).values(holder);
+      await tx.insert(entries).values(holder);
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${holder.id}
+        update shifts set locked_at = now(), locked_by_event_id = ${holder.id}
         where id = ${other}
       `);
       expect(
         await raised(
           tx,
-          sql`update job_assignments set locked_by_event_id = ${holder.id} where id = ${shift}`,
+          sql`update shifts set locked_by_event_id = ${holder.id} where id = ${shift}`,
         ),
       ).toEqual(refused);
       // A standing one takes it, with the lock's moment as it was.
       const stands = started(refs);
-      await tx.insert(workSessionEvents).values(stands);
+      await tx.insert(entries).values(stands);
       expect(
         await raised(
           tx,
-          sql`update job_assignments set locked_by_event_id = ${stands.id},
+          sql`update shifts set locked_by_event_id = ${stands.id},
               locked_at = locked_at + interval '1 minute' where id = ${shift}`,
         ),
       ).toEqual(refused);
       const moved = await tx.execute(
-        sql`update job_assignments set locked_by_event_id = ${stands.id} where id = ${shift}`,
+        sql`update shifts set locked_by_event_id = ${stands.id} where id = ${shift}`,
       );
       expect(moved.rowCount).toBe(1);
     });
@@ -520,10 +502,10 @@ describe("job_assignments, the punch lock", () => {
       // The table held first, never waiting (helpers.ts, lockExclusive), and nothing but
       // the TRUNCATE after it: a statement that waited while holding it would stall the
       // suites that write shifts.
-      await lockExclusive(tx, ["job_assignments"]);
-      expect(await raised(tx, sql`truncate job_assignments cascade`)).toEqual({
+      await lockExclusive(tx, ["shifts"]);
+      expect(await raised(tx, sql`truncate shifts cascade`)).toEqual({
         code: "23000",
-        constraint: "job_assignments_locked",
+        constraint: "shifts_locked",
       });
     });
   });

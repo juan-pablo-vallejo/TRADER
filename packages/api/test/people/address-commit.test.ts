@@ -4,7 +4,7 @@
 // disposableDb), dropped at the end with everything committed in it. The provider is a
 // stand-in that waits until the test lets it answer, which is where the real one spends
 // its time: inside the change's transaction, with the person's row locked.
-import { addressChanges, users, workSessionEvents } from "@trader/db/schema";
+import { addressChanges, users, entries } from "@trader/db/schema";
 import { asc, eq } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -148,9 +148,9 @@ describe("an address change, on real commits", () => {
     expect(await change).toMatchObject({ result: "changed" });
     await pushed;
     const events = await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.id, tap.id));
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.id, tap.id));
     expect(events).toEqual([{ id: tap.id }]);
   }, 20_000);
 });

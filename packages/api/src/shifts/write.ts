@@ -1,5 +1,5 @@
 // shift.create, update and remove: the weekly schedule's writers. A shift is one person
-// on one job on one day between two times. These writers touch job_assignments and nothing
+// on one job on one day between two times. These writers touch shifts and nothing
 // else: an admin may schedule any active person of the company on any job of the company
 // that is not archived.
 //
@@ -9,7 +9,7 @@
 // nothing. A shift a clock-in has locked is not changed or removed here at all: its end
 // alone may move earlier, through move.ts, which shares `lockShift` below.
 //
-// The day and the times are kept as written (schema, job-assignments.ts): no instant, no
+// The day and the times are kept as written (schema, shifts.ts): no instant, no
 // duration, no comparison with today. A shift lies within its day, so the end is after the
 // start.
 //
@@ -21,7 +21,7 @@
 // committed while it waited is seen). `update` and `remove` re-read the caller. All of them
 // then take the day's lock (day.ts), in day order where there are two, and only then a
 // shift's row. No worker lock: a shift is not labor.
-import { jobAssignments, jobs } from "@trader/db/schema";
+import { shifts, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -171,14 +171,14 @@ export async function createShifts(
     const key = { id, workDate };
     const [existing] = await tx
       .select({
-        userId: jobAssignments.userId,
-        jobId: jobAssignments.jobId,
-        workDate: jobAssignments.workDate,
-        expectedStart: jobAssignments.expectedStart,
-        expectedEnd: jobAssignments.expectedEnd,
+        userId: shifts.userId,
+        jobId: shifts.jobId,
+        workDate: shifts.workDate,
+        expectedStart: shifts.expectedStart,
+        expectedEnd: shifts.expectedEnd,
       })
-      .from(jobAssignments)
-      .where(eq(jobAssignments.id, id));
+      .from(shifts)
+      .where(eq(shifts.id, id));
     if (existing !== undefined) {
       const same =
         existing.userId === person.id &&
@@ -208,7 +208,7 @@ export async function createShifts(
       continue;
     }
     const inserted = await tx
-      .insert(jobAssignments)
+      .insert(shifts)
       .values({
         id,
         companyId: user.companyId,
@@ -220,8 +220,8 @@ export async function createShifts(
       })
       // The id is named: taken by a row this tenant cannot see, it is refused; the exact
       // shift was judged above, and any other violation is a defect and must be raised.
-      .onConflictDoNothing({ target: jobAssignments.id })
-      .returning({ id: jobAssignments.id });
+      .onConflictDoNothing({ target: shifts.id })
+      .returning({ id: shifts.id });
     if (inserted.length === 0) {
       days.push({ ...key, result: "rejected", code: "id_conflict" });
       continue;
@@ -244,16 +244,16 @@ export async function lockShift(
   const read = () =>
     tx
       .select({
-        id: jobAssignments.id,
-        userId: jobAssignments.userId,
-        jobId: jobAssignments.jobId,
-        workDate: jobAssignments.workDate,
-        expectedStart: jobAssignments.expectedStart,
-        expectedEnd: jobAssignments.expectedEnd,
-        lockedAt: jobAssignments.lockedAt,
+        id: shifts.id,
+        userId: shifts.userId,
+        jobId: shifts.jobId,
+        workDate: shifts.workDate,
+        expectedStart: shifts.expectedStart,
+        expectedEnd: shifts.expectedEnd,
+        lockedAt: shifts.lockedAt,
       })
-      .from(jobAssignments)
-      .where(eq(jobAssignments.id, shiftId));
+      .from(shifts)
+      .where(eq(shifts.id, shiftId));
   const [seen] = await read();
   if (seen === undefined) return { state: "gone" as const };
   await lockPersonDays(
@@ -312,13 +312,13 @@ export async function updateShift(
   }
 
   await tx
-    .update(jobAssignments)
+    .update(shifts)
     .set({
       workDate: input.workDate,
       expectedStart: input.expectedStart,
       expectedEnd: input.expectedEnd,
     })
-    .where(eq(jobAssignments.id, row.id));
+    .where(eq(shifts.id, row.id));
   return { result: "updated" };
 }
 
@@ -340,6 +340,6 @@ export async function removeShift(
   const judged = judgeDay({ shifts: day.shifts.filter((s) => s.id !== row.id) });
   if (!judged.ok) return refused(judged.refusal);
 
-  await tx.delete(jobAssignments).where(eq(jobAssignments.id, row.id));
+  await tx.delete(shifts).where(eq(shifts.id, row.id));
   return { result: "removed" };
 }

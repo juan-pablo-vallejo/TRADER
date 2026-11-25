@@ -1,7 +1,7 @@
 // Dated shifts: shift.week, the office's read of a Monday-to-Sunday week
 // as written. Rolled-back transactions throughout. The clock-in flag against a real push is
 // authority.test.ts's.
-import { jobAssignments, jobs } from "@trader/db/schema";
+import { shifts, jobs } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -43,7 +43,7 @@ async function office(tx: Tx) {
     jobId: string,
     workDate: string,
     hours = HOURS,
-  ) => tx.insert(jobAssignments).values({ companyId, userId, jobId, workDate, ...hours });
+  ) => tx.insert(shifts).values({ companyId, userId, jobId, workDate, ...hours });
   return { day, other, admin, ana, ben, stranger, put };
 }
 
@@ -113,7 +113,7 @@ describe("shift.week", () => {
         (
           await put(c, userId, jobId, workDate, { expectedStart, expectedEnd }).returning(
             {
-              id: jobAssignments.id,
+              id: shifts.id,
             },
           )
         )[0]!.id;
@@ -135,7 +135,7 @@ describe("shift.week", () => {
         client: "2026-11-16T12:10:00Z",
       });
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+        update shifts set locked_at = now(), locked_by_event_id = ${eventId}
         where id = ${morning}
       `);
       await becomeApp(tx);

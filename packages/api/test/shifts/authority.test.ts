@@ -3,7 +3,7 @@
 // and the office read's flag says, case by case, what that push answers. Every test runs in
 // an owner transaction that is always rolled back, each record in a savepoint of it as
 // trader_app, as sync/labor.test.ts does.
-import { jobAssignments, jobs, users } from "@trader/db/schema";
+import { shifts, jobs, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -214,7 +214,7 @@ describe("the office read's flag is push's answer", () => {
         // The admin who reads is not the admin who is planned.
         const planned = await boundIn(tx, day.companyId, "admin");
         const userId = c.who(day, { admin: planned.id });
-        await tx.insert(jobAssignments).values({
+        await tx.insert(shifts).values({
           companyId: day.companyId,
           userId,
           jobId: day[c.job],

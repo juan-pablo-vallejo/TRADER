@@ -2,7 +2,7 @@
 // that count per worker, job and work date, through the application's router under the
 // runtime role in rolled-back transactions. Fixtures are written by the owner; the replayed
 // pushes go through the push's own writer.
-import { companies, workSessionEvents } from "@trader/db/schema";
+import { companies, entries } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -504,9 +504,9 @@ describe("labor.hours", () => {
       const state = () =>
         tx
           .select()
-          .from(workSessionEvents)
-          .where(eq(workSessionEvents.companyId, d.companyId))
-          .orderBy(asc(workSessionEvents.id));
+          .from(entries)
+          .where(eq(entries.companyId, d.companyId))
+          .orderBy(asc(entries.id));
       const before = await state();
       await becomeApp(tx);
       await hours(tx, admin.who);

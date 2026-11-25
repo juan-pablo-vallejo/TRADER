@@ -4,7 +4,7 @@
 // creates nothing; undo removes the whole copy or none of it. Every
 // call runs in a rolled-back transaction (helpers, "Rolled-back calls"); two admins copying
 // at once and a failure part-way are shift-commit.test.ts's.
-import { jobAssignments, users } from "@trader/db/schema";
+import { shifts, users } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -47,9 +47,9 @@ async function office(tx: Tx) {
   ) =>
     (
       await tx
-        .insert(jobAssignments)
+        .insert(shifts)
         .values({ companyId, userId, jobId, workDate, ...hours })
-        .returning({ id: jobAssignments.id })
+        .returning({ id: shifts.id })
     )[0]!.id;
   const as = (who: unknown) => appCallerIn(tx, who).shift;
   return { day, other, admin, worker, put, as, plan: as(admin.who) };
@@ -58,17 +58,15 @@ async function office(tx: Tx) {
 const shiftsOf = async (tx: Tx, d: WorkDay, from = THIS) =>
   tx
     .select({
-      userId: jobAssignments.userId,
-      jobId: jobAssignments.jobId,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      copyId: jobAssignments.copyId,
+      userId: shifts.userId,
+      jobId: shifts.jobId,
+      workDate: shifts.workDate,
+      expectedStart: shifts.expectedStart,
+      copyId: shifts.copyId,
     })
-    .from(jobAssignments)
-    .where(
-      sql`${jobAssignments.companyId} = ${d.companyId} and ${jobAssignments.workDate} >= ${from}`,
-    )
-    .orderBy(asc(jobAssignments.workDate), asc(jobAssignments.expectedStart));
+    .from(shifts)
+    .where(sql`${shifts.companyId} = ${d.companyId} and ${shifts.workDate} >= ${from}`)
+    .orderBy(asc(shifts.workDate), asc(shifts.expectedStart));
 
 const brief = (p: { create: object[]; leftOut: object[] }) => ({
   create: (p.create as { workDate: string; expectedStart: string }[]).map(
@@ -202,7 +200,7 @@ describe("shift.copyPreview", () => {
         client: "2026-11-09T11:50:00Z",
       });
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+        update shifts set locked_at = now(), locked_by_event_id = ${eventId}
         where id = ${held}
       `);
       await becomeApp(tx);
@@ -419,11 +417,11 @@ describe("shift.copyUndo", () => {
       const { day, plan, copyId } = await copied(tx);
       await tx.execute(sql`reset role`);
       const [monday] = await tx
-        .select({ id: jobAssignments.id })
-        .from(jobAssignments)
+        .select({ id: shifts.id })
+        .from(shifts)
         .where(
-          sql`${jobAssignments.copyId} = ${copyId} and ${jobAssignments.userId} = ${day.w1}
-            and ${jobAssignments.workDate} = ${THIS}`,
+          sql`${shifts.copyId} = ${copyId} and ${shifts.userId} = ${day.w1}
+            and ${shifts.workDate} = ${THIS}`,
         );
       const eventId = await eventIn(tx, day, {
         worker: day.w1,
@@ -432,7 +430,7 @@ describe("shift.copyUndo", () => {
         client: "2026-11-09T12:10:00Z",
       });
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+        update shifts set locked_at = now(), locked_by_event_id = ${eventId}
         where id = ${monday!.id}
       `);
       await becomeApp(tx);
@@ -452,7 +450,7 @@ describe("gates", () => {
       const { day, other, worker, put, as, plan } = await office(tx);
       await put(day.w1, day.J, "2026-11-02");
       const foreignCopy = uuidv7();
-      await tx.insert(jobAssignments).values({
+      await tx.insert(shifts).values({
         companyId: other.companyId,
         userId: other.w1,
         jobId: other.J,
@@ -480,9 +478,7 @@ describe("gates", () => {
         result: "unchanged",
       });
       await tx.execute(sql`reset role`);
-      expect(
-        await tx.$count(jobAssignments, eq(jobAssignments.copyId, foreignCopy)),
-      ).toBe(1);
+      expect(await tx.$count(shifts, eq(shifts.copyId, foreignCopy))).toBe(1);
     });
   });
 });

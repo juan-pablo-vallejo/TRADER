@@ -5745,7 +5745,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -5947,7 +5947,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -6214,7 +6214,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -6440,7 +6440,7 @@
                       "channel": {
                         "type": "string",
                         "enum": [
-                          "text",
+                          "whatsapp",
                           "email"
                         ]
                       },
@@ -6739,7 +6739,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -6941,7 +6941,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -7293,7 +7293,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -7495,7 +7495,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -7697,7 +7697,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -7956,7 +7956,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -8158,7 +8158,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -8391,7 +8391,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -8593,7 +8593,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -8848,7 +8848,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -9050,7 +9050,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -9252,7 +9252,7 @@
                             "channel": {
                               "type": "string",
                               "enum": [
-                                "text",
+                                "whatsapp",
                                 "email"
                               ]
                             },
@@ -12216,7 +12216,7 @@
       "unscheduled"
     ],
     "INVITATION_CHANNELS": [
-      "text",
+      "whatsapp",
       "email"
     ],
     "INVITATION_STATUSES": [

@@ -1,7 +1,7 @@
 // job.read: the job page's one call. Each of the four steps reached and not reached, the
 // people of the job with their hours on it, its invoices, the gate and the tenant wall.
 // Every test runs in an owner transaction that is always rolled back.
-import { invoiceCounters, invoices, jobAssignments, users } from "@trader/db/schema";
+import { invoiceCounters, invoices, shifts, users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -46,7 +46,7 @@ async function world(tx: Tx) {
     signInPhone: null,
   };
   const shift = (userId: string, jobId: string, workDate: string) =>
-    tx.insert(jobAssignments).values({
+    tx.insert(shifts).values({
       id: uuidv7(),
       companyId: d.companyId,
       userId,

@@ -1,13 +1,7 @@
 // sync.pull (sync/pull.ts) through the application's router, against Postgres,
 // in rolled-back owner transactions as trader_app under the tenant. What it must never hold:
 // another worker's labor, coordinates or contact details.
-import {
-  companies,
-  jobAssignments,
-  jobs,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { companies, shifts, jobs, users, entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -55,11 +49,11 @@ async function event(
     type: "started" | "ended";
     at: Date;
     by?: string;
-    flags?: (typeof workSessionEvents.$inferInsert)["flags"];
+    flags?: (typeof entries.$inferInsert)["flags"];
   },
 ) {
   const id = uuidv7(e.at.getTime());
-  await tx.insert(workSessionEvents).values({
+  await tx.insert(entries).values({
     id,
     companyId: d.companyId,
     workerId: e.worker,
@@ -282,7 +276,7 @@ describe("sync.pull — reference data", () => {
         .set({ phone: "401-555-0100" })
         .where(eq(companies.id, d.companyId));
       await tx.update(jobs).set({ notes: "Gate code 4411." }).where(eq(jobs.id, d.J));
-      await tx.insert(jobAssignments).values({
+      await tx.insert(shifts).values({
         companyId: d.companyId,
         userId: d.w.id,
         jobId: d.J,

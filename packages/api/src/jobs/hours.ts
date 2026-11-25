@@ -6,7 +6,7 @@
 // week is the company's own: Monday to Sunday around today in its zone. A plain read: no
 // lock, no write. Every reader of `job.list` gets the figures, the screens that only need
 // names among them: one answer, one cache.
-import { workSessionEvents } from "@trader/db/schema";
+import { entries } from "@trader/db/schema";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
@@ -37,9 +37,7 @@ export async function listJobsWithHours(
   const weekStart = mondayOf(today);
   const weekEnd = addDays(weekStart, 6);
 
-  const workers = await tx
-    .selectDistinct({ id: workSessionEvents.workerId })
-    .from(workSessionEvents);
+  const workers = await tx.selectDistinct({ id: entries.workerId }).from(entries);
   const cells = await readDayHours(
     tx,
     workers.map((w) => w.id),

@@ -3,7 +3,7 @@
 // record runs in a savepoint of it as trader_app under the day's tenant, as a record's own
 // transaction would. Commit independence is not provable here: the real-commit suite
 // (sync/push-commit.test.ts) proves it.
-import { jobs, users, workSessionEvents } from "@trader/db/schema";
+import { jobs, users, entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -86,12 +86,8 @@ async function asOwner<T>(tx: Tx, d: { companyId: string }, body: () => Promise<
 
 const rowsOf = (tx: Tx, d: WorkDay) =>
   asOwner(tx, d, async () => ({
-    events: (
-      await tx
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.companyId, d.companyId))
-    ).length,
+    events: (await tx.select().from(entries).where(eq(entries.companyId, d.companyId)))
+      .length,
   }));
 
 async function dayFor(tx: Tx) {
@@ -168,13 +164,7 @@ describe("sync.push labor — a worker's own day", () => {
       const row = await asOwner(
         tx,
         d,
-        async () =>
-          (
-            await tx
-              .select()
-              .from(workSessionEvents)
-              .where(eq(workSessionEvents.id, r.id))
-          )[0],
+        async () => (await tx.select().from(entries).where(eq(entries.id, r.id)))[0],
       );
       expect(row).toMatchObject({
         companyId: d.companyId,
@@ -280,9 +270,9 @@ describe("sync.push labor — flags", () => {
           async () =>
             (
               await tx
-                .select({ flags: workSessionEvents.flags })
-                .from(workSessionEvents)
-                .where(eq(workSessionEvents.id, start.id))
+                .select({ flags: entries.flags })
+                .from(entries)
+                .where(eq(entries.id, start.id))
             )[0],
         );
         expect(row).toEqual({ flags: reasons });
@@ -341,10 +331,7 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
     asOwner(
       tx,
       d,
-      async () =>
-        (
-          await tx.select().from(workSessionEvents).where(eq(workSessionEvents.id, id))
-        )[0]!,
+      async () => (await tx.select().from(entries).where(eq(entries.id, id)))[0]!,
     );
 
   it("flags a backdated event that claims an online capture, at the time it carries", async () => {
@@ -757,7 +744,7 @@ describe("sync.push labor — idempotency", () => {
           .returning({ id: jobs.id })
       )[0]!.id;
       const id = uuidv7();
-      await tx.insert(workSessionEvents).values({
+      await tx.insert(entries).values({
         id,
         companyId: other.companyId,
         workerId: other.userId,
@@ -796,9 +783,9 @@ describe("sync.push labor — an admin's own labor", () => {
       async () =>
         (
           await tx
-            .select({ flags: workSessionEvents.flags })
-            .from(workSessionEvents)
-            .where(eq(workSessionEvents.id, eventId))
+            .select({ flags: entries.flags })
+            .from(entries)
+            .where(eq(entries.id, eventId))
         )[0]?.flags,
     );
 
@@ -826,7 +813,7 @@ describe("sync.push labor — an admin's own labor", () => {
         ack: { id: r.id, clockSkewed: true, flags: REASONS },
       });
       const [row] = await asOwner(tx, d, () =>
-        tx.select().from(workSessionEvents).where(eq(workSessionEvents.id, r.id)),
+        tx.select().from(entries).where(eq(entries.id, r.id)),
       );
       expect(row).toMatchObject({
         workerId: admin.id,

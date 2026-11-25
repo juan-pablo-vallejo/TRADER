@@ -13,7 +13,7 @@
 // Hours screen and whatever exports it read one figure and add nothing themselves. The range
 // is refused past its bound, never truncated, and there is no limit, so nothing in it is
 // left out.
-import { entryFlag, companies, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { entryFlag, companies, jobs, users, entries } from "@trader/db/schema";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -38,8 +38,8 @@ export async function readDayHours(
   if (workerIds.length === 0) return [];
   const rows = await tx
     .select()
-    .from(workSessionEvents)
-    .where(inArray(workSessionEvents.workerId, [...workerIds]));
+    .from(entries)
+    .where(inArray(entries.workerId, [...workerIds]));
 
   const ledgers = groupBy(rows, (r) => r.workerId);
   const flags = new Map(rows.map((r) => [r.id, r.flags]));
@@ -175,12 +175,12 @@ export async function readHours(
       ? [input.workerId]
       : (
           await tx
-            .selectDistinct({ id: workSessionEvents.workerId })
-            .from(workSessionEvents)
+            .selectDistinct({ id: entries.workerId })
+            .from(entries)
             .where(
               and(
-                gte(workSessionEvents.clientTimestamp, sql`${input.from}::date - 1`),
-                lt(workSessionEvents.clientTimestamp, sql`${input.to}::date + 2`),
+                gte(entries.clientTimestamp, sql`${input.from}::date - 1`),
+                lt(entries.clientTimestamp, sql`${input.to}::date + 2`),
               ),
             )
         ).map((r) => r.id);

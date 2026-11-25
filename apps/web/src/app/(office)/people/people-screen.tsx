@@ -542,7 +542,7 @@ function Sends({ row }: { row: Row }) {
         const at = f.stamp(send.at, zone);
         return (
           <li key={send.id} className="secondary">
-            {send.channel === "text"
+            {send.channel === "whatsapp"
               ? p.byWhatsApp(send.by, at)
               : send.outcome === "sent"
                 ? p.byEmail(send.by, at)

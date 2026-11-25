@@ -2,7 +2,7 @@
 // admits, never anyone else's labor. One protected transaction; under READ COMMITTED each
 // statement reads its own committed state, so the snapshot may combine moments, and the next
 // pull converges.
-import { companies, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { companies, jobs, users, entries } from "@trader/db/schema";
 import { asc, eq, inArray, ne } from "drizzle-orm";
 
 import { loadDays } from "../shifts/day";
@@ -83,11 +83,11 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     ownEvents.length === 0
       ? []
       : await tx
-          .select({ id: workSessionEvents.id, flags: workSessionEvents.flags })
-          .from(workSessionEvents)
+          .select({ id: entries.id, flags: entries.flags })
+          .from(entries)
           .where(
             inArray(
-              workSessionEvents.id,
+              entries.id,
               ownEvents.map((e) => e.id),
             ),
           );
@@ -113,7 +113,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
           .from(jobs)
           .where(inArray(jobs.id, shiftJobIds));
   const shiftJob = new Map(shiftJobs.map((j) => [j.id, j]));
-  const shifts = [...ownDays.values()]
+  const ownShifts = [...ownDays.values()]
     .flatMap((day) => {
       return day.shifts.map((s) => {
         const job = shiftJob.get(s.jobId);
@@ -141,7 +141,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     company: { name: company.name, timezone: company.timezone, phone: company.phone },
     scheduleEnforced: company.scheduleEnforced,
     locationStamps: stampsOn(self.locationStamps, company.locationStamps),
-    shifts,
+    shifts: ownShifts,
     jobs: jobRows,
     sessions: kept.map((s) => ({
       rootEventId: s.rootEventId,

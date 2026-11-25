@@ -6,7 +6,7 @@
 // is `clock_skewed`), so a push at a fixed past instant is sent as captured offline, and a
 // push captured online is timed now. The two commit orders of an edit against a start are
 // schedule-commit.test.ts's; the rules themselves eligibility.test.ts's.
-import { companies, jobAssignments, workSessionEvents } from "@trader/db/schema";
+import { companies, shifts, entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -59,7 +59,7 @@ async function shift(
 ) {
   await asOwner(tx);
   const [row] = await tx
-    .insert(jobAssignments)
+    .insert(shifts)
     .values({
       companyId: d.companyId,
       userId,
@@ -68,7 +68,7 @@ async function shift(
       expectedStart,
       expectedEnd,
     })
-    .returning({ id: jobAssignments.id });
+    .returning({ id: shifts.id });
   return row!.id;
 }
 
@@ -132,15 +132,15 @@ async function push(
 const lockOf = async (tx: Tx, shiftId: string) => {
   await asOwner(tx);
   const [row] = await tx
-    .select({ lockedByEventId: jobAssignments.lockedByEventId })
-    .from(jobAssignments)
-    .where(eq(jobAssignments.id, shiftId));
+    .select({ lockedByEventId: shifts.lockedByEventId })
+    .from(shifts)
+    .where(eq(shifts.id, shiftId));
   return row!.lockedByEventId;
 };
 
 const eventsOf = async (tx: Tx, d: WorkDay) => {
   await asOwner(tx);
-  return tx.$count(workSessionEvents, eq(workSessionEvents.companyId, d.companyId));
+  return tx.$count(entries, eq(entries.companyId, d.companyId));
 };
 
 describe("judgeStart", () => {
@@ -431,12 +431,12 @@ describe("sync.push with schedule enforcement on", () => {
       await asOwner(tx);
       const [event] = await tx
         .select({
-          clientTimestamp: workSessionEvents.clientTimestamp,
-          jobId: workSessionEvents.jobId,
-          flags: workSessionEvents.flags,
+          clientTimestamp: entries.clientTimestamp,
+          jobId: entries.jobId,
+          flags: entries.flags,
         })
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, start.id));
+        .from(entries)
+        .where(eq(entries.id, start.id));
       expect(event).toEqual({
         clientTimestamp: at("07:10"),
         jobId: d.J,

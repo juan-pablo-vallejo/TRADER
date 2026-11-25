@@ -36,7 +36,7 @@ const texted = (refs: Billing, over: Partial<Row> = {}): Row => ({
   id: uuidv7(),
   companyId: refs.companyId,
   userId: refs.workerId,
-  channel: "text",
+  channel: "whatsapp",
   recipient: "+14015550123",
   outcome: "sent",
   sentByUserId: refs.adminId,

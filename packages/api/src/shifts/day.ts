@@ -7,10 +7,10 @@
 // `judgeDay` is the whole rule a write must pass: the day resolves (eligibility.ts: no two
 // shifts overlap), and every start already admitted would still be admitted on the same
 // shift. The database holds only what one row can prove; this is where the rest is held. A
-// writer of job_assignments that skips `lockPersonDays` breaks the rule silently.
+// writer of shifts that skips `lockPersonDays` breaks the rule silently.
 //
 // Lock order: a day's lock is taken after any row lock on jobs, users or companies and after
-// the worker's lock, and before any job_assignments row. Several days are
+// the worker's lock, and before any shifts row. Several days are
 // taken in day order.
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -96,9 +96,9 @@ export async function loadDays(
       to_char(a.expected_end, 'HH24:MI') as "end",
       case when a.locked_at is null then null
         else to_char(e.client_timestamp at time zone c.timezone, 'HH24:MI') end as locked_start
-    from job_assignments a
+    from shifts a
     join companies c on c.id = a.company_id
-    left join work_session_events e on e.id = a.locked_by_event_id
+    left join entries e on e.id = a.locked_by_event_id
     where a.work_date between ${from} and ${to} ${people}
     order by a.id
   `);

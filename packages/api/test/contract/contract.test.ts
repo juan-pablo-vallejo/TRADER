@@ -6,7 +6,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { entryFlag, jobStatus, userRole, workSessionEventType } from "@trader/db/schema";
+import { entryFlag, jobStatus, userRole, entryType } from "@trader/db/schema";
 import { describe, expect, it } from "vitest";
 
 import * as contract from "../../src/contract";
@@ -24,11 +24,11 @@ describe("the contract's restated lists", () => {
   it("are the schema's own, member for member", () => {
     expect([...contract.ROLES]).toEqual(userRole.enumValues);
     expect([...contract.JOB_STATUSES]).toEqual(jobStatus.enumValues);
-    expect([...contract.LABOR_EVENT_TYPES]).toEqual(workSessionEventType.enumValues);
+    expect([...contract.LABOR_EVENT_TYPES]).toEqual(entryType.enumValues);
     expect([...contract.ENTRY_FLAGS]).toEqual(entryFlag.enumValues);
     // What a device may record is every type but the office's void.
     expect([...contract.DEVICE_EVENT_TYPES]).toEqual(
-      workSessionEventType.enumValues.filter((t) => t !== "voided"),
+      entryType.enumValues.filter((t) => t !== "voided"),
     );
   });
 

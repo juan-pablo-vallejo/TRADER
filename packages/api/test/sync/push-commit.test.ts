@@ -3,7 +3,7 @@
 // connections serialize; these do, in a database of their own (helpers.ts, disposableDb),
 // migrated through the whole journal and dropped at the end with everything committed in it.
 // Every call runs as trader_app over the real caller transaction, one per record.
-import { jobs, users, workSessionEvents } from "@trader/db/schema";
+import { jobs, users, entries } from "@trader/db/schema";
 import { eq, inArray, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -111,10 +111,7 @@ const push = (
 
 const eventIds = async (ids: string[]) =>
   (
-    await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(inArray(workSessionEvents.id, ids))
+    await D.owner.select({ id: entries.id }).from(entries).where(inArray(entries.id, ids))
   ).map((r) => r.id);
 
 describe("sync.push — commits, record by record", () => {
@@ -139,7 +136,7 @@ describe("sync.push — commits, record by record", () => {
       // Meanwhile the caller's ledger stops replaying (an `ended` with no session), written
       // by the owner: validating anything for them throws, as a corrupt ledger must
       // (fold.ts).
-      await tx.insert(workSessionEvents).values({
+      await tx.insert(entries).values({
         id: uuidv7(),
         companyId: d.companyId,
         workerId: d.userId,
@@ -164,9 +161,9 @@ describe("sync.push — commits, record by record", () => {
     expect(JSON.stringify(events)).not.toContain(d.companyId);
     // A is committed with its flag; nothing of B or C is.
     const stored = await D.owner
-      .select({ id: workSessionEvents.id, flags: workSessionEvents.flags })
-      .from(workSessionEvents)
-      .where(inArray(workSessionEvents.id, [a.id, b.id, c.id]));
+      .select({ id: entries.id, flags: entries.flags })
+      .from(entries)
+      .where(inArray(entries.id, [a.id, b.id, c.id]));
     expect(stored).toEqual([{ id: a.id, flags: ["offline"] }]);
     // The report carries the request's id.
     expect(events[0]?.requestId).toBe(REQUEST_ID);
@@ -189,9 +186,9 @@ describe("sync.push — commits, record by record", () => {
     const ledger = () =>
       D.owner
         .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.companyId, d.companyId))
-        .orderBy(workSessionEvents.id);
+        .from(entries)
+        .where(eq(entries.companyId, d.companyId))
+        .orderBy(entries.id);
     const first = await push(d.w.who, sent); // the response the device never saw
     const rows = await ledger();
     const again = await push(d.w.who, sent);
@@ -238,9 +235,9 @@ describe("sync.push — a flagged event at commit", () => {
     ]);
     expect(await eventIds([event.id])).toEqual([event.id]);
     const rows = await D.owner
-      .select({ flags: workSessionEvents.flags })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.id, event.id));
+      .select({ flags: entries.flags })
+      .from(entries)
+      .where(eq(entries.id, event.id));
     expect(rows).toEqual([{ flags: reasons }]);
     // The resend answers from what was stored.
     const again = await push(admin.who, [event]);
@@ -283,9 +280,9 @@ describe("sync.push — concurrency on real locks", () => {
       code: "session_already_open",
     });
     const ledger = await D.owner
-      .select({ id: workSessionEvents.id })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.workerId, d.w.id));
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.workerId, d.w.id));
     expect(ledger).toHaveLength(1);
   });
 

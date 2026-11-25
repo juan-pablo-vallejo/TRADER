@@ -4,7 +4,7 @@
 import { fileURLToPath } from "node:url";
 
 import { createDb, type Db } from "@trader/db";
-import { companies, customers, jobAssignments, jobs, users } from "@trader/db/schema";
+import { companies, customers, shifts, jobs, users } from "@trader/db/schema";
 import type { ErrorReport, ErrorReporter } from "@trader/api";
 import { eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
@@ -99,7 +99,7 @@ export async function invitation(owner: Db, opts: { role?: "admin" | "worker" } 
     .returning({ id: users.id });
   // In reference order: a test may have written any of these.
   const cleanup = async () => {
-    await owner.delete(jobAssignments).where(eq(jobAssignments.companyId, companyId));
+    await owner.delete(shifts).where(eq(shifts.companyId, companyId));
     await owner.delete(jobs).where(eq(jobs.companyId, companyId));
     await owner.delete(customers).where(eq(customers.companyId, companyId));
     await owner.delete(users).where(eq(users.companyId, companyId));

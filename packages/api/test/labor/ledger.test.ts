@@ -2,7 +2,7 @@
 // them, through the application's router under the runtime role in rolled-back transactions.
 // Fixtures are written by the owner; the one correction here goes through labor.correct itself, to
 // show the read hands it the ids it needs.
-import { jobs, workSessionEvents } from "@trader/db/schema";
+import { jobs, entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -240,7 +240,7 @@ describe("labor.ledger", () => {
       // larger id: receipt decides before the id does.
       const correction = async (idMs: string, server: string) => {
         const id = uuidv7(new Date(idMs).getTime());
-        await tx.insert(workSessionEvents).values({
+        await tx.insert(entries).values({
           id,
           companyId: d.companyId,
           workerId: d.w1,
@@ -481,8 +481,8 @@ describe("labor.ledger", () => {
         (
           await tx
             .select({ n: sql<number>`count(*)::int` })
-            .from(workSessionEvents)
-            .where(eq(workSessionEvents.companyId, d.companyId))
+            .from(entries)
+            .where(eq(entries.companyId, d.companyId))
         )[0]!.n;
       const before = await counts();
       await becomeApp(tx);

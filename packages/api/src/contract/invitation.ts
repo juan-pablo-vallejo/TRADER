@@ -5,7 +5,7 @@
 // browser and the server say exactly the same thing.
 
 // The two ways an invitation goes out. `text` is the admin's own phone; `email` is TRADER's.
-export const INVITATION_CHANNELS = ["text", "email"] as const;
+export const INVITATION_CHANNELS = ["whatsapp", "email"] as const;
 export type InvitationChannel = (typeof INVITATION_CHANNELS)[number];
 
 // Each language's paragraph. The last sentence names the address the person signs in
@@ -19,8 +19,8 @@ export function invitationParagraphs(input: {
 }): [english: string, spanish: string] {
   const { name, company, url, by } = input;
   return [
-    `${name}: ${company} uses TRADER for your schedule and your hours. Get the app: ${url} Then sign in with this ${by === "text" ? "mobile number" : "email address"}.`,
-    `${name}: ${company} usa TRADER para tu horario y tus horas. Obtén la aplicación: ${url} Después inicia sesión con este ${by === "text" ? "número de celular" : "correo"}.`,
+    `${name}: ${company} uses TRADER for your schedule and your hours. Get the app: ${url} Then sign in with this ${by === "whatsapp" ? "mobile number" : "email address"}.`,
+    `${name}: ${company} usa TRADER para tu horario y tus horas. Obtén la aplicación: ${url} Después inicia sesión con este ${by === "whatsapp" ? "número de celular" : "correo"}.`,
   ];
 }
 

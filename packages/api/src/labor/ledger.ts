@@ -13,14 +13,7 @@
 // defined over all of it; the range selects sessions, and there is no limit, so nothing in the
 // range is ever left out. No coordinates or rounded hours.
 import { ROLES } from "../contract/enums";
-import {
-  entryFlag,
-  companies,
-  jobs,
-  jobStatus,
-  users,
-  workSessionEvents,
-} from "@trader/db/schema";
+import { entryFlag, companies, jobs, jobStatus, users, entries } from "@trader/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -153,10 +146,7 @@ export async function workerLedger(
   if (company === undefined) throw new Error("a user's company is not visible");
   const { timezone } = company;
 
-  const ledger = await tx
-    .select()
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.workerId, worker.id));
+  const ledger = await tx.select().from(entries).where(eq(entries.workerId, worker.id));
 
   const { structural, byRoot } = sessionAccounting(ledger);
   const dated = structural.sessions.map((s) => ({

@@ -1,4 +1,4 @@
-// Shared by every schema test file. Fixtures can never be cleaned up: work_session_events is
+// Shared by every schema test file. Fixtures can never be cleaned up: entries is
 // append-only by trigger and references users and companies, so nothing can bulk-delete
 // those tables. Every test therefore runs inside a transaction that is always rolled back,
 // and every statement runs on `tx`, never `db`.
@@ -14,7 +14,7 @@ import {
   invoices,
   jobs,
   users,
-  type workSessionEvents,
+  type entries,
 } from "../src/schema";
 
 export type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0];
@@ -141,7 +141,7 @@ export async function fixture(tx: Tx, values = company) {
 type Refs = Awaited<ReturnType<typeof fixture>>;
 
 // A complete, legal clock-in as the push handler will write it.
-export const started = (refs: Refs): typeof workSessionEvents.$inferInsert => ({
+export const started = (refs: Refs): typeof entries.$inferInsert => ({
   id: uuidv7(),
   ...refs,
   type: "started",

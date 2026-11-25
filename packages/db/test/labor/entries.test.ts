@@ -5,7 +5,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createDb, type Db } from "../../src/client";
-import { companies, users, workSessionEvents } from "../../src/schema";
+import { companies, users, entries } from "../../src/schema";
 import {
   company,
   fixture,
@@ -18,8 +18,7 @@ import {
   lockExclusive,
 } from "../helpers";
 
-const APPEND_ONLY =
-  /^work_session_events is append-only: (UPDATE|DELETE|TRUNCATE) rejected$/;
+const APPEND_ONLY = /^entries is append-only: (UPDATE|DELETE|TRUNCATE) rejected$/;
 
 let db: Db;
 beforeAll(() => {
@@ -29,50 +28,48 @@ afterAll(async () => {
   await db.$client.end();
 });
 
-describe("work_session_events", () => {
+describe("entries", () => {
   it("rejects UPDATE and the row survives", async () => {
     await rolledBack(db, async (tx) => {
       const event = started(await fixture(tx));
-      await tx.insert(workSessionEvents).values(event);
+      await tx.insert(entries).values(event);
       const error = await pgError(
-        tx.transaction((sp) =>
-          sp.execute(sql`update work_session_events set type = 'ended'`),
-        ),
+        tx.transaction((sp) => sp.execute(sql`update entries set type = 'ended'`)),
       );
       expect(error.code).toBe("23000");
-      expect(error.message).toBe("work_session_events is append-only: UPDATE rejected");
-      const row = one(await tx.select().from(workSessionEvents));
+      expect(error.message).toBe("entries is append-only: UPDATE rejected");
+      const row = one(await tx.select().from(entries));
       expect(row.type).toBe("started");
     });
   });
 
   it("rejects DELETE and the row survives", async () => {
     await rolledBack(db, async (tx) => {
-      await tx.insert(workSessionEvents).values(started(await fixture(tx)));
+      await tx.insert(entries).values(started(await fixture(tx)));
       const error = await pgError(
-        tx.transaction((sp) => sp.execute(sql`delete from work_session_events`)),
+        tx.transaction((sp) => sp.execute(sql`delete from entries`)),
       );
       expect(error.code).toBe("23000");
-      expect(error.message).toBe("work_session_events is append-only: DELETE rejected");
-      expect(await tx.select().from(workSessionEvents)).toHaveLength(1);
+      expect(error.message).toBe("entries is append-only: DELETE rejected");
+      expect(await tx.select().from(entries)).toHaveLength(1);
     });
   });
 
   it("rejects TRUNCATE, which bypasses row triggers", async () => {
-    // CASCADE, because job_assignments names the event that locked a shift and Postgres
+    // CASCADE, because shifts names the event that locked a shift and Postgres
     // refuses a plain TRUNCATE of a referenced table (0A000) before any trigger runs; with
     // CASCADE the statement reaches the guard. The whole cascade set held first, without
     // waiting: a waiting TRUNCATE can close a cycle with another suite's insert (40P01;
     // helpers.ts, lockExclusive).
     await rolledBack(db, async (tx) => {
-      await tx.insert(workSessionEvents).values(started(await fixture(tx)));
-      await lockExclusive(tx, ["work_session_events", "job_assignments"]);
+      await tx.insert(entries).values(started(await fixture(tx)));
+      await lockExclusive(tx, ["entries", "shifts"]);
       const error = await pgError(
-        tx.transaction((sp) => sp.execute(sql`truncate work_session_events cascade`)),
+        tx.transaction((sp) => sp.execute(sql`truncate entries cascade`)),
       );
       expect(error.code).toBe("23000");
-      expect(error.message).toBe("work_session_events is append-only: TRUNCATE rejected");
-      expect(await tx.select().from(workSessionEvents)).toHaveLength(1);
+      expect(error.message).toBe("entries is append-only: TRUNCATE rejected");
+      expect(await tx.select().from(entries)).toHaveLength(1);
     });
   });
 
@@ -84,26 +81,26 @@ describe("work_session_events", () => {
       const error = await pgError(
         tx.transaction((sp) =>
           sp
-            .insert(workSessionEvents)
+            .insert(entries)
             .values(event)
-            .onConflictDoUpdate({ target: workSessionEvents.id, set: { type: "ended" } }),
+            .onConflictDoUpdate({ target: entries.id, set: { type: "ended" } }),
         ),
       );
       expect(error.code).toBe("23000");
       expect(error.message).toMatch(APPEND_ONLY);
-      expect(await tx.select().from(workSessionEvents)).toHaveLength(0);
+      expect(await tx.select().from(entries)).toHaveLength(0);
     });
   });
 
   it("records a repeated id once under ON CONFLICT DO NOTHING", async () => {
     await rolledBack(db, async (tx) => {
       const event = started(await fixture(tx));
-      await tx.insert(workSessionEvents).values(event);
+      await tx.insert(entries).values(event);
       await tx
-        .insert(workSessionEvents)
+        .insert(entries)
         .values({ ...event, type: "ended" })
-        .onConflictDoNothing({ target: workSessionEvents.id });
-      const row = one(await tx.select().from(workSessionEvents));
+        .onConflictDoNothing({ target: entries.id });
+      const row = one(await tx.select().from(entries));
       expect(row.id).toBe(event.id);
       expect(row.type).toBe("started");
     });
@@ -115,7 +112,7 @@ describe("work_session_events", () => {
       // Raw SQL: the Drizzle insert type already refuses to omit the id.
       const code = await sqlstate(
         tx.execute(sql`
-          insert into work_session_events
+          insert into entries
             (company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
              clock_skew_ms, schema_version, time_set_by_user, initiator_user_id)
           values (${companyId}, ${workerId}, ${jobId}, 'started', now(), false, 0, 1, false,
@@ -132,7 +129,7 @@ describe("work_session_events", () => {
       // Raw SQL again: the Drizzle insert type already refuses to omit it.
       const code = await sqlstate(
         tx.execute(sql`
-          insert into work_session_events
+          insert into entries
             (id, company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
              clock_skew_ms, schema_version, initiator_user_id)
           values (${uuidv7()}, ${companyId}, ${workerId}, ${jobId}, 'started', now(), false,
@@ -147,7 +144,7 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const event = started(await fixture(tx));
       const code = await sqlstate(
-        tx.insert(workSessionEvents).values({ ...event, id: crypto.randomUUID() }),
+        tx.insert(entries).values({ ...event, id: crypto.randomUUID() }),
       );
       expect(code).toBe("23514");
     });
@@ -166,9 +163,7 @@ describe("work_session_events", () => {
           .returning({ id: users.id }),
       );
       const code = await sqlstate(
-        tx
-          .insert(workSessionEvents)
-          .values({ ...started(a), initiatorUserId: outsider.id }),
+        tx.insert(entries).values({ ...started(a), initiatorUserId: outsider.id }),
       );
       expect(code).toBe("23503");
     });
@@ -187,7 +182,7 @@ describe("work_session_events", () => {
           .returning({ id: users.id }),
       );
       const code = await sqlstate(
-        tx.insert(workSessionEvents).values({ ...started(a), workerId: outsider.id }),
+        tx.insert(entries).values({ ...started(a), workerId: outsider.id }),
       );
       expect(code).toBe("23503");
     });
@@ -198,13 +193,13 @@ describe("work_session_events", () => {
       const event = started(await fixture(tx));
       const partial = await sqlstate(
         tx.transaction((sp) =>
-          sp.insert(workSessionEvents).values({ ...event, locationLat: 41.8 }),
+          sp.insert(entries).values({ ...event, locationLat: 41.8 }),
         ),
       );
       expect(partial).toBe("23514");
       const accuracyOnly = await sqlstate(
         tx.transaction((sp) =>
-          sp.insert(workSessionEvents).values({ ...event, locationAccuracyM: 12 }),
+          sp.insert(entries).values({ ...event, locationAccuracyM: 12 }),
         ),
       );
       expect(accuracyOnly).toBe("23514");
@@ -215,7 +210,7 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const event = started(await fixture(tx));
       const code = await sqlstate(
-        tx.insert(workSessionEvents).values({ ...event, schemaVersion: 0 }),
+        tx.insert(entries).values({ ...event, schemaVersion: 0 }),
       );
       expect(code).toBe("23514");
     });
@@ -231,8 +226,8 @@ describe("work_session_events", () => {
         clockSkewed: true,
         clockSkewMs: ninetyDays,
       };
-      await tx.insert(workSessionEvents).values(event);
-      const row = one(await tx.select().from(workSessionEvents));
+      await tx.insert(entries).values(event);
+      const row = one(await tx.select().from(entries));
       expect(row.clockSkewMs).toBe(ninetyDays);
       expect(row.clockSkewed).toBe(true);
     });
@@ -242,14 +237,14 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       const session = started(refs);
-      await tx.insert(workSessionEvents).values(session);
+      await tx.insert(entries).values(session);
       const voided = {
         ...started(refs),
         type: "voided" as const,
         voidsEventId: session.id,
       };
-      await tx.insert(workSessionEvents).values(voided);
-      const rows = await tx.select().from(workSessionEvents);
+      await tx.insert(entries).values(voided);
+      const rows = await tx.select().from(entries);
       const row = rows.find((r) => r.id === voided.id);
       expect(row?.type).toBe("voided");
       expect(row?.voidsEventId).toBe(session.id);
@@ -259,13 +254,11 @@ describe("work_session_events", () => {
   it("rejects a voided event with no voids_event_id", async () => {
     await rolledBack(db, async (tx) => {
       const error = await pgError(
-        tx
-          .insert(workSessionEvents)
-          .values({ ...started(await fixture(tx)), type: "voided" }),
+        tx.insert(entries).values({ ...started(await fixture(tx)), type: "voided" }),
       );
       expect(error.code).toBe("23514");
       expect(error.message).toBe(
-        "work_session_events: voids_event_id is set exactly when type is voided",
+        "entries: voids_event_id is set exactly when type is voided",
       );
     });
   });
@@ -274,10 +267,10 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       const session = started(refs);
-      await tx.insert(workSessionEvents).values(session);
+      await tx.insert(entries).values(session);
       const code = await sqlstate(
         tx
-          .insert(workSessionEvents)
+          .insert(entries)
           .values({ ...started(refs), type: "ended", voidsEventId: session.id }),
       );
       expect(code).toBe("23514");
@@ -288,9 +281,9 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);
       const session = started(refs);
-      await tx.insert(workSessionEvents).values(session);
+      await tx.insert(entries).values(session);
       const error = await pgError(
-        tx.insert(workSessionEvents).values({
+        tx.insert(entries).values({
           ...started(refs),
           type: "voided",
           voidsEventId: session.id,
@@ -298,7 +291,7 @@ describe("work_session_events", () => {
         }),
       );
       expect(error.code).toBe("23514");
-      expect(error.message).toBe("work_session_events: a voided event corrects nothing");
+      expect(error.message).toBe("entries: a voided event corrects nothing");
     });
   });
 
@@ -306,9 +299,7 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const event = started(await fixture(tx));
       const code = await sqlstate(
-        tx
-          .insert(workSessionEvents)
-          .values({ ...event, type: "voided", voidsEventId: event.id }),
+        tx.insert(entries).values({ ...event, type: "voided", voidsEventId: event.id }),
       );
       expect(code).toBe("23514");
     });
@@ -319,10 +310,10 @@ describe("work_session_events", () => {
       const a = await fixture(tx);
       const b = await fixture(tx);
       const theirs = started(b);
-      await tx.insert(workSessionEvents).values(theirs);
+      await tx.insert(entries).values(theirs);
       const code = await sqlstate(
         tx
-          .insert(workSessionEvents)
+          .insert(entries)
           .values({ ...started(a), type: "ended", correctsEventId: theirs.id }),
       );
       expect(code).toBe("23503");
@@ -335,11 +326,9 @@ describe("work_session_events", () => {
       const refs = await fixture(tx);
       const bare = started(refs);
       const flagged = started(refs);
-      await tx.insert(workSessionEvents).values(bare);
-      await tx
-        .insert(workSessionEvents)
-        .values({ ...flagged, flags: ["offline", "unscheduled"] });
-      const rows = await tx.select().from(workSessionEvents);
+      await tx.insert(entries).values(bare);
+      await tx.insert(entries).values({ ...flagged, flags: ["offline", "unscheduled"] });
+      const rows = await tx.select().from(entries);
       expect(rows.find((r) => r.id === bare.id)?.flags).toEqual([]);
       expect(rows.find((r) => r.id === flagged.id)?.flags).toEqual([
         "offline",
@@ -349,7 +338,7 @@ describe("work_session_events", () => {
       const code = await sqlstate(
         tx.transaction((sp) =>
           sp.execute(sql`
-            insert into work_session_events
+            insert into entries
               (id, company_id, worker_id, job_id, type, client_timestamp, clock_skewed,
                clock_skew_ms, schema_version, time_set_by_user, initiator_user_id, flags)
             values (${uuidv7()}, ${refs.companyId}, ${refs.workerId}, ${refs.jobId},
@@ -365,7 +354,7 @@ describe("work_session_events", () => {
     await rolledBack(db, async (tx) => {
       const { rows } = await tx.execute(sql`
         select 1 from information_schema.columns
-        where table_schema = 'public' and table_name = 'work_session_events'
+        where table_schema = 'public' and table_name = 'entries'
           and column_name = 'updated_at'
       `);
       expect(rows).toHaveLength(0);

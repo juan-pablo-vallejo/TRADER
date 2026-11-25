@@ -1,5 +1,5 @@
 {
-  "id": "818e68a1-0029-4c8a-97f1-74047d5133ee",
+  "id": "9315e27b-c08f-4997-a5a4-46e5a0e7bcab",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -34,6 +34,51 @@
           "notNull": true,
           "default": false
         },
+        "address": {
+          "name": "address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "payment_instructions": {
+          "name": "payment_instructions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invoice_terms_days": {
+          "name": "invoice_terms_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "location_stamps": {
+          "name": "location_stamps",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "demo": {
+          "name": "demo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -62,6 +107,10 @@
         "companies_timezone_not_blank": {
           "name": "companies_timezone_not_blank",
           "value": "btrim(\"companies\".\"timezone\") <> ''"
+        },
+        "companies_invoice_terms_days_range": {
+          "name": "companies_invoice_terms_days_range",
+          "value": "\"companies\".\"invoice_terms_days\" BETWEEN 0 AND 365"
         }
       },
       "isRLSEnabled": false
@@ -120,6 +169,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'worker'"
+        },
+        "location_stamps": {
+          "name": "location_stamps",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
         },
         "deactivated_at": {
           "name": "deactivated_at",
@@ -384,6 +439,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "status": {
           "name": "status",
           "type": "job_status",
@@ -520,8 +581,8 @@
       },
       "isRLSEnabled": false
     },
-    "public.job_assignments": {
-      "name": "job_assignments",
+    "public.shifts": {
+      "name": "shifts",
       "schema": "",
       "columns": {
         "id": {
@@ -601,8 +662,8 @@
         }
       },
       "indexes": {
-        "job_assignments_company_id_copy_id_idx": {
-          "name": "job_assignments_company_id_copy_id_idx",
+        "shifts_company_id_copy_id_idx": {
+          "name": "shifts_company_id_copy_id_idx",
           "columns": [
             {
               "expression": "company_id",
@@ -622,8 +683,8 @@
           "method": "btree",
           "with": {}
         },
-        "job_assignments_company_id_work_date_idx": {
-          "name": "job_assignments_company_id_work_date_idx",
+        "shifts_company_id_work_date_idx": {
+          "name": "shifts_company_id_work_date_idx",
           "columns": [
             {
               "expression": "company_id",
@@ -645,9 +706,9 @@
         }
       },
       "foreignKeys": {
-        "job_assignments_company_id_companies_id_fk": {
-          "name": "job_assignments_company_id_companies_id_fk",
-          "tableFrom": "job_assignments",
+        "shifts_company_id_companies_id_fk": {
+          "name": "shifts_company_id_companies_id_fk",
+          "tableFrom": "shifts",
           "tableTo": "companies",
           "columnsFrom": [
             "company_id"
@@ -658,9 +719,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "job_assignments_company_id_user_id_fk": {
-          "name": "job_assignments_company_id_user_id_fk",
-          "tableFrom": "job_assignments",
+        "shifts_company_id_user_id_fk": {
+          "name": "shifts_company_id_user_id_fk",
+          "tableFrom": "shifts",
           "tableTo": "users",
           "columnsFrom": [
             "company_id",
@@ -673,9 +734,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "job_assignments_company_id_job_id_fk": {
-          "name": "job_assignments_company_id_job_id_fk",
-          "tableFrom": "job_assignments",
+        "shifts_company_id_job_id_fk": {
+          "name": "shifts_company_id_job_id_fk",
+          "tableFrom": "shifts",
           "tableTo": "jobs",
           "columnsFrom": [
             "company_id",
@@ -688,10 +749,10 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "job_assignments_company_id_locked_by_event_id_fk": {
-          "name": "job_assignments_company_id_locked_by_event_id_fk",
-          "tableFrom": "job_assignments",
-          "tableTo": "work_session_events",
+        "shifts_company_id_locked_by_event_id_fk": {
+          "name": "shifts_company_id_locked_by_event_id_fk",
+          "tableFrom": "shifts",
+          "tableTo": "entries",
           "columnsFrom": [
             "company_id",
             "locked_by_event_id"
@@ -706,16 +767,16 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "job_assignments_company_id_id_unique": {
-          "name": "job_assignments_company_id_id_unique",
+        "shifts_company_id_id_unique": {
+          "name": "shifts_company_id_id_unique",
           "nullsNotDistinct": false,
           "columns": [
             "company_id",
             "id"
           ]
         },
-        "job_assignments_exact_shift_unique": {
-          "name": "job_assignments_exact_shift_unique",
+        "shifts_exact_shift_unique": {
+          "name": "shifts_exact_shift_unique",
           "nullsNotDistinct": false,
           "columns": [
             "user_id",
@@ -728,19 +789,19 @@
       },
       "policies": {},
       "checkConstraints": {
-        "job_assignments_lock_complete": {
-          "name": "job_assignments_lock_complete",
-          "value": "(\"job_assignments\".\"locked_at\" IS NULL) = (\"job_assignments\".\"locked_by_event_id\" IS NULL)"
+        "shifts_lock_complete": {
+          "name": "shifts_lock_complete",
+          "value": "(\"shifts\".\"locked_at\" IS NULL) = (\"shifts\".\"locked_by_event_id\" IS NULL)"
         },
-        "job_assignments_end_after_start": {
-          "name": "job_assignments_end_after_start",
-          "value": "\"job_assignments\".\"expected_end\" > \"job_assignments\".\"expected_start\""
+        "shifts_end_after_start": {
+          "name": "shifts_end_after_start",
+          "value": "\"shifts\".\"expected_end\" > \"shifts\".\"expected_start\""
         }
       },
       "isRLSEnabled": false
     },
-    "public.work_session_events": {
-      "name": "work_session_events",
+    "public.entries": {
+      "name": "entries",
       "schema": "",
       "columns": {
         "id": {
@@ -769,7 +830,7 @@
         },
         "type": {
           "name": "type",
-          "type": "work_session_event_type",
+          "type": "entry_type",
           "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
@@ -863,8 +924,8 @@
         }
       },
       "indexes": {
-        "work_session_events_worker_id_client_timestamp_idx": {
-          "name": "work_session_events_worker_id_client_timestamp_idx",
+        "entries_worker_id_client_timestamp_idx": {
+          "name": "entries_worker_id_client_timestamp_idx",
           "columns": [
             {
               "expression": "worker_id",
@@ -884,8 +945,8 @@
           "method": "btree",
           "with": {}
         },
-        "work_session_events_job_id_client_timestamp_idx": {
-          "name": "work_session_events_job_id_client_timestamp_idx",
+        "entries_job_id_client_timestamp_idx": {
+          "name": "entries_job_id_client_timestamp_idx",
           "columns": [
             {
               "expression": "job_id",
@@ -907,9 +968,9 @@
         }
       },
       "foreignKeys": {
-        "work_session_events_company_id_companies_id_fk": {
-          "name": "work_session_events_company_id_companies_id_fk",
-          "tableFrom": "work_session_events",
+        "entries_company_id_companies_id_fk": {
+          "name": "entries_company_id_companies_id_fk",
+          "tableFrom": "entries",
           "tableTo": "companies",
           "columnsFrom": [
             "company_id"
@@ -920,9 +981,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "work_session_events_company_id_worker_id_fk": {
-          "name": "work_session_events_company_id_worker_id_fk",
-          "tableFrom": "work_session_events",
+        "entries_company_id_worker_id_fk": {
+          "name": "entries_company_id_worker_id_fk",
+          "tableFrom": "entries",
           "tableTo": "users",
           "columnsFrom": [
             "company_id",
@@ -935,9 +996,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "work_session_events_company_id_job_id_fk": {
-          "name": "work_session_events_company_id_job_id_fk",
-          "tableFrom": "work_session_events",
+        "entries_company_id_job_id_fk": {
+          "name": "entries_company_id_job_id_fk",
+          "tableFrom": "entries",
           "tableTo": "jobs",
           "columnsFrom": [
             "company_id",
@@ -950,9 +1011,9 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "work_session_events_company_id_initiator_user_id_fk": {
-          "name": "work_session_events_company_id_initiator_user_id_fk",
-          "tableFrom": "work_session_events",
+        "entries_company_id_initiator_user_id_fk": {
+          "name": "entries_company_id_initiator_user_id_fk",
+          "tableFrom": "entries",
           "tableTo": "users",
           "columnsFrom": [
             "company_id",
@@ -965,10 +1026,10 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "work_session_events_company_id_voids_event_id_fk": {
-          "name": "work_session_events_company_id_voids_event_id_fk",
-          "tableFrom": "work_session_events",
-          "tableTo": "work_session_events",
+        "entries_company_id_voids_event_id_fk": {
+          "name": "entries_company_id_voids_event_id_fk",
+          "tableFrom": "entries",
+          "tableTo": "entries",
           "columnsFrom": [
             "company_id",
             "voids_event_id"
@@ -980,10 +1041,10 @@
           "onDelete": "no action",
           "onUpdate": "no action"
         },
-        "work_session_events_company_id_corrects_event_id_fk": {
-          "name": "work_session_events_company_id_corrects_event_id_fk",
-          "tableFrom": "work_session_events",
-          "tableTo": "work_session_events",
+        "entries_company_id_corrects_event_id_fk": {
+          "name": "entries_company_id_corrects_event_id_fk",
+          "tableFrom": "entries",
+          "tableTo": "entries",
           "columnsFrom": [
             "company_id",
             "corrects_event_id"
@@ -998,8 +1059,8 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "work_session_events_company_id_id_unique": {
-          "name": "work_session_events_company_id_id_unique",
+        "entries_company_id_id_unique": {
+          "name": "entries_company_id_id_unique",
           "nullsNotDistinct": false,
           "columns": [
             "company_id",
@@ -1009,41 +1070,41 @@
       },
       "policies": {},
       "checkConstraints": {
-        "work_session_events_id_v7": {
-          "name": "work_session_events_id_v7",
-          "value": "uuid_extract_version(\"work_session_events\".\"id\") = 7"
+        "entries_id_v7": {
+          "name": "entries_id_v7",
+          "value": "uuid_extract_version(\"entries\".\"id\") = 7"
         },
-        "work_session_events_location_complete": {
-          "name": "work_session_events_location_complete",
-          "value": "(\"work_session_events\".\"location_lat\" IS NULL) = (\"work_session_events\".\"location_lng\" IS NULL)"
+        "entries_location_complete": {
+          "name": "entries_location_complete",
+          "value": "(\"entries\".\"location_lat\" IS NULL) = (\"entries\".\"location_lng\" IS NULL)"
         },
-        "work_session_events_location_accuracy_with_fix": {
-          "name": "work_session_events_location_accuracy_with_fix",
-          "value": "\"work_session_events\".\"location_accuracy_m\" IS NULL OR \"work_session_events\".\"location_lat\" IS NOT NULL"
+        "entries_location_accuracy_with_fix": {
+          "name": "entries_location_accuracy_with_fix",
+          "value": "\"entries\".\"location_accuracy_m\" IS NULL OR \"entries\".\"location_lat\" IS NOT NULL"
         },
-        "work_session_events_location_lat_range": {
-          "name": "work_session_events_location_lat_range",
-          "value": "\"work_session_events\".\"location_lat\" BETWEEN -90 AND 90"
+        "entries_location_lat_range": {
+          "name": "entries_location_lat_range",
+          "value": "\"entries\".\"location_lat\" BETWEEN -90 AND 90"
         },
-        "work_session_events_location_lng_range": {
-          "name": "work_session_events_location_lng_range",
-          "value": "\"work_session_events\".\"location_lng\" BETWEEN -180 AND 180"
+        "entries_location_lng_range": {
+          "name": "entries_location_lng_range",
+          "value": "\"entries\".\"location_lng\" BETWEEN -180 AND 180"
         },
-        "work_session_events_location_accuracy_m_nonnegative": {
-          "name": "work_session_events_location_accuracy_m_nonnegative",
-          "value": "\"work_session_events\".\"location_accuracy_m\" >= 0"
+        "entries_location_accuracy_m_nonnegative": {
+          "name": "entries_location_accuracy_m_nonnegative",
+          "value": "\"entries\".\"location_accuracy_m\" >= 0"
         },
-        "work_session_events_schema_version_positive": {
-          "name": "work_session_events_schema_version_positive",
-          "value": "\"work_session_events\".\"schema_version\" >= 1"
+        "entries_schema_version_positive": {
+          "name": "entries_schema_version_positive",
+          "value": "\"entries\".\"schema_version\" >= 1"
         },
-        "work_session_events_voids_not_self": {
-          "name": "work_session_events_voids_not_self",
-          "value": "\"work_session_events\".\"voids_event_id\" <> \"work_session_events\".\"id\""
+        "entries_voids_not_self": {
+          "name": "entries_voids_not_self",
+          "value": "\"entries\".\"voids_event_id\" <> \"entries\".\"id\""
         },
-        "work_session_events_corrects_not_self": {
-          "name": "work_session_events_corrects_not_self",
-          "value": "\"work_session_events\".\"corrects_event_id\" <> \"work_session_events\".\"id\""
+        "entries_corrects_not_self": {
+          "name": "entries_corrects_not_self",
+          "value": "\"entries\".\"corrects_event_id\" <> \"entries\".\"id\""
         }
       },
       "isRLSEnabled": false
@@ -1152,6 +1213,60 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true
+        },
+        "due_on": {
+          "name": "due_on",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_company_name": {
+          "name": "printed_company_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_company_address": {
+          "name": "printed_company_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_company_phone": {
+          "name": "printed_company_phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_company_email": {
+          "name": "printed_company_email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_payment_instructions": {
+          "name": "printed_payment_instructions",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_customer_name": {
+          "name": "printed_customer_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_customer_address": {
+          "name": "printed_customer_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "printed_job_name": {
+          "name": "printed_job_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         },
         "issued_at": {
           "name": "issued_at",
@@ -1368,6 +1483,18 @@
         "invoices_void_not_before_issue": {
           "name": "invoices_void_not_before_issue",
           "value": "\"invoices\".\"voided_at\" >= \"invoices\".\"issued_at\""
+        },
+        "invoices_issued_has_due": {
+          "name": "invoices_issued_has_due",
+          "value": "\"invoices\".\"issued_at\" IS NULL OR \"invoices\".\"due_on\" IS NOT NULL"
+        },
+        "invoices_issued_has_print": {
+          "name": "invoices_issued_has_print",
+          "value": "\"invoices\".\"issued_at\" IS NULL OR \"invoices\".\"printed_company_name\" IS NOT NULL"
+        },
+        "invoices_issued_has_print_names": {
+          "name": "invoices_issued_has_print_names",
+          "value": "\"invoices\".\"issued_at\" IS NULL OR (\"invoices\".\"printed_customer_name\" IS NOT NULL AND \"invoices\".\"printed_job_name\" IS NOT NULL)"
         }
       },
       "isRLSEnabled": false
@@ -1886,6 +2013,315 @@
         }
       },
       "isRLSEnabled": false
+    },
+    "public.address_changes": {
+      "name": "address_changes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "uuidv7()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "field": {
+          "name": "field",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "old_value": {
+          "name": "old_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "new_value": {
+          "name": "new_value",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "changed_by_user_id": {
+          "name": "changed_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "address_changes_user_id_idx": {
+          "name": "address_changes_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "address_changes_company_id_companies_id_fk": {
+          "name": "address_changes_company_id_companies_id_fk",
+          "tableFrom": "address_changes",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "address_changes_company_id_user_id_fk": {
+          "name": "address_changes_company_id_user_id_fk",
+          "tableFrom": "address_changes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "company_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "company_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "address_changes_company_id_changed_by_user_id_fk": {
+          "name": "address_changes_company_id_changed_by_user_id_fk",
+          "tableFrom": "address_changes",
+          "tableTo": "users",
+          "columnsFrom": [
+            "company_id",
+            "changed_by_user_id"
+          ],
+          "columnsTo": [
+            "company_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "address_changes_company_id_id_unique": {
+          "name": "address_changes_company_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "company_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "address_changes_field": {
+          "name": "address_changes_field",
+          "value": "\"address_changes\".\"field\" IN ('email', 'sign_in_phone')"
+        },
+        "address_changes_changed": {
+          "name": "address_changes_changed",
+          "value": "\"address_changes\".\"old_value\" IS DISTINCT FROM \"address_changes\".\"new_value\""
+        },
+        "address_changes_not_own": {
+          "name": "address_changes_not_own",
+          "value": "\"address_changes\".\"user_id\" <> \"address_changes\".\"changed_by_user_id\""
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.invitation_sends": {
+      "name": "invitation_sends",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channel": {
+          "name": "channel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recipient": {
+          "name": "recipient",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "outcome": {
+          "name": "outcome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "failure": {
+          "name": "failure",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_message_id": {
+          "name": "provider_message_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sent_by_user_id": {
+          "name": "sent_by_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "invitation_sends_user_id_idx": {
+          "name": "invitation_sends_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "invitation_sends_company_id_companies_id_fk": {
+          "name": "invitation_sends_company_id_companies_id_fk",
+          "tableFrom": "invitation_sends",
+          "tableTo": "companies",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invitation_sends_company_id_user_id_fk": {
+          "name": "invitation_sends_company_id_user_id_fk",
+          "tableFrom": "invitation_sends",
+          "tableTo": "users",
+          "columnsFrom": [
+            "company_id",
+            "user_id"
+          ],
+          "columnsTo": [
+            "company_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "invitation_sends_company_id_sent_by_user_id_fk": {
+          "name": "invitation_sends_company_id_sent_by_user_id_fk",
+          "tableFrom": "invitation_sends",
+          "tableTo": "users",
+          "columnsFrom": [
+            "company_id",
+            "sent_by_user_id"
+          ],
+          "columnsTo": [
+            "company_id",
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invitation_sends_company_id_id_unique": {
+          "name": "invitation_sends_company_id_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "company_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "invitation_sends_channel": {
+          "name": "invitation_sends_channel",
+          "value": "\"invitation_sends\".\"channel\" IN ('whatsapp', 'email')"
+        },
+        "invitation_sends_outcome": {
+          "name": "invitation_sends_outcome",
+          "value": "\"invitation_sends\".\"outcome\" IN ('sent', 'failed')"
+        },
+        "invitation_sends_outcome_facts": {
+          "name": "invitation_sends_outcome_facts",
+          "value": "(\"invitation_sends\".\"outcome\" = 'failed') = (\"invitation_sends\".\"failure\" IS NOT NULL) AND (\"invitation_sends\".\"outcome\" = 'sent' OR \"invitation_sends\".\"provider_message_id\" IS NULL) AND (\"invitation_sends\".\"channel\" = 'email' OR (\"invitation_sends\".\"outcome\" = 'sent' AND \"invitation_sends\".\"provider_message_id\" IS NULL))"
+        },
+        "invitation_sends_failure_code": {
+          "name": "invitation_sends_failure_code",
+          "value": "\"invitation_sends\".\"failure\" ~ '^[a-z_]+$'"
+        },
+        "invitation_sends_recipient_shape": {
+          "name": "invitation_sends_recipient_shape",
+          "value": "(\"invitation_sends\".\"channel\" = 'email' AND \"invitation_sends\".\"recipient\" = lower(btrim(\"invitation_sends\".\"recipient\")) AND \"invitation_sends\".\"recipient\" ~ '^[^@[:space:]]+@[^@[:space:]]+$') OR (\"invitation_sends\".\"channel\" = 'whatsapp' AND \"invitation_sends\".\"recipient\" ~ '^\\+1[2-9][0-9]{9}$')"
+        }
+      },
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -1899,6 +2335,17 @@
         "location",
         "clock_skewed",
         "unscheduled"
+      ]
+    },
+    "public.entry_type": {
+      "name": "entry_type",
+      "schema": "public",
+      "values": [
+        "started",
+        "paused",
+        "resumed",
+        "ended",
+        "voided"
       ]
     },
     "public.job_status": {
@@ -1916,17 +2363,6 @@
       "values": [
         "admin",
         "worker"
-      ]
-    },
-    "public.work_session_event_type": {
-      "name": "work_session_event_type",
-      "schema": "public",
-      "values": [
-        "started",
-        "paused",
-        "resumed",
-        "ended",
-        "voided"
       ]
     }
   },

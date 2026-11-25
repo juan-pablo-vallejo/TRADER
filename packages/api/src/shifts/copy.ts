@@ -14,11 +14,11 @@
 // week the earlier one is copied.
 //
 // A copy is known by the browser's id for it, stored on every row it creates
-// (job_assignments.copy_id): a confirmation sent again finds its rows and creates nothing.
+// (shifts.copy_id): a confirmation sent again finds its rows and creates nothing.
 // Undo removes every row of the copy, or none when a clock-in has locked any of them.
 import { createHash } from "node:crypto";
 
-import { jobAssignments, jobs, users } from "@trader/db/schema";
+import { shifts, jobs, users } from "@trader/db/schema";
 import { and, asc, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
 
@@ -114,10 +114,10 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
   const source = addDays(target, -7);
   const rows = await tx
     .select({
-      id: jobAssignments.id,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      expectedEnd: jobAssignments.expectedEnd,
+      id: shifts.id,
+      workDate: shifts.workDate,
+      expectedStart: shifts.expectedStart,
+      expectedEnd: shifts.expectedEnd,
       userId: users.id,
       userName: users.name,
       deactivatedAt: users.deactivatedAt,
@@ -125,23 +125,18 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
       jobName: jobs.name,
       jobStatus: jobs.status,
     })
-    .from(jobAssignments)
-    .innerJoin(users, eq(users.id, jobAssignments.userId))
-    .innerJoin(jobs, eq(jobs.id, jobAssignments.jobId))
-    .where(
-      and(
-        gte(jobAssignments.workDate, source),
-        lte(jobAssignments.workDate, addDays(source, 6)),
-      ),
-    )
+    .from(shifts)
+    .innerJoin(users, eq(users.id, shifts.userId))
+    .innerJoin(jobs, eq(jobs.id, shifts.jobId))
+    .where(and(gte(shifts.workDate, source), lte(shifts.workDate, addDays(source, 6))))
     // One person's day together, its shifts in the order they are taken in.
     .orderBy(
       asc(byName(users.name)),
       asc(users.id),
-      asc(jobAssignments.workDate),
-      asc(jobAssignments.expectedStart),
-      asc(jobAssignments.expectedEnd),
-      asc(jobAssignments.id),
+      asc(shifts.workDate),
+      asc(shifts.expectedStart),
+      asc(shifts.expectedEnd),
+      asc(shifts.id),
     );
 
   const days = await loadDays(tx, target, addDays(target, 6));
@@ -217,7 +212,7 @@ export async function confirmCopy(
   input: z.infer<typeof copyConfirmInput>,
 ): Promise<z.infer<typeof copyConfirmOutput>> {
   await lockActiveSelf(tx, user, "admin");
-  const made = () => tx.$count(jobAssignments, eq(jobAssignments.copyId, input.copyId));
+  const made = () => tx.$count(shifts, eq(shifts.copyId, input.copyId));
 
   // What the plan reads is held still before it is worked out for the write: the jobs and
   // the people FOR SHARE, in id order, then every day it may touch.
@@ -245,7 +240,7 @@ export async function confirmCopy(
   const plan = await planCopy(tx, input.weekStart);
   if (plan.fingerprint !== input.fingerprint) return { result: "stale", preview: plan };
   if (plan.create.length === 0) return { result: "nothing" };
-  await tx.insert(jobAssignments).values(
+  await tx.insert(shifts).values(
     plan.create.map((o) => ({
       companyId: user.companyId,
       userId: o.worker.id,
@@ -268,14 +263,14 @@ export async function undoCopy(
   const read = () =>
     tx
       .select({
-        id: jobAssignments.id,
-        userId: jobAssignments.userId,
-        workDate: jobAssignments.workDate,
-        lockedAt: jobAssignments.lockedAt,
+        id: shifts.id,
+        userId: shifts.userId,
+        workDate: shifts.workDate,
+        lockedAt: shifts.lockedAt,
       })
-      .from(jobAssignments)
-      .where(eq(jobAssignments.copyId, input.copyId))
-      .orderBy(asc(jobAssignments.id));
+      .from(shifts)
+      .where(eq(shifts.copyId, input.copyId))
+      .orderBy(asc(shifts.id));
   const seen = await read();
   if (seen.length === 0) return { result: "unchanged" };
   await lockDays(tx, seen);
@@ -295,6 +290,6 @@ export async function undoCopy(
   // Removing shifts takes nothing from the ones that stay, so no clock-in already admitted
   // is touched and the day still resolves. Nothing is judged here.
   const copied = rows.map((r) => r.id);
-  await tx.delete(jobAssignments).where(inArray(jobAssignments.id, copied));
+  await tx.delete(shifts).where(inArray(shifts.id, copied));
   return { result: "undone", removed: rows.length };
 }

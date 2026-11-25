@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { companies } from "./companies";
-import { entryFlag, workSessionEventType } from "./enums";
+import { entryFlag, entryType } from "./enums";
 import { jobs } from "./jobs";
 import { users } from "./users";
 
@@ -22,8 +22,8 @@ import { users } from "./users";
 // from, never stored. The baseline migration adds the trigger that refuses UPDATE, DELETE and
 // TRUNCATE for every role, the application's own connection included (invariant 1);
 // corrections are new events. No updated_at and no created_at: server_timestamp is that fact.
-export const workSessionEvents = pgTable(
-  "work_session_events",
+export const entries = pgTable(
+  "entries",
   {
     // The device's UUIDv7 with no default (invariant 2): it is the idempotency key a push
     // upserts by, and a server default would turn a retry into a second row. Version 7 is
@@ -34,7 +34,7 @@ export const workSessionEvents = pgTable(
       .references(() => companies.id),
     workerId: uuid("worker_id").notNull(),
     jobId: uuid("job_id").notNull(),
-    type: workSessionEventType("type").notNull(),
+    type: entryType("type").notNull(),
     // Device time is business time: recorded as the device reported it, never clamped, and the
     // instant the fold places the event at, flagged or not (invariant 3).
     clientTimestamp: timestamp("client_timestamp", { withTimezone: true }).notNull(),
@@ -91,31 +91,31 @@ export const workSessionEvents = pgTable(
       .default(sql`'{}'`),
   },
   (t) => [
-    unique("work_session_events_company_id_id_unique").on(t.companyId, t.id),
+    unique("entries_company_id_id_unique").on(t.companyId, t.id),
     // Composite, so the worker, the job, the initiator and every referenced event belong to
     // this event's company (invariant 5).
     foreignKey({
-      name: "work_session_events_company_id_worker_id_fk",
+      name: "entries_company_id_worker_id_fk",
       columns: [t.companyId, t.workerId],
       foreignColumns: [users.companyId, users.id],
     }),
     foreignKey({
-      name: "work_session_events_company_id_job_id_fk",
+      name: "entries_company_id_job_id_fk",
       columns: [t.companyId, t.jobId],
       foreignColumns: [jobs.companyId, jobs.id],
     }),
     foreignKey({
-      name: "work_session_events_company_id_initiator_user_id_fk",
+      name: "entries_company_id_initiator_user_id_fk",
       columns: [t.companyId, t.initiatorUserId],
       foreignColumns: [users.companyId, users.id],
     }),
     foreignKey({
-      name: "work_session_events_company_id_voids_event_id_fk",
+      name: "entries_company_id_voids_event_id_fk",
       columns: [t.companyId, t.voidsEventId],
       foreignColumns: [t.companyId, t.id],
     }),
     foreignKey({
-      name: "work_session_events_company_id_corrects_event_id_fk",
+      name: "entries_company_id_corrects_event_id_fk",
       columns: [t.companyId, t.correctsEventId],
       foreignColumns: [t.companyId, t.id],
     }),
@@ -123,39 +123,24 @@ export const workSessionEvents = pgTable(
     // index: row-level security on one tenant gains nothing from it. No index on the two event
     // references: the fold loads a worker's window and resolves them in memory, and nothing is
     // ever deleted, so the foreign keys' reverse lookups never run.
-    index("work_session_events_worker_id_client_timestamp_idx").on(
-      t.workerId,
-      t.clientTimestamp,
-    ),
-    index("work_session_events_job_id_client_timestamp_idx").on(
-      t.jobId,
-      t.clientTimestamp,
-    ),
-    check("work_session_events_id_v7", sql`uuid_extract_version(${t.id}) = 7`),
+    index("entries_worker_id_client_timestamp_idx").on(t.workerId, t.clientTimestamp),
+    index("entries_job_id_client_timestamp_idx").on(t.jobId, t.clientTimestamp),
+    check("entries_id_v7", sql`uuid_extract_version(${t.id}) = 7`),
     check(
-      "work_session_events_location_complete",
+      "entries_location_complete",
       sql`(${t.locationLat} IS NULL) = (${t.locationLng} IS NULL)`,
     ),
     check(
-      "work_session_events_location_accuracy_with_fix",
+      "entries_location_accuracy_with_fix",
       sql`${t.locationAccuracyM} IS NULL OR ${t.locationLat} IS NOT NULL`,
     ),
-    check(
-      "work_session_events_location_lat_range",
-      sql`${t.locationLat} BETWEEN -90 AND 90`,
-    ),
-    check(
-      "work_session_events_location_lng_range",
-      sql`${t.locationLng} BETWEEN -180 AND 180`,
-    ),
-    check(
-      "work_session_events_location_accuracy_m_nonnegative",
-      sql`${t.locationAccuracyM} >= 0`,
-    ),
-    check("work_session_events_schema_version_positive", sql`${t.schemaVersion} >= 1`),
+    check("entries_location_lat_range", sql`${t.locationLat} BETWEEN -90 AND 90`),
+    check("entries_location_lng_range", sql`${t.locationLng} BETWEEN -180 AND 180`),
+    check("entries_location_accuracy_m_nonnegative", sql`${t.locationAccuracyM} >= 0`),
+    check("entries_schema_version_positive", sql`${t.schemaVersion} >= 1`),
     // An event can reference neither itself as voided nor as corrected. Plain checks: they name
     // no enum member, so they are safe in the transaction that adds one.
-    check("work_session_events_voids_not_self", sql`${t.voidsEventId} <> ${t.id}`),
-    check("work_session_events_corrects_not_self", sql`${t.correctsEventId} <> ${t.id}`),
+    check("entries_voids_not_self", sql`${t.voidsEventId} <> ${t.id}`),
+    check("entries_corrects_not_self", sql`${t.correctsEventId} <> ${t.id}`),
   ],
 );

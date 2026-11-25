@@ -158,7 +158,7 @@ async function changesOf(tx: Tx, userId?: string): Promise<Changed[]> {
 }
 
 const channelOf = (send: Send): InvitationChannel =>
-  send.channel === "email" ? "email" : "text";
+  send.channel === "email" ? "email" : "whatsapp";
 
 const toUser = (row: Row, sends: Send[], changes: Changed[]): Person => ({
   id: row.id,

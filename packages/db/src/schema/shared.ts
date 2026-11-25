@@ -3,7 +3,7 @@ import { sql } from "drizzle-orm";
 import { timestamp, uuid } from "drizzle-orm/pg-core";
 
 // Office-created rows take their id from Postgres 18's uuidv7(): time-ordered, and a raw SQL
-// insert works. Rows a phone creates (work_session_events) carry the device's UUIDv7
+// insert works. Rows a phone creates (entries) carry the device's UUIDv7
 // and declare their own id column with no default.
 export const id = uuid("id")
   .primaryKey()

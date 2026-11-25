@@ -1,7 +1,7 @@
 CREATE TYPE "public"."entry_flag" AS ENUM('offline', 'corrected', 'user_timed', 'location', 'clock_skewed', 'unscheduled');--> statement-breakpoint
 CREATE TYPE "public"."job_status" AS ENUM('open', 'complete', 'archived');--> statement-breakpoint
 CREATE TYPE "public"."user_role" AS ENUM('admin', 'worker');--> statement-breakpoint
-CREATE TYPE "public"."work_session_event_type" AS ENUM('started', 'paused', 'resumed', 'ended', 'voided');--> statement-breakpoint
+CREATE TYPE "public"."entry_type" AS ENUM('started', 'paused', 'resumed', 'ended', 'voided');--> statement-breakpoint
 CREATE TABLE "companies" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"name" text NOT NULL,
@@ -9,8 +9,17 @@ CREATE TABLE "companies" (
 	"schedule_enforced" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"address" text,
+	"phone" text,
+	"email" text,
+	"payment_instructions" text,
+	"invoice_terms_days" integer DEFAULT 0 NOT NULL,
+	"location_stamps" boolean DEFAULT true NOT NULL,
+	-- The Demo company's flag: the Demo sign-in admits people of a flagged company only.
+	"demo" boolean DEFAULT false NOT NULL,
 	CONSTRAINT "companies_name_not_blank" CHECK (btrim("companies"."name") <> ''),
-	CONSTRAINT "companies_timezone_not_blank" CHECK (btrim("companies"."timezone") <> '')
+	CONSTRAINT "companies_timezone_not_blank" CHECK (btrim("companies"."timezone") <> ''),
+	CONSTRAINT "companies_invoice_terms_days_range" CHECK ("companies"."invoice_terms_days" BETWEEN 0 AND 365)
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
@@ -25,6 +34,7 @@ CREATE TABLE "users" (
 	"deactivated_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"location_stamps" boolean,
 	CONSTRAINT "users_company_id_id_unique" UNIQUE("company_id","id"),
 	CONSTRAINT "users_identity_subject_unique" UNIQUE("identity_subject"),
 	CONSTRAINT "users_company_id_sign_in_phone_unique" UNIQUE("company_id","sign_in_phone"),
@@ -61,6 +71,7 @@ CREATE TABLE "jobs" (
 	"status" "job_status" DEFAULT 'open' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"notes" text,
 	CONSTRAINT "jobs_company_id_id_unique" UNIQUE("company_id","id"),
 	CONSTRAINT "jobs_company_id_customer_id_id_unique" UNIQUE("company_id","customer_id","id"),
 	CONSTRAINT "jobs_name_not_blank" CHECK (btrim("jobs"."name") <> ''),
@@ -70,7 +81,7 @@ CREATE TABLE "jobs" (
 	CONSTRAINT "jobs_location_radius_m_positive" CHECK ("jobs"."location_radius_m" > 0)
 );
 --> statement-breakpoint
-CREATE TABLE "job_assignments" (
+CREATE TABLE "shifts" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"company_id" uuid NOT NULL,
 	"user_id" uuid NOT NULL,
@@ -83,18 +94,18 @@ CREATE TABLE "job_assignments" (
 	"locked_by_event_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "job_assignments_company_id_id_unique" UNIQUE("company_id","id"),
-	CONSTRAINT "job_assignments_exact_shift_unique" UNIQUE("user_id","work_date","job_id","expected_start","expected_end"),
-	CONSTRAINT "job_assignments_lock_complete" CHECK (("job_assignments"."locked_at" IS NULL) = ("job_assignments"."locked_by_event_id" IS NULL)),
-	CONSTRAINT "job_assignments_end_after_start" CHECK ("job_assignments"."expected_end" > "job_assignments"."expected_start")
+	CONSTRAINT "shifts_company_id_id_unique" UNIQUE("company_id","id"),
+	CONSTRAINT "shifts_exact_shift_unique" UNIQUE("user_id","work_date","job_id","expected_start","expected_end"),
+	CONSTRAINT "shifts_lock_complete" CHECK (("shifts"."locked_at" IS NULL) = ("shifts"."locked_by_event_id" IS NULL)),
+	CONSTRAINT "shifts_end_after_start" CHECK ("shifts"."expected_end" > "shifts"."expected_start")
 );
 --> statement-breakpoint
-CREATE TABLE "work_session_events" (
+CREATE TABLE "entries" (
 	"id" uuid PRIMARY KEY NOT NULL,
 	"company_id" uuid NOT NULL,
 	"worker_id" uuid NOT NULL,
 	"job_id" uuid NOT NULL,
-	"type" "work_session_event_type" NOT NULL,
+	"type" "entry_type" NOT NULL,
 	"client_timestamp" timestamp with time zone NOT NULL,
 	"server_timestamp" timestamp (3) with time zone DEFAULT now() NOT NULL,
 	"clock_skewed" boolean NOT NULL,
@@ -109,16 +120,16 @@ CREATE TABLE "work_session_events" (
 	"captured_offline" boolean NOT NULL,
 	"initiator_user_id" uuid NOT NULL,
 	"flags" "entry_flag"[] DEFAULT '{}' NOT NULL,
-	CONSTRAINT "work_session_events_company_id_id_unique" UNIQUE("company_id","id"),
-	CONSTRAINT "work_session_events_id_v7" CHECK (uuid_extract_version("work_session_events"."id") = 7),
-	CONSTRAINT "work_session_events_location_complete" CHECK (("work_session_events"."location_lat" IS NULL) = ("work_session_events"."location_lng" IS NULL)),
-	CONSTRAINT "work_session_events_location_accuracy_with_fix" CHECK ("work_session_events"."location_accuracy_m" IS NULL OR "work_session_events"."location_lat" IS NOT NULL),
-	CONSTRAINT "work_session_events_location_lat_range" CHECK ("work_session_events"."location_lat" BETWEEN -90 AND 90),
-	CONSTRAINT "work_session_events_location_lng_range" CHECK ("work_session_events"."location_lng" BETWEEN -180 AND 180),
-	CONSTRAINT "work_session_events_location_accuracy_m_nonnegative" CHECK ("work_session_events"."location_accuracy_m" >= 0),
-	CONSTRAINT "work_session_events_schema_version_positive" CHECK ("work_session_events"."schema_version" >= 1),
-	CONSTRAINT "work_session_events_voids_not_self" CHECK ("work_session_events"."voids_event_id" <> "work_session_events"."id"),
-	CONSTRAINT "work_session_events_corrects_not_self" CHECK ("work_session_events"."corrects_event_id" <> "work_session_events"."id")
+	CONSTRAINT "entries_company_id_id_unique" UNIQUE("company_id","id"),
+	CONSTRAINT "entries_id_v7" CHECK (uuid_extract_version("entries"."id") = 7),
+	CONSTRAINT "entries_location_complete" CHECK (("entries"."location_lat" IS NULL) = ("entries"."location_lng" IS NULL)),
+	CONSTRAINT "entries_location_accuracy_with_fix" CHECK ("entries"."location_accuracy_m" IS NULL OR "entries"."location_lat" IS NOT NULL),
+	CONSTRAINT "entries_location_lat_range" CHECK ("entries"."location_lat" BETWEEN -90 AND 90),
+	CONSTRAINT "entries_location_lng_range" CHECK ("entries"."location_lng" BETWEEN -180 AND 180),
+	CONSTRAINT "entries_location_accuracy_m_nonnegative" CHECK ("entries"."location_accuracy_m" >= 0),
+	CONSTRAINT "entries_schema_version_positive" CHECK ("entries"."schema_version" >= 1),
+	CONSTRAINT "entries_voids_not_self" CHECK ("entries"."voids_event_id" <> "entries"."id"),
+	CONSTRAINT "entries_corrects_not_self" CHECK ("entries"."corrects_event_id" <> "entries"."id")
 );
 --> statement-breakpoint
 CREATE TABLE "invoice_counters" (
@@ -143,6 +154,15 @@ CREATE TABLE "invoices" (
 	"voided_by_user_id" uuid,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"due_on" date,
+	"printed_company_name" text,
+	"printed_company_address" text,
+	"printed_company_phone" text,
+	"printed_company_email" text,
+	"printed_payment_instructions" text,
+	"printed_customer_name" text,
+	"printed_customer_address" text,
+	"printed_job_name" text,
 	CONSTRAINT "invoices_company_id_id_unique" UNIQUE("company_id","id"),
 	CONSTRAINT "invoices_company_id_id_currency_unique" UNIQUE("company_id","id","currency"),
 	CONSTRAINT "invoices_company_id_number_unique" UNIQUE("company_id","number"),
@@ -153,7 +173,10 @@ CREATE TABLE "invoices" (
 	CONSTRAINT "invoices_issued_complete" CHECK (("invoices"."issued_at" IS NULL) = ("invoices"."issued_by_user_id" IS NULL)),
 	CONSTRAINT "invoices_voided_complete" CHECK (("invoices"."voided_at" IS NULL) = ("invoices"."voided_by_user_id" IS NULL)),
 	CONSTRAINT "invoices_void_after_issue" CHECK ("invoices"."voided_at" IS NULL OR "invoices"."issued_at" IS NOT NULL),
-	CONSTRAINT "invoices_void_not_before_issue" CHECK ("invoices"."voided_at" >= "invoices"."issued_at")
+	CONSTRAINT "invoices_void_not_before_issue" CHECK ("invoices"."voided_at" >= "invoices"."issued_at"),
+	CONSTRAINT "invoices_issued_has_due" CHECK ("invoices"."issued_at" IS NULL OR "invoices"."due_on" IS NOT NULL),
+	CONSTRAINT "invoices_issued_has_print" CHECK ("invoices"."issued_at" IS NULL OR "invoices"."printed_company_name" IS NOT NULL),
+	CONSTRAINT "invoices_issued_has_print_names" CHECK ("invoices"."issued_at" IS NULL OR ("invoices"."printed_customer_name" IS NOT NULL AND "invoices"."printed_job_name" IS NOT NULL))
 );
 --> statement-breakpoint
 CREATE TABLE "invoice_line_items" (
@@ -214,20 +237,54 @@ CREATE TABLE "invoice_sends" (
 	CONSTRAINT "invoice_sends_recipient_shape" CHECK ("invoice_sends"."recipient" = lower(btrim("invoice_sends"."recipient")) AND "invoice_sends"."recipient" ~ '^[^@[:space:]]+@[^@[:space:]]+$')
 );
 --> statement-breakpoint
+CREATE TABLE "invitation_sends" (
+	"id" uuid PRIMARY KEY NOT NULL,
+	"company_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"channel" text NOT NULL,
+	"recipient" text NOT NULL,
+	"outcome" text NOT NULL,
+	"failure" text,
+	"provider_message_id" text,
+	"sent_by_user_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "invitation_sends_company_id_id_unique" UNIQUE("company_id","id"),
+	CONSTRAINT "invitation_sends_channel" CHECK ("invitation_sends"."channel" IN ('whatsapp', 'email')),
+	CONSTRAINT "invitation_sends_outcome" CHECK ("invitation_sends"."outcome" IN ('sent', 'failed')),
+	CONSTRAINT "invitation_sends_outcome_facts" CHECK (("invitation_sends"."outcome" = 'failed') = ("invitation_sends"."failure" IS NOT NULL) AND ("invitation_sends"."outcome" = 'sent' OR "invitation_sends"."provider_message_id" IS NULL) AND ("invitation_sends"."channel" = 'email' OR ("invitation_sends"."outcome" = 'sent' AND "invitation_sends"."provider_message_id" IS NULL))),
+	CONSTRAINT "invitation_sends_failure_code" CHECK ("invitation_sends"."failure" ~ '^[a-z_]+$'),
+	CONSTRAINT "invitation_sends_recipient_shape" CHECK (("invitation_sends"."channel" = 'email' AND "invitation_sends"."recipient" = lower(btrim("invitation_sends"."recipient")) AND "invitation_sends"."recipient" ~ '^[^@[:space:]]+@[^@[:space:]]+$') OR ("invitation_sends"."channel" = 'whatsapp' AND "invitation_sends"."recipient" ~ '^\+1[2-9][0-9]{9}$'))
+);
+--> statement-breakpoint
+CREATE TABLE "address_changes" (
+	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
+	"company_id" uuid NOT NULL,
+	"user_id" uuid NOT NULL,
+	"field" text NOT NULL,
+	"old_value" text,
+	"new_value" text,
+	"changed_by_user_id" uuid NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "address_changes_company_id_id_unique" UNIQUE("company_id","id"),
+	CONSTRAINT "address_changes_field" CHECK ("address_changes"."field" IN ('email', 'sign_in_phone')),
+	CONSTRAINT "address_changes_changed" CHECK ("address_changes"."old_value" IS DISTINCT FROM "address_changes"."new_value"),
+	CONSTRAINT "address_changes_not_own" CHECK ("address_changes"."user_id" <> "address_changes"."changed_by_user_id")
+);
+--> statement-breakpoint
 ALTER TABLE "users" ADD CONSTRAINT "users_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "customers" ADD CONSTRAINT "customers_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "jobs" ADD CONSTRAINT "jobs_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "jobs" ADD CONSTRAINT "jobs_company_id_customer_id_fk" FOREIGN KEY ("company_id","customer_id") REFERENCES "public"."customers"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "job_assignments" ADD CONSTRAINT "job_assignments_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "job_assignments" ADD CONSTRAINT "job_assignments_company_id_user_id_fk" FOREIGN KEY ("company_id","user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "job_assignments" ADD CONSTRAINT "job_assignments_company_id_job_id_fk" FOREIGN KEY ("company_id","job_id") REFERENCES "public"."jobs"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "job_assignments" ADD CONSTRAINT "job_assignments_company_id_locked_by_event_id_fk" FOREIGN KEY ("company_id","locked_by_event_id") REFERENCES "public"."work_session_events"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "work_session_events" ADD CONSTRAINT "work_session_events_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "work_session_events" ADD CONSTRAINT "work_session_events_company_id_worker_id_fk" FOREIGN KEY ("company_id","worker_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "work_session_events" ADD CONSTRAINT "work_session_events_company_id_job_id_fk" FOREIGN KEY ("company_id","job_id") REFERENCES "public"."jobs"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "work_session_events" ADD CONSTRAINT "work_session_events_company_id_initiator_user_id_fk" FOREIGN KEY ("company_id","initiator_user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "work_session_events" ADD CONSTRAINT "work_session_events_company_id_voids_event_id_fk" FOREIGN KEY ("company_id","voids_event_id") REFERENCES "public"."work_session_events"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "work_session_events" ADD CONSTRAINT "work_session_events_company_id_corrects_event_id_fk" FOREIGN KEY ("company_id","corrects_event_id") REFERENCES "public"."work_session_events"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "shifts" ADD CONSTRAINT "shifts_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "shifts" ADD CONSTRAINT "shifts_company_id_user_id_fk" FOREIGN KEY ("company_id","user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "shifts" ADD CONSTRAINT "shifts_company_id_job_id_fk" FOREIGN KEY ("company_id","job_id") REFERENCES "public"."jobs"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "shifts" ADD CONSTRAINT "shifts_company_id_locked_by_event_id_fk" FOREIGN KEY ("company_id","locked_by_event_id") REFERENCES "public"."entries"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "entries" ADD CONSTRAINT "entries_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "entries" ADD CONSTRAINT "entries_company_id_worker_id_fk" FOREIGN KEY ("company_id","worker_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "entries" ADD CONSTRAINT "entries_company_id_job_id_fk" FOREIGN KEY ("company_id","job_id") REFERENCES "public"."jobs"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "entries" ADD CONSTRAINT "entries_company_id_initiator_user_id_fk" FOREIGN KEY ("company_id","initiator_user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "entries" ADD CONSTRAINT "entries_company_id_voids_event_id_fk" FOREIGN KEY ("company_id","voids_event_id") REFERENCES "public"."entries"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "entries" ADD CONSTRAINT "entries_company_id_corrects_event_id_fk" FOREIGN KEY ("company_id","corrects_event_id") REFERENCES "public"."entries"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoice_counters" ADD CONSTRAINT "invoice_counters_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoices" ADD CONSTRAINT "invoices_company_id_customer_id_job_id_fk" FOREIGN KEY ("company_id","customer_id","job_id") REFERENCES "public"."jobs"("company_id","customer_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -242,19 +299,27 @@ ALTER TABLE "invoice_payments" ADD CONSTRAINT "invoice_payments_company_id_rever
 ALTER TABLE "invoice_sends" ADD CONSTRAINT "invoice_sends_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoice_sends" ADD CONSTRAINT "invoice_sends_company_id_invoice_id_fk" FOREIGN KEY ("company_id","invoice_id") REFERENCES "public"."invoices"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "invoice_sends" ADD CONSTRAINT "invoice_sends_company_id_sent_by_user_id_fk" FOREIGN KEY ("company_id","sent_by_user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invitation_sends" ADD CONSTRAINT "invitation_sends_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invitation_sends" ADD CONSTRAINT "invitation_sends_company_id_user_id_fk" FOREIGN KEY ("company_id","user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "invitation_sends" ADD CONSTRAINT "invitation_sends_company_id_sent_by_user_id_fk" FOREIGN KEY ("company_id","sent_by_user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "address_changes" ADD CONSTRAINT "address_changes_company_id_companies_id_fk" FOREIGN KEY ("company_id") REFERENCES "public"."companies"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "address_changes" ADD CONSTRAINT "address_changes_company_id_user_id_fk" FOREIGN KEY ("company_id","user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "address_changes" ADD CONSTRAINT "address_changes_company_id_changed_by_user_id_fk" FOREIGN KEY ("company_id","changed_by_user_id") REFERENCES "public"."users"("company_id","id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 CREATE UNIQUE INDEX "users_company_id_lower_email_idx" ON "users" USING btree ("company_id",lower("email"));--> statement-breakpoint
 CREATE INDEX "jobs_company_id_status_idx" ON "jobs" USING btree ("company_id","status");--> statement-breakpoint
 CREATE INDEX "jobs_customer_id_idx" ON "jobs" USING btree ("customer_id");--> statement-breakpoint
-CREATE INDEX "job_assignments_company_id_copy_id_idx" ON "job_assignments" USING btree ("company_id","copy_id");--> statement-breakpoint
-CREATE INDEX "job_assignments_company_id_work_date_idx" ON "job_assignments" USING btree ("company_id","work_date");--> statement-breakpoint
-CREATE INDEX "work_session_events_worker_id_client_timestamp_idx" ON "work_session_events" USING btree ("worker_id","client_timestamp");--> statement-breakpoint
-CREATE INDEX "work_session_events_job_id_client_timestamp_idx" ON "work_session_events" USING btree ("job_id","client_timestamp");--> statement-breakpoint
+CREATE INDEX "shifts_company_id_copy_id_idx" ON "shifts" USING btree ("company_id","copy_id");--> statement-breakpoint
+CREATE INDEX "shifts_company_id_work_date_idx" ON "shifts" USING btree ("company_id","work_date");--> statement-breakpoint
+CREATE INDEX "entries_worker_id_client_timestamp_idx" ON "entries" USING btree ("worker_id","client_timestamp");--> statement-breakpoint
+CREATE INDEX "entries_job_id_client_timestamp_idx" ON "entries" USING btree ("job_id","client_timestamp");--> statement-breakpoint
 CREATE INDEX "invoices_company_id_issued_at_idx" ON "invoices" USING btree ("company_id","issued_at");--> statement-breakpoint
 CREATE INDEX "invoices_job_id_idx" ON "invoices" USING btree ("job_id");--> statement-breakpoint
 CREATE INDEX "invoices_customer_id_idx" ON "invoices" USING btree ("customer_id");--> statement-breakpoint
 CREATE INDEX "invoice_line_items_invoice_id_position_idx" ON "invoice_line_items" USING btree ("invoice_id","position");--> statement-breakpoint
 CREATE INDEX "invoice_payments_invoice_id_idx" ON "invoice_payments" USING btree ("invoice_id");--> statement-breakpoint
-CREATE INDEX "invoice_sends_invoice_id_idx" ON "invoice_sends" USING btree ("invoice_id");
+CREATE INDEX "invoice_sends_invoice_id_idx" ON "invoice_sends" USING btree ("invoice_id");--> statement-breakpoint
+CREATE INDEX "invitation_sends_user_id_idx" ON "invitation_sends" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX "address_changes_user_id_idx" ON "address_changes" USING btree ("user_id");
 --> statement-breakpoint
 -- Everything below is hand-written: drizzle-kit sees tables, enums, constraints and indexes
 -- only. Later migrations that add a trigger, a function, a policy or a grant are
@@ -307,7 +372,9 @@ $$;
 --> statement-breakpoint
 -- Invariant 1: a clock event is never edited or deleted. UPDATE, DELETE and TRUNCATE are
 -- refused for every role, the table's owner included; a fix is a new event pointing at the
--- old one. Payments and sends are append-only the same way.
+-- old one. Payments and sends are append-only the same way, and so are the record of an
+-- invitation's sends and the record of who changed whose sign-in address: a row is written
+-- once and never changed.
 CREATE FUNCTION reject_mutation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -319,11 +386,11 @@ BEGIN
 END;
 $$;
 --> statement-breakpoint
-CREATE TRIGGER work_session_events_no_update BEFORE UPDATE ON work_session_events FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER entries_no_update BEFORE UPDATE ON entries FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
 --> statement-breakpoint
-CREATE TRIGGER work_session_events_no_delete BEFORE DELETE ON work_session_events FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER entries_no_delete BEFORE DELETE ON entries FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
 --> statement-breakpoint
-CREATE TRIGGER work_session_events_no_truncate BEFORE TRUNCATE ON work_session_events FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+CREATE TRIGGER entries_no_truncate BEFORE TRUNCATE ON entries FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
 --> statement-breakpoint
 CREATE TRIGGER invoice_payments_no_update BEFORE UPDATE ON invoice_payments FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
 --> statement-breakpoint
@@ -337,34 +404,50 @@ CREATE TRIGGER invoice_sends_no_delete BEFORE DELETE ON invoice_sends FOR EACH S
 --> statement-breakpoint
 CREATE TRIGGER invoice_sends_no_truncate BEFORE TRUNCATE ON invoice_sends FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
 --> statement-breakpoint
+CREATE TRIGGER invitation_sends_no_update BEFORE UPDATE ON invitation_sends FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+--> statement-breakpoint
+CREATE TRIGGER invitation_sends_no_delete BEFORE DELETE ON invitation_sends FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+--> statement-breakpoint
+CREATE TRIGGER invitation_sends_no_truncate BEFORE TRUNCATE ON invitation_sends FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+--> statement-breakpoint
+CREATE TRIGGER address_changes_no_update BEFORE UPDATE ON address_changes FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+--> statement-breakpoint
+CREATE TRIGGER address_changes_no_delete BEFORE DELETE ON address_changes FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+--> statement-breakpoint
+CREATE TRIGGER address_changes_no_truncate BEFORE TRUNCATE ON address_changes FOR EACH STATEMENT EXECUTE FUNCTION reject_mutation();
+--> statement-breakpoint
 -- A void names the `started` event of the session it voids, and corrects nothing.
-CREATE FUNCTION check_work_session_event_references() RETURNS trigger
+CREATE FUNCTION check_entry_references() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
   IF (NEW.type = 'voided') <> (NEW.voids_event_id IS NOT NULL) THEN
     RAISE EXCEPTION USING
       ERRCODE = 'check_violation',
-      MESSAGE = 'work_session_events: voids_event_id is set exactly when type is voided',
-      CONSTRAINT = 'work_session_events_void_reference';
+      MESSAGE = 'entries: voids_event_id is set exactly when type is voided',
+      CONSTRAINT = 'entries_void_reference';
   END IF;
   IF NEW.type = 'voided' AND NEW.corrects_event_id IS NOT NULL THEN
     RAISE EXCEPTION USING
       ERRCODE = 'check_violation',
-      MESSAGE = 'work_session_events: a voided event corrects nothing',
-      CONSTRAINT = 'work_session_events_void_corrects_nothing';
+      MESSAGE = 'entries: a voided event corrects nothing',
+      CONSTRAINT = 'entries_void_corrects_nothing';
   END IF;
   RETURN NEW;
 END;
 $$;
 --> statement-breakpoint
-CREATE TRIGGER work_session_events_check_references BEFORE INSERT ON work_session_events FOR EACH ROW EXECUTE FUNCTION check_work_session_event_references();
+CREATE TRIGGER entries_check_references BEFORE INSERT ON entries FOR EACH ROW EXECUTE FUNCTION check_entry_references();
 --> statement-breakpoint
 -- Invariant 6: an invoice is born a draft, takes the next number of its company's series at
 -- issue (under the counter row's lock, so numbers have no gaps and an aborted issue gives its
 -- number back), and from then never changes but to be voided once. Its lines are frozen with
 -- it. A cascaded DELETE reaches the line trigger after the draft is gone, so a missing parent
--- is permitted there.
+-- is permitted there. At issue, an invoice whose draft named no due date takes one from its
+-- company's terms; a draft may name its own, and issuing leaves it as named. Issuing also
+-- copies what prints: the company's details and the customer's and job's names. The check
+-- that issuing changes nothing but the issue itself reads what the statement supplied, and
+-- an issued row's due date and copy are frozen with every other column.
 CREATE FUNCTION check_invoice_mutation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -425,6 +508,28 @@ BEGIN
         MESSAGE = 'invoices: the company has no number series; create its invoice_counters row',
         CONSTRAINT = 'invoices_counter_missing';
     END IF;
+    -- The day it is due, when the draft named none: the day of issue on the company's
+    -- wall clock, plus the company's terms. From here it is frozen with the rest.
+    IF NEW.due_on IS NULL THEN
+      SELECT (NEW.issued_at AT TIME ZONE c.timezone)::date + c.invoice_terms_days
+        INTO NEW.due_on
+        FROM companies c WHERE c.id = NEW.company_id;
+    END IF;
+    -- What prints: the company's name, address, phone, email and how to pay, as they stand
+    -- at this moment. Whatever a draft held in these columns is replaced; from here they
+    -- are frozen with the rest, so a later change to Settings never reaches this invoice.
+    SELECT c.name, c.address, c.phone, c.email, c.payment_instructions
+      INTO NEW.printed_company_name, NEW.printed_company_address,
+           NEW.printed_company_phone, NEW.printed_company_email,
+           NEW.printed_payment_instructions
+      FROM companies c WHERE c.id = NEW.company_id;
+    -- And who it is made out to and for what: the customer's name and address and the
+    -- job's name, as they stand at this moment, frozen with the rest.
+    SELECT cu.name, cu.address, j.name
+      INTO NEW.printed_customer_name, NEW.printed_customer_address, NEW.printed_job_name
+      FROM jobs j
+      JOIN customers cu ON cu.company_id = j.company_id AND cu.id = j.customer_id
+      WHERE j.company_id = NEW.company_id AND j.id = NEW.job_id;
     RETURN NEW;
   END IF;
   -- UPDATE of an issued row: only the void transition, once.
@@ -553,36 +658,42 @@ $$;
 CREATE TRIGGER invoice_sends_check_insert BEFORE INSERT ON invoice_sends FOR EACH ROW EXECUTE FUNCTION check_invoice_send_insert();
 --> statement-breakpoint
 -- A shift is created unlocked; its company, person and job never change; once a clock-in has
--- locked it, it keeps its day, its times and its lock and is never removed. The lock names a
--- `started` event of the shift's own person on its own job.
-CREATE FUNCTION check_job_assignment_insert() RETURNS trigger
+-- locked it, it keeps its day, its start and its lock and is never removed. The lock names a
+-- `started` event of the shift's own person on its own job. A locked shift's end may move
+-- earlier, to any minute after the clock-in that locked it, read on the company's wall clock
+-- as every shift time is. A clock-in voided by the office does not hold its shift: the lock
+-- comes off, or passes to another clock-in of the same person on the same job that stands,
+-- is no correction, and locks no other shift (api sync/schedule.ts, releaseVoided, in the
+-- void's transaction). No entry is written.
+CREATE FUNCTION check_shift_insert() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
   IF NEW.locked_at IS NOT NULL OR NEW.locked_by_event_id IS NOT NULL THEN
     RAISE EXCEPTION USING
       ERRCODE = 'integrity_constraint_violation',
-      MESSAGE = 'job_assignments: a shift is created unlocked',
-      CONSTRAINT = 'job_assignments_created_unlocked';
+      MESSAGE = 'shifts: a shift is created unlocked',
+      CONSTRAINT = 'shifts_created_unlocked';
   END IF;
   RETURN NEW;
 END;
 $$;
 --> statement-breakpoint
-CREATE TRIGGER job_assignments_check_insert BEFORE INSERT ON job_assignments FOR EACH ROW EXECUTE FUNCTION check_job_assignment_insert();
+CREATE TRIGGER shifts_check_insert BEFORE INSERT ON shifts FOR EACH ROW EXECUTE FUNCTION check_shift_insert();
 --> statement-breakpoint
-CREATE FUNCTION check_job_assignment_mutation() RETURNS trigger
+CREATE FUNCTION check_shift_mutation() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 DECLARE
   ev record;
+  clocked_in time;
 BEGIN
   IF TG_OP = 'DELETE' THEN
     IF OLD.locked_at IS NOT NULL THEN
       RAISE EXCEPTION USING
         ERRCODE = 'integrity_constraint_violation',
-        MESSAGE = 'job_assignments: a shift locked by a clock-in is never removed',
-        CONSTRAINT = 'job_assignments_locked';
+        MESSAGE = 'shifts: a shift locked by a clock-in is never removed',
+        CONSTRAINT = 'shifts_locked';
     END IF;
     RETURN OLD;
   END IF;
@@ -590,51 +701,100 @@ BEGIN
      OR NEW.job_id <> OLD.job_id THEN
     RAISE EXCEPTION USING
       ERRCODE = 'integrity_constraint_violation',
-      MESSAGE = 'job_assignments: a shift''s company, person and job never change',
-      CONSTRAINT = 'job_assignments_identity';
+      MESSAGE = 'shifts: a shift''s company, person and job never change',
+      CONSTRAINT = 'shifts_identity';
+  END IF;
+  -- The clock-in that holds the lock has been voided: the lock comes off, or passes to a
+  -- clock-in of the same person on the same job that is not voided, is no correction and
+  -- locks no other shift, the day, the times and the lock's moment left as they are.
+  -- Nothing else frees a locked shift.
+  IF OLD.locked_at IS NOT NULL
+     AND NEW.locked_by_event_id IS DISTINCT FROM OLD.locked_by_event_id
+     AND EXISTS (SELECT 1 FROM entries v
+                 WHERE v.type = 'voided' AND v.voids_event_id = OLD.locked_by_event_id) THEN
+    IF NEW.work_date <> OLD.work_date OR NEW.expected_start <> OLD.expected_start
+       OR NEW.expected_end <> OLD.expected_end THEN
+      RAISE EXCEPTION USING
+        ERRCODE = 'integrity_constraint_violation',
+        MESSAGE = 'shifts: a shift whose lock passes keeps its day and its times',
+        CONSTRAINT = 'shifts_locked';
+    END IF;
+    IF NEW.locked_by_event_id IS NULL THEN
+      RETURN NEW;
+    END IF;
+    SELECT e.type, e.worker_id, e.job_id, e.corrects_event_id INTO ev
+      FROM entries e
+      WHERE e.id = NEW.locked_by_event_id;
+    IF NOT FOUND OR ev.type <> 'started' OR ev.worker_id <> NEW.user_id
+       OR ev.job_id <> NEW.job_id OR ev.corrects_event_id IS NOT NULL
+       OR NEW.locked_at IS DISTINCT FROM OLD.locked_at
+       OR EXISTS (SELECT 1 FROM shifts o
+                  WHERE o.locked_by_event_id = NEW.locked_by_event_id AND o.id <> NEW.id)
+       OR EXISTS (SELECT 1 FROM entries v
+                  WHERE v.type = 'voided' AND v.voids_event_id = NEW.locked_by_event_id) THEN
+      RAISE EXCEPTION USING
+        ERRCODE = 'integrity_constraint_violation',
+        MESSAGE = 'shifts: a lock passes only to a standing clock-in of the shift''s own person and job that is no correction and locks no other shift',
+        CONSTRAINT = 'shifts_locked';
+    END IF;
+    RETURN NEW;
   END IF;
   IF OLD.locked_at IS NOT NULL THEN
     IF NEW.work_date <> OLD.work_date OR NEW.expected_start <> OLD.expected_start
-       OR NEW.expected_end <> OLD.expected_end
+       OR NEW.expected_end > OLD.expected_end
        OR NEW.locked_at IS DISTINCT FROM OLD.locked_at
        OR NEW.locked_by_event_id IS DISTINCT FROM OLD.locked_by_event_id THEN
       RAISE EXCEPTION USING
         ERRCODE = 'integrity_constraint_violation',
-        MESSAGE = 'job_assignments: a shift locked by a clock-in keeps its day, its times and its lock',
-        CONSTRAINT = 'job_assignments_locked';
+        MESSAGE = 'shifts: a shift locked by a clock-in keeps its day, its start and its lock, and its end only moves earlier',
+        CONSTRAINT = 'shifts_locked';
+    END IF;
+    IF NEW.expected_end < OLD.expected_end THEN
+      -- The clock-in's minute, seconds dropped and never rounded up, as the API places it.
+      SELECT date_trunc('minute', e.client_timestamp AT TIME ZONE c.timezone)::time
+        INTO clocked_in
+        FROM entries e
+        JOIN companies c ON c.id = e.company_id
+        WHERE e.id = OLD.locked_by_event_id;
+      IF NOT FOUND OR NEW.expected_end <= clocked_in THEN
+        RAISE EXCEPTION USING
+          ERRCODE = 'integrity_constraint_violation',
+          MESSAGE = 'shifts: a shift locked by a clock-in ends after that clock-in',
+          CONSTRAINT = 'shifts_locked_end';
+      END IF;
     END IF;
   ELSIF NEW.locked_at IS NOT NULL THEN
-    SELECT e.type, e.worker_id, e.job_id INTO ev FROM work_session_events e
+    SELECT e.type, e.worker_id, e.job_id INTO ev FROM entries e
       WHERE e.id = NEW.locked_by_event_id;
     IF NOT FOUND OR ev.type <> 'started' OR ev.worker_id <> NEW.user_id
        OR ev.job_id <> NEW.job_id THEN
       RAISE EXCEPTION USING
         ERRCODE = 'integrity_constraint_violation',
-        MESSAGE = 'job_assignments: a shift is locked by a clock-in of its own person on its own job',
-        CONSTRAINT = 'job_assignments_lock_event';
+        MESSAGE = 'shifts: a shift is locked by a clock-in of its own person on its own job',
+        CONSTRAINT = 'shifts_lock_event';
     END IF;
   END IF;
   RETURN NEW;
 END;
 $$;
 --> statement-breakpoint
-CREATE TRIGGER job_assignments_check_mutation BEFORE DELETE OR UPDATE ON job_assignments FOR EACH ROW EXECUTE FUNCTION check_job_assignment_mutation();
+CREATE TRIGGER shifts_check_mutation BEFORE DELETE OR UPDATE ON shifts FOR EACH ROW EXECUTE FUNCTION check_shift_mutation();
 --> statement-breakpoint
-CREATE FUNCTION check_job_assignment_truncate() RETURNS trigger
+CREATE FUNCTION check_shift_truncate() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM job_assignments WHERE locked_at IS NOT NULL) THEN
+  IF EXISTS (SELECT 1 FROM shifts WHERE locked_at IS NOT NULL) THEN
     RAISE EXCEPTION USING
       ERRCODE = 'integrity_constraint_violation',
-      MESSAGE = 'job_assignments: a shift locked by a clock-in is never removed',
-      CONSTRAINT = 'job_assignments_locked';
+      MESSAGE = 'shifts: a shift locked by a clock-in is never removed',
+      CONSTRAINT = 'shifts_locked';
   END IF;
   RETURN NULL;
 END;
 $$;
 --> statement-breakpoint
-CREATE TRIGGER job_assignments_check_truncate BEFORE TRUNCATE ON job_assignments FOR EACH STATEMENT EXECUTE FUNCTION check_job_assignment_truncate();
+CREATE TRIGGER shifts_check_truncate BEFORE TRUNCATE ON shifts FOR EACH STATEMENT EXECUTE FUNCTION check_shift_truncate();
 --> statement-breakpoint
 -- A sign-in binds one invited row by writing its identity_subject, alone, and under a
 -- sign-in identity that is the only update permitted.
@@ -699,17 +859,17 @@ ALTER TABLE jobs FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 CREATE POLICY jobs_tenant ON jobs TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
 --> statement-breakpoint
-ALTER TABLE job_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shifts ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
-ALTER TABLE job_assignments FORCE ROW LEVEL SECURITY;
+ALTER TABLE shifts FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY job_assignments_tenant ON job_assignments TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
+CREATE POLICY shifts_tenant ON shifts TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
 --> statement-breakpoint
-ALTER TABLE work_session_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE entries ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
-ALTER TABLE work_session_events FORCE ROW LEVEL SECURITY;
+ALTER TABLE entries FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
-CREATE POLICY work_session_events_tenant ON work_session_events TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
+CREATE POLICY entries_tenant ON entries TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
 --> statement-breakpoint
 ALTER TABLE invoice_counters ENABLE ROW LEVEL SECURITY;
 --> statement-breakpoint
@@ -741,6 +901,18 @@ ALTER TABLE invoice_sends FORCE ROW LEVEL SECURITY;
 --> statement-breakpoint
 CREATE POLICY invoice_sends_tenant ON invoice_sends TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
 --> statement-breakpoint
+ALTER TABLE invitation_sends ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE invitation_sends FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY invitation_sends_tenant ON invitation_sends TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
+--> statement-breakpoint
+ALTER TABLE address_changes ENABLE ROW LEVEL SECURITY;
+--> statement-breakpoint
+ALTER TABLE address_changes FORCE ROW LEVEL SECURITY;
+--> statement-breakpoint
+CREATE POLICY address_changes_tenant ON address_changes TO trader_app USING ((company_id = public.app_company_id())) WITH CHECK ((company_id = public.app_company_id()));
+--> statement-breakpoint
 -- First sign-in: with the tenant unset and an identity set, a caller sees its own bound row
 -- or the unbound invitations to its verified email or number, and may bind one.
 CREATE POLICY users_identity_select ON users FOR SELECT TO trader_app USING (((identity_subject = public.app_identity_subject()) OR ((identity_subject IS NULL) AND (lower(email) = lower(public.app_identity_email())))));
@@ -754,16 +926,17 @@ CREATE POLICY users_identity_bind_phone ON users FOR UPDATE TO trader_app USING 
 -- Per table, and stated again by every migration that adds one: no default privileges, so an
 -- append-only table never inherits UPDATE. TRUNCATE is granted nowhere. DELETE only where the
 -- domain deletes: a draft invoice and its lines, a shift. The company row and its counter row
--- are created by onboarding as the owner. Of a company's columns the application writes its
--- name and zone only: schedule_enforced is the owner's.
+-- are created by onboarding as the owner. Of a company's columns the application writes
+-- what an admin sets in Settings: the name and zone, the details an invoice prints, the
+-- terms, and the two switches. demo is the owner's alone.
 GRANT SELECT ON companies TO trader_app;
 --> statement-breakpoint
-GRANT UPDATE (name, timezone, updated_at) ON companies TO trader_app;
+GRANT UPDATE (name, timezone, address, phone, email, payment_instructions, invoice_terms_days, location_stamps, schedule_enforced, updated_at) ON companies TO trader_app;
 --> statement-breakpoint
 GRANT SELECT, UPDATE ON invoice_counters TO trader_app;
 --> statement-breakpoint
 GRANT SELECT, INSERT, UPDATE ON users, customers, jobs TO trader_app;
 --> statement-breakpoint
-GRANT SELECT, INSERT, UPDATE, DELETE ON job_assignments, invoices, invoice_line_items TO trader_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON shifts, invoices, invoice_line_items TO trader_app;
 --> statement-breakpoint
-GRANT SELECT, INSERT ON work_session_events, invoice_payments, invoice_sends TO trader_app;
+GRANT SELECT, INSERT ON entries, invoice_payments, invoice_sends, invitation_sends, address_changes TO trader_app;

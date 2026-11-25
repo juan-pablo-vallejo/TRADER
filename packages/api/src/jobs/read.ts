@@ -11,7 +11,7 @@
 // Hours are the one labor derivation's (labor/day-hours.ts), summed and never rounded
 // again, as job.list's are (jobs/hours.ts). The week is the company's own, Monday to
 // Sunday.
-import { jobAssignments, users, workSessionEvents } from "@trader/db/schema";
+import { shifts, users, entries } from "@trader/db/schema";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -81,23 +81,21 @@ export async function readJobPage(
 
   // Shifts on this job from the week's Monday on: this week's people, and whether any is
   // today or later.
-  const shifts = await tx
-    .select({ userId: jobAssignments.userId, workDate: jobAssignments.workDate })
-    .from(jobAssignments)
-    .where(
-      and(eq(jobAssignments.jobId, found.id), gte(jobAssignments.workDate, weekStart)),
-    );
-  const scheduled = shifts.some((s) => s.workDate >= today);
+  const planned = await tx
+    .select({ userId: shifts.userId, workDate: shifts.workDate })
+    .from(shifts)
+    .where(and(eq(shifts.jobId, found.id), gte(shifts.workDate, weekStart)));
+  const scheduled = planned.some((s) => s.workDate >= today);
   const thisWeek = new Set(
-    shifts.filter((s) => s.workDate <= weekEnd).map((s) => s.userId),
+    planned.filter((s) => s.workDate <= weekEnd).map((s) => s.userId),
   );
 
   // Everyone who has an entry on this job: their whole ledgers are folded, since a session
   // is the fold's, and only their cells on this job are kept.
   const workers = await tx
-    .selectDistinct({ id: workSessionEvents.workerId })
-    .from(workSessionEvents)
-    .where(eq(workSessionEvents.jobId, found.id));
+    .selectDistinct({ id: entries.workerId })
+    .from(entries)
+    .where(eq(entries.jobId, found.id));
   const cells = (
     await readDayHours(
       tx,

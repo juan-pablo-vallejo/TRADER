@@ -170,7 +170,7 @@ describe("the roster through the route handler", () => {
     expect(other.status).toBe(401);
   });
 
-  it("notes a texted invitation, answers where it stands, and emails only with an address of its own to link to", async () => {
+  it("notes an invitation sent by WhatsApp, answers where it stands, and emails only with an address of its own to link to", async () => {
     const email = `both-${admin.run}@web.test`;
     const invited = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), phone: "(401) 555-0146", email, name: "Painter By Both" },
@@ -194,7 +194,7 @@ describe("the roster through the route handler", () => {
     expect(noted.body.result?.data.json).toEqual({ result: "noted" });
     expect(await standing()).toMatchObject({
       status: "sent",
-      sends: [{ channel: "text", outcome: "sent" }],
+      sends: [{ channel: "whatsapp", outcome: "sent" }],
     });
 
     // A server that names no address of its own has no link to mail: nothing is sent.
@@ -224,7 +224,7 @@ describe("the roster through the route handler", () => {
     expect((await standing())?.sends.map((send) => [send.channel, send.outcome])).toEqual(
       [
         ["email", "failed"],
-        ["text", "sent"],
+        ["whatsapp", "sent"],
       ],
     );
   });

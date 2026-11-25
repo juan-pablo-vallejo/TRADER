@@ -8,7 +8,7 @@
 // rules themselves are eligibility.test.ts's, the reads list.test.ts's, what a shift does
 // not change about labor authority.test.ts's, and real commits against each other
 // shift-commit.test.ts's.
-import { jobAssignments, users, workSessionEvents } from "@trader/db/schema";
+import { shifts, users, entries } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -50,16 +50,16 @@ async function office(tx: Tx) {
 const plansOf = (tx: Tx, companyId: string) =>
   tx
     .select({
-      id: jobAssignments.id,
-      userId: jobAssignments.userId,
-      jobId: jobAssignments.jobId,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      expectedEnd: jobAssignments.expectedEnd,
+      id: shifts.id,
+      userId: shifts.userId,
+      jobId: shifts.jobId,
+      workDate: shifts.workDate,
+      expectedStart: shifts.expectedStart,
+      expectedEnd: shifts.expectedEnd,
     })
-    .from(jobAssignments)
-    .where(eq(jobAssignments.companyId, companyId))
-    .orderBy(asc(jobAssignments.workDate), asc(jobAssignments.id));
+    .from(shifts)
+    .where(eq(shifts.companyId, companyId))
+    .orderBy(asc(shifts.workDate), asc(shifts.id));
 
 // What the browser sends for a set of days: an id of its own for each.
 const on = (...dates: string[]) => dates.map((workDate) => ({ id: uuidv7(), workDate }));
@@ -100,7 +100,7 @@ async function punched(tx: Tx, day: WorkDay, shiftId: string, at: string, job = 
     client: at,
   });
   await tx.execute(sql`
-    update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+    update shifts set locked_at = now(), locked_by_event_id = ${eventId}
     where id = ${shiftId}
   `);
   await becomeApp(tx);
@@ -519,7 +519,7 @@ describe("a shift locked by a clock-in", () => {
         client: "2026-11-16T20:00:00Z",
       });
       await tx.execute(sql`
-        update job_assignments set locked_at = now(), locked_by_event_id = ${clockIn}
+        update shifts set locked_at = now(), locked_by_event_id = ${clockIn}
         where id = ${id}
       `);
       await becomeApp(tx);
@@ -534,9 +534,9 @@ describe("a shift locked by a clock-in", () => {
       expect(voided.result).toBe("accepted");
       // The lock is gone: what Today reads as clocked in (overview/today.ts).
       const [row] = await tx
-        .select({ lockedAt: jobAssignments.lockedAt, by: jobAssignments.lockedByEventId })
-        .from(jobAssignments)
-        .where(eq(jobAssignments.id, id));
+        .select({ lockedAt: shifts.lockedAt, by: shifts.lockedByEventId })
+        .from(shifts)
+        .where(eq(shifts.id, id));
       expect(row).toEqual({ lockedAt: null, by: null });
       // Edited, then removed, as any shift nobody has clocked in on.
       expect(
@@ -549,11 +549,11 @@ describe("a shift locked by a clock-in", () => {
       ).toEqual({ result: "updated" });
       expect(await plan.remove({ shiftId: id })).toEqual({ result: "removed" });
       // No entry was touched: the clock-in and its void stand.
-      const entries = await tx
-        .select({ id: workSessionEvents.id })
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.workerId, day.w1));
-      expect(entries).toHaveLength(3);
+      const recorded = await tx
+        .select({ id: entries.id })
+        .from(entries)
+        .where(eq(entries.workerId, day.w1));
+      expect(recorded).toHaveLength(3);
     });
   });
 
@@ -592,7 +592,7 @@ describe("a shift locked by a clock-in", () => {
         [afternoon, b],
       ] as const) {
         await tx.execute(sql`
-          update job_assignments set locked_at = now(), locked_by_event_id = ${by}
+          update shifts set locked_at = now(), locked_by_event_id = ${by}
           where id = ${shiftId}
         `);
       }
@@ -600,9 +600,9 @@ describe("a shift locked by a clock-in", () => {
       const lockOf = async (shiftId: string) =>
         (
           await tx
-            .select({ by: jobAssignments.lockedByEventId })
-            .from(jobAssignments)
-            .where(eq(jobAssignments.id, shiftId))
+            .select({ by: shifts.lockedByEventId })
+            .from(shifts)
+            .where(eq(shifts.id, shiftId))
         )[0]?.by;
       const voidA = { kind: "void" as const, id: uuidv7(), voidsEventId: a };
       const correct = (operations: (typeof voidA)[]) =>
@@ -648,7 +648,7 @@ describe("a shift locked by a clock-in", () => {
         [afternoon, b],
       ] as const) {
         await tx.execute(sql`
-          update job_assignments set locked_at = now(), locked_by_event_id = ${by}
+          update shifts set locked_at = now(), locked_by_event_id = ${by}
           where id = ${shiftId}
         `);
       }
@@ -662,9 +662,9 @@ describe("a shift locked by a clock-in", () => {
       });
       expect(answer.result).toBe("accepted");
       const locks = await tx
-        .select({ id: jobAssignments.id, by: jobAssignments.lockedByEventId })
-        .from(jobAssignments)
-        .where(eq(jobAssignments.userId, day.w1));
+        .select({ id: shifts.id, by: shifts.lockedByEventId })
+        .from(shifts)
+        .where(eq(shifts.userId, day.w1));
       const byShift = new Map(locks.map((l) => [l.id, l.by]));
       // The clock-in left holds one shift; the other is free.
       expect([byShift.get(morning), byShift.get(afternoon)].sort()).toEqual(
@@ -763,7 +763,7 @@ describe("gates and targets", () => {
         ]);
       }
       await tx.execute(sql`reset role`);
-      const { rows } = await tx.execute(sql`select 1 from job_assignments
+      const { rows } = await tx.execute(sql`select 1 from shifts
         where company_id in (${day.companyId}, ${other.companyId})`);
       expect(rows).toEqual([]);
     });
@@ -783,9 +783,9 @@ describe("gates and targets", () => {
         expectedEnd,
       });
       const [foreign, second] = await tx
-        .insert(jobAssignments)
+        .insert(shifts)
         .values([theirs("07:00", "15:30"), theirs("12:00", "17:00")])
-        .returning({ id: jobAssignments.id });
+        .returning({ id: shifts.id });
       await becomeApp(tx);
       const plan = appCallerIn(tx, admin.who).shift;
       for (const shiftId of [foreign!.id, crypto.randomUUID()]) {
@@ -819,10 +819,7 @@ describe("what a shift leaves alone", () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);
       const counts = async () => ({
-        events: await tx.$count(
-          workSessionEvents,
-          eq(workSessionEvents.companyId, day.companyId),
-        ),
+        events: await tx.$count(entries, eq(entries.companyId, day.companyId)),
       });
       // A first call, so the tenant is set for the counts that follow.
       await plan.remove({ shiftId: crypto.randomUUID() });

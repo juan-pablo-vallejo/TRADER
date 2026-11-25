@@ -20,10 +20,10 @@ const GRANTS: Record<string, Privilege[]> = {
   customers: ["SELECT", "INSERT", "UPDATE"],
   jobs: ["SELECT", "INSERT", "UPDATE"],
   // A plan, not a fact: the office edits and removes it.
-  job_assignments: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+  shifts: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   invoices: ["SELECT", "INSERT", "UPDATE", "DELETE"],
   invoice_line_items: ["SELECT", "INSERT", "UPDATE", "DELETE"],
-  work_session_events: ["SELECT", "INSERT"],
+  entries: ["SELECT", "INSERT"],
   invoice_payments: ["SELECT", "INSERT"],
   invoice_sends: ["SELECT", "INSERT"],
   invitation_sends: ["SELECT", "INSERT"],
@@ -176,7 +176,7 @@ describe("trader_app", () => {
       expect(
         await sqlstate(
           tx.transaction((sp: Tx) =>
-            sp.execute(sql`update work_session_events set schema_version = 2`),
+            sp.execute(sql`update entries set schema_version = 2`),
           ),
         ),
       ).toBe("42501");

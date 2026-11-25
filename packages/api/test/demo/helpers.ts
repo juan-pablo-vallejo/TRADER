@@ -72,8 +72,8 @@ export async function counts(db: Db) {
     count(db, "users"),
     count(db, "customers"),
     count(db, "jobs"),
-    count(db, "work_session_events"),
-    count(db, "job_assignments"),
+    count(db, "entries"),
+    count(db, "shifts"),
   ]);
   return { users, customers, jobs, events, shifts };
 }

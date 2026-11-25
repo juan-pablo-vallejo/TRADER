@@ -349,7 +349,7 @@ describe("people.noteInvitation", () => {
         {
           id,
           userId: o.byNumber,
-          channel: "text",
+          channel: "whatsapp",
           recipient: "+14015550111",
           outcome: "sent",
           failure: null,
@@ -390,7 +390,7 @@ describe("where an invitation stands, in people.list", () => {
       expect(standing?.status).toBe("sent");
       expect(standing?.sends.map((s) => s.id).sort()).toEqual([text, email].sort());
       expect(standing?.sends.find((s) => s.id === text)).toMatchObject({
-        channel: "text",
+        channel: "whatsapp",
         by: "Rolled",
         outcome: "sent",
         failure: null,

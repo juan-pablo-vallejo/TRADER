@@ -15,7 +15,7 @@ describe("an invitation's words", () => {
   };
 
   it("say the same thing in English and in Spanish, with the link", () => {
-    const [english, spanish] = invitationParagraphs({ ...input, by: "text" });
+    const [english, spanish] = invitationParagraphs({ ...input, by: "whatsapp" });
     expect(english).toBe(
       "Ana Ruiz: D Sierra Painting uses TRADER for your schedule and your hours. Get the app: https://dsierrapainting.jpteq.app/get Then sign in with this mobile number.",
     );
@@ -41,7 +41,11 @@ describe("an invitation's words", () => {
 
 describe("where an invitation stands", () => {
   const person = { signedIn: false, email: "Ana@Crew.test", signInPhone: "+14015550123" };
-  const text = { channel: "text", recipient: "+14015550123", outcome: "sent" } as const;
+  const text = {
+    channel: "whatsapp",
+    recipient: "+14015550123",
+    outcome: "sent",
+  } as const;
   const email = {
     channel: "email",
     recipient: "ana@crew.test",

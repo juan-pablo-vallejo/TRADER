@@ -15,7 +15,7 @@ import { companies } from "./companies";
 import { jobs } from "./jobs";
 import { createdAt, id, updatedAt } from "./shared";
 import { users } from "./users";
-import { workSessionEvents } from "./work-session-events";
+import { entries } from "./entries";
 
 // A dated plan: this person is expected on this job, on this day, between these times.
 // Nothing that counts labor reads this table — not the fold or invoices; the push reads it
@@ -41,8 +41,8 @@ import { workSessionEvents } from "./work-session-events";
 // day, start and job never change and it is never removed; its end may only move earlier,
 // to a minute after that clock-in (a trigger, migration 0002). copy_id marks the
 // rows one Copy Last Week created, so the copy is undone whole.
-export const jobAssignments = pgTable(
-  "job_assignments",
+export const shifts = pgTable(
+  "shifts",
   {
     id,
     companyId: uuid("company_id")
@@ -62,25 +62,25 @@ export const jobAssignments = pgTable(
   (t) => [
     // Composite, so the person and the job belong to the row's company (invariant 5).
     foreignKey({
-      name: "job_assignments_company_id_user_id_fk",
+      name: "shifts_company_id_user_id_fk",
       columns: [t.companyId, t.userId],
       foreignColumns: [users.companyId, users.id],
     }),
     foreignKey({
-      name: "job_assignments_company_id_job_id_fk",
+      name: "shifts_company_id_job_id_fk",
       columns: [t.companyId, t.jobId],
       foreignColumns: [jobs.companyId, jobs.id],
     }),
-    unique("job_assignments_company_id_id_unique").on(t.companyId, t.id),
+    unique("shifts_company_id_id_unique").on(t.companyId, t.id),
     // The event that locked the shift belongs to the row's company (invariant 5).
     foreignKey({
-      name: "job_assignments_company_id_locked_by_event_id_fk",
+      name: "shifts_company_id_locked_by_event_id_fk",
       columns: [t.companyId, t.lockedByEventId],
-      foreignColumns: [workSessionEvents.companyId, workSessionEvents.id],
+      foreignColumns: [entries.companyId, entries.id],
     }),
     // The same shift twice is refused; the same job twice in a day at other times is two
     // shifts. Leading with the person and the day, it is also the index of a person's day.
-    unique("job_assignments_exact_shift_unique").on(
+    unique("shifts_exact_shift_unique").on(
       t.userId,
       t.workDate,
       t.jobId,
@@ -88,14 +88,14 @@ export const jobAssignments = pgTable(
       t.expectedEnd,
     ),
     // One Copy Last Week's rows, for its resend and its undo.
-    index("job_assignments_company_id_copy_id_idx").on(t.companyId, t.copyId),
+    index("shifts_company_id_copy_id_idx").on(t.companyId, t.copyId),
     check(
-      "job_assignments_lock_complete",
+      "shifts_lock_complete",
       sql`(${t.lockedAt} IS NULL) = (${t.lockedByEventId} IS NULL)`,
     ),
     // The office read: a company's plans over a range of days.
-    index("job_assignments_company_id_work_date_idx").on(t.companyId, t.workDate),
+    index("shifts_company_id_work_date_idx").on(t.companyId, t.workDate),
     // A plan lies within its day: an overnight shift is not one row.
-    check("job_assignments_end_after_start", sql`${t.expectedEnd} > ${t.expectedStart}`),
+    check("shifts_end_after_start", sql`${t.expectedEnd} > ${t.expectedStart}`),
   ],
 );

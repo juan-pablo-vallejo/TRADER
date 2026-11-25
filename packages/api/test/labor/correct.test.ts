@@ -2,7 +2,7 @@
 // rolled-back transactions. Office corrections append, correct and void; a set is one timeline;
 // every event is written with its flags and takes effect at once; a rejection writes nothing.
 // Concurrency and commits are labor/correct-commit.test.ts's.
-import { jobs, users, workSessionEvents } from "@trader/db/schema";
+import { jobs, users, entries } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -101,8 +101,8 @@ async function counts(tx: Tx, d: WorkDay) {
   return asOwner(tx, d, async () => {
     const [e] = await tx
       .select({ n: sql<number>`count(*)::int` })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.companyId, d.companyId));
+      .from(entries)
+      .where(eq(entries.companyId, d.companyId));
     return { events: e!.n };
   });
 }
@@ -121,10 +121,7 @@ async function rejectsWritingNothing(
 // An entry's flags, as stored with it.
 const flagsOf = async (tx: Tx, eventId: string) =>
   (
-    await tx
-      .select({ flags: workSessionEvents.flags })
-      .from(workSessionEvents)
-      .where(eq(workSessionEvents.id, eventId))
+    await tx.select({ flags: entries.flags }).from(entries).where(eq(entries.id, eventId))
   )[0]?.flags;
 
 // The accounting of every session of one worker, from the stored ledger.
@@ -237,10 +234,7 @@ describe("labor.correct — append, correct, void", () => {
         result: "accepted",
         events: [{ id: end.id, flags: ["corrected", "user_timed"] }],
       });
-      const [row] = await tx
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, end.id));
+      const [row] = await tx.select().from(entries).where(eq(entries.id, end.id));
       expect(row).toMatchObject({
         workerId: d.w1,
         jobId: d.J,
@@ -417,10 +411,7 @@ describe("labor.correct — append, correct, void", () => {
         result: "accepted",
         events: [{ id: v.id, flags: ["corrected"] }],
       });
-      const [row] = await tx
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, v.id));
+      const [row] = await tx.select().from(entries).where(eq(entries.id, v.id));
       expect(row).toMatchObject({
         type: "voided",
         voidsEventId: start,
@@ -513,10 +504,7 @@ describe("labor.correct — append, correct, void", () => {
       const start = await ev(tx, d, d.w1, "started", "08:00");
       await ev(tx, d, d.w1, "ended", "16:00");
       await asTenant(tx, d.companyId);
-      const [startRow] = await tx
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, start));
+      const [startRow] = await tx.select().from(entries).where(eq(entries.id, start));
       const before = await counts(tx, d);
 
       const same = correct(start, "started", d.J, "08:00");
@@ -529,10 +517,7 @@ describe("labor.correct — append, correct, void", () => {
         accounting: "eligible",
         eligibleWorkedMs: 8 * HOUR,
       });
-      const [after] = await tx
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, start));
+      const [after] = await tx.select().from(entries).where(eq(entries.id, start));
       expect(after).toEqual(startRow);
     });
   });
@@ -555,10 +540,7 @@ describe("labor.correct — the caller's own ledger", () => {
           { id: end.id, flags: ["corrected", "user_timed"] },
         ],
       });
-      const [row] = await tx
-        .select()
-        .from(workSessionEvents)
-        .where(eq(workSessionEvents.id, start.id));
+      const [row] = await tx.select().from(entries).where(eq(entries.id, start.id));
       expect(row).toMatchObject({
         workerId: admin.id,
         initiatorUserId: admin.id,
@@ -660,12 +642,7 @@ describe("labor.correct — retries and ids", () => {
         () => submit(tx, admin.who, d.w1, [fresh, colliding]),
         { code: "id_conflict", conflictingEventId: held },
       );
-      expect(
-        await tx
-          .select()
-          .from(workSessionEvents)
-          .where(eq(workSessionEvents.id, fresh.id)),
-      ).toEqual([]);
+      expect(await tx.select().from(entries).where(eq(entries.id, fresh.id))).toEqual([]);
     });
   });
 

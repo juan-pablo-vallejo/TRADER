@@ -7,7 +7,7 @@
 // (both success) with acknowledgements in input order, or `rejected` with a code, writing
 // nothing, so the same ids may be sent again. Anything thrown rolls the call back. Consumed
 // by routers/labor.ts.
-import { entryFlag, jobs, users, workSessionEvents } from "@trader/db/schema";
+import { entryFlag, jobs, users, entries } from "@trader/db/schema";
 import { inArray, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -160,7 +160,7 @@ const rejected = (
     : { conflictingEventId: ids.conflictingEventId }),
 });
 
-type Stored = typeof workSessionEvents.$inferSelect;
+type Stored = typeof entries.$inferSelect;
 
 // An office event's facts, fixed by the server: the time was set by a person (a void sets none),
 // it was captured online, it is placed where the office put it, no stamp.
@@ -214,10 +214,7 @@ async function answerRecorded(
   input: CorrectionInput,
 ): Promise<CorrectionResult | null> {
   const ids = input.operations.map((op) => op.id);
-  const rows = await tx
-    .select()
-    .from(workSessionEvents)
-    .where(inArray(workSessionEvents.id, ids));
+  const rows = await tx.select().from(entries).where(inArray(entries.id, ids));
   if (rows.length === 0) return null;
   const byId = new Map(rows.map((r) => [r.id, r]));
   for (const op of input.operations) {
@@ -391,7 +388,7 @@ export async function correctLabor(
   try {
     await tx.transaction(async (sp) => {
       const inserted = await sp
-        .insert(workSessionEvents)
+        .insert(entries)
         .values(
           input.operations.map((op, i) => {
             const c = candidates[i]!;
@@ -411,8 +408,8 @@ export async function correctLabor(
             };
           }),
         )
-        .onConflictDoNothing({ target: workSessionEvents.id })
-        .returning({ id: workSessionEvents.id });
+        .onConflictDoNothing({ target: entries.id })
+        .returning({ id: entries.id });
       if (inserted.length !== candidates.length) {
         const written = new Set(inserted.map((r) => r.id));
         throw new IdHeld(candidates.find((c) => !written.has(c.id))!.id);

@@ -71,7 +71,7 @@ flow() { "$here/run.sh" "$platform" "$device" "$@"; }
 
 # A shift for one person on the demo's first job, around now on the company's clock.
 shift_now() {
-  sql "insert into job_assignments
+  sql "insert into shifts
          (company_id, user_id, job_id, work_date, expected_start, expected_end)
        select u.company_id, u.id, j.id, l.t::date,
          case when l.t::time < time '01:00' then time '00:00'
@@ -85,7 +85,7 @@ shift_now() {
        where u.email = '$1';"
 }
 events_of() {
-  echo "select count(*) from work_session_events e join users u on u.id = e.worker_id
+  echo "select count(*) from entries e join users u on u.id = e.worker_id
         where u.email = '$1'
           and e.client_timestamp > now() - interval '1 hour'"
 }
@@ -115,20 +115,20 @@ flow clock
 expect "six events, once each" "$(events_of $LUIS)" 6
 expect "in the order they were made" \
   "select string_agg(e.type::text, ',' order by e.client_timestamp, e.id)
-   from work_session_events e join users u on u.id = e.worker_id
+   from entries e join users u on u.id = e.worker_id
    where u.email = '$LUIS' and e.client_timestamp > now() - interval '1 hour'" \
   "started,ended,started,paused,resumed,ended"
 expect "on two jobs" \
-  "select count(distinct e.job_id) from work_session_events e
+  "select count(distinct e.job_id) from entries e
    join users u on u.id = e.worker_id
    where u.email = '$LUIS' and e.client_timestamp > now() - interval '1 hour'" 2
 expect "captured with a connection" \
-  "select count(*) from work_session_events e join users u on u.id = e.worker_id
+  "select count(*) from entries e join users u on u.id = e.worker_id
    where u.email = '$LUIS' and e.client_timestamp > now() - interval '1 hour'
      and e.captured_offline" 0
 
 expect "with the location, where the permission was granted" \
-  "select count(*) > 0 from work_session_events e join users u on u.id = e.worker_id
+  "select count(*) > 0 from entries e join users u on u.id = e.worker_id
    where u.email = '$LUIS' and e.client_timestamp > now() - interval '1 hour'
      and e.location_lat is not null" t
 
@@ -145,12 +145,12 @@ expect "a second send adds nothing" "$(events_of $LUIS)" 8
 echo "— location refused"
 flow location-denied fresh deny $OMAR
 expect "the entries have no location" \
-  "select count(*) || ' ' || count(e.location_lat) from work_session_events e
+  "select count(*) || ' ' || count(e.location_lat) from entries e
    join users u on u.id = e.worker_id where u.email = '$OMAR'
      and e.client_timestamp > now() - interval '1 hour'" "2 0"
 
 echo "— a session left open from an earlier day"
-sql "insert into work_session_events
+sql "insert into entries
        (id, company_id, worker_id, job_id, type, client_timestamp, server_timestamp,
         clock_skewed, clock_skew_ms, schema_version, time_set_by_user, captured_offline,
         initiator_user_id)
@@ -161,7 +161,7 @@ sql "insert into work_session_events
      where u.email = '$ELENA';"
 flow earlier-day fresh allow $ELENA clock-working
 expect "yesterday's session is closed, by one clock-out" \
-  "select count(*) from work_session_events e join users u on u.id = e.worker_id
+  "select count(*) from entries e join users u on u.id = e.worker_id
    where u.email = '$ELENA' and e.type = 'ended'
      and e.client_timestamp > now() - interval '1 hour'" 1
 
@@ -171,7 +171,7 @@ flow stamps-off fresh never $MARCUS crew
 expect "two entries, neither with a location, neither flagged for one" \
   "select count(*) || ' ' || count(e.location_lat) || ' '
      || count(*) filter (where 'location' = any (e.flags))
-   from work_session_events e join users u on u.id = e.worker_id
+   from entries e join users u on u.id = e.worker_id
    where u.email = '$MARCUS' and e.client_timestamp > now() - interval '1 hour'" "2 0 0"
 
 echo "— the weekly schedule, enforced"
@@ -179,14 +179,14 @@ sql "update companies set schedule_enforced = true;"
 shift_now $LUIS
 flow schedule
 expect "the start locked its shift" \
-  "select count(*) from job_assignments a join users u on u.id = a.user_id
+  "select count(*) from shifts a join users u on u.id = a.user_id
    where u.email = '$LUIS' and a.locked_at is not null" 1
 flow schedule-none fresh allow $SAM
 
 echo "— a start the server refuses"
 shift_now $TOM
 flow schedule-offered fresh allow $TOM
-sql "delete from job_assignments a using users u
+sql "delete from shifts a using users u
      where u.id = a.user_id and u.email = '$TOM' and a.locked_at is null;"
 flow schedule-refused resume
 expect "nothing was written" "$(events_of $TOM)" 0
@@ -195,7 +195,7 @@ echo "— a schedule changed while the phone was offline"
 shift_now $ANA
 flow schedule-offered fresh allow $ANA
 api_down
-sql "delete from job_assignments a using users u
+sql "delete from shifts a using users u
      where u.id = a.user_id and u.email = '$ANA' and a.locked_at is null;"
 # Long enough that the phone's last word from the API is stale (clock.ts): what it
 # captures now says it was captured offline.
@@ -204,17 +204,17 @@ flow schedule-stale-capture resume
 api_up
 flow schedule-stale-review resume
 expect "the start is stored, flagged as unscheduled" \
-  "select count(*) from work_session_events e
+  "select count(*) from entries e
    join users u on u.id = e.worker_id
    where u.email = '$ANA' and e.captured_offline and 'unscheduled' = any (e.flags)" 1
 
 echo "— the Crew tab, as the admin"
-sql "delete from job_assignments a using users u, companies c
+sql "delete from shifts a using users u, companies c
      where u.id = a.user_id and c.id = u.company_id and u.email = '$SAM'
        and a.work_date = (now() at time zone c.timezone)::date and a.locked_at is null;"
 flow crew fresh allow $OFFICE crew
 expect "the shift the admin added is on the server, today, on that jobsite" \
-  "select count(*) from job_assignments a
+  "select count(*) from shifts a
    join users u on u.id = a.user_id join companies c on c.id = u.company_id
    join jobs j on j.id = a.job_id
    where u.email = '$SAM' and j.name = 'Harbor View unit 4B'

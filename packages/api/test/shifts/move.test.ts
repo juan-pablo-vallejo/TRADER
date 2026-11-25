@@ -4,7 +4,7 @@
 // ends one shift and starts the next, both or neither; and no clock event is written by
 // either. Every test runs in an owner transaction that is always rolled back, each call as
 // trader_app, as authority.test.ts does.
-import { companies, jobAssignments, workSessionEvents } from "@trader/db/schema";
+import { companies, shifts, entries } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -108,20 +108,20 @@ async function world(tx: Tx) {
     );
     return answer.result === "rejected" ? answer.code : answer.result;
   };
-  const shifts = () =>
+  const readShifts = () =>
     asOwner(async () =>
       (
         await tx
           .select({
-            id: jobAssignments.id,
-            jobId: jobAssignments.jobId,
-            start: jobAssignments.expectedStart,
-            end: jobAssignments.expectedEnd,
-            locked: sql<boolean>`${jobAssignments.lockedAt} is not null`,
+            id: shifts.id,
+            jobId: shifts.jobId,
+            start: shifts.expectedStart,
+            end: shifts.expectedEnd,
+            locked: sql<boolean>`${shifts.lockedAt} is not null`,
           })
-          .from(jobAssignments)
-          .where(eq(jobAssignments.userId, d.w1))
-          .orderBy(asc(jobAssignments.expectedStart))
+          .from(shifts)
+          .where(eq(shifts.userId, d.w1))
+          .orderBy(asc(shifts.expectedStart))
       ).map((s) => ({ ...s, start: s.start.slice(0, 5), end: s.end.slice(0, 5) })),
     );
   const events = () =>
@@ -129,21 +129,21 @@ async function world(tx: Tx) {
       (
         await tx
           .select({
-            id: workSessionEvents.id,
-            type: workSessionEvents.type,
-            at: workSessionEvents.clientTimestamp,
-            flags: workSessionEvents.flags,
+            id: entries.id,
+            type: entries.type,
+            at: entries.clientTimestamp,
+            flags: entries.flags,
           })
-          .from(workSessionEvents)
-          .where(eq(workSessionEvents.workerId, d.w1))
-          .orderBy(asc(workSessionEvents.clientTimestamp))
+          .from(entries)
+          .where(eq(entries.workerId, d.w1))
+          .orderBy(asc(entries.clientTimestamp))
       ).map((e) => ({ ...e, at: e.at.toISOString() })),
     );
   const move = async (input: Parameters<typeof moveToday>[2]) => {
     await asTenant(tx, d.companyId);
     return tx.transaction((sp) => moveToday(sp, adminUser, input, NOON));
   };
-  return { ...d, admin, office, plan, clock, shifts, events, move };
+  return { ...d, admin, office, plan, clock, shifts: readShifts, events, move };
 }
 
 describe("shift.endEarly", () => {
@@ -251,20 +251,18 @@ describe("shift.endEarly", () => {
         }
       };
       for (const statement of [
-        sql`update job_assignments set expected_start = '06:00' where id = ${id}`,
-        sql`update job_assignments set work_date = '2026-11-17' where id = ${id}`,
-        sql`update job_assignments set expected_end = '16:00' where id = ${id}`,
-        sql`update job_assignments set locked_at = null, locked_by_event_id = null
+        sql`update shifts set expected_start = '06:00' where id = ${id}`,
+        sql`update shifts set work_date = '2026-11-17' where id = ${id}`,
+        sql`update shifts set expected_end = '16:00' where id = ${id}`,
+        sql`update shifts set locked_at = null, locked_by_event_id = null
             where id = ${id}`,
-        sql`delete from job_assignments where id = ${id}`,
+        sql`delete from shifts where id = ${id}`,
       ]) {
-        expect(await refused(statement)).toBe("job_assignments_locked");
+        expect(await refused(statement)).toBe("shifts_locked");
       }
       expect(
-        await refused(
-          sql`update job_assignments set expected_end = '07:05' where id = ${id}`,
-        ),
-      ).toBe("job_assignments_locked_end");
+        await refused(sql`update shifts set expected_end = '07:05' where id = ${id}`),
+      ).toBe("shifts_locked_end");
       expect(await w.shifts()).toEqual([
         { id, jobId: w.J, start: "07:00", end: "15:30", locked: true },
       ]);

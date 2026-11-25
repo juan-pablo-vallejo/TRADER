@@ -52,7 +52,7 @@ export const invitationSends = pgTable(
       foreignColumns: [users.companyId, users.id],
     }),
     index("invitation_sends_user_id_idx").on(t.userId),
-    check("invitation_sends_channel", sql`${t.channel} IN ('text', 'email')`),
+    check("invitation_sends_channel", sql`${t.channel} IN ('whatsapp', 'email')`),
     check("invitation_sends_outcome", sql`${t.outcome} IN ('sent', 'failed')`),
     // A failure has its code and no message id; a send that went has no failure. A text is
     // only ever noted as opened to send: the server has no outcome of it to record.
@@ -64,7 +64,7 @@ export const invitationSends = pgTable(
     // The address as the roster holds one: an email lowercased, a number in E.164.
     check(
       "invitation_sends_recipient_shape",
-      sql`(${t.channel} = 'email' AND ${t.recipient} = lower(btrim(${t.recipient})) AND ${t.recipient} ~ '^[^@[:space:]]+@[^@[:space:]]+$') OR (${t.channel} = 'text' AND ${t.recipient} ~ '^\\+1[2-9][0-9]{9}$')`,
+      sql`(${t.channel} = 'email' AND ${t.recipient} = lower(btrim(${t.recipient})) AND ${t.recipient} ~ '^[^@[:space:]]+@[^@[:space:]]+$') OR (${t.channel} = 'whatsapp' AND ${t.recipient} ~ '^\\+1[2-9][0-9]{9}$')`,
     ),
   ],
 );

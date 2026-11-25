@@ -1,13 +1,13 @@
 // The session fold (invariant 4): one worker's work sessions, computed from the
-// append-only `work_session_events` ledger and never stored. Pure: no database, no clock. The
+// append-only `entries` ledger and never stored. Pure: no database, no clock. The
 // state machine below runs the one transition table (contract/clock.ts, which the phone reads
 // too); validation (validate.ts) and derivation (work-date.ts) both run through `replay`, so
 // they cannot drift apart.
-import type { workSessionEvents } from "@trader/db/schema";
+import type { entries } from "@trader/db/schema";
 
 import { clockAfter, type ClockStep } from "../contract/clock";
 
-type Row = typeof workSessionEvents.$inferSelect;
+type Row = typeof entries.$inferSelect;
 
 // The columns the fold reads, and `clockSkewed`, which it does not: the flag is evidence that
 // travels with the ledger rows (sync.pull shows it), never a rule here. Everything else on the

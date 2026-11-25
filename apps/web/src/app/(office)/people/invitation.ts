@@ -12,7 +12,7 @@ export function invitationText(input: {
   // Where the app is got from: this host's `/get`.
   url: string;
 }): string {
-  return invitationParagraphs({ ...input, by: "text" }).join("\n\n");
+  return invitationParagraphs({ ...input, by: "whatsapp" }).join("\n\n");
 }
 
 // A link that opens the phone's messages on a new text to a number, with the words

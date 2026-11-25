@@ -15,7 +15,7 @@
 //
 // What the answer means for a person (on the clock, late, done) is
 // contract/crew.ts's to name, from this answer and the minute.
-import { jobAssignments, users, workSessionEvents } from "@trader/db/schema";
+import { shifts, users, entries } from "@trader/db/schema";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -132,22 +132,22 @@ export async function overviewToday(
 
   const shiftRows = await tx
     .select({
-      id: jobAssignments.id,
-      userId: jobAssignments.userId,
-      jobId: jobAssignments.jobId,
-      start: jobAssignments.expectedStart,
-      end: jobAssignments.expectedEnd,
-      lockedAt: jobAssignments.lockedAt,
+      id: shifts.id,
+      userId: shifts.userId,
+      jobId: shifts.jobId,
+      start: shifts.expectedStart,
+      end: shifts.expectedEnd,
+      lockedAt: shifts.lockedAt,
     })
-    .from(jobAssignments)
-    .where(eq(jobAssignments.workDate, today))
-    .orderBy(asc(jobAssignments.expectedStart), asc(jobAssignments.id));
+    .from(shifts)
+    .where(eq(shifts.workDate, today))
+    .orderBy(asc(shifts.expectedStart), asc(shifts.id));
 
   // Who has a session that could show: an entry timed since yesterday covers every session
   // begun today in any zone, and more starts than ends (roots only: a correction or a void
   // is neither) is an open session, however long ago it began.
   const active = await tx.execute<{ id: string }>(sql`
-    select worker_id as id from work_session_events
+    select worker_id as id from entries
     group by worker_id
     having max(client_timestamp) >= ${today}::date - 1
       or count(*) filter (where type = 'started' and corrects_event_id is null)
@@ -157,10 +157,7 @@ export async function overviewToday(
   const ledger =
     workerIds.length === 0
       ? []
-      : await tx
-          .select()
-          .from(workSessionEvents)
-          .where(inArray(workSessionEvents.workerId, workerIds));
+      : await tx.select().from(entries).where(inArray(entries.workerId, workerIds));
   const ledgers = groupBy(ledger, (row) => row.workerId);
 
   type Clock = z.infer<typeof clock>;

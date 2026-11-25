@@ -21,7 +21,7 @@
 //
 // Every write is judged over the person's whole day first (day.ts, judgeDay), under the
 // same locks in the same order as write.ts.
-import { companies, jobAssignments, jobs } from "@trader/db/schema";
+import { companies, shifts, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -84,9 +84,9 @@ export async function endShiftEarly(
   if (!judged.ok) return refused(judged.refusal);
 
   await tx
-    .update(jobAssignments)
+    .update(shifts)
     .set({ expectedEnd: input.expectedEnd })
-    .where(eq(jobAssignments.id, row.id));
+    .where(eq(shifts.id, row.id));
   return { result: "updated" };
 }
 
@@ -168,14 +168,14 @@ export async function moveToday(
 
   const [existing] = await tx
     .select({
-      userId: jobAssignments.userId,
-      jobId: jobAssignments.jobId,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      expectedEnd: jobAssignments.expectedEnd,
+      userId: shifts.userId,
+      jobId: shifts.jobId,
+      workDate: shifts.workDate,
+      expectedStart: shifts.expectedStart,
+      expectedEnd: shifts.expectedEnd,
     })
-    .from(jobAssignments)
-    .where(eq(jobAssignments.id, input.id));
+    .from(shifts)
+    .where(eq(shifts.id, input.id));
   if (existing !== undefined) {
     // The end is not compared: the first send took it from the shift it ended.
     const same =
@@ -232,7 +232,7 @@ export async function moveToday(
   // written. The day's lock is held, so no reader of the schedule's rules sees the moment
   // between the two statements.
   const inserted = await tx
-    .insert(jobAssignments)
+    .insert(shifts)
     .values({
       id: input.id,
       companyId: user.companyId,
@@ -242,17 +242,17 @@ export async function moveToday(
       expectedStart: input.at,
       expectedEnd: end,
     })
-    .onConflictDoNothing({ target: jobAssignments.id })
-    .returning({ id: jobAssignments.id });
+    .onConflictDoNothing({ target: shifts.id })
+    .returning({ id: shifts.id });
   if (inserted.length === 0) return { result: "rejected", code: "id_conflict" };
   if (covering !== undefined) {
     if (replaces) {
-      await tx.delete(jobAssignments).where(eq(jobAssignments.id, covering.id));
+      await tx.delete(shifts).where(eq(shifts.id, covering.id));
     } else {
       await tx
-        .update(jobAssignments)
+        .update(shifts)
         .set({ expectedEnd: input.at })
-        .where(eq(jobAssignments.id, covering.id));
+        .where(eq(shifts.id, covering.id));
     }
   }
   return {

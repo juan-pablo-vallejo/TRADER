@@ -3,7 +3,7 @@
 // connections must see the same rows, and the lock-wait probe reads every backend of its
 // database. Each test holds a row from the owner's transaction, lets the calls queue on it,
 // and releases them by committing.
-import { jobAssignments } from "@trader/db/schema";
+import { shifts } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -61,13 +61,13 @@ async function world() {
 const plansOf = (companyId: string) =>
   D.owner
     .select({
-      id: jobAssignments.id,
-      workDate: jobAssignments.workDate,
-      expectedStart: jobAssignments.expectedStart,
-      expectedEnd: jobAssignments.expectedEnd,
+      id: shifts.id,
+      workDate: shifts.workDate,
+      expectedStart: shifts.expectedStart,
+      expectedEnd: shifts.expectedEnd,
     })
-    .from(jobAssignments)
-    .where(eq(jobAssignments.companyId, companyId));
+    .from(shifts)
+    .where(eq(shifts.companyId, companyId));
 
 async function planned(d: Awaited<ReturnType<typeof world>>) {
   await plan(d.admin.who).create({
@@ -141,16 +141,14 @@ describe("two admins at once", () => {
     let later!: Promise<unknown>;
     await D.owner.transaction(async (tx) => {
       // The earlier edit, not yet committed.
-      await tx.execute(
-        sql`update job_assignments set expected_end = '12:00' where id = ${id}`,
-      );
+      await tx.execute(sql`update shifts set expected_end = '12:00' where id = ${id}`);
       later = plan(d.second.who).update({
         shiftId: id,
         workDate: "2026-11-18",
         expectedStart: "08:00",
         expectedEnd: "16:00",
       });
-      await waitForLockWait(D.owner, '%from "job_assignments"%for no key update%');
+      await waitForLockWait(D.owner, '%from "shifts"%for no key update%');
     });
     expect(await later).toEqual({ result: "updated" });
     expect(await plansOf(d.companyId)).toEqual([
@@ -163,11 +161,11 @@ describe("two admins at once", () => {
     const id = await planned(d);
     let edit!: Promise<string>;
     await D.owner.transaction(async (tx) => {
-      await tx.execute(sql`delete from job_assignments where id = ${id}`);
+      await tx.execute(sql`delete from shifts where id = ${id}`);
       edit = outcome(
         plan(d.second.who).update({ shiftId: id, workDate: "2026-11-18", ...HOURS }),
       );
-      await waitForLockWait(D.owner, '%from "job_assignments"%for no key update%');
+      await waitForLockWait(D.owner, '%from "shifts"%for no key update%');
     });
     expect(await edit).toBe("FORBIDDEN");
     expect(await plansOf(d.companyId)).toEqual([]);
@@ -377,7 +375,7 @@ describe("Copy Last Week on real commits", () => {
       end $$
     `);
     await D.owner.execute(sql`
-      create trigger fail_copy_test before insert on job_assignments
+      create trigger fail_copy_test before insert on shifts
       for each row execute function fail_copy_test()
     `);
     try {
@@ -391,7 +389,7 @@ describe("Copy Last Week on real commits", () => {
         ),
       ).toBe("INTERNAL_SERVER_ERROR");
     } finally {
-      await D.owner.execute(sql`drop trigger fail_copy_test on job_assignments`);
+      await D.owner.execute(sql`drop trigger fail_copy_test on shifts`);
       await D.owner.execute(sql`drop function fail_copy_test()`);
     }
     expect(await thisWeek(d.companyId)).toEqual([]);

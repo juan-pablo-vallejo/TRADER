@@ -61,7 +61,7 @@ export async function judgeStart(
 // carry times that may not be the clock-in's), and holding no other shift's lock (the same
 // job twice in a day is two shifts). With none, it comes off, and the shift can be edited,
 // moved or removed again. The database refuses any other handover
-// (check_job_assignment_mutation). Written only by a correction that voids.
+// (check_shift_mutation). Written only by a correction that voids.
 export async function releaseVoided(tx: Tx, voidedIds: string[]) {
   // One statement per voided clock-in, each seeing the one before: in a single statement two
   // freed shifts could pick the same clock-in, and the database would refuse the second.
@@ -70,28 +70,28 @@ export async function releaseVoided(tx: Tx, voidedIds: string[]) {
 
 async function releaseOne(tx: Tx, voidedId: string) {
   await tx.execute(sql`
-    update job_assignments a
+    update shifts a
     set locked_by_event_id = next.id,
         locked_at = case when next.id is null then null else a.locked_at end
     from (
       select s.id as shift_id, (
-        select e.id from work_session_events e
+        select e.id from entries e
         join companies c on c.id = e.company_id
         where e.worker_id = s.user_id and e.job_id = s.job_id and e.type = 'started'
           and e.corrects_event_id is null
           and (e.client_timestamp at time zone c.timezone)::date = s.work_date
           and not exists (
-            select 1 from work_session_events v
+            select 1 from entries v
             where (v.type = 'voided' and v.voids_event_id = e.id) or v.corrects_event_id = e.id
           )
           and not exists (
-            select 1 from job_assignments o
+            select 1 from shifts o
             where o.locked_by_event_id = e.id and o.id <> s.id
           )
         order by e.client_timestamp, e.id
         limit 1
       ) as id
-      from job_assignments s
+      from shifts s
       where s.locked_by_event_id = ${voidedId}
     ) next
     where a.id = next.shift_id
@@ -102,7 +102,7 @@ async function releaseOne(tx: Tx, voidedId: string) {
 // holds the rest — the event is a `started` of the shift's own person on its own job.
 export async function lockShift(tx: Tx, shiftId: string, eventId: string) {
   await tx.execute(sql`
-    update job_assignments set locked_at = now(), locked_by_event_id = ${eventId}
+    update shifts set locked_at = now(), locked_by_event_id = ${eventId}
     where id = ${shiftId} and locked_at is null
   `);
 }

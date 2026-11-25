@@ -14,8 +14,8 @@ import {
   invoicePayments,
   invoiceSends,
   invoices,
-  jobAssignments,
-  workSessionEvents,
+  shifts,
+  entries,
 } from "../../src/schema";
 import {
   asApp,
@@ -41,10 +41,10 @@ const TENANT_TABLES = [
   "invoice_payments",
   "invoice_sends",
   "invoices",
-  "job_assignments",
+  "shifts",
   "jobs",
   "users",
-  "work_session_events",
+  "entries",
 ];
 const ALL_TABLES = [...TENANT_TABLES, "companies"].sort();
 
@@ -63,7 +63,7 @@ const tenantColumn = (table: string) => (table === "companies" ? "id" : "company
 // One row in every tenant table for a new company, written as the owner.
 async function everything(tx: Tx, name: string) {
   const refs = await billing(tx, { ...company, name });
-  await tx.insert(workSessionEvents).values(started(refs));
+  await tx.insert(entries).values(started(refs));
   const { invoiceId } = await draftInvoice(tx, refs);
   await issue(tx, refs, invoiceId);
   await tx.insert(invoicePayments).values({
@@ -100,7 +100,7 @@ async function everything(tx: Tx, name: string) {
     outcome: "sent",
     sentByUserId: refs.adminId,
   });
-  await tx.insert(jobAssignments).values({
+  await tx.insert(shifts).values({
     companyId: refs.companyId,
     userId: refs.workerId,
     jobId: refs.jobId,
@@ -314,10 +314,7 @@ describe("row-level security", () => {
         ),
       ).toBe(0);
       expect(
-        await rowCount(
-          tx,
-          sql`delete from job_assignments where company_id = ${b.companyId}`,
-        ),
+        await rowCount(tx, sql`delete from shifts where company_id = ${b.companyId}`),
       ).toBe(0);
       await tx.execute(sql`reset role`);
       const { rows } = await tx.execute<{ name: string }>(
