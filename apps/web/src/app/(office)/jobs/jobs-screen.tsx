@@ -13,6 +13,7 @@
 // address that carries them (location.ts), with the radius beside it; an admin can also
 // set it from the phone's Crew tab, standing at the jobsite. A `rejected` answer reads
 // beneath the control it came from.
+import { JOBSITE_RADIUS_M } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type FormEvent, useRef, useState } from "react";
@@ -35,7 +36,6 @@ import { useTRPC } from "../../trpc";
 import { useUrlFilters } from "../../use-url-filters";
 import styles from "./jobs.module.css";
 import {
-  DEFAULT_RADIUS_M,
   locationText,
   parseLocation,
   parseRadius,
@@ -79,7 +79,7 @@ const EMPTY: Facts = {
   address: "",
   notes: "",
   location: "",
-  radiusM: String(DEFAULT_RADIUS_M),
+  radiusM: String(JOBSITE_RADIUS_M),
 };
 const factsOf = (row: Row): Facts => ({
   customerId: row.customer.id,
@@ -88,7 +88,7 @@ const factsOf = (row: Row): Facts => ({
   address: row.address ?? "",
   notes: row.notes ?? "",
   location: locationText(row.location),
-  radiusM: String(row.location?.radiusM ?? DEFAULT_RADIUS_M),
+  radiusM: String(row.location?.radiusM ?? JOBSITE_RADIUS_M),
 });
 
 type LocationProblem = Exclude<ParsedLocation, { ok: true }>["problem"] | "radius";

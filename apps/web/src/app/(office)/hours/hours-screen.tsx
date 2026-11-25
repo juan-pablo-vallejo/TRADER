@@ -261,7 +261,11 @@ function Shown({
 
   // A day's figure: the hours, the flags as badges, and a mark for a session still open.
   const figure = (d: { hundredths: number; openSessions: number } | null) =>
-    d === null ? "" : d.hundredths === 0 && d.openSessions > 0 ? "" : hours(d.hundredths);
+    d === null
+      ? ""
+      : d.hundredths === 0 && d.openSessions > 0
+        ? ""
+        : t.hoursValue(hours(d.hundredths));
 
   const weekColumns: Column<WeekRow>[] = [
     { key: "person", header: t.person, cell: (row) => row.worker.name, total: undefined },
@@ -293,15 +297,16 @@ function Shown({
                 label: t.week.openDay(row.worker.name, f.weekDay(day)),
                 onOpen: () => onOpen(row.worker.id, day),
               },
-        total: total === null ? undefined : hours(total.hundredths),
+        total: total === null ? undefined : t.hoursValue(hours(total.hundredths)),
       };
     }),
     {
       key: "total",
       header: t.week.total,
       number: true,
-      cell: (row) => hours(row.hundredths),
-      total: answer === undefined ? undefined : hours(answer.totals.hundredths),
+      cell: (row) => t.hoursValue(hours(row.hundredths)),
+      total:
+        answer === undefined ? undefined : t.hoursValue(hours(answer.totals.hundredths)),
     },
   ];
 
@@ -316,7 +321,7 @@ function Shown({
       key: "hours",
       header: t.hours,
       number: true,
-      cell: (c) => hours(c.hundredths),
+      cell: (c) => t.hoursValue(hours(c.hundredths)),
       open: (c) => ({
         label: t.week.openDay(c.worker.name, f.weekDay(c.workDate)),
         onOpen: () => onOpen(c.worker.id, c.workDate),

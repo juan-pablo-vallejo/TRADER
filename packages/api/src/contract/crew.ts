@@ -44,20 +44,3 @@ export function crewCounts(
   for (const p of people) counts[crewStatus(p, minute)]++;
   return counts;
 }
-
-// The minute on a zone's wall clock, HH:MM on a 24-hour clock. Through the zone's rules,
-// built from parts so no locale's format can change the shape.
-export function wallMinute(instant: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).formatToParts(instant);
-  const part = (type: "hour" | "minute") => {
-    const value = parts.find((p) => p.type === type)?.value;
-    if (value === undefined) throw new Error(`no ${type} in the formatted time`);
-    return value.padStart(2, "0");
-  };
-  return `${part("hour")}:${part("minute")}`;
-}

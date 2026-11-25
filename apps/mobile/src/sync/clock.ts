@@ -118,28 +118,6 @@ export function recordsFor(tap: Tap, state: ClockState, c: Capture): NewRecord[]
   }
 }
 
-// An instant as a day and a minute on a zone's wall clock: how the server places a start
-// (sync/schedule.ts), done here with the platform's own zone data.
-export function wallClock(
-  instant: Date,
-  timeZone: string,
-): { day: string; minute: string } {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(instant);
-  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
-  return {
-    day: `${part("year")}-${part("month")}-${part("day")}`,
-    minute: `${part("hour")}:${part("minute")}`,
-  };
-}
-
 type Shift = PullOutput["shifts"][number];
 
 const minutes = (wall: string) =>

@@ -14,6 +14,7 @@ import type { AppUser } from "../core/resolve-user";
 import { companyZone, readDayHours } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
 import { job, listJobs } from "./list";
+import { addDays, mondayOf } from "../contract/calendar";
 
 const jobWithHours = job.extend({
   // Integer hundredths of an hour, as everywhere.
@@ -25,9 +26,6 @@ const jobWithHours = job.extend({
 
 export const listWithHoursOutput = z.array(jobWithHours);
 
-const dayAfter = (day: string, n: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-
 export async function listJobsWithHours(
   tx: Tx,
   user: AppUser,
@@ -36,9 +34,8 @@ export async function listJobsWithHours(
   const rows = await listJobs(tx);
   const timezone = await companyZone(tx, user.companyId);
   const today = workDate(now, timezone);
-  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
-  const weekStart = dayAfter(today, -((weekday + 6) % 7));
-  const weekEnd = dayAfter(weekStart, 6);
+  const weekStart = mondayOf(today);
+  const weekEnd = addDays(weekStart, 6);
 
   const workers = await tx
     .selectDistinct({ id: workSessionEvents.workerId })

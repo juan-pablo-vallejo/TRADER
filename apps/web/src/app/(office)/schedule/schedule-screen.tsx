@@ -13,13 +13,13 @@
 // once (optimistic.ts), with Undo offered in a toast for a few seconds. A refusal puts the
 // week back and is said in words from the answer's own code. Everything else here waits
 // for the server.
+import { addDays, mondayOf } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 import controls from "../../controls.module.css";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
-import { addDays } from "../../format";
 import { Note } from "../../note";
 import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
@@ -33,7 +33,6 @@ import {
   byEmployee,
   byJobsite,
   hoursOf,
-  mondayOf,
   nowIn,
   peopleOn,
   refusalText,

@@ -5,10 +5,7 @@
 // at all (it is only a redirect), so it is refused by name, and the screen says how to
 // copy the pair instead: nothing here ever follows a link, the office's browser loads no
 // other host.
-import { JOBSITE_RADIUS_M, MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
-
-// The radius a job gets unless the office changes it.
-export const DEFAULT_RADIUS_M = JOBSITE_RADIUS_M;
+import { MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
 
 export type ParsedLocation =
   | { ok: true; lat: number; lng: number }

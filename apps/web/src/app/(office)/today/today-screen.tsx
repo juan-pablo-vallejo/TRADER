@@ -15,7 +15,7 @@
 // It reads `overview.today` (api overview/today.ts) and names a person's status with the
 // function the phone's Crew tab uses (today-view.ts). Every figure is the server's. It is
 // read again each minute while the page is open.
-import { wallMinute } from "@trader/api/contract";
+import { minuteIn } from "@trader/api/contract";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
@@ -81,7 +81,7 @@ function Shown({ today, now }: { today: Today; now: number }) {
   const { t, f } = useStrings();
   const s = t.todayScreen;
   const zone = today.timezone;
-  const minute = wallMinute(new Date(now), zone);
+  const minute = minuteIn(new Date(now), zone);
   const jobName = new Map(today.jobs.map((j) => [j.id, j.name]));
   const job = (id: string) => jobName.get(id) ?? "";
   // A sentence that names a job, with the name a link to the job's page. The catalog's

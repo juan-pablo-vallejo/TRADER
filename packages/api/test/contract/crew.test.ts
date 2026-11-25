@@ -2,7 +2,7 @@
 // from what overview.today answers and the minute.
 import { describe, expect, it } from "vitest";
 
-import { crewCounts, crewStatus, wallMinute, type CrewFacts } from "../../src/contract";
+import { crewCounts, crewStatus, minuteIn, type CrewFacts } from "../../src/contract";
 
 const off = { status: "off" } as const;
 const shift = (start: string, clockedIn = false) => ({ start, clockedIn });
@@ -83,17 +83,9 @@ describe("the counts above the list", () => {
 
 describe("the minute on the company's wall clock", () => {
   it("is read through the zone's rules, either side of a clock change", () => {
-    expect(wallMinute(new Date("2026-11-16T12:05:00Z"), "America/New_York")).toBe(
-      "07:05",
-    );
-    expect(wallMinute(new Date("2026-07-16T12:05:00Z"), "America/New_York")).toBe(
-      "08:05",
-    );
-    expect(wallMinute(new Date("2026-11-16T05:00:00Z"), "America/New_York")).toBe(
-      "00:00",
-    );
-    expect(wallMinute(new Date("2026-11-16T04:59:59Z"), "America/New_York")).toBe(
-      "23:59",
-    );
+    expect(minuteIn(new Date("2026-11-16T12:05:00Z"), "America/New_York")).toBe("07:05");
+    expect(minuteIn(new Date("2026-07-16T12:05:00Z"), "America/New_York")).toBe("08:05");
+    expect(minuteIn(new Date("2026-11-16T05:00:00Z"), "America/New_York")).toBe("00:00");
+    expect(minuteIn(new Date("2026-11-16T04:59:59Z"), "America/New_York")).toBe("23:59");
   });
 });

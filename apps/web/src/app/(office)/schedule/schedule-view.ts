@@ -5,11 +5,9 @@ import type { AppRouter } from "@trader/api";
 import type { Issue } from "@trader/api/eligibility";
 import type { inferRouterOutputs } from "@trpc/server";
 
-import { addDays } from "../../format";
 import type { Catalog } from "../../i18n/en";
-import { instantToWall } from "../../zoned";
 import type { Formatters } from "../../format";
-import { compareNames } from "@trader/api/contract";
+import { compareNames, instantToWall, isDay, mondayOf } from "@trader/api/contract";
 
 type Outputs = inferRouterOutputs<AppRouter>["assignment"];
 export type Week = Outputs["week"];
@@ -17,26 +15,12 @@ export type WeekShift = Week["shifts"][number];
 export type CopyPreview = Outputs["copyPreview"];
 export type { Issue };
 
-// The Monday of the week `day` is in. Calendar arithmetic in UTC: no zone can move it.
-export function mondayOf(day: string): string {
-  const weekday = new Date(`${day}T00:00:00Z`).getUTCDay();
-  return addDays(day, -((weekday + 6) % 7));
-}
-
 // The schedule's place, kept in the address (use-url-filters.ts) as Hours keeps its own: a
 // reload, Back or a pasted link shows the same week, day, view and person. This week, by
 // employee and everyone are the defaults, so the plain address is the plain screen.
 export type View = "employee" | "jobsite";
 export const SCHEDULE_FILTERS = { week: "", day: "", view: "employee", who: "" };
 type ScheduleFilters = typeof SCHEDULE_FILTERS;
-
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-// A real calendar day: "2026-13-40" has the shape and is no day.
-function isDay(value: string): boolean {
-  if (!ISO_DAY.test(value)) return false;
-  const at = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(at.getTime()) && at.toISOString().startsWith(value);
-}
 
 export function scheduleOf(
   filters: ScheduleFilters,

@@ -17,6 +17,7 @@
 //
 // Which person and day is the address's to say (hours-view.ts, DAY_FILTERS), so a panel
 // can be linked.
+import { instantToWall } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 
@@ -34,7 +35,6 @@ import { SidePanel } from "../../side-panel";
 import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import styles from "./day-panel.module.css";
-import { instantToWall } from "../../zoned";
 import {
   createMinter,
   draftOf,

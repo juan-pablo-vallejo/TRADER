@@ -7,6 +7,7 @@
 // minted once and kept, so a confirmation sent again creates nothing twice. Beneath: the
 // copies that have shifts in this week, each undone whole or, once someone has clocked in on
 // one of its shifts, not at all.
+import { addDays } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 
@@ -14,7 +15,6 @@ import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { LoadingRows } from "../../loading-rows";
-import { addDays } from "../../format";
 import { Note } from "../../note";
 import { DestructiveAction } from "../../row-editor";
 import type { Formatters } from "../../format";

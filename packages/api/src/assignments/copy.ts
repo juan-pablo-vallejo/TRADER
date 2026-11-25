@@ -28,10 +28,7 @@ import type { AppUser } from "../core/resolve-user";
 import { type Day, dayOf, type DayShift, judgeDay, loadDays, lockDays } from "./day";
 import { toWallTime, wallTime, workDay } from "./write";
 import { byName } from "../core/order";
-
-const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
-const dayAfter = (day: string, n: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+import { addDays, isMonday } from "../contract/calendar";
 
 // The week being filled; its source is the week before it.
 const weekStart = workDay.refine(isMonday, { message: "A week starts on a Monday." });
@@ -114,7 +111,7 @@ function fingerprintOf(create: Offered[], leftOut: Preview["leftOut"]): string {
 
 // The plan as the database stands. Read-only: the caller decides what is locked first.
 async function planCopy(tx: Tx, target: string): Promise<Preview> {
-  const source = dayAfter(target, -7);
+  const source = addDays(target, -7);
   const rows = await tx
     .select({
       id: jobAssignments.id,
@@ -134,7 +131,7 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
     .where(
       and(
         gte(jobAssignments.workDate, source),
-        lte(jobAssignments.workDate, dayAfter(source, 6)),
+        lte(jobAssignments.workDate, addDays(source, 6)),
       ),
     )
     // One person's day together, its shifts in the order they are taken in.
@@ -147,13 +144,13 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
       asc(jobAssignments.id),
     );
 
-  const days = await loadDays(tx, target, dayAfter(target, 6));
+  const days = await loadDays(tx, target, addDays(target, 6));
   // Each target day as it will stand once the shifts taken so far are created.
   const standing = new Map<string, Pick<Day, "shifts">>();
   const create: Offered[] = [];
   const leftOut: Preview["leftOut"] = [];
   for (const r of rows) {
-    const workDate = dayAfter(r.workDate, 7);
+    const workDate = addDays(r.workDate, 7);
     const offer: Offered = {
       sourceId: r.id,
       worker: { id: r.userId, name: r.userName },

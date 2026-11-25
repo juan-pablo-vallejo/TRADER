@@ -8,6 +8,7 @@
 // so the database the caller prepared is the unit of atomicity: a failed step
 // throws DemoFailure naming the step and what answered, and target.ts's recovery drops that
 // database.
+import { instantNear } from "../contract/calendar";
 import { randomUUID } from "node:crypto";
 
 import type { Db, SeedCompany } from "@trader/db";
@@ -34,7 +35,7 @@ import {
   workDays,
   type Persona,
 } from "./content";
-import { atZone, seededRandom, uuidv7At } from "./ids";
+import { seededRandom, uuidv7At } from "./ids";
 import { MAX_PUSH_RECORDS } from "../contract/limits";
 
 export type Step = { index: number; name: string };
@@ -88,7 +89,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   const days = workDays(opts.anchor);
   const random = seededRandom(`trader-demo:${opts.anchor}`);
   const idAt = (at: Date) => uuidv7At(at.getTime(), random);
-  const at = (day: number, time: string) => atZone(days[day]!, time, tz);
+  const at = (day: number, time: string) => instantNear(days[day]!, time, tz);
   const now = () => new Date();
 
   const summary: Summary = {

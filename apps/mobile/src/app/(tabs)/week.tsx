@@ -5,13 +5,13 @@
 // Each scheduled day is a card, today first; a shift opens the same job sheet as Today.
 // Beneath, the hours by day as the server folds them, each with a flag in words where the
 // office may look. Nothing here is computed on the phone but the grouping (sync/week.ts).
+import { wallClock } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { age, dayName, duration, wallTime } from "../../format";
 import { useStrings } from "../../i18n";
-import { wallClock } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
 import { hoursByDay, shiftDays } from "../../sync/week";
 import { color, size, space } from "../../theme";

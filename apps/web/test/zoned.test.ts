@@ -3,7 +3,7 @@
 // (March 8, clocks skip 02:00–03:00; November 1, clocks repeat 01:00–02:00).
 import { describe, expect, it } from "vitest";
 
-import { instantToWall, wallToInstant } from "../src/app/zoned";
+import { instantToWall, wallToInstant } from "@trader/api/contract";
 
 const NY = "America/New_York";
 const iso = (wall: string, zone = NY) => wallToInstant(wall, zone)?.toISOString() ?? null;

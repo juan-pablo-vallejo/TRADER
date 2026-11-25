@@ -30,15 +30,14 @@ import { forbidden } from "../core/trpc";
 import { eventEffect, sessionAccounting } from "./accounting";
 import { workDate } from "./work-date";
 import { MAX_RANGE_DAYS } from "../contract/limits";
+import { daysBetween } from "../contract/calendar";
 
 export { MAX_RANGE_DAYS };
-
-const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
 
 // A range of work dates, both ends included: forward, and no longer than the bound. Refused
 // past it, never truncated. Also labor/day-hours.ts's.
 export const rangeWithinBound = (v: { from: string; to: string }) => {
-  const days = dayNumber(v.to) - dayNumber(v.from);
+  const days = daysBetween(v.from, v.to);
   return days >= 0 && days < MAX_RANGE_DAYS;
 };
 export const RANGE_REFUSAL = {

@@ -29,26 +29,26 @@ const plain = {
 };
 
 describe("measureSkew", () => {
-  it("is device minus server, signed, and skewed strictly beyond five minutes", () => {
-    expect(CLOCK_SKEW_TOLERANCE_MS).toBe(300_000);
-    expect(measureSkew(at(300_000), SERVER)).toEqual({
-      deviceNow: at(300_000),
-      clockSkewMs: 300_000,
+  it("is device minus server, signed, and skewed strictly beyond the tolerance", () => {
+    const T = CLOCK_SKEW_TOLERANCE_MS;
+    expect(measureSkew(at(T), SERVER)).toEqual({
+      deviceNow: at(T),
+      clockSkewMs: T,
       clockSkewed: false,
     });
-    expect(measureSkew(at(-300_000), SERVER)).toEqual({
-      deviceNow: at(-300_000),
-      clockSkewMs: -300_000,
+    expect(measureSkew(at(-T), SERVER)).toEqual({
+      deviceNow: at(-T),
+      clockSkewMs: -T,
       clockSkewed: false,
     });
-    expect(measureSkew(at(300_001), SERVER)).toEqual({
-      deviceNow: at(300_001),
-      clockSkewMs: 300_001,
+    expect(measureSkew(at(T + 1), SERVER)).toEqual({
+      deviceNow: at(T + 1),
+      clockSkewMs: T + 1,
       clockSkewed: true,
     });
-    expect(measureSkew(at(-600_000), SERVER)).toEqual({
-      deviceNow: at(-600_000),
-      clockSkewMs: -600_000,
+    expect(measureSkew(at(-2 * T), SERVER)).toEqual({
+      deviceNow: at(-2 * T),
+      clockSkewMs: -2 * T,
       clockSkewed: true,
     });
   });

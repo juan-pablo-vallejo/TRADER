@@ -10,6 +10,7 @@
 // and Switch job beneath it. Clock out asks once; nothing else asks. A session left open
 // from an earlier day says so first. The server decides what counts either way, and an
 // entry it refused is shown behind the chip as what it is.
+import { wallClock } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { dayName, duration, timeOfDay, wallTime } from "../../format";
 import { useStrings } from "../../i18n";
 import { useReminders } from "../../reminders";
-import { offerAt, type Tap, wallClock } from "../../sync/clock";
+import { offerAt, type Tap } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
 import { fromEarlierDay, sessionWorkedMs, telLink, timer } from "../../sync/today";
 import { color, size, space } from "../../theme";

@@ -2,7 +2,11 @@
 // The server here is a stand-in that keeps what it accepted by
 // id, as the real one does, and can be told to lose a response, stop part-way, refuse a
 // record or change the service's state.
-import type { PullOutput, ServiceState } from "@trader/api/contract";
+import {
+  MAX_PUSH_RECORDS,
+  type PullOutput,
+  type ServiceState,
+} from "@trader/api/contract";
 import superjson from "superjson";
 import { describe, expect, it } from "vitest";
 
@@ -328,9 +332,13 @@ describe("a cycle", () => {
 
   it("sends a backlog larger than one batch in order, once each", async () => {
     const p = await phone();
-    const ids = await p.capture(230);
-    expect(await p.cycle()).toMatchObject({ settled: 230, drained: true });
-    expect(p.srv.pushes.map((b) => b.length)).toEqual([100, 100, 30]);
+    const ids = await p.capture(2 * MAX_PUSH_RECORDS + 30);
+    expect(await p.cycle()).toMatchObject({ settled: ids.length, drained: true });
+    expect(p.srv.pushes.map((b) => b.length)).toEqual([
+      MAX_PUSH_RECORDS,
+      MAX_PUSH_RECORDS,
+      30,
+    ]);
     expect(p.srv.pushes.flat()).toEqual(ids);
     expect([...p.srv.accepted.values()].every((n) => n === 1)).toBe(true);
   });

@@ -6,9 +6,7 @@
 import type { AppRouter } from "@trader/api";
 import type { inferRouterOutputs } from "@trpc/server";
 
-import { addDays } from "../../format";
-import { mondayOf } from "../schedule/schedule-view";
-import { MAX_RANGE_DAYS } from "@trader/api/contract";
+import { addDays, isDay, MAX_RANGE_DAYS, mondayOf } from "@trader/api/contract";
 
 type Outputs = inferRouterOutputs<AppRouter>;
 export type Hours = Outputs["labor"]["hours"];
@@ -39,10 +37,6 @@ export function panelOf(
 }
 
 export type Range = { from: string; to: string };
-
-const DAY = /^\d{4}-\d{2}-\d{2}$/;
-const isDay = (value: string) =>
-  DAY.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 
 // Monday to Sunday around a day.
 export function weekOf(day: string): Range {

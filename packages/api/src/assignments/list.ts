@@ -10,6 +10,7 @@ import { z } from "zod";
 import type { Tx } from "../core/context";
 import { toWallTime, wallTime, workDay } from "./write";
 import { byName } from "../core/order";
+import { addDays, isMonday } from "../contract/calendar";
 
 // A bound, not a page: a week of a 30-person company on two jobs a day is far under it.
 const LIST_LIMIT = 2000;
@@ -86,7 +87,6 @@ async function plannedShifts(
 }
 
 // A week, with whether a clock-in has locked each shift.
-const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
 
 export const weekInput = z.strictObject({
   weekStart: workDay.refine(isMonday, { message: "A week starts on a Monday." }),
@@ -107,14 +107,11 @@ export const weekOutput = z.strictObject({
   shifts: z.array(shiftRow),
 });
 
-const dayAfter = (day: string, n: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-
 export async function weekAssignments(
   tx: Tx,
   input: z.infer<typeof weekInput>,
 ): Promise<z.infer<typeof weekOutput>> {
-  const days = Array.from({ length: 7 }, (_, n) => dayAfter(input.weekStart, n));
+  const days = Array.from({ length: 7 }, (_, n) => addDays(input.weekStart, n));
   const from = days[0]!;
   const to = days[6]!;
   const rows = await plannedShifts(tx, from, to);

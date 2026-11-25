@@ -7,9 +7,10 @@
 // the clock is still running on its job. The set is decided again after every pull and
 // every tap, so a clock-in takes the start reminder away and puts the end one in its place,
 // and a clock-out takes that away too.
+import { instantNear, wallClock } from "@trader/api/contract";
 import type { PullOutput } from "@trader/api/contract";
 
-import { type ClockState, wallClock } from "./clock";
+import type { ClockState } from "./clock";
 
 type Shift = PullOutput["shifts"][number];
 
@@ -37,34 +38,6 @@ const LATE_MS = 15 * 60_000;
 // shifts is far under it; the cap is here so a strange schedule cannot starve the nearest.
 export const MAX_REMINDERS = 40;
 
-// A day and a wall-clock time in a zone, as an instant. The platform turns instants into
-// wall time (clock.ts, wallClock), not the other way, so this guesses and corrects: read
-// the guess back on the zone's wall clock, and move by what it is off. Twice, because the
-// first correction can cross a daylight-saving change. A time that does not exist (the
-// skipped hour) lands on the hour after it; one that happens twice, on its first pass.
-export function zonedInstant(day: string, wall: string, timeZone: string): Date {
-  const want = Date.UTC(
-    Number(day.slice(0, 4)),
-    Number(day.slice(5, 7)) - 1,
-    Number(day.slice(8, 10)),
-    Number(wall.slice(0, 2)),
-    Number(wall.slice(3, 5)),
-  );
-  let guess = want;
-  for (let i = 0; i < 2; i++) {
-    const seen = wallClock(new Date(guess), timeZone);
-    const read = Date.UTC(
-      Number(seen.day.slice(0, 4)),
-      Number(seen.day.slice(5, 7)) - 1,
-      Number(seen.day.slice(8, 10)),
-      Number(seen.minute.slice(0, 2)),
-      Number(seen.minute.slice(3, 5)),
-    );
-    guess += want - read;
-  }
-  return new Date(guess);
-}
-
 const idOf = (kind: Reminder["kind"], shift: Shift, at: Date) =>
   `shift-${kind}:${shift.id}:${String(at.getTime())}`;
 
@@ -81,8 +54,8 @@ export function reminders(input: {
   const today = wallClock(new Date(now), timeZone).day;
   const out: Reminder[] = [];
   for (const shift of input.shifts) {
-    const start = zonedInstant(shift.workDate, shift.start, timeZone);
-    const end = zonedInstant(shift.workDate, shift.end, timeZone);
+    const start = instantNear(shift.workDate, shift.start, timeZone);
+    const end = instantNear(shift.workDate, shift.end, timeZone);
     // On the clock on this shift's job, today, before it ends: this is the shift being
     // worked, whether the clock-in came early, on time or late.
     const working =

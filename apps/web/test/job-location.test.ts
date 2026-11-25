@@ -1,9 +1,9 @@
 // A job's location as one field (jobs/location.ts): a pasted pair and a maps address read
 // into the same place, a short link refused by name, and nonsense refused.
+import { JOBSITE_RADIUS_M, MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_RADIUS_M,
   locationText,
   parseLocation,
   parseRadius,
@@ -86,12 +86,11 @@ describe("a job's location, pasted", () => {
     expect(locationText(null)).toBe("");
   });
 
-  it("takes a radius in whole meters, 200 unless changed", () => {
-    expect(DEFAULT_RADIUS_M).toBe(200);
-    expect(parseRadius("200")).toBe(200);
+  it("takes a radius in whole meters, the contract's unless changed, up to its ceiling", () => {
+    expect(parseRadius(String(JOBSITE_RADIUS_M))).toBe(JOBSITE_RADIUS_M);
     expect(parseRadius(" 50 ")).toBe(50);
-    expect(parseRadius("100000")).toBe(100_000);
-    for (const bad of ["", "0", "100001", "12.5", "-5", "wide"]) {
+    expect(parseRadius(String(MAX_JOBSITE_RADIUS_M))).toBe(MAX_JOBSITE_RADIUS_M);
+    for (const bad of ["", "0", String(MAX_JOBSITE_RADIUS_M + 1), "12.5", "-5", "wide"]) {
       expect([bad, parseRadius(bad)]).toEqual([bad, null]);
     }
   });

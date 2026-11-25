@@ -6,11 +6,11 @@
 // job. An added entry goes on the session's job as the set leaves it. Times are entered as
 // the company's clock read them (zoned.ts); an entry whose time was not touched keeps its
 // instant to the millisecond.
+import { instantToWall, wallToInstant } from "@trader/api/contract";
 import type { AppRouter } from "@trader/api";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 
 import { uuidv7 } from "../../uuidv7";
-import { instantToWall, wallToInstant } from "../../zoned";
 
 export type RepairInput = inferRouterInputs<AppRouter>["labor"]["repair"];
 export type Operation = RepairInput["operations"][number];

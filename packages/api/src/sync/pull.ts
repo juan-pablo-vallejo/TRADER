@@ -13,6 +13,7 @@ import { deriveSessions, workDate } from "../labor/work-date";
 import type { AppUser } from "../core/resolve-user";
 import type { PullOutput } from "../contract/pull";
 import { stampsOn } from "./scope";
+import { addDays, mondayOf } from "../contract/calendar";
 
 // Today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
@@ -23,13 +24,6 @@ export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
 // The caller's shifts are read from the Monday of the current week for this many days: this
 // week whole, and the next, so Sunday evening already shows Monday.
 const SHIFT_DAYS = 14;
-
-// YYYY-MM-DD minus `days`, on the calendar (no zone: a date is a date).
-function daysBefore(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - days);
-  return d.toISOString().slice(0, 10);
-}
 
 export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   const serverNow = new Date();
@@ -49,7 +43,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     .from(users)
     .where(eq(users.id, user.id));
   if (self === undefined) throw new Error("the caller's own row is not visible");
-  const from = daysBefore(workDate(serverNow, company.timezone), WINDOW_DAYS - 1);
+  const from = addDays(workDate(serverNow, company.timezone), 1 - WINDOW_DAYS);
 
   // Every job a start may name: not archived. Under the schedule the phone offers the
   // shift's own job; without it, the person picks from these.
@@ -101,11 +95,8 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
 
   // The caller's own shifts and the hours each is the eligible one, a day at a time.
   const today = workDate(serverNow, company.timezone);
-  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
-  const monday = daysBefore(today, (weekday + 6) % 7);
-  const ownDays = await loadDays(tx, monday, daysBefore(monday, 1 - SHIFT_DAYS), [
-    user.id,
-  ]);
+  const monday = mondayOf(today);
+  const ownDays = await loadDays(tx, monday, addDays(monday, SHIFT_DAYS - 1), [user.id]);
   const shiftJobIds = [
     ...new Set([...ownDays.values()].flatMap((d) => d.shifts.map((s) => s.jobId))),
   ];

@@ -1,10 +1,14 @@
 // What the Crew tab works out from `overview.today`'s answer and the minute. Pure: the
 // screen draws what these answer. A person's status is the shared function's
 // (`@trader/api/contract`, crewStatus) and is never decided here.
-import { crewStatus, type CrewStatus, type PullOutput } from "@trader/api/contract";
+import {
+  crewStatus,
+  type CrewStatus,
+  type PullOutput,
+  wallClock,
+} from "@trader/api/contract";
 
 import type { Api } from "../api";
-import { wallClock } from "./clock";
 
 export type Crew = Awaited<ReturnType<Api["overview"]["today"]["query"]>>;
 export type CrewPerson = Crew["people"][number];

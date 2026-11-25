@@ -23,6 +23,7 @@ import { companyZone, readDayHours } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
 import { job, readJob } from "./list";
 import { compareNames } from "../contract/order";
+import { addDays, mondayOf } from "../contract/calendar";
 
 export const readInput = z.strictObject({ jobId: z.uuid() });
 
@@ -61,9 +62,6 @@ export const readOutput = z.strictObject({
   invoices: listOutput,
 });
 
-const dayAfter = (day: string, n: number) =>
-  new Date(Date.parse(`${day}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
-
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 
 export async function readJobPage(
@@ -78,9 +76,8 @@ export async function readJobPage(
 
   const timezone = await companyZone(tx, user.companyId);
   const today = workDate(now, timezone);
-  const weekday = new Date(`${today}T00:00:00Z`).getUTCDay();
-  const weekStart = dayAfter(today, -((weekday + 6) % 7));
-  const weekEnd = dayAfter(weekStart, 6);
+  const weekStart = mondayOf(today);
+  const weekEnd = addDays(weekStart, 6);
 
   // Shifts on this job from the week's Monday on: this week's people, and whether any is
   // today or later.

@@ -1,6 +1,7 @@
 // The Hours screen's layout of a `labor.hours` answer and the dates it asks for: a week as
 // people by days, a longer range as a list, open sessions apart, and the range the address
 // names. Every figure is the server's, carried as given.
+import { addDays, MAX_RANGE_DAYS } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -169,18 +170,16 @@ describe("the dates the address asks for", () => {
     });
   });
 
-  it("is the dates named, up to 31 days, and nothing for dates the server would refuse", () => {
+  it("is the dates named, up to the bound, and nothing for dates the server would refuse", () => {
     const dates = (from: string, to: string) =>
       rangeOf(filters({ range: "dates", from, to }), TODAY);
-    expect(dates("2026-10-01", "2026-10-31")).toEqual({
-      from: "2026-10-01",
-      to: "2026-10-31",
-    });
+    const last = addDays("2026-10-01", MAX_RANGE_DAYS - 1);
+    expect(dates("2026-10-01", last)).toEqual({ from: "2026-10-01", to: last });
     expect(dates("2026-10-01", "2026-10-01")).toEqual({
       from: "2026-10-01",
       to: "2026-10-01",
     });
-    expect(dates("2026-10-01", "2026-11-01")).toBeNull();
+    expect(dates("2026-10-01", addDays(last, 1))).toBeNull();
     expect(dates("2026-10-02", "2026-10-01")).toBeNull();
     expect(dates("", "2026-10-01")).toBeNull();
     expect(dates("2026-13-40", "2026-10-01")).toBeNull();

@@ -1,16 +1,12 @@
 // Shift reminders (src/sync/reminders.ts): the one function that decides the whole set
 // from the shifts, the clock and the time; the wall-clock-to-instant step it rests on; and
 // the difference against what the phone already holds.
+import { instantNear } from "@trader/api/contract";
 import type { PullOutput } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
 import type { ClockState } from "../../src/sync/clock";
-import {
-  MAX_REMINDERS,
-  reconcile,
-  reminders,
-  zonedInstant,
-} from "../../src/sync/reminders";
+import { MAX_REMINDERS, reconcile, reminders } from "../../src/sync/reminders";
 
 const NY = "America/New_York";
 const J = "01900000-0000-7000-8000-00000000000a";
@@ -50,28 +46,28 @@ const said = (r: ReturnType<typeof reminders>) =>
 
 describe("a wall-clock time as an instant", () => {
   it("reads a day and a time in the company's zone, winter and summer", () => {
-    expect(zonedInstant("2026-11-16", "07:00", NY).toISOString()).toBe(
+    expect(instantNear("2026-11-16", "07:00", NY).toISOString()).toBe(
       "2026-11-16T12:00:00.000Z",
     );
-    expect(zonedInstant("2026-07-06", "07:00", NY).toISOString()).toBe(
+    expect(instantNear("2026-07-06", "07:00", NY).toISOString()).toBe(
       "2026-07-06T11:00:00.000Z",
     );
-    expect(zonedInstant("2026-11-16", "23:59", "UTC").toISOString()).toBe(
+    expect(instantNear("2026-11-16", "23:59", "UTC").toISOString()).toBe(
       "2026-11-16T23:59:00.000Z",
     );
   });
 
   it("is right on the days the clocks change", () => {
     // 2026-11-01: back an hour at 02:00. 07:00 is already winter time.
-    expect(zonedInstant("2026-11-01", "07:00", NY).toISOString()).toBe(
+    expect(instantNear("2026-11-01", "07:00", NY).toISOString()).toBe(
       "2026-11-01T12:00:00.000Z",
     );
     // 2026-03-08: forward an hour at 02:00. 07:00 is already summer time.
-    expect(zonedInstant("2026-03-08", "07:00", NY).toISOString()).toBe(
+    expect(instantNear("2026-03-08", "07:00", NY).toISOString()).toBe(
       "2026-03-08T11:00:00.000Z",
     );
     // The hour that is skipped lands on a real instant, not a crash.
-    expect(Number.isNaN(zonedInstant("2026-03-08", "02:30", NY).getTime())).toBe(false);
+    expect(Number.isNaN(instantNear("2026-03-08", "02:30", NY).getTime())).toBe(false);
   });
 });
 

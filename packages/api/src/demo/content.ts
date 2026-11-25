@@ -6,7 +6,7 @@
 import type { SeedCompany } from "@trader/db";
 
 import type { EntryFlag } from "../sync/reasons";
-import { addDays } from "./ids";
+import { addDays } from "../contract/calendar";
 
 export const DEMO: SeedCompany = {
   companyId: "019a4a00-0000-7000-8000-00000000de30",

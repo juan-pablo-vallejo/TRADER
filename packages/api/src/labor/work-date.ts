@@ -1,26 +1,9 @@
 // `work_date`: derived in `companies.timezone`, never stored. Pure.
+import { dayIn } from "../contract/calendar";
 import { foldSessions, type LaborEvent, type Session } from "./fold";
 
-// The calendar date of `instant` in the IANA zone, as YYYY-MM-DD. Through the zone's rules,
-// never a fixed offset, which is wrong on either side of a daylight-saving change. Built
-// from parts so no locale's date format can change the shape. An unknown zone throws
-// RangeError: an internal error, since the zone is validated where it is written.
-export function workDate(instant: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    calendar: "gregory",
-    numberingSystem: "latn",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(instant);
-  const part = (type: "year" | "month" | "day") => {
-    const value = parts.find((p) => p.type === type)?.value;
-    if (value === undefined) throw new Error(`no ${type} in the formatted date`);
-    return value;
-  };
-  return `${part("year").padStart(4, "0")}-${part("month")}-${part("day")}`;
-}
+// The calendar date of an instant in the company's zone: a work date.
+export const workDate = dayIn;
 
 type DerivedSession = Session & { workDate: string };
 

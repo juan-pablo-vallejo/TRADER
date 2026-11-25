@@ -20,6 +20,7 @@ import {
   crewStatus,
   type CrewStatus,
   JOBSITE_RADIUS_M,
+  wallClock,
 } from "@trader/api/contract";
 import * as Crypto from "expo-crypto";
 import { Redirect, useFocusEffect } from "expo-router";
@@ -41,7 +42,6 @@ import { useStrings } from "../../i18n";
 import { createMinter } from "../../ids";
 import { currentFix } from "../../location";
 import { headersFor, useSession } from "../../session";
-import { wallClock } from "../../sync/clock";
 import {
   byJob,
   coveringShift,

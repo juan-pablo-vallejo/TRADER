@@ -1,6 +1,6 @@
 // What the clock shows and what a tap records (src/sync/clock.ts), and that what it records
 // is what the server parses (the contract's own schema).
-import { laborPayloadV1, type PullOutput } from "@trader/api/contract";
+import { laborPayloadV1, type PullOutput, wallClock } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
 import { createMinter } from "../../src/ids";
@@ -10,7 +10,6 @@ import {
   offerAt,
   READING_FRESH_MS,
   recordsFor,
-  wallClock,
   type Capture,
 } from "../../src/sync/clock";
 import type { NewRecord, OutboxRecord } from "../../src/sync/types";

@@ -4,6 +4,7 @@
 // anchor, so one anchor yields one id set every run: a second run against the same database is
 // recognisable as duplicates, never as new rows. The test helpers' uuidv7 stays random, because
 // rows written by rolled-back tests share a database.
+import { addDays, dayIn, mondayOf } from "../contract/calendar";
 
 // FNV-1a over the seed text, then mulberry32: small, dependency-free, good enough for ids that
 // only need to be distinct and repeatable (nothing here is a secret).
@@ -37,66 +38,9 @@ export function uuidv7At(ms: number, random: () => number): string {
   return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
-// The wall-clock offset of `timeZone` at a UTC instant, in milliseconds.
-function zoneOffsetMs(utcMs: number, timeZone: string): number {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).formatToParts(new Date(utcMs));
-  const n = (type: string) => Number(parts.find((p) => p.type === type)!.value);
-  const asUtc = Date.UTC(
-    n("year"),
-    n("month") - 1,
-    n("day"),
-    n("hour"),
-    n("minute"),
-    n("second"),
-  );
-  return asUtc - utcMs;
-}
-
-// The instant at which a calendar day's wall-clock time occurs in a zone (times render
-// in the company's timezone; the demo states them that way too). Two passes settle an
-// instant on either side of a DST change; no demo time falls inside a transition gap.
-export function atZone(date: string, time: string, timeZone: string): Date {
-  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
-  const [hh, mm] = time.split(":").map(Number) as [number, number];
-  const guess = Date.UTC(y, m - 1, d, hh, mm);
-  let utc = guess - zoneOffsetMs(guess, timeZone);
-  utc = guess - zoneOffsetMs(utc, timeZone);
-  return new Date(utc);
-}
-
-// The calendar date (YYYY-MM-DD) of an instant in a zone.
-export function dateIn(instant: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(instant);
-}
-
-// `date` plus `days` calendar days, as YYYY-MM-DD (UTC arithmetic on a date-only value).
-export function addDays(date: string, days: number): string {
-  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
-  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
-}
-
 // The default anchor: the Monday two weeks before `now`'s date in the zone, so the office sees
 // two recent recorded weeks and the week it is opened in. ISO weekday arithmetic on the date only.
-export function defaultAnchor(now: Date, timeZone: string): string {
-  const today = dateIn(now, timeZone);
-  const [y, m, d] = today.split("-").map(Number) as [number, number, number];
-  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay(); // 0 Sunday … 6 Saturday
-  const sinceMonday = (dow + 6) % 7;
-  return addDays(today, -sinceMonday - 14);
-}
+export const defaultAnchor = (now: Date, timeZone: string): string =>
+  addDays(mondayOf(dayIn(now, timeZone)), -14);
 
 export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

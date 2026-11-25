@@ -130,14 +130,6 @@ export function formatters(language: Language, t: Catalog) {
 
 export type Formatters = ReturnType<typeof formatters>;
 
-// A calendar day `days` after `iso`, by calendar arithmetic in UTC so no zone or clock change
-// can move it.
-export function addDays(iso: string, days: number): string {
-  const at = new Date(`${iso}T00:00:00Z`);
-  at.setUTCDate(at.getUTCDate() + days);
-  return at.toISOString().slice(0, 10);
-}
-
 // "25", "25.5" or "25.50" to cents, by digits, never through a float; null when malformed.
 export function cents(amount: string): number | null {
   const match = /^\s*(\d+)(?:\.(\d{1,2}))?\s*$/.exec(amount);
