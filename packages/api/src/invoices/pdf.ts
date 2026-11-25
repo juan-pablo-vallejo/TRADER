@@ -17,6 +17,7 @@
 // the same description (the document's dates are the invoice's own, never the clock's). The
 // standard Helvetica carries Latin text only, so a character it cannot draw is written `?`
 // rather than failing the invoice.
+import { isDay } from "../contract/calendar";
 import { companies } from "@trader/db/schema";
 import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import { z } from "zod";
@@ -80,6 +81,24 @@ export function money(cents: number): string {
   const grouped = whole!.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   return `${cents < 0 ? "-" : ""}${grouped}.${fraction}`;
 }
+
+// An amount as the office's screen writes it: "$1,250.50", "-$20.00"; another currency
+// keeps its code after the figure, "1,250.50 EUR".
+export function amount(cents: number, currency: string): string {
+  if (currency !== "USD") return `${money(cents)} ${currency}`;
+  return `${cents < 0 ? "-" : ""}$${money(Math.abs(cents))}`;
+}
+
+// A calendar day as the office's screen writes a due or issue date: "Nov 16, 2026".
+const printed = new Intl.DateTimeFormat("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric",
+  timeZone: "UTC",
+});
+// Anything but a whole day is written as it is.
+export const printedDay = (day: string): string =>
+  isDay(day) ? printed.format(new Date(`${day}T00:00:00Z`)) : day;
 
 // A stored quantity carries three decimal places; the page shows the ones that say
 // something: `8.000` is 8, `2.500` is 2.5.
@@ -168,7 +187,7 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
     left("Description", PAGE.margin, bold);
     right("Quantity", COLUMNS.quantity, bold);
     right("Unit price", COLUMNS.price, bold);
-    right(`Amount (${invoice.currency})`, COLUMNS.amount, bold);
+    right("Amount", COLUMNS.amount, bold);
     y -= LEADING;
     rule();
   };
@@ -206,7 +225,7 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
   const settled = !invoice.void && invoice.owedCents <= 0;
   left(
     // A void invoice asks for nothing.
-    `Amount due: ${money(invoice.void ? 0 : invoice.owedCents)} ${invoice.currency}`,
+    `Amount due: ${amount(invoice.void ? 0 : invoice.owedCents, invoice.currency)}`,
     PAGE.margin,
     bold,
     SIZE.title,
@@ -218,11 +237,11 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
     SIZE.title,
   );
   y -= LEADING * 2;
-  left(`Due ${invoice.dueOn}`, PAGE.margin, bold);
+  left(`Due ${printedDay(invoice.dueOn)}`, PAGE.margin, bold);
   right(`Invoice ${invoice.number}`, COLUMNS.amount, bold);
   y -= LEADING;
   left(`Status: ${invoice.status}`, PAGE.margin);
-  right(`Issued ${invoice.issuedOn}`, COLUMNS.amount);
+  right(`Issued ${printedDay(invoice.issuedOn)}`, COLUMNS.amount);
   y -= LEADING * 2;
 
   left("From", PAGE.margin, bold, SIZE.small);
@@ -263,8 +282,8 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
         : `${quantityText(line.quantity)} ${line.unit}`,
       COLUMNS.quantity,
     );
-    right(money(line.unitPriceCents), COLUMNS.price);
-    right(money(line.amountCents), COLUMNS.amount);
+    right(amount(line.unitPriceCents, invoice.currency), COLUMNS.price);
+    right(amount(line.amountCents, invoice.currency), COLUMNS.amount);
     for (const part of words) {
       left(part, PAGE.margin);
       y -= LEADING;
@@ -276,7 +295,7 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
   y -= 4;
   const total = (label: string, cents: number, font = regular) => {
     right(label, COLUMNS.price, font);
-    right(money(cents), COLUMNS.amount, font);
+    right(amount(cents, invoice.currency), COLUMNS.amount, font);
     y -= LEADING;
   };
   total("Subtotal", invoice.subtotalCents);
@@ -290,8 +309,8 @@ export async function renderInvoice(invoice: InvoicePage): Promise<Uint8Array> {
       y -= LEADING;
       for (const paid of invoice.payments) {
         roomBelow();
-        left(`${paid.paidOn}, ${paid.method}`, PAGE.margin);
-        right(money(paid.amountCents), COLUMNS.amount);
+        left(`${printedDay(paid.paidOn)}, ${paid.method}`, PAGE.margin);
+        right(amount(paid.amountCents, invoice.currency), COLUMNS.amount);
         y -= LEADING;
       }
     }

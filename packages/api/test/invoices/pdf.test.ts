@@ -9,7 +9,9 @@ import {
   drawable,
   type InvoicePage,
   DESCRIPTION_WIDTH,
+  amount,
   money,
+  printedDay,
   quantityText,
   renderInvoice,
   wrap,
@@ -65,6 +67,11 @@ describe("money", () => {
     expect(money(5)).toBe("0.05");
     expect(money(52000)).toBe("520.00");
     expect(money(123456789)).toBe("1,234,567.89");
+    expect(amount(123456789, "USD")).toBe("$1,234,567.89");
+    expect(amount(-2000, "USD")).toBe("-$20.00");
+    expect(amount(125050, "EUR")).toBe("1,250.50 EUR");
+    expect(printedDay("2026-11-16")).toBe("Nov 16, 2026");
+    expect(printedDay("")).toBe("");
     expect(money(-100050)).toBe("-1,000.50");
   });
 });
@@ -111,35 +118,35 @@ describe("renderInvoice", () => {
       "INVOICE",
       "Invoice 1042",
       // What a customer looks for: the amount, the day and the instructions.
-      "Amount due: 404.55 USD",
-      "Due 2026-11-30",
+      "Amount due: $404.55",
+      "Due Nov 30, 2026",
       "Status: Issued",
       "200 Broad St, Providence, RI 02903",
       "401-555-0142",
       "office@dsierra.test",
       "Payments received",
-      "2026-11-18, check",
+      "Nov 18, 2026, check",
       "Balance",
       "How to pay",
       "Check payable to D Sierra Painting LLC.",
       "Zelle: pay@dsierra.test",
       "Questions about this invoice: 401-555-0142 or office@dsierra.test",
-      "Issued 2026-11-15",
+      "Issued Nov 15, 2026",
       "Whitmore Family",
       "14 Elmgrove Ave, Providence, RI",
       "Job: Whitmore exterior repaint",
       "Exterior repaint, two coats",
       "8 h",
-      "65.00",
-      "520.00",
+      "$65.00",
+      "$520.00",
       "3 gal",
-      "15.00",
-      "45.00",
-      "565.00",
-      "39.55",
-      "604.55",
-      "200.00",
-      "404.55",
+      "$15.00",
+      "$45.00",
+      "$565.00",
+      "$39.55",
+      "$604.55",
+      "$200.00",
+      "$404.55",
     ]) {
       expect([said, text.includes(said)]).toEqual([said, true]);
     }
@@ -148,8 +155,8 @@ describe("renderInvoice", () => {
     // It opens with the amount due, the due date and the number, in that order, before
     // anything else on the page.
     const first = text.split("\n");
-    expect(first[0]).toBe("Amount due: 404.55 USD");
-    expect(first.indexOf("Due 2026-11-30")).toBeLessThan(first.indexOf("From"));
+    expect(first[0]).toBe("Amount due: $404.55");
+    expect(first.indexOf("Due Nov 30, 2026")).toBeLessThan(first.indexOf("From"));
     expect(first.indexOf("Invoice 1042")).toBeLessThan(first.indexOf("From"));
     expect(first.indexOf("How to pay")).toBeGreaterThan(first.indexOf("Balance"));
   });
@@ -169,8 +176,8 @@ describe("renderInvoice", () => {
       ),
     );
     expect(text.split("\n")).toContain("PAID");
-    expect(text).toContain("Amount due: 0.00 USD");
-    expect(text).toContain("2026-11-25, cash");
+    expect(text).toContain("Amount due: $0.00");
+    expect(text).toContain("Nov 25, 2026, cash");
     expect(text.split("\n")).not.toContain("INVOICE");
   });
 

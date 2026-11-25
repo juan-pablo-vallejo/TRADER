@@ -21,7 +21,7 @@ import { MAIL_FAILURES, type Mailer } from "../core/mailer";
 import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { lockInvoice } from "./draft";
-import { invoicePdf, money } from "./pdf";
+import { amount, invoicePdf, printedDay } from "./pdf";
 import { readInvoice } from "./read";
 
 export const sendInput = z.strictObject({
@@ -61,9 +61,9 @@ export function invoiceEmail(m: {
 }): string[] {
   const said = (v: string | null) => v !== null && v.trim() !== "";
   return [
-    `Amount due: ${money(m.owedCents)} ${m.currency}`,
-    `Due: ${m.dueOn}`,
-    `Invoice ${m.number} from ${m.company} (${m.status}; total ${money(m.totalCents)} ${m.currency})`,
+    `Amount due: ${amount(m.owedCents, m.currency)}`,
+    `Due: ${printedDay(m.dueOn)}`,
+    `Invoice ${m.number} from ${m.company} (${m.status}; total ${amount(m.totalCents, m.currency)})`,
     ...(said(m.howToPay)
       ? [
           "How to pay:",

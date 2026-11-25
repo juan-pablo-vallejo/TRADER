@@ -5,6 +5,7 @@
 import { invoiceCounters, invoiceSends } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
+import { printedDay } from "../../src/invoices/pdf";
 
 import type { Tx } from "../../src/core/context";
 import {
@@ -168,9 +169,9 @@ describe("invoice.send", () => {
       // The first lines say what the page opens with: the amount, the day, the number.
       const due = (await o.bill.read({ invoiceId: o.invoiceId })).dueOn;
       expect(mail.text.slice(0, 3)).toEqual([
-        "Amount due: 556.40 USD",
-        `Due: ${due}`,
-        expect.stringMatching(/^Invoice 1042 from .+ \(Issued; total 556\.40 USD\)$/),
+        "Amount due: $556.40",
+        `Due: ${printedDay(due!)}`,
+        expect.stringMatching(/^Invoice 1042 from .+ \(Issued; total \$556\.40\)$/),
       ]);
       // The attachment is the page invoice.pdf answers, byte for byte.
       const page = await o.bill.pdf({ invoiceId: o.invoiceId });

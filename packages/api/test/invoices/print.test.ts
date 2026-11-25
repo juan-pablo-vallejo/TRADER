@@ -5,6 +5,7 @@
 import { companies, customers, invoiceCounters, invoices, jobs } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
+import { printedDay } from "../../src/invoices/pdf";
 
 import type { Tx } from "../../src/core/context";
 import type { Mail, Mailer } from "../../src/core/mailer";
@@ -117,8 +118,8 @@ describe("what a customer is sent", () => {
 
       const pdf = await o.text(id);
       for (const said of [
-        "Amount due: 1,000.00 USD",
-        `Due ${dueOn}`,
+        "Amount due: $1,000.00",
+        `Due ${printedDay(dueOn!)}`,
         "Invoice 77",
         "How to pay",
         "Check payable to D Sierra Painting LLC.",
@@ -126,7 +127,7 @@ describe("what a customer is sent", () => {
         "D Sierra Painting",
         "200 Broad St, Providence, RI 02903",
         "Payments received",
-        "2026-11-20, check",
+        "Nov 20, 2026, check",
       ]) {
         expect([said, pdf.includes(said)]).toEqual([said, true]);
       }
@@ -137,9 +138,9 @@ describe("what a customer is sent", () => {
       const mail = o.sent[0]!;
       expect(mail.subject).toBe("Invoice 77 from D Sierra Painting");
       expect(mail.text).toEqual([
-        "Amount due: 1,000.00 USD",
-        `Due: ${dueOn}`,
-        "Invoice 77 from D Sierra Painting (Partly paid; total 1,234.56 USD)",
+        "Amount due: $1,000.00",
+        `Due: ${printedDay(dueOn!)}`,
+        "Invoice 77 from D Sierra Painting (Partly paid; total $1,234.56)",
         "How to pay:",
         "Check payable to D Sierra Painting LLC.",
         "Zelle: pay@dsierra.test",
@@ -300,9 +301,9 @@ describe("the email's words", () => {
         howToPay: null,
       }),
     ).toEqual([
-      "Amount due: 0.00 USD",
-      "Due: 2026-12-01",
-      "Invoice 3 from Acme (Paid; total 50.00 USD)",
+      "Amount due: $0.00",
+      "Due: Dec 1, 2026",
+      "Invoice 3 from Acme (Paid; total $50.00)",
       "The invoice is attached as a PDF.",
     ]);
   });
