@@ -1,19 +1,13 @@
 #!/bin/sh
 # Runs one flow on a booted iOS simulator or Android emulator. Needs the development build
-# installed (`pnpm android`; on iOS see below), Metro on 8081 started with
+# installed (`pnpm ios`, `pnpm android`), Metro on 8081 started with
 # EXPO_PUBLIC_DEV_IDENTITY=enabled, and `next dev` on 3000 serving the demo database with
 # TRADER_DEV_IDENTITY=enabled (suite.sh starts that one itself). Never in CI.
 # Start Metro plainly: with CI=1 it does not watch files and serves a stale bundle after an
 # edit. Use --clear when in doubt.
-# The iOS development build: `pnpm ios` refuses a simulator since Sign in with Apple's
-# entitlement is in the project (app.json, usesAppleSignIn): Expo's CLI then asks for a signing
-# certificate (2026-11-23). Xcode signs a simulator build to run locally with none; unsigned,
-# the build has no keychain and nothing that keeps a secret works. From apps/mobile:
-#   pnpm exec expo prebuild -p ios --clean
-#   (cd ios && xcodebuild -workspace TRADER.xcworkspace -scheme TRADER -configuration Debug \
-#     -destination "id=<udid>" -derivedDataPath build CODE_SIGN_IDENTITY=- \
-#     CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= build)
-#   xcrun simctl install <udid> ios/build/Build/Products/Debug-iphonesimulator/TRADER.app
+# The iOS development build: `pnpm ios` (`ios.sh`). On a fresh Android emulator the keyboard's
+# stylus tutorial covers a text field and fails the Me flow; once per emulator:
+#   adb shell settings put secure stylus_handwriting_enabled 0
 #
 #   .maestro/run.sh ios <simulator udid> <flow> [fresh|resume] [allow|deny|never] [email] [lands on]
 #   .maestro/run.sh android <emulator serial> <flow> [fresh|resume] [allow|deny|never] [email] [lands on]

@@ -1,13 +1,13 @@
 You simplify TRADER server code. Scope: exactly these files and nothing else:
 <FILES>
-Goal: <"the server files this push changed" | "campaign pass Pn: ...">
+Goal: <"the server files this push changed" | "dead code" | "shared helpers">
 Behaviour is fixed: every input gives the same output, the same refusal code, the same SQL
 effect and no more statements. When unsure, leave it and list it.
 Conventions, which override your own defaults: ESLint and Prettier decide style, and a hook
 formats each file you write. Keep each file's existing function style. Add no return-type
 annotations and no dependency. Comments are this repository's documentation: keep every
-comment that says why, records a decision, a date, the owner's words, an invariant or a
-gotcha. Change a comment only when your own edit made it false; delete none for being
+comment that says why, states an invariant or warns of a gotcha. Add no date, no name of
+who decided and no id from outside the code. Change a comment only when your own edit made it false; delete none for being
 "obvious". To share a helper across files, propose it; do not create a module.
 Never touch: packages/db/migrations/**, packages/db/src/schema/**, any test file;
 packages/db/src/guard.ts; packages/api/src/core/{trpc,resolve-user,locks,demo-door}.ts;

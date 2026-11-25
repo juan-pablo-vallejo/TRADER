@@ -307,6 +307,8 @@ export async function repairLabor(
       });
       continue;
     }
+    // An office browser more than a minute fast is refused here when it ends an open
+    // session: the end it sends is its own now less 60 s, and the clock is the browser's.
     if (op.clientTimestamp.getTime() > receivedAt.getTime()) {
       return rejected("time_in_future", { eventId: op.id });
     }

@@ -5,6 +5,10 @@
 // Export hours. The lists are the four the office already holds (the same queries its
 // screens make, read when the menu opens); nothing is searched on the server
 // (command-items.ts).
+// Each action is an address (`/schedule?do=shift`, `/invoices?do=invoice`,
+// `/people?do=invite`, `/hours?do=export`), so it can be linked to. The menu holds at most
+// the 500 newest invoices, which is all `invoice.list` answers. The header's button reads
+// "Ctrl K" on every machine; on a Mac Cmd+K works too.
 //
 // A text field that is a `combobox` over a `listbox`, inside a native modal `<dialog>`:
 // the browser keeps Tab inside, closes it on Escape and makes the page behind inert. No

@@ -15,7 +15,6 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test",
-    "check:ci": "sh scripts/check-ci.sh",
     "test": "node .claude/hooks/guard.test.mjs && pnpm -r test",
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down",

@@ -2,7 +2,8 @@
 # What a release would ship, as facts a person can check: nothing here is a judgement.
 #   scripts/release-facts.sh [base] [head]     default: origin/production origin/main
 # Read-only. Prints the commit range, the changes under the paths a release must be read
-# for, every statement in a new migration that drops or rewrites, and new dependencies.
+# for, every statement in a new migration that drops or rewrites, new dependencies, and what
+# was seen working (the "Seen" lines of the commits that finished an item).
 set -eu
 base=${1:-origin/production}
 head=${2:-origin/main}
@@ -45,3 +46,12 @@ done
 echo
 echo "## Dependencies added or moved"
 git diff "$range" -- package.json 'apps/*/package.json' 'packages/*/package.json' | grep -E '^[+-]\s+"[^"]+": "[~^]?[0-9]' | sed 's/^/   /' || echo "   none"
+
+echo
+echo "## Seen working"
+seen=0
+for c in $(git rev-list --reverse "$range"); do
+  lines=$(git log -1 --format=%B "$c" | grep '^Seen' || true)
+  [ -z "$lines" ] || { seen=1; git log -1 --format='%h %s' "$c"; echo "$lines" | sed 's/^/   /'; }
+done
+[ "$seen" = 1 ] || echo "none"

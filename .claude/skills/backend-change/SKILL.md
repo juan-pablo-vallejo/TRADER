@@ -16,7 +16,7 @@ paths:
 Runs inline: a forked skill cannot start agents. `docs/TASKS.md` and `CLAUDE.md` still
 decide what is built and when to stop and ask.
 
-1. **What.** The list item, the finding id and its Done-when. Note the push base:
+1. **What.** The list's item and its Done when. Note the push base:
    `git rev-parse origin/main`.
 2. **A failing test first.** It fails for the reason the finding gives. The clock and sync
    path gets a dropped response, a duplicate send and a wrong clock (rule 4).
@@ -27,11 +27,17 @@ decide what is built and when to stop and ask.
    `git diff --name-only <push-base>..HEAD -- packages/api/src packages/db/src apps/web/src/server`,
    less the never-touch list in `simplifier-prompt.md`. None left: skip to 7. Start
    `code-simplifier:code-simplifier` with that prompt verbatim, `<FILES>` and the goal
-   filled. Never on its own output.
+   filled. Never on its own output. A file on the never-touch list is never given to the
+   simplifier: the main session edits it and the reviewer reads it.
 6. **Commit B.** Targeted tests, `verify`, commit the simplification alone, so it reverts
    alone. Anything it changed that you would not keep, undo before the commit and say so.
-7. **Review.** Start `batch-reviewer` on `<push-base>..HEAD` with the finding ids. Two
-   rounds at most. An invariant objection that stands stops the work and goes to the
-   owner; anything else is decided and explained in the commit message.
-8. **Commit C.** The fixes, `verify`, commit; on a first PASS, the `docs/TASKS.md` note
-   that records it is the last commit. Then push as `CLAUDE.md` says.
+7. **Review.** Start `batch-reviewer` on `<push-base>..HEAD`, naming the files that changed
+   and the questions to answer. Two rounds at most. An invariant objection that stands
+   stops the work and goes to the owner; anything else is decided and explained in the
+   commit message.
+8. **Commit C.** The fixes, `verify`, commit. Then push as `CLAUDE.md` says. What the review
+   found and how long each agent took go in the message of the commit that finishes the
+   item.
+9. **Comments only.** A batch whose diff changes comments and no code token needs neither
+   agent: compare the files with comments stripped and paste the result in the commit
+   message.

@@ -23,6 +23,7 @@ The owner merges a release; this only prepares it. Nothing here merges, pushes t
    findings ranked by what the owner must read himself.
 6. **Pull request.** `gh pr create --base production --head main`, its body in this order:
    what a person using the product will see changed; what the owner must read (the
-   auditor's findings, each with file and line); the facts, verbatim; what was seen working
-   on staging, and on which device; what was not checked.
+   auditor's findings, each with file and line); the facts, verbatim; what was seen working,
+   as `scripts/release-facts.sh` gathers it from the finishing commits; what was not
+   checked.
 7. **Stop.** From here until the owner merges or closes it, nothing is pushed to `main`.

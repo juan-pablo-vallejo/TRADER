@@ -11,6 +11,12 @@
 // rounded in the browser. The dates and the presets live in the address
 // (use-url-filters.ts), so a reload or a pasted link shows the same thing.
 //
+// The strip reads the same answer as the table, so with Flagged only on it lists only the
+// open sessions whose cell is flagged. A `location` flag reads "No location" or "Off-site"
+// in the day panel, where each entry says whether a stamp was recorded; in the week table a
+// day's badge reads "location", since a day's flags are a sum over entries and
+// `labor.hours` does not say which kind.
+//
 // A cell opens that person's day in the side panel (day-panel.tsx), and which panel is open
 // is in the address too. Consumed by page.tsx.
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";

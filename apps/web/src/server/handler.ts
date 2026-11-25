@@ -48,11 +48,15 @@ export type HandlerDependencies = {
   logCall?: (line: CallLine) => void;
   // Whether a response also carries its calls as Server-Timing and its request id as
   // x-request-id, read per request. Absent, never: production answers neither.
+  // The statement count tells a sign-in that found an invitation from one that did not,
+  // which the single UNAUTHORIZED otherwise hides: one reason production answers neither.
   timingHeaders?: () => boolean;
 };
 
 // The call's line, then one line per record it refused (M4), each under the call's request
 // id, so a refusal is found by searching for `trader_refusal` alone.
+// The lines are written as records are answered: a call that then fails before any record
+// ran (a deactivated caller) has logged refusals it never answered.
 export const logToStdout = (line: CallLine): void => {
   const { refusals, ...call } = line;
   console.log(JSON.stringify({ trader_call: { ...call, refused: refusals.length } }));

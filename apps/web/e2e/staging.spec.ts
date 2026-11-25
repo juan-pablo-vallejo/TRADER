@@ -9,6 +9,9 @@
 // seen refused and a used one seen dead; given none, by the number and Clerk's test code,
 // which works only while the development instance's test mode is on. The flow writes one customer row and
 // rewrites it on every run; it deletes nothing (cleanup is destructive).
+// `check` cannot see a change that breaks this flow: it runs only after a deploy. A change
+// to what Customers, People or the sign-out menu draw is run against staging first, with
+// tickets: `pnpm --filter @trader/web e2e:staging`.
 // Staging's database holds more than one fixture company. The suite's company is the one
 // its signed-in admin belongs to, read from the API; its worker must be of the same one.
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";

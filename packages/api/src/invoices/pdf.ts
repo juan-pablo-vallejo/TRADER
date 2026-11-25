@@ -2,6 +2,9 @@
 // `invoice.read`'s own — the stored line amounts, the stored tax, what is paid and owed —
 // so the page says what the screen says, and nothing is computed again here. A draft has no
 // PDF: it has no number and may still change. A void one has, and says VOID across its head.
+// Its status line ("Status: Overdue"), like the amount due and the payments, is as of the
+// moment the file is made: the same invoice downloaded on a later day can say something
+// else. The copy taken at issue never changes.
 //
 // The page is the only thing a customer sees, so it opens with what they need: the amount
 // due, the day it is due and the invoice's number. Then who is asking (the company's

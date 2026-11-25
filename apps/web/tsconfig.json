@@ -1,3 +1,5 @@
+// A dev server leaves `.next/dev/types`, which `tsc` reads: after a route is removed,
+// `pnpm typecheck` fails on the stale file until that folder is deleted.
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {

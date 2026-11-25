@@ -1,15 +1,16 @@
 # TRADER: working in this repository
 
-Phone-first time tracking, scheduling and invoicing for a painting contractor. One owner,
-Juan Pablo, with Claude Code doing the building. The owner's notebook decides; its typed copy
-is `docs/TASKS.md` (the MVP and the list) and `docs/ARCHITECTURE.md` (how it is built and
-released). Where the code disagrees with them, the code is wrong: fix it, or stop and ask.
+What TRADER is: the MVP's one sentence, at the top of `docs/TASKS.md`. One owner, Juan Pablo,
+with Claude Code doing the building. Four documents decide, and a decision counts once it is
+written in one of them: `docs/TASKS.md` (the MVP and the open work), `docs/ARCHITECTURE.md`
+(how it is built and released), `README.md` (how it is run) and this file. Where the code
+disagrees with them, the code is wrong: fix it, or stop and ask.
 
 ## The loop
 
 1. Read `docs/TASKS.md`. Take the top open item.
-2. Build it. Run `pnpm check` until green.
-3. Commit locally, each tree green as rule 3 says. Notes in `docs/TASKS.md` ride along.
+2. Build it. Run `pnpm check` until green, never piped.
+3. Commit locally, each tree green as rule 3 says. A finding rides along as rule 8 says.
 4. Push a batch: the related items together, once, straight to `main`. Never push to find
    out: a defect seen on staging is first reproduced as a failing local test.
 5. Watch `check` and the staging deploy (`gh run watch`). Red: fix it before anything else.
@@ -17,7 +18,9 @@ released). Where the code disagrees with them, the code is wrong: fix it, or sto
    older commit than `main`, by design.
 6. See it working: on staging in a browser for the office; on the simulator and the
    emulator for the phone. Collect everything wrong; one follow-up push at most.
-7. Tick the items. Next batch.
+7. Finish the batch with one commit of Markdown alone, pushed alone. It deletes the batch's
+   items from `docs/TASKS.md`; its message says what was seen, where and at which commit,
+   each on a line that begins "Seen", and the reviewers' running total. Next batch.
 
 Done means `check` green on `main`, deployed to staging where the batch deploys, seen working.
 
@@ -29,14 +32,14 @@ Done means `check` green on `main`, deployed to staging where the batch deploys,
   (`docs/ARCHITECTURE.md`)
 - anything on Apple, Google or legal text, except the Android SDK's licences
   (`sdkmanager --licenses`), which you accept
-- a migration that drops or rewrites data, once production exists
+- a migration that drops or rewrites data, once production's database exists
 
-Everything else, decide, and say why in the commit message. While a pull request into
-`production` is open, don't push to `main`.
+Everything else, decide, and say why in the commit message.
 
 ## Never
 
 - merge into `production`, push to it, or use an admin bypass (`--admin`)
+- push to `main` while a pull request into `production` is open
 - touch a production key, dashboard, resource or store account
 - route around a block in `.claude/settings.json`: if a blocked tool is the only way to do
   the task, stop and ask
@@ -49,38 +52,49 @@ Everything else, decide, and say why in the commit message. While a pull request
 
 The vendor CLIs and plugins on this Mac (Vercel, Neon, Clerk, Expo, Sentry) are signed in as
 the owner and reach the whole account, production included once it exists. Read and inspect
-through them. Change staging only with staging's own keys in `.env.staging`. Sentry is
+through them. Change staging only with staging's own keys (Staging is yours). Sentry is
 read-only for you.
 
 ## Rules
 
 1. Scope is the MVP. Nothing outside it is built without the owner's word.
 2. The six invariants are never weakened.
-3. `main` stays green: `pnpm check` while building, and before every commit CI's own steps
-   (`pnpm check:ci`, run by the `verify` skill) green on the exact tree. A green run on the
-   workstation counts when the tree committed is exactly the tree it checked. A change to
-   the office's sign-in also needs `scripts/staging.sh local` green on that tree, on this
-   Mac; a change to the phone, its Maestro suite on the iPhone simulator and
-   `trader-ws android`, whole, once before the commit. While fixing, run only the flows of
-   the area being worked on. A batch that changes the server or the phone's sync path is
-   simplified once and reviewed once by agents that did not write it (the `backend-change`
-   skill).
+3. `main` stays green. Before every commit one command is green on the exact tree:
+   `scripts/trader-ws check`, `--local` on this Mac. A commit that changes Markdown alone
+   needs no check. A green run on the workstation counts when the tree committed is exactly
+   the tree it checked. A change to the office's sign-in also needs its suite against Clerk's
+   development instance green on that tree, on this Mac; a change to the phone, both phone
+   suites, iPhone and Android, whole, once before the commit. While fixing, run only the
+   flows of the area being worked on. A batch that changes the server or the phone's sync
+   path is simplified once and reviewed once by agents that did not write it (the
+   `backend-change` skill). A batch that changes what a person sees is seen rendered in
+   both languages and reviewed once by an agent that did not build it (the
+   `interface-change` skill). A batch that changes comments alone runs neither: a check
+   that no code token changed, the files compared with their comments stripped, is pasted
+   in its commit message.
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
    clock. Everything else gets ordinary tests.
-5. Every screen exists in English and Spanish. An invoice to a customer is in English.
+5. Every screen exists in English and Spanish. Spanish addresses the reader as tú. An
+   invoice to a customer is in English.
 6. Versions, prices and platform rules are looked up, never recalled. Next's own, for the
-   installed version, are in `apps/web/node_modules/next/dist/docs/`.
+   installed version, are in `apps/web/node_modules/next/dist/docs/`. A looked-up fact keeps
+   its source and the day it was read, as in "(Apple's page, read 2026-11-18)": the only
+   date in a document or a comment.
 7. Commits are as large as the work needs; the message says what changed and why. Signed, no
-   trailers.
-8. In `docs/TASKS.md`: tick items, add what you find at the bottom, never reorder, never add
-   scope.
+   trailers. A decision's date and reason, whose word it was and what it replaced live in
+   the message alone; documents and comments say what is, and why where it explains a rule.
+8. In `docs/TASKS.md`: the commit that finishes an item deletes it. A finding becomes an
+   item at the end of Claude's part, a comment beside its code, or nothing, in the same
+   push. An item is known by its bold title; nothing cites a number. Never reorder, never
+   add scope.
 9. Four documents and no more: `README.md`, `CLAUDE.md`, `docs/ARCHITECTURE.md`,
    `docs/TASKS.md`. A gotcha that will bite again is a comment beside the code it concerns.
+   One test in `pnpm check` holds that `.env.example` lists exactly the variables the code
+   reads, that README's opening sentence is the MVP's, that no date sits outside rule 6's
+   form, and that code cites no plan or item number.
 
 ## Staging is yours
 
 Fictional data only. Reset, reseed or break it without asking. Its keys are in
-`.env.staging`, which git ignores. `scripts/staging.sh` uses them without showing them: its
-address, its readiness, the smoke test, screenshots of the office to look at, and the
-office's sign-in run on this Mac against Clerk's development instance (`local`). Local
-development never connects to a deployed database.
+`.env.staging`, which git ignores. `scripts/staging.sh` uses them without showing them; its
+header lists what it does. Local development never connects to a deployed database.

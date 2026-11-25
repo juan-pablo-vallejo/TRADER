@@ -1,3 +1,5 @@
+// `@clerk/localizations` is pinned to the release built on the same `@clerk/shared` that
+// `@clerk/nextjs` uses: move the two together.
 import { esMX } from "@clerk/localizations";
 import { ClerkProvider } from "@clerk/nextjs";
 import { headers } from "next/headers";

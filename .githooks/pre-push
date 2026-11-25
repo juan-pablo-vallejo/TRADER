@@ -4,7 +4,7 @@
 # into `production` is open, and any push whose new commits hold a secret (this repository
 # is public: a secret pushed is a secret published, and CI's scan comes after).
 # The record of greens is one line per tree in .git/trader/green, "<tree> check <when>
-# <where>", written when `pnpm check:ci` ends green on that exact tree. A push to `main` whose
+# <where>", written by `scripts/trader-ws check` when CI's steps end green on that exact tree. A push to `main` whose
 # new commits touch the office's sign-in (CLERK_PATHS) also needs "<tree> clerk ...", written
 # by `scripts/staging.sh local` when the suite against real Clerk ends green on that tree.
 # Enabled once per clone:  git config core.hooksPath .githooks

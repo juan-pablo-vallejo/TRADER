@@ -2,11 +2,13 @@
 // heading in Bodoni Moda, one red button. One field takes a mobile number or an email, then
 // the code sent to it; another code after half a minute; "Trouble signing in?" on every
 // step; and the Demo door. Above the field: Face ID or fingerprint where this phone holds a
-// key, Google, and Apple's own button on an iPhone. The steps are sign-in-steps.ts, over the
+// key, Google, and Apple's own button on an iPhone: Apple's App Review rule 4.8 asks an app
+// that offers Google's sign-in to offer Apple's too. The steps are sign-in-steps.ts, over the
 // provider it is handed (sign-in-provider.ts): Clerk's, or the development stand-in. Nobody
 // signs up here: an address or an account no roster holds is told to ask the office, by the
 // provider or by the server. After a sign-in by code, a phone that can is offered a key
-// (biometric-rules.ts, app/biometric-offer.tsx).
+// (biometric-rules.ts, app/biometric-offer.tsx). Clerk's prebuilt native screens are not
+// used: they are in beta, and their language would not follow the app's own choice.
 import { BodoniModa_700Bold, useFonts } from "@expo-google-fonts/bodoni-moda";
 import { SIGN_IN_CODE_LENGTH, type SignInIdentifier } from "@trader/api/contract";
 import {

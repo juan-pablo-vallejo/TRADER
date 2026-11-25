@@ -13,7 +13,8 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
 
 1. **Check.** `trader-ws check`. It sends the working tree as it stands (tracked changes and
    untracked files, nothing git ignores), runs the check, prints one line when green and
-   records that tree.
+   records that tree. Never pipe the check into another command: a pipe's exit status hides
+   a red run.
 2. **Red.** It prints the last lines of the log, which name the step and say why. More:
    `trader-ws logs check 200`. Fix it and check again. Never write `.git/trader/green` by
    hand.
@@ -30,10 +31,6 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
    same steps here and records the same line. Android waits for the workstation.
 5. **Commit what was checked.** `git add -A`, then `git write-tree` prints the tree the
    check named. A different tree has no green: check again.
-6. **Markdown alone.** A commit that differs from a checked tree only in `.md` files, a tick
-   in `docs/TASKS.md` for one, needs no check: the hook runs the format check on those
-   files itself.
-7. **Push once per batch.** Commits stay local until the batch is whole; one push lands it.
-   Never push to find out: a defect seen on staging is first a failing local test.
-8. **Reviewed.** A batch that changes the server or the phone's sync path (the
-   `backend-change` skill) has `batch-reviewer`'s PASS before its last commit.
+6. **Markdown alone.** A commit that differs from a checked tree only in `.md` files, the
+   commit that finishes a batch for one, needs no check: the hook runs the format check on
+   those files itself.

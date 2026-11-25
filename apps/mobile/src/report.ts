@@ -2,6 +2,10 @@
 // build (`EXPO_PUBLIC_SENTRY_DSN` blank, as on a development machine) nothing is started
 // and every function here does nothing: silent, never a failure of its own.
 //
+// Sentry looks up the address a report arrives from and keeps its country, region and city
+// (`user.geo`), though it stores no address and the app sends none; the privacy policy says
+// so.
+//
 // Errors only. No tracing, no session tracking, no replay, no logs, no screenshot, no
 // breadcrumbs, no failed-request capture, and no personal data switch; then, as the net
 // under those, every event from JavaScript is rebuilt from an allow-list (report-event.ts).

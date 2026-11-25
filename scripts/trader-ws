@@ -15,7 +15,6 @@
 #   trader-ws android                   sync, then the phone flows on the emulator, detached
 #   trader-ws wait <name> [secs]        wait for a detached job; its log's tail; its exit code
 #   trader-ws logs <name> [lines]       a log's tail: check, e2e, sync, run, or a job's name
-#   trader-ws nightly                   last night's result, one line
 #   trader-ws db-reset                  drop, create and migrate the local database there
 #   trader-ws run -- <cmd...>           sync, then <cmd> in ~/trader, foreground
 #   trader-ws start <name> -- <cmd...>  sync, then <cmd> in tmux session tw-<name>, detached
@@ -235,15 +234,12 @@ $*" ;;
     name=${1:?usage: trader-ws logs <name> [lines]}; n=${2:-80}
     case "$name" in *[!a-z0-9-]*) die "log names are [a-z0-9-]";; esac
     ssh "$HOST" "if [ -f ~/trader-jobs/$name.log ]; then tail -n $n ~/trader-jobs/$name.log; else tail -n $n ~/$RDIR/.last-$name.log; fi" ;;
-  nightly)
-    ssh -o BatchMode=yes -o ConnectTimeout=2 "$HOST" 'cat ~/nightly/last' 2>/dev/null ;;
   tunnel)
     exec ssh -N -L 13000:127.0.0.1:3000 -L 18081:127.0.0.1:8081 -L 15432:127.0.0.1:5432 "$HOST" ;;
   install)
     reach
     ssh "$HOST" 'mkdir -p ~/bin ~/.config/systemd/user'
     scp -q "$HERE/trader-ws.d/trader-android" "$HOST:bin/trader-android"
-    [ ! -f "$HERE/trader-ws.d/trader-nightly" ] || scp -q "$HERE/trader-ws.d/trader-nightly" "$HOST:bin/trader-nightly"
     scp -q "$HERE"/trader-ws.d/*.service "$HOST:.config/systemd/user/"
     ls "$HERE"/trader-ws.d/*.timer >/dev/null 2>&1 && scp -q "$HERE"/trader-ws.d/*.timer "$HOST:.config/systemd/user/"
     ssh "$HOST" 'chmod +x ~/bin/trader-*; systemctl --user daemon-reload; for t in ~/.config/systemd/user/*.timer; do [ -f "$t" ] && systemctl --user enable --now "$(basename "$t")"; done; ls ~/bin ~/.config/systemd/user; systemctl --user list-timers --no-pager 2>/dev/null | head -4' ;;
