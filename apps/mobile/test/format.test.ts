@@ -26,6 +26,8 @@ describe("a Spanish sentence on the phone that names a time", () => {
     expect(es.today.shiftLater("Obra", "2:30 p. m.")).toBe(
       "Tu próximo turno es en Obra a las 2:30 p. m. Puedes marcar entrada 15 minutos antes.",
     );
+    expect(es.today.since("1:15 p. m.")).toBe("Desde la 1:15 p. m.");
+    expect(es.today.since("2:30 p. m.")).toBe("Desde las 2:30 p. m.");
     expect(es.reminders.startBody("1:00 p. m.")).toBe(
       "Empieza a la 1:00 p. m. Marca entrada cuando llegues.",
     );

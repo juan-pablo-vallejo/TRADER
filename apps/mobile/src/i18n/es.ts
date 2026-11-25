@@ -96,7 +96,7 @@ export const es: Catalog = {
     shiftHours: (start, end) => `De ${start} a ${end}`,
     onTheClock: "Trabajando",
     onBreak: "En descanso",
-    since: (time) => `Desde las ${time}`,
+    since: (time) => `Desde ${las(time)} ${time}`,
     switchJob: "Cambiar de obra",
     switchTitle: "¿A qué obra cambias?",
     clockOutTitle: "¿Marcar salida?",
@@ -200,7 +200,7 @@ export const es: Catalog = {
     startBody: (time) =>
       `${end(`Empieza a ${las(time)} ${time}`)} Marca entrada cuando llegues.`,
     endTitle: (job) => `Tu turno en ${job} terminó`,
-    endBody: (time) => `Terminó a las ${time} y sigues con la entrada marcada.`,
+    endBody: (time) => `Terminó a ${las(time)} ${time} y sigues con la entrada marcada.`,
   },
   crew: {
     title: "Cuadrilla",
@@ -243,8 +243,9 @@ export const es: Catalog = {
       addSave: "Agregar el turno",
       added: "Turno agregado.",
       moveTitle: (name) => `Mover a ${name}`,
-      moveFrom: (time) => `Desde las ${time} está en la obra que elijas.`,
-      moveEndKept: (time) => `Hasta las ${time}, cuando termina el turno en el que está.`,
+      moveFrom: (time) => `Desde ${las(time)} ${time} está en la obra que elijas.`,
+      moveEndKept: (time) =>
+        `Hasta ${las(time)} ${time}, cuando termina el turno en el que está.`,
       moveTell: "Avísale: cambia de obra en su propio teléfono.",
       moveSave: "Mover",
       moved: "Listo, movido.",
