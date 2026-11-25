@@ -11,7 +11,7 @@
 //
 // Lock order: a day's lock is taken after any row lock on jobs, users or companies and after
 // the worker's lock, and before any job_assignments row. Several days are
-// taken in day order. Consumed by write.ts, copy.ts and sync/schedule.ts.
+// taken in day order.
 import { sql } from "drizzle-orm";
 import { z } from "zod";
 

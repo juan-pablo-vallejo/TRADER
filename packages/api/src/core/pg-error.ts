@@ -5,8 +5,7 @@
 // arriving as a 500 from the deployed route while every test, which loads one copy, was
 // green. The driver's own error is the `cause`; its `code` is the SQLSTATE and its
 // `constraint` the name a guard raised with. Never the message: it holds the statement and
-// its parameters. Consumed by every module that turns a database refusal into an
-// answer.
+// its parameters.
 export function pgFailure(error: unknown): { code?: string; constraint?: string } {
   const cause = (error as { cause?: unknown } | null | undefined)?.cause;
   if (typeof cause !== "object" || cause === null) {

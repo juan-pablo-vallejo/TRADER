@@ -8,7 +8,6 @@
 //
 // A link fetches its screen's list when the pointer or the keyboard reaches it, so the rows
 // are usually there before the click lands (providers.tsx keeps them fresh for 30 s).
-// Consumed by (office)/layout.tsx.
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

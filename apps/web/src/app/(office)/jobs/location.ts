@@ -4,7 +4,7 @@
 // parameters, and Apple's `ll`, `q` and `coordinate`. A short link carries no coordinates
 // at all (it is only a redirect), so it is refused by name, and the screen says how to
 // copy the pair instead: nothing here ever follows a link, the office's browser loads no
-// other host. Consumed by jobs-screen.tsx.
+// other host.
 
 // The radius a job gets unless the office changes it.
 export const DEFAULT_RADIUS_M = 200;

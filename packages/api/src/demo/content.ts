@@ -2,7 +2,7 @@
 // well on every office screen, plus one instance of each abnormal scenario the office screens
 // need, each stated with the answer and the flags the API is expected to give.
 // Nothing here is a real person, address or domain: `.invalid` is reserved (RFC 2606), and the
-// coordinates are a point in Providence used only as a job's place. Consumed by demo/run.ts.
+// coordinates are a point in Providence used only as a job's place.
 import type { SeedCompany } from "@trader/db";
 
 import type { EntryFlag } from "../sync/reasons";

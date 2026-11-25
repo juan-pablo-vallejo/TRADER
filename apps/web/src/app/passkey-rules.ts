@@ -2,8 +2,7 @@
 // tested: when Today offers one, and what a failed attempt is called. Clerk asks that a
 // person has signed in within the last ten minutes before a passkey is added or removed
 // ("Add/remove passkey", its reverification table, read 2026-11-23), so the offer is made
-// only while that holds, and later the screen says to sign in again. Consumed by
-// clerk-passkeys.tsx and the sign-in form.
+// only while that holds, and later the screen says to sign in again.
 
 // Clerk's window for a sensitive action, in minutes, as its dashboard has it by default.
 export const REVERIFICATION_MINUTES = 10;

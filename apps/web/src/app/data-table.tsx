@@ -3,7 +3,7 @@
 // heading, a closing row may hold totals, and a cell may open something. Still a native
 // `<table>`, so a screen reader reads rows and columns, and still table.module.css, whose
 // container query stacks a row into a card when the column is narrow: a cell's
-// `data-label` is what names it there. Consumed by the Hours screen first.
+// `data-label` is what names it there.
 import type { ReactNode } from "react";
 
 import { EmptyState } from "./empty-state";

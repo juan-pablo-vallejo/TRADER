@@ -16,7 +16,7 @@
 // `renderInvoice` is pure: a plain description of the page in, bytes out, the same bytes for
 // the same description (the document's dates are the invoice's own, never the clock's). The
 // standard Helvetica carries Latin text only, so a character it cannot draw is written `?`
-// rather than failing the invoice. Consumed by routers/invoice.ts.
+// rather than failing the invoice.
 import { companies } from "@trader/db/schema";
 import { PDFDocument, StandardFonts, type PDFFont, type PDFPage } from "pdf-lib";
 import { z } from "zod";

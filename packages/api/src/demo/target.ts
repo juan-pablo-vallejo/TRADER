@@ -7,7 +7,7 @@
 // matched against DEMO_DB_PATTERN. (3) An existing target is refused unless `reset` asked for
 // it to be dropped: append-only rows make a second run on the same data meaningless, and the
 // recovery is printed. (4) On the target, `current_database()` is matched again before any
-// write, so a misrouted connection is caught. Consumed by run-demo.ts and the demo tests.
+// write, so a misrouted connection is caught.
 import { createDb as realCreateDb, parseDatabaseEnv, type Db } from "@trader/db";
 import { sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";

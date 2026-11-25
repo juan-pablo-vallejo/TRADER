@@ -20,8 +20,7 @@
 // id order (what a push takes, so it never waits on one, and an archival or a deactivation
 // committed while it waited is seen). `update` and `remove` re-read the caller. All of them
 // then take the day's lock (day.ts), in day order where there are two, and only then a
-// shift's row. No worker lock: a shift is not labor. Consumed by
-// routers/assignment.ts.
+// shift's row. No worker lock: a shift is not labor.
 import { jobAssignments, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

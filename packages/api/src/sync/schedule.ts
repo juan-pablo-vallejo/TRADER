@@ -12,7 +12,6 @@
 // timeline lock, and held to the end of the record's transaction: the schedule a start was
 // admitted on is the schedule its shift is locked under, and an office write to that day
 // either committed before this read or waits and is judged against the lock.
-// Consumed by sync/labor.ts, sync/pull.ts and labor/repair.ts.
 import { companies } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 

@@ -2,7 +2,7 @@
 
 // A toast: one line that says what was just done, with at most one action (Undo), gone by
 // itself after a few seconds. It waits while the pointer or the focus is on it, so nobody
-// loses the action while reaching for it. Announced politely. Consumed by the Schedule.
+// loses the action while reaching for it. Announced politely.
 //
 // Its action, once pressed, keeps the toast up and busy ("Undo…") until the screen gives
 // it the outcome, which it then says in the same place: the person is looking there. An

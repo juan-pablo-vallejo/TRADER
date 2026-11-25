@@ -1,7 +1,7 @@
 // The caller, re-read under a lock held to commit: resolution read it without one. A
 // deactivated caller is UNAUTHORIZED, as at resolution; a changed role is FORBIDDEN. Users
 // come after jobs and customers in the global lock order, so a writer takes its entity locks
-// first and this last. Consumed by every office writer.
+// first and this last.
 import { users } from "@trader/db/schema";
 import { asc, eq, inArray } from "drizzle-orm";
 

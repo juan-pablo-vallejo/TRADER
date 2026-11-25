@@ -1,9 +1,8 @@
 // Two-sided transition validation: an incoming event is legal
 // only if the whole timeline, with it inserted at its own position, stays legal: what came
 // before and what comes after. Pure; the caller supplies the worker's locked timeline and
-// stamps from loadWorkerTimeline (timeline.ts). Consumed by sync.push and labor.repair (a set of
-// candidates as one timeline). Only a `rejected` verdict is permanent; anything thrown here is an
-// internal error the device retries, never a rejection.
+// stamps from loadWorkerTimeline (timeline.ts). Only a `rejected` verdict is permanent;
+// anything thrown here is an internal error the device retries, never a rejection.
 import {
   replay,
   LedgerInconsistentError,

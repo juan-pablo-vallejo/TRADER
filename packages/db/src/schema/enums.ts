@@ -1,8 +1,7 @@
 // Postgres enum types. After the first production release a value is only ever added
 // (`ALTER TYPE ... ADD VALUE`, which drizzle-kit emits); removing or renaming one needs a type
 // rebuild. A label added that way is unusable in a CHECK, DEFAULT or index predicate of the
-// migration run that adds it (55P04); plpgsql may name it. Consumed by users.ts, jobs.ts and
-// work-session-events.ts.
+// migration run that adds it (55P04); plpgsql may name it.
 import { pgEnum } from "drizzle-orm/pg-core";
 
 // A new user starts as a worker; making an admin is a deliberate act.

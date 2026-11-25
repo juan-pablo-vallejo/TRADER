@@ -7,8 +7,7 @@
 // apart from the step that runs the browser: the key reaches this file and nothing else.
 // It writes each ticket to $GITHUB_ENV, tells the runner to mask it, and prints codes only.
 // The request is Clerk's as its pages document it (Backend API, `GET /v1/users` and
-// `POST /v1/sign_in_tokens`, read 2026-11-16). Consumed by staging.spec.ts (the suite's
-// required settings), the workflow and test/e2e-tickets.test.ts.
+// `POST /v1/sign_in_tokens`, read 2026-11-16).
 import { appendFileSync } from "node:fs";
 
 export const CLERK_API = "https://api.clerk.com/v1";

@@ -9,7 +9,6 @@
 // resending the rest. The company's row is held FOR NO KEY UPDATE, then the caller
 // (lockActiveSelf): companies before users, as everywhere. A push reads the switches with
 // no lock, in its own record's transaction: a change counts for the records after it.
-// Consumed by routers/company.ts.
 import { companies } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

@@ -10,7 +10,7 @@
 //
 // Hours are the one labor derivation's (labor/day-hours.ts), summed and never rounded
 // again, as job.list's are (jobs/hours.ts). The week is the company's own, Monday to
-// Sunday. Consumed by routers/job.ts.
+// Sunday.
 import { jobAssignments, users, workSessionEvents } from "@trader/db/schema";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { z } from "zod";

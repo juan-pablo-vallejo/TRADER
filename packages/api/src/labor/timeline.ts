@@ -2,7 +2,6 @@
 // writer for that worker until the transaction ends. Every writer of labor events follows one
 // path — loadWorkerTimeline, validateEvent, insert, commit — in one transaction, so two
 // concurrent pushes for a worker cannot each validate against a timeline missing the other.
-// Consumed by sync.push (sync/labor.ts) and labor.repair.
 import { workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 

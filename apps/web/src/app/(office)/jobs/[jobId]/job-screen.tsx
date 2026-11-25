@@ -10,7 +10,7 @@
 // Then the people of the job (scheduled this week, on it now, their hours on it, a link
 // that dials, a link to their week in Hours), the job's invoices with their state, and
 // the details: customer, address, notes, location, status, with the way to edit them.
-// Every figure is the server's. Consumed by page.tsx.
+// Every figure is the server's.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";

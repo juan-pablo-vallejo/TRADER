@@ -7,7 +7,7 @@
 // Full atomicity is impossible without bypassing one-transaction-per-call,
 // so the database the caller prepared is the unit of atomicity: a failed step
 // throws DemoFailure naming the step and what answered, and target.ts's recovery drops that
-// database. Consumed by run-demo.ts and the demo tests.
+// database.
 import { randomUUID } from "node:crypto";
 
 import type { Db, SeedCompany } from "@trader/db";

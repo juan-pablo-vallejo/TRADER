@@ -2,8 +2,7 @@
 // never worked out. Vercel's VERCEL_ENV cannot say it: staging is the staging project's
 // own Production deployment, so `production` there means only "this project's production
 // branch". Null when unset or anything else; a deployment refuses to start on null
-// (deploy-env.ts). Consumed by the mailer's allow-list rule, the error reporter's
-// environment tag and the API route's timing headers.
+// (deploy-env.ts).
 type Env = Record<string, string | undefined>;
 
 export const TRADER_ENVIRONMENTS = ["staging", "production"] as const;

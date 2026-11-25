@@ -10,7 +10,6 @@
 // standing payment of the same invoice for its amount. This module holds that row first,
 // so it can answer in words what the database would refuse, and names the database's own
 // refusal where two calls raced. Ids are the browser's: a record sent again is `duplicate`.
-// Consumed by routers/invoice.ts.
 import { invoicePayments } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

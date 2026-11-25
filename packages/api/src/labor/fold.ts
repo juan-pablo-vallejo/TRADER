@@ -2,7 +2,6 @@
 // append-only `work_session_events` ledger and never stored. Pure: no database, no clock. The
 // state machine below is the only encoding of the transition rules; validation (validate.ts)
 // and derivation (work-date.ts) both run through `replay`, so they cannot drift apart.
-// Consumed by validate.ts, work-date.ts, accounting.ts, repair.ts and sync.
 import type { workSessionEvents } from "@trader/db/schema";
 
 type Row = typeof workSessionEvents.$inferSelect;

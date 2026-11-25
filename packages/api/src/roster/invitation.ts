@@ -12,7 +12,7 @@
 // The id is the browser's. A request sent twice is one send; an id that belongs to another
 // person's send is refused. The mail goes before the row is written, as an invoice's does
 // (invoices/send.ts): the mail service is given the same id and treats a repeat of it as
-// the same message. Consumed by routers/roster.ts.
+// the same message.
 import {
   invitationParagraphs,
   invitationSubject,

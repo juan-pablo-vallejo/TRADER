@@ -7,7 +7,6 @@
 // statuses, `archived` reversible and reading no ledger: an open session on an archived job
 // ends through push as today; leaving `archived` re-judges the customer, so a deactivated one
 // never regains a live job. Lock order: jobs, customers, then the caller (lockActiveSelf).
-// Consumed by routers/job.ts.
 import { invoices, jobStatus, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

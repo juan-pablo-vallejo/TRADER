@@ -2,7 +2,6 @@
 // and FORBIDDEN are states, drawn as the empty state; anything else is the attention banner.
 // A refused caller is offered this server's sign-in (identity-mode.ts) — or, where a Clerk
 // session exists and the API still knows nobody, told so (clerk-session.tsx).
-// Consumed by every office screen.
 import { ClerkRefused } from "./clerk-session";
 import controls from "./controls.module.css";
 import { EmptyState } from "./empty-state";

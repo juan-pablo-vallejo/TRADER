@@ -3,7 +3,7 @@
 // claims against its receipt; two-sided validation; its flags; the insert, flags with it.
 // An accepted event counts toward hours at once. Answers `accepted` or `duplicate` with an
 // acknowledgement of fixed facts only, or `rejected` with a code, writing nothing. Anything
-// thrown is the loop's: the record is omitted and retried. Consumed by sync/push.ts.
+// thrown is the loop's: the record is omitted and retried.
 import { workSessionEvents } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { type z } from "zod";

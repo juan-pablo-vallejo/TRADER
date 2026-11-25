@@ -11,8 +11,7 @@
 // statement, so a session's accounting is one committed state; names are read
 // after and may be newer. The whole ledger is read whatever the range, because the fold is
 // defined over all of it; the range selects sessions, and there is no limit, so nothing in the
-// range is ever left out. No coordinates or rounded hours. Consumed by
-// routers/labor.ts.
+// range is ever left out. No coordinates or rounded hours.
 import { ROLES } from "../contract/enums";
 import {
   entryFlag,

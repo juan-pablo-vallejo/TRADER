@@ -3,7 +3,6 @@
 // (labor/day-hours.ts: a cell, a person's day, a person's sum, a day's sum, the total).
 // This module only places them: a person's days into the columns of a week, a cell with
 // hours under its person in a list, a cell with a session still open in the strip above.
-// Consumed by hours-screen.tsx.
 import type { AppRouter } from "@trader/api";
 import type { inferRouterOutputs } from "@trpc/server";
 

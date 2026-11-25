@@ -4,7 +4,7 @@
 // deadlock two admins demoting each other. The rows come back re-read under locks held to
 // commit, so the caller is judged as lockActiveSelf judges it and the last-admin rule is judged
 // on committed state: a second admin's statement waits here and re-evaluates its WHERE on the
-// first one's commit. Reads and writes users only. Consumed by role.ts and deactivation.ts.
+// first one's commit. Reads and writes users only.
 import { users } from "@trader/db/schema";
 import { and, asc, eq, isNull, or } from "drizzle-orm";
 

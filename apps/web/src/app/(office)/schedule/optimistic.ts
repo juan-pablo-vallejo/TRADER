@@ -7,7 +7,7 @@
 //
 // Only these three. A started shift, Copy last week, adding a shift, and everything
 // outside Schedule wait for the server; nothing append-only is ever drawn before it is
-// written. Pure but for the cache it is handed. Consumed by schedule-screen.tsx.
+// written. Pure but for the cache it is handed.
 import type { Week, WeekShift } from "./schedule-view";
 
 export type Plan = { workDate: string; expectedStart: string; expectedEnd: string };

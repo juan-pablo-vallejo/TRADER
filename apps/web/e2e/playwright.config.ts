@@ -3,7 +3,7 @@
 // deployment, with no secret; or a protected preview, from a machine that holds Vercel's
 // automation bypass secret. It is never part of `pnpm check` or the `check` job. Its values
 // come from the environment of the one command that runs it and are never read from a
-// file. Consumed by the `e2e:staging` script.
+// file.
 import { defineConfig, devices } from "@playwright/test";
 
 const stagingUrl = process.env.STAGING_URL ?? "";

@@ -2,8 +2,7 @@
 // problem. Always an icon and a word beside the tint: the color alone says nothing to
 // someone who cannot tell it apart. The icon is decoration and hidden from a screen
 // reader, which reads the word. `FlagBadges` is the flags of an entry, a day or a cell, each
-// in the catalog's word for it. Consumed by the Hours screen first, then by every screen
-// that names a state.
+// in the catalog's word for it.
 import styles from "./badge.module.css";
 import { useStrings } from "./i18n";
 import type { Catalog } from "./i18n/en";

@@ -92,8 +92,7 @@ export function databaseDriver(
 // Refuses a deployed database. Tests commit fixtures and create and drop databases, and the
 // seed writes a placeholder company: all three belong on the local compose server or CI's
 // service container, both reached through the POSTGRES_* variables. DATABASE_URL is the
-// deployed shape, so its presence means the target is not one of those. Consumed by every
-// package's test/setup.ts and by run-seed.ts; the migrator does not call it.
+// deployed shape, so its presence means the target is not one of those.
 export function assertLocalDatabase(
   env: Record<string, string | undefined>,
   what: string,
@@ -111,7 +110,7 @@ export function assertLocalDatabase(
 // migrate it: so a set DATABASE_URL is refused unless the caller says which of the two
 // sanctioned migrators it is: the deploy job (.github/workflows/ci.yml), or the owner
 // following the runbook (README.md). The local compose database and CI's container, reached through
-// POSTGRES_*, need no purpose. Consumed by drizzle.config.ts.
+// POSTGRES_*, need no purpose.
 export const MIGRATE_PURPOSES = ["deploy", "owner"] as const;
 
 export function assertMigrationPurpose(env: Record<string, string | undefined>): void {

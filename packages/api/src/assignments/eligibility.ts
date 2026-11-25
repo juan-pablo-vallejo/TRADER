@@ -17,8 +17,7 @@
 // session begins when the start was recorded, and it never looks past the day's end at the
 // next day's shifts.
 //
-// The answer does not depend on the order of the shifts. Consumed by day.ts, list.ts,
-// sync/schedule.ts, sync/pull.ts and, in the browser, the schedule screen.
+// The answer does not depend on the order of the shifts.
 
 // One person's shift on one day. `start` and `end` are HH:MM on a 24-hour clock.
 export type Shift = { id: string; jobId: string; start: string; end: string };

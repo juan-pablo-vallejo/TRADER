@@ -5,8 +5,7 @@
 // whoever runs payroll sees what the office may still want to look at. Hours only: no rate,
 // no pay. There is no pay period: the same range asked again later answers what the ledger
 // says then, and nothing is frozen by an export. Names are today's; ids are in the file so a
-// renamed person or job is still the same one. A read: no write. Consumed by
-// routers/labor.ts.
+// renamed person or job is still the same one. A read: no write.
 import { z } from "zod";
 
 import { workDay } from "../assignments/write";

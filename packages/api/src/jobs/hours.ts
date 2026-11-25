@@ -5,7 +5,7 @@
 // payroll file would add up to. Time of a session still open is in neither figure. This
 // week is the company's own: Monday to Sunday around today in its zone. A plain read: no
 // lock, no write. Every reader of `job.list` gets the figures, the screens that only need
-// names among them: one answer, one cache. Consumed by routers/job.ts.
+// names among them: one answer, one cache.
 import { workSessionEvents } from "@trader/db/schema";
 import { z } from "zod";
 

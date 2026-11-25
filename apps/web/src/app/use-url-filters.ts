@@ -4,7 +4,6 @@
 // shows the same thing. Each filter is a string with a default; a filter at its default is
 // left out of the address, so the plain address is the plain screen. Setting one replaces
 // the history entry (a filter is not a page to go back through) and keeps the scroll.
-// Consumed by the Hours screen first.
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 

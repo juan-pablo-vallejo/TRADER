@@ -1,8 +1,7 @@
 // The row editor: a table row's Edit toggle and the editor row that
 // opens beneath it, plus the two pieces every editor is built from — a section and the footer
 // where a destructive button stands last and alone — and the destructive action itself, which
-// says what it will do before it does it. Consumed by the people, customers, jobs,
-// hours, schedule and invoice screens.
+// says what it will do before it does it.
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";

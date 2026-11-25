@@ -17,7 +17,7 @@ import { Providers } from "./providers";
 // present (server/identity-mode.ts, clerk-env.ts). Under the development identity, and in
 // a build with no keys, nothing of Clerk is rendered or loaded. The publishable key is
 // handed over as a prop, read on the server per request, so it never depends on what a
-// build inlined. Consumed by (office)/layout.tsx and (auth)/layout.tsx.
+// build inlined.
 export async function SessionFrame({ children }: { children: ReactNode }) {
   // The request's nonce (proxy.ts), for the script Clerk's provider adds; absent on a
   // development server, which sets no policy.

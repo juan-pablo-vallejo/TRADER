@@ -2,7 +2,7 @@
 
 // Jobs and Customers are two tabs of one place: a job belongs to a customer, and the menu
 // names the place once. Links, not buttons: each tab is its own address, so a reload or a
-// pasted link opens the same one. Consumed by the Jobs and Customers screens.
+// pasted link opens the same one.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 

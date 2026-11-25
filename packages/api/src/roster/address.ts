@@ -16,7 +16,7 @@
 //   person's own phone, sending a clock tap meanwhile, waits its two seconds and sends the
 //   tap again (core/trpc.ts, SYNC_TIMEOUTS); nothing is lost.
 //
-// Each change is one row of address_changes. Consumed by routers/roster.ts.
+// Each change is one row of address_changes.
 import { addressChanges, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

@@ -1,7 +1,6 @@
 // What the Weekly Schedule screen works out from `assignment.week` before it draws anything.
 // Pure: no React, no request. This module only groups what the server answered and puts a
-// refusal into words. The server judges every save. Consumed by schedule-screen.tsx,
-// shift-dialog.tsx and copy-dialog.tsx.
+// refusal into words. The server judges every save.
 import type { AppRouter } from "@trader/api";
 import type { Issue } from "@trader/api/eligibility";
 import type { inferRouterOutputs } from "@trpc/server";

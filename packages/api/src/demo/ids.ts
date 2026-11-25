@@ -3,8 +3,7 @@
 // record's own client time and whose 74 random bits come from a generator seeded by the run's
 // anchor, so one anchor yields one id set every run: a second run against the same database is
 // recognisable as duplicates, never as new rows. The test helpers' uuidv7 stays random, because
-// rows written by rolled-back tests share a database. Consumed by demo/content.ts and
-// demo/run.ts.
+// rows written by rolled-back tests share a database.
 
 // FNV-1a over the seed text, then mulberry32: small, dependency-free, good enough for ids that
 // only need to be distinct and repeatable (nothing here is a secret).

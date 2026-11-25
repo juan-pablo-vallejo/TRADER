@@ -5,7 +5,7 @@
 // A table is read as rows of cells, each cell holding some number of stops (a schedule
 // cell holds a card for each shift and its own Add button). Down and up go through a
 // cell's stops and then to the nearest cell with one in the next row; left and right go
-// along the row. Pure. Consumed by keyboard-rows.tsx, which finds the stops in the page.
+// along the row. Pure.
 export type Direction = "down" | "up" | "left" | "right";
 // For each row, how many stops each of its cells holds.
 export type Stops = readonly (readonly number[])[];

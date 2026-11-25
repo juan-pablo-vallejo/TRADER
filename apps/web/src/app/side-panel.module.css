@@ -1,6 +1,5 @@
 /* The side panel: a native modal dialog. Wide, a panel on the right; narrow, the whole
-   screen. Its backdrop covers the page behind it, the navigation included. Consumed by
-   side-panel.tsx. */
+   screen. Its backdrop covers the page behind it, the navigation included. */
 .panel {
   box-sizing: border-box;
   width: min(32rem, 100vw);

@@ -1,5 +1,5 @@
 /* The signed-in person in the header: the name, shrinking before anything else, and behind
-   it a small menu with the profile and Sign out. Consumed by account.tsx. */
+   it a small menu with the profile and Sign out. */
 .account {
   margin-left: auto;
   min-width: 0;

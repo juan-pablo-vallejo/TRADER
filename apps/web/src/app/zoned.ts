@@ -2,7 +2,7 @@
 // platform formatter in the company's timezone. A `datetime-local` control reads and writes
 // "YYYY-MM-DDTHH:MM" with no zone and the browser would take it as its own; the office enters
 // a repaired time as the company's clock read it, so the conversion is done here, on `Intl`
-// alone. Consumed by hours/repair-set.ts.
+// alone.
 
 const WALL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/;
 

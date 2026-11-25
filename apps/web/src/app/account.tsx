@@ -4,7 +4,7 @@
 // settings, the other language and Sign out. `me.get` is the one query every role may call; while it is pending or refused the
 // name is absent. Sign-out is the identity's own: the development route's form where that
 // route answers, Clerk's where Clerk's provider is around
-// the office (clerk-session.tsx), and absent on a server with neither. Consumed by header.tsx.
+// the office (clerk-session.tsx), and absent on a server with neither.
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";

@@ -1,7 +1,7 @@
 // How the office's Today lays out `overview.today`'s answer. Pure, and no rule of its own:
 // a person's status is the shared function's (`@trader/api/contract`, crewStatus), the same
 // one the phone's Crew tab names it with. This module only sorts people into the screen's
-// bands and its attention rows. Consumed by today-screen.tsx.
+// bands and its attention rows.
 import type { AppRouter } from "@trader/api";
 import { crewStatus, LATE_AFTER_MINUTES } from "@trader/api/contract";
 import type { inferRouterOutputs } from "@trpc/server";

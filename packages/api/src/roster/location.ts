@@ -2,8 +2,7 @@
 // answers: on, off, or null, which is "as the company" (companies.location_stamps). The
 // person's own setting wins where it is set (sync/scope.ts, stampsOn). It changes what the
 // next tap records and nothing already recorded. Judged under lock.ts's locks, as every
-// roster writer is. The same value again is `unchanged` and writes nothing. Consumed by
-// routers/roster.ts.
+// roster writer is. The same value again is `unchanged` and writes nothing.
 import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

@@ -15,7 +15,7 @@
 //
 // The first two are the company's and an admin's alone (`company.get`, `company.update`,
 // which writes the keys it is given and no others, so a switch is saved without resending
-// the details); anyone else sees Me. Consumed by page.tsx.
+// the details); anyone else sees Me.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 

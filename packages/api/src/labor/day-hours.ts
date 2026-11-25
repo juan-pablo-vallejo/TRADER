@@ -12,7 +12,7 @@
 // the whole answer: a total is the sum of rounded cells and is never rounded again, so the
 // Hours screen and whatever exports it read one figure and add nothing themselves. The range
 // is refused past its bound, never truncated, and there is no limit, so nothing in it is
-// left out. Consumed by routers/labor.ts, labor/export.ts and invoices/read.ts.
+// left out.
 import { entryFlag, companies, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";

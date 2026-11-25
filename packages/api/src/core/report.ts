@@ -3,9 +3,7 @@
 // SQL and its parameters (emails, subjects, company ids, coordinates), so no message, input,
 // context or header is ever copied. Reporting can never change an answer: building, minimizing
 // and sending run inside one guard, a returned promise is never awaited and its rejection is
-// swallowed. Consumed by routers/sync.ts (push records), routers/status.ts (configuration) and
-// the route handler through `reportingOnError`; the deployed reporter (apps/web,
-// server/reporter.ts) implements ErrorReporter.
+// swallowed.
 import { TRPCError } from "@trpc/server";
 
 export type ErrorReport = {

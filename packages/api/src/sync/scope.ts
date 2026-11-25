@@ -4,7 +4,7 @@
 // push and a later push sees it. A caller deactivated meanwhile is UNAUTHORIZED, as at
 // resolution; every other refusal is one `not_permitted` that says nothing of which check
 // failed. The same rows say whether this person's taps are stamped with a location: their
-// own setting, else the company's. Consumed by sync/labor.ts and sync/pull.ts.
+// own setting, else the company's.
 import { companies, jobs, users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 

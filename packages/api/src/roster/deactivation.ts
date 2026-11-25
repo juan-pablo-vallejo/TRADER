@@ -3,7 +3,7 @@
 // identity_subject is kept, so reactivation — deactivated_at back to NULL and nothing else —
 // lets the same login in again, and an unbound invitation becomes the one invitation again.
 // Deactivating the last active admin is `rejected` `last_admin` under lock.ts's locks. Neither
-// pseudonymizes. Consumed by routers/roster.ts.
+// pseudonymizes.
 import { users } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";

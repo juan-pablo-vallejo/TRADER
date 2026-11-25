@@ -20,7 +20,7 @@
 // job until they switch on their phone, which the second shift now admits.
 //
 // Every write is judged over the person's whole day first (day.ts, judgeDay), under the
-// same locks in the same order as write.ts. Consumed by routers/assignment.ts.
+// same locks in the same order as write.ts.
 import { companies, jobAssignments, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

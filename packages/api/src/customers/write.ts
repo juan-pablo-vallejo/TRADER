@@ -5,8 +5,7 @@
 // job still awaits invoicing. Judged under the customer row FOR NO KEY UPDATE, which a job
 // writer's FOR SHARE on the customer (jobs/write.ts) conflicts with, so a job never lands under
 // a customer being deactivated. Every writer re-reads the caller under lock after its rows
-// (lockActiveSelf): users come after customers in the lock order. Consumed by
-// routers/customer.ts; `lockCustomerShare` by jobs/write.ts.
+// (lockActiveSelf): users come after customers in the lock order.
 import { customers } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -92,8 +91,7 @@ async function lockCustomer(tx: Tx, id: string, mode: "no key update" | "share")
   return row;
 }
 
-// A job writer's view: the customer FOR SHARE, so a deactivation waits for it. Consumed by
-// jobs/write.ts.
+// A job writer's view: the customer FOR SHARE, so a deactivation waits for it.
 export const lockCustomerShare = (tx: Tx, id: string): Promise<Locked> =>
   lockCustomer(tx, id, "share");
 

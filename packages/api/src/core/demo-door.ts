@@ -16,7 +16,6 @@
 // did not answer. (Whether a host has a door, and whether its company is flagged, is no
 // secret: /api/ready says so, M8.) The code is compared in constant time. Request rates are the firewall's
 // (apps/web, edge.ts); the code is long enough that guessing it is not a plan.
-// Consumed by routers/demo.ts; the door itself is the host's (apps/web, clerk-demo.ts).
 import { createHash, timingSafeEqual } from "node:crypto";
 
 import type { Db } from "@trader/db";

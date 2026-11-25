@@ -1,8 +1,7 @@
 // The kill switch's state: what a cooperative build may do on the
 // network now. Pure over the environment record and the client it is handed, like
 // dev-identity.ts; read per request, never at module load. Advisory: push and pull do
-// not read it. No state stops capture or touches a record. Consumed by
-// routers/status.ts.
+// not read it. No state stops capture or touches a record.
 import type { z } from "zod";
 
 import {

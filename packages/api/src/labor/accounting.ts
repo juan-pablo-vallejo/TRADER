@@ -1,8 +1,7 @@
 // Whether a session counts toward hours. Pure: no database, no clock. Every accepted event
 // counts at once: a session counts unless a void names it, and a voided session counts
 // nothing. An open session counts its closed intervals only, and is still open. Flags are
-// evidence for the office (sync/reasons.ts) and change nothing here. Consumed by
-// labor/ledger.ts and labor/day-hours.ts, which sums what counts for every hours figure.
+// evidence for the office (sync/reasons.ts) and change nothing here.
 import { LedgerInconsistentError, replay, type LaborEvent, type Replay } from "./fold";
 
 export type Accounting = "eligible" | "voided";

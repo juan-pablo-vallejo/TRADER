@@ -1,7 +1,7 @@
 // An entry's flags (offline, corrected, user-timed, location, clock skew, unscheduled). Pure:
 // no database, no clock. Every flag is computed here, in one place, and written once with
 // the entry it describes (work_session_events.flags). A flag is evidence for the office and
-// never keeps an entry from counting. Consumed by sync/labor.ts and labor/repair.ts.
+// never keeps an entry from counting.
 import type { entryFlag } from "@trader/db/schema";
 
 export type EntryFlag = (typeof entryFlag.enumValues)[number];

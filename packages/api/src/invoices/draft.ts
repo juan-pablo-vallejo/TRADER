@@ -9,7 +9,7 @@
 // Ids are the browser's: a `create` sent again answers `duplicate`. Lock order: the caller
 // re-read, then the invoice's row FOR UPDATE, which is what an issue takes, so a save and an
 // issue of one draft never interleave. Who
-// issued and who voided an invoice are on its row. Consumed by routers/invoice.ts.
+// issued and who voided an invoice are on its row.
 import { invoiceLineItems, invoices, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

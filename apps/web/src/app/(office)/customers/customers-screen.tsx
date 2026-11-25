@@ -4,7 +4,6 @@
 // invalidates it. The page header's action opens the create form. A customer's name opens
 // them in the side panel, and which customer is in the address: the fields with Save and,
 // last, the deactivation. A `rejected` answer reads beneath the control it came from.
-// Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useRef, useState } from "react";
 

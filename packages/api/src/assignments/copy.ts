@@ -16,7 +16,6 @@
 // A copy is known by the browser's id for it, stored on every row it creates
 // (job_assignments.copy_id): a confirmation sent again finds its rows and creates nothing.
 // Undo removes every row of the copy, or none when a clock-in has locked any of them.
-// Consumed by routers/assignment.ts.
 import { createHash } from "node:crypto";
 
 import { jobAssignments, jobs, users } from "@trader/db/schema";

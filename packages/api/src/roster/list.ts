@@ -4,8 +4,7 @@
 // itself is never output, as me.get never outputs it. Each person carries where their
 // invitation stands and the sends it is worked out from (contract/invitation.ts,
 // invitation_sends): worked out here on every read, never stored; and each time the office
-// changed an address of theirs (address_changes). A plain read under RLS, no locks. Consumed by routers/roster.ts, and by invite.ts, role.ts and deactivation.ts for
-// the row they answer with.
+// changed an address of theirs (address_changes). A plain read under RLS, no locks.
 import { ROLES } from "../contract/enums";
 import {
   INVITATION_CHANNELS,

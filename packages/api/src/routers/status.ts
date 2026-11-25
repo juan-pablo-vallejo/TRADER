@@ -1,7 +1,7 @@
 // The kill switch: public, so a build that cannot sign in — before
 // login, an expired session, a forced update — still learns what to do. It reads no identity and
 // queries no database, so it answers while Postgres is down or cold. The environment is read per
-// request; a deployed value changes only with a new deployment. Consumed by router.ts.
+// request; a deployed value changes only with a new deployment.
 import { reportConfigFault } from "../core/report";
 import {
   createConfigLatch,

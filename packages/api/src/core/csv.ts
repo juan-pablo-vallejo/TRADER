@@ -3,7 +3,7 @@
 // doubled. `text` is for a cell a person typed — a name, a description: when it begins with a
 // character a spreadsheet would run as a formula it is led by an apostrophe, so a job named
 // "=SUM(A1)" is read as its name. A number is never passed through `text`: a negative figure
-// begins with a minus and must stay a number. Consumed by labor/export.ts.
+// begins with a minus and must stay a number.
 const FORMULA_LEAD = /^[=+\-@\t\r]/;
 
 export const text = (value: string): string =>

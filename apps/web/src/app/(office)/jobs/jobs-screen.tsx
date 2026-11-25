@@ -12,7 +12,7 @@
 // phones. Its location is one field that takes a pasted pair of coordinates or a maps
 // address that carries them (location.ts), with the radius beside it; an admin can also
 // set it from the phone's Crew tab, standing at the jobsite. A `rejected` answer reads
-// beneath the control it came from. Consumed by page.tsx.
+// beneath the control it came from.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { type FormEvent, useRef, useState } from "react";

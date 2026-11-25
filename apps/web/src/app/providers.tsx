@@ -5,7 +5,6 @@
 // into strings; superjson keeps them). A mismatch does not throw — it hands every screen a
 // string where a Date was sent — so if one side changes, change both. The browser calls the
 // same route handler the phone does, with its cookie; no server-side caller exists.
-// Consumed by layout.tsx.
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import { createContext, useContext, useState, type ReactNode } from "react";

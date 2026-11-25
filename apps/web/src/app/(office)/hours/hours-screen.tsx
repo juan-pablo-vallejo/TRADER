@@ -18,7 +18,7 @@
 // `labor.hours` does not say which kind.
 //
 // A cell opens that person's day in the side panel (day-panel.tsx), and which panel is open
-// is in the address too. Consumed by page.tsx.
+// is in the address too.
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";

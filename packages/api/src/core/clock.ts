@@ -3,8 +3,7 @@
 // anything the caller waited behind: every stamp that must sort after a lock is read here,
 // after that lock. With `after`, the stamp is floored at `after` + 1 ms, so a series of
 // stamps rises in acceptance order even when the clock steps back. Epoch milliseconds cross
-// the driver as text; the columns hold milliseconds (precision 3). Consumed by
-// labor/timeline.ts.
+// the driver as text; the columns hold milliseconds (precision 3).
 import { sql } from "drizzle-orm";
 
 import type { Tx } from "./context";

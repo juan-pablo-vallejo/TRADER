@@ -5,7 +5,7 @@
 // it to (`repair_stale`); it keeps its entry's type, and only a start may move to another
 // job. An added entry goes on the session's job as the set leaves it. Times are entered as
 // the company's clock read them (zoned.ts); an entry whose time was not touched keeps its
-// instant to the millisecond. Consumed by day-panel.tsx.
+// instant to the millisecond.
 import type { AppRouter } from "@trader/api";
 import type { inferRouterInputs, inferRouterOutputs } from "@trpc/server";
 

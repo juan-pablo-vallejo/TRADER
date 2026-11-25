@@ -5,7 +5,6 @@
 // Dates and money follow the person's language: `formatters` binds them to it, and a
 // screen reads them from `useStrings().f`. What does not depend on a language (digits to
 // cents, hundredths to hours, a phone number) is a plain function here.
-// Consumed by the people, schedule, hours, invoices and profile screens.
 import type { Catalog } from "./i18n/en";
 import { localeOf, type Language } from "./i18n/language";
 

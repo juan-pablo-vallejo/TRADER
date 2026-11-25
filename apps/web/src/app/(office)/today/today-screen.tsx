@@ -14,7 +14,7 @@
 //
 // It reads `overview.today` (api overview/today.ts) and names a person's status with the
 // function the phone's Crew tab uses (today-view.ts). Every figure is the server's. It is
-// read again each minute while the page is open. Consumed by page.tsx.
+// read again each minute while the page is open.
 import { wallMinute } from "@trader/api/contract";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";

@@ -5,7 +5,7 @@
 // back to pending under the same id; then it pulls. A call that throws is the network, never
 // a verdict: nothing is marked rejected or lost, and the next cycle tries again. Under
 // `paused` or `update_required` the outbox is not touched at all; under `read_only` it is
-// kept and only the pull runs. Consumed by sync/provider.tsx.
+// kept and only the pull runs.
 import type { ServiceState } from "@trader/api/contract";
 import superjson from "superjson";
 

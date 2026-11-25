@@ -3,7 +3,6 @@
 // hook returns at once, awaits nothing and touches no query, so a metered call behaves
 // exactly as an unmetered one. The count lives in an AsyncLocalStorage store, so calls that
 // run at once (a tRPC batch, concurrent tests) each count only their own statements.
-// Consumed by the API's timing middleware (core/trpc.ts) and its statement budgets.
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { Logger } from "drizzle-orm/logger";

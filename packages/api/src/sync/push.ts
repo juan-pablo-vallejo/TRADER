@@ -3,8 +3,7 @@
 // `accepted` or `duplicate` (success) or `rejected` (permanent); a record left out of the
 // answer is retried. The loop stops at the first record that throws — a timeout, a lost lock,
 // a ledger that fails replay — because the records behind it may depend on it: a `started`
-// that failed transiently must not let its `ended` be rejected for good. Consumed by
-// routers/sync.ts.
+// that failed transiently must not let its `ended` be rejected for good.
 import { z } from "zod";
 
 import type { Tx } from "../core/context";

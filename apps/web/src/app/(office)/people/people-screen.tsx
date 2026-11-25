@@ -16,7 +16,7 @@
 //
 // A worker's sign-in addresses are changed here, each asked about first: whoever has the
 // new address can sign in as that person, and the person is signed out everywhere. An
-// admin's are shown and not changed (the owner's word, 2026-11-23). Consumed by page.tsx.
+// admin's are shown and not changed (the owner's word, 2026-11-23).
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";

@@ -6,7 +6,7 @@
 // is the one later change, once, touching nothing else; it takes no number.
 //
 // Lock order: the caller re-read, the invoice's row FOR UPDATE, then — inside the database's
-// trigger — the counter's row. Consumed by routers/invoice.ts.
+// trigger — the counter's row.
 import { invoiceLineItems, invoices } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod";

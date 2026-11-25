@@ -1,5 +1,4 @@
-// `work_date`: derived in `companies.timezone`, never stored. Pure. Consumed by
-// labor/hours.ts, labor/ledger.ts, sync/pull.ts and invoices/pdf.ts.
+// `work_date`: derived in `companies.timezone`, never stored. Pure.
 import { foldSessions, type LaborEvent, type Session } from "./fold";
 
 // The calendar date of `instant` in the IANA zone, as YYYY-MM-DD. Through the zone's rules,

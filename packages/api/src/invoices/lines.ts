@@ -2,8 +2,7 @@
 // A line's amount is its quantity times its unit price, rounded half-up to
 // the cent — what the database's own check computes (invoice_line_items) — worked in
 // integers: the quantity in thousandths, never a float. The subtotal is the sum of the
-// lines; the total adds the tax the admin entered. A price is whatever the admin typed. Pure. Consumed by draft.ts and
-// read.ts.
+// lines; the total adds the tax the admin entered. A price is whatever the admin typed. Pure.
 import { z } from "zod";
 
 // A quantity at the API boundary: a decimal string with at most nine integer and three

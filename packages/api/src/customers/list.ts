@@ -1,8 +1,7 @@
 // customer.list. Every customer of the caller's
 // company, deactivated ones included with their timestamp so the office can reactivate them,
 // ordered by name, each with the count of its jobs not yet archived — what `deactivate`
-// refuses on (write.ts). A plain read under RLS, no locks. Consumed by routers/customer.ts and
-// by write.ts for the row each writer answers with.
+// refuses on (write.ts). A plain read under RLS, no locks.
 import { customers } from "@trader/db/schema";
 import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";

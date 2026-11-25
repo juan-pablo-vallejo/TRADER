@@ -4,7 +4,7 @@
 // this server's identity, and nothing where the development identity is — a person invited
 // there exists in the database only. A server whose identity is Clerk and whose keys are
 // missing refuses the invitation: a roster row no provider was told about could never be
-// signed in to. Consumed by the route handler.
+// signed in to.
 import { localDirectory, type IdentityDirectory } from "@trader/api";
 
 import { createClerkDirectory } from "./clerk-directory";

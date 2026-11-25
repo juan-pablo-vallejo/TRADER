@@ -13,7 +13,7 @@
 // stay where they were.
 //
 // Both ranges are inclusive calendar days, as written (schema, job-assignments.ts), and
-// bounded. Plain reads under RLS. Consumed by routers/assignment.ts.
+// bounded. Plain reads under RLS.
 import { companies, jobAssignments, jobs, jobStatus, users } from "@trader/db/schema";
 import { and, asc, eq, gte, lte } from "drizzle-orm";
 import { z } from "zod";

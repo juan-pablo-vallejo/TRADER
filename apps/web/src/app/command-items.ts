@@ -2,7 +2,7 @@
 // typed query finds. Everything is a place in the office: a person's panel, a job's page,
 // a customer's panel, an invoice, or a screen asked to open one of its own forms
 // (`?do=`, use-url-filters.ts). The lists are the ones the office already holds; nothing
-// here asks the server anything. Pure. Consumed by command-menu.tsx.
+// here asks the server anything. Pure.
 import type { Catalog } from "./i18n/en";
 
 export type Kind = "action" | "person" | "job" | "customer" | "invoice";

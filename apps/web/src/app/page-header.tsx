@@ -1,7 +1,6 @@
 // The page header: the screen title and at most one primary action on
 // one row. The action opens the screen's create form beneath the header; while the form is
 // open the button is the secondary "Close", so the form's own submit is the one primary.
-// Consumed by the people, customers, jobs, hours and invoices screens.
 import controls from "./controls.module.css";
 import { useStrings } from "./i18n";
 

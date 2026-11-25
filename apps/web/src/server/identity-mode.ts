@@ -2,8 +2,7 @@
 // the development identity only where its own flag and NODE_ENV admit it
 // (`devIdentityEnabled`: never under a production build), Clerk everywhere else. So a
 // production build never constructs, calls or links to the development adapter's sign-in,
-// whatever TRADER_DEV_IDENTITY says. Consumed by identity.ts, the layout, the header and the
-// sign-in pages.
+// whatever TRADER_DEV_IDENTITY says.
 import { devIdentityEnabled } from "@trader/api";
 
 import { DEV_SIGN_IN_PATH, SIGN_IN_PATH } from "./sign-in-paths";

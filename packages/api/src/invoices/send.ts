@@ -10,7 +10,6 @@
 // (apps/web, server/mailer.ts), up to 8 s: a void or a payment of that invoice waits behind it
 // and gives up at its own 5 s lock_timeout. Where a deployment names an allow-list, a recipient outside
 // it is a failed send that asked the service nothing (mailer.ts, restrictedTo).
-// Consumed by routers/invoice.ts.
 import { invoiceSends } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

@@ -14,8 +14,7 @@
 // drafts wait, how many complete jobs have no invoice. Counts and sums, no list.
 //
 // What the answer means for a person (on the clock, late, done) is
-// contract/crew.ts's to name, from this answer and the minute. Consumed by
-// routers/overview.ts.
+// contract/crew.ts's to name, from this answer and the minute.
 import { jobAssignments, users, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";

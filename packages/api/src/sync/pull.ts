@@ -1,7 +1,7 @@
 // sync.pull: a per-user snapshot of the caller's own entries and the reference data the push
 // admits, never anyone else's labor. One protected transaction; under READ COMMITTED each
 // statement reads its own committed state, so the snapshot may combine moments, and the next
-// pull converges. Consumed by routers/sync.ts.
+// pull converges.
 import { companies, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, inArray, ne } from "drizzle-orm";
 

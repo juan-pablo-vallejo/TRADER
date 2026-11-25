@@ -2,7 +2,7 @@
 // under lock.ts's locks: demoting the last active admin is `rejected` `last_admin`, so a
 // company can never lose its last admin to a demotion, two admins racing included. An admin may
 // demote themself while another remains; their call commits and the next is FORBIDDEN. The
-// same role again is `unchanged` and writes nothing. Consumed by routers/roster.ts.
+// same role again is `unchanged` and writes nothing.
 import { ROLES } from "../contract/enums";
 import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";

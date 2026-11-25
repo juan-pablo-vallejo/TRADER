@@ -16,7 +16,7 @@
 // confirmed, and the week behind it is read again.
 //
 // Which person and day is the address's to say (hours-view.ts, DAY_FILTERS), so a panel
-// can be linked. Consumed by hours-screen.tsx.
+// can be linked.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 

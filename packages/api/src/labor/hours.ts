@@ -9,7 +9,7 @@
 // nothing until its clock-out arrives: it is counted apart, so a figure never moves while
 // someone is on the clock. A voided session adds nothing anywhere. A cell carries every flag
 // of the entries its sessions are made of. Hours are integer hundredths everywhere: no float
-// is ever an hour. Consumed by labor/day-hours.ts (readDayHours).
+// is ever an hour.
 import { REASON_ORDER, type EntryFlag } from "../sync/reasons";
 import type { sessionAccounting } from "./accounting";
 import { workDate } from "./work-date";

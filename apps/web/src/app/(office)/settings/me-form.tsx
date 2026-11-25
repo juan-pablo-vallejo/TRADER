@@ -3,7 +3,7 @@
 // Settings' third part, Me: name and contact phone as form fields, and the language;
 // email read-only, captioned "Managed by your sign-in provider"; no role, company or
 // identity field. `me.get` fills it, `me.update` saves it and invalidates `me.get`. The
-// language is kept on this browser and changes at once. Consumed by settings-screen.tsx.
+// language is kept on this browser and changes at once.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
