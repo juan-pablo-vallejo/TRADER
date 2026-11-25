@@ -133,20 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**The four documents, in one voice**
-
-- `main` tagged `archive/pre-consolidation`, the tag pushed.
-- The four documents in their final shape: open work only, no log, no cited numbers; each
-  rule written once; the MVP and the invariants as the owner set them; the runbook whole;
-  the names left as they are mapped in one table.
-- What the log knew that will bite again is a comment beside its code. The skills, agents
-  and hooks follow, at the owner's first guard sitting. One test holds README's opening
-  sentence to the MVP's.
-- Done when: this file holds only the MVP, this list and After MVP; every pointer in the
-  four documents resolves.
-- See it working: each change to a rule, the MVP and the invariants shown to the owner;
-  `scripts/trader-ws check --local` green.
-
 **The rendered audit**
 
 - Every screen, both apps, both languages: the office at 390, 768 and 1280; the phone on the
