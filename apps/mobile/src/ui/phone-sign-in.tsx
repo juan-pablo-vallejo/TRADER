@@ -62,6 +62,8 @@ import { color, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
 
+const TYPING_WONT_HELP = new Set<Note>(["expired_code", "too_many", "locked"]);
+
 // What the form says for each refusal, in the screen's language.
 export function sentence(s: Catalog["signIn"], note: Note): string {
   return {
@@ -147,6 +149,9 @@ export function PhoneSignIn({
       if (done.form.at !== form.at || done.note !== null) setCode("");
       setForm(done.form);
       setNote(done.note);
+      // Where typing again cannot help, the keyboard goes, so what can (Send another
+      // code, the trouble lines) is in view: on Android it would stay under the keyboard.
+      if (done.note !== null && TYPING_WONT_HELP.has(done.note)) Keyboard.dismiss();
       setNow(Date.now());
     } catch {
       setNote("failed");
@@ -260,6 +265,13 @@ export function PhoneSignIn({
   };
 
   const heading = [styles.heading, fontLoaded && styles.bodoni];
+  // A refusal sits right under the field it is about: anything lower is under the keyboard
+  // on Android, where the page does not scroll clear of it.
+  const noteLine = note !== null && (
+    <Text testID="sign-in-note" style={text.attention} accessibilityRole="alert">
+      {sentence(s, note)}
+    </Text>
+  );
 
   return (
     <SafeAreaView testID="sign-in" style={styles.screen} edges={["top", "left", "right"]}>
@@ -273,7 +285,8 @@ export function PhoneSignIn({
         keyboardShouldPersistTaps="handled"
         // Dragged away, the keyboard shows what is under it: the trouble lines.
         keyboardDismissMode="on-drag"
-        // The page scrolls clear of the keyboard, so Send is never under it.
+        // On iOS the page scrolls clear of the keyboard. Android does not (the prop is
+        // iOS-only), so what a person must see sits close under the field they type in.
         automaticallyAdjustKeyboardInsets
       >
         {form.at === "field" && (
@@ -332,6 +345,7 @@ export function PhoneSignIn({
               returnKeyType="go"
               onSubmitEditing={send}
             />
+            {noteLine}
             <Button
               testID="sign-in-send"
               kind="brand"
@@ -374,6 +388,7 @@ export function PhoneSignIn({
               returnKeyType="go"
               onSubmitEditing={() => check(code)}
             />
+            {noteLine}
             <Button
               testID="sign-in-verify"
               kind="brand"
@@ -428,6 +443,7 @@ export function PhoneSignIn({
               returnKeyType="go"
               onSubmitEditing={demo}
             />
+            {noteLine}
             <Button
               testID="sign-in-demo-submit"
               kind="brand"
@@ -442,11 +458,6 @@ export function PhoneSignIn({
               onPress={back}
             />
           </>
-        )}
-        {note !== null && (
-          <Text testID="sign-in-note" style={text.attention} accessibilityRole="alert">
-            {sentence(s, note)}
-          </Text>
         )}
         {form.at === "field" && (
           <TextButton

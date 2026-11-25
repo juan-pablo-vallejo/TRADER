@@ -8,6 +8,9 @@
 # The iOS development build: `pnpm ios` (`ios.sh`). On a fresh Android emulator the keyboard's
 # stylus tutorial covers a text field and fails the Me flow; once per emulator:
 #   adb shell settings put secure stylus_handwriting_enabled 0
+# An emulator with a hardware keyboard hides the on-screen one, and with it whatever a real
+# phone's keyboard covers; show it, as a phone does:
+#   adb shell settings put secure show_ime_with_hard_keyboard 1
 #
 #   .maestro/run.sh ios <simulator udid> <flow> [fresh|resume] [allow|deny|never] [email] [lands on]
 #   .maestro/run.sh android <emulator serial> <flow> [fresh|resume] [allow|deny|never] [email] [lands on]
