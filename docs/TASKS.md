@@ -133,18 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**Dead code goes** (backend-change)
-
-- The two procedures nothing calls (`assignment.list`, `assignment.mine`), the one-value
-  `DATABASE_DRIVER`, unused barrel names, exports used only in their own file, the
-  "Consumed by" headers, the office's row editor and unused status classes. `/profile`
-  answers 404. `job.update` leaves `PHONE_PROCEDURES`, which then pins eleven.
-- `wire.json`: those two procedures and that one line; the diff shown to the owner.
-- In files on the simplifier's never-touch list Claude makes these edits itself and
-  `batch-reviewer` reads them.
-- Done when: typecheck and every test green without them; `git grep` of each name empty.
-- See it working: staging's smoke test; both suites whole.
-
 **One home for dates, times and limits** (backend-change)
 
 - Numbers and pure rules both apps need live in the contract package, so the phone runs the
