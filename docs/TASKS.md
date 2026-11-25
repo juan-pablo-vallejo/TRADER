@@ -135,18 +135,16 @@ the iPhone simulator and `trader-ws android`.
 
 **One home for dates, times and limits** (backend-change)
 
-- Numbers and pure rules both apps need live in the contract package, so the phone runs the
-  server's own clock rule. Each helper is held by property tests before its copies become
-  imports; no import cycle is left. `wire.json` and the recorded build do not change.
-- One formatter each, both apps: a time of day reads 12-hour ("2:30 PM", "2:30 p. m."); time
-  worked reads "7 h 30 min" on a clock and "7.50 h" where it is paid from; a day reads "Mon,
-  Nov 16" when worked or paid, "Nov 16, 2026" when due, issued or a range, "Mon 16" in a
-  grid's column. Names sort with accents beside their letter, in every list and in SQL. Tests
-  import a product number or state a relation; the palette's values stay in the theme test.
-- Done when: a test that failed first refuses a pause on a pause on the phone; a structure
-  test finds no cycle.
-- See it working: staging, simulator, emulator, both languages, reviewed on Fable; both
-  suites whole.
+- Calendar, zone and today helpers: one home each in the contract package, held by property
+  tests (plain loops over every day of several years and each hour around both clock
+  changes) green on today's copies before the copies become imports.
+- Time worked reads "7 h 30 min" on a clock and "7.50 h" where it is paid from, the unit
+  always shown, in both apps.
+- Tests import a product number or state a relation; the palette's values stay in the theme
+  test.
+- Done when: `git grep` finds no second copy of a calendar or zone helper; no test restates a
+  limit the contract exports.
+- See it working: staging, both languages, reviewed; both suites whole once for the batch.
 
 **Guard sitting 2**
 
