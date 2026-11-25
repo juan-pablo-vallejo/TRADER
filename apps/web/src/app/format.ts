@@ -15,6 +15,12 @@ export function signInPhone(e164: string): string {
   return m === null ? e164 : `(${m[1]}) ${m[2]}-${m[3]}`;
 }
 
+// A person's first name: the first word of the name they gave, where the header has room
+// for no more (account.tsx).
+export function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
 // Whether what was typed can be a sign-in number, so the form can say so before it asks:
 // ten digits, or eleven starting with 1, however spaced. The server decides (people.invite).
 export function looksLikeSignInPhone(typed: string): boolean {

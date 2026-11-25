@@ -260,8 +260,8 @@ export const en = {
     correctOf: (name: string) => `Correct ${name}'s time in Hours`,
     late: (name: string, job: string, start: string) =>
       `${name} is late for ${job}, which started at ${start}.`,
-    call: "Call",
-    callOf: (name: string) => `Call ${name}`,
+    whatsApp: "WhatsApp",
+    whatsAppOf: (name: string) => `Message ${name} on WhatsApp`,
     noNumber: "No number",
     more: (n: number) => (n === 1 ? "And 1 more" : `And ${n} more`),
     onTheClock: "On the clock now",
@@ -417,6 +417,7 @@ export const en = {
     save: "Save draft",
     saved: "Draft saved.",
     unsaved: "Save the draft before issuing it.",
+    noLinesToIssue: "This draft cannot be issued until it has a line.",
     badLine: (n: number) =>
       `Line ${n} needs a description, a quantity above zero and a price.`,
     badTax: "Enter the tax as an amount, or 0.",
@@ -557,6 +558,12 @@ export const en = {
   },
   notPermitted: "Not permitted.",
   requestFailed: "That did not go through. Nothing was saved. Try again.",
+  // Under a field the browser finds wrong as a form is sent, in place of its own bubble.
+  fieldRefusal: {
+    missing: "Fill this in.",
+    email: "Enter an email address.",
+    other: "This is not a value this field takes.",
+  },
   loadFailed: "This page did not load.",
   refreshFailed: (time: string) => `Could not refresh: this is as of ${time}.`,
   loadFailedHelp: "Nothing was changed. Check the connection and try again.",
@@ -660,12 +667,16 @@ export const en = {
     invitationExplain:
       "They have not signed in yet. Send them where to get the app. The message is written, in English and Spanish: text it from your own phone, or have TRADER email it.",
     invitedOn: (day: string) => `Invited ${day}`,
-    sendByWhatsApp: "Send by text",
+    sendByWhatsApp: "Send by WhatsApp",
+    sentIt: "I sent it",
     sendByEmail: "Send by email",
     emailGoesTo: (email: string) =>
       `By email, TRADER sends the same message to ${email}.`,
     emailed: (email: string) => `Sent to ${email}.`,
-    byWhatsApp: (by: string, at: string) => `By text from ${by}, ${at}`,
+    byWhatsApp: (by: string, at: string) => `By WhatsApp from ${by}, ${at}`,
+    copiedBy: (by: string, at: string) => `Copied by ${by}, ${at}, not yet sent`,
+    openedBy: (by: string, at: string) =>
+      `Opened in WhatsApp by ${by}, ${at}, not yet sent`,
     byEmail: (by: string, at: string) => `By email, sent by ${by}, ${at}`,
     emailNotSent: (by: string, at: string) => `Email not sent (tried by ${by}, ${at})`,
     refused: {
@@ -679,7 +690,8 @@ export const en = {
       company_closed: "This demo company cannot invite anyone.",
     },
     copyInvitation: "Copy the message",
-    copied: "Copied. Paste it into a text message to them.",
+    copied: "Copied. Paste it into a WhatsApp message to them, then press I sent it.",
+    opened: "When it has gone in WhatsApp, press I sent it.",
     // The addresses a worker signs in with, changed by the office (people.setEmail,
     // people.setSignInPhone).
     addresses: "Sign-in addresses",
@@ -741,6 +753,8 @@ export const en = {
   customerAdded: (name: string) => `${name} added.`,
   address: "Address",
   phone: "Phone",
+  companyPhoneHelp:
+    "The crew messages the office on WhatsApp at this number. Include the country code; a number without one is read as a United States number.",
   notes: "Notes",
   jobsUnarchived: (n: number) =>
     `${n === 1 ? "1 of this customer's jobs is" : `${n} of this customer's jobs are`} not archived. Archive ${n === 1 ? "it" : "them"} first.`,

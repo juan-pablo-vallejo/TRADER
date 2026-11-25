@@ -168,6 +168,7 @@
      padding reaches into the row's padding above and below, and a name on two lines keeps
      both. */
   .rowLink {
+    width: auto;
     min-height: 0;
     padding: var(--space-3) 0;
     margin: calc(-1 * var(--space-3)) 0;
@@ -178,11 +179,12 @@
   .table tr td.number::before {
     content: attr(data-label) " ";
   }
+  /* The dot belongs to the cell it introduces: the line may break before it, never after. */
   .table tr td:not(:first-child):not([data-empty]) ~ td:not([data-empty])::before {
-    content: "\00a0· ";
+    content: " ·\00a0";
   }
   .table tr td:not(:first-child):not([data-empty]) ~ td.number:not([data-empty])::before {
-    content: "\00a0· " attr(data-label) " ";
+    content: " ·\00a0" attr(data-label) " ";
   }
 
   /* A group's heading is a line of its own, not a card; the totals are a card like a
@@ -219,6 +221,32 @@
     padding: var(--space-3) 0;
     text-decoration: underline;
   }
+  /* A row's name that opens its record is set as Jobs' name link is: the link's color, and
+     a target the width of its line, reaching into the row's padding as .rowLink does. */
+  .table tr td:first-child .cellOpen {
+    display: flex;
+    width: 100%;
+    margin: calc(-1 * var(--space-3)) 0;
+    color: var(--accent);
+  }
+  /* A row's act (its Edit) is a line of its own under the rest, a full target tall, with
+     no dot before it. `important`: the separator rules above are longer selectors. */
+  .table tr td.action {
+    display: block;
+    margin-top: var(--space-2);
+  }
+  .table tr td.action::before {
+    content: none !important;
+  }
+  .table tr td.action .cellOpen {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: var(--target);
+    padding: 0;
+    color: var(--accent);
+    font-weight: 600;
+  }
   /* A table of figures by column (a week of days): in a narrow row each cell is a line
      of its own, its column's name at the left and its figure at the right, where the
      joined line of a plain table would run seven figures together. `important`: the
@@ -228,18 +256,16 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-3);
-    min-height: 32px;
+    min-height: var(--target);
     font-variant-numeric: tabular-nums;
   }
   .table.lines tr td:not(:first-child):not([data-empty])::before {
     content: attr(data-label) !important;
     flex: none;
   }
-  /* A day's line is the target, as tall as the density asks: its button takes the room
-     beside the day's name, which stays the cell's own label. */
-  .table.lines tr td:has(> .cellOpen) {
-    min-height: var(--target);
-  }
+  /* A day's line is the target, as tall as the density asks at every width below the
+     stacking one, 768 included: its button takes the room beside the day's name, which
+     stays the cell's own label. */
   .table.lines .cellOpen {
     display: inline-flex;
     flex: 1;

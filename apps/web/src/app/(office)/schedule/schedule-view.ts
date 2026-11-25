@@ -106,6 +106,9 @@ export const hoursOf = (
 export type Row = {
   id: string;
   name: string;
+  // By employee: whether the person is active. A deactivated one keeps the week's shifts
+  // on their row and is offered no new one, which the form could not take.
+  active?: boolean;
   // Each day's shifts, by start, end and id.
   days: Map<string, WeekShift[]>;
 };
@@ -141,11 +144,20 @@ export function byEmployee(
   shifts: WeekShift[],
   people: { id: string; name: string; active: boolean }[],
 ): Row[] {
-  const scheduled = rows(shifts, (shift) => shift.worker);
+  const active = new Set(people.filter((p) => p.active).map((p) => p.id));
+  const scheduled = rows(shifts, (shift) => shift.worker).map((r) => ({
+    ...r,
+    active: active.has(r.id),
+  }));
   const seen = new Set(scheduled.map((r) => r.id));
   const idle = people
     .filter((p) => p.active && !seen.has(p.id))
-    .map((p) => ({ id: p.id, name: p.name, days: new Map<string, WeekShift[]>() }));
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      active: true,
+      days: new Map<string, WeekShift[]>(),
+    }));
   return [...scheduled, ...idle].sort(
     (a, b) => compareNames(a.name, b.name) || a.id.localeCompare(b.id),
   );

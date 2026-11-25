@@ -234,7 +234,7 @@ describe("people.sendInvitation", () => {
         result: "rejected",
         code: "id_conflict",
       });
-      expect(await call.noteInvitation({ id, userId: o.byEmail })).toEqual({
+      expect(await call.noteInvitation({ id, userId: o.byEmail, act: "sent" })).toEqual({
         result: "rejected",
         code: "id_conflict",
       });
@@ -293,7 +293,9 @@ describe("people.sendInvitation", () => {
       expect(await outcome(o.as(o.worker.who, { mailer }).sendInvitation(input))).toBe(
         "FORBIDDEN",
       );
-      expect(await outcome(o.as(o.worker.who).noteInvitation(input))).toBe("FORBIDDEN");
+      expect(
+        await outcome(o.as(o.worker.who).noteInvitation({ ...input, act: "sent" })),
+      ).toBe("FORBIDDEN");
       // Another company's person, and nobody at all: one answer.
       for (const userId of [o.strangerId, uuidv7()]) {
         expect(
@@ -302,7 +304,9 @@ describe("people.sendInvitation", () => {
           ),
         ).toBe("FORBIDDEN");
         expect(
-          await outcome(o.as(o.c.who).noteInvitation({ id: uuidv7(), userId })),
+          await outcome(
+            o.as(o.c.who).noteInvitation({ id: uuidv7(), userId, act: "sent" }),
+          ),
         ).toBe("FORBIDDEN");
       }
       expect(sent).toEqual([]);
@@ -320,7 +324,9 @@ describe("people.sendInvitation", () => {
         result: "rejected",
         code: "company_closed",
       });
-      expect(await call.noteInvitation({ id: uuidv7(), userId: o.byNumber })).toEqual({
+      expect(
+        await call.noteInvitation({ id: uuidv7(), userId: o.byNumber, act: "sent" }),
+      ).toEqual({
         result: "rejected",
         code: "company_closed",
       });
@@ -337,10 +343,10 @@ describe("people.noteInvitation", () => {
       const { sent, mailer } = recordingMailer();
       const id = uuidv7();
       const call = o.as(o.c.who, { mailer });
-      expect(await call.noteInvitation({ id, userId: o.byNumber })).toEqual({
+      expect(await call.noteInvitation({ id, userId: o.byNumber, act: "sent" })).toEqual({
         result: "noted",
       });
-      expect(await call.noteInvitation({ id, userId: o.byNumber })).toEqual({
+      expect(await call.noteInvitation({ id, userId: o.byNumber, act: "sent" })).toEqual({
         result: "duplicate",
       });
       // TRADER sends nothing for a text.
@@ -360,11 +366,27 @@ describe("people.noteInvitation", () => {
     });
   });
 
+  it("leaves a copied or opened invitation not sent until the admin says it went", async () => {
+    await rolledBack(owner, async (tx) => {
+      const o = await office(tx);
+      const call = o.as(o.c.who);
+      const note = (act: "copied" | "opened" | "sent") =>
+        call.noteInvitation({ id: uuidv7(), userId: o.byNumber, act });
+      expect(await note("copied")).toEqual({ result: "noted" });
+      expect(await note("opened")).toEqual({ result: "noted" });
+      const standing = await o.statusOf(o.byNumber);
+      expect(standing?.status).toBe("not_sent");
+      expect(standing?.sends.map((s) => s.outcome).sort()).toEqual(["copied", "opened"]);
+      expect(await note("sent")).toEqual({ result: "noted" });
+      expect((await o.statusOf(o.byNumber))?.status).toBe("sent");
+    });
+  });
+
   it("notes nothing for a person with no number, signed in, or deactivated", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const note = (userId: string) =>
-        o.as(o.c.who).noteInvitation({ id: uuidv7(), userId });
+        o.as(o.c.who).noteInvitation({ id: uuidv7(), userId, act: "sent" });
       expect(await note(o.byEmail)).toEqual({ result: "rejected", code: "no_number" });
       expect(await note(o.worker.id)).toEqual({ result: "rejected", code: "signed_in" });
       expect(await note(o.gone)).toEqual({ result: "rejected", code: "deactivated" });
@@ -379,7 +401,7 @@ describe("where an invitation stands, in people.list", () => {
       const o = await office(tx);
       expect(await o.statusOf(o.byBoth)).toEqual({ status: "not_sent", sends: [] });
       const text = uuidv7();
-      await o.as(o.c.who).noteInvitation({ id: text, userId: o.byBoth });
+      await o.as(o.c.who).noteInvitation({ id: text, userId: o.byBoth, act: "sent" });
       const email = uuidv7();
       await o
         .as(o.c.who, {
@@ -416,7 +438,9 @@ describe("where an invitation stands, in people.list", () => {
   it("counts only a send to an address the person still has", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
-      await o.as(o.c.who).noteInvitation({ id: uuidv7(), userId: o.byNumber });
+      await o
+        .as(o.c.who)
+        .noteInvitation({ id: uuidv7(), userId: o.byNumber, act: "sent" });
       expect((await o.statusOf(o.byNumber))?.status).toBe("sent");
       // The number is changed (as the owner, here): the old send reached another number.
       await tx.execute(sql`reset role`);

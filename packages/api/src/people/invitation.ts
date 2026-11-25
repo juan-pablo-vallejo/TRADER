@@ -1,5 +1,5 @@
 // An invitation's sends: `people.sendInvitation` emails it, `people.noteInvitation` records
-// that the admin opened the ready text on their own phone to send it. Both write one row of
+// what the admin did with the ready message on their own phone: copied, opened, or sent. Both write one row of
 // invitation_sends, which the roster reads back as where the invitation stands (list.ts).
 //
 // The email is the words of the text message (contract/invitation.ts) with the link to
@@ -49,6 +49,12 @@ const REFUSALS = [
   "too_many",
   "company_closed",
 ] as const;
+
+// What the admin did with the ready message: copied it, opened it in WhatsApp, or, after
+// either, said that it went. Only the last makes the invitation sent: TRADER cannot see a
+// message leave the admin's own phone.
+export const NOTED_ACTS = ["copied", "opened", "sent"] as const;
+export const noteInvitationInput = invitationInput.extend({ act: z.enum(NOTED_ACTS) });
 
 const refusal = z.strictObject({
   result: z.literal("rejected"),
@@ -208,13 +214,12 @@ export async function sendInvitation(
   return answer.ok ? { result: "sent" } : { result: "failed", failure: answer.failure };
 }
 
-// The admin opened the ready text on their own phone. TRADER sent nothing and cannot know
-// that they did: what is recorded is that it was opened to send, to the number the roster
-// holds, which is all "sent by text" has ever meant here.
+// The admin copied the ready message, opened it in WhatsApp, or says it went, to the number
+// the roster holds. TRADER sent nothing; what is recorded is what the admin did, and when.
 export async function noteInvitation(
   tx: Tx,
   user: AppUser,
-  input: z.infer<typeof invitationInput>,
+  input: z.infer<typeof noteInvitationInput>,
 ): Promise<z.infer<typeof noteInvitationOutput>> {
   const person = await lockPerson(tx, user, input.userId);
   const before = await madeBefore(tx, input, "whatsapp");
@@ -229,7 +234,7 @@ export async function noteInvitation(
     userId: input.userId,
     channel: "whatsapp",
     recipient: person.signInPhone,
-    outcome: "sent",
+    outcome: input.act,
   });
   return { result: "noted" };
 }

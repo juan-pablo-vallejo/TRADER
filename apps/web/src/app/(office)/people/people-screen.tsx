@@ -17,6 +17,7 @@
 // A worker's sign-in addresses are changed here, each asked about first: whoever has the
 // new address can sign in as that person, and the person is signed out everywhere. An
 // admin's are shown and not changed (the owner's word, 2026-11-23).
+import { whatsAppLink } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
@@ -38,7 +39,7 @@ import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import { useAsked, useUrlFilters } from "../../use-url-filters";
 import { uuidv7 } from "../../uuidv7";
-import { invitationText, isPhone, smsLink } from "./invitation";
+import { invitationText } from "./invitation";
 import styles from "./people.module.css";
 import { WriteButton } from "../../write-button";
 
@@ -348,7 +349,7 @@ function PeopleTable({
 function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
   const { t } = useStrings();
   return (
-    <SidePanel title={row.name} onClose={onClose}>
+    <SidePanel title={row.name} onClose={onClose} returnTo={row.id}>
       <p className={`secondary ${styles.line}`}>
         {t.roles[row.role]} · {statusOf(t, row)}
       </p>
@@ -382,7 +383,6 @@ function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
 // gave themselves when it is another.
 function Numbers({ row }: { row: Row }) {
   const { t } = useStrings();
-  const dial = (number: string) => `tel:${number.replace(/[^\d+]/g, "")}`;
   const contact = row.phone !== null && row.phone !== row.signInPhone ? row.phone : null;
   return (
     <EditorSection heading={t.personPanel.numbers}>
@@ -392,14 +392,24 @@ function Numbers({ row }: { row: Row }) {
         <ul className={styles.numbers}>
           {row.signInPhone !== null && (
             <li>
-              <a href={dial(row.signInPhone)}>
+              <a
+                href={whatsAppLink(row.signInPhone) ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+              >
                 {t.personPanel.signInNumber(signInPhone(row.signInPhone))}
               </a>
             </li>
           )}
           {contact !== null && (
             <li>
-              <a href={dial(contact)}>{t.personPanel.contactNumber(contact)}</a>
+              <a
+                href={whatsAppLink(contact) ?? undefined}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {t.personPanel.contactNumber(contact)}
+              </a>
             </li>
           )}
         </ul>
@@ -409,35 +419,27 @@ function Numbers({ row }: { row: Row }) {
   );
 }
 
-// Neither the browser's description of itself nor its address changes under a page.
+// The page's address does not change under it.
 const unchanging = () => () => undefined;
 
-// The invitation, each way the person can be reached. By text: on a phone, a link that
-// opens the admin's own messages on the words, written; anywhere else the same words to
-// copy. Which it is cannot be known on the server, so the copy is drawn first and the link
-// takes its place once the browser has said what it is. Taking the words either way is
-// noted as the send: TRADER cannot know more of a message it does not carry. By email:
-// TRADER sends the same words itself, and says how that went.
+// The invitation by WhatsApp or by email. By WhatsApp the admin sends the ready message from
+// their own phone: Send by WhatsApp opens it, Copy takes the words. Each is noted with who
+// and when, and the invitation stays Not sent until the admin presses I sent it: TRADER
+// cannot see a message leave the admin's phone. By email TRADER sends the same words
+// itself, and says how that went.
 function Invitation({ row }: { row: Row }) {
   const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
   const company = useQuery(trpc.company.get.queryOptions());
-  // What only the browser knows, read as React reads anything outside itself: nothing on
-  // the server, the browser's answer once it is there.
-  const phone = useSyncExternalStore(
-    unchanging,
-    () => isPhone(navigator.userAgent),
-    () => false,
-  );
   const origin = useSyncExternalStore(
     unchanging,
     () => window.location.origin,
     () => null,
   );
   const [note, setNote] = useState<{ text: string; saved: boolean } | null>(null);
-  // The admin took the words to send: noted, and the list says where that leaves it. A
-  // note that does not arrive costs the status and nothing else, so it fails quietly.
+  // What the admin did with the words: noted, and the list says where that leaves it. A
+  // note that does not arrive costs the record and nothing else, so it fails quietly.
   const noted = useMutation(
     trpc.people.noteInvitation.mutationOptions({ onSuccess: () => refresh() }),
   );
@@ -474,7 +476,18 @@ function Invitation({ row }: { row: Row }) {
           company: company.data.name,
           url: `${origin}/get`,
         });
-  const took = () => noted.mutate({ id: uuidv7(), userId: row.id });
+  const did = (act: "copied" | "opened" | "sent") =>
+    noted.mutate({ id: uuidv7(), userId: row.id, act });
+  // The last WhatsApp note was a copy or an opening: say whether it went.
+  const last = row.invitation.sends.find((send) => send.channel === "whatsapp");
+  const asks =
+    row.invitation.status === "not_sent" &&
+    last !== undefined &&
+    (last.outcome === "copied" || last.outcome === "opened");
+  const link =
+    row.signInPhone === null || text === null
+      ? null
+      : whatsAppLink(row.signInPhone, text);
   return (
     <>
       {text !== null && (
@@ -486,30 +499,49 @@ function Invitation({ row }: { row: Row }) {
         <p className="secondary">{t.personPanel.emailGoesTo(row.email)}</p>
       )}
       <div className={controls.actions}>
-        {text === null || row.signInPhone === null ? null : phone ? (
-          <a
-            className={controls.primary}
-            href={smsLink(row.signInPhone, text)}
-            onClick={took}
-          >
-            {t.personPanel.sendByWhatsApp}
-          </a>
-        ) : (
-          <button
+        {link !== null && text !== null && (
+          <>
+            <a
+              className={controls.primary}
+              href={link}
+              target="_blank"
+              rel="noreferrer"
+              onClick={() => {
+                setNote({ saved: true, text: t.personPanel.opened });
+                did("opened");
+              }}
+            >
+              {t.personPanel.sendByWhatsApp}
+            </a>
+            <button
+              type="button"
+              className={controls.secondary}
+              onClick={() =>
+                void navigator.clipboard.writeText(text).then(
+                  () => {
+                    setNote({ saved: true, text: t.personPanel.copied });
+                    did("copied");
+                  },
+                  () => setNote({ saved: false, text: t.requestFailed }),
+                )
+              }
+            >
+              {t.personPanel.copyInvitation}
+            </button>
+          </>
+        )}
+        {asks && (
+          <WriteButton
             type="button"
             className={controls.secondary}
-            onClick={() =>
-              void navigator.clipboard.writeText(text).then(
-                () => {
-                  setNote({ saved: true, text: t.personPanel.copied });
-                  took();
-                },
-                () => setNote({ saved: false, text: t.requestFailed }),
-              )
-            }
+            pending={noted.isPending}
+            onClick={() => {
+              setNote(null);
+              did("sent");
+            }}
           >
-            {t.personPanel.copyInvitation}
-          </button>
+            {t.personPanel.sentIt}
+          </WriteButton>
         )}
         {row.email !== null && (
           <WriteButton
@@ -543,7 +575,11 @@ function Sends({ row }: { row: Row }) {
         return (
           <li key={send.id} className="secondary">
             {send.channel === "whatsapp"
-              ? p.byWhatsApp(send.by, at)
+              ? send.outcome === "copied"
+                ? p.copiedBy(send.by, at)
+                : send.outcome === "opened"
+                  ? p.openedBy(send.by, at)
+                  : p.byWhatsApp(send.by, at)
               : send.outcome === "sent"
                 ? p.byEmail(send.by, at)
                 : [p.emailNotSent(send.by, at), failures[send.failure ?? ""]]

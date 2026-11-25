@@ -43,7 +43,12 @@ export function SettingsScreen({ signInHref }: { signInHref: string }) {
   return (
     <>
       <PageHeader title={t.settings.title} />
-      {me.data?.role === "admin" && <CompanyParts signInHref={signInHref} />}
+      {me.isPending ? (
+        // Who is signed in is not known yet; most who open Settings are admins.
+        <CompanyPlaceholder />
+      ) : (
+        me.data?.role === "admin" && <CompanyParts signInHref={signInHref} />
+      )}
       <MeForm signInHref={signInHref} />
       {clerkOn && <PasskeySection className={styles.part} />}
     </>
@@ -57,9 +62,32 @@ function useCompany() {
   return useQuery(trpc.company.get.queryOptions());
 }
 
+// Company and Time clock while they load: placeholder rows under their headings, about
+// as tall as the two parts drawn (14 rows for the details' card, 8 for the two switches),
+// so Me below does not move a screen when they arrive.
+function CompanyPlaceholder() {
+  const { t } = useStrings();
+  return (
+    <>
+      <section aria-labelledby="settings-company" className={styles.part}>
+        <h2 id="settings-company" className="heading">
+          {t.settings.company}
+        </h2>
+        <LoadingRows rows={14} />
+      </section>
+      <section aria-labelledby="settings-clock" className={styles.part}>
+        <h2 id="settings-clock" className="heading">
+          {t.settings.clock}
+        </h2>
+        <LoadingRows rows={8} />
+      </section>
+    </>
+  );
+}
+
 function CompanyParts({ signInHref }: { signInHref: string }) {
   const company = useCompany();
-  if (company.isPending) return <LoadingRows rows={4} />;
+  if (company.isPending) return <CompanyPlaceholder />;
   if (blocking([company]) !== undefined || company.data === undefined) {
     return (
       <Failure
@@ -172,9 +200,13 @@ function Details({ company }: { company: Company }) {
             type="tel"
             maxLength={32}
             autoComplete="tel"
+            aria-describedby="company-phone-help"
             value={fields.phone}
             onChange={(e) => change({ phone: e.target.value })}
           />
+          <p id="company-phone-help" className="secondary">
+            {t.companyPhoneHelp}
+          </p>
         </Field>
         <Field id="company-email" label={t.settings.companyEmail}>
           <input

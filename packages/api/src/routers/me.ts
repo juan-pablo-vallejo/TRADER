@@ -1,5 +1,9 @@
-// The signed-in caller's own record: the first consumer of the protected procedure. `get`
-// takes no input, so nothing a client sends can name whose record it reads. The output is
+// The signed-in caller's own record: the first consumer of the protected procedure. Nothing
+// `get` takes can name whose record it reads. A phone that signed in by its Face ID or
+// fingerprint key says when the key was made: a key older than a change to the person's
+// sign-in address is refused as a deactivated person is, and the phone drops it, so a lost
+// phone's key stops once the office changes the address. Clerk's token does not say how a
+// session began, so the phone's word is what there is. The output is
 // validated and narrowed: no identity subject, no deactivation state (a deactivated caller
 // never reaches here). `update` writes the caller's `name` and
 // `phone` and nothing else: email, role, company and identity are not in its input and are
@@ -7,11 +11,12 @@
 // `signInPhone` is the number the roster invited (users.ts): read here, written by no one
 // through this router.
 import { ROLES } from "../contract/enums";
-import { users } from "@trader/db/schema";
-import { eq } from "drizzle-orm";
+import { addressChanges, users } from "@trader/db/schema";
+import { and, eq, gt } from "drizzle-orm";
 import { z } from "zod";
 
-import { protectedProcedure, router } from "../core/trpc";
+import { instant } from "../contract/instant";
+import { protectedProcedure, router, unauthorized } from "../core/trpc";
 
 const meOutput = z.strictObject({
   id: z.uuid(),
@@ -35,16 +40,37 @@ const updateInput = z.strictObject({
     .transform((p) => (p === "" ? null : p)),
 });
 
+// Null or absent: a sign-in by a code, Google or Apple, as a build that names no key sends it.
+const getInput = z.strictObject({ keyMadeAt: instant }).nullish();
+
 export const meRouter = router({
-  get: protectedProcedure.output(meOutput).query(({ ctx }) => ({
-    id: ctx.user.id,
-    companyId: ctx.user.companyId,
-    role: ctx.user.role,
-    name: ctx.user.name,
-    email: ctx.user.email,
-    phone: ctx.user.phone,
-    signInPhone: ctx.user.signInPhone,
-  })),
+  get: protectedProcedure
+    .input(getInput)
+    .output(meOutput)
+    .query(async ({ ctx, input }) => {
+      if (input != null) {
+        const [changed] = await ctx.tx
+          .select({ id: addressChanges.id })
+          .from(addressChanges)
+          .where(
+            and(
+              eq(addressChanges.userId, ctx.user.id),
+              gt(addressChanges.createdAt, input.keyMadeAt),
+            ),
+          )
+          .limit(1);
+        if (changed !== undefined) throw unauthorized();
+      }
+      return {
+        id: ctx.user.id,
+        companyId: ctx.user.companyId,
+        role: ctx.user.role,
+        name: ctx.user.name,
+        email: ctx.user.email,
+        phone: ctx.user.phone,
+        signInPhone: ctx.user.signInPhone,
+      };
+    }),
   update: protectedProcedure
     .input(updateInput)
     .output(meOutput)

@@ -178,7 +178,7 @@ function Grid({
                       onOpen={() => onOpen(shift.id)}
                     />
                   ))}
-                  {view === "employee" && (
+                  {view === "employee" && row.active !== false && (
                     <button
                       type="button"
                       className={

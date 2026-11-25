@@ -19,6 +19,7 @@ import { useStrings } from "./i18n";
 import { KEYS_HELP_EVENT } from "./keyboard-rows";
 import { LANGUAGES } from "./i18n/language";
 import { blocking } from "./failure";
+import { firstName } from "./format";
 import { useTRPC } from "./trpc";
 
 export function Account({ signInHref }: { signInHref: string }) {
@@ -81,6 +82,8 @@ export function Account({ signInHref }: { signInHref: string }) {
     >
       <summary className={styles.name} title={t.account}>
         <span className={styles.nameText}>{me.data.name}</span>
+        {/* At phone width the first name alone, kept whole beside the company's. */}
+        <span className={styles.firstName}>{firstName(me.data.name)}</span>
       </summary>
       <div className={styles.menu}>
         <Link

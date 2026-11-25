@@ -200,7 +200,12 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
           </div>
           <JobsTable rows={rows} onOpen={(id) => setFilters({ job: id })} />
           {opened !== undefined && (
-            <SidePanel title={opened.name} onClose={() => setFilters({ job: "" })} wide>
+            <SidePanel
+              title={opened.name}
+              onClose={() => setFilters({ job: "" })}
+              returnTo={opened.id}
+              wide
+            >
               <EditorSection heading={t.details}>
                 <FactsEditor key={opened.id} row={opened} customers={customers.data!} />
               </EditorSection>
@@ -260,7 +265,9 @@ function JobsTable({ rows, onOpen }: { rows: Rows; onOpen: (jobId: string) => vo
       key: "edit",
       header: t.jobPage.edit,
       cell: () => t.jobForm.editShort,
-      open: (row) => ({ label: t.jobForm.open(row.name), onOpen: () => onOpen(row.id) }),
+      // Named "Edit, <job>": the word it shows, then whose.
+      open: (row) => ({ label: row.name, onOpen: () => onOpen(row.id) }),
+      action: true,
     },
   ];
   return (

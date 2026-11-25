@@ -3,12 +3,15 @@
 // The side panel: one thing's details, or one form, over the screen that asked. A native
 // `<dialog>` opened modal, so the page behind is inert, Tab stays inside, and Escape
 // closes it. Focus goes back to what opened it when it closes: the cell, the shift, the
-// button. Whether a panel is open is the screen's to keep, in the address where a panel
+// button. A panel opened by its address had no opener: its focus goes back to the
+// record's own row, the control `returnTo` names (data-table.tsx, `data-open`). Whether a
+// panel is open is the screen's to keep, in the address where a panel
 // should be linkable (use-url-filters.ts). Lifted from the schedule's drawer; consumed by
 // the Schedule and Hours screens.
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
+import { rowOpener } from "./data-table";
 import { useStrings } from "./i18n";
 import styles from "./side-panel.module.css";
 
@@ -16,12 +19,15 @@ export function SidePanel({
   title,
   onClose,
   wide = false,
+  returnTo,
   children,
 }: {
   title: string;
   onClose: () => void;
   // Room for a table of entries; the default is a form's width.
   wide?: boolean;
+  // The key of the row whose control opens this panel, for a panel opened by its address.
+  returnTo?: string;
   children: ReactNode;
 }) {
   const { t } = useStrings();
@@ -44,8 +50,12 @@ export function SidePanel({
       );
     field?.focus();
     return () => {
-      if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+      if (opener instanceof HTMLElement && opener.isConnected && opener !== document.body)
+        opener.focus();
+      else if (returnTo !== undefined) rowOpener(returnTo)?.focus();
     };
+    // Once, as the panel opens: what it returns to is fixed then.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   return (
     <dialog

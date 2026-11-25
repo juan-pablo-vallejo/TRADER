@@ -430,8 +430,6 @@ test("Hours: Export takes the typed dates, a day line is a full target, a correc
   // Export, pressed with dates typed and not shown: the file is for those dates.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/hours");
-  // Typed only once the page is the browser's: a date typed into the server's markup before
-  // hydration is put back to the range shown.
   await page.waitForLoadState("networkidle");
   await page.getByLabel("From").fill("2026-01-05");
   await page.getByLabel("Through").fill("2026-01-11");
@@ -660,4 +658,172 @@ test("a worker is refused the office", async ({ page }) => {
   await expect(page.getByText("Not permitted.")).toBeVisible();
   await expect(page.getByRole("table")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add customer" })).toHaveCount(0);
+});
+
+// The office in Spanish: the language's cookie, set before the next page is drawn.
+async function inSpanish(page: Page): Promise<void> {
+  await page
+    .context()
+    .addCookies([{ name: "trader_lang", value: "es", url: new URL(page.url()).origin }]);
+}
+
+test("a required field is refused under it in the office's language, not the browser's bubble", async ({
+  page,
+}) => {
+  await signIn(page, ADMIN);
+  await inSpanish(page);
+  await page.goto("/customers");
+  await page.getByRole("button", { name: "Agregar cliente" }).click();
+  const form = page.locator("#create-form");
+  await form.getByRole("button", { name: "Agregar cliente" }).click();
+  await expect(form.getByText("Completa este campo.")).toBeVisible();
+  const name = form.locator("#new-customer-name");
+  await expect(name).toBeFocused();
+  await expect(name).toHaveAttribute("aria-invalid", "true");
+  await name.fill("A");
+  await expect(form.getByText("Completa este campo.")).toHaveCount(0);
+});
+
+test("a panel opened by its address gives the focus back to its row when it closes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/jobs");
+  const edit = page.getByRole("main").locator("[data-open]").first();
+  await expect(edit).toBeVisible();
+  // Named by the word it shows, then the job.
+  await expect(edit).toHaveAccessibleName(/^Edit, /);
+  const id = await edit.getAttribute("data-open");
+  await page.goto(`/jobs?job=${id}`);
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.locator(`[data-open="${id}"]`)).toBeFocused();
+  // The search button's name begins with the word it shows.
+  await expect(
+    page.locator("header").getByRole("button", { name: /^Search/ }),
+  ).toBeVisible();
+});
+
+test("at phone width: Correct brings its form into view, Settings holds its room, rows and the header keep their lines", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 800 });
+  await signIn(page, ADMIN);
+
+  // Correct, in a day's panel: the form in view with the focus in its first field.
+  await page.goto("/hours?range=last");
+  await page.getByRole("main").getByRole("table").getByRole("button").first().click();
+  const panel = page.getByRole("dialog");
+  await panel
+    .getByRole("button", { name: /^Correct/ })
+    .first()
+    .click();
+  const first = panel.locator('form[id^="correct-"]').locator("input, select").first();
+  await expect(first).toBeFocused();
+  await expect(first).toBeInViewport();
+  await page.keyboard.press("Escape");
+
+  // Settings: Me stays where it first stood while Company and Time clock arrive above it.
+  await page.route("**/api/trpc/**company.get**", async (route) => {
+    await new Promise((done) => setTimeout(done, 3000));
+    await route.continue();
+  });
+  await page.goto("/settings");
+  const me = page.locator("#settings-me");
+  await expect(me).toBeVisible();
+  const before = (await me.boundingBox())?.y ?? 0;
+  await expect(page.getByRole("button", { name: "Save company" })).toBeVisible({
+    timeout: 15_000,
+  });
+  const after = (await me.boundingBox())?.y ?? 0;
+  expect(Math.abs(after - before)).toBeLessThan(200);
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+
+  // The header keeps the person's first name, whole.
+  const name = page.locator("header summary");
+  await expect(name).toBeVisible();
+  expect((await name.innerText()).trim()).not.toContain(" ");
+  expect((await name.boundingBox())?.width ?? 0).toBeGreaterThan(40);
+
+  // A name's target is its whole line; a row's Edit is its own line, a target tall.
+  await page.goto("/customers");
+  const row = page.getByRole("main").locator("tbody tr").first();
+  const open = row.locator("td").first().getByRole("button");
+  const rowBox = (await row.boundingBox())!;
+  const openBox = (await open.boundingBox())!;
+  expect(openBox.width).toBeGreaterThan(rowBox.width - 48);
+  expect(openBox.height).toBeGreaterThanOrEqual(48);
+  await page.goto("/jobs");
+  const job = page.getByRole("main").locator("tbody tr").first();
+  const editBox = (await job.locator("[data-open]").boundingBox())!;
+  const nameBox = (await job.locator("td").first().boundingBox())!;
+  expect(editBox.height).toBeGreaterThanOrEqual(48);
+  expect(editBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
+});
+
+test("at 768: Hours' day lines are a target tall, and a Spanish draft line's fields sit level", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 768, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/hours?range=last");
+  const line = page.getByRole("main").getByRole("table").locator("tbody td").nth(1);
+  await expect(line).toBeVisible();
+  expect((await line.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(36);
+
+  await inSpanish(page);
+  // A draft: the first test of this file started one.
+  await page.goto("/invoices?show=drafts");
+  const draft = page.getByRole("main").locator('a[href^="/invoices/"]').first();
+  await draft.click();
+  await page.waitForURL((url) => /^\/invoices\/[0-9a-f-]{36}$/.test(url.pathname));
+  await page.getByRole("button", { name: "Agregar una línea" }).click();
+  const top = async (label: string) =>
+    (await page.getByLabel(label, { exact: true }).last().boundingBox())?.y ?? 0;
+  expect(await top("Precio por unidad")).toBe(await top("Descripción"));
+});
+
+test("a draft with no lines says why at its foot, and once deleted is not read again", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const wrong = watch(page);
+  await signIn(page, ADMIN);
+  await page.goto("/invoices");
+  await page.getByRole("button", { name: "New invoice" }).click();
+  const form = page.getByRole("form", { name: "New invoice" });
+  await form.locator("#invoice-job").selectOption({ index: 1 });
+  await form.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => /^\/invoices\/[0-9a-f-]{36}$/.test(url.pathname), {
+    timeout: 90_000,
+  });
+  await expect(
+    page.getByText("This draft cannot be issued until it has a line."),
+  ).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  await page.getByRole("button", { name: "Delete draft" }).click();
+  await page.getByRole("button", { name: "Delete draft" }).last().click();
+  await page.waitForURL((url) => url.pathname === "/invoices");
+  await page.waitForLoadState("networkidle");
+  expect(wrong, "nothing asked of the deleted draft").toEqual([]);
+});
+
+test("dates typed into Hours before the page takes over are kept", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  // The page's scripts are held back until the dates are typed into its markup.
+  let release: () => void = () => {};
+  const held = new Promise<void>((done) => (release = done));
+  await page.route("**/_next/static/chunks/**", async (route) => {
+    await held;
+    await route.continue();
+  });
+  await page.goto("/hours", { waitUntil: "domcontentloaded" });
+  await page.locator("#hours-from").fill("2026-01-05");
+  await page.locator("#hours-to").fill("2026-01-11");
+  release();
+  await page.waitForLoadState("networkidle");
+  await expect(page.locator("#hours-from")).toHaveValue("2026-01-05");
+  await expect(page.locator("#hours-to")).toHaveValue("2026-01-11");
 });

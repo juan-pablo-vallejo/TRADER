@@ -112,7 +112,11 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
             onOpen={(id) => setFilters({ customer: id })}
           />
           {opened !== undefined && (
-            <SidePanel title={opened.name} onClose={() => setFilters({ customer: "" })}>
+            <SidePanel
+              title={opened.name}
+              onClose={() => setFilters({ customer: "" })}
+              returnTo={opened.id}
+            >
               <Editor key={opened.id} row={opened} />
             </SidePanel>
           )}

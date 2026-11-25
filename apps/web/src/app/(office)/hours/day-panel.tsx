@@ -19,7 +19,7 @@
 // can be linked.
 import { instantToWall } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { AppRouter } from "@trader/api";
 import type { inferRouterOutputs } from "@trpc/server";
@@ -397,6 +397,21 @@ function useCorrection(workerId: string, onDone: (outcome: Outcome) => void) {
   return { send, sending: correct.isPending, refusal, setRefusal };
 }
 
+// An editor as it opens: brought into view inside the panel, which at phone width opens it
+// below the screen, and its first field given the focus.
+function useRevealed() {
+  const ref = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const form = ref.current;
+    if (form === null) return;
+    form.scrollIntoView({ block: "nearest" });
+    form
+      .querySelector<HTMLElement>("input:not([type=hidden]), select, textarea")
+      ?.focus({ preventScroll: true });
+  }, []);
+  return ref;
+}
+
 // A date and time as the company's clock read it. The control has no zone of its own; the
 // screen says which one above the days.
 function TimeField({
@@ -492,6 +507,7 @@ function SessionCorrection({
   const [draft, setDraft] = useState<SessionDraft>(() => draftOf(session, zone));
   const [badField, setBadField] = useState<string | null>(null);
   const { send, sending, refusal, setRefusal } = useCorrection(workerId, onDone);
+  const revealed = useRevealed();
   const voided = session.events.some((e) => e.effect === "void");
   // The session's own job is always offered, listed or not.
   const options = jobs.some((j) => j.id === session.job.id)
@@ -526,6 +542,7 @@ function SessionCorrection({
 
   return (
     <form
+      ref={revealed}
       id={`correct-${id}`}
       className={`${controls.card} ${styles.editor}`}
       aria-label={t.correctionOf(session.job.name, f.stamp(session.startedAt, zone))}
@@ -648,6 +665,7 @@ function MissingHours({
   const [draft, setDraft] = useState({ jobId: "", start: "", end: "" });
   const [badField, setBadField] = useState<string | null>(null);
   const { send, sending, refusal, setRefusal } = useCorrection(workerId, onDone);
+  const revealed = useRevealed();
   const change = (patch: Partial<typeof draft>) => {
     setBadField(null);
     setRefusal(null);
@@ -666,6 +684,7 @@ function MissingHours({
   };
   return (
     <form
+      ref={revealed}
       id={`correct-${MISSING}`}
       className={`${controls.card} ${styles.editor}`}
       aria-label={t.addMissingHours}

@@ -10,6 +10,11 @@ import { EmptyState } from "./empty-state";
 import { LoadingRows } from "./loading-rows";
 import table from "./table.module.css";
 
+// The control that opens a row's record, by the row's key: where a panel opened by its
+// address hands the focus back (side-panel.tsx).
+export const rowOpener = (key: string): HTMLElement | null =>
+  document.querySelector<HTMLElement>(`[data-open="${CSS.escape(key)}"]`);
+
 export type Column<Row> = {
   key: string;
   header: string;
@@ -23,6 +28,8 @@ export type Column<Row> = {
   // What the cell opens, and the name of that for a screen reader; null when it opens
   // nothing for this row.
   open?: (row: Row) => { label: string; onOpen: () => void } | null;
+  // A row's act (its Edit): on a line of its own, a full target tall, in a narrow row.
+  action?: boolean;
   // The closing row's cell for this column.
   total?: ReactNode;
 };
@@ -111,6 +118,7 @@ export function DataTable<Row>({
                     data-empty={c.empty?.(row) ? "" : undefined}
                     className={[
                       c.number ? table.number : "",
+                      c.action ? table.action : "",
                       index === 0 ? "body-strong" : "",
                     ]
                       .join(" ")
@@ -124,6 +132,7 @@ export function DataTable<Row>({
                       <button
                         type="button"
                         className={table.cellOpen}
+                        data-open={rowKey(row)}
                         onClick={opens.onOpen}
                       >
                         {content}

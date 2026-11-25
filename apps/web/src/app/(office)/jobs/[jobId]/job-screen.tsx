@@ -11,6 +11,7 @@
 // that dials, a link to their week in Hours), the job's invoices with their state, and
 // the details: customer, address, notes, location, status, with the way to edit them.
 // Every figure is the server's.
+import { whatsAppLink } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,7 +20,7 @@ import { useState } from "react";
 import controls from "../../../controls.module.css";
 import { DataTable, type Column } from "../../../data-table";
 import { blocking, codeOf, EmptyState, Failure, RefreshFailed } from "../../../failure";
-import { hours } from "../../../format";
+import { hours, signInPhone } from "../../../format";
 import { useStrings } from "../../../i18n";
 import { LoadingRows } from "../../../loading-rows";
 import { Note } from "../../../note";
@@ -98,7 +99,6 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
   const draftOf = page.invoices.find((i) => i.state === "draft");
   type Person = (typeof page.people)[number];
   type Invoice = (typeof page.invoices)[number];
-  const dial = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
   const people: Column<Person>[] = [
     { key: "name", header: t.name, cell: (p) => p.person.name },
@@ -128,16 +128,16 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
       cell: (p) => hours(p.hours.toDate),
     },
     {
-      key: "call",
-      header: t.todayScreen.call,
-      empty: (p) => p.person.phone === null,
+      key: "whatsapp",
+      header: t.todayScreen.whatsApp,
+      empty: (p) => whatsAppLink(p.person.phone) === null,
       cell: (p) =>
-        p.person.phone === null ? (
+        whatsAppLink(p.person.phone) === null ? (
           ""
         ) : (
-          <a href={dial(p.person.phone)}>
-            {p.person.phone}
-            <span className="visually-hidden">{`, ${t.todayScreen.callOf(p.person.name)}`}</span>
+          <a href={whatsAppLink(p.person.phone)!} target="_blank" rel="noreferrer">
+            {signInPhone(p.person.phone ?? "")}
+            <span className="visually-hidden">{`, ${t.todayScreen.whatsAppOf(p.person.name)}`}</span>
           </a>
         ),
     },

@@ -250,8 +250,8 @@ CREATE TABLE "invitation_sends" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "invitation_sends_company_id_id_unique" UNIQUE("company_id","id"),
 	CONSTRAINT "invitation_sends_channel" CHECK ("invitation_sends"."channel" IN ('whatsapp', 'email')),
-	CONSTRAINT "invitation_sends_outcome" CHECK ("invitation_sends"."outcome" IN ('sent', 'failed')),
-	CONSTRAINT "invitation_sends_outcome_facts" CHECK (("invitation_sends"."outcome" = 'failed') = ("invitation_sends"."failure" IS NOT NULL) AND ("invitation_sends"."outcome" = 'sent' OR "invitation_sends"."provider_message_id" IS NULL) AND ("invitation_sends"."channel" = 'email' OR ("invitation_sends"."outcome" = 'sent' AND "invitation_sends"."provider_message_id" IS NULL))),
+	CONSTRAINT "invitation_sends_outcome" CHECK ("invitation_sends"."outcome" IN ('sent', 'failed', 'copied', 'opened')),
+	CONSTRAINT "invitation_sends_outcome_facts" CHECK (("invitation_sends"."outcome" = 'failed') = ("invitation_sends"."failure" IS NOT NULL) AND ("invitation_sends"."outcome" = 'sent' OR "invitation_sends"."provider_message_id" IS NULL) AND ("invitation_sends"."channel" = 'email' OR ("invitation_sends"."outcome" IN ('sent', 'copied', 'opened') AND "invitation_sends"."provider_message_id" IS NULL)) AND ("invitation_sends"."outcome" NOT IN ('copied', 'opened') OR "invitation_sends"."channel" = 'whatsapp')),
 	CONSTRAINT "invitation_sends_failure_code" CHECK ("invitation_sends"."failure" ~ '^[a-z_]+$'),
 	CONSTRAINT "invitation_sends_recipient_shape" CHECK (("invitation_sends"."channel" = 'email' AND "invitation_sends"."recipient" = lower(btrim("invitation_sends"."recipient")) AND "invitation_sends"."recipient" ~ '^[^@[:space:]]+@[^@[:space:]]+$') OR ("invitation_sends"."channel" = 'whatsapp' AND "invitation_sends"."recipient" ~ '^\+1[2-9][0-9]{9}$'))
 );

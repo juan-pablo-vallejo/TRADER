@@ -53,12 +53,16 @@ export const invitationSends = pgTable(
     }),
     index("invitation_sends_user_id_idx").on(t.userId),
     check("invitation_sends_channel", sql`${t.channel} IN ('whatsapp', 'email')`),
-    check("invitation_sends_outcome", sql`${t.outcome} IN ('sent', 'failed')`),
-    // A failure has its code and no message id; a send that went has no failure. A text is
-    // only ever noted as opened to send: the server has no outcome of it to record.
+    check(
+      "invitation_sends_outcome",
+      sql`${t.outcome} IN ('sent', 'failed', 'copied', 'opened')`,
+    ),
+    // A failure has its code and no message id; a send that went has no failure. A WhatsApp
+    // message leaves the admin's own phone: it is noted as copied, opened or, once the admin
+    // says so, sent, never failed and with no message id; copied and opened are its alone.
     check(
       "invitation_sends_outcome_facts",
-      sql`(${t.outcome} = 'failed') = (${t.failure} IS NOT NULL) AND (${t.outcome} = 'sent' OR ${t.providerMessageId} IS NULL) AND (${t.channel} = 'email' OR (${t.outcome} = 'sent' AND ${t.providerMessageId} IS NULL))`,
+      sql`(${t.outcome} = 'failed') = (${t.failure} IS NOT NULL) AND (${t.outcome} = 'sent' OR ${t.providerMessageId} IS NULL) AND (${t.channel} = 'email' OR (${t.outcome} IN ('sent', 'copied', 'opened') AND ${t.providerMessageId} IS NULL)) AND (${t.outcome} NOT IN ('copied', 'opened') OR ${t.channel} = 'whatsapp')`,
     ),
     check("invitation_sends_failure_code", sql`${t.failure} ~ '^[a-z_]+$'`),
     // The address as the roster holds one: an email lowercased, a number in E.164.

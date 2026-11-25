@@ -4,8 +4,8 @@
 // Color: the same names and values as the office's (apps/web/src/app/theme.css); a test
 // fails when the two differ (apps/web/test/theme.test.ts). The accent is the color of
 // every action; `brand` and `brandNavy` belong to the mark, never to a control or a status,
-// save the sign-in screen, which is on D'Sierra's brand as the office's is: its navy band
-// and its one red button (ui/phone-sign-in.tsx).
+// save a control's edge, which is the navy, and the sign-in screen, which is on D'Sierra's
+// brand as the office's is: its navy band and its one red button (ui/phone-sign-in.tsx).
 export const color = {
   ink: "#111827",
   inkSecondary: "#4B5563",
@@ -13,8 +13,8 @@ export const color = {
   surface: "#FFFFFF",
   // A hairline between things.
   border: "#D9DCE3",
-  // The edge of a control: 3:1 on white.
-  controlBorder: "#8A93A2",
+  // The edge of a control, a field's included: the navy, 3:1 and more on white and canvas.
+  controlBorder: "#140064",
   accent: "#2808AC",
   onAccent: "#FFFFFF",
   accentTint: "#EEEBFA",
@@ -54,8 +54,8 @@ export const type = {
   bodyStrong: { fontSize: 17, lineHeight: 24, fontWeight: "600" },
   secondary: { fontSize: 15, lineHeight: 20, fontWeight: "400" },
   label: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 15,
+    lineHeight: 20,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,

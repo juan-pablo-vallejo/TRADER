@@ -6,15 +6,17 @@
      fails when the two differ (apps/web/test/theme.test.ts). D Sierra's brand: their indigo
      is the color of every action, link, focus ring and current item inside the office;
      their red and their navy belong to the mark, the homepage and sign-in, never to a
-     control of the office and never to a status. */
+     control of the office and never to a status, save the navy on a control's edge
+     (--control-border). */
   --ink: #111827;
   --ink-secondary: #4b5563;
   --canvas: #f5f6f8;
   --surface: #ffffff;
   /* A hairline between things. */
   --border: #d9dce3;
-  /* The edge of a control: 3:1 on white, so a field is seen without its label. */
-  --control-border: #8a93a2;
+  /* The edge of a control: their navy, the one place it is a control's, 3:1 and more on
+     white and on the canvas, so a field is seen without its label. */
+  --control-border: #140064;
   --accent: #2808ac;
   --on-accent: #ffffff;
   /* Behind a selected row and the current item. */

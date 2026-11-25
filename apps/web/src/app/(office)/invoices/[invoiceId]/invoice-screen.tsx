@@ -113,7 +113,17 @@ const laborLine = (day: string) => `Labor, ${day}`;
 const ADD_LINE_ID = "invoice-add-line";
 const Said = createContext<(text: string) => void>(() => {});
 
-function DraftEditor({ invoice }: { invoice: Invoice }) {
+function DraftEditor({
+  invoice,
+  deleting,
+  stopReads,
+}: {
+  invoice: Invoice;
+  // Whether its deletion is sent: the invoice's reads stop then, so the page never asks
+  // again for an invoice the server is deleting or has deleted. A refusal starts them again.
+  deleting: boolean;
+  stopReads: (stop: boolean) => void;
+}) {
   const { t, f } = useStrings();
   const s = t.invoices;
   const trpc = useTRPC();
@@ -138,7 +148,9 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   const say = useContext(Said);
 
   const [tone, setTone] = useState<"saved" | "error">("error");
-  const offers = useQuery(trpc.invoice.suggest.queryOptions({ invoiceId: invoice.id }));
+  const offers = useQuery(
+    trpc.invoice.suggest.queryOptions({ invoiceId: invoice.id }, { enabled: !deleting }),
+  );
 
   const change = (next: Draft[]) => {
     setLines(next);
@@ -227,7 +239,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
     trpc.invoice.issue.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          fail(answer.code === "no_lines" ? s.noLines : s.noSeries);
+          fail(answer.code === "no_lines" ? s.noLinesToIssue : s.noSeries);
           await refresh();
           return;
         }
@@ -242,16 +254,20 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   );
   const remove = useMutation(
     trpc.invoice.remove.mutationOptions({
+      onMutate: () => stopReads(true),
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
+          stopReads(false);
           fail(s.isIssued);
           return;
         }
+        // The list is read again when it is shown; this invoice's reads stay stopped.
         await refresh();
         // Said on the list, where the page goes.
         router.push("/invoices?done=removed");
       },
       onError: () => {
+        stopReads(false);
         fail(s.unknownOutcome);
         void refresh();
       },
@@ -442,7 +458,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       <div className={styles.danger}>
         {dirty || invoice.lines.length === 0 ? (
           <p className="secondary">
-            {invoice.lines.length === 0 && !dirty ? s.noLines : s.unsaved}
+            {invoice.lines.length === 0 && !dirty ? s.noLinesToIssue : s.unsaved}
           </p>
         ) : (
           <DestructiveAction
@@ -943,7 +959,10 @@ export function InvoiceScreen({
   const s = t.invoices;
   const [said, setSaid] = useState<string | null>(null);
   const trpc = useTRPC();
-  const read = useQuery(trpc.invoice.read.queryOptions({ invoiceId }));
+  const [deleting, setDeleting] = useState(false);
+  const read = useQuery(
+    trpc.invoice.read.queryOptions({ invoiceId }, { enabled: !deleting }),
+  );
   const back = (
     <p className={styles.back}>
       <Link href="/invoices">{s.back}</Link>
@@ -1014,7 +1033,12 @@ export function InvoiceScreen({
       {invoice.state === "draft" ? (
         // What is typed stays the editor's own until it is saved: a refetch after a save
         // must not start it afresh and drop the note that said so.
-        <DraftEditor key={invoice.id} invoice={invoice} />
+        <DraftEditor
+          key={invoice.id}
+          invoice={invoice}
+          deleting={deleting}
+          stopReads={setDeleting}
+        />
       ) : (
         <Issued invoice={invoice} />
       )}

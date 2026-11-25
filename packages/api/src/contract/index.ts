@@ -19,3 +19,4 @@ export * from "./pull";
 export * from "./rejections";
 export * from "./sign-in";
 export * from "./status";
+export * from "./whatsapp";

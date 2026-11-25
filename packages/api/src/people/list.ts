@@ -25,12 +25,14 @@ import { byName } from "../core/order";
 // text is the admin's own message, noted when they opened it to send; an email is
 // TRADER's, with the mail service's answer. The address it went to stays in the record and
 // is not output: the panel shows the person's own.
+const OUTCOMES = ["sent", "failed", "copied", "opened"] as const;
+
 const invitationSend = z.strictObject({
   id: z.uuid(),
   channel: z.enum(INVITATION_CHANNELS),
   at: z.date(),
   by: z.string(),
-  outcome: z.enum(["sent", "failed"]),
+  outcome: z.enum(OUTCOMES),
   failure: z.string().nullable(),
 });
 
@@ -187,7 +189,7 @@ const toUser = (row: Row, sends: Send[], changes: Changed[]): Person => ({
       channel: channelOf(send),
       at: send.at,
       by: send.by,
-      outcome: send.outcome === "sent" ? "sent" : "failed",
+      outcome: OUTCOMES.find((o) => o === send.outcome) ?? "failed",
       failure: send.failure,
     })),
   },

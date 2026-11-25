@@ -10,6 +10,7 @@ import { isClosed } from "../core/demo-door";
 import {
   invitationInput,
   noteInvitation,
+  noteInvitationInput,
   noteInvitationOutput,
   sendInvitation,
   sendInvitationOutput,
@@ -59,7 +60,7 @@ export const peopleRouter = router({
           }),
     ),
   noteInvitation: roleProcedure("admin")
-    .input(invitationInput)
+    .input(noteInvitationInput)
     .output(noteInvitationOutput)
     .mutation(({ ctx, input }) =>
       isClosed(ctx.closed, ctx.user.companyId)

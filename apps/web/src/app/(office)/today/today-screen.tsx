@@ -15,7 +15,7 @@
 // It reads `overview.today` (api overview/today.ts) and names a person's status with the
 // function the phone's Crew tab uses (today-view.ts). Every figure is the server's. It is
 // read again each minute while the page is open.
-import { minuteIn } from "@trader/api/contract";
+import { minuteIn, whatsAppLink } from "@trader/api/contract";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { type ReactNode, useEffect, useState } from "react";
@@ -102,7 +102,6 @@ function Shown({ today, now }: { today: Today; now: number }) {
   const shown = rows.slice(0, ATTENTION_ROWS);
   const more = rows.length - shown.length;
   const { working, expected, done } = bands(today, minute);
-  const dial = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
   const person = (p: Person, line: ReactNode) => (
     <li key={p.person.id}>
@@ -158,15 +157,17 @@ function Shown({ today, now }: { today: Today; now: number }) {
                       row.jobId,
                     )}
                   </span>
-                  {row.person.phone === null ? (
+                  {whatsAppLink(row.person.phone) === null ? (
                     <span className="secondary">{s.noNumber}</span>
                   ) : (
                     <a
                       className={controls.secondary}
-                      href={dial(row.person.phone)}
-                      aria-label={s.callOf(row.person.name)}
+                      href={whatsAppLink(row.person.phone)!}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={s.whatsAppOf(row.person.name)}
                     >
-                      {s.call}
+                      {s.whatsApp}
                     </a>
                   )}
                 </li>

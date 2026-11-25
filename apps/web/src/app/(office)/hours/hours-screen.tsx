@@ -73,6 +73,29 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
   const shown = range ?? weekOf(today());
   const [draft, setDraft] = useState<Range | null>(null);
   const typed = draft ?? shown;
+  // The two fields keep their own values, as sign-in's does: React empties a field it holds
+  // as it takes the page over, and dates typed before then were put back to the range
+  // shown. Typed before then: a field's value is not the one its markup came with
+  // (`defaultValue`), and those dates are the draft. After that, the fields follow the
+  // range shown whenever nothing typed is waiting.
+  const fromField = useRef<HTMLInputElement>(null);
+  const toField = useRef<HTMLInputElement>(null);
+  const tookOver = useRef(false);
+  useEffect(() => {
+    const from = fromField.current;
+    const to = toField.current;
+    if (from === null || to === null) return;
+    if (!tookOver.current) {
+      tookOver.current = true;
+      if (from.value !== from.defaultValue || to.value !== to.defaultValue) {
+        setDraft({ from: from.value, to: to.value });
+        return;
+      }
+    }
+    if (draft !== null) return;
+    from.value = shown.from;
+    to.value = shown.to;
+  }, [draft, shown.from, shown.to]);
   // Whether the dates in the form, typed or shown, are a range the rule refuses: said under
   // the field as they are typed, and cleared as soon as they are a range again.
   const refused =
@@ -138,21 +161,23 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
         <div className={styles.lookupGrid}>
           <Field id="hours-from" label={t.planFrom}>
             <input
+              ref={fromField}
               id="hours-from"
               className={controls.input}
               type="date"
               required
-              value={typed.from}
+              defaultValue={typed.from}
               onChange={(e) => setDraft({ ...typed, from: e.target.value })}
             />
           </Field>
           <Field id="hours-to" label={t.planThrough}>
             <input
+              ref={toField}
               id="hours-to"
               className={controls.input}
               type="date"
               required
-              value={typed.to}
+              defaultValue={typed.to}
               aria-invalid={refused}
               aria-describedby={refused ? "hours-range" : undefined}
               onChange={(e) => setDraft({ ...typed, to: e.target.value })}

@@ -88,3 +88,20 @@ summary.name::after {
   color: var(--accent);
   font-weight: 600;
 }
+/* Narrow: the first name, whole, in place of the full name, and the account never shrinks;
+   the company's name beside it shortens instead (header.module.css). */
+.firstName {
+  display: none;
+  white-space: nowrap;
+}
+@media (max-width: 767px) {
+  .account {
+    flex: none;
+  }
+  .nameText {
+    display: none;
+  }
+  .firstName {
+    display: inline;
+  }
+}

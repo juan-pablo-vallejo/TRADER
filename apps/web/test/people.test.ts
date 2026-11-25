@@ -188,7 +188,7 @@ describe("the roster through the route handler", () => {
     expect(await standing()).toEqual({ status: "not_sent", sends: [] });
 
     const noted = await mutate(POST, "people.noteInvitation", {
-      input: { id: uuidv7(), userId },
+      input: { id: uuidv7(), userId, act: "sent" },
       headers: as(admin.email),
     });
     expect(noted.body.result?.data.json).toEqual({ result: "noted" });

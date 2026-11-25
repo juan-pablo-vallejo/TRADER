@@ -1,7 +1,9 @@
-// The invitation message an admin sends from their own phone (people/invitation.ts).
+// The invitation message an admin sends from their own WhatsApp (people/invitation.ts).
 import { describe, expect, it } from "vitest";
 
-import { invitationText, isPhone, smsLink } from "../src/app/(office)/people/invitation";
+import { whatsAppLink } from "@trader/api/contract";
+
+import { invitationText } from "../src/app/(office)/people/invitation";
 
 describe("the invitation message", () => {
   const text = invitationText({
@@ -23,21 +25,14 @@ describe("the invitation message", () => {
     expect(english).not.toBe(spanish);
   });
 
-  it("opens the phone's messages on the person's number with the words written", () => {
-    const link = smsLink("+14015550100", text);
-    expect(link.startsWith("sms:+14015550100?&body=")).toBe(true);
+  it("opens WhatsApp on the person's number with the words written", () => {
+    const link = whatsAppLink("+14015550100", text)!;
+    expect(link.startsWith("https://wa.me/14015550100?text=")).toBe(true);
     // The words survive the trip through a link whole: spaces, accents, a line break.
-    expect(decodeURIComponent(link.slice("sms:+14015550100?&body=".length))).toBe(text);
+    expect(decodeURIComponent(link.slice("https://wa.me/14015550100?text=".length))).toBe(
+      text,
+    );
     expect(link).not.toContain(" ");
     expect(link).not.toContain("\n");
-    // A number as it is shown still dials.
-    expect(smsLink("(401) 555-0100", "x")).toBe("sms:4015550100?&body=x");
-  });
-
-  it("is a link only on a phone", () => {
-    expect(isPhone("Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X)")).toBe(true);
-    expect(isPhone("Mozilla/5.0 (Linux; Android 16; Pixel 9)")).toBe(true);
-    expect(isPhone("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)")).toBe(false);
-    expect(isPhone("")).toBe(false);
   });
 });

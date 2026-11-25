@@ -32,6 +32,7 @@ const counted = (leaf: Leaf, n: number) =>
 // The same in both languages on purpose: the product's name, each language under its own
 // name, a dash for nothing, an id's label, and patterns that are only their blanks.
 const SAME = new Set([
+  "todayScreen.whatsApp",
   "languages.en",
   "languages.es",
   "dayOf",
@@ -138,6 +139,23 @@ describe("the office's words", () => {
       }
     }
     expect([...new Set(found)]).toEqual([]);
+  });
+});
+
+describe("names and labels", () => {
+  it("name the search button with its visible word first", () => {
+    for (const catalog of [en, es]) {
+      expect(catalog.command.title.startsWith(catalog.command.open)).toBe(true);
+    }
+  });
+
+  it("put no Spanish article before a time the person types", () => {
+    // "a la 1:45", "a las 2:30": the article is the hour's, so a label that ends where a
+    // time field begins cannot choose it.
+    const found = leaves(es as unknown as Tree)
+      .filter(([, leaf]) => typeof leaf === "string" && /\ba las?$/.test(leaf))
+      .map(([key]) => key);
+    expect(found).toEqual([]);
   });
 });
 

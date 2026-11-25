@@ -10,6 +10,12 @@
   background: var(--surface);
   border-bottom: var(--hairline) solid var(--border);
 }
+/* The company's name gives way before the person's first name and the search: it shortens
+   with an ellipsis. */
 .wordmark {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--ink);
 }

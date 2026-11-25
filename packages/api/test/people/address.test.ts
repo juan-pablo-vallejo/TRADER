@@ -423,12 +423,46 @@ describe("people.setEmail and people.setSignInPhone", () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const call = o.as(o.c.who);
-      await call.noteInvitation({ id: uuidv7(), userId: o.byNumber });
+      await call.noteInvitation({ id: uuidv7(), userId: o.byNumber, act: "sent" });
       const standing = async () =>
         (await call.list()).find((r) => r.id === o.byNumber)?.invitation.status;
       expect(await standing()).toBe("sent");
       await call.setSignInPhone({ userId: o.byNumber, phone: "+14015550144" });
       expect(await standing()).toBe("not_sent");
+    });
+  });
+});
+
+// A phone signed in by its Face ID or fingerprint key says so, and when the key was made: a
+// key older than a change to the person's sign-in address is refused as a deactivated
+// person is, so a lost phone's key stops once the office changes the address.
+describe("a key sign-in after an address change", () => {
+  it("is refused when the key is older than the change, and admitted otherwise", async () => {
+    await rolledBack(owner, async (tx) => {
+      const o = await office(tx);
+      const me = () =>
+        createCallerFactory(appRouter)(
+          createContext({
+            directory: provider().directory,
+            db: txAsDb(tx),
+            identity: o.worker.who,
+            reporter: quietReporter,
+            requestId: REQUEST_ID,
+            waits: "inherit",
+          }),
+        ).me;
+      const before = new Date(Date.now() - 60_000);
+      // No change yet: the key is admitted, and so is a sign-in that names no key.
+      expect((await me().get({ keyMadeAt: before })).id).toBe(o.worker.id);
+      await o
+        .as(o.c.who)
+        .setEmail({ userId: o.worker.id, email: `moved-${o.run}@crew.test` });
+      expect(await outcome(me().get({ keyMadeAt: before }))).toBe("UNAUTHORIZED");
+      // A key made after the change, and a sign-in by a code, are the person's own.
+      expect((await me().get({ keyMadeAt: new Date(Date.now() + 60_000) })).id).toBe(
+        o.worker.id,
+      );
+      expect((await me().get()).id).toBe(o.worker.id);
     });
   });
 });

@@ -79,7 +79,7 @@ describe("the theme", () => {
       canvas: "#F5F6F8",
       surface: "#FFFFFF",
       border: "#D9DCE3",
-      controlBorder: "#8A93A2",
+      controlBorder: "#140064",
       accent: "#2808AC",
       accentTint: "#EEEBFA",
       brand: "#BC0C0C",
@@ -99,6 +99,11 @@ describe("the theme", () => {
   it("gives a control an edge of 3:1 on the surface, and text 4.5:1 on canvas and surface", () => {
     expect(
       contrast(web.get("controlBorder")!, web.get("surface")!),
+    ).toBeGreaterThanOrEqual(3);
+    // A field's edge is their navy, and is seen on the canvas a page sits on as well.
+    expect(web.get("controlBorder")).toBe(web.get("brandNavy"));
+    expect(
+      contrast(web.get("controlBorder")!, web.get("canvas")!),
     ).toBeGreaterThanOrEqual(3);
     for (const ground of ["surface", "canvas"]) {
       for (const ink of ["ink", "inkSecondary", "accent"]) {

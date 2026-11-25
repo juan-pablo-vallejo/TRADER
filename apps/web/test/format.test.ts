@@ -2,7 +2,13 @@
 // figure is never rounded or divided as a float on the way to the screen.
 import { describe, expect, it } from "vitest";
 
-import { formatters, hours, looksLikeSignInPhone, signInPhone } from "../src/app/format";
+import {
+  firstName,
+  formatters,
+  hours,
+  looksLikeSignInPhone,
+  signInPhone,
+} from "../src/app/format";
 import { en } from "../src/app/i18n/en";
 import { es } from "../src/app/i18n/es";
 
@@ -34,6 +40,14 @@ describe("a sign-in number", () => {
     ]) {
       expect(looksLikeSignInPhone(typed), typed).toBe(false);
     }
+  });
+});
+
+describe("a person's first name", () => {
+  it("is the name's first word, and the whole name when it has one", () => {
+    expect(firstName("Ana Ruiz")).toBe("Ana");
+    expect(firstName("  María José  Pérez ")).toBe("María");
+    expect(firstName("Cher")).toBe("Cher");
   });
 });
 

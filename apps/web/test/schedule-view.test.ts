@@ -89,6 +89,19 @@ describe("the week's rows", () => {
     expect(rows[1]!.days.size).toBe(0);
   });
 
+  it("by employee: a deactivated person's row is offered no new shift", () => {
+    const gone = { id: id(3), name: "Bea", active: false };
+    const rows = byEmployee(
+      [...shifts, shift(9, gone, kitchen, MON, "07:00", "11:00")],
+      [tom, ana, gone],
+    );
+    expect(rows.map((r) => [r.name, r.active])).toEqual([
+      ["Ana", true],
+      ["Bea", false],
+      ["Tom", true],
+    ]);
+  });
+
   it("by jobsite: each with its shifts and the people it has each day", () => {
     const rows = byJobsite(shifts);
     expect(rows.map((r) => r.name)).toEqual(["Kitchen", "Porch"]);

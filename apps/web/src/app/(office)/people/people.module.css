@@ -10,7 +10,7 @@
   overflow-wrap: anywhere;
 }
 .address + .address::before {
-  content: "\00a0· ";
+  content: " ·\00a0";
 }
 @container (min-width: 720px) {
   .address {

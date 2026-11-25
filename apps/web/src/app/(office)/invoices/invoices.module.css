@@ -87,8 +87,11 @@
   .payFields {
     grid-template-columns: 1fr 1fr;
   }
+  /* Fields level on their bottom edge: a label that takes two lines (Spanish's "Precio
+     por unidad") grows upward, never pushing its field below its neighbours'. */
   .line {
     grid-template-columns: 3fr 1fr 1fr 1fr;
+    align-items: end;
   }
   .lineFoot {
     grid-column: 1 / -1;

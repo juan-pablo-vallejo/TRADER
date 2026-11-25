@@ -144,7 +144,7 @@ export const es: Catalog = {
     personWeek: (name) => `La semana de ${name}`,
     personWeekEmpty: "Todavía no hay turnos esta semana.",
     endEarly: "Terminar antes",
-    endEarlyAt: "Termina a las",
+    endEarlyAt: "Hora en que termina",
     endEarlyEffect: (name, jobsite, was, at) =>
       `El turno de ${name} en ${jobsite} terminará a ${las(at)} ${at} y no a ${las(was)} ${was}. Las horas registradas no cambian: marca salida en su propio teléfono.`,
     endedEarly: "El turno ahora termina antes.",
@@ -244,8 +244,8 @@ export const es: Catalog = {
     correctOf: (name) => `Corregir en Horas el tiempo de ${name}`,
     late: (name, job, start) =>
       end(`${name} va tarde a ${job}, que empezó a ${las(start)} ${start}`),
-    call: "Llamar",
-    callOf: (name) => `Llamar a ${name}`,
+    whatsApp: "WhatsApp",
+    whatsAppOf: (name) => `Escribir a ${name} por WhatsApp`,
     noNumber: "Sin número",
     more: (n) => (n === 1 ? "Y 1 más" : `Y ${n} más`),
     onTheClock: "Trabajando ahora",
@@ -400,6 +400,7 @@ export const es: Catalog = {
     save: "Guardar borrador",
     saved: "Borrador guardado.",
     unsaved: "Guarda el borrador antes de emitirlo.",
+    noLinesToIssue: "Este borrador no se puede emitir hasta que tenga una línea.",
     badLine: (n) =>
       `La línea ${n} necesita una descripción, una cantidad mayor que cero y un precio.`,
     badTax: "Escribe el impuesto como un importe, o 0.",
@@ -537,6 +538,11 @@ export const es: Catalog = {
   },
   notPermitted: "No tienes permiso.",
   requestFailed: "No se pudo completar. No se guardó nada. Inténtalo de nuevo.",
+  fieldRefusal: {
+    missing: "Completa este campo.",
+    email: "Escribe un correo electrónico.",
+    other: "Este campo no acepta ese valor.",
+  },
   loadFailed: "Esta página no cargó.",
   refreshFailed: (time: string) =>
     `No se pudo actualizar: esto es lo último leído (${time}).`,
@@ -633,11 +639,14 @@ export const es: Catalog = {
     invitationExplain:
       "Todavía no ha iniciado sesión. Mándale dónde obtener la aplicación. El mensaje ya está escrito, en inglés y en español: envíalo por mensaje de texto desde tu propio teléfono, o deja que TRADER lo mande por correo.",
     invitedOn: (day) => `Invitación del ${day}`,
-    sendByWhatsApp: "Enviar por mensaje de texto",
+    sendByWhatsApp: "Enviar por WhatsApp",
+    sentIt: "Ya lo envié",
     sendByEmail: "Enviar por correo",
     emailGoesTo: (email) => `Por correo, TRADER manda el mismo mensaje a ${email}.`,
     emailed: (email) => `Enviada a ${email}.`,
-    byWhatsApp: (by, at) => `Por mensaje de texto de ${by}, ${at}`,
+    byWhatsApp: (by, at) => `Por WhatsApp de ${by}, ${at}`,
+    copiedBy: (by, at) => `Copiado por ${by}, ${at}, aún sin enviar`,
+    openedBy: (by, at) => `Abierto en WhatsApp por ${by}, ${at}, aún sin enviar`,
     byEmail: (by, at) => `Por correo, enviada por ${by}, ${at}`,
     emailNotSent: (by, at) => `El correo no salió (lo intentó ${by}, ${at})`,
     refused: {
@@ -652,7 +661,9 @@ export const es: Catalog = {
       company_closed: "Esta empresa de demostración no puede invitar a nadie.",
     },
     copyInvitation: "Copiar el mensaje",
-    copied: "Copiado. Pégalo en un mensaje de texto para esa persona.",
+    copied:
+      "Copiado. Pégalo en un mensaje de WhatsApp para esa persona y luego pulsa Ya lo envié.",
+    opened: "Cuando haya salido en WhatsApp, pulsa Ya lo envié.",
     addresses: "Direcciones de acceso",
     addressesExplain:
       "Lo que escribe para iniciar sesión. Deja una vacía para quitarla: una de las dos siempre se queda.",
@@ -707,6 +718,8 @@ export const es: Catalog = {
   customerAdded: (name: string) => `Se agregó ${name}.`,
   address: "Dirección",
   phone: "Teléfono",
+  companyPhoneHelp:
+    "El equipo escribe a la oficina por WhatsApp a este número. Incluye el código de país; un número sin él se lee como de Estados Unidos.",
   notes: "Notas",
   jobsUnarchived: (n) =>
     `${n === 1 ? "1 obra de este cliente no está archivada" : `${n} obras de este cliente no están archivadas`}. ${n === 1 ? "Archívala" : "Archívalas"} primero.`,
