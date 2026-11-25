@@ -18,6 +18,7 @@ import {
   waitForLockWait,
   world,
   type World,
+  uuidv7,
 } from "../helpers";
 
 const owner = ownerDb();
@@ -36,6 +37,9 @@ afterAll(async () => {
 });
 
 const customer = (who: unknown) => appCaller(app, who).customer;
+// A create as the office sends it: with an id of its own.
+const create = (who: unknown, input: Omit<CreateInput, "id">) =>
+  appCaller(app, who).customer.create({ id: uuidv7(), ...input });
 
 type CreateInput = Parameters<ReturnType<typeof customer>["create"]>[0];
 
@@ -109,9 +113,32 @@ describe("customer.list", () => {
 });
 
 describe("customer.create and customer.update", () => {
+  it("answers a resend after a lost answer as its duplicate, and another use of its id as a conflict", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const sent = { id: uuidv7(), name: "Resent Residence", notes: "side door" };
+    const first = await customer(admin.who).create(sent);
+    expect(first.result).toBe("created");
+    // The answer was dropped; the office sends the same thing again.
+    const again = await customer(admin.who).create(sent);
+    expect(again).toMatchObject({ result: "duplicate", customer: { id: sent.id } });
+    // The same id with other contents is not this customer.
+    expect(await customer(admin.who).create({ ...sent, name: "Someone else" })).toEqual({
+      result: "rejected",
+      code: "id_conflict",
+    });
+    const named = (await customer(admin.who).list()).filter((c) => c.id === sent.id);
+    expect(named).toHaveLength(1);
+    // An id held in another company is a conflict too, and nothing is written.
+    const other = await member(owner, w, "b", "admin");
+    expect(await customer(other.who).create({ ...sent })).toEqual({
+      result: "rejected",
+      code: "id_conflict",
+    });
+  });
+
   it("creates with trimmed text, blank optional text as NULL, and lists it", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const answer = await customer(admin.who).create({
+    const answer = await create(admin.who, {
       name: "  Smith Residence ",
       address: "   ",
       phone: "",
@@ -130,6 +157,7 @@ describe("customer.create and customer.update", () => {
         unarchivedJobs: 0,
       },
     });
+    if (answer.result !== "created") throw new Error("not created");
     const [row] = await owner
       .select({ companyId: customers.companyId })
       .from(customers)
@@ -147,9 +175,7 @@ describe("customer.create and customer.update", () => {
       { name: "X", email: "not an email" },
       { name: "X", companyId: w.b.companyId },
     ]) {
-      expect(await outcome(customer(admin.who).create(input as CreateInput))).toBe(
-        "BAD_REQUEST",
-      );
+      expect(await outcome(create(admin.who, input as CreateInput))).toBe("BAD_REQUEST");
     }
   });
 
@@ -212,14 +238,14 @@ describe("customer.deactivate and customer.reactivate", () => {
     const worker = await member(owner, w, "a", "worker");
     const fields = { name: "X" };
     for (const call of [
-      () => customer(worker.who).create(fields),
+      () => create(worker.who, fields),
       () => customer(worker.who).update({ customerId: w.a.customerId, ...fields }),
       () => customer(worker.who).deactivate({ customerId: w.a.customerId }),
       () => customer(worker.who).reactivate({ customerId: w.a.customerId }),
     ]) {
       expect(await outcome(call())).toBe("FORBIDDEN");
     }
-    expect(await outcome(customer(null).create(fields))).toBe("UNAUTHORIZED");
+    expect(await outcome(create(null, fields))).toBe("UNAUTHORIZED");
     for (const customerId of [w.b.customerId, crypto.randomUUID()]) {
       expect(await outcome(customer(admin.who).update({ customerId, ...fields }))).toBe(
         "FORBIDDEN",
@@ -246,7 +272,7 @@ describe("customer.deactivate and customer.reactivate", () => {
         admin.id,
         sql`select 1 from users where id = ${admin.id} for update`,
         '%from "users"%for share%',
-        () => customer(admin.who).create({ name: "Late" }),
+        () => create(admin.who, { name: "Late" }),
       ),
     ).toBe("UNAUTHORIZED");
     expect(await owner.$count(customers, eq(customers.name, "Late"))).toBe(0);

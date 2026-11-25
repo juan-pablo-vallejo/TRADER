@@ -16,6 +16,7 @@ import {
 } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
+import { uuidv7 } from "../src/app/uuidv7";
 import { getDb } from "../src/server/db";
 import { DEV_EMAIL_COOKIE } from "../src/server/identity";
 import { disposableDb, invitation, mutate, query } from "./helpers";
@@ -71,6 +72,7 @@ describe("the roster through the route handler", () => {
     ]);
 
     const input = {
+      id: uuidv7(),
       email: `painter-${admin.run}@web.test`,
       phone: "(401) 555-0143",
       name: "New Painter",
@@ -85,7 +87,12 @@ describe("the roster through the route handler", () => {
       user: { email: input.email, role: "worker", invited: true },
     });
     const second = await mutate(POST, "roster.invite", {
-      input: { ...input, phone: "(401) 555-0144", email: input.email.toUpperCase() },
+      input: {
+        ...input,
+        id: uuidv7(),
+        phone: "(401) 555-0144",
+        email: input.email.toUpperCase(),
+      },
       headers: as(admin.email),
     });
     expect(second.status).toBe(200);
@@ -101,7 +108,7 @@ describe("the roster through the route handler", () => {
   it("invites by mobile number, answers phone_taken, and signs that number in", async () => {
     const phone = "+14015550142";
     const first = await mutate(POST, "roster.invite", {
-      input: { phone: "(401) 555-0142", name: "Painter By Number" },
+      input: { id: uuidv7(), phone: "(401) 555-0142", name: "Painter By Number" },
       headers: as(admin.email),
     });
     expect(first.status).toBe(200);
@@ -110,7 +117,7 @@ describe("the roster through the route handler", () => {
       user: { email: null, signInPhone: phone, role: "worker", invited: true },
     });
     const second = await mutate(POST, "roster.invite", {
-      input: { phone: "401-555-0142", name: "Again" },
+      input: { id: uuidv7(), phone: "401-555-0142", name: "Again" },
       headers: as(admin.email),
     });
     expect(second.body.result?.data.json).toEqual({
@@ -118,13 +125,13 @@ describe("the roster through the route handler", () => {
       code: "phone_taken",
     });
     const neither = await mutate(POST, "roster.invite", {
-      input: { name: "No Address" },
+      input: { id: uuidv7(), name: "No Address" },
       headers: as(admin.email),
     });
     expect(neither.status).toBe(400);
     // An email alone is an invitation too: that person signs in by a code sent to it.
     const emailOnly = await mutate(POST, "roster.invite", {
-      input: { email: `only-${admin.run}@web.test`, name: "Email Only" },
+      input: { id: uuidv7(), email: `only-${admin.run}@web.test`, name: "Email Only" },
       headers: as(admin.email),
     });
     expect(emailOnly.status).toBe(200);
@@ -166,7 +173,7 @@ describe("the roster through the route handler", () => {
   it("notes a texted invitation, answers where it stands, and emails only with an address of its own to link to", async () => {
     const email = `both-${admin.run}@web.test`;
     const invited = await mutate(POST, "roster.invite", {
-      input: { phone: "(401) 555-0146", email, name: "Painter By Both" },
+      input: { id: uuidv7(), phone: "(401) 555-0146", email, name: "Painter By Both" },
       headers: as(admin.email),
     });
     const userId = (invited.body.result?.data.json as { user: { id: string } }).user.id;
@@ -224,7 +231,7 @@ describe("the roster through the route handler", () => {
 
   it("changes a worker's sign-in addresses, keeps the record, and refuses an admin's", async () => {
     const invited = await mutate(POST, "roster.invite", {
-      input: { phone: "(401) 555-0147", name: "Painter Readdressed" },
+      input: { id: uuidv7(), phone: "(401) 555-0147", name: "Painter Readdressed" },
       headers: as(admin.email),
     });
     const user = (invited.body.result?.data.json as { user: { id: string } }).user;

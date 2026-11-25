@@ -45,8 +45,8 @@ export const invitedPhone = z
 // sent to it.
 export const inviteInput = z
   .strictObject({
-    // The invitation's id, made by the office (uuidv7): the same id again is a retry.
-    id: z.uuid().optional(),
+    // The invitation's id, made by the office: the same id again is a retry.
+    id: z.uuid({ version: "v7" }),
     email: signInEmailSchema.optional(),
     phone: invitedPhone.optional(),
     name: z.string().trim().min(1).max(120),
@@ -90,13 +90,13 @@ export async function rosterInvite(
   const phone = input.phone ?? null;
   const { rows } = await tx.execute<{ id: string }>(sql`
     INSERT INTO users (id, company_id, email, sign_in_phone, name, role)
-    VALUES (coalesce(${input.id ?? null}::uuid, uuidv7()), ${user.companyId}, ${email},
+    VALUES (${input.id}::uuid, ${user.companyId}, ${email},
       ${phone}, ${input.name}, ${input.role}::user_role)
     ON CONFLICT DO NOTHING
     RETURNING id
   `);
   const inserted = rows[0];
-  if (inserted === undefined && input.id !== undefined) {
+  if (inserted === undefined) {
     // A retry: the row is this company's own, written by the call whose answer was lost, so
     // it is answered as that call was (the person was admitted then). Held by a row this
     // tenant cannot see, it is no retry.

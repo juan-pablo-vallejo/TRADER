@@ -5,6 +5,7 @@ import { DEV_EMAIL_HEADER, DEV_SUBJECT_HEADER } from "@trader/api";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
+import { uuidv7 } from "../src/app/uuidv7";
 import { getDb } from "../src/server/db";
 import { invitation, mutate, ownerDb, query } from "./helpers";
 
@@ -44,7 +45,7 @@ describe("customers through the route handler", () => {
 
   it("creates by POST, lists by GET, and deactivates", async () => {
     const created = await mutate(POST, "customer.create", {
-      input: { name: "Smith Residence", email: "" },
+      input: { id: uuidv7(), name: "Smith Residence", email: "" },
       headers: as(admin.email),
     });
     expect(created.status).toBe(200);

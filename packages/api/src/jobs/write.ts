@@ -19,7 +19,10 @@ import type { AppUser } from "../core/resolve-user";
 import { forbidden } from "../core/trpc";
 import { job, locationInput, readJob, type Job } from "./list";
 
+// The new job's id is the office's, made when the form opens and kept on a retry: a resend
+// whose answer was lost finds its own row and writes nothing.
 export const createInput = z.strictObject({
+  id: z.uuid({ version: "v7" }),
   customerId: z.uuid(),
   name: z.string().trim().min(1).max(200),
   address: optionalText(500),
@@ -62,8 +65,14 @@ export type SetStatusInput = z.infer<typeof setStatusInput>;
 
 export const createOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("created"), job }),
-  // The customer named is deactivated. Nothing is written.
-  z.strictObject({ result: z.literal("rejected"), code: z.literal("customer_inactive") }),
+  // This id is already this job, as sent: a resend. Nothing is written.
+  z.strictObject({ result: z.literal("duplicate"), job }),
+  // The customer named is deactivated, or the id is held by other contents or by a row this
+  // caller cannot see. Nothing is written.
+  z.strictObject({
+    result: z.literal("rejected"),
+    code: z.enum(["customer_inactive", "id_conflict"]),
+  }),
 ]);
 export const updateOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("updated"), job }),
@@ -136,6 +145,7 @@ export async function createJob(tx: Tx, user: AppUser, input: CreateInput) {
   const [row] = await tx
     .insert(jobs)
     .values({
+      id: input.id,
       companyId: user.companyId,
       customerId: input.customerId,
       name: input.name,
@@ -143,9 +153,22 @@ export async function createJob(tx: Tx, user: AppUser, input: CreateInput) {
       notes: input.notes,
       ...locationColumns(input.location),
     })
+    .onConflictDoNothing({ target: jobs.id })
     .returning({ id: jobs.id });
-  if (row === undefined) throw new Error("the inserted jobs row is not visible");
-  return answerWith(tx, "created" as const, row.id);
+  if (row !== undefined) return answerWith(tx, "created" as const, row.id);
+  // The id is taken: by this job as sent (a resend), or by anything else. Its facts decide;
+  // a location is set again through its own procedure, so it is not compared.
+  const held = await readJob(tx, input.id);
+  if (
+    held !== undefined &&
+    held.customer.id === input.customerId &&
+    held.name === input.name &&
+    held.address === input.address &&
+    held.notes === input.notes
+  ) {
+    return { result: "duplicate" as const, job: held };
+  }
+  return refusal("id_conflict" as const);
 }
 
 export async function updateJob(tx: Tx, user: AppUser, input: UpdateInput) {

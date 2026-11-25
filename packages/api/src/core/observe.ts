@@ -2,9 +2,7 @@
 // sent (the meter, @trader/db meter.ts). Written by the base procedure every gate builds on
 // (trpc.ts) to the context's observer; the route handler (apps/web server/handler.ts) logs it
 // and, outside production, answers it as Server-Timing. It names no person and holds no
-// input: a path, a code, numbers and the request's own random id. Sent to Sentry on staging
-// alone, as one transaction per call without the request id (the owner's decision 4; apps/web
-// server/call-trace.ts); never from production.
+// input: a path, a code, numbers and the request's own random id. It is never sent to Sentry.
 export type CallLine = {
   requestId: string;
   path: string;

@@ -6,7 +6,6 @@ import { getDb } from "../../../../server/db";
 import { webDirectory } from "../../../../server/directory";
 import { originsFrom } from "../../../../server/edge";
 import { answersTimings } from "../../../../server/environment";
-import { traceCall } from "../../../../server/call-trace";
 import { createTrpcHandler, logToStdout } from "../../../../server/handler";
 import { webIdentity } from "../../../../server/identity";
 import { webMailer } from "../../../../server/mailer";
@@ -25,11 +24,8 @@ const handler = createTrpcHandler({
   closed: webClosed,
   reporter: webReporter,
   edge: { authorizedOrigins: originsFrom(process.env) },
-  // Each call's line to the log and, on staging, to the tracing trial (call-trace.ts).
-  logCall: (line) => {
-    logToStdout(line);
-    traceCall(line);
-  },
+  // Each call's line to the log.
+  logCall: logToStdout,
   timingHeaders: () => answersTimings(process.env),
 });
 

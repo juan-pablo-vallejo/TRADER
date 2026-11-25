@@ -19,6 +19,7 @@ import {
   waitForLockWait,
   world,
   type World,
+  uuidv7,
 } from "../helpers";
 
 const owner = ownerDb();
@@ -37,6 +38,9 @@ afterAll(async () => {
 });
 
 const job = (who: unknown) => appCaller(app, who).job;
+// A create as the office sends it: with an id of its own.
+const create = (who: unknown, input: Omit<CreateInput, "id">) =>
+  appCaller(app, who).job.create({ id: uuidv7(), ...input });
 
 type CreateInput = Parameters<ReturnType<typeof job>["create"]>[0];
 
@@ -115,9 +119,29 @@ describe("job.list", () => {
 });
 
 describe("job.create", () => {
+  it("answers a resend after a lost answer as its duplicate, and another use of its id as a conflict", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const sent = { id: uuidv7(), customerId: w.a.customerId, name: "Resent job" };
+    expect((await job(admin.who).create(sent)).result).toBe("created");
+    // The answer was dropped; the office sends the same thing again.
+    expect(await job(admin.who).create(sent)).toMatchObject({
+      result: "duplicate",
+      job: { id: sent.id, name: "Resent job" },
+    });
+    expect(await job(admin.who).create({ ...sent, name: "Another job" })).toEqual({
+      result: "rejected",
+      code: "id_conflict",
+    });
+    const other = await member(owner, w, "b", "admin");
+    expect(await job(other.who).create({ ...sent, customerId: w.b.customerId })).toEqual({
+      result: "rejected",
+      code: "id_conflict",
+    });
+  });
+
   it("creates under the customer, located or not, with blank address as NULL", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const plain = await job(admin.who).create({
+    const plain = await create(admin.who, {
       customerId: w.a.customerId,
       name: " Kitchen ",
       address: "  ",
@@ -126,7 +150,7 @@ describe("job.create", () => {
       result: "created",
       job: { name: "Kitchen", address: null, location: null, status: "open" },
     });
-    const located = await job(admin.who).create({
+    const located = await create(admin.who, {
       customerId: w.a.customerId,
       name: "Deck",
       address: "1 Main St",
@@ -150,9 +174,7 @@ describe("job.create", () => {
     const admin = await member(owner, w, "a", "admin");
     const before = await owner.$count(jobs, eq(jobs.companyId, w.a.companyId));
     await deactivateCustomer(w.a.customerId);
-    expect(
-      await job(admin.who).create({ customerId: w.a.customerId, name: "X" }),
-    ).toEqual({
+    expect(await create(admin.who, { customerId: w.a.customerId, name: "X" })).toEqual({
       result: "rejected",
       code: "customer_inactive",
     });
@@ -161,9 +183,7 @@ describe("job.create", () => {
       { customerId: w.a.customerId, name: "X", status: "archived" },
       { customerId: w.a.customerId, name: " " },
     ]) {
-      expect(await outcome(job(admin.who).create(input as CreateInput))).toBe(
-        "BAD_REQUEST",
-      );
+      expect(await outcome(create(admin.who, input as CreateInput))).toBe("BAD_REQUEST");
     }
     expect(await owner.$count(jobs, eq(jobs.companyId, w.a.companyId))).toBe(before);
   });
@@ -172,7 +192,7 @@ describe("job.create", () => {
 describe("a job's notes", () => {
   it("are written by create and update, blank as NULL, and listed", async () => {
     const admin = await member(owner, w, "a", "admin");
-    const created = await job(admin.who).create({
+    const created = await create(admin.who, {
       customerId: w.a.customerId,
       name: "Porch",
       notes: " Gate code 4411. Park on the street. ",
@@ -366,13 +386,13 @@ describe("gates and targets", () => {
     const jobB = await jobIn("b");
     const facts = { customerId: w.a.customerId, name: "X" };
     for (const call of [
-      () => job(worker.who).create(facts),
+      () => create(worker.who, facts),
       () => job(worker.who).update({ jobId: id, ...facts }),
       () => job(worker.who).setStatus({ jobId: id, status: "complete" }),
     ]) {
       expect(await outcome(call())).toBe("FORBIDDEN");
     }
-    expect(await outcome(job(null).create(facts))).toBe("UNAUTHORIZED");
+    expect(await outcome(create(null, facts))).toBe("UNAUTHORIZED");
     for (const jobId of [jobB, crypto.randomUUID()]) {
       expect(await outcome(job(admin.who).update({ jobId, ...facts }))).toBe("FORBIDDEN");
       expect(await outcome(job(admin.who).setStatus({ jobId, status: "complete" }))).toBe(
@@ -380,7 +400,7 @@ describe("gates and targets", () => {
       );
     }
     for (const customerId of [w.b.customerId, crypto.randomUUID()]) {
-      expect(await outcome(job(admin.who).create({ customerId, name: "X" }))).toBe(
+      expect(await outcome(create(admin.who, { customerId, name: "X" }))).toBe(
         "FORBIDDEN",
       );
       expect(

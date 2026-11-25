@@ -284,6 +284,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     for (const p of PEOPLE) {
       const a = expectResult(
         await admin().roster.invite({
+          id: idAt(now()),
           email: p.email,
           phone: p.phone,
           name: p.name,
@@ -298,13 +299,18 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
 
   await step("add customers", async () => {
     for (const c of CUSTOMERS) {
-      const a = await admin().customer.create({
-        name: c.name,
-        address: c.address,
-        phone: c.phone,
-        email: c.email,
-        notes: c.notes,
-      });
+      const a = expectResult(
+        await admin().customer.create({
+          id: idAt(now()),
+          name: c.name,
+          address: c.address,
+          phone: c.phone,
+          email: c.email,
+          notes: c.notes,
+        }),
+        "created",
+      );
+      if (a.result !== "created") return;
       customerIds.set(c.key, a.customer.id);
       summary.customers++;
     }
@@ -314,6 +320,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     for (const j of JOBS) {
       const a = expectResult(
         await admin().job.create({
+          id: idAt(now()),
           customerId: customerIds.get(j.customer)!,
           name: j.name,
           address: j.address,

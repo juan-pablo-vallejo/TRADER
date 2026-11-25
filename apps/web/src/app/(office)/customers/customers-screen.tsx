@@ -6,7 +6,7 @@
 // last, the deactivation. A `rejected` answer reads beneath the control it came from.
 // Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
@@ -25,6 +25,7 @@ import { useTRPC } from "../../trpc";
 import { useUrlFilters } from "../../use-url-filters";
 import styles from "./customers.module.css";
 import { WriteButton } from "../../write-button";
+import { uuidv7 } from "../../uuidv7";
 
 type Rows = NonNullable<ReturnType<typeof useCustomers>["data"]>;
 type Row = Rows[number];
@@ -180,21 +181,28 @@ function CreateForm({ onDone }: { onDone: (name: string) => void }) {
   const refresh = useRefresh();
   const [value, setValue] = useState<Fields>(EMPTY);
   const [note, setNote] = useState<string | null>(null);
-  const create = useMutation(
-    trpc.customer.create.mutationOptions({
-      onSuccess: async (_answer, asked) => {
-        setValue(EMPTY);
-        setNote(null);
-        await refresh();
-        onDone(asked.name);
-      },
-      onError: () => setNote(t.requestFailed),
-    }),
-  );
+  // The new customer's id: made for what the form holds and kept while it holds the same, so
+  // a retry after a lost answer is the same customer; a conflict takes a new one.
+  const minted = useRef<{ key: string; id: string } | null>(null);
+  const create = useMutation(trpc.customer.create.mutationOptions());
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
-    create.mutate(value);
+    const key = JSON.stringify(value);
+    if (minted.current?.key !== key) minted.current = { key, id: uuidv7() };
+    create.mutate(
+      { id: minted.current.id, ...value },
+      {
+        onSuccess: (answer, asked) => {
+          // Answered: the next customer takes a new id, and so does a retry after a conflict.
+          minted.current = null;
+          if (answer.result === "rejected") return setNote(t.requestFailed);
+          setValue(EMPTY);
+          void refresh().then(() => onDone(asked.name));
+        },
+        onError: () => setNote(t.requestFailed),
+      },
+    );
   };
   return (
     <form

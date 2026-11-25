@@ -22,7 +22,7 @@ import { forbidden } from "../core/trpc";
 import { amountCents, lineInput, MAX_CENTS, MAX_LINES, taxInput } from "./lines";
 
 export const createInput = z.strictObject({
-  id: z.uuid(),
+  id: z.uuid({ version: "v7" }),
   jobId: z.uuid(),
   currency: z.string().regex(/^[A-Z]{3}$/),
 });

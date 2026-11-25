@@ -38,7 +38,7 @@ const weekStart = workDay.refine(isMonday, { message: "A week starts on a Monday
 
 export const copyPreviewInput = z.strictObject({ weekStart });
 export const copyConfirmInput = z.strictObject({
-  copyId: z.uuid(),
+  copyId: z.uuid({ version: "v7" }),
   weekStart,
   fingerprint: z.string().regex(/^[0-9a-f]{64}$/),
 });

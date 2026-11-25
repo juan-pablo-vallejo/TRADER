@@ -16,6 +16,7 @@ import type { Tx } from "../core/context";
 import { instant } from "../core/instant";
 import type { AppUser } from "../core/resolve-user";
 import { laborReasons, type EntryFlag } from "../sync/reasons";
+import { releaseVoided } from "../sync/schedule";
 import { forbidden } from "../core/trpc";
 import { replay, type LaborEvent } from "./fold";
 import { assertReadCommitted, loadWorkerTimeline } from "./timeline";
@@ -421,6 +422,12 @@ export async function repairLabor(
     }
     throw error;
   }
+
+  // 11. A clock-in voided here no longer holds its shift (sync/schedule.ts).
+  await releaseVoided(
+    tx,
+    input.operations.flatMap((op) => (op.kind === "void" ? [op.voidsEventId] : [])),
+  );
 
   // 12. In input order, whatever order the database returned rows in.
   const events: Acknowledgement[] = candidates.map((c, i) => ({

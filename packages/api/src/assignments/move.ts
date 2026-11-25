@@ -92,8 +92,8 @@ export async function endShiftEarly(
 
 export const moveTodayInput = z
   .strictObject({
-    // The new shift's id, made by the client (UUIDv7): a resend finds it and writes nothing.
-    id: z.uuid(),
+    // The new shift's id, made by the client: a resend finds it and writes nothing.
+    id: z.uuid({ version: "v7" }),
     userId: z.uuid(),
     jobId: z.uuid(),
     // The minute of the company's today the person moves at.

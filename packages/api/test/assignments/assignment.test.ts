@@ -501,6 +501,62 @@ describe("a shift locked by a clock-in", () => {
     });
   });
 
+  it("is free again once the office voids its clock-in, and Today's lock reads it off the clock", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { day, plan, admin } = await office(tx);
+      const { id } = await shift(plan, day, "07:00", "15:30");
+      await tx.execute(sql`reset role`);
+      const clockIn = await eventIn(tx, day, {
+        worker: day.w1,
+        job: day.J,
+        type: "started",
+        client: "2026-11-16T12:05:00Z",
+      });
+      await eventIn(tx, day, {
+        worker: day.w1,
+        job: day.J,
+        type: "ended",
+        client: "2026-11-16T20:00:00Z",
+      });
+      await tx.execute(sql`
+        update job_assignments set locked_at = now(), locked_by_event_id = ${clockIn}
+        where id = ${id}
+      `);
+      await becomeApp(tx);
+      expect(await plan.remove({ assignmentId: id })).toEqual({
+        result: "rejected",
+        code: "locked",
+      });
+      const voided = await appCallerIn(tx, admin.who).labor.repair({
+        workerId: day.w1,
+        operations: [{ kind: "void", id: uuidv7(), voidsEventId: clockIn }],
+      });
+      expect(voided.result).toBe("accepted");
+      // The lock is gone: what Today reads as clocked in (overview/today.ts).
+      const [row] = await tx
+        .select({ lockedAt: jobAssignments.lockedAt, by: jobAssignments.lockedByEventId })
+        .from(jobAssignments)
+        .where(eq(jobAssignments.id, id));
+      expect(row).toEqual({ lockedAt: null, by: null });
+      // Edited, then removed, as any shift nobody has clocked in on.
+      expect(
+        await plan.update({
+          assignmentId: id,
+          workDate: MON,
+          expectedStart: "08:00",
+          expectedEnd: "15:30",
+        }),
+      ).toEqual({ result: "updated" });
+      expect(await plan.remove({ assignmentId: id })).toEqual({ result: "removed" });
+      // No entry was touched: the clock-in and its void stand.
+      const entries = await tx
+        .select({ id: workSessionEvents.id })
+        .from(workSessionEvents)
+        .where(eq(workSessionEvents.workerId, day.w1));
+      expect(entries).toHaveLength(3);
+    });
+  });
+
   it("keeps an early clock-in's leave: nothing may become eligible before its shift", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan } = await office(tx);

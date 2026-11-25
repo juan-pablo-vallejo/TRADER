@@ -49,8 +49,11 @@ afterAll(async () => {
   await D.drop();
 });
 
-type Input = Parameters<ReturnType<typeof appCaller>["roster"]["invite"]>[0];
-const invite = (who: unknown, input: Input) => appCaller(app, who).roster.invite(input);
+type Sent = Parameters<ReturnType<typeof appCaller>["roster"]["invite"]>[0];
+type Input = Omit<Sent, "id"> & { id?: string };
+// The office's own id, unless the test names one.
+const invite = (who: unknown, input: Input) =>
+  appCaller(app, who).roster.invite({ id: uuidv7(), ...input });
 
 // The same call with a directory of the test's own: what the provider was told, or a
 // provider that refuses.
@@ -63,7 +66,7 @@ const inviteThrough = (who: unknown, input: Input, directory: IdentityDirectory)
       reporter: quietReporter,
       requestId: REQUEST_ID,
     }),
-  ).roster.invite(input);
+  ).roster.invite({ id: uuidv7(), ...input });
 
 const recordingDirectory = () => {
   const admitted: { email: string | null; phone: string | null }[] = [];

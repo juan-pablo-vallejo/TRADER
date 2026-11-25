@@ -7,6 +7,7 @@ import { customers, jobs, users } from "@trader/db/schema";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
+import { uuidv7 } from "../src/app/uuidv7";
 import { getDb } from "../src/server/db";
 import { invitation, mutate, ownerDb, query } from "./helpers";
 
@@ -51,7 +52,7 @@ describe("assignments through the route handler", () => {
         input: {
           userId: worker.userId,
           jobId: crypto.randomUUID(),
-          days: [{ id: crypto.randomUUID(), workDate: "2026-11-16" }],
+          days: [{ id: uuidv7(), workDate: "2026-11-16" }],
           expectedStart: "07:00",
           expectedEnd: "15:30",
         },
@@ -83,7 +84,7 @@ describe("assignments through the route handler", () => {
       })
       .returning({ id: jobs.id });
     const days = ["2026-11-16", "2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"];
-    const sent = days.map((workDate) => ({ id: crypto.randomUUID(), workDate }));
+    const sent = days.map((workDate) => ({ id: uuidv7(), workDate }));
     const created = await mutate(POST, "assignment.create", {
       input: {
         userId: painter!.id,

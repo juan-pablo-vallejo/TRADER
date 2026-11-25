@@ -6,6 +6,7 @@ import { customers } from "@trader/db/schema";
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { GET, POST } from "../src/app/api/trpc/[trpc]/route";
+import { uuidv7 } from "../src/app/uuidv7";
 import { getDb } from "../src/server/db";
 import { invitation, mutate, ownerDb, query } from "./helpers";
 
@@ -50,6 +51,7 @@ describe("jobs through the route handler", () => {
       .returning({ id: customers.id });
     const created = await mutate(POST, "job.create", {
       input: {
+        id: uuidv7(),
         customerId: customer!.id,
         name: "Kitchen",
         address: "",

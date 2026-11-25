@@ -28,7 +28,7 @@ export const METHODS = ["check", "cash", "card", "bank_transfer", "other"] as co
 const note = z.string().trim().min(1).max(500).nullable();
 
 export const recordInput = z.strictObject({
-  id: z.uuid(),
+  id: z.uuid({ version: "v7" }),
   invoiceId: z.uuid(),
   amountCents: z.number().int().min(1).max(MAX_CENTS),
   paidOn: workDay,
@@ -45,7 +45,7 @@ export const recordOutput = z.discriminatedUnion("result", [
 ]);
 
 export const reverseInput = z.strictObject({
-  id: z.uuid(),
+  id: z.uuid({ version: "v7" }),
   paymentId: z.uuid(),
   note,
 });

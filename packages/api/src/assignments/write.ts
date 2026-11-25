@@ -68,7 +68,7 @@ export const createInput = z
     expectedStart: wallTime,
     expectedEnd: wallTime,
     days: z
-      .array(z.strictObject({ id: z.uuid(), workDate: workDay }))
+      .array(z.strictObject({ id: z.uuid({ version: "v7" }), workDate: workDay }))
       .min(1)
       .max(MAX_DAYS)
       .refine((days) => new Set(days.map((d) => d.workDate)).size === days.length, {

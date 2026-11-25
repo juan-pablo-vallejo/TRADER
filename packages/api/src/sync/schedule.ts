@@ -56,6 +56,40 @@ export async function judgeStart(
   return { admitted: true, shiftId: admission.shiftId };
 }
 
+// A voided clock-in no longer holds its shift. The lock passes to the earliest clock-in of
+// the same person on the same job, on the shift's day in the company's zone, that is not
+// voided; with none, it comes off, and the shift can be edited, moved or removed again. The
+// database allows only this (check_job_assignment_mutation). One statement, written only by
+// a correction that voids.
+export async function releaseVoided(tx: Tx, voidedIds: string[]) {
+  if (voidedIds.length === 0) return;
+  await tx.execute(sql`
+    update job_assignments a
+    set locked_by_event_id = next.id,
+        locked_at = case when next.id is null then null else a.locked_at end
+    from (
+      select s.id as shift_id, (
+        select e.id from work_session_events e
+        join companies c on c.id = e.company_id
+        where e.worker_id = s.user_id and e.job_id = s.job_id and e.type = 'started'
+          and (e.client_timestamp at time zone c.timezone)::date = s.work_date
+          and not exists (
+            select 1 from work_session_events v
+            where v.type = 'voided' and v.voids_event_id = e.id
+          )
+        order by e.client_timestamp, e.id
+        limit 1
+      ) as id
+      from job_assignments s
+      where s.locked_by_event_id in (${sql.join(
+        voidedIds.map((id) => sql`${id}`),
+        sql`, `,
+      )})
+    ) next
+    where a.id = next.shift_id
+  `);
+}
+
 // Once: a second start on a shift already locked leaves the first lock as it is. The database
 // holds the rest — the event is a `started` of the shift's own person on its own job.
 export async function lockShift(tx: Tx, shiftId: string, eventId: string) {

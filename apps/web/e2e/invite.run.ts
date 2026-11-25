@@ -7,6 +7,7 @@
 // word is all this says. Staging only: the config holds the address to STAGING_URL.
 import { expect, test } from "@playwright/test";
 
+import { uuidv7 } from "../src/app/uuidv7";
 import { signInByTicket } from "./ticket-session";
 
 const ticket = process.env.E2E_ADMIN_TICKET ?? "";
@@ -22,7 +23,7 @@ test("a person invited to staging's roster as an admin", async ({ page, context 
 
   // superjson on the wire (packages/api/src/core/trpc.ts): the input sits under `json`.
   const answer = await context.request.post("/api/trpc/roster.invite", {
-    data: { json: { name, phone, role: "admin" } },
+    data: { json: { id: uuidv7(), name, phone, role: "admin" } },
   });
   const body = await answer.text();
   const result = /"result":"([a-z_]+)"/.exec(body)?.[1] ?? "no answer";

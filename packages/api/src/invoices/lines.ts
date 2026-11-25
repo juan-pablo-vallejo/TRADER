@@ -25,7 +25,7 @@ export const MAX_LINES = 100;
 const cents = z.number().int().min(0).max(MAX_CENTS);
 
 export const lineInput = z.strictObject({
-  id: z.uuid(),
+  id: z.uuid({ version: "v7" }),
   description: z.string().trim().min(1).max(500),
   quantity,
   unit: z.string().trim().min(1).max(32).nullable(),

@@ -29,7 +29,7 @@ export const optionalText = (max: number) =>
 
 const blankToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
 
-export const createInput = z.strictObject({
+const contact = z.strictObject({
   name: z.string().trim().min(1).max(200),
   address: optionalText(500),
   phone: optionalText(32),
@@ -38,10 +38,14 @@ export const createInput = z.strictObject({
   notes: optionalText(2000),
 });
 
+// The new customer's id is the office's, made when the form opens and kept on a retry: a
+// resend whose answer was lost finds its own row and writes nothing.
+export const createInput = contact.extend({ id: z.uuid({ version: "v7" }) });
+
 export type CreateInput = z.infer<typeof createInput>;
 
 // A whole-record replace, as me.update is.
-export const updateInput = createInput.extend({ customerId: z.uuid() });
+export const updateInput = contact.extend({ customerId: z.uuid() });
 
 export type UpdateInput = z.infer<typeof updateInput>;
 
@@ -49,7 +53,14 @@ export const targetInput = z.strictObject({ customerId: z.uuid() });
 
 export type TargetInput = z.infer<typeof targetInput>;
 
-export const createOutput = z.strictObject({ result: z.literal("created"), customer });
+export const createOutput = z.discriminatedUnion("result", [
+  z.strictObject({ result: z.literal("created"), customer }),
+  // This id is already this customer, as sent: a resend. Nothing is written.
+  z.strictObject({ result: z.literal("duplicate"), customer }),
+  // The id is held by other contents, or by a row this caller cannot see. Nothing is
+  // written.
+  z.strictObject({ result: z.literal("rejected"), code: z.literal("id_conflict") }),
+]);
 export const updateOutput = z.strictObject({ result: z.literal("updated"), customer });
 export const deactivateOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("updated"), customer }),
@@ -96,7 +107,7 @@ async function answerWith<R extends string>(
   return { result, customer: row };
 }
 
-const fields = (input: CreateInput) => ({
+const fields = (input: z.infer<typeof contact>) => ({
   name: input.name,
   address: input.address,
   phone: input.phone,
@@ -108,10 +119,24 @@ export async function createCustomer(tx: Tx, user: AppUser, input: CreateInput) 
   await lockActiveSelf(tx, user, "admin");
   const [row] = await tx
     .insert(customers)
-    .values({ companyId: user.companyId, ...fields(input) })
+    .values({ id: input.id, companyId: user.companyId, ...fields(input) })
+    .onConflictDoNothing({ target: customers.id })
     .returning({ id: customers.id });
-  if (row === undefined) throw new Error("the inserted customers row is not visible");
-  return answerWith(tx, "created" as const, row.id);
+  if (row !== undefined) return answerWith(tx, "created" as const, row.id);
+  // The id is taken: by this customer as sent (a resend), or by anything else.
+  const held = await readCustomer(tx, input.id);
+  const own = fields(input);
+  if (
+    held !== undefined &&
+    held.name === own.name &&
+    held.address === own.address &&
+    held.phone === own.phone &&
+    held.email === own.email &&
+    held.notes === own.notes
+  ) {
+    return { result: "duplicate" as const, customer: held };
+  }
+  return { result: "rejected" as const, code: "id_conflict" as const };
 }
 
 // Allowed on a deactivated customer: contact details may still be corrected.

@@ -15,7 +15,7 @@
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useRef, useState } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
@@ -43,6 +43,7 @@ import {
 } from "./location";
 import { WriteButton } from "../../write-button";
 import table from "../../table.module.css";
+import { uuidv7 } from "../../uuidv7";
 
 type Rows = NonNullable<ReturnType<typeof useJobs>["data"]>;
 type Row = Rows[number];
@@ -432,6 +433,20 @@ function CreateForm({
   // A customer made by a first press and kept: if the job is then refused, a second press
   // does not make the customer twice.
   const [made, setMade] = useState<{ name: string; id: string } | null>(null);
+  // Each new record's id: made for what the form holds and kept while it holds the same, so a
+  // retry after a lost answer is the same record; a conflict takes a new one.
+  const minted = useRef<Record<"customer" | "job", { key: string; id: string } | null>>({
+    customer: null,
+    job: null,
+  });
+  const idFor = (which: "customer" | "job", contents: unknown) => {
+    const key = JSON.stringify(contents);
+    const held = minted.current[which];
+    if (held?.key === key) return held.id;
+    const id = uuidv7();
+    minted.current[which] = { key, id };
+    return id;
+  };
   const addCustomer = useMutation(trpc.customer.create.mutationOptions());
   const create = useMutation(trpc.job.create.mutationOptions());
   const busy = addCustomer.isPending || create.isPending;
@@ -446,26 +461,33 @@ function CreateForm({
         const name = facts.newCustomer.trim();
         if (made !== null && made.name === name) customerId = made.id;
         else {
+          const contact = { name, address: null, phone: null, email: null, notes: null };
           const answer = await addCustomer.mutateAsync({
-            name,
-            address: null,
-            phone: null,
-            email: null,
-            notes: null,
+            id: idFor("customer", contact),
+            ...contact,
           });
+          if (answer.result === "rejected") {
+            minted.current.customer = null;
+            return setNote(t.requestFailed);
+          }
           customerId = answer.customer.id;
           setMade({ name, id: customerId });
           await queryClient.invalidateQueries(trpc.customer.pathFilter());
         }
       }
-      const answer = await create.mutateAsync({
+      const sent = {
         customerId,
         name: facts.name,
         address: facts.address,
         notes: facts.notes,
         location: located.location,
-      });
-      if (answer.result === "rejected") return setNote(reason(t, answer.code, "facts"));
+      };
+      const answer = await create.mutateAsync({ id: idFor("job", sent), ...sent });
+      if (answer.result === "rejected") {
+        if (answer.code === "id_conflict") minted.current.job = null;
+        return setNote(reason(t, answer.code, "facts"));
+      }
+      minted.current.job = null;
       await queryClient.invalidateQueries(trpc.job.pathFilter());
       setFacts(EMPTY);
       onDone(answer.job.name);

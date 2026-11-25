@@ -21,6 +21,7 @@ import {
   userCount,
   world,
   type World,
+  uuidv7,
 } from "../helpers";
 
 const owner = ownerDb();
@@ -125,7 +126,11 @@ describe("the closed company: the door's, in production", () => {
     const before = await userCount(owner, [w.a.companyId]);
     const closed = office(admin.who, { companyId: w.a.companyId, allowed: [] });
     expect(
-      await closed.caller.roster.invite({ phone: testPhone(), name: "Anyone" }),
+      await closed.caller.roster.invite({
+        id: uuidv7(),
+        phone: testPhone(),
+        name: "Anyone",
+      }),
     ).toEqual({ result: "rejected", code: "company_closed" });
     expect(closed.admitted).toEqual([]);
     expect(await userCount(owner, [w.a.companyId])).toEqual(before);
@@ -136,14 +141,16 @@ describe("the closed company: the door's, in production", () => {
     // Staging, a development machine: nobody is closed.
     const open = office(admin.who, null);
     const first = testPhone();
-    expect(await open.caller.roster.invite({ phone: first, name: "One" })).toMatchObject({
+    expect(
+      await open.caller.roster.invite({ id: uuidv7(), phone: first, name: "One" }),
+    ).toMatchObject({
       result: "invited",
     });
     // Production, where the closed company is another one: D Sierra invites freely.
     const other = office(admin.who, { companyId: w.b.companyId, allowed: [] });
     const second = testPhone();
     expect(
-      await other.caller.roster.invite({ phone: second, name: "Two" }),
+      await other.caller.roster.invite({ id: uuidv7(), phone: second, name: "Two" }),
     ).toMatchObject({ result: "invited" });
     expect([...open.admitted, ...other.admitted]).toEqual([first, second]);
   });
