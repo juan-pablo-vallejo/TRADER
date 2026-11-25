@@ -9,7 +9,7 @@ import {
   statusInput,
   statusOutput,
 } from "../core/status";
-import { SYNC_PROTOCOL } from "../sync/protocol";
+import { SYNC_PROTOCOL } from "../contract/protocol";
 import { publicProcedure, router } from "../core/trpc";
 
 const reportOnce = createConfigLatch();

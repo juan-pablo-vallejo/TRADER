@@ -320,7 +320,7 @@ export const caller = (db: Db, who: unknown) =>
 
 // The application's own router on committed fixtures: in the shared database only for
 // procedures that write nothing append-only (me, the lists), in a disposable one for the
-// roster's writers.
+// writers of people.
 export const appCaller = (db: Db, who: unknown) =>
   createCallerFactory(appRouter)(
     createContext({

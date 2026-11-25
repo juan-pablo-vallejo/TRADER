@@ -4,7 +4,7 @@
 // no bypass at all. Then an
 // admin's sign-in through Clerk, one fixture customer rewritten and read back, sign-out, and
 // a worker refused the office. Identities are Clerk's fictional numbers and must already be
-// on the staging roster. Given tickets (tickets.ts; the deploy job always gives
+// on staging's people. Given tickets (tickets.ts; the deploy job always gives
 // them) each person signs in with a single-use Clerk sign-in token, a made-up ticket is
 // seen refused and a used one seen dead; given none, by the number and Clerk's test code,
 // which works only while the development instance's test mode is on. The flow writes one customer row and

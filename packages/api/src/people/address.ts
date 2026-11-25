@@ -4,7 +4,7 @@
 //
 // - A worker's only. An admin's addresses, the caller's own among them, are not the
 //   office's to change.
-// - The roster row and the provider's login change together. The row is written and the
+// - The person's row and the provider's login change together. The row is written and the
 //   change recorded first, inside a savepoint; the provider is told last, and anything it
 //   will not do (the address is another login's, no login is this row's, it cannot be
 //   reached) undoes both. The provider is never asked about an address: it is handed the
@@ -45,7 +45,7 @@ const REFUSALS = [
   "deactivated",
   // A person signs in with something: the one address they have stays.
   "last_address",
-  // Someone on this roster has it.
+  // Someone in this company has it.
   "email_taken",
   "phone_taken",
   // The provider holds it under another login. Whose, it does not say, and neither do we.
@@ -81,7 +81,7 @@ const TAKEN: Record<string, Refusal | undefined> = {
   users_company_id_sign_in_phone_unique: "phone_taken",
 };
 
-// The caller FOR SHARE and the person FOR UPDATE, in id order as every roster writer
+// The caller FOR SHARE and the person FOR UPDATE, in id order as every writer of people
 // takes users rows. A deactivated caller is UNAUTHORIZED and one who is no longer an admin
 // FORBIDDEN, as everywhere; a person who is missing or another company's is FORBIDDEN.
 async function lockBoth(tx: Tx, user: AppUser, userId: string) {
@@ -155,7 +155,7 @@ async function setAddress(
         });
       }
       // Last, and inside the savepoint: a provider that will not, or cannot be reached,
-      // leaves the roster as it was.
+      // leaves the person's row as it was.
       const answer = await directory.readdress({
         id: change.userId,
         subject: person.subject,

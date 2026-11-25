@@ -1,9 +1,9 @@
-// The identity directory this server hands to people.invite and to the roster's address
+// The identity directory this server hands to people.invite and to a person's address
 // changes (packages/api identity.ts),
 // chosen as the identity adapter is (identity.ts) and read per call: Clerk where Clerk is
 // this server's identity, and nothing where the development identity is — a person invited
 // there exists in the database only. A server whose identity is Clerk and whose keys are
-// missing refuses the invitation: a roster row no provider was told about could never be
+// missing refuses the invitation: a person's row no provider was told about could never be
 // signed in to.
 import { localDirectory, type IdentityDirectory } from "@trader/api";
 

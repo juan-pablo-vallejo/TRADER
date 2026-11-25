@@ -4,8 +4,8 @@
 // Monday to Sunday, by employee or by jobsite; planned shifts only — nothing here is hours, a
 // total or a status of work. Wide, the seven days side by side with their headings held in
 // view; narrow, one day at a time, chosen from seven day buttons. The employee filter reaches
-// any one person without scrolling the roster, at every width. A shift card opens the shift;
-// a cell's own button adds one there. Three queries — the roster and the jobs for the
+// any one person without scrolling the people, at every width. A shift card opens the shift;
+// a cell's own button adds one there. Three queries — the people and the jobs for the
 // pickers, `shift.week` for the grid — and every write through the drawers
 // (shift-dialog.tsx, copy-dialog.tsx), which the server judges (api shifts/).
 //
@@ -216,7 +216,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const panel: Panel = opened ?? (asked ? { kind: "add" } : null);
   const [note, setNote] = useState<string | null>(null);
 
-  const roster = useQuery(trpc.people.list.queryOptions());
+  const listed = useQuery(trpc.people.list.queryOptions());
   const jobs = useQuery(trpc.job.list.queryOptions());
   const week = useQuery(
     trpc.shift.week.queryOptions(
@@ -333,9 +333,9 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const stale = week.isPlaceholderData;
   // A refresh that fails keeps the rows (and an open drawer) under one line; only a read
   // with nothing to show, or a refused session, replaces the screen.
-  const failed = blocking([roster, jobs, week]);
+  const failed = blocking([listed, jobs, week]);
   const ready =
-    roster.data !== undefined && jobs.data !== undefined && week.data !== undefined;
+    listed.data !== undefined && jobs.data !== undefined && week.data !== undefined;
 
   const show = (monday: string) => {
     setNote(null);
@@ -375,7 +375,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
       )}
     </div>
   );
-  if (roster.isPending || jobs.isPending || week.isPending) {
+  if (listed.isPending || jobs.isPending || week.isPending) {
     return (
       <>
         {header}
@@ -398,7 +398,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
 
   // The week drawn: the one asked for once it has come, the one before until then.
   const drawn = week.data.days[0] ?? weekStart;
-  const people = roster.data.map((p) => ({
+  const people = listed.data.map((p) => ({
     id: p.id,
     name: p.name,
     active: p.deactivatedAt === null,
@@ -420,7 +420,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
     <>
       {header}
       <p className={`secondary ${styles.explain}`}>{s.explain}</p>
-      <RefreshFailed reads={[roster, jobs, week]} />
+      <RefreshFailed reads={[listed, jobs, week]} />
       <div className={styles.bar}>
         <div className={styles.weekSteps}>
           <button

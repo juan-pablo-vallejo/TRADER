@@ -55,7 +55,7 @@ describe("where an invitation stands", () => {
   it("is not sent until something went to an address the person has", () => {
     expect(invitationStatus({ ...person, sends: [] })).toBe("not_sent");
     expect(invitationStatus({ ...person, sends: [text] })).toBe("sent");
-    // An email is compared as the roster compares it, whatever its case.
+    // An email is compared as People compares it, whatever its case.
     expect(invitationStatus({ ...person, sends: [email] })).toBe("sent");
   });
 

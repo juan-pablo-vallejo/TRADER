@@ -1,4 +1,4 @@
-// A person put on staging's roster as an admin, by the suite's admin: the way the owner's
+// A person put on staging's people as an admin, by the suite's admin: the way the owner's
 // own login gets there, since nobody can sign in to staging's office by hand to press
 // Invite for him (Clerk's test mode is off, and the fixture numbers take no text). Signed
 // in by the single-use ticket `scripts/staging.sh` made, then one call to `people.invite`,
@@ -14,7 +14,7 @@ const ticket = process.env.E2E_ADMIN_TICKET ?? "";
 const phone = process.env.INVITE_PHONE ?? "";
 const name = process.env.INVITE_NAME ?? "";
 
-test("a person invited to staging's roster as an admin", async ({ page, context }) => {
+test("a person invited to staging's people as an admin", async ({ page, context }) => {
   expect(ticket, "E2E_ADMIN_TICKET is set").not.toBe("");
   expect(phone.trim(), "a mobile number is given").not.toBe("");
   expect(name.trim(), "a name is given").not.toBe("");
@@ -31,5 +31,5 @@ test("a person invited to staging's roster as an admin", async ({ page, context 
   console.log(
     `people.invite: HTTP ${answer.status()}, ${result}${code === undefined ? "" : ` (${code})`}`,
   );
-  expect(result, "the person is on the roster, invited").toBe("invited");
+  expect(result, "the person is among the company's people, invited").toBe("invited");
 });

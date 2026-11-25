@@ -1,4 +1,4 @@
-// The roster writers' lock: the caller, the target and every active
+// The people's writers' lock: the caller, the target and every active
 // admin of the company, in one statement, FOR NO KEY UPDATE in id order — the global order
 // puts users rows in id order, and two statements (the caller first, then the rest) would
 // deadlock two admins demoting each other. The rows come back re-read under locks held to

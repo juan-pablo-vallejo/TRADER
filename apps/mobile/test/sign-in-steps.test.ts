@@ -80,7 +80,7 @@ describe("the field", () => {
     }
   });
 
-  it("gives a number and an email no roster holds the same one answer", async () => {
+  it("gives a number and an email no company has added the same one answer", async () => {
     const notes = [];
     for (const typed of ["401 555 0199", "nobody@example.com"]) {
       for (const code of ["form_identifier_not_found", "strategy_for_user_invalid"]) {

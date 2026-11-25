@@ -2,7 +2,7 @@
 // a build with its key: it sends the code, checks it and makes the session. And a stand-in
 // for it that exists only in a development build with the development identity on
 // (config.ts), so the simulators and Maestro walk every step of the real screen with no
-// text message: it asks the local server whether a roster holds the address, takes 123456
+// text message: it asks the local server whether a company has added the address, takes 123456
 // as the code and 000000 as one that has expired, and signs in with the development
 // headers. `__DEV__` is false in every release build, so the stand-in is never chosen there.
 import { useClerk, useSignIn, useSSO } from "@clerk/expo";
@@ -113,7 +113,7 @@ const who = (to: SignInIdentifier): DevWho =>
 export function standInProvider(apiUrl: string): Provider {
   return {
     forgetStale: async () => undefined,
-    // A roster holds the address, or Clerk would have refused it here: the server says.
+    // A company has added the address, or Clerk would have refused it here: the server says.
     sendCode: async (to) => {
       try {
         await createApi(apiUrl, () => devHeaders(who(to))).me.get.query();
@@ -139,7 +139,7 @@ export function standInProvider(apiUrl: string): Provider {
       return { kind: "dev", ...who(to) };
     },
     // Google or Apple, as the account whose email the field holds: the stand-in has no
-    // sheet to pick one in. With none there, it is an account no roster holds.
+    // sheet to pick one in. With none there, it is an account no company has added.
     social: async (_kind, hint) => {
       const typed = signInIdentifier(hint);
       const to: SignInIdentifier =

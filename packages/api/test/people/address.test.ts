@@ -132,7 +132,7 @@ async function office(tx: Tx) {
 }
 
 describe("people.setEmail and people.setSignInPhone", () => {
-  it("changes a worker's email on the roster and at the provider, and records it", async () => {
+  it("changes a worker's email among the company's people and at the provider, and records it", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const p = provider();
@@ -259,7 +259,7 @@ describe("people.setEmail and people.setSignInPhone", () => {
             subject: o.worker.subject,
             email: o.worker.email,
             phone: "+14015550121",
-            // The roster did not change here: nobody is signed out for it.
+            // The person's row did not change here: nobody is signed out for it.
             fresh: false,
           },
         ]);
@@ -291,7 +291,7 @@ describe("people.setEmail and people.setSignInPhone", () => {
     });
   });
 
-  it("refuses an address someone on the roster has, and goes on working afterwards", async () => {
+  it("refuses an address someone among the company's people has, and goes on working afterwards", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const p = provider();

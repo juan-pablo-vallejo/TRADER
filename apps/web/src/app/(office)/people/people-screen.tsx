@@ -1,6 +1,6 @@
 "use client";
 
-// The People screen: the admin's roster, on the shared table. The list is one query; every
+// The People screen: the admin's people, on the shared table. The list is one query; every
 // mutation invalidates it, so the table refetches and nothing is edited in the cache by
 // hand. The page header's action opens the invite form. A row's name opens the person in
 // the side panel, and which person is in the address: their role (making an admin asks
@@ -10,7 +10,7 @@
 //
 // The invitation goes two ways. By text, from the admin's own phone (invitation.ts):
 // TRADER writes the words, sends nothing, and notes that the admin took them to send. By
-// email, from TRADER (people.sendInvitation). Each is recorded, and the roster answers
+// email, from TRADER (people.sendInvitation). Each is recorded, and People answers
 // where the invitation stands: not sent, sent and not verified, or verified once the
 // person has signed in.
 //

@@ -86,7 +86,7 @@ export async function onboard(
   // holds it: a second holder would lock both people out.
   if (taken[0]?.address === true) {
     throw new Error(
-      "refusing to onboard: the admin's number or email is already on a roster",
+      "refusing to onboard: the admin's number or email is already added by a company",
     );
   }
 

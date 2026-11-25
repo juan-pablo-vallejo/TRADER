@@ -4,7 +4,7 @@
 //
 // The key is the provider's (Clerk's biometric credentials, biometrics.ts): one per app
 // installation, made for whoever was signed in when it was turned on. Which person that was
-// is kept on the phone as their roster id, so a second person signing in by code is offered
+// is kept on the phone as their id, so a second person signing in by code is offered
 // their own, which replaces the first's.
 
 // Why the provider says the phone cannot sign in with its lock now (Clerk's
@@ -40,9 +40,9 @@ export type SignedInBy = "code" | "biometric" | "google" | "apple" | "demo";
 export function offersBiometric(input: {
   by: SignedInBy;
   reason: Unavailable | null;
-  // Who the phone's key was made for, by roster id; null when none was.
+  // Who the phone's key was made for, by their id; null when none was.
   keyFor: string | null;
-  // Who said "Not now" on this phone, by roster id.
+  // Who said "Not now" on this phone, by their id.
   declinedBy: string | null;
   // Who has just signed in.
   who: string;
@@ -80,7 +80,7 @@ export const keyCheck = (
 ): { keyMadeAt: Date } | undefined =>
   by === "biometric" ? { keyMadeAt: new Date(madeAt ?? 0) } : undefined;
 
-// A sign-in the server refused (deactivated, no roster holds the person, or the address
+// A sign-in the server refused (deactivated, no company has added the person, or the address
 // changed since the key was made): when it came by the key, the key goes too, so the phone
 // stops offering a way in that leads nowhere.
 export const revokesKey = (by: SignedInBy): boolean => by === "biometric";

@@ -280,7 +280,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     summary.users = 1;
   });
 
-  await step("invite the roster", async () => {
+  await step("invite the people", async () => {
     for (const p of PEOPLE) {
       const a = expectResult(
         await admin().people.invite({

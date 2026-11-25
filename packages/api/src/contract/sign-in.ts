@@ -4,7 +4,7 @@
 // beneath it, as the rest of the contract is.
 import { z } from "zod";
 
-// A sign-in number as the roster holds it: E.164, `+1` and ten digits. People type it with
+// A sign-in number as the person's row holds it: E.164, `+1` and ten digits. People type it with
 // spaces, dashes, brackets, with or without the 1.
 export function signInPhone(typed: string): string | null {
   const digits = typed.replace(/[\s().-]/g, "");

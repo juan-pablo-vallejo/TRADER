@@ -103,9 +103,9 @@ describe("the demo run", () => {
   });
 
   it("shows the office what the plan says", async () => {
-    const roster = await admin().people.list();
-    expect(roster).toHaveLength(EXPECTED.users);
-    const byEmail = new Map(roster.map((u) => [u.email, u]));
+    const listed = await admin().people.list();
+    expect(listed).toHaveLength(EXPECTED.users);
+    const byEmail = new Map(listed.map((u) => [u.email, u]));
     expect(byEmail.get("priya.shah@demo.invalid")!.deactivatedAt).not.toBeNull();
     expect(byEmail.get("marcus.bell@demo.invalid")!.role).toBe("admin");
     expect(byEmail.get("sam.carter@demo.invalid")!.invited).toBe(true);

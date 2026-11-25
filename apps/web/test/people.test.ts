@@ -1,4 +1,4 @@
-// The roster over the real transport — the route module as Next calls it, the
+// People over the real transport — the route module as Next calls it, the
 // development headers as the cookie bridge sets them: 401 anonymous, 403 as a worker, and an
 // admin's invite answering `invited` then `email_taken` through POST, an invitation by
 // mobile number that the number's own login then binds, and an invitation's sends.
@@ -49,7 +49,7 @@ const as = (email: string) => ({
   [DEV_EMAIL_HEADER]: email,
 });
 
-describe("the roster through the route handler", () => {
+describe("People through the route handler", () => {
   it("answers 401 anonymous and 403 as a worker, with no-store", async () => {
     const anonymous = await query(GET, "people.list");
     expect(anonymous.status).toBe(401);
@@ -64,7 +64,7 @@ describe("the roster through the route handler", () => {
     }
   });
 
-  it("lists the roster for an admin and invites by POST, then answers email_taken", async () => {
+  it("lists the people for an admin and invites by POST, then answers email_taken", async () => {
     const list = await query(GET, "people.list", { headers: as(admin.email) });
     expect(list.status).toBe(200);
     expect(list.body.result?.data.json).toMatchObject([

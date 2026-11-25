@@ -8,7 +8,7 @@
 // never reaches here). `update` writes the caller's `name` and
 // `phone` and nothing else: email, role, company and identity are not in its input and are
 // never self-written; an email changes through the identity provider's verified flow.
-// `signInPhone` is the number the roster invited (users.ts): read here, written by no one
+// `signInPhone` is the number the office invited (users.ts): read here, written by no one
 // through this router.
 import { ROLES } from "../contract/enums";
 import { addressChanges, users } from "@trader/db/schema";

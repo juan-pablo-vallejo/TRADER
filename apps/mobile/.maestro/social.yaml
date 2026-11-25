@@ -1,6 +1,6 @@
 # Google, and Apple's own button on an iPhone, with the development stand-in, which signs in
 # as the account whose email the field holds (src/sign-in-provider.ts): ${EMAIL} lands on
-# Today and is offered no key; an empty field is an account no roster holds, told to ask the
+# Today and is offered no key; an empty field is an account no company has added, told to ask the
 # office.
 appId: app.jpteq.trader
 ---

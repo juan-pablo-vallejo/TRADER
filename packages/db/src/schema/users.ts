@@ -14,7 +14,7 @@ import { userRole } from "./enums";
 import { createdAt, deactivatedAt, id, updatedAt } from "./shared";
 
 // A person with their own login. Authentication lives behind the identity adapter; this table
-// holds the facts the provider does not own: company, role, roster state.
+// holds the facts the provider does not own: company, role, a person's state.
 export const users = pgTable(
   "users",
   {

@@ -12,7 +12,7 @@ import { instant } from "../core/instant";
 import type { AppUser } from "../core/resolve-user";
 import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { reportFailure, type ErrorReporter } from "../core/report";
-import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
+import { SYNC_PROTOCOL_VERSIONS } from "../contract/protocol";
 import { measureSkew, type Skew } from "./flags";
 import { MAX_PUSH_RECORDS } from "../contract/limits";
 

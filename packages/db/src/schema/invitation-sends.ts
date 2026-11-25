@@ -3,7 +3,7 @@
 // TRADER through the mail service, and its row keeps how that went. `text` is the ready
 // message on the admin's own phone: TRADER sends nothing, and the row records that the
 // admin opened it to send, which is all the server can know. The id is the browser's, so a
-// request sent twice is one send. `recipient` is the address it went to as the roster held
+// request sent twice is one send. `recipient` is the address it went to as the person's row held
 // it then, so a send to an address the person no longer has can be told from one to the
 // address they have. Whether a person is "sent" or "verified" is worked out from these rows
 // and from the users row, never stored (packages/api, people/list.ts). Guards and tenancy
@@ -65,7 +65,7 @@ export const invitationSends = pgTable(
       sql`(${t.outcome} = 'failed') = (${t.failure} IS NOT NULL) AND (${t.outcome} = 'sent' OR ${t.providerMessageId} IS NULL) AND (${t.channel} = 'email' OR (${t.outcome} IN ('sent', 'copied', 'opened') AND ${t.providerMessageId} IS NULL)) AND (${t.outcome} NOT IN ('copied', 'opened') OR ${t.channel} = 'whatsapp')`,
     ),
     check("invitation_sends_failure_code", sql`${t.failure} ~ '^[a-z_]+$'`),
-    // The address as the roster holds one: an email lowercased, a number in E.164.
+    // The address as the person's row holds one: an email lowercased, a number in E.164.
     check(
       "invitation_sends_recipient_shape",
       sql`(${t.channel} = 'email' AND ${t.recipient} = lower(btrim(${t.recipient})) AND ${t.recipient} ~ '^[^@[:space:]]+@[^@[:space:]]+$') OR (${t.channel} = 'whatsapp' AND ${t.recipient} ~ '^\\+1[2-9][0-9]{9}$')`,

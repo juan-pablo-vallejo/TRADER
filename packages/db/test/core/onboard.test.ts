@@ -58,12 +58,12 @@ describe("onboard", () => {
             .where(eq(invoiceCounters.companyId, result.companyId)),
         ),
       ).toMatchObject({ nextInvoiceNumber: 1043 });
-      const roster = await tx
+      const listed = await tx
         .select()
         .from(users)
         .where(eq(users.companyId, result.companyId));
-      expect(roster).toHaveLength(1);
-      expect(roster[0]).toMatchObject({
+      expect(listed).toHaveLength(1);
+      expect(listed[0]).toMatchObject({
         id: result.adminId,
         role: "admin",
         name: "First Admin",
@@ -118,18 +118,18 @@ describe("onboard", () => {
     });
   });
 
-  it("refuses an admin whose number or email another roster holds", async () => {
+  it("refuses an admin whose number or email another company has added", async () => {
     await rolledBack(db, async (tx) => {
       await onboard(tx, { ...input, adminEmail: email });
       const other = { ...input, companyName: `Other Co ${run}` };
-      await expect(onboard(tx, other)).rejects.toThrow("already on a roster");
+      await expect(onboard(tx, other)).rejects.toThrow("already added by a company");
       await expect(
         onboard(tx, {
           ...other,
           adminPhone: "+14015550198",
           adminEmail: email.toUpperCase(),
         }),
-      ).rejects.toThrow("already on a roster");
+      ).rejects.toThrow("already added by a company");
       const { rows } = await tx.execute<{ n: number }>(
         sql`select count(*)::int as n from companies where name = ${other.companyName}`,
       );

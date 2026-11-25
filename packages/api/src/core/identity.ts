@@ -43,12 +43,12 @@ export type IdentityAdapter = {
 // login for these addresses, whether it made one now or already had one: a second admission
 // is not an error, and it never says whose the existing login is. It throws when the provider
 // could not be reached or refused, and people.invite then invites no one. A person has a
-// mobile number, an email, or both: never neither. `id` is the roster row's own, which a
+// mobile number, an email, or both: never neither. `id` is the person's row's own, which a
 // login made here is tagged with, so that the row's login can later be found by what it
 // is and never by an address someone else may hold.
 //
-// `readdress` brings the login of one roster row to the addresses the roster now holds for
-// it, and to nothing else: an address the roster does not hold is taken off the login. The
+// `readdress` brings the login of one person's row to the addresses the row now holds, and
+// to nothing else: an address the row does not hold is taken off the login. The
 // login is the one bound to the row (`subject`) or, for a person who has not signed in,
 // the one tagged with the row's id; it is never looked for by an address, since an address
 // may be another person's, in another company. It answers:
@@ -56,10 +56,10 @@ export type IdentityAdapter = {
 //                (sessions, passkeys, links to other accounts) was ended with it;
 //   `unchanged`  the login already held exactly these addresses, and nothing was touched;
 //   `no_login`   no login is this row's: nothing was changed;
-//   `held`       an address is another login's: nothing of the roster's may change.
+//   `held`       an address is another login's: nothing of the person's row may change.
 // It throws when the provider could not be reached or refused, like `admit`. Asked again
 // with the same addresses it finishes what an earlier call left half-done; and `fresh`,
-// true when the roster itself changed in this call, has it end whatever could sign in as
+// true when the person's row itself changed in this call, has it end whatever could sign in as
 // the person even where the login already holds the addresses, which is how a call that
 // stopped after the addresses and before the sign-out is finished too.
 export type Readdressed = "done" | "unchanged" | "no_login" | "held";

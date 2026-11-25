@@ -66,7 +66,7 @@ export const inviteOutput = z.discriminatedUnion("result", [
   // Another user of this company already has that address, active or not. Nothing is
   // written. When both are held, the email is the one named.
   // `company_closed`: this company invites nobody on this deployment (the Demo company in
-  // production; core/demo-door.ts, routers/roster.ts). Nothing is written.
+  // production; core/demo-door.ts, routers/people.ts). Nothing is written.
   // `id_conflict`: the id is held by a row this caller cannot see. Nothing is written; the
   // office sends again under a new id.
   z.strictObject({

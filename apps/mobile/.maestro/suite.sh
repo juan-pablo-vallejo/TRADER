@@ -110,7 +110,7 @@ api_up
 echo "— sign-in: refused, the code step, in Spanish"
 flow sign-in-refused fresh allow nobody.invited@demo.invalid
 flow sign-in-refused fresh allow 4015550199
-expect "an address no roster holds bound nobody" \
+expect "an address no company has added bound nobody" \
   "select count(*) from users where identity_subject like 'dev:nobody%' or identity_subject = 'dev:+14015550199'" 0
 flow sign-in-codes fresh allow $LUIS
 flow sign-in-spanish fresh allow $LUIS

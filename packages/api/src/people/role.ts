@@ -1,4 +1,4 @@
-// people.setRole: a role changes only by a deliberate roster action. One user's role, judged
+// people.setRole: a role changes only by a deliberate action in People. One user's role, judged
 // under lock.ts's locks: demoting the last active admin is `rejected` `last_admin`, so a
 // company can never lose its last admin to a demotion, two admins racing included. An admin may
 // demote themself while another remains; their call commits and the next is FORBIDDEN. The
@@ -30,7 +30,7 @@ export const changeOutput = z.discriminatedUnion("result", [
 
 export type ChangeResult = z.infer<typeof changeOutput>;
 
-// The row after the locks, as the roster shows it. Consumed here and by deactivation.ts.
+// The row after the locks, as People shows it. Consumed here and by deactivation.ts.
 export async function answerWith<R extends "updated" | "unchanged">(
   tx: Tx,
   result: R,

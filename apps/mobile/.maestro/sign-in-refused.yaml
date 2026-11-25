@@ -1,4 +1,4 @@
-# What the field says, before any code is sent, to ${EMAIL}: an address no roster holds.
+# What the field says, before any code is sent, to ${EMAIL}: an address no company has added.
 # The suite runs it for an email and for a number, which get the same one sentence. Trouble
 # signing in? opens on the field. Nothing here signs in.
 appId: app.jpteq.trader

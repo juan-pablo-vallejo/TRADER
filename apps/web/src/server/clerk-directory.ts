@@ -11,7 +11,7 @@
 // person invited by email alone is created by it; where a number is required, an email with
 // no number answers 422 `form_data_missing`.
 //
-// A login made here carries the roster row's id as Clerk's `external_id`: the row's login
+// A login made here carries the person's row's id as Clerk's `external_id`: the row's login
 // can then be found by what it is, never by an address that someone else may hold. A login
 // that already existed is left exactly as it was, untagged: it may be another person's.
 //
@@ -21,12 +21,12 @@
 // person has both and only the email is held by an existing user, they are created by
 // number alone.
 //
-// `readdress` brings one row's login to the addresses the roster now holds (packages/api,
+// `readdress` brings one row's login to the addresses the person's row now holds (packages/api,
 // people/address.ts). The login is read by its own id, the one bound to the row, or found
 // by the row's tag: no call here ever names an address to find anyone by. A new address
 // goes on first, verified and primary, and Clerk's "another user has it" is the answer
 // `held` with nothing yet changed; then links to other accounts and passkeys come off,
-// then the addresses the roster no longer holds, then every session is revoked. Each step
+// then the addresses the person's row no longer holds, then every session is revoked. Each step
 // is one documented Backend API call (paths from @clerk/backend 3.27.0, read 2026-11-23),
 // all under one deadline, and done again from the top they finish what was left. What is
 // not removed here: a Face ID or fingerprint key from the phone app, for which the Backend
@@ -201,7 +201,7 @@ export function createClerkDirectory(deps: {
         want: person.email,
         have: listOf(login.user, "email_addresses", "email_address"),
         primaryId: primary?.primary_email_address_id,
-        // Clerk compares an email without regard to case, as the roster does.
+        // Clerk compares an email without regard to case, as People does.
         same: (a: string, b: string) => a.toLowerCase() === b.toLowerCase(),
       },
       {
@@ -216,7 +216,7 @@ export function createClerkDirectory(deps: {
     let changed = false;
     // What this change added, and each primary it moved, so that a step failing before the
     // old addresses come off puts the login back as it was: an added, verified address
-    // its roster row does not hold could be bound to another company's invitation.
+    // its person's row does not hold could be bound to another company's invitation.
     const added: string[] = [];
     const moved: { path: string; id: string }[] = [];
     // Its own deadline: a change that failed by running out of time has no time left on its

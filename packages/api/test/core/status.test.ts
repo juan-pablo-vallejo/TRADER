@@ -8,7 +8,7 @@ import {
   type ServiceState,
   type StatusClient,
 } from "../../src/core/status";
-import { SYNC_PROTOCOL } from "../../src/sync/protocol";
+import { SYNC_PROTOCOL } from "../../src/contract/protocol";
 
 const ONE = { min: 1, max: 1 };
 const client = (over: Partial<StatusClient> = {}): StatusClient => ({

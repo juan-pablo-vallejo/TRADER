@@ -1,4 +1,4 @@
-// The roster. Admin only, at the gate; the last-admin rule
+// People. Admin only, at the gate; the last-admin rule
 // and the target's visibility are judged inside each writer under its locks.
 import {
   deactivate,

@@ -29,9 +29,9 @@ export type SeedCompany = {
 // sign-in binds it.
 export const SEED: SeedCompany = {
   companyId: "019a4a00-0000-7000-8000-000000000001",
-  companyName: "Pilot Company",
+  companyName: "Demo Painting Co.",
   timezone: "America/New_York",
-  adminEmail: "admin@jpteq.app",
+  adminEmail: "admin@seed.test",
   adminName: "Admin",
 };
 

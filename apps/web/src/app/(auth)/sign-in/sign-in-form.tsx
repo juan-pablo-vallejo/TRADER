@@ -6,7 +6,7 @@
 // number and an email as two fields it switches between, and cannot be one. Clerk still
 // sends the code, checks it and makes the session; this only asks.
 //
-// Nobody signs up here. A number or an email Clerk does not know, and one no roster holds,
+// Nobody signs up here. A number or an email Clerk does not know, and one no company has added,
 // get the same sentence: ask your office. What was typed and what a refusal means are read
 // by the functions the phone shares (`@trader/api/contract`, sign-in.ts).
 //
@@ -33,7 +33,7 @@ import google from "./google-button.module.css";
 
 // What the form says under its field. A refusal from Clerk, by name; a field that is
 // neither a number nor an email; or a sign-in Clerk left at a step this form has none for.
-// Or a Google account no roster holds, said when the browser comes back from Google.
+// Or a Google account no company has added, said when the browser comes back from Google.
 // Or a passkey Clerk did not take.
 // Or Clerk's script that never arrived, so nothing on the form can work.
 type Note =
@@ -84,7 +84,7 @@ export function SignInForm({
   googleBack,
 }: {
   returnTo: string;
-  // The browser has just come back from Google: with an account no roster holds, or
+  // The browser has just come back from Google: with an account no company has added, or
   // from a return that failed.
   googleBack: "google_refused" | "failed" | null;
 }) {

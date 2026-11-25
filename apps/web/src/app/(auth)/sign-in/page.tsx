@@ -44,7 +44,7 @@ export default async function SignInPage({
   const asked = await searchParams;
   const returnTo = returnPath(asked.redirect_url);
   // Someone already signed in has nothing to do here: they go on, before a form is drawn.
-  // Whether a roster holds them is the office's to say, as for anyone it shows a screen.
+  // Whether a company has added them is the office's to say, as for anyone it shows a screen.
   const { userId } = await auth();
   if (userId !== null) redirect(returnTo);
   return (

@@ -206,7 +206,7 @@ const namesNoAddress = (calls: Call[]) => {
 };
 
 describe("an address change at Clerk", () => {
-  it("leaves the bound login with exactly the roster's addresses, and nothing that could sign in as it", async () => {
+  it("leaves the bound login with exactly the row's addresses, and nothing that could sign in as it", async () => {
     const c = clerk([signedIn()]);
     expect(
       await c.directory.readdress({
@@ -280,7 +280,7 @@ describe("an address change at Clerk", () => {
     namesNoAddress(c.calls);
   });
 
-  it("touches nothing when the login already holds exactly these, unless the roster itself changed", async () => {
+  it("touches nothing when the login already holds exactly these, unless the person's row itself changed", async () => {
     const same = {
       id: ROW,
       subject: "user_bound",
@@ -305,7 +305,7 @@ describe("an address change at Clerk", () => {
     });
   });
 
-  it("finishes a change that stopped half-way: the address the roster no longer holds comes off", async () => {
+  it("finishes a change that stopped half-way: the address the person's row no longer holds comes off", async () => {
     const half = signedIn();
     half.email_addresses.push({ id: "idn_n", email_address: NEW_EMAIL });
     const c = clerk([half]);
@@ -393,7 +393,7 @@ describe("an address change at Clerk", () => {
   });
 
   // The failure: a change that stops after adding an address leaves the login holding a
-  // verified address its roster row does not, which a first sign-in could then bind elsewhere.
+  // verified address its person's row does not, which a first sign-in could then bind elsewhere.
   it("takes an address it added back off, and restores the primary, when a later step fails", async () => {
     const theirs = login("user_theirs", {
       phone_numbers: [{ id: "idn_t", phone_number: NEW_PHONE }],

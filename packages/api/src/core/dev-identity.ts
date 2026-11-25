@@ -4,7 +4,7 @@
 // NODE_ENV; every deployed build and runtime is NODE_ENV=production, so a deployment cannot
 // accept a named identity. Nor is it trusted where DATABASE_URL is set: that is a deployed
 // database, and a `dev:` sign-in would bind a
-// roster row there for good. The check runs per request, never at module load, so `next build`
+// person's row there for good. The check runs per request, never at module load, so `next build`
 // never fails. Pure over the env record it is handed, like db/src/env.ts.
 import { DEV_EMAIL_HEADER, DEV_PHONE_HEADER, DEV_SUBJECT_HEADER } from "../contract/dev";
 import { z } from "zod";

@@ -38,7 +38,7 @@ async function signInAs(page: Page, phone: string): Promise<void> {
 }
 const ADMIN_PHONE = process.env.E2E_ADMIN_PHONE ?? "";
 
-// The account menu in the office's header, which only a person on a roster is drawn.
+// The account menu in the office's header, which only a person added by a company is drawn.
 const account = (page: Page) => page.getByRole("banner").locator("summary");
 
 // A device's own lock, as Chromium's virtual authenticator: it holds a passkey made on this

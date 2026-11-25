@@ -158,7 +158,7 @@ describe("people.sendInvitation", () => {
       expect(
         await o.as(o.c.who, { mailer }).sendInvitation({ id, userId: o.byBoth }),
       ).toEqual({ result: "sent" });
-      // The address as the roster holds it, lowercased as it is compared; both languages,
+      // The address as the person's row holds it, lowercased as it is compared; both languages,
       // the host's own link, and the sentence that names an email; the browser's id.
       expect(sent).toHaveLength(1);
       const mail = sent[0]!;
@@ -337,7 +337,7 @@ describe("people.sendInvitation", () => {
 });
 
 describe("people.noteInvitation", () => {
-  it("records that the text was opened to send, to the number the roster holds", async () => {
+  it("records that the text was opened to send, to the number the person's row holds", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
       const { sent, mailer } = recordingMailer();

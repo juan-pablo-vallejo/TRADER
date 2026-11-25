@@ -4,7 +4,7 @@
 // sees when the API refuses them. Rendered only inside Clerk's provider (layout.tsx), so
 // only where Clerk is this server's identity; account.tsx and failure.tsx choose by
 // `useClerkOn`. A person can hold a Clerk session and still be nobody here — their number is
-// on no roster, or the office deactivated them: the API answers 401 either way, and the
+// added by no company, or the office deactivated them: the API answers 401 either way, and the
 // screen says so and offers the one useful step, signing out, instead of a sign-in link that
 // would only return them here.
 import { useAuth, useClerk } from "@clerk/nextjs";

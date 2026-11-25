@@ -1,4 +1,4 @@
-// One person onto staging's roster: `scripts/staging.sh invite <number> <name>` and
+// One person onto staging's people: `scripts/staging.sh invite <number> <name>` and
 // nothing else runs this. It is not a test of anything and is never part of `check` or
 // the deploy job; its file's name keeps it out of the staging suite, which loads
 // `*.spec.ts`. Values come from the environment of that one command.

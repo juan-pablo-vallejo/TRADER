@@ -1,4 +1,4 @@
-// people.list: the admin keeps the roster. Every user of the caller's
+// people.list: the admin keeps the company's people. Every user of the caller's
 // company, deactivated ones included with their timestamp so the office can reactivate them,
 // ordered by name. `invited` is "never signed in" (identity_subject still NULL); the subject
 // itself is never output, as me.get never outputs it. Each person carries where their

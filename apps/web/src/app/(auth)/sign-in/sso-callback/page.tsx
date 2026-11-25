@@ -9,7 +9,7 @@ import { SsoCallback } from "./sso-callback";
 
 // Where the browser comes back to from Google when the sign-in was not finished there:
 // sso-callback.tsx finishes it if it can be, and otherwise sends the person back to the
-// form to be told their Google account is on no roster. It never asks for a sign-up. As
+// form to be told their Google account was added by no company. It never asks for a sign-up. As
 // sign-in itself: a 404 where the development identity is this server's, and nothing to
 // do on a server with no Clerk keys.
 export const dynamic = "force-dynamic";

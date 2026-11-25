@@ -35,7 +35,7 @@ export const INVITATION_STATUSES = ["not_sent", "sent", "verified"] as const;
 type InvitationStatus = (typeof INVITATION_STATUSES)[number];
 
 export function invitationStatus(person: {
-  // Whether a sign-in has been bound to the person's roster row.
+  // Whether a sign-in has been bound to the person's person's row.
   signedIn: boolean;
   email: string | null;
   signInPhone: string | null;

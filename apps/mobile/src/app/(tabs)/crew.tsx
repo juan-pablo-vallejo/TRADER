@@ -223,7 +223,9 @@ export default function CrewTab() {
   const [end, setEnd] = useState("15:30");
   const [problem, setProblem] = useState<Problem | null>(null);
   const [saving, setSaving] = useState(false);
-  const [roster, setRoster] = useState<{ id: string; name: string }[] | null>(null);
+  const [candidates, setCandidates] = useState<{ id: string; name: string }[] | null>(
+    null,
+  );
   // The open sheet's write: its id, minted as the sheet opens, kept across tries with what
   // it sent (sync/crew.ts, nextSend).
   const held = useRef<HeldWrite | null>(null);
@@ -329,11 +331,11 @@ export default function CrewTab() {
     held.current = heldWrite(mint(Date.now()));
     setOpen({ kind: "add", personId: forPerson });
     if (forPerson === null && api !== null) {
-      setRoster(null);
+      setCandidates(null);
       void api.people.list
         .query()
         .then((all) =>
-          setRoster(
+          setCandidates(
             all
               .filter((u) => u.deactivatedAt === null)
               .map((u) => ({ id: u.id, name: u.name }))
@@ -786,11 +788,11 @@ export default function CrewTab() {
                 {open.personId === null ? (
                   <>
                     <Text style={text.label}>{t.crew.form.who}</Text>
-                    {roster === null ? (
+                    {candidates === null ? (
                       <Text style={text.secondary}>{t.loading}</Text>
                     ) : (
                       <View accessibilityRole="radiogroup" style={styles.choices}>
-                        {roster.map((u, i) => (
+                        {candidates.map((u, i) => (
                           <Choice
                             key={u.id}
                             testID={`form-person-${i}`}

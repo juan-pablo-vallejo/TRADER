@@ -55,7 +55,7 @@ export function Nav() {
     if (href === "/jobs") [fetch.job, fetch.customer].forEach((f) => f());
     if (href === "/invoices") [fetch.invoice, fetch.job].forEach((f) => f());
     if (href === "/people") fetch.people();
-    // Schedule opens on the roster and the jobs beside its week.
+    // Schedule opens among the company's people and the jobs beside its week.
     if (href === "/schedule") [fetch.people, fetch.job].forEach((f) => f());
   };
   // Escape closes the menu and hands focus back to the button that opened it.

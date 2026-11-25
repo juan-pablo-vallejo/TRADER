@@ -1,11 +1,11 @@
 // An invitation's sends: `people.sendInvitation` emails it, `people.noteInvitation` records
 // what the admin did with the ready message on their own phone: copied, opened, or sent. Both write one row of
-// invitation_sends, which the roster reads back as where the invitation stands (list.ts).
+// invitation_sends, which People reads back as where the invitation stands (list.ts).
 //
 // The email is the words of the text message (contract/invitation.ts) with the link to
 // where the app is got, which is the host's to say and never a request's: TRADER sends this
 // from the address its invoices go from, so what it says and where it points are fixed here.
-// It goes only to the person's own address as the roster holds it, read under a lock; the
+// It goes only to the person's own address as the person's row holds it, read under a lock; the
 // request names a person, never an address. Only someone who has not signed in is invited,
 // and no more than a few times a day, so the office cannot be made to mail anyone at all.
 //
@@ -89,7 +89,7 @@ type Person = {
   deactivatedAt: Date | null;
 };
 
-// The caller and the person, locked together in id order, then the person as the roster
+// The caller and the person, locked together in id order, then the person as their row
 // holds them: their addresses cannot change under a send. A person who is missing or
 // another company's is FORBIDDEN (core/locks.ts).
 async function lockPerson(tx: Tx, user: AppUser, userId: string): Promise<Person> {
@@ -215,7 +215,7 @@ export async function sendInvitation(
 }
 
 // The admin copied the ready message, opened it in WhatsApp, or says it went, to the number
-// the roster holds. TRADER sent nothing; what is recorded is what the admin did, and when.
+// the person's row holds. TRADER sent nothing; what is recorded is what the admin did, and when.
 export async function noteInvitation(
   tx: Tx,
   user: AppUser,
