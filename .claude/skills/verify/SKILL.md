@@ -18,19 +18,21 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
 2. **Red.** It prints the last lines of the log, which name the step and say why. More:
    `trader-ws logs check 200`. Fix it and check again. Never write `.git/trader/green` by
    hand.
-3. **What the change touches.** A screen under `apps/web/src/app`, or what one calls: also
-   `trader-ws e2e`, the office in a browser on the demo data (`pnpm e2e:local` here, with
-   port 3000 free). The office's sign-in (`apps/web/src/app/(auth)/`, `clerk-*.tsx`,
-   `server/clerk-*.ts`, `server/directory.ts`, `e2e/clerk*`): also `scripts/staging.sh local`,
-   real Clerk on this Mac only, which records the `clerk` line the pre-push hook asks for. A
-   phone screen or the sync path under `apps/mobile`: also
-   `apps/mobile/.maestro/suite.sh ios <udid>` here and `trader-ws android`, then
-   `trader-ws wait android`, whole, once before the commit. While fixing, only the flows of
-   the area being worked on (`.maestro/run.sh`).
-4. **Workstation off.** The session's first lines say so. `trader-ws check --local` runs the
+3. **What the change touches.** Before a commit, the tests and flows of what changed: the
+   unit tests of the files; for an office screen its browser tests, from `apps/web`:
+   `pnpm exec playwright test -c e2e/local.config.ts -g <name>`; for a phone screen its
+   flows (`.maestro/run.sh`). The office's sign-in (`apps/web/src/app/(auth)/`,
+   `clerk-*.tsx`, `server/clerk-*.ts`, `server/directory.ts`, `e2e/clerk*`): also
+   `scripts/staging.sh local`, real Clerk on this Mac only, which records the `clerk` line
+   the pre-push hook asks for.
+4. **Once per batch.** On the tree that is pushed, and before a release's merge, the full
+   suites of the apps the batch touches: `trader-ws e2e` for the office (`pnpm e2e:local`
+   here, with port 3000 free); `apps/mobile/.maestro/suite.sh ios <udid>` here and
+   `trader-ws android`, then `trader-ws wait android`, for the phone.
+5. **Workstation off.** The session's first lines say so. `trader-ws check --local` runs the
    same steps here and records the same line. Android waits for the workstation.
-5. **Commit what was checked.** `git add -A`, then `git write-tree` prints the tree the
+6. **Commit what was checked.** `git add -A`, then `git write-tree` prints the tree the
    check named. A different tree has no green: check again.
-6. **Markdown alone.** A commit that differs from a checked tree only in `.md` files, the
+7. **Markdown alone.** A commit that differs from a checked tree only in `.md` files, the
    commit that finishes a batch for one, needs no check: the hook runs the format check on
    those files itself.

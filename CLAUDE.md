@@ -63,9 +63,10 @@ read-only for you.
    `scripts/trader-ws check`, `--local` on this Mac. A commit that changes Markdown alone
    needs no check. A green run on the workstation counts when the tree committed is exactly
    the tree it checked. A change to the office's sign-in also needs its suite against Clerk's
-   development instance green on that tree, on this Mac; a change to the phone, both phone
-   suites, iPhone and Android, whole, once before the commit. While fixing, run only the
-   flows of the area being worked on. A batch that changes the server or the phone's sync
+   development instance green on that tree, on this Mac. Before a commit, run the tests and
+   flows of what changed; the office's browser suite and both phone suites, iPhone and
+   Android, run whole once per batch, on the tree that is pushed, and before a release's
+   merge. A batch that changes the server or the phone's sync
    path is simplified once and reviewed once by agents that did not write it (the
    `backend-change` skill). A batch that changes what a person sees is seen rendered in
    both languages and reviewed once by an agent that did not build it (the
