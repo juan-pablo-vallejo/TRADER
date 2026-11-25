@@ -66,8 +66,18 @@ api_down() {
   # `next dev` leaves a child holding the port.
   lsof -ti tcp:3000 -sTCP:LISTEN | xargs kill 2>/dev/null || true
 }
-trap api_down EXIT
+trap 'api_down; largest_text off' EXIT
 flow() { "$here/run.sh" "$platform" "$device" "$@"; }
+# The phone's text size: its largest, or its default. The trap puts the default back if a
+# flow fails at the largest.
+largest_text() {
+  case "$platform:$1" in
+    ios:on) xcrun simctl ui "$device" content_size accessibility-extra-extra-extra-large ;;
+    ios:off) xcrun simctl ui "$device" content_size large ;;
+    android:on) "${ANDROID_HOME:?set ANDROID_HOME}/platform-tools/adb" -s "$device" shell settings put system font_scale 2.0 ;;
+    android:off) "${ANDROID_HOME:?set ANDROID_HOME}/platform-tools/adb" -s "$device" shell settings put system font_scale 1.0 ;;
+  esac
+}
 
 # A shift for one person on the demo's first job, around now on the company's clock.
 shift_now() {
@@ -91,8 +101,8 @@ events_of() {
 }
 
 (cd "$root" && pnpm demo --db $DB --reset >/dev/null)
-# What the office would have typed: its number, which "Call the office" dials, and notes on
-# every jobsite, which the job's sheet shows.
+# What the office would have typed: its number, which the office's WhatsApp button opens a
+# chat with, and notes on every jobsite, which the job's sheet shows.
 sql "update companies set phone = '(401) 555-0142';
      update jobs set notes = 'Gate code 4411. Park on the street.';"
 api_up
@@ -222,9 +232,20 @@ expect "the shift the admin added is on the server, today, on that jobsite" \
 
 echo "— Face ID or fingerprint, Google and Apple"
 flow biometric fresh allow $LUIS
+# At the phone's largest text size, and back to the default after.
+largest_text on
+flow biometric-largest-text fresh allow $TOM
+largest_text off
 flow social fresh allow $LUIS
 flow biometric-key-set fresh allow $OMAR
 sql "update users set deactivated_at = now() where email = '$OMAR';"
+flow biometric-key-refused resume
+# The office changed the sign-in address of the person whose key this phone holds: the key
+# is older than the change, so a sign-in by it is refused and the key goes.
+flow biometric-key-set fresh allow $ELENA
+sql "insert into address_changes (company_id, user_id, field, old_value, new_value, changed_by_user_id)
+     select p.company_id, p.id, 'email', p.email, 'elena.moved@demo.invalid', o.id
+     from users p join users o on o.email = '$OFFICE' where p.email = '$ELENA';"
 flow biometric-key-refused resume
 
 # By number: every demo person is bound to their email by now, so one is invited by number

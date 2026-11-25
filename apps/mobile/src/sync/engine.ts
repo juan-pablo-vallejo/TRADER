@@ -40,31 +40,14 @@ export const RECLAIM_MS = 2 * 60_000;
 const BATCH = MAX_PUSH_RECORDS;
 
 export const SNAPSHOT_KEY = "snapshot";
-// The pull's shape as this build reads it. Raise it in the commit that changes what a pull
-// answers (packages/api, contract/pull.ts), and add the step from the shape before to
-// UPCAST: a snapshot an older build stored is read as this build's (H3: thrown away, it
-// left a phone that updated overnight with nothing to clock in to until its first pull).
-// A shape this build does not know, newer or unreadable, is thrown away and pulled again.
-// 2: the company's phone, `locationStamps`, each job's notes (2026-11-19).
-export const SNAPSHOT_SHAPE = 2;
+// The pull's shape as this build reads it. A snapshot of any other shape, one stored with
+// none and one that is not a snapshot at all, is thrown away and pulled again; the outbox
+// is another table and is not touched, so nothing captured is lost. A change to what a pull
+// answers (packages/api, contract/pull.ts) raises it, with a step that reads the shape
+// before as this one, so a phone that updates overnight keeps its jobs to clock in to until
+// its first pull.
+export const SNAPSHOT_SHAPE = 1;
 
-type Loose = Record<string, unknown>;
-const withNotes = (job: unknown) => ({ notes: null, ...(job as Loose) });
-
-// Each step takes a snapshot's data from the shape before it to its own. A build before
-// shape 2 stored none (`undefined`, read as 1).
-const UPCAST: Record<number, (data: Loose) => Loose> = {
-  2: (data) => ({
-    locationStamps: true,
-    ...data,
-    company: { phone: null, ...(data.company as Loose) },
-    jobs: ((data.jobs as unknown[] | undefined) ?? []).map(withNotes),
-    shifts: ((data.shifts as Loose[] | undefined) ?? []).map((s) => ({
-      ...s,
-      job: withNotes(s.job),
-    })),
-  }),
-};
 export const READING_KEY = "reachability";
 
 export type CycleResult =
@@ -108,38 +91,20 @@ export async function readSnapshot(store: Store): Promise<Snapshot | null> {
   try {
     kept = superjson.parse<Partial<Snapshot> | null>(raw);
   } catch {
-    // Not a snapshot at all: gone, like one of a shape this build does not know.
+    // Not a snapshot at all: gone, like one of a shape this build does not read.
   }
-  const shape = kept?.shape ?? 1;
   if (
     kept === null ||
     typeof kept !== "object" ||
-    !Number.isInteger(shape) ||
-    shape < 1 ||
-    shape > SNAPSHOT_SHAPE ||
+    kept.shape !== SNAPSHOT_SHAPE ||
     typeof kept.pulledAt !== "number" ||
     typeof kept.data !== "object" ||
     kept.data === null
   ) {
-    // Unreadable, or a newer build's. The outbox is another table and is not touched:
-    // nothing captured is lost, and the next cycle pulls afresh.
     await store.write(SNAPSHOT_KEY, null);
     return null;
   }
-  let data = kept.data as unknown as Loose;
-  try {
-    for (let step = shape + 1; step <= SNAPSHOT_SHAPE; step += 1)
-      data = UPCAST[step]!(data);
-  } catch {
-    // Stored data no step can read: dropped and pulled again, like an unreadable snapshot.
-    await store.write(SNAPSHOT_KEY, null);
-    return null;
-  }
-  return {
-    shape: SNAPSHOT_SHAPE,
-    pulledAt: kept.pulledAt,
-    data: data as Snapshot["data"],
-  };
+  return { shape: SNAPSHOT_SHAPE, pulledAt: kept.pulledAt, data: kept.data };
 }
 
 export async function runCycle(

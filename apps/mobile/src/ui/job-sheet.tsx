@@ -1,12 +1,13 @@
 // A job, opened from its card on Today or from a shift on Week: its address, which opens
 // the phone's own maps, and the office's notes. Both are the last pull's, so they are there
 // with no signal.
-import { Linking, Platform, Text } from "react-native";
+import { Linking, Platform } from "react-native";
 
 import { useStrings } from "../i18n";
 import { mapsLink } from "../sync/today";
 import { Button, text } from "./controls";
 import { Sheet } from "./sheet";
+import { Text } from "./text";
 
 export type JobFacts = {
   id: string;

@@ -6,6 +6,8 @@ import { describe, expect, it } from "vitest";
 import {
   byJob,
   coveringShift,
+  heldWrite,
+  nextSend,
   offeredEnd,
   opensOnCrew,
   quarterAfter,
@@ -233,5 +235,83 @@ describe("where the app opens", () => {
     const late = new Date("2026-11-16T23:30:00-05:00").getTime();
     expect(opensOnCrew(pull({ shifts: [shiftOn("2026-11-16")] }), late)).toBe(false);
     expect(opensOnCrew(pull({ shifts: [shiftOn("2026-11-17")] }), late)).toBe(true);
+  });
+});
+
+// A stand-in for the two writes, as the server keeps them (packages/api shifts/write.ts and
+// move.ts): an id it has is `duplicate` when the contents match and `id_conflict` when they
+// do not; a new id is judged against what is already written.
+function office() {
+  const byId = new Map<string, string>();
+  // The job each person is on now, once moved; the shifts added, by person.
+  const on = new Map<string, string>();
+  const added = new Map<string, string[]>();
+  return {
+    create(id: string, contents: string[], person: string) {
+      const key = contents.join(" ");
+      const had = byId.get(id);
+      if (had !== undefined) {
+        return had === key
+          ? { result: "duplicate" }
+          : { result: "rejected", code: "id_conflict" };
+      }
+      // The same hours again under a new id overlap the shift the first send wrote.
+      if ((added.get(person) ?? []).includes(contents.slice(1).join(" "))) {
+        return { result: "rejected", code: "schedule", issues: [{ code: "overlap" }] };
+      }
+      byId.set(id, key);
+      added.set(person, [...(added.get(person) ?? []), contents.slice(1).join(" ")]);
+      return { result: "created" };
+    },
+    move(id: string, person: string, job: string, at: string) {
+      // The end is not compared: the first send took it from the shift it ended.
+      const key = [person, job, at].join(" ");
+      const had = byId.get(id);
+      if (had !== undefined) {
+        return had === key
+          ? { result: "duplicate" }
+          : { result: "rejected", code: "id_conflict" };
+      }
+      if (on.get(person) === job) return { result: "rejected", code: "same_job" };
+      byId.set(id, key);
+      on.set(person, job);
+      return { result: "moved" };
+    },
+  };
+}
+
+describe("a write from Crew's sheets, tried again", () => {
+  let n = 0;
+  const mint = () => `01900000-0000-7000-8000-${String((n += 1)).padStart(12, "0")}`;
+
+  it("reads a move whose answer was lost, tried again a minute later, as done", () => {
+    const server = office();
+    // The id is minted when the sheet opens.
+    const held = heldWrite(mint());
+    const first = nextSend(held, ["ana", "elm", "15:30"], "09:02", mint);
+    // The server writes it; the answer never arrives.
+    server.move(first.id, "ana", "elm", first.at);
+    const again = nextSend(first, ["ana", "elm", "15:30"], "09:03", mint);
+    expect(again).toMatchObject({ id: first.id, at: "09:02" });
+    expect(refusalOf(server.move(again.id, "ana", "elm", again.at))).toBeNull();
+  });
+
+  it("reads an added shift whose answer was lost, tried again, as done", () => {
+    const server = office();
+    const form = ["ana", "elm", "07:00", "15:30"];
+    const first = nextSend(heldWrite(mint()), form, "06:40", mint);
+    server.create(first.id, form, "ana");
+    const again = nextSend(first, form, "06:41", mint);
+    expect(again.id).toBe(first.id);
+    expect(refusalOf(server.create(again.id, form, "ana"))).toBeNull();
+  });
+
+  it("is a new write, with a new id and the minute of its own send, once the form changed", () => {
+    const first = nextSend(heldWrite(mint()), ["ana", "elm", "15:30"], "09:02", mint);
+    const changed = nextSend(first, ["ana", "oak", "15:30"], "09:05", mint);
+    expect(changed.id).not.toBe(first.id);
+    expect(changed.at).toBe("09:05");
+    // The sheet opened again for a fresh write holds a fresh id.
+    expect(heldWrite(mint()).id).not.toBe(first.id);
   });
 });

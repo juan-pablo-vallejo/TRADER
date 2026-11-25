@@ -5,10 +5,10 @@
 // a failure is never silent.
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 
 import { timeOfDay } from "../format";
-import { useStrings } from "../i18n";
+import { useSpeech, useStrings } from "../i18n";
 import type { Catalog } from "../i18n/catalog";
 import { useSync } from "../sync/provider";
 import { type ChipState, waiting } from "../sync/today";
@@ -16,6 +16,7 @@ import type { OutboxRecord } from "../sync/types";
 import { color, size, space } from "../theme";
 import { Button, text } from "./controls";
 import { Sheet } from "./sheet";
+import { Text } from "./text";
 
 // What an entry still on this phone needs said about it, or nothing when it simply counts.
 function entryNote(record: OutboxRecord, t: Catalog["entry"]): string | null {
@@ -71,9 +72,16 @@ const LOOK: Record<
 
 export function SyncChip() {
   const { t, language } = useStrings();
+  const speech = useSpeech();
   const { snapshot, records, last, syncing, refused, sync } = useSync();
   const [open, setOpen] = useState(false);
-  const where = waiting({ records, last, syncing, refused });
+  const where = waiting({
+    data: snapshot?.data ?? null,
+    records,
+    last,
+    syncing,
+    refused,
+  });
   const look = LOOK[where.state];
   const zone = snapshot?.data.company.timezone ?? "UTC";
   const names = new Map<string, string>([
@@ -111,6 +119,13 @@ export function SyncChip() {
       <Pressable
         testID={`sync-${look.tone}`}
         accessibilityRole="button"
+        accessibilityLanguage={speech}
+        // The word, and the count in words: "· 2" is not read as anything.
+        accessibilityLabel={
+          where.unsent > 0
+            ? `${t.sync.chip[where.state]}, ${t.sync.unsent(where.unsent)}`
+            : t.sync.chip[where.state]
+        }
         accessibilityLiveRegion="polite"
         onPress={() => setOpen(true)}
         hitSlop={8}

@@ -72,8 +72,16 @@ export type Catalog = {
     title: string;
     jobs: string;
     noJobs: string;
-    // Nothing has been pulled on this phone yet and the server cannot be reached.
-    firstLoad: string;
+    // Nothing has been pulled on this phone yet, and why (sync/today.ts, nothingLoaded):
+    // the server not reached, reached and failing, an update needed, sending paused by the
+    // office's system, the session refused.
+    nothingLoaded: {
+      offline: string;
+      failed: string;
+      update: string;
+      paused: string;
+      signIn: string;
+    };
     off: string;
     working: (job: string, since: string) => string;
     paused: (job: string) => string;
@@ -84,6 +92,8 @@ export type Catalog = {
     resume: string;
     switchTo: (job: string) => string;
     hoursToday: (hours: string) => string;
+    // The running timer as a screen reader says it.
+    timerSpoken: (hours: number, minutes: number) => string;
     // Under the weekly schedule.
     shiftNow: (job: string, start: string, end: string) => string;
     shiftLater: (job: string, start: string) => string;
@@ -104,9 +114,14 @@ export type Catalog = {
     // A session still open from an earlier day.
     earlier: (job: string, day: string) => string;
     clockOutNow: string;
-    callOffice: string;
+    // The office's button where there is no shift: a WhatsApp chat with the office's number,
+    // and what a screen reader says of it.
+    whatsApp: string;
+    whatsAppSpoken: string;
     // Said by a screen reader when a tap has been saved; the mark itself is a check.
     captured: string;
+    // A tap the phone's own store would not write: nothing was saved.
+    notSaved: string;
     // The job, opened from its card.
     job: {
       address: string;
@@ -143,6 +158,8 @@ export type Catalog = {
     now: string;
     // The chip under a screen's title: where this phone's entries stand, in a word.
     chip: { sent: string; saved: string; sending: string; attention: string };
+    // Said at once when a cycle hears entries refused; the chip turns to Needs attention.
+    refusedNews: (count: number) => string;
     // The sheet the chip opens.
     waitingTitle: string;
     nothingWaiting: string;
@@ -212,7 +229,9 @@ export type Catalog = {
       shifts: string;
       noShifts: string;
       at: (job: string) => string;
-      call: string;
+      // A WhatsApp chat with the person, and what a screen reader says of it.
+      whatsApp: string;
+      whatsAppSpoken: (name: string) => string;
       noPhone: string;
       add: string;
       move: string;
@@ -279,6 +298,8 @@ export type Catalog = {
     name: string;
     phone: string;
     phoneHelp: string;
+    // The server has not answered with the contact phone yet.
+    phoneNotLoaded: string;
     save: string;
     saved: string;
     saveFailed: string;

@@ -1,0 +1,53 @@
+// What Me works out apart from the screen: the contact phone's loading, and its three pairs.
+// Pure but for the fetch it is handed, so it is tested with nothing of a device beneath it.
+import type { Language } from "./i18n/catalog";
+
+export type Contact = { name: string; phone: string | null };
+export type ContactLoad =
+  { phase: "loading" } | { phase: "failed" } | { phase: "loaded"; contact: Contact };
+
+// The contact phone comes only from the server. Me calls this as it comes into focus, as the
+// app comes back to the front, and on Try again: it asks until the server has answered once,
+// one question at a time, and after that never again, so a later focus leaves what the
+// person is typing alone.
+export function contactLoader(
+  fetch: () => Promise<Contact>,
+  told: (state: ContactLoad) => void,
+): () => Promise<void> {
+  let loaded = false;
+  let asking = false;
+  return async () => {
+    if (loaded || asking) return;
+    asking = true;
+    told({ phase: "loading" });
+    try {
+      const contact = await fetch();
+      loaded = true;
+      told({ phase: "loaded", contact });
+    } catch {
+      told({ phase: "failed" });
+    } finally {
+      asking = false;
+    }
+  };
+}
+
+export type Side<T extends string> = { value: T; selected: boolean };
+
+const pair = <T extends string>(values: readonly [T, T], chosen: T): Side<T>[] =>
+  values.map((value) => ({ value, selected: value === chosen }));
+
+// Me's three pairs, each read as two radio buttons with the chosen side selected: the
+// language; reminders, off until turned on; and Face ID or fingerprint, absent where this
+// phone can hold no key.
+export function mePairs(input: {
+  language: Language;
+  reminders: "on" | "off" | null;
+  key: "on" | "off" | "absent";
+}) {
+  return {
+    language: pair(["en", "es"] as const, input.language),
+    reminders: pair(["on", "off"] as const, input.reminders === "on" ? "on" : "off"),
+    key: input.key === "absent" ? null : pair(["on", "off"] as const, input.key),
+  };
+}

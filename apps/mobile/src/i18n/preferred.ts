@@ -1,5 +1,6 @@
-// The first of the phone's languages that is one of ours, English when none is. Apart from
-// the provider so it can be tested with nothing of a device beneath it.
+// The first of the phone's languages that is one of ours, English when none is; and the
+// language a screen reader speaks the app in, the one chosen in it. Apart from the provider
+// so they can be tested with nothing of a device beneath them.
 import { type Language, LANGUAGES } from "./catalog";
 
 export function preferred(codes: readonly (string | null)[]): Language {
@@ -9,3 +10,6 @@ export function preferred(codes: readonly (string | null)[]): Language {
   }
   return "en";
 }
+
+// A BCP 47 tag, as `accessibilityLanguage` takes it (ui/text.tsx).
+export const speechLanguage = (language: Language): string => language;

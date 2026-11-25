@@ -5,41 +5,56 @@
 // Off the clock: a card with the job, its address and the shift's hours, and one Clock in
 // button at the foot of the screen. Under the weekly schedule the card is the shift the
 // schedule makes eligible now and there is nothing to pick; with no such shift there is no
-// button, the reason, and Call the office. Without the schedule the person picks a jobsite
-// first. On the clock: the job, a running timer, Clock out as the main button, Start break
-// and Switch job beneath it. Clock out asks once; nothing else asks. A session left open
-// from an earlier day says so first. The server decides what counts either way, and an
-// entry it refused is shown behind the chip as what it is.
-import { wallClock } from "@trader/api/contract";
+// button, the reason, and WhatsApp, a chat with the office. Without the schedule the person
+// picks a jobsite first. On the clock: the job, a running timer, Clock out as the main
+// button, Start break and Switch job beneath it. Clock out asks once; nothing else asks. A
+// session left open from an earlier day says so first. The server decides what counts either way, and an
+// entry it refused is shown behind the chip as what it is. With nothing loaded yet the
+// screen says why (today.ts, nothingLoaded) and draws the chip. The timer is spoken as hours
+// and minutes, and its size grows with the phone's text only as far as the screen's width.
+import { wallClock, whatsAppLink } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { announce, felt } from "../../feedback";
 import { dayName, duration, timeOfDay, wallTime } from "../../format";
-import { useStrings } from "../../i18n";
+import { useSpeech, useStrings } from "../../i18n";
 import { useReminders } from "../../reminders";
 import { offerAt, type Tap } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
-import { fromEarlierDay, sessionWorkedMs, telLink, timer } from "../../sync/today";
+import {
+  fromEarlierDay,
+  nothingLoaded,
+  sessionWorkedMs,
+  spokenTimer,
+  timer,
+  workedOn,
+} from "../../sync/today";
 import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
 import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { Sheet } from "../../ui/sheet";
 import { SyncChip } from "../../ui/sync-chip";
+import { Text } from "../../ui/text";
 
 // How long the check mark stays after a tap was saved.
 const CAPTURED_MS = 1600;
+// How far the timer grows with the phone's text size.
+const TIMER_GROWS = 1.25;
 
 export default function Today() {
   const { t, language } = useStrings();
-  const { snapshot, records, clock, last, tap, sync } = useSync();
+  const speech = useSpeech();
+  const { snapshot, records, clock, last, refused, tap, sync } = useSync();
   const insets = useSafeAreaInsets();
   const [picked, setPicked] = useState<string | null>(null);
   const [asking, setAsking] = useState<"clock-out" | "switch" | null>(null);
   const [opened, setOpened] = useState<string | null>(null);
   const [captured, setCaptured] = useState(false);
+  // A tap the store would not write: said until the next tap.
+  const [notSaved, setNotSaved] = useState(false);
   const { setting: remindersSetting, turnOn, turnOff } = useReminders();
   const [askReminders, setAskReminders] = useState(false);
   const capturedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -63,24 +78,45 @@ export default function Today() {
   const at = useMemo(() => wallClock(new Date(now), zone), [now, zone]);
 
   if (data === null) {
+    const reason = nothingLoaded(last, refused);
+    const said = {
+      offline: t.today.nothingLoaded.offline,
+      failed: t.today.nothingLoaded.failed,
+      update: t.today.nothingLoaded.update,
+      paused: t.today.nothingLoaded.paused,
+      sign_in: t.today.nothingLoaded.signIn,
+    };
     return (
       <Screen testID="today">
-        <Text style={text.title}>{t.today.title}</Text>
-        {last === null ? (
+        <View style={styles.head}>
+          <Text style={text.title} accessibilityRole="header">
+            {t.today.title}
+          </Text>
+          <SyncChip />
+        </View>
+        {reason === null ? (
           <Text testID="today-loading" style={text.body}>
             {t.loading}
           </Text>
         ) : (
           <>
-            <Text testID="today-failed" style={text.attention} accessibilityRole="alert">
-              {t.today.firstLoad}
+            <Text
+              testID={`today-failed-${reason}`}
+              style={text.attention}
+              accessibilityRole="alert"
+              accessibilityLiveRegion="polite"
+            >
+              {said[reason]}
             </Text>
-            <Button
-              testID="today-retry"
-              kind="secondary"
-              label={t.retry}
-              onPress={() => void sync()}
-            />
+            {/* Trying again cannot update the app. */}
+            {reason !== "update" && (
+              <Button
+                testID="today-retry"
+                kind="secondary"
+                label={t.retry}
+                onPress={() => void sync()}
+              />
+            )}
           </>
         )}
       </Screen>
@@ -111,34 +147,31 @@ export default function Today() {
   const switchTo: string[] =
     offer !== null ? (target === null ? [] : [target]) : choices.map((job) => job.id);
 
-  const workedToday = data.sessions
-    .filter((s) => s.workDate === at.day && !s.voided)
-    .reduce(
-      (sum, s) =>
-        sum +
-        s.workedMs +
-        // A session still open has kept working since the pull.
-        (s.endedAt === null && s.state === "working"
-          ? Math.max(0, now - snapshot!.pulledAt)
-          : 0),
-      0,
-    );
+  // The day's hours count the running clock from the same marks as the timer (today.ts).
+  const workedToday = workedOn(data, records, at.day, now);
   const session = sessionWorkedMs(data, records, clock, now);
   const earlier =
     clock.status !== "off" && fromEarlierDay(wallClock(clock.since, zone).day, at.day);
 
   // One capture: written to the store, answered with a check mark and a short haptic.
-  // Neither waits on the network, and a phone with no haptics simply stays quiet.
+  // Neither waits on the network, and a phone with no haptics simply stays quiet. A write
+  // the store refused is said, felt as an error and spoken; it was reported (capture.ts).
   const capture = async (what: Tap) => {
-    if (!(await tap(what))) return;
+    const done = await tap(what);
+    setNotSaved(done === "failed");
+    if (done === "failed") {
+      setCaptured(false);
+      felt("error");
+      announce(t.today.notSaved);
+      return;
+    }
+    if (done !== "saved") return;
     // Asked once, after the first clock-in: the moment a reminder first makes sense.
     if (what.action === "start" && remindersSetting === null) setAskReminders(true);
     setCaptured(true);
     if (capturedTimer.current !== null) clearTimeout(capturedTimer.current);
     capturedTimer.current = setTimeout(() => setCaptured(false), CAPTURED_MS);
-    void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(
-      () => undefined,
-    );
+    felt("success");
   };
 
   // The card's job: the one the clock is on; else the one a start would go to.
@@ -146,14 +179,17 @@ export default function Today() {
   const card = cardJob === null ? null : (facts.get(cardJob) ?? null);
   const shift =
     offer?.kind === "eligible" && offer.shift.job.id === cardJob ? offer.shift : null;
-  const officeCall = telLink(data.company.phone);
+  const officeChat = whatsAppLink(data.company.phone);
+  const spoken = spokenTimer(session);
   const noShift = offer !== null && offer.kind !== "eligible" && clock.status === "off";
   const sheetJob = opened === null ? null : (facts.get(opened) ?? null);
 
   return (
     <Screen testID="today">
       <View style={styles.head}>
-        <Text style={text.title}>{t.today.title}</Text>
+        <Text style={text.title} accessibilityRole="header">
+          {t.today.title}
+        </Text>
         <SyncChip />
       </View>
 
@@ -174,6 +210,19 @@ export default function Today() {
           <Pressable
             testID="job-card"
             accessibilityRole="button"
+            accessibilityLanguage={speech}
+            accessibilityLabel={[
+              card.name,
+              card.address,
+              shift !== null && clock.status === "off"
+                ? t.today.shiftHours(
+                    wallTime(shift.start, language),
+                    wallTime(shift.end, language),
+                  )
+                : null,
+            ]
+              .filter((part) => part !== null)
+              .join(", ")}
             onPress={() => setOpened(card.id)}
             style={styles.card}
           >
@@ -218,6 +267,12 @@ export default function Today() {
               <Text
                 testID="clock-timer"
                 accessibilityRole="timer"
+                accessibilityLabel={t.today.timerSpoken(spoken.hours, spoken.minutes)}
+                // At the phone's largest text "10:00:00" at 56 pt grown with it would run past
+                // the screen: it grows a quarter at most, and shrinks to its one line.
+                maxFontSizeMultiplier={TIMER_GROWS}
+                numberOfLines={1}
+                adjustsFontSizeToFit
                 style={[styles.timer, clock.status === "paused" && styles.timerPaused]}
               >
                 {timer(session)}
@@ -242,6 +297,15 @@ export default function Today() {
               </View>
             )}
           </View>
+          {notSaved && (
+            <Text
+              testID="capture-not-saved"
+              style={text.attention}
+              accessibilityRole="alert"
+            >
+              {t.today.notSaved}
+            </Text>
+          )}
         </View>
 
         {noShift && offer !== null && (
@@ -268,7 +332,7 @@ export default function Today() {
                 {t.today.noJobs}
               </Text>
             ) : (
-              <View testID="job-list" style={styles.list}>
+              <View testID="job-list" accessibilityRole="radiogroup" style={styles.list}>
                 {jobs.map((job, index) => {
                   const chosen = job.id === target;
                   return (
@@ -276,6 +340,10 @@ export default function Today() {
                       key={job.id}
                       testID={`job-row-${index}`}
                       accessibilityRole="radio"
+                      accessibilityLanguage={speech}
+                      accessibilityLabel={[job.name, job.address]
+                        .filter((part) => part !== null)
+                        .join(", ")}
                       accessibilityState={{ selected: chosen }}
                       onPress={() => setPicked(job.id)}
                       style={[styles.row, chosen && styles.chosen]}
@@ -312,11 +380,12 @@ export default function Today() {
             }}
           />
         )}
-        {noShift && officeCall !== null && (
+        {noShift && officeChat !== null && (
           <Button
-            testID="call-office"
-            label={t.today.callOffice}
-            onPress={() => void Linking.openURL(officeCall).catch(() => undefined)}
+            testID="whatsapp-office"
+            label={t.today.whatsApp}
+            spoken={t.today.whatsAppSpoken}
+            onPress={() => void Linking.openURL(officeChat).catch(() => undefined)}
           />
         )}
         {clock.status === "working" && (

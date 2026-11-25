@@ -107,6 +107,28 @@ export function refusalOf(answer: Answer): Refusal | null {
     : "failed";
 }
 
+// A write from one of the tab's sheets (add a shift, move a person), as it is sent and sent
+// again. Its id is minted when the sheet opens and kept with what it sent, the minute of a
+// move among it: a try again with nothing changed is the same write, which the server
+// answers `duplicate`, read as done (refusalOf), even when the first answer was lost. The
+// server compares the contents under an id, so anything changed between tries is a new
+// write, under a new id and read at its own minute.
+export type HeldWrite = { id: string; sent: string | null; at: string | null };
+export type Send = { id: string; sent: string; at: string };
+
+export const heldWrite = (id: string): HeldWrite => ({ id, sent: null, at: null });
+
+export function nextSend(
+  held: HeldWrite,
+  form: readonly string[],
+  minute: string,
+  mint: () => string,
+): Send {
+  const sent = JSON.stringify(form);
+  if (held.sent === sent && held.at !== null) return { id: held.id, sent, at: held.at };
+  return { id: held.sent === null ? held.id : mint(), sent, at: minute };
+}
+
 // Whether the app opens on Crew: an admin with no shift of their own on the company's
 // today, and not on the clock. An admin who works a shift opens on their clock like anyone.
 export function opensOnCrew(data: PullOutput, now: number): boolean {

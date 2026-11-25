@@ -2,9 +2,9 @@
   "expo": {
     "name": "TRADER",
     "slug": "trader",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
-    "scheme": "trader",
+    "scheme": "app.jpteq.trader",
     "userInterfaceStyle": "light",
     "icon": "../../assets/brand/icon.png",
     "ios": {

@@ -22,6 +22,7 @@ import {
   SNAPSHOT_KEY,
   SNAPSHOT_SHAPE,
 } from "../../src/sync/engine";
+import { newlyRefused } from "../../src/sync/today";
 import type { PushAnswer, Transport } from "../../src/sync/types";
 import { memoryStore } from "../memory-store";
 
@@ -218,45 +219,57 @@ describe("a cycle", () => {
     expect(p.store.rows.map((r) => r.id)).toEqual([ids[0]]);
   });
 
-  // H3: a snapshot thrown away left a phone that updated overnight with nothing to clock in
-  // to until its first pull. An older shape is read as the current one.
-  it("reads a snapshot an older build stored as this build's, and throws away only an unreadable one", async () => {
+  it("tells of a refusal once, on the cycle that heard it, through a lost answer and a resend", async () => {
+    const p = await phone();
+    const [id] = await p.capture(1);
+    p.srv.refuse.set(id!, "not_scheduled");
+    // The answer is lost: nothing is known yet, so nothing is felt or said.
+    p.srv.dropResponse = true;
+    expect(newlyRefused(await p.cycle())).toBe(0);
+    expect(p.standing(id!)).toBe("pending");
+    // Sent again under the same id, refused: said now, once.
+    expect(newlyRefused(await p.cycle())).toBe(1);
+    // The cycles after it send nothing and say nothing.
+    expect(newlyRefused(await p.cycle())).toBe(0);
+    expect(newlyRefused({ outcome: "unreachable" })).toBe(0);
+    const [second] = await p.capture(1);
+    p.srv.refuse.set(second!, "not_scheduled");
+    expect(newlyRefused(await p.cycle())).toBe(1);
+  });
+
+  it("throws a snapshot with no shape away and pulls again, and reads shape 1 as stored", async () => {
     const p = await phone();
     const [id] = await p.capture(1);
     await p.cycle();
     const fresh = await readSnapshot(p.store);
     expect(fresh).toMatchObject({ shape: SNAPSHOT_SHAPE });
-    // As a build before 2026-11-19 stored it: no shape, and none of the newer fields.
-    const { shape: _shape, ...older } = fresh!;
-    const { phone: _phone, ...company } = older.data.company;
-    const { locationStamps: _stamps, ...data } = older.data;
-    const before = {
-      ...older,
-      data: {
-        ...data,
-        company,
-        jobs: [{ id: JOB, name: "J", address: null, status: "open" }],
-      },
-    };
-    for (const stored of [
-      superjson.stringify(before),
-      superjson.stringify({ ...before, shape: 1 }),
-    ]) {
-      await p.store.write(SNAPSHOT_KEY, stored);
-      const read = await readSnapshot(p.store);
-      expect(read).toMatchObject({
-        shape: SNAPSHOT_SHAPE,
-        pulledAt: fresh!.pulledAt,
-        data: {
-          company: { phone: null },
-          locationStamps: true,
-          jobs: [{ id: JOB, notes: null }],
-        },
-      });
-      expect(read?.data.events.map((e) => e.id)).toEqual([id]);
-    }
+    expect(fresh?.data.events.map((e) => e.id)).toEqual([id]);
+    // Stored with no shape: thrown away, gone from the store, and the next cycle pulls
+    // before it pushes, to learn whose records to send.
+    const { shape: _shape, ...shapeless } = fresh!;
+    await p.store.write(SNAPSHOT_KEY, superjson.stringify(shapeless));
+    expect(await readSnapshot(p.store)).toBeNull();
+    expect(await p.store.read(SNAPSHOT_KEY)).toBeNull();
+    await p.store.write(SNAPSHOT_KEY, superjson.stringify(shapeless));
+    const [next] = await p.capture(1);
+    let order: string[] = [];
+    const { push, pull } = p.srv.transport;
+    p.srv.transport.pull = () => ((order = [...order, "pull"]), pull());
+    p.srv.transport.push = (input) => ((order = [...order, "push"]), push(input));
+    expect(await p.cycle()).toMatchObject({
+      outcome: "synced",
+      settled: 1,
+      pulled: true,
+    });
+    expect(order).toEqual(["pull", "push", "pull"]);
+    expect(p.srv.accepted.has(next!)).toBe(true);
+    expect(await readSnapshot(p.store)).toMatchObject({
+      shape: SNAPSHOT_SHAPE,
+      pulledAt: p.now(),
+    });
     for (const stored of [
       superjson.stringify({ ...fresh, shape: SNAPSHOT_SHAPE + 1 }),
+      superjson.stringify({ ...fresh, shape: 0 }),
       superjson.stringify(null),
       "not json at all",
     ]) {
@@ -267,6 +280,8 @@ describe("a cycle", () => {
       await p.cycle();
       expect(await readSnapshot(p.store)).toMatchObject({ shape: SNAPSHOT_SHAPE });
     }
+    // This build's shape is the first: no older one is read.
+    expect(SNAPSHOT_SHAPE).toBe(1);
   });
 
   // H2: a settled record the pull no longer shows (older than its window) was never pruned,

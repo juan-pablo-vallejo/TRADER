@@ -1,6 +1,5 @@
 {
   "name": "@trader/mobile",
-  "version": "0.1.0",
   "private": true,
   "license": "UNLICENSED",
   "main": "expo-router/entry",

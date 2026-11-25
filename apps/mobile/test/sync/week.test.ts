@@ -3,6 +3,7 @@
 import type { PullOutput } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
+import type { OutboxRecord } from "../../src/sync/types";
 import { hoursByDay, shiftDays } from "../../src/sync/week";
 
 const ME = "01900000-0000-7000-8000-000000000001";
@@ -11,6 +12,7 @@ const K = "01900000-0000-7000-8000-00000000000b";
 const id = (n: number) => `01900000-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const at = (day: string, time: string) => new Date(`${day}T${time}:00-05:00`);
 const HOUR = 3_600_000;
+const NOON = at("2026-11-17", "12:00").getTime();
 
 const snapshot = (over: Partial<PullOutput> = {}): PullOutput => ({
   serverNow: at("2026-11-17", "12:00"),
@@ -83,7 +85,7 @@ describe("hours by day", () => {
         session(2, K, "2026-11-16", "13:00", "16:00"),
       ],
     });
-    const days = hoursByDay(data);
+    const days = hoursByDay(data, [], NOON);
     expect(days.map((d) => [d.day, d.workedMs / HOUR])).toEqual([
       ["2026-11-17", 4],
       ["2026-11-16", 8],
@@ -99,8 +101,10 @@ describe("hours by day", () => {
         session(2, K, "2026-11-16", "13:00", "16:00", { voided: true }),
       ],
     });
-    expect(hoursByDay(data)).toMatchObject([{ workedMs: 5 * HOUR, sessions: [{}] }]);
-    expect(hoursByDay(snapshot())).toEqual([]);
+    expect(hoursByDay(data, [], NOON)).toMatchObject([
+      { workedMs: 5 * HOUR, sessions: [{}] },
+    ]);
+    expect(hoursByDay(snapshot(), [], NOON)).toEqual([]);
   });
 
   it("names each session's flags once, in one order, from its own entries only", () => {
@@ -121,12 +125,69 @@ describe("hours by day", () => {
         event(6, J, "2026-11-17", "09:30", ["corrected", "user_timed"]),
       ],
     });
-    const [tuesday, monday] = hoursByDay(data);
+    const [tuesday, monday] = hoursByDay(data, [], NOON);
     expect(monday!.sessions.map((s) => s.flags)).toEqual([
       ["offline", "location", "unscheduled"],
       [],
     ]);
     expect(tuesday!.sessions.map((s) => s.flags)).toEqual([["corrected", "user_timed"]]);
+  });
+});
+
+describe("hours by day, the running clock counted", () => {
+  const record = (
+    n: number,
+    type: OutboxRecord["payload"]["type"],
+    time: string,
+  ): OutboxRecord => ({
+    id: id(n),
+    ownerId: ME,
+    kind: "labor_event",
+    schemaVersion: 1,
+    payload: {
+      workerId: ME,
+      jobId: J,
+      type,
+      clientTimestamp: at("2026-11-17", time),
+      location: null,
+      timeSetByUser: false,
+      capturedOffline: true,
+    },
+    standing: "pending",
+    syncingSince: null,
+    code: null,
+    flags: [],
+  });
+
+  it("counts an open session after a pull up to now", () => {
+    const data = snapshot({
+      // The server's fold: an open session holds its closed intervals only.
+      sessions: [session(1, J, "2026-11-17", "07:00", null)],
+      events: [event(1, J, "2026-11-17", "07:00", [])],
+    });
+    const [today] = hoursByDay(data, [], NOON);
+    expect(today!.workedMs).toBe(5 * HOUR);
+    expect(today!.sessions[0]!.session).toMatchObject({
+      workedMs: 5 * HOUR,
+      endedAt: null,
+    });
+  });
+
+  it("shows an offline start, break and end as a session of its day", () => {
+    const records = [
+      record(1, "started", "07:00"),
+      record(2, "paused", "09:00"),
+      record(3, "resumed", "09:30"),
+      record(4, "ended", "11:30"),
+    ];
+    const [today] = hoursByDay(snapshot(), records, NOON);
+    expect(today).toMatchObject({ day: "2026-11-17", workedMs: 4 * HOUR });
+    expect(today!.sessions[0]!.session).toMatchObject({
+      jobId: J,
+      state: "ended",
+      workedMs: 4 * HOUR,
+      breakMs: HOUR / 2,
+    });
   });
 });
 

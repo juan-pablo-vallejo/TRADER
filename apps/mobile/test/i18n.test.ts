@@ -22,10 +22,12 @@ const said = (leaf: Leaf) =>
   typeof leaf === "string" ? leaf : (leaf as (name: string) => string)("Ana Ruiz");
 
 // Words that are the same in both languages on purpose: the product's name, each
-// language's own name for itself, shown where the language is chosen, and Apple's names
-// for an iPhone's lock, which are not translated.
+// language's own name for itself, shown where the language is chosen, Apple's names for an
+// iPhone's lock and WhatsApp's name on its buttons, which are not translated.
 const SAME = new Set([
   "appName",
+  "today.whatsApp",
+  "crew.person.whatsApp",
   "me.english",
   "me.spanish",
   "biometric.names.faceId",

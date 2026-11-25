@@ -74,9 +74,18 @@ export const es: Catalog = {
   today: {
     title: "Hoy",
     jobs: "Tus obras",
-    noJobs: "Todavía no hay ninguna obra abierta. Llama a la oficina.",
-    firstLoad:
-      "Este teléfono todavía no ha cargado tus obras. Conéctate e inténtalo de nuevo.",
+    noJobs: "Todavía no hay ninguna obra abierta. Escribe a la oficina por WhatsApp.",
+    nothingLoaded: {
+      offline:
+        "Este teléfono todavía no ha cargado tus obras. Conéctate e inténtalo de nuevo.",
+      failed:
+        "Este teléfono todavía no ha cargado tus obras. No se pudo completar. Inténtalo de nuevo.",
+      update: "Actualiza la aplicación para cargar tus obras.",
+      paused:
+        "El sistema de la oficina pausó la aplicación por ahora. Inténtalo más tarde.",
+      signIn:
+        "El sistema de la oficina no aceptó este inicio de sesión. Cierra sesión en Yo e inicia sesión de nuevo.",
+    },
     off: "No estás trabajando.",
     working: (job, since) => end(`Trabajando en ${job} desde ${las(since)} ${since}`),
     paused: (job) => `En descanso en ${job}.`,
@@ -87,11 +96,13 @@ export const es: Catalog = {
     resume: "Terminar descanso",
     switchTo: (job) => `Cambiar a ${job}`,
     hoursToday: (hours) => `${hours} trabajadas hoy`,
+    timerSpoken: (hours, minutes) =>
+      `${hours} ${hours === 1 ? "hora" : "horas"}, ${minutes} ${minutes === 1 ? "minuto" : "minutos"}`,
     shiftNow: (job, start, end) => `Tu turno: ${job}, ${start}–${end}.`,
     shiftLater: (job, start) =>
       `${end(`Tu próximo turno es en ${job} a ${las(start)} ${start}`)} Puedes marcar entrada ${EARLY_MINUTES} minutos antes.`,
     noMoreShifts: "No tienes más turnos hoy.",
-    noShift: "No tienes turno hoy. Llama a la oficina.",
+    noShift: "No tienes turno hoy. Escribe a la oficina por WhatsApp.",
     attention: "Requiere atención",
     shiftHours: (start, end) => `De ${start} a ${end}`,
     onTheClock: "Trabajando",
@@ -104,8 +115,10 @@ export const es: Catalog = {
     keepWorking: "Seguir trabajando",
     earlier: (job, day) => `Sigues trabajando en ${job} desde el ${day}.`,
     clockOutNow: "Marcar salida ahora",
-    callOffice: "Llamar a la oficina",
+    whatsApp: "WhatsApp",
+    whatsAppSpoken: "Escribir a la oficina por WhatsApp",
     captured: "Guardado",
+    notSaved: "No se guardó. Inténtalo de nuevo.",
     job: {
       address: "Dirección",
       noAddress: "La oficina no ha puesto una dirección.",
@@ -126,7 +139,7 @@ export const es: Catalog = {
     refused: "El sistema de la oficina no aceptó este registro.",
     refusals: {
       not_scheduled:
-        "No tenías turno en esa obra a esa hora. Llama a la oficina para que agregue tus horas.",
+        "No tenías turno en esa obra a esa hora. Escribe a la oficina por WhatsApp para que agregue tus horas.",
       time_in_future:
         "El reloj de este teléfono estaba adelantado. Pon la hora en automático y pide a la oficina que agregue tus horas.",
       session_already_open:
@@ -134,7 +147,7 @@ export const es: Catalog = {
       no_open_session:
         "No habías marcado entrada. Pide a la oficina que revise tus horas.",
       not_permitted:
-        "Esa obra está cerrada. Llama a la oficina para que agregue tus horas.",
+        "Esa obra está cerrada. Escribe a la oficina por WhatsApp para que agregue tus horas.",
       other: (code) => `Pide a la oficina que agregue tus horas. Diles: ${code}.`,
     },
   },
@@ -161,6 +174,10 @@ export const es: Catalog = {
       sending: "Enviando",
       attention: "Requiere atención",
     },
+    refusedNews: (count) =>
+      count === 1
+        ? "El sistema de la oficina no aceptó un registro. Toca Requiere atención para ver por qué."
+        : `El sistema de la oficina no aceptó ${count} registros. Toca Requiere atención para ver por qué.`,
     waitingTitle: "Tus registros",
     nothingWaiting: "No hay nada pendiente en este teléfono.",
     close: "Cerrar",
@@ -225,7 +242,8 @@ export const es: Catalog = {
       shifts: "Turnos de hoy",
       noShifts: "Sin turno hoy.",
       at: (job) => `En ${job}`,
-      call: "Llamar",
+      whatsApp: "WhatsApp",
+      whatsAppSpoken: (name) => `Escribir a ${name} por WhatsApp`,
       noPhone: "No hay teléfono de esta persona.",
       add: "Agregar un turno hoy",
       move: "Mover a otra obra",
@@ -297,7 +315,9 @@ export const es: Catalog = {
     name: "Tu nombre",
     phone: "Teléfono de contacto",
     phoneHelp:
-      "Donde la oficina puede llamarte. No es el número con el que inicias sesión.",
+      "Donde la oficina puede contactarte. No es el número con el que inicias sesión.",
+    phoneNotLoaded:
+      "Este teléfono no pudo llegar a la oficina para cargar tu teléfono de contacto. Conéctate e inténtalo de nuevo.",
     save: "Guardar",
     saved: "Guardado.",
     saveFailed: "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.",

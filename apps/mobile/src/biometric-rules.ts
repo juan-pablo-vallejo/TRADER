@@ -71,6 +71,16 @@ export function keySwitch(
   return reason === null && keyFor === who ? "on" : "off";
 }
 
-// A sign-in the server refused (deactivated, or no roster holds the person): when it came by
-// the key, the key goes too, so the phone stops offering a way in that leads nowhere.
+// What me.get is told after a sign-in: by the key, when the key was made, so the server can
+// refuse a key older than a change to the person's sign-in address. A key whose day the
+// phone lost is taken as the oldest. Any other way in names no key.
+export const keyCheck = (
+  by: SignedInBy,
+  madeAt: string | null,
+): { keyMadeAt: Date } | undefined =>
+  by === "biometric" ? { keyMadeAt: new Date(madeAt ?? 0) } : undefined;
+
+// A sign-in the server refused (deactivated, no roster holds the person, or the address
+// changed since the key was made): when it came by the key, the key goes too, so the phone
+// stops offering a way in that leads nowhere.
 export const revokesKey = (by: SignedInBy): boolean => by === "biometric";

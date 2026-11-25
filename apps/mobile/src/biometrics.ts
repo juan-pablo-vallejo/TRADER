@@ -38,6 +38,8 @@ type Biometrics = {
 
 // Who the phone's key was made for, and who said "Not now", each by roster id.
 export const KEY_FOR = "biometric-key-for";
+// When this phone's key was made, as an ISO instant.
+export const KEY_MADE_AT = "biometric-key-made-at";
 export const DECLINED_BY = "biometric-declined-by";
 
 function useKeyName(): KeyName {

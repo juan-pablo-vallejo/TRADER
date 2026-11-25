@@ -54,6 +54,12 @@ export type Form =
 
 export const FIELD: Form = { at: "field" };
 
+// Whether the keyboard stays up after a refusal: where typing again can help, a wrong code
+// above all, it does; where it cannot, it goes, so what can (Send another code, the trouble
+// lines) is in view, as on Android it would stay under the keyboard.
+export const keepsKeyboard = (note: Note): boolean =>
+  note !== "expired_code" && note !== "too_many" && note !== "locked";
+
 // A step's outcome: where the form is now, and what it says.
 export type Step = { form: Form; note: Note | null };
 

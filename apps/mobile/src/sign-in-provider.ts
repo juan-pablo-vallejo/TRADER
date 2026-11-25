@@ -47,7 +47,7 @@ export function useClerkProvider(): Provider {
         kind === "google"
           ? await startSSOFlow({
               strategy: "oauth_google",
-              redirectUrl: makeRedirectUri({ scheme: "trader", path: "sso-callback" }),
+              redirectUrl: makeRedirectUri({ path: "sso-callback" }),
             })
           : Platform.OS === "ios"
             ? await startAppleAuthenticationFlow()

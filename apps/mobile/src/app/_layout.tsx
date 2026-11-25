@@ -7,13 +7,13 @@ import { Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { maybeCompleteAuthSession } from "expo-web-browser";
 import { useEffect } from "react";
-import { Text } from "react-native";
 
 import { apiUrl, clerkKey } from "../config";
 import { reportScreen, startReporting, withReporting } from "../report";
 import { StringsProvider } from "../i18n";
 import { SessionProvider } from "../session";
 import { Screen, text } from "../ui/controls";
+import { Text } from "../ui/text";
 
 // Before anything is drawn, so an error in the first render is reported too. With no DSN
 // in the build this does nothing (report.ts).

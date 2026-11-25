@@ -2,11 +2,13 @@
 // width, one a screen; a secondary one 48 pt. A label too long for one line, as Spanish
 // often is, takes a second and the button grows with it: it is never cut short. Every control carries a `testID`: a
 // Maestro flow selects by it, never by text, which is in two languages.
-import { Pressable, StyleSheet, Text, type TextStyle } from "react-native";
+import { Pressable, StyleSheet, type TextStyle, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { ReactNode } from "react";
 
+import { useSpeech } from "../i18n";
 import { color, size, space, type } from "../theme";
+import { Text } from "./text";
 
 export function Button({
   label,
@@ -14,6 +16,9 @@ export function Button({
   onPress,
   disabled = false,
   kind = "primary",
+  selected,
+  mark,
+  spoken,
 }: {
   label: string;
   testID: string;
@@ -21,13 +26,22 @@ export function Button({
   disabled?: boolean;
   // `brand`: the sign-in screen's one button, in D'Sierra's red as the office's is.
   kind?: "primary" | "secondary" | "brand";
+  // One side of a pair: read as a radio button, selected or not, inside a `Pair`.
+  selected?: boolean;
+  // A mark drawn before the words, a vendor's own where its rules ask for one.
+  mark?: ReactNode;
+  // What a screen reader says, where the words shown are not the whole of it.
+  spoken?: string;
 }) {
   const primary = kind !== "secondary";
+  const speech = useSpeech();
   return (
     <Pressable
       testID={testID}
-      accessibilityRole="button"
-      accessibilityState={{ disabled }}
+      accessibilityRole={selected === undefined ? "button" : "radio"}
+      accessibilityLabel={spoken ?? label}
+      accessibilityLanguage={speech}
+      accessibilityState={{ disabled, ...(selected !== undefined && { selected }) }}
       disabled={disabled}
       onPress={onPress}
       style={[
@@ -35,8 +49,10 @@ export function Button({
         primary ? styles.primary : styles.secondary,
         kind === "brand" && styles.brand,
         disabled && primary && styles.disabled,
+        mark !== undefined && styles.withMark,
       ]}
     >
+      {mark}
       <Text
         numberOfLines={2}
         style={[styles.buttonLabel, { color: primary ? color.onAccent : color.ink }]}
@@ -44,6 +60,16 @@ export function Button({
         {label}
       </Text>
     </Pressable>
+  );
+}
+
+// Two buttons side by side, one of them chosen: a radio group, each side's selected state
+// said, as Crew's view switch is.
+export function Pair({ children }: { children: ReactNode }) {
+  return (
+    <View accessibilityRole="radiogroup" style={styles.pair}>
+      {children}
+    </View>
   );
 }
 
@@ -85,4 +111,6 @@ const styles = StyleSheet.create({
   },
   disabled: { backgroundColor: color.muted },
   buttonLabel: { ...(type.bodyStrong as TextStyle), textAlign: "center" },
+  withMark: { flexDirection: "row", gap: space[3] },
+  pair: { flexDirection: "row", gap: space[2] },
 });

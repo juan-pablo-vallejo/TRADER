@@ -1,5 +1,6 @@
 {
   "ios": {
-    "NSFaceIDUsageDescription": "TRADER usa Face ID para que inicies sesión sin un código."
+    "NSFaceIDUsageDescription": "TRADER usa Face ID para que inicies sesión sin un código.",
+    "NSLocationWhenInUseUsageDescription": "TRADER registra dónde estás cuando marcas entrada o salida, para que la oficina vea que fue en la obra."
   }
 }

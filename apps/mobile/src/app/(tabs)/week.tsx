@@ -3,28 +3,31 @@
 // not known here until the next one, so an old one says it may be out of date.
 //
 // Each scheduled day is a card, today first; a shift opens the same job sheet as Today.
-// Beneath, the hours by day as the server folds them, each with a flag in words where the
-// office may look. Nothing here is computed on the phone but the grouping (sync/week.ts).
+// Beneath, the hours by day, each with a flag in words where the office may look: a closed
+// session's as the server folds them, the open one and any begun on this phone since the
+// pull counting the running clock (sync/week.ts).
 import { wallClock } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { age, dayName, duration, wallTime } from "../../format";
-import { useStrings } from "../../i18n";
+import { useSpeech, useStrings } from "../../i18n";
 import { useSync } from "../../sync/provider";
 import { hoursByDay, shiftDays } from "../../sync/week";
 import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
 import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { SyncChip } from "../../ui/sync-chip";
+import { Text } from "../../ui/text";
 
 // Older than this, the schedule on the phone is said to be possibly out of date.
 const STALE_MS = 60 * 60_000;
 
 export default function Week() {
   const { t, language } = useStrings();
-  const { snapshot, sync, syncing } = useSync();
+  const speech = useSpeech();
+  const { snapshot, records, sync, syncing } = useSync();
   const [opened, setOpened] = useState<JobFacts | null>(null);
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -37,7 +40,7 @@ export default function Week() {
   const today =
     data === null ? null : wallClock(new Date(now), data.company.timezone).day;
   const days = data === null || today === null ? [] : shiftDays(data, today);
-  const hours = data === null ? [] : hoursByDay(data);
+  const hours = data === null ? [] : hoursByDay(data, records, now);
   const jobName = new Map<string, string>([
     ...(data?.shifts ?? []).map((s) => [s.job.id, s.job.name] as const),
     ...(data?.jobs ?? []).map((j) => [j.id, j.name] as const),
@@ -48,7 +51,9 @@ export default function Week() {
   return (
     <Screen testID="week">
       <View style={styles.head}>
-        <Text style={text.title}>{t.week.title}</Text>
+        <Text style={text.title} accessibilityRole="header">
+          {t.week.title}
+        </Text>
         <SyncChip />
       </View>
       <ScrollView contentContainerStyle={styles.page}>
@@ -92,6 +97,17 @@ export default function Week() {
                 key={shift.id}
                 testID={`week-shift-${d}-${i}`}
                 accessibilityRole="button"
+                accessibilityLanguage={speech}
+                accessibilityLabel={[
+                  shift.job.name,
+                  t.today.shiftHours(
+                    wallTime(shift.start, language),
+                    wallTime(shift.end, language),
+                  ),
+                  shift.job.address,
+                ]
+                  .filter((part) => part !== null)
+                  .join(", ")}
                 onPress={() => setOpened(shift.job)}
                 style={styles.shift}
               >
@@ -115,7 +131,9 @@ export default function Week() {
 
         {data !== null && (
           <View style={styles.hours}>
-            <Text style={text.heading}>{t.week.hours}</Text>
+            <Text style={text.heading} accessibilityRole="header">
+              {t.week.hours}
+            </Text>
             {hours.length === 0 ? (
               <Text testID="hours-empty" style={text.body}>
                 {t.week.noHours}

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   demoDoor,
   FIELD,
+  keepsKeyboard,
   resend,
   secondsLeft,
   sendCode,
@@ -200,5 +201,18 @@ describe("Google and Apple", () => {
       form: FIELD,
       note: "failed",
     });
+  });
+});
+
+describe("the keyboard after a refusal", () => {
+  it("stays for a wrong code, so the next one is typed at once", () => {
+    expect(keepsKeyboard("wrong_code")).toBe(true);
+    expect(keepsKeyboard("bad_address")).toBe(true);
+  });
+
+  it("goes where typing again cannot help, so what can is in view", () => {
+    for (const note of ["expired_code", "too_many", "locked"] as const) {
+      expect([note, keepsKeyboard(note)]).toEqual([note, false]);
+    }
   });
 });

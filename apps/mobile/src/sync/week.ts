@@ -1,7 +1,12 @@
-// What Week works out from the last pull: the person's hours by day, each session with the
-// flags the office may look at, in words. Pure. The hours are the server's own fold
-// (`sessions`), never recomputed here; this only groups them and names their flags.
+// What Week works out from the last pull and the entries still on this phone: the person's
+// hours by day, each session with the flags the office may look at, in words. Pure. A
+// closed session's hours are the server's own fold (`sessions`); the open one, and any
+// begun on this phone since the pull, count the running clock from the marks the timer
+// reads (today.ts, liveSessions).
 import type { PullOutput } from "@trader/api/contract";
+
+import { liveSessions } from "./today";
+import type { OutboxRecord } from "./types";
 
 type Session = PullOutput["sessions"][number];
 export type Flag = PullOutput["events"][number]["flags"][number];
@@ -35,9 +40,13 @@ function flagsOf(session: Session, events: PullOutput["events"]): Flag[] {
 
 // Days newest first, a day's sessions in the order they began. A voided session is left
 // out: the office took it off the record.
-export function hoursByDay(data: PullOutput): HoursDay[] {
+export function hoursByDay(
+  data: PullOutput,
+  records: readonly OutboxRecord[],
+  now: number,
+): HoursDay[] {
   const days = new Map<string, HoursDay>();
-  const kept = data.sessions
+  const kept = liveSessions(data, records, now)
     .filter((s) => !s.voided)
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
   for (const session of kept) {

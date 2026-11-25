@@ -17,7 +17,7 @@ import { deviceStore } from "../store/device";
 
 import { type Catalog, type Language, LANGUAGES } from "./catalog";
 import { en } from "./en";
-import { preferred } from "./preferred";
+import { preferred, speechLanguage } from "./preferred";
 import { es } from "./es";
 
 const CATALOGS: Record<Language, Catalog> = { en, es };
@@ -51,4 +51,12 @@ export function useStrings(): Value {
   const value = useContext(Strings);
   if (value === null) throw new Error("useStrings needs StringsProvider above it");
   return value;
+}
+
+// The language a screen reader speaks a text or a control in: the one chosen in the app.
+// Undefined outside the provider (the build that was not told its API), where the phone's
+// own is used.
+export function useSpeech(): string | undefined {
+  const value = useContext(Strings);
+  return value === null ? undefined : speechLanguage(value.language);
 }

@@ -3,12 +3,21 @@
 // the code sent to it; another code after half a minute; "Trouble signing in?" on every
 // step; and the Demo door. Above the field: Face ID or fingerprint where this phone holds a
 // key, Google, and Apple's own button on an iPhone: Apple's App Review rule 4.8 asks an app
-// that offers Google's sign-in to offer Apple's too. The steps are sign-in-steps.ts, over the
-// provider it is handed (sign-in-provider.ts): Clerk's, or the development stand-in. Nobody
-// signs up here: an address or an account no roster holds is told to ask the office, by the
-// provider or by the server. After a sign-in by code, a phone that can is offered a key
-// (biometric-rules.ts, app/biometric-offer.tsx). Clerk's prebuilt native screens are not
-// used: they are in beta, and their language would not follow the app's own choice.
+// that offers Google's sign-in to offer Apple's too. The steps are sign-in-steps.ts, over
+// the provider it is handed (sign-in-provider.ts): Clerk's, or the development stand-in.
+// Nobody signs up here: an address or an account no roster holds is told to ask the office,
+// by the provider or by the server. After a sign-in by code, a phone that can is offered a
+// key (biometric-rules.ts, app/biometric-offer.tsx). Clerk's prebuilt native screens are
+// not used: they are in beta, and their language would not follow the app's own choice. A
+// refusal is shown under its field and said aloud (feedback.ts); after a wrong code the
+// keyboard stays and the field keeps its focus.
+//
+// Google's button carries Google's "G" in its standard colors on white, at the size of
+// Google's own assets: "The button must always include the standard color for the Google
+// "G"", and the rules are for "your website or app", with a padding for iOS and one for
+// Android (Google's page, read 2026-11-25). The page is
+// https://developers.google.com/identity/branding-guidelines, and the mark is cut from its
+// download bundle (assets/google).
 import { BodoniModa_700Bold, useFonts } from "@expo-google-fonts/bodoni-moda";
 import { SIGN_IN_CODE_LENGTH, type SignInIdentifier } from "@trader/api/contract";
 import {
@@ -18,14 +27,14 @@ import {
 } from "expo-apple-authentication";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { type ComponentRef, useEffect, useRef, useState } from "react";
 import {
+  Image,
   Keyboard,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   View,
   type TextStyle,
@@ -36,16 +45,19 @@ import { createApi } from "../api";
 import {
   offersBiometric,
   offersKeySignIn,
+  keyCheck,
   revokesKey,
   type SignedInBy,
 } from "../biometric-rules";
-import { DECLINED_BY, KEY_FOR, useBiometrics } from "../biometrics";
-import { useStrings } from "../i18n";
+import { DECLINED_BY, KEY_FOR, KEY_MADE_AT, useBiometrics } from "../biometrics";
+import { announce, felt } from "../feedback";
+import { useSpeech, useStrings } from "../i18n";
 import type { Catalog } from "../i18n/catalog";
 import { headersFor, useSession, type Session } from "../session";
 import {
   demoDoor,
   FIELD,
+  keepsKeyboard,
   resend,
   secondsLeft,
   sendCode,
@@ -61,8 +73,17 @@ import { deviceStore } from "../store/device";
 import { color, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
+import { Text } from "./text";
 
-const TYPING_WONT_HELP = new Set<Note>(["expired_code", "too_many", "locked"]);
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- React Native's way to name a bundled image
+const googleG = require("../../assets/google/g.png") as number;
+
+// The heading's hyphen does not break: "Team sign-in" wraps between its words, never
+// inside one.
+const unbroken = (heading: string) => heading.replace(/-/g, "\u2011");
+// How far the 32 pt heading grows with the phone's text size: at the largest, a word still
+// fits the line.
+const HEADING_GROWS = 1.5;
 
 // What the form says for each refusal, in the screen's language.
 export function sentence(s: Catalog["signIn"], note: Note): string {
@@ -93,7 +114,9 @@ export function PhoneSignIn({
   standIn?: boolean;
 }) {
   const { t } = useStrings();
+  const speech = useSpeech();
   const s = t.signIn;
+  const codeField = useRef<ComponentRef<typeof TextInput>>(null);
   const { signIn: keep } = useSession();
   const router = useRouter();
   // Until the heading's face has loaded, the system's serif stands in: nothing waits on it.
@@ -149,12 +172,19 @@ export function PhoneSignIn({
       if (done.form.at !== form.at || done.note !== null) setCode("");
       setForm(done.form);
       setNote(done.note);
-      // Where typing again cannot help, the keyboard goes, so what can (Send another
-      // code, the trouble lines) is in view: on Android it would stay under the keyboard.
-      if (done.note !== null && TYPING_WONT_HELP.has(done.note)) Keyboard.dismiss();
+      if (done.note !== null) {
+        felt("error");
+        announce(sentence(s, done.note));
+        // Where typing again helps, a wrong code above all, the field keeps the keyboard;
+        // where it cannot, the keyboard goes (sign-in-steps.ts, keepsKeyboard).
+        if (keepsKeyboard(done.note)) codeField.current?.focus();
+        else Keyboard.dismiss();
+      }
       setNow(Date.now());
     } catch {
       setNote("failed");
+      felt("error");
+      announce(s.failed);
     } finally {
       setBusy(false);
     }
@@ -167,7 +197,8 @@ export function PhoneSignIn({
   const admit = async (session: Session, by: SignedInBy) => {
     let who: string;
     try {
-      who = (await createApi(apiUrl, () => headersFor(session)).me.get.query()).id;
+      const check = keyCheck(by, await deviceStore.read(KEY_MADE_AT));
+      who = (await createApi(apiUrl, () => headersFor(session)).me.get.query(check)).id;
     } catch (error) {
       const refused =
         (error as { data?: { code?: string } } | null)?.data?.code === "UNAUTHORIZED";
@@ -175,12 +206,15 @@ export function PhoneSignIn({
         if (revokesKey(by)) {
           await biometrics.revokeHere();
           await deviceStore.write(KEY_FOR, null);
+          await deviceStore.write(KEY_MADE_AT, null);
           setKeyReady(false);
         }
         await provider.forgetStale();
         setForm(FIELD);
       }
       setNote(refused ? "unknown" : "failed");
+      felt("error");
+      announce(refused ? s.notAdded : s.failed);
       return;
     }
     await keep(session);
@@ -207,9 +241,18 @@ export function PhoneSignIn({
     try {
       const done = await socialSignIn(provider, kind, typed);
       if ("session" in done) await admit(done.session, kind);
-      else setNote(done.note);
+      else {
+        setNote(done.note);
+        // A sheet the person closed says nothing.
+        if (done.note !== null) {
+          felt("error");
+          announce(sentence(s, done.note));
+        }
+      }
     } catch {
       setNote("failed");
+      felt("error");
+      announce(s.failed);
     } finally {
       setBusy(false);
     }
@@ -222,9 +265,15 @@ export function PhoneSignIn({
     try {
       const signedIn = await biometrics.signIn();
       if (signedIn.ok) await admit(signedIn.session, "biometric");
-      else if (!signedIn.cancelled) setNote("failed");
+      else if (!signedIn.cancelled) {
+        setNote("failed");
+        felt("error");
+        announce(s.failed);
+      }
     } catch {
       setNote("failed");
+      felt("error");
+      announce(s.failed);
     } finally {
       setBusy(false);
     }
@@ -291,8 +340,13 @@ export function PhoneSignIn({
       >
         {form.at === "field" && (
           <>
-            <Text style={heading} accessibilityRole="header">
-              {s.title}
+            <Text
+              style={heading}
+              accessibilityRole="header"
+              accessibilityLabel={s.title}
+              maxFontSizeMultiplier={HEADING_GROWS}
+            >
+              {unbroken(s.title)}
             </Text>
             {keyReady && (
               <Button
@@ -307,6 +361,15 @@ export function PhoneSignIn({
               testID="sign-in-google"
               kind="secondary"
               label={s.google}
+              mark={
+                <Image
+                  source={googleG}
+                  style={styles.googleG}
+                  accessible={false}
+                  accessibilityElementsHidden
+                  importantForAccessibility="no"
+                />
+              }
               disabled={busy}
               onPress={() => void withSocial("google")}
             />
@@ -330,6 +393,7 @@ export function PhoneSignIn({
             <TextInput
               testID="sign-in-address"
               accessibilityLabel={s.address}
+              accessibilityLanguage={speech}
               style={styles.input}
               // No focus as the screen opens: the keyboard would cover what is above the
               // field before it has been read, and Send under it.
@@ -357,7 +421,11 @@ export function PhoneSignIn({
         )}
         {form.at === "code" && (
           <>
-            <Text style={heading} accessibilityRole="header">
+            <Text
+              style={heading}
+              accessibilityRole="header"
+              maxFontSizeMultiplier={HEADING_GROWS}
+            >
               {s.codeTitle}
             </Text>
             <Text style={text.body}>
@@ -368,15 +436,19 @@ export function PhoneSignIn({
             <Text style={text.label}>{s.code}</Text>
             <TextInput
               testID="sign-in-code"
+              ref={codeField}
               accessibilityLabel={s.code}
+              accessibilityLanguage={speech}
               // The texted code is offered above the keyboard, and one tap fills it: iOS by
               // `oneTimeCode`, Android by `sms-otp`.
               style={[styles.input, styles.code]}
               autoFocus
               maxLength={SIGN_IN_CODE_LENGTH}
               value={code}
-              editable={!busy}
+              // Never made read-only while a code is checked: a field that is loses its
+              // focus, and the keyboard goes with it. What is typed meanwhile is ignored.
               onChangeText={(entered) => {
+                if (busy) return;
                 const digits = entered.replace(/\D/g, "").slice(0, SIGN_IN_CODE_LENGTH);
                 setCode(digits);
                 // The last digit sends it: nobody types a code and then looks for a button.
@@ -415,7 +487,11 @@ export function PhoneSignIn({
         )}
         {form.at === "demo" && (
           <>
-            <Text style={heading} accessibilityRole="header">
+            <Text
+              style={heading}
+              accessibilityRole="header"
+              maxFontSizeMultiplier={HEADING_GROWS}
+            >
               {s.demo}
             </Text>
             <Text style={text.body}>{s.demoHelp}</Text>
@@ -423,6 +499,7 @@ export function PhoneSignIn({
             <TextInput
               testID="sign-in-demo-phone"
               accessibilityLabel={s.demoPhone}
+              accessibilityLanguage={speech}
               style={styles.input}
               value={demoPhone}
               onChangeText={setDemoPhone}
@@ -434,6 +511,7 @@ export function PhoneSignIn({
             <TextInput
               testID="sign-in-demo-code"
               accessibilityLabel={s.demoCode}
+              accessibilityLanguage={speech}
               style={styles.input}
               value={demoCode}
               onChangeText={setDemoCode}
@@ -508,10 +586,12 @@ function TextButton({
   onPress: () => void;
   expanded?: boolean;
 }) {
+  const speech = useSpeech();
   return (
     <Pressable
       testID={testID}
       accessibilityRole="button"
+      accessibilityLanguage={speech}
       accessibilityState={{ disabled, ...(expanded !== undefined && { expanded }) }}
       disabled={disabled}
       onPress={onPress}
@@ -562,6 +642,8 @@ const styles = StyleSheet.create({
   },
   textButtonDisabled: { color: color.muted, textDecorationLine: "none" },
   trouble: { gap: space[2] },
+  // Google's "G" at the size of its own assets, 20 pt in a 44 pt button.
+  googleG: { width: 20, height: 20 },
   apple: { minHeight: size.target },
   appleButton: { height: size.target, width: "100%" },
   or: { textAlign: "center" },

@@ -10,7 +10,7 @@ import { RemindersProvider } from "../../reminders";
 import { useSession } from "../../session";
 import { opensOnCrew } from "../../sync/crew";
 import { SyncProvider, useSync } from "../../sync/provider";
-import { color } from "../../theme";
+import { color, type } from "../../theme";
 
 // An icon beside each word: the word stays, so the tab is never an icon alone.
 const icon =
@@ -59,7 +59,8 @@ function AppTabs() {
         headerShown: false,
         tabBarActiveTintColor: color.accent,
         tabBarInactiveTintColor: color.inkSecondary,
-        tabBarLabelStyle: { fontSize: 13, fontWeight: "600" },
+        // 15 pt, as `type.label` is (theme.ts).
+        tabBarLabelStyle: { fontSize: type.label.fontSize, fontWeight: "600" },
       }}
     >
       <Tabs.Screen

@@ -2,13 +2,16 @@
 // still on the phone, the clock's state, and `tap`, which writes to the store and returns.
 // Cycles run when someone signs in, when the app comes forward, every minute while it is in
 // front, and after each capture; they coalesce (engine.ts). Nothing here is on the capture
-// path but the store.
+// path but the store. The chip turning to Needs attention is felt and said here, once for
+// the whole app: a refusal by the cycle that heard it, anything else by what the person
+// must do (today.ts, attentionNews).
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -17,22 +20,24 @@ import * as Crypto from "expo-crypto";
 
 import { createApi } from "../api";
 import { apiUrl, BUILD } from "../config";
+import { announce, felt } from "../feedback";
+import { useStrings } from "../i18n";
 import { createMinter } from "../ids";
 import { locationStamp, refreshLocation } from "../location";
-import { reportSyncFailure } from "../report";
+import { reportCaptureFailure, reportSyncFailure } from "../report";
 import { headersFor, useSession } from "../session";
 import { deviceStore } from "../store/device";
-import { clockState, recordsFor, type ClockState, type Tap } from "./clock";
+import { capture, type Captured } from "./capture";
+import { clockState, type ClockState, type Tap } from "./clock";
 import {
   createSyncer,
-  READING_KEY,
   readSnapshot,
   runCycle,
   type CycleResult,
   answersOf,
 } from "./engine";
 import { createFailureLog } from "./failures";
-import { stampsOn } from "./today";
+import { attentionNews, newlyRefused, stampsOn, waiting } from "./today";
 import type { OutboxRecord, Snapshot, Transport } from "./types";
 
 // While the app is in front. The reachability reading is fresh for two of these (clock.ts).
@@ -49,7 +54,8 @@ type Value = {
   syncing: boolean;
   // The server would not take this session: sign in again; the records are kept.
   refused: boolean;
-  tap: (tap: Tap) => Promise<boolean>;
+  // What became of the tap (capture.ts): saved, nothing to write, or not saved.
+  tap: (tap: Tap) => Promise<Captured>;
   sync: () => Promise<void>;
 };
 const SyncContext = createContext<Value | null>(null);
@@ -59,6 +65,10 @@ const unauthorized = (error: unknown) =>
 
 export function SyncProvider({ children }: { children: ReactNode }) {
   const { session } = useSession();
+  // Read when a cycle ends, so a change of language never restarts the cycles.
+  const { t } = useStrings();
+  const strings = useRef(t);
+  strings.current = t;
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [records, setRecords] = useState<OutboxRecord[]>([]);
   const [last, setLast] = useState<CycleResult | null>(null);
@@ -126,6 +136,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         // The first pull is where the phone learns it: ask then, not a cycle later.
         if (stampsOn(kept?.data ?? null)) void refreshLocation();
         setLast(result);
+        // The refused count rose: felt and said once, as the chip turns to Needs attention.
+        const refusedNow = newlyRefused(result);
+        if (refusedNow > 0) {
+          felt("error");
+          announce(strings.current.sync.refusedNews(refusedNow));
+        }
       } finally {
         setSyncing(false);
       }
@@ -163,33 +179,40 @@ export function SyncProvider({ children }: { children: ReactNode }) {
     () => clockState(snapshot?.data ?? null, records),
     [snapshot, records],
   );
+
+  // The chip's turn to Needs attention, said once as it turns.
+  const news = attentionNews(
+    waiting({ data: snapshot?.data ?? null, records, last, syncing, refused }),
+  );
+  const told = useRef(news);
+  useEffect(() => {
+    if (news !== null && news !== told.current) {
+      const s = strings.current.sync;
+      felt("error");
+      announce(
+        {
+          sign_in: s.signInAgain,
+          paused: s.paused,
+          update: s.updateRequired,
+          wrong_clock: s.wrongClock,
+        }[news],
+      );
+    }
+    told.current = news;
+  }, [news]);
   const tap = useCallback(
     async (what: Tap) => {
-      // Read from the store, not from what is drawn: two quick taps are two captures, and
-      // a tap that lands while a cycle is replacing the snapshot and pruning the records
-      // it now shows must see both as the store has them, never one of each.
-      // The records first, the snapshot after: a cycle writes its snapshot before it prunes
-      // (engine.ts), so records read first are never fewer than that snapshot accounts for.
-      const me = (await readSnapshot(deviceStore))?.data.me.id;
-      if (me === undefined) return false;
-      const now = Date.now();
-      const mine = await deviceStore.records(me);
-      const kept = await readSnapshot(deviceStore);
-      if (kept === null || kept.data.me.id !== me) return false;
-      const reading = await deviceStore.read(READING_KEY);
-      const written = recordsFor(what, clockState(kept.data, mine), {
-        me,
-        now,
-        reading: reading === null ? null : Number(reading),
-        // Off for this person: nothing is sent, whatever reading is in hand.
-        location: stampsOn(kept.data) ? locationStamp(now) : null,
+      const done = await capture(deviceStore, what, {
+        now: Date.now,
         mint,
+        location: locationStamp,
+        report: reportCaptureFailure,
       });
-      if (written.length === 0) return false;
-      await deviceStore.append(written);
-      setRecords(await deviceStore.records(me));
+      if (done !== "saved") return done;
+      const me = (await readSnapshot(deviceStore))?.data.me.id;
+      if (me !== undefined) setRecords(await deviceStore.records(me));
       if (request !== null) void request();
-      return true;
+      return done;
     },
     [request],
   );

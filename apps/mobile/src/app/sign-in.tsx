@@ -3,13 +3,13 @@
 // on the same screen (ui/phone-sign-in.tsx, sign-in-provider.ts). A build with neither says
 // so in words.
 import { useMemo } from "react";
-import { Text } from "react-native";
 
 import { apiUrl, clerkKey, devIdentity } from "../config";
 import { useStrings } from "../i18n";
 import { standInProvider, useClerkProvider } from "../sign-in-provider";
 import { Screen, text } from "../ui/controls";
 import { PhoneSignIn } from "../ui/phone-sign-in";
+import { Text } from "../ui/text";
 
 function WithClerk({ url }: { url: string }) {
   const provider = useClerkProvider();
@@ -27,7 +27,9 @@ export default function SignIn() {
   if (apiUrl !== null && devIdentity) return <WithStandIn url={apiUrl} />;
   return (
     <Screen testID="sign-in-unavailable">
-      <Text style={text.title}>{t.signIn.title}</Text>
+      <Text style={text.title} accessibilityRole="header">
+        {t.signIn.title}
+      </Text>
       <Text style={text.body}>{t.signIn.unavailable}</Text>
     </Screen>
   );

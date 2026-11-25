@@ -1,0 +1,38 @@
+# The Face ID or fingerprint offer at the phone's largest text size (suite.sh sets it before
+# this flow and puts it back after): the sign-in heading wraps by words and the field is
+# scrolled to, the code is typed, and the offer scrolls until "Not now" is reached and
+# taken, onto Today.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/launch.yaml
+- takeScreenshot: sign-in-largest-text
+- scrollUntilVisible:
+    element:
+      id: "sign-in-address"
+    centerElement: true
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${EMAIL}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-code"
+    timeout: 30000
+- tapOn:
+    id: "sign-in-code"
+- inputText: "123456"
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer"
+    timeout: 30000
+- takeScreenshot: biometric-offer-largest-text
+- scrollUntilVisible:
+    element:
+      id: "biometric-not-now"
+    centerElement: true
+- takeScreenshot: biometric-offer-not-now
+- tapOn:
+    id: "biometric-not-now"
+- runFlow:
+    file: parts/landed.yaml

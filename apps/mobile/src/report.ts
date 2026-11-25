@@ -60,6 +60,13 @@ export function reportSyncFailure(stage: Stage, kind: string, error: unknown): v
   });
 }
 
+// A tap the phone's own store would not write (sync/capture.ts): nothing was saved, and
+// the person was told to try again.
+export function reportCaptureFailure(error: unknown): void {
+  if (!reporting) return;
+  Sentry.captureException(error, { fingerprint: ["capture"] });
+}
+
 // A report made on purpose, to see one arrive with a readable stack (docs/TASKS.md, item
 // 12). A staging build's alone: Me offers it on a long press of the build's number.
 // Thrown and caught, so it carries a stack of its own and the app goes on.

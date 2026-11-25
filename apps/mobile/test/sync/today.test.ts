@@ -1,18 +1,26 @@
 // What Today works out (src/sync/today.ts): the running timer, an open session from an
-// earlier day, the chip's four states, whether a tap is stamped, and the two links.
-import type { PullOutput } from "@trader/api/contract";
+// earlier day, the chip's four states and what it says as it turns, why nothing is loaded,
+// whether a tap is stamped, and the two links.
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { type PullOutput, whatsAppLink } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
 import type { ClockState } from "../../src/sync/clock";
 import type { CycleResult } from "../../src/sync/engine";
 import {
+  attentionNews,
   fromEarlierDay,
   mapsLink,
+  nothingLoaded,
   sessionWorkedMs,
+  spokenTimer,
   stampsOn,
-  telLink,
   timer,
   waiting,
+  workedOn,
 } from "../../src/sync/today";
 import type { OutboxRecord, Standing } from "../../src/sync/types";
 
@@ -134,6 +142,78 @@ describe("the running timer", () => {
   });
 });
 
+describe("worked today", () => {
+  const DAY = "2026-11-16";
+  const open = (over: Partial<PullOutput["sessions"][number]> = {}) => ({
+    rootEventId: id(1),
+    jobId: J,
+    workDate: DAY,
+    startedAt: new Date(T0),
+    endedAt: null,
+    state: "working" as const,
+    // The server's fold counts closed intervals only: an open session's running part is
+    // the phone's to add.
+    workedMs: 0,
+    breakMs: 0,
+    voided: false,
+    ...over,
+  });
+
+  it("counts an open session after a pull from its clock-in, as the timer does", () => {
+    const data = snapshot({ sessions: [open()], events: [pulled(1, "started", T0)] });
+    expect(workedOn(data, [], DAY, T0 + 90 * MIN)).toBe(90 * MIN);
+    // A break the pull shows, then back at work: the break is left out.
+    const back = snapshot({
+      sessions: [open({ workedMs: 60 * MIN, breakMs: 30 * MIN })],
+      events: [
+        pulled(1, "started", T0),
+        pulled(2, "paused", T0 + 60 * MIN),
+        pulled(3, "resumed", T0 + 90 * MIN),
+      ],
+    });
+    expect(workedOn(back, [], DAY, T0 + 120 * MIN)).toBe(90 * MIN);
+    // A closed session earlier the same day adds the server's own hours.
+    const two = snapshot({
+      sessions: [
+        open({
+          rootEventId: id(7),
+          startedAt: new Date(T0 - 300 * MIN),
+          endedAt: new Date(T0 - 240 * MIN),
+          state: "ended",
+          workedMs: 60 * MIN,
+        }),
+        open(),
+      ],
+      events: [pulled(1, "started", T0)],
+    });
+    expect(workedOn(two, [], DAY, T0 + 30 * MIN)).toBe(90 * MIN);
+  });
+
+  it("counts an offline start, break and end that the pull does not show yet", () => {
+    const data = snapshot();
+    const started = [record(1, "started", T0)];
+    expect(workedOn(data, started, DAY, T0 + 45 * MIN)).toBe(45 * MIN);
+    const onBreak = [...started, record(2, "paused", T0 + 60 * MIN)];
+    expect(workedOn(data, onBreak, DAY, T0 + 80 * MIN)).toBe(60 * MIN);
+    const ended = [
+      ...onBreak,
+      record(3, "resumed", T0 + 90 * MIN),
+      record(4, "ended", T0 + 120 * MIN),
+    ];
+    // 60 worked, 30 on a break, 30 worked, then off the clock: 90, however late it is.
+    expect(workedOn(data, ended, DAY, T0 + 300 * MIN)).toBe(90 * MIN);
+    // A refused clock-in counts nothing; another day's hours are not today's.
+    expect(workedOn(data, [record(1, "started", T0, "rejected")], DAY, T0 + MIN)).toBe(0);
+    expect(workedOn(data, ended, "2026-11-17", T0 + 300 * MIN)).toBe(0);
+  });
+
+  it("ends the open session the pull shows with a clock-out still on this phone", () => {
+    const data = snapshot({ sessions: [open()], events: [pulled(1, "started", T0)] });
+    const out = [record(5, "ended", T0 + 50 * MIN, "syncing")];
+    expect(workedOn(data, out, DAY, T0 + 200 * MIN)).toBe(50 * MIN);
+  });
+});
+
 describe("a session left open", () => {
   it("is from an earlier day when its clock-in's day is before the company's today", () => {
     expect(fromEarlierDay("2026-11-15", "2026-11-16")).toBe(true);
@@ -153,7 +233,13 @@ describe("the chip", () => {
     pulled: true,
     clockSkewMs: 0,
   };
-  const base = { records: [], last: synced, syncing: false, refused: false };
+  const base = {
+    data: snapshot(),
+    records: [],
+    last: synced,
+    syncing: false,
+    refused: false,
+  };
 
   it("says Sent with nothing waiting, Saved on phone with an entry, Sending while it goes", () => {
     expect(waiting(base)).toMatchObject({ state: "sent", unsent: 0, held: null });
@@ -178,6 +264,35 @@ describe("the chip", () => {
     });
     expect(waiting(offline)).toMatchObject({ state: "sent", held: "offline" });
     expect(waiting({ ...base, last: null, records: one }).state).toBe("saved");
+  });
+
+  it("keeps a refused entry on Needs attention until a correcting entry for its day is accepted", () => {
+    const refusedStart = record(1, "started", T0, "rejected");
+    // Days later, nothing else sent: still attention, however many cycles pass.
+    expect(waiting({ ...base, records: [refusedStart] })).toMatchObject({
+      state: "attention",
+      refused: 1,
+    });
+    // An entry of another day, accepted: not a correction of this one.
+    const tomorrow = record(2, "started", T0 + 24 * 60 * MIN, "settled");
+    expect(waiting({ ...base, records: [refusedStart, tomorrow] }).state).toBe(
+      "attention",
+    );
+    // A clock-in later the same day, accepted: the chip clears, and the refusal is still
+    // listed in the sheet.
+    const again = record(3, "started", T0 + 20 * MIN, "settled");
+    expect(waiting({ ...base, records: [refusedStart, again] })).toMatchObject({
+      state: "sent",
+      refused: 1,
+    });
+    // Once the pull shows it and the settled copy is pruned, it still clears.
+    const shown = snapshot({ events: [pulled(3, "started", T0 + 20 * MIN)] });
+    expect(waiting({ ...base, data: shown, records: [refusedStart] }).state).toBe("sent");
+    // An entry the server had before the refused one was made corrects nothing.
+    const earlier = snapshot({ events: [pulled(4, "started", T0 - 60 * MIN)] });
+    expect(waiting({ ...base, data: earlier, records: [refusedStart] }).state).toBe(
+      "attention",
+    );
   });
 
   it("needs attention for a refused entry, a wrong clock, or sending held for the person to act", () => {
@@ -232,13 +347,81 @@ describe("the two links", () => {
     );
   });
 
-  it("dials the company's number whatever is typed around its digits, or nothing", () => {
-    expect(telLink("(401) 555-0100")).toBe("tel:4015550100");
-    // An extension is not dialed: the number ends where its run of digits does.
-    expect(telLink("+1 401-555-0100 ext. 2")).toBe("tel:+14015550100");
-    expect(telLink("Office: 401.555.0100")).toBe("tel:4015550100");
-    expect(telLink("call the office")).toBeNull();
-    expect(telLink("")).toBeNull();
-    expect(telLink(null)).toBeNull();
+  it("opens a chat on WhatsApp, and nothing on the phone dials or texts", () => {
+    // The office's number as the office types it, read as a United States number.
+    expect(whatsAppLink("(401) 555-0142")).toBe("https://wa.me/14015550142");
+    const src = fileURLToPath(new URL("../../src", import.meta.url).href);
+    const files = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const path = join(dir, name);
+        return statSync(path).isDirectory() ? files(path) : [path];
+      });
+    const dialing = files(src).filter((path) =>
+      /\b(?:tel|sms):|telLink/.test(readFileSync(path, "utf8")),
+    );
+    expect(dialing).toEqual([]);
+  });
+});
+
+describe("Today with nothing loaded", () => {
+  const synced = (pulled: boolean): CycleResult => ({
+    outcome: "synced",
+    state: "normal",
+    settled: 0,
+    rejected: 0,
+    drained: true,
+    pulled,
+    clockSkewMs: null,
+  });
+
+  it("says the real reason, and asks for a connection only when the server was not reached", () => {
+    expect(nothingLoaded({ outcome: "unreachable" }, false)).toBe("offline");
+    expect(nothingLoaded({ outcome: "held", state: "update_required" }, false)).toBe(
+      "update",
+    );
+    expect(nothingLoaded({ outcome: "held", state: "paused" }, false)).toBe("paused");
+    // The session refused wins over whatever the cycle said: signing in again is the way.
+    expect(nothingLoaded(synced(false), true)).toBe("sign_in");
+    expect(nothingLoaded({ outcome: "unreachable" }, true)).toBe("sign_in");
+    // Reached, and the pull still failed: not a connection to look for.
+    expect(nothingLoaded(synced(false), false)).toBe("failed");
+  });
+
+  it("waits for the first cycle before it says anything", () => {
+    expect(nothingLoaded(null, false)).toBeNull();
+  });
+});
+
+describe("the chip turning to Needs attention", () => {
+  const where = (over: Partial<ReturnType<typeof waiting>>) => ({
+    state: "attention" as const,
+    unsent: 0,
+    refused: 0,
+    held: null,
+    wrongClock: false,
+    ...over,
+  });
+
+  it("is said with what the person must do", () => {
+    expect(attentionNews(where({ held: "sign_in" }))).toBe("sign_in");
+    expect(attentionNews(where({ held: "paused" }))).toBe("paused");
+    expect(attentionNews(where({ held: "update" }))).toBe("update");
+    expect(attentionNews(where({ wrongClock: true }))).toBe("wrong_clock");
+  });
+
+  it("leaves a refusal to the news the cycle gives, and says nothing off attention", () => {
+    expect(attentionNews(where({ refused: 1 }))).toBeNull();
+    expect(attentionNews(where({ state: "saved", held: "offline" }))).toBeNull();
+  });
+});
+
+describe("the timer, spoken", () => {
+  it("is hours and minutes, the seconds left out", () => {
+    expect(spokenTimer(0)).toEqual({ hours: 0, minutes: 0 });
+    expect(spokenTimer((2 * 3600 + 5 * 60 + 59) * 1000)).toEqual({
+      hours: 2,
+      minutes: 5,
+    });
+    expect(spokenTimer(-1000)).toEqual({ hours: 0, minutes: 0 });
   });
 });

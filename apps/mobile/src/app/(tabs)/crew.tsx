@@ -1,7 +1,7 @@
 // Crew: the company's today, for an admin on a jobsite. Who is on the clock, on a break,
-// expected, late or done, by person or by jobsite; a person's sheet to call them, add a
-// shift for today or move them to another jobsite; a jobsite's sheet to see who is there
-// and to set its location to where the admin stands.
+// expected, late or done, by person or by jobsite; a person's sheet to message them on
+// WhatsApp, add a shift for today or move them to another jobsite; a jobsite's sheet to see
+// who is there and to set its location to where the admin stands.
 //
 // Online only. It is other people's day, read from the server when the tab is in front
 // and every minute after, and never kept on the phone: when the server cannot be reached
@@ -21,30 +21,27 @@ import {
   type CrewStatus,
   JOBSITE_RADIUS_M,
   wallClock,
+  whatsAppLink,
 } from "@trader/api/contract";
 import * as Crypto from "expo-crypto";
 import { Redirect, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
 
 import { createApi } from "../../api";
 import { apiUrl } from "../../config";
+import { announce, felt } from "../../feedback";
 import { dayName, duration, timeOfDay, wallTime } from "../../format";
-import { useStrings } from "../../i18n";
+import { useSpeech, useStrings } from "../../i18n";
 import { createMinter } from "../../ids";
 import { currentFix } from "../../location";
 import { headersFor, useSession } from "../../session";
 import {
   byJob,
   coveringShift,
+  heldWrite,
+  type HeldWrite,
+  nextSend,
   offeredEnd,
   quarterAfter,
   refusalOf,
@@ -54,10 +51,12 @@ import {
   type Refusal,
 } from "../../sync/crew";
 import { CYCLE_MS, useSync } from "../../sync/provider";
-import { mapsLink, telLink } from "../../sync/today";
+import { mapsLink } from "../../sync/today";
 import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
 import { Sheet } from "../../ui/sheet";
+import { SyncChip } from "../../ui/sync-chip";
+import { Text } from "../../ui/text";
 
 // The radius a jobsite gets when its location is set from the phone: the server's default.
 const SET_RADIUS_M = JOBSITE_RADIUS_M;
@@ -123,10 +122,12 @@ function Choice({
   testID: string;
   onPress: () => void;
 }) {
+  const speech = useSpeech();
   return (
     <Pressable
       testID={testID}
       accessibilityRole="radio"
+      accessibilityLanguage={speech}
       // The label alone: the icon is a glyph, and would be read out as one.
       accessibilityLabel={label}
       accessibilityState={{ selected: chosen }}
@@ -144,7 +145,7 @@ function Choice({
 }
 
 // A time of day moved a quarter hour at a tap: no keyboard, and nothing to mistype with
-// paint on a thumb.
+// paint on a thumb. The time a step lands on is spoken, so a screen reader hears it move.
 function TimeStepper({
   label,
   value,
@@ -162,6 +163,12 @@ function TimeStepper({
   later: string;
   onChange: (next: string) => void;
 }) {
+  const speech = useSpeech();
+  const step = (quarters: number) => {
+    const next = stepTime(value, quarters);
+    onChange(next);
+    announce(`${label}: ${wallTime(next, language)}`);
+  };
   return (
     <View style={styles.stepper}>
       <Text style={text.label}>{label}</Text>
@@ -169,8 +176,9 @@ function TimeStepper({
         <Pressable
           testID={`${testID}-earlier`}
           accessibilityRole="button"
+          accessibilityLanguage={speech}
           accessibilityLabel={earlier}
-          onPress={() => onChange(stepTime(value, -1))}
+          onPress={() => step(-1)}
           style={styles.step}
         >
           <Ionicons name="remove" size={24} color={color.ink} />
@@ -185,8 +193,9 @@ function TimeStepper({
         <Pressable
           testID={`${testID}-later`}
           accessibilityRole="button"
+          accessibilityLanguage={speech}
           accessibilityLabel={later}
-          onPress={() => onChange(stepTime(value, 1))}
+          onPress={() => step(1)}
           style={styles.step}
         >
           <Ionicons name="add" size={24} color={color.ink} />
@@ -198,6 +207,7 @@ function TimeStepper({
 
 export default function CrewTab() {
   const { t, language } = useStrings();
+  const speech = useSpeech();
   const { session } = useSession();
   const { snapshot } = useSync();
   const [load, setLoad] = useState<Load>({ phase: "loading" });
@@ -214,6 +224,9 @@ export default function CrewTab() {
   const [problem, setProblem] = useState<Problem | null>(null);
   const [saving, setSaving] = useState(false);
   const [roster, setRoster] = useState<{ id: string; name: string }[] | null>(null);
+  // The open sheet's write: its id, minted as the sheet opens, kept across tries with what
+  // it sent (sync/crew.ts, nextSend).
+  const held = useRef<HeldWrite | null>(null);
 
   const api = useMemo(
     () => (apiUrl === null ? null : createApi(apiUrl, () => headersFor(session))),
@@ -313,6 +326,7 @@ export default function CrewTab() {
     setEnd(offeredEnd(from));
     setProblem(null);
     setNote(null);
+    held.current = heldWrite(mint(Date.now()));
     setOpen({ kind: "add", personId: forPerson });
     if (forPerson === null && api !== null) {
       setRoster(null);
@@ -326,7 +340,7 @@ export default function CrewTab() {
               .sort((a, b) => compareNames(a.name, b.name)),
           ),
         )
-        .catch(() => setProblem("failed"));
+        .catch(() => refuse("failed"));
     }
   };
   const openMove = (person: CrewPerson) => {
@@ -334,6 +348,7 @@ export default function CrewTab() {
     setEnd(coveringShift(person, minute)?.end ?? offeredEnd(minute));
     setProblem(null);
     setNote(null);
+    held.current = heldWrite(mint(Date.now()));
     setOpen({ kind: "move", personId: person.person.id });
   };
 
@@ -341,13 +356,22 @@ export default function CrewTab() {
     setOpen(null);
     setProblem(null);
     setNote(said);
+    felt("success");
+    announce(said);
     await refresh();
   };
 
   const saveAdd = async () => {
-    if (api === null || crew === null) return setProblem("failed");
-    if (personId === null) return setProblem("pickPerson");
-    if (jobId === null) return setProblem("pickJob");
+    if (api === null || crew === null) return refuse("failed");
+    if (personId === null) return refuse("pickPerson");
+    if (jobId === null) return refuse("pickJob");
+    const send = nextSend(
+      held.current ?? heldWrite(mint(Date.now())),
+      [personId, jobId, start, end, crew.today],
+      minute,
+      () => mint(Date.now()),
+    );
+    held.current = send;
     setSaving(true);
     try {
       const answer = await api.shift.create.mutate({
@@ -355,27 +379,35 @@ export default function CrewTab() {
         jobId,
         expectedStart: start,
         expectedEnd: end,
-        days: [{ id: mint(Date.now()), workDate: crew.today }],
+        days: [{ id: send.id, workDate: crew.today }],
       });
       const refusal = refusalOf(answer.result === "planned" ? answer.days[0] : answer);
-      if (refusal !== null) return setProblem(refusal);
+      if (refusal !== null) return refuse(refusal);
       await written(t.crew.form.added);
     } catch {
-      setProblem("failed");
+      refuse("failed");
     } finally {
       setSaving(false);
     }
   };
 
   const saveMove = async () => {
-    if (api === null || open?.kind !== "move") return setProblem("failed");
-    if (jobId === null) return setProblem("pickJob");
-    // The minute is read at the tap, not when the form opened.
-    const at = wallClock(new Date(), zone).minute;
+    if (api === null || open?.kind !== "move") return refuse("failed");
+    if (jobId === null) return refuse("pickJob");
+    // The minute is read at the first tap, not when the form opened; a try again with
+    // nothing changed sends that same minute under the same id.
+    const send = nextSend(
+      held.current ?? heldWrite(mint(Date.now())),
+      [open.personId, jobId, end],
+      wallClock(new Date(), zone).minute,
+      () => mint(Date.now()),
+    );
+    held.current = send;
+    const at = send.at;
     setSaving(true);
     try {
       const answer = await api.shift.moveToday.mutate({
-        id: mint(Date.now()),
+        id: send.id,
         userId: open.personId,
         jobId,
         at,
@@ -383,31 +415,31 @@ export default function CrewTab() {
         expectedEnd: end > at ? end : offeredEnd(at),
       });
       const refusal = refusalOf(answer);
-      if (refusal !== null) return setProblem(refusal);
+      if (refusal !== null) return refuse(refusal);
       await written(t.crew.form.moved);
     } catch {
-      setProblem("failed");
+      refuse("failed");
     } finally {
       setSaving(false);
     }
   };
 
   const setLocation = async (id: string) => {
-    if (api === null) return setProblem("failed");
+    if (api === null) return refuse("failed");
     setSaving(true);
     setProblem(null);
     try {
       const fix = await currentFix();
-      if (fix === null) return setProblem("noFix");
+      if (fix === null) return refuse("noFix");
       // The place alone (M6): job.setLocation writes nothing the office typed.
       const answer = await api.job.setLocation.mutate({
         jobId: id,
         location: { ...fix, radiusM: SET_RADIUS_M },
       });
-      if (answer.result !== "updated") return setProblem("failed");
+      if (answer.result !== "updated") return refuse("failed");
       await written(t.crew.job.set);
     } catch {
-      setProblem("failed");
+      refuse("failed");
     } finally {
       setSaving(false);
     }
@@ -421,6 +453,12 @@ export default function CrewTab() {
         : p === "noFix"
           ? t.crew.job.noFix
           : t.crew.refusal[p];
+  // A form's refusal: shown under it, felt and said.
+  const refuse = (p: Problem) => {
+    setProblem(p);
+    felt("error");
+    announce(problemText(p));
+  };
   const said = problem !== null && (
     <Text testID="crew-problem" style={text.attention} accessibilityRole="alert">
       {problemText(problem)}
@@ -453,6 +491,7 @@ export default function CrewTab() {
       key={`${prefix}-${person.person.id}`}
       testID={`${prefix}-${index}`}
       accessibilityRole="button"
+      accessibilityLanguage={speech}
       accessibilityLabel={`${person.person.name}, ${statusLabel(status)}, ${line(person)}`}
       onPress={() => {
         setNote(null);
@@ -496,15 +535,21 @@ export default function CrewTab() {
 
   return (
     <Screen testID="crew">
-      <View style={styles.head}>
-        <Text style={text.title}>{t.crew.title}</Text>
-        <Button
-          testID="crew-refresh"
-          kind="secondary"
-          label={busy ? t.loading : t.crew.refresh}
-          disabled={busy}
-          onPress={() => void refresh()}
-        />
+      {/* The title and Check now, then the chip beneath, as on every other tab. */}
+      <View style={styles.top}>
+        <View style={styles.head}>
+          <Text style={text.title} accessibilityRole="header">
+            {t.crew.title}
+          </Text>
+          <Button
+            testID="crew-refresh"
+            kind="secondary"
+            label={busy ? t.loading : t.crew.refresh}
+            disabled={busy}
+            onPress={() => void refresh()}
+          />
+        </View>
+        <SyncChip />
       </View>
       <ScrollView contentContainerStyle={styles.page}>
         {load.phase === "loading" && <Text style={text.secondary}>{t.loading}</Text>}
@@ -542,7 +587,7 @@ export default function CrewTab() {
               <View testID="crew-earlier" style={[styles.card, styles.attention]}>
                 <Text style={text.bodyStrong}>{t.crew.earlierTitle}</Text>
                 {crew.earlier.map((e, i) => {
-                  const dial = telLink(e.person.phone);
+                  const chat = whatsAppLink(e.person.phone);
                   return (
                     <View key={e.person.id} style={styles.earlier}>
                       <View style={styles.fill}>
@@ -554,13 +599,14 @@ export default function CrewTab() {
                           )}
                         </Text>
                       </View>
-                      {dial !== null && (
+                      {chat !== null && (
                         <Button
-                          testID={`crew-earlier-call-${i}`}
+                          testID={`crew-earlier-whatsapp-${i}`}
                           kind="secondary"
-                          label={t.crew.person.call}
+                          label={t.crew.person.whatsApp}
+                          spoken={t.crew.person.whatsAppSpoken(e.person.name)}
                           onPress={() =>
-                            void Linking.openURL(dial).catch(() => undefined)
+                            void Linking.openURL(chat).catch(() => undefined)
                           }
                         />
                       )}
@@ -576,6 +622,7 @@ export default function CrewTab() {
                   key={which}
                   testID={`crew-view-${which}`}
                   accessibilityRole="radio"
+                  accessibilityLanguage={speech}
                   accessibilityState={{ selected: view === which }}
                   onPress={() => setView(which)}
                   style={[styles.view, view === which && styles.viewOn]}
@@ -609,6 +656,14 @@ export default function CrewTab() {
                   key={g.job.id}
                   testID={`crew-job-${i}`}
                   accessibilityRole="button"
+                  accessibilityLanguage={speech}
+                  accessibilityLabel={[
+                    g.job.name,
+                    ...[...g.here, ...g.scheduled].map(
+                      ({ person, status }) =>
+                        `${person.person.name}, ${statusLabel(status)}`,
+                    ),
+                  ].join(", ")}
                   onPress={() => {
                     setNote(null);
                     setOpen({ kind: "job", id: g.job.id });
@@ -686,16 +741,17 @@ export default function CrewTab() {
                     </Text>
                   ))
                 )}
-                {telLink(opened.person.phone) === null ? (
+                {whatsAppLink(opened.person.phone) === null ? (
                   <Text testID="person-no-phone" style={text.secondary}>
                     {t.crew.person.noPhone}
                   </Text>
                 ) : (
                   <Button
-                    testID="person-call"
-                    label={t.crew.person.call}
+                    testID="person-whatsapp"
+                    label={t.crew.person.whatsApp}
+                    spoken={t.crew.person.whatsAppSpoken(opened.person.name)}
                     onPress={() =>
-                      void Linking.openURL(telLink(opened.person.phone)!).catch(
+                      void Linking.openURL(whatsAppLink(opened.person.phone)!).catch(
                         () => undefined,
                       )
                     }
@@ -937,6 +993,7 @@ export default function CrewTab() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
+  top: { gap: space[2] },
   head: {
     flexDirection: "row",
     alignItems: "center",

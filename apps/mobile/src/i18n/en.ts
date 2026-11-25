@@ -65,8 +65,16 @@ export const en: Catalog = {
   today: {
     title: "Today",
     jobs: "Your jobs",
-    noJobs: "No job is open yet. Call the office.",
-    firstLoad: "This phone has not loaded your jobs yet. Connect and try again.",
+    noJobs: "No job is open yet. Message the office on WhatsApp.",
+    nothingLoaded: {
+      offline: "This phone has not loaded your jobs yet. Connect and try again.",
+      failed:
+        "This phone has not loaded your jobs yet. That did not go through. Try again.",
+      update: "Update the app to load your jobs.",
+      paused: "The office's system has paused this app for now. Try again later.",
+      signIn:
+        "The office's system did not accept this sign-in. Sign out in Me, then sign in again.",
+    },
     off: "You are off the clock.",
     working: (job, since) => `On the clock at ${job} since ${since}.`,
     paused: (job) => `On a break at ${job}.`,
@@ -77,11 +85,13 @@ export const en: Catalog = {
     resume: "End break",
     switchTo: (job) => `Switch to ${job}`,
     hoursToday: (hours) => `${hours} worked today`,
+    timerSpoken: (hours, minutes) =>
+      `${hours} ${hours === 1 ? "hour" : "hours"}, ${minutes} ${minutes === 1 ? "minute" : "minutes"}`,
     shiftNow: (job, start, end) => `Your shift: ${job}, ${start}–${end}.`,
     shiftLater: (job, start) =>
       `Your next shift is at ${job} at ${start}. You can clock in ${EARLY_MINUTES} minutes before.`,
     noMoreShifts: "You have no more shifts today.",
-    noShift: "You have no shift today. Call the office.",
+    noShift: "You have no shift today. Message the office on WhatsApp.",
     attention: "Needs attention",
     shiftHours: (start, end) => `${start} – ${end}`,
     onTheClock: "On the clock",
@@ -94,8 +104,10 @@ export const en: Catalog = {
     keepWorking: "Keep working",
     earlier: (job, day) => `You are still on the clock at ${job} from ${day}.`,
     clockOutNow: "Clock out now",
-    callOffice: "Call the office",
+    whatsApp: "WhatsApp",
+    whatsAppSpoken: "Message the office on WhatsApp",
     captured: "Saved",
+    notSaved: "Not saved. Try again.",
     job: {
       address: "Address",
       noAddress: "The office has not added an address.",
@@ -116,14 +128,15 @@ export const en: Catalog = {
     refused: "The office's system did not accept this entry.",
     refusals: {
       not_scheduled:
-        "You had no shift on that job then. Call the office to add your hours.",
+        "You had no shift on that job then. Message the office on WhatsApp to add your hours.",
       time_in_future:
         "This phone's clock was ahead. Set the time automatically and ask the office to add your hours.",
       session_already_open:
         "You were already on the clock. Ask the office to check your hours.",
       no_open_session:
         "You were not on the clock then. Ask the office to check your hours.",
-      not_permitted: "That job is closed. Call the office to add your hours.",
+      not_permitted:
+        "That job is closed. Message the office on WhatsApp to add your hours.",
       other: (code) => `Ask the office to add your hours. Tell them: ${code}.`,
     },
   },
@@ -147,6 +160,10 @@ export const en: Catalog = {
       sending: "Sending",
       attention: "Needs attention",
     },
+    refusedNews: (count) =>
+      count === 1
+        ? "The office's system did not accept an entry. Tap Needs attention to see why."
+        : `The office's system did not accept ${count} entries. Tap Needs attention to see why.`,
     waitingTitle: "Your entries",
     nothingWaiting: "Nothing is waiting on this phone.",
     close: "Close",
@@ -210,7 +227,8 @@ export const en: Catalog = {
       shifts: "Today's shifts",
       noShifts: "No shift today.",
       at: (job) => `At ${job}`,
-      call: "Call",
+      whatsApp: "WhatsApp",
+      whatsAppSpoken: (name) => `Message ${name} on WhatsApp`,
       noPhone: "No phone number for this person.",
       add: "Add a shift today",
       move: "Move to another job",
@@ -280,7 +298,9 @@ export const en: Catalog = {
         : `${count} entries have not been sent. They stay on this phone and are sent when you sign in again.`,
     name: "Your name",
     phone: "Contact phone",
-    phoneHelp: "Where the office can call you. It is not the number you sign in with.",
+    phoneHelp: "Where the office can reach you. It is not the number you sign in with.",
+    phoneNotLoaded:
+      "This phone could not reach the office to load your contact phone. Connect and try again.",
     save: "Save",
     saved: "Saved.",
     saveFailed: "That did not go through. Check your connection and try again.",

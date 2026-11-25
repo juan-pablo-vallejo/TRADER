@@ -2,11 +2,12 @@
 // screen that asked. The system's own modal, so the Android back button and a screen
 // reader's escape close it; a tap on the dimmed screen behind it closes it too.
 import type { ReactNode } from "react";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { color, size, space } from "../theme";
 import { text } from "./controls";
+import { Text } from "./text";
 
 export function Sheet({
   visible,

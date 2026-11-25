@@ -3,8 +3,8 @@
 // the last pull's snapshot, the reachability reading, the language and who is signed in.
 // Capture writes here and nowhere else, so it works with no signal and no session. The
 // tables are made on open with the statements below, which only ever add: a later build
-// that needs a new column adds it the same way and reads an old row without it. One column
-// was renamed, in place and once (below), so no row an older build captured is lost.
+// that needs a new column adds it the same way and reads an old row without it, so no row
+// an older build captured is lost.
 import type { LaborPayload } from "@trader/api/contract";
 import { and, asc, eq, inArray, lte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/expo-sqlite";
@@ -32,21 +32,6 @@ const kv = sqliteTable("kv", {
 });
 
 const expo = openDatabaseSync("trader.db");
-// The outbox's `flags` column was `reasons` in builds before 2026-11-19. Renamed before the
-// statements below run: `create table if not exists` leaves an older table as it is, and
-// every read here names `flags`. The rows stay, unsent entries among them.
-const outboxColumns = (): string[] => {
-  try {
-    return expo
-      .getAllSync<{ name: string }>("select name from pragma_table_info('outbox')")
-      .map((c) => c.name);
-  } catch {
-    return [];
-  }
-};
-if (outboxColumns().includes("reasons")) {
-  expo.execSync("alter table outbox rename column reasons to flags");
-}
 expo.execSync(`
   create table if not exists outbox (
     id text primary key not null,

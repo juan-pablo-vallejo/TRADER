@@ -7,6 +7,7 @@ import {
   keySwitch,
   offersBiometric,
   offersKeySignIn,
+  keyCheck,
   revokesKey,
   type Unavailable,
 } from "../src/biometric-rules";
@@ -81,5 +82,16 @@ describe("the key's button and switch", () => {
     for (const by of ["code", "google", "apple", "demo"] as const) {
       expect([by, revokesKey(by)]).toEqual([by, false]);
     }
+  });
+});
+
+describe("what a sign-in tells the server about the key", () => {
+  it("names the key's age after a sign-in by it, and the oldest age when the phone lost it", () => {
+    expect(keyCheck("biometric", "2026-11-20T15:00:00.000Z")).toEqual({
+      keyMadeAt: new Date("2026-11-20T15:00:00.000Z"),
+    });
+    expect(keyCheck("biometric", null)).toEqual({ keyMadeAt: new Date(0) });
+    for (const by of ["code", "google", "apple", "demo"] as const)
+      expect([by, keyCheck(by, "2026-11-20T15:00:00.000Z")]).toEqual([by, undefined]);
   });
 });
