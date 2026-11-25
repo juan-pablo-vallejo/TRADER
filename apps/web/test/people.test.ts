@@ -188,7 +188,7 @@ describe("the roster through the route handler", () => {
     expect(await standing()).toEqual({ status: "not_sent", sends: [] });
 
     const noted = await mutate(POST, "roster.noteInvitation", {
-      input: { id: crypto.randomUUID(), userId },
+      input: { id: uuidv7(), userId },
       headers: as(admin.email),
     });
     expect(noted.body.result?.data.json).toEqual({ result: "noted" });
@@ -201,7 +201,7 @@ describe("the roster through the route handler", () => {
     vi.stubEnv("TRADER_HOME_HOST", "");
     vi.stubEnv("CLERK_AUTHORIZED_PARTIES", "");
     const noLink = await mutate(POST, "roster.sendInvitation", {
-      input: { id: crypto.randomUUID(), userId },
+      input: { id: uuidv7(), userId },
       headers: as(admin.email),
     });
     expect(noLink.body.result?.data.json).toEqual({
@@ -214,7 +214,7 @@ describe("the roster through the route handler", () => {
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("MAIL_FROM", "");
     const unsent = await mutate(POST, "roster.sendInvitation", {
-      input: { id: crypto.randomUUID(), userId },
+      input: { id: uuidv7(), userId },
       headers: as(admin.email),
     });
     expect(unsent.body.result?.data.json).toEqual({

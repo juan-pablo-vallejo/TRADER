@@ -139,6 +139,14 @@ async function customerActive(tx: Tx, customerId: string): Promise<boolean> {
 const refusal = <C extends string>(code: C) => ({ result: "rejected" as const, code });
 
 export async function createJob(tx: Tx, user: AppUser, input: CreateInput) {
+  // A resend is answered first, whatever has happened to its customer since: the job it
+  // made is this one, as sent, location included; any other job under the id is a conflict.
+  const held = await readJob(tx, input.id);
+  if (held !== undefined) {
+    return sameJob(held, input)
+      ? { result: "duplicate" as const, job: held }
+      : refusal("id_conflict" as const);
+  }
   if (!(await customerActive(tx, input.customerId)))
     return refusal("customer_inactive" as const);
   await lockActiveSelf(tx, user, "admin");
@@ -156,20 +164,20 @@ export async function createJob(tx: Tx, user: AppUser, input: CreateInput) {
     .onConflictDoNothing({ target: jobs.id })
     .returning({ id: jobs.id });
   if (row !== undefined) return answerWith(tx, "created" as const, row.id);
-  // The id is taken: by this job as sent (a resend), or by anything else. Its facts decide;
-  // a location is set again through its own procedure, so it is not compared.
-  const held = await readJob(tx, input.id);
-  if (
-    held !== undefined &&
-    held.customer.id === input.customerId &&
-    held.name === input.name &&
-    held.address === input.address &&
-    held.notes === input.notes
-  ) {
-    return { result: "duplicate" as const, job: held };
+  // Taken meanwhile, or by a row this caller cannot see: either way, no job of this send.
+  const raced = await readJob(tx, input.id);
+  if (raced !== undefined && sameJob(raced, input)) {
+    return { result: "duplicate" as const, job: raced };
   }
   return refusal("id_conflict" as const);
 }
+
+const sameJob = (held: Job, input: CreateInput) =>
+  held.customer.id === input.customerId &&
+  held.name === input.name &&
+  held.address === input.address &&
+  held.notes === input.notes &&
+  JSON.stringify(held.location) === JSON.stringify(input.location);
 
 export async function updateJob(tx: Tx, user: AppUser, input: UpdateInput) {
   // FOR UPDATE: see the header. The lock's race with an invoice insert has no test until an

@@ -1,9 +1,8 @@
--- Hand-written (drizzle-kit sees no function). A clock-in voided by the office no longer
--- holds its shift: the lock comes off, or passes to another clock-in of the same person on
--- the same job that is not voided (api labor/repair.ts writes it in the void's
--- transaction). Until then a voided clock-in left its shift unmovable and its person read
--- as clocked in. The function is replaced whole; nothing else in it changes, and no entry
--- is written or changed.
+-- Hand-written (drizzle-kit sees no function). A clock-in voided by the office does not hold
+-- its shift: the lock comes off, or passes to another clock-in of the same person on the
+-- same job that stands, is no correction, and locks no other shift (api sync/schedule.ts,
+-- releaseVoided, in the void's transaction). The function is replaced whole; nothing else in
+-- it changes, and no entry is written or changed.
 SET LOCAL lock_timeout = '3s';--> statement-breakpoint
 CREATE OR REPLACE FUNCTION check_job_assignment_mutation() RETURNS trigger
     LANGUAGE plpgsql
@@ -29,8 +28,9 @@ BEGIN
       CONSTRAINT = 'job_assignments_identity';
   END IF;
   -- The clock-in that holds the lock has been voided: the lock comes off, or passes to a
-  -- clock-in of the same person on the same job that is not voided, the day and times
-  -- left as they are. Nothing else frees a locked shift.
+  -- clock-in of the same person on the same job that is not voided, is no correction and
+  -- locks no other shift, the day, the times and the lock's moment left as they are.
+  -- Nothing else frees a locked shift.
   IF OLD.locked_at IS NOT NULL
      AND NEW.locked_by_event_id IS DISTINCT FROM OLD.locked_by_event_id
      AND EXISTS (SELECT 1 FROM work_session_events v
@@ -45,15 +45,19 @@ BEGIN
     IF NEW.locked_by_event_id IS NULL THEN
       RETURN NEW;
     END IF;
-    SELECT e.type, e.worker_id, e.job_id INTO ev FROM work_session_events e
+    SELECT e.type, e.worker_id, e.job_id, e.corrects_event_id INTO ev
+      FROM work_session_events e
       WHERE e.id = NEW.locked_by_event_id;
     IF NOT FOUND OR ev.type <> 'started' OR ev.worker_id <> NEW.user_id
-       OR ev.job_id <> NEW.job_id
+       OR ev.job_id <> NEW.job_id OR ev.corrects_event_id IS NOT NULL
+       OR NEW.locked_at IS DISTINCT FROM OLD.locked_at
+       OR EXISTS (SELECT 1 FROM job_assignments o
+                  WHERE o.locked_by_event_id = NEW.locked_by_event_id AND o.id <> NEW.id)
        OR EXISTS (SELECT 1 FROM work_session_events v
                   WHERE v.type = 'voided' AND v.voids_event_id = NEW.locked_by_event_id) THEN
       RAISE EXCEPTION USING
         ERRCODE = 'integrity_constraint_violation',
-        MESSAGE = 'job_assignments: a lock passes only to a clock-in that stands, of the shift''s own person on its own job',
+        MESSAGE = 'job_assignments: a lock passes only to a standing clock-in of the shift''s own person and job that is no correction and locks no other shift',
         CONSTRAINT = 'job_assignments_locked';
     END IF;
     RETURN NEW;

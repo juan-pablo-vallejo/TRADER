@@ -461,6 +461,58 @@ describe("job_assignments, the punch lock", () => {
     });
   });
 
+  it("passes a voided lock to no correction, no clock-in holding another shift, and keeps its moment", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await fixture(tx);
+      const { shift, eventId } = await lockedShift(tx, refs);
+      await tx
+        .insert(workSessionEvents)
+        .values({ ...started(refs), type: "voided", voidsEventId: eventId });
+      const refused = { code: "23000", constraint: "job_assignments_locked" };
+      // A correction of the voided clock-in is a `started` row too, and never takes the lock.
+      const correction = { ...started(refs), correctsEventId: eventId };
+      await tx.insert(workSessionEvents).values(correction);
+      expect(
+        await raised(
+          tx,
+          sql`update job_assignments set locked_by_event_id = ${correction.id}
+              where id = ${shift}`,
+        ),
+      ).toEqual(refused);
+      // A clock-in that holds the person's other shift on the job keeps to that one.
+      const other = await insertShift(
+        tx,
+        plan(refs, { expectedStart: "16:00", expectedEnd: "18:00" }),
+      );
+      const holder = started(refs);
+      await tx.insert(workSessionEvents).values(holder);
+      await tx.execute(sql`
+        update job_assignments set locked_at = now(), locked_by_event_id = ${holder.id}
+        where id = ${other}
+      `);
+      expect(
+        await raised(
+          tx,
+          sql`update job_assignments set locked_by_event_id = ${holder.id} where id = ${shift}`,
+        ),
+      ).toEqual(refused);
+      // A standing one takes it, with the lock's moment as it was.
+      const stands = started(refs);
+      await tx.insert(workSessionEvents).values(stands);
+      expect(
+        await raised(
+          tx,
+          sql`update job_assignments set locked_by_event_id = ${stands.id},
+              locked_at = locked_at + interval '1 minute' where id = ${shift}`,
+        ),
+      ).toEqual(refused);
+      const moved = await tx.execute(
+        sql`update job_assignments set locked_by_event_id = ${stands.id} where id = ${shift}`,
+      );
+      expect(moved.rowCount).toBe(1);
+    });
+  });
+
   it("refuses TRUNCATE while any shift is locked", async () => {
     await rolledBack(db, async (tx) => {
       const refs = await fixture(tx);

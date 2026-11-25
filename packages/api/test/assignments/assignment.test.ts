@@ -501,7 +501,7 @@ describe("a shift locked by a clock-in", () => {
     });
   });
 
-  it("is free again once the office voids its clock-in, and Today's lock reads it off the clock", async () => {
+  it("is free again once the office voids its clock-in: the lock Today reads as clocked in is gone", async () => {
     await rolledBack(owner, async (tx) => {
       const { day, plan, admin } = await office(tx);
       const { id } = await shift(plan, day, "07:00", "15:30");
@@ -554,6 +554,73 @@ describe("a shift locked by a clock-in", () => {
         .from(workSessionEvents)
         .where(eq(workSessionEvents.workerId, day.w1));
       expect(entries).toHaveLength(3);
+    });
+  });
+
+  it("passes a voided clock-in's lock to one that stands, never to a correction or another shift's, and holds on a resend", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { day, plan, admin } = await office(tx);
+      // The same job twice on Monday: two shifts, each locked by its own clock-in.
+      const morning = (await shift(plan, day, "07:00", "11:00")).id;
+      const afternoon = (await shift(plan, day, "13:00", "17:00")).id;
+      await tx.execute(sql`reset role`);
+      const worked = async (from: string, to: string) => {
+        const id = await eventIn(tx, day, {
+          worker: day.w1,
+          job: day.J,
+          type: "started",
+          client: from,
+        });
+        await eventIn(tx, day, { worker: day.w1, job: day.J, type: "ended", client: to });
+        return id;
+      };
+      // 07:05 to 10:00 in New York, then 10:10 to 10:50, then 13:05 to 16:00.
+      const a = await worked("2026-11-16T12:05:00Z", "2026-11-16T15:00:00Z");
+      const later = await worked("2026-11-16T15:10:00Z", "2026-11-16T15:50:00Z");
+      const b = await worked("2026-11-16T18:05:00Z", "2026-11-16T21:00:00Z");
+      // A correction of the first clock-in's time: a `started` row naming it.
+      await eventIn(tx, day, {
+        worker: day.w1,
+        job: day.J,
+        type: "started",
+        client: "2026-11-16T12:10:00Z",
+        corrects: a,
+        initiator: admin.id,
+      });
+      for (const [shiftId, by] of [
+        [morning, a],
+        [afternoon, b],
+      ] as const) {
+        await tx.execute(sql`
+          update job_assignments set locked_at = now(), locked_by_event_id = ${by}
+          where id = ${shiftId}
+        `);
+      }
+      await becomeApp(tx);
+      const lockOf = async (shiftId: string) =>
+        (
+          await tx
+            .select({ by: jobAssignments.lockedByEventId })
+            .from(jobAssignments)
+            .where(eq(jobAssignments.id, shiftId))
+        )[0]?.by;
+      const voidA = { kind: "void" as const, id: uuidv7(), voidsEventId: a };
+      const repair = (operations: (typeof voidA)[]) =>
+        appCallerIn(tx, admin.who).labor.repair({ workerId: day.w1, operations });
+      expect((await repair([voidA])).result).toBe("accepted");
+      // Not to A's correction, not to the clock-in that holds the afternoon: to 10:10.
+      expect(await lockOf(morning)).toBe(later);
+      expect(await lockOf(afternoon)).toBe(b);
+      // The answer was lost and the office sends the same void again: nothing moves.
+      expect((await repair([voidA])).result).not.toBe("accepted");
+      expect(await lockOf(morning)).toBe(later);
+      // That one voided too, nothing of the morning stands: the shift is free.
+      expect(
+        (await repair([{ kind: "void", id: uuidv7(), voidsEventId: later }])).result,
+      ).toBe("accepted");
+      expect(await lockOf(morning)).toBeNull();
+      expect(await lockOf(afternoon)).toBe(b);
+      expect(await plan.remove({ assignmentId: morning })).toEqual({ result: "removed" });
     });
   });
 

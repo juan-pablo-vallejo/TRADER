@@ -119,6 +119,39 @@ describe("job.list", () => {
 });
 
 describe("job.create", () => {
+  it("refuses an id that is not a version 7 UUID", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    expect(
+      await outcome(
+        job(admin.who).create({
+          id: "8f14e45f-ceea-467f-a5e0-6b3f6b1c1c11",
+          customerId: w.a.customerId,
+          name: "Version four",
+        }),
+      ),
+    ).toBe("BAD_REQUEST");
+  });
+
+  it("answers a resend as its duplicate even after its customer is deactivated, and a changed location as a conflict", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    const sent = {
+      id: uuidv7(),
+      customerId: w.a.customerId,
+      name: "Located",
+      location: { lat: 41.8, lng: -71.4, radiusM: 150 },
+    };
+    expect((await job(admin.who).create(sent)).result).toBe("created");
+    expect(
+      await job(admin.who).create({
+        ...sent,
+        location: { lat: 41.9, lng: -71.4, radiusM: 150 },
+      }),
+    ).toEqual({ result: "rejected", code: "id_conflict" });
+    await job(admin.who).setStatus({ jobId: sent.id, status: "archived" });
+    await appCaller(app, admin.who).customer.deactivate({ customerId: w.a.customerId });
+    expect((await job(admin.who).create(sent)).result).toBe("duplicate");
+  });
+
   it("answers a resend after a lost answer as its duplicate, and another use of its id as a conflict", async () => {
     const admin = await member(owner, w, "a", "admin");
     const sent = { id: uuidv7(), customerId: w.a.customerId, name: "Resent job" };

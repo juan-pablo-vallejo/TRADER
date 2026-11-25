@@ -12,7 +12,7 @@
 // timeline lock, and held to the end of the record's transaction: the schedule a start was
 // admitted on is the schedule its shift is locked under, and an office write to that day
 // either committed before this read or waits and is judged against the lock.
-// Consumed by sync/labor.ts and sync/pull.ts.
+// Consumed by sync/labor.ts, sync/pull.ts and labor/repair.ts.
 import { companies } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 
@@ -57,10 +57,12 @@ export async function judgeStart(
 }
 
 // A voided clock-in no longer holds its shift. The lock passes to the earliest clock-in of
-// the same person on the same job, on the shift's day in the company's zone, that is not
-// voided; with none, it comes off, and the shift can be edited, moved or removed again. The
-// database allows only this (check_job_assignment_mutation). One statement, written only by
-// a correction that voids.
+// the same person on the same job, on the shift's day in the company's zone, that stands:
+// not voided, no correction and not corrected (a correction's own row and a corrected one
+// carry times that may not be the clock-in's), and holding no other shift's lock (the same
+// job twice in a day is two shifts). With none, it comes off, and the shift can be edited,
+// moved or removed again. The database refuses any other handover
+// (check_job_assignment_mutation). One statement, written only by a correction that voids.
 export async function releaseVoided(tx: Tx, voidedIds: string[]) {
   if (voidedIds.length === 0) return;
   await tx.execute(sql`
@@ -72,10 +74,15 @@ export async function releaseVoided(tx: Tx, voidedIds: string[]) {
         select e.id from work_session_events e
         join companies c on c.id = e.company_id
         where e.worker_id = s.user_id and e.job_id = s.job_id and e.type = 'started'
+          and e.corrects_event_id is null
           and (e.client_timestamp at time zone c.timezone)::date = s.work_date
           and not exists (
             select 1 from work_session_events v
-            where v.type = 'voided' and v.voids_event_id = e.id
+            where (v.type = 'voided' and v.voids_event_id = e.id) or v.corrects_event_id = e.id
+          )
+          and not exists (
+            select 1 from job_assignments o
+            where o.locked_by_event_id = e.id and o.id <> s.id
           )
         order by e.client_timestamp, e.id
         limit 1

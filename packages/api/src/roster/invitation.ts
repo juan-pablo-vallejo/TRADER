@@ -33,7 +33,7 @@ export const INVITATION_EMAILS_A_DAY = 5;
 
 export const invitationInput = z.strictObject({
   // The send's own id, made by the browser.
-  id: z.uuid(),
+  id: z.uuid({ version: "v7" }),
   userId: z.uuid(),
 });
 
