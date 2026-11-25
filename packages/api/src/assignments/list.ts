@@ -11,7 +11,7 @@ import type { Tx } from "../core/context";
 import { toWallTime, wallTime, workDay } from "./write";
 
 // A bound, not a page: a week of a 30-person company on two jobs a day is far under it.
-export const LIST_LIMIT = 2000;
+const LIST_LIMIT = 2000;
 
 const BLOCKED_BY = ["worker_inactive", "job_archived"] as const;
 
