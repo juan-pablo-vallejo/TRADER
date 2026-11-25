@@ -4,9 +4,11 @@
 // `@trader/api/contract`.
 import type { AppRouter } from "@trader/api";
 import {
+  CALL_DEADLINE_MS,
   DEV_EMAIL_HEADER,
   DEV_PHONE_HEADER,
   DEV_SUBJECT_HEADER,
+  MAX_BATCH_CALLS,
 } from "@trader/api/contract";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
@@ -23,13 +25,11 @@ export const devHeaders = (who: DevWho): Record<string, string> =>
     ? { [DEV_SUBJECT_HEADER]: `dev:${who.email}`, [DEV_EMAIL_HEADER]: who.email }
     : { [DEV_SUBJECT_HEADER]: `dev:${who.phone}`, [DEV_PHONE_HEADER]: who.phone };
 
-// Every request is given up after this (M1): one that never answered held the sync cycle,
-// and every cycle behind it, for good. The engine holds each call to the same deadline
-// (sync/engine.ts, CALL_DEADLINE_MS); this one also frees the socket.
-export const REQUEST_TIMEOUT_MS = 25_000;
-// The server answers at most this many calls in one request (apps/web handler.ts,
-// MAX_BATCH_SIZE); a larger batch would be refused whole.
-export const MAX_BATCH_ITEMS = 10;
+// Every request is given up at the contract's deadline, as the engine gives up each call
+// (sync/engine.ts); this one also frees the socket. The server answers at most the contract's
+// MAX_BATCH_CALLS calls in one request; a larger batch would be refused whole.
+export const REQUEST_TIMEOUT_MS = CALL_DEADLINE_MS;
+export const MAX_BATCH_ITEMS = MAX_BATCH_CALLS;
 
 // A fetch that aborts at the deadline, or sooner when its caller aborts. A controller and
 // a timer, not AbortSignal.timeout or .any, which a phone's JavaScript engine may lack.

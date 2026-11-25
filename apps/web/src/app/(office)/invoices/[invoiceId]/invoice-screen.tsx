@@ -19,11 +19,12 @@ import controls from "../../../controls.module.css";
 import { LoadingRows } from "../../../loading-rows";
 import { blocking, codeOf, EmptyState, Failure, RefreshFailed } from "../../../failure";
 import { Field } from "../../../field";
-import { amount, cents } from "../../../format";
+import { amount, cents, formatters } from "../../../format";
 import { Note } from "../../../note";
 import { PageHeader } from "../../../page-header";
 import { DestructiveAction } from "../../../row-editor";
 import { useStrings } from "../../../i18n";
+import { en } from "../../../i18n/en";
 import table from "../../../table.module.css";
 import { SidePanel } from "../../../side-panel";
 import { StatusBadge } from "../../../status-badge";
@@ -105,6 +106,8 @@ function Totals({
 // What the page says once an act changed it into another view (issued, voided): said under
 // its title, where the view that did it no longer stands.
 // Add a line: where the focus goes when the last line is removed.
+// What an invoice's own words are written with: English, as the customer reads them.
+const onInvoice = formatters("en", en);
 const ADD_LINE_ID = "invoice-add-line";
 const Said = createContext<(text: string) => void>(() => {});
 
@@ -381,7 +384,9 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         ) : (
           <ul className={styles.offers}>
             {offers.data.labor.map((l) => {
-              const label = s.laborOn(f.weekDay(l.workDate));
+              // The line goes on the customer's invoice, which is in English whatever the
+              // office's language (CLAUDE.md, rule 5).
+              const label = en.invoices.laborOn(onInvoice.weekDay(l.workDate));
               return (
                 <li key={l.workDate}>
                   <span className="body">

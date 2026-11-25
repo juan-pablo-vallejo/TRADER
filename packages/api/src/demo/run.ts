@@ -35,6 +35,7 @@ import {
   type Persona,
 } from "./content";
 import { atZone, seededRandom, uuidv7At } from "./ids";
+import { MAX_PUSH_RECORDS } from "../contract/limits";
 
 export type Step = { index: number; name: string };
 
@@ -69,7 +70,7 @@ export class DemoFailure extends Error {
   }
 }
 
-const MAX_RECORDS = 100;
+const MAX_RECORDS = MAX_PUSH_RECORDS;
 
 // The application's router as a server-side caller: the same procedures the route handler
 // serves, called in-process with a context built per persona.

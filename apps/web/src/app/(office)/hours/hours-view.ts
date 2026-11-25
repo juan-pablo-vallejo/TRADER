@@ -8,14 +8,15 @@ import type { inferRouterOutputs } from "@trpc/server";
 
 import { addDays } from "../../format";
 import { mondayOf } from "../schedule/schedule-view";
+import { MAX_RANGE_DAYS } from "@trader/api/contract";
 
 type Outputs = inferRouterOutputs<AppRouter>;
 export type Hours = Outputs["labor"]["hours"];
 export type Cell = Hours["cells"][number];
 export type Day = Hours["workers"][number]["days"][number];
 
-// The longest range the server reads at once (labor/ledger.ts).
-export const MAX_RANGE_DAYS = 31;
+// The longest range the server reads at once.
+export { MAX_RANGE_DAYS };
 
 // What the address holds (use-url-filters.ts). `range` is a preset or `dates`, and then
 // `from` and `to` are the dates; `flagged` is "1" for flagged only. The plain address is

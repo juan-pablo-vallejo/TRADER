@@ -24,28 +24,9 @@ import { companies, users } from "@trader/db/schema";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import type { ClosedCompany, DemoDoor } from "./context";
 import { signInPhoneSchema } from "./identity";
 import { PROTECTED_TIMEOUTS, runtimeRoleChecked } from "./trpc";
-
-export type DemoDoor = {
-  // The code a caller must present. Never logged, never answered.
-  code: string;
-  // The one company whose people the door admits.
-  companyId: string;
-  // A single-use sign-in ticket for the admitted person: their login (`subject`, the row's
-  // identity_subject), or, for an invitation not yet signed in (null), whoever holds `phone`
-  // at the identity provider. Null when it has none to give. May throw: the network, never
-  // a verdict.
-  ticket(person: { phone: string; subject: string | null }): Promise<string | null>;
-};
-
-// The company that reaches nobody outside this deployment: the door's company, in
-// production (the host says when: apps/web, clerk-demo.ts). Its code is shared by design,
-// so whoever holds it can sign in as any of its people, its admin included, and must be
-// harmless: its invoices are emailed only to `allowed` (the deployment's allow-list;
-// blank is nobody), and it invites nobody (roster/invite.ts), since an invitation makes a
-// login for any number. Null everywhere else, staging included: no rule changes there.
-export type ClosedCompany = { companyId: string; allowed: readonly string[] };
 
 export const isClosed = (closed: ClosedCompany | null, companyId: string): boolean =>
   closed !== null && closed.companyId === companyId;

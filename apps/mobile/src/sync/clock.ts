@@ -1,7 +1,13 @@
 // What the clock shows and what a tap on it records.
 // Pure: the snapshot of the last pull, the records still on this phone, and the
 // time. The phone shows what follows from them; the server alone decides what counts.
-import type { LaborPayload, PullOutput } from "@trader/api/contract";
+import {
+  clockAfter,
+  EARLY_MINUTES,
+  type ClockStep,
+  type LaborPayload,
+  type PullOutput,
+} from "@trader/api/contract";
 
 import type { NewRecord, OutboxRecord } from "./types";
 
@@ -17,9 +23,13 @@ export function capturedOffline(reading: number | null, now: number): boolean {
 export type ClockState =
   { status: "off" } | { status: "working" | "paused"; jobId: string; since: Date };
 
+const stepOf = (state: ClockState): ClockStep =>
+  state.status === "off" ? "idle" : state.status;
+
 // The open session the server knows of, then every record of this phone the snapshot does
-// not show yet, in the order they were captured. A rejected record changes nothing: the
-// server refused it, and the screen says so beside it. A voided session still open is open:
+// not show yet, in the order they were captured, each moving the clock by the server's own
+// rule (the contract's clockAfter). A record the server refused, or one it will refuse from
+// where the clock stands (a second clock-in while one is open), changes nothing. A voided session still open is open:
 // the server's fold reads it so and refuses a clock-in on top of it (packages/api
 // labor/fold.ts; H1), and the office now ends one before voiding it.
 export function clockState(
@@ -35,11 +45,12 @@ export function clockState(
   for (const r of records) {
     if (r.standing === "rejected" || known.has(r.id)) continue;
     const { type, jobId, clientTimestamp } = r.payload;
-    if (type === "started") state = { status: "working", jobId, since: clientTimestamp };
-    else if (type === "ended") state = { status: "off" };
-    else if (state.status !== "off") {
-      state = { ...state, status: type === "paused" ? "paused" : "working" };
-    }
+    const next = clockAfter(stepOf(state), type);
+    if (next === undefined) continue;
+    if (next === "idle") state = { status: "off" };
+    else if (type === "started")
+      state = { status: "working", jobId, since: clientTimestamp };
+    else if (state.status !== "off") state = { ...state, status: next };
   }
   return state;
 }
@@ -77,15 +88,24 @@ export function recordsFor(tap: Tap, state: ClockState, c: Capture): NewRecord[]
       capturedOffline: capturedOffline(c.reading, c.now),
     },
   });
+  // The server's rule decides what a tap may write from where the clock stands.
+  const may = (entry: LaborPayload["type"]) =>
+    clockAfter(stepOf(state), entry) !== undefined;
   switch (tap.action) {
     case "start":
-      return state.status === "off" ? [event("started", tap.jobId, c.now)] : [];
+      return may("started") ? [event("started", tap.jobId, c.now)] : [];
     case "pause":
-      return state.status === "working" ? [event("paused", state.jobId, c.now)] : [];
+      return may("paused") && state.status !== "off"
+        ? [event("paused", state.jobId, c.now)]
+        : [];
     case "resume":
-      return state.status === "paused" ? [event("resumed", state.jobId, c.now)] : [];
+      return may("resumed") && state.status !== "off"
+        ? [event("resumed", state.jobId, c.now)]
+        : [];
     case "end":
-      return state.status === "off" ? [] : [event("ended", state.jobId, c.now)];
+      return may("ended") && state.status !== "off"
+        ? [event("ended", state.jobId, c.now)]
+        : [];
     case "switch":
       return state.status === "off" || state.jobId === tap.jobId
         ? []
@@ -116,10 +136,6 @@ export function wallClock(
 }
 
 type Shift = PullOutput["shifts"][number];
-
-// The server admits a start up to this many minutes before a shift's start
-// (eligibility.ts, EARLY_MINUTES). Restated: the phone only shows what to expect.
-export const EARLY_MINUTES = 15;
 
 const minutes = (wall: string) =>
   Number(wall.slice(0, 2)) * 60 + Number(wall.slice(3, 5));

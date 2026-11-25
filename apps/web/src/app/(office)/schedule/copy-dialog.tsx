@@ -26,7 +26,7 @@ import { copiesIn, type CopyPreview, leftOutText, type Week } from "./schedule-v
 import { WriteButton } from "../../write-button";
 
 const line = (f: Formatters, o: CopyPreview["create"][number]) =>
-  `${o.worker.name} · ${o.job.name} · ${f.weekDay(o.workDate)} ${o.expectedStart}–${o.expectedEnd}`;
+  `${o.worker.name} · ${o.job.name} · ${f.weekDay(o.workDate)} · ${f.span(o.expectedStart, o.expectedEnd)}`;
 
 export function CopyWeek({
   week,

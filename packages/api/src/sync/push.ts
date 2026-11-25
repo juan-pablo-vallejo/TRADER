@@ -14,6 +14,7 @@ import { laborAck, laborPayloadV1, pushLaborEvent } from "./labor";
 import { reportFailure, type ErrorReporter } from "../core/report";
 import { SYNC_PROTOCOL_VERSIONS } from "./protocol";
 import { measureSkew, type Skew } from "./reasons";
+import { MAX_PUSH_RECORDS } from "../contract/limits";
 
 // A batch is the device's, so a cap protects the function, not the
 // device: what is left out comes back next cycle. Vercel Pro allows 300 s by default (checked
@@ -21,7 +22,7 @@ import { measureSkew, type Skew } from "./reasons";
 // starting records after 8 s, and one record waits at most 2 s for a lock and 4 s on a
 // statement (trpc.ts, SYNC_TIMEOUTS), so a response is never held long enough to time the
 // device out.
-export const MAX_RECORDS = 100;
+export const MAX_RECORDS = MAX_PUSH_RECORDS;
 export const BUDGET_MS = 8_000;
 
 // One kind today. The envelope keeps the field so a later kind is a new member here and a

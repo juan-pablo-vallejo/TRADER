@@ -36,6 +36,7 @@ import {
 } from "./schedule-view";
 import { sameAs, type Change } from "./optimistic";
 import { WriteButton } from "../../write-button";
+import type { Formatters } from "../../format";
 
 function useRefresh() {
   const trpc = useTRPC();
@@ -43,7 +44,8 @@ function useRefresh() {
   return () => queryClient.invalidateQueries(trpc.assignment.pathFilter());
 }
 
-const labelOf = (shift: WeekShift) => `${shift.job.name} ${hoursOf(shift)}`;
+const labelOf = (shift: WeekShift, f: Pick<Formatters, "span">) =>
+  `${shift.job.name} ${hoursOf(shift, f)}`;
 
 type Overlap = ReturnType<typeof overlapsWith>[number];
 
@@ -81,7 +83,7 @@ function PersonWeek({
                     className={shift.id === current ? "body-strong" : "body"}
                     aria-current={shift.id === current ? "true" : undefined}
                   >
-                    <span className={styles.hours}>{hoursOf(shift)}</span>{" "}
+                    <span className={styles.hours}>{hoursOf(shift, f)}</span>{" "}
                     {shift.job.name}
                     {shift.locked && <StatusBadge tone="active" label={s.locked} />}
                   </dd>
@@ -109,7 +111,7 @@ function Started({
   jobs: { id: string; name: string }[];
   onClose: (note: string | null) => void;
 }) {
-  const { t } = useStrings();
+  const { t, f } = useStrings();
   const s = t.schedule;
   const trpc = useTRPC();
   const refresh = useRefresh();
@@ -127,7 +129,7 @@ function Started({
   const [moveId] = useState(uuidv7);
   const label = (id: string) => {
     const other = week.shifts.find((x) => x.id === id);
-    return other === undefined || id === shift.id ? s.thisShift : labelOf(other);
+    return other === undefined || id === shift.id ? s.thisShift : labelOf(other, f);
   };
   const said = (answer: { result: string; code?: string }): string =>
     answer.code === "not_earlier"
@@ -135,9 +137,9 @@ function Started({
       : answer.code === "same_job"
         ? s.sameJob
         : answer.code === "schedule" || answer.code === "authorization"
-          ? refusalText(s, answer as Refusal, label)
+          ? refusalText(s, answer as Refusal, label, f)
           : answer.code === "user_inactive" || answer.code === "job_archived"
-            ? refusalText(s, answer as Refusal, label)
+            ? refusalText(s, answer as Refusal, label, f)
             : s.refused.stale;
 
   const endEarly = useMutation(
@@ -273,14 +275,14 @@ function Started({
 
 // The shifts this one would overlap, and why it cannot be saved while it does.
 function Overlaps({ overlaps }: { overlaps: Overlap[] }) {
-  const { t } = useStrings();
+  const { t, f } = useStrings();
   const s = t.schedule;
   if (overlaps.length === 0) return null;
   return (
     <section className={styles.overlaps} aria-label={s.overlapsHeading}>
       {overlaps.map(({ other, start, end }) => (
         <p key={other.id} className="body">
-          {s.overlap(labelOf(other), `${start}–${end}`)}
+          {s.overlap(labelOf(other, f), f.span(start, end))}
         </p>
       ))}
       {/* Why the save is disabled, said where a screen reader hears it change. */}
@@ -345,7 +347,7 @@ export function EditShift({
               </Link>
             </p>
             <p className={`body ${styles.hours}`}>
-              {f.weekDay(shift.workDate)} · {hoursOf(shift)}{" "}
+              {f.weekDay(shift.workDate)} · {hoursOf(shift, f)}{" "}
               <StatusBadge tone="active" label={s.locked} />
             </p>
             <Started shift={shift} week={week} jobs={jobs} onClose={onClose} />
@@ -494,14 +496,14 @@ export function AddShift({
   });
   const label = (id: string) => {
     const other = week.shifts.find((x) => x.id === id);
-    return other === undefined ? s.thisShift : labelOf(other);
+    return other === undefined ? s.thisShift : labelOf(other, f);
   };
 
   const create = useMutation(
     trpc.assignment.create.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          setNote(refusalText(s, answer, label));
+          setNote(refusalText(s, answer, label, f));
           return;
         }
         await refresh();
@@ -510,7 +512,7 @@ export function AddShift({
         const refused = new Map(
           answer.days.flatMap((d) =>
             d.result === "rejected"
-              ? [[d.workDate, refusalText(s, d as Refusal, label)] as const]
+              ? [[d.workDate, refusalText(s, d as Refusal, label, f)] as const]
               : [],
           ),
         );

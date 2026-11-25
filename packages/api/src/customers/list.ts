@@ -7,6 +7,7 @@ import { asc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { byName } from "../core/order";
 
 export const customer = z.strictObject({
   id: z.uuid(),
@@ -46,7 +47,7 @@ export async function listCustomers(tx: Tx): Promise<Customer[]> {
   return tx
     .select(columns)
     .from(customers)
-    .orderBy(asc(sql`lower(${customers.name})`), asc(customers.id));
+    .orderBy(asc(byName(customers.name)), asc(customers.id));
 }
 
 // One visible customer, or undefined: another tenant's row is invisible under RLS.

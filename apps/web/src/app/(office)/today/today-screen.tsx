@@ -154,7 +154,7 @@ function Shown({ today, now }: { today: Today; now: number }) {
                   <StatusBadge tone="attention" label={t.crewStatus.late} />
                   <span className={`body ${styles.grow}`}>
                     {withJob(
-                      s.late(row.person.name, job(row.jobId), row.start),
+                      s.late(row.person.name, job(row.jobId), f.wall(row.start)),
                       row.jobId,
                     )}
                   </span>
@@ -229,7 +229,10 @@ function Shown({ today, now }: { today: Today; now: number }) {
                   p,
                   shift === null
                     ? ""
-                    : withJob(s.expectedAt(job(shift.jobId), shift.start), shift.jobId),
+                    : withJob(
+                        s.expectedAt(job(shift.jobId), f.wall(shift.start)),
+                        shift.jobId,
+                      ),
                 );
               })}
             </ul>

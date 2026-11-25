@@ -19,6 +19,7 @@ import { z } from "zod";
 
 import type { Tx } from "../core/context";
 import { groupBy } from "../core/group";
+import { byName } from "../core/order";
 
 // One time an invitation went out: by which way, when, who sent it, and how it went. A
 // text is the admin's own message, noted when they opened it to send; an email is
@@ -198,7 +199,7 @@ export async function rosterList(tx: Tx): Promise<RosterUser[]> {
   const rows = await tx
     .select(columns)
     .from(users)
-    .orderBy(asc(sql`lower(${users.name})`), asc(users.id));
+    .orderBy(asc(byName(users.name)), asc(users.id));
   const byPerson = groupBy(await sendsOf(tx), (send) => send.userId);
   const changed = groupBy(await changesOf(tx), (change) => change.userId);
   return rows.map((row) =>

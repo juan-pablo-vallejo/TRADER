@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import type { Tx } from "../core/context";
 import { toWallTime, wallTime, workDay } from "./write";
+import { byName } from "../core/order";
 
 // A bound, not a page: a week of a 30-person company on two jobs a day is far under it.
 const LIST_LIMIT = 2000;
@@ -58,7 +59,7 @@ async function plannedShifts(
     .orderBy(
       asc(jobAssignments.workDate),
       asc(jobAssignments.expectedStart),
-      asc(users.name),
+      asc(byName(users.name)),
       asc(jobAssignments.id),
     )
     .limit(LIST_LIMIT);

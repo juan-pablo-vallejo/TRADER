@@ -8,6 +8,8 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { addDays } from "../../format";
 import type { Catalog } from "../../i18n/en";
 import { instantToWall } from "../../zoned";
+import type { Formatters } from "../../format";
+import { compareNames } from "@trader/api/contract";
 
 type Outputs = inferRouterOutputs<AppRouter>["assignment"];
 export type Week = Outputs["week"];
@@ -112,8 +114,10 @@ export function personWeek(
   }));
 }
 
-export const hoursOf = (shift: { expectedStart: string; expectedEnd: string }) =>
-  `${shift.expectedStart}–${shift.expectedEnd}`;
+export const hoursOf = (
+  shift: { expectedStart: string; expectedEnd: string },
+  f: Pick<Formatters, "span">,
+) => f.span(shift.expectedStart, shift.expectedEnd);
 
 export type Row = {
   id: string;
@@ -143,7 +147,7 @@ function rows(
     row.days.set(shift.workDate, [...(row.days.get(shift.workDate) ?? []), shift]);
   }
   return [...byId.values()].sort(
-    (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+    (a, b) => compareNames(a.name, b.name) || a.id.localeCompare(b.id),
   );
 }
 
@@ -159,7 +163,7 @@ export function byEmployee(
     .filter((p) => p.active && !seen.has(p.id))
     .map((p) => ({ id: p.id, name: p.name, days: new Map<string, WeekShift[]>() }));
   return [...scheduled, ...idle].sort(
-    (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+    (a, b) => compareNames(a.name, b.name) || a.id.localeCompare(b.id),
   );
 }
 
@@ -197,6 +201,7 @@ export function issueText(
   s: Words,
   issue: Issue,
   label: (shiftId: string) => string,
+  f: Pick<Formatters, "span">,
 ): string {
   switch (issue.code) {
     case "duplicate_shift":
@@ -205,7 +210,7 @@ export function issueText(
       return s.issue.overlap(
         label(issue.shiftIds[0]),
         label(issue.shiftIds[1]),
-        `${issue.start}–${issue.end}`,
+        f.span(issue.start, issue.end),
       );
     case "duplicate_shift_id":
     case "invalid_interval":
@@ -222,10 +227,11 @@ export function refusalText(
   s: Words,
   refusal: Refusal,
   label: (shiftId: string) => string,
+  f: Pick<Formatters, "span">,
 ): string {
   switch (refusal.code) {
     case "schedule":
-      return refusal.issues.map((issue) => issueText(s, issue, label)).join(" ");
+      return refusal.issues.map((issue) => issueText(s, issue, label, f)).join(" ");
     case "authorization":
       return s.refused.authorization(label(refusal.shiftId));
     case "locked":

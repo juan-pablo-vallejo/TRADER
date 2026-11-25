@@ -6,14 +6,18 @@
 // a verdict: nothing is marked rejected or lost, and the next cycle tries again. Under
 // `paused` or `update_required` the outbox is not touched at all; under `read_only` it is
 // kept and only the pull runs.
-import type { ServiceState } from "@trader/api/contract";
+import {
+  CALL_DEADLINE_MS,
+  MAX_PUSH_RECORDS,
+  type ServiceState,
+} from "@trader/api/contract";
 import superjson from "superjson";
 
 import type { PushAnswer, Snapshot, Store, Transport } from "./types";
 
-// A call that has not answered by now is given up, as one the network failed is (M1): one
-// that never answered held this cycle, and every cycle queued behind it, for good.
-export const CALL_DEADLINE_MS = 25_000;
+// A call that has not answered by the contract's deadline is given up, as one the network
+// failed is: one that never answered held this cycle, and every cycle queued behind it.
+export { CALL_DEADLINE_MS };
 
 const within = <T>(call: () => Promise<T>, ms: number): Promise<T> =>
   new Promise<T>((resolve, reject) => {
@@ -33,7 +37,7 @@ const within = <T>(call: () => Promise<T>, ms: number): Promise<T> =>
 // A record stuck `syncing` is reclaimed after two minutes.
 export const RECLAIM_MS = 2 * 60_000;
 // The server takes at most this many records in a push (its MAX_RECORDS).
-const BATCH = 100;
+const BATCH = MAX_PUSH_RECORDS;
 
 export const SNAPSHOT_KEY = "snapshot";
 // The pull's shape as this build reads it. Raise it in the commit that changes what a pull

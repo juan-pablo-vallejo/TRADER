@@ -3,6 +3,7 @@
 // (api eligibility.test.ts); here only what the screen does with them.
 import { describe, expect, it } from "vitest";
 
+import { formatters } from "../src/app/format";
 import { en } from "../src/app/i18n/en";
 import {
   byEmployee,
@@ -24,6 +25,7 @@ import {
 
 // The English words: what the sentences below are held to.
 const S = en.schedule;
+const F = formatters("en", en);
 const id = (n: number) => `00000000-0000-7000-8000-${String(n).padStart(12, "0")}`;
 const ana = { id: id(1), name: "Ana", active: true };
 const tom = { id: id(2), name: "Tom", active: true };
@@ -135,24 +137,25 @@ describe("a refusal in words", () => {
           end: "15:30",
         },
         label,
+        F,
       ),
-    ).toBe("shift 101 and shift 102 overlap during 12:00–15:30.");
+    ).toBe("shift 101 and shift 102 overlap during 12:00\u00a0PM–3:30\u00a0PM.");
     expect(
-      issueText(S, { code: "duplicate_shift", shiftIds: [id(101), id(102)] }, label),
+      issueText(S, { code: "duplicate_shift", shiftIds: [id(101), id(102)] }, label, F),
     ).toBe("That shift already exists.");
   });
 
   it("says each refusal a write can answer", () => {
-    expect(refusalText(S, { code: "locked" }, label)).toContain(
+    expect(refusalText(S, { code: "locked" }, label, F)).toContain(
       "Correct attendance in Hours",
     );
-    expect(refusalText(S, { code: "authorization", shiftId: id(101) }, label)).toContain(
-      "already clocked in on shift 101",
-    );
-    expect(refusalText(S, { code: "user_inactive" }, label)).toBe(
+    expect(
+      refusalText(S, { code: "authorization", shiftId: id(101) }, label, F),
+    ).toContain("already clocked in on shift 101");
+    expect(refusalText(S, { code: "user_inactive" }, label, F)).toBe(
       "That employee is deactivated.",
     );
-    expect(refusalText(S, { code: "job_archived" }, label)).toBe(
+    expect(refusalText(S, { code: "job_archived" }, label, F)).toBe(
       "That jobsite is archived.",
     );
     expect(
@@ -171,9 +174,10 @@ describe("a refusal in words", () => {
           ],
         },
         label,
+        F,
       ),
     ).toBe(
-      "That shift already exists. shift 101 and shift 102 overlap during 12:00–15:30.",
+      "That shift already exists. shift 101 and shift 102 overlap during 12:00\u00a0PM–3:30\u00a0PM.",
     );
   });
 });

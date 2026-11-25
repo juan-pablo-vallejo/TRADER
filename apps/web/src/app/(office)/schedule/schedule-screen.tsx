@@ -95,7 +95,7 @@ function ShiftCard({
       <span className={`compact ${styles.cardName}`}>
         {view === "employee" ? shift.job.name : shift.worker.name}
       </span>
-      <span className={`secondary ${styles.hours}`}>{hoursOf(shift)}</span>
+      <span className={`secondary ${styles.hours}`}>{hoursOf(shift, f)}</span>
       <span className="visually-hidden">
         {`, ${view === "employee" ? shift.worker.name : shift.job.name}, ${f.weekDay(shift.workDate)}`}
       </span>
@@ -148,8 +148,9 @@ function Grid({
               className="label"
               data-day
               data-selected={day === selected ? "" : undefined}
+              // A grid's column is "Mon 16": the range above says the month.
             >
-              {f.weekDay(day)}
+              {f.weekColumn(day)}
             </th>
           ))}
         </tr>
@@ -278,11 +279,11 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
       const shift = shown.shifts.find((x) => x.id === id);
       return shift === undefined || shift.id === asked.shift.id
         ? s.thisShift
-        : `${shift.job.name} ${hoursOf(shift)}`;
+        : `${shift.job.name} ${hoursOf(shift, f)}`;
     };
     const why = (result: Outcome<Sent>) =>
       result.outcome === "refused"
-        ? refusalText(s, result.answer as Refusal, label)
+        ? refusalText(s, result.answer as Refusal, label, f)
         : t.requestFailed;
     const name = asked.shift.worker.name;
     const what = said(asked);
@@ -297,7 +298,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
         asked.kind === "update"
           ? what === "moved"
             ? s.did.moved(name, f.weekDay(asked.to.workDate))
-            : s.did.changed(name, `${asked.to.expectedStart}–${asked.to.expectedEnd}`)
+            : s.did.changed(name, f.span(asked.to.expectedStart, asked.to.expectedEnd))
           : s.did.removed(name, f.weekDay(asked.shift.workDate)),
       // Undo waits for the first answer: a change the server refused has nothing to undo.
       // The toast stays, busy, until the undo's answer, and then says it where it was.
@@ -495,7 +496,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
               aria-pressed={day === selected}
               onClick={() => setFilters({ day })}
             >
-              {f.weekDay(day)}
+              {f.weekColumn(day)}
             </button>
           ))}
         </div>

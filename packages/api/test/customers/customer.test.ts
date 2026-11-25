@@ -99,6 +99,20 @@ describe("customer.list", () => {
     expect(rows.map((r) => r.id)).not.toContain(w.b.customerId);
   });
 
+  it("orders names with an accent beside their letter and case aside, as the apps do", async () => {
+    const admin = await member(owner, w, "a", "admin");
+    await owner.insert(customers).values(
+      ["Zoe Works", "Ángel Painting", "ana co", "Bea Homes"].map((name) => ({
+        companyId: w.a.companyId,
+        name,
+      })),
+    );
+    const names = (await customer(admin.who).list()).map((r) => r.name);
+    const ours = names.filter((n) => n !== "Customer a");
+    expect(ours).toEqual(["ana co", "Ángel Painting", "Bea Homes", "Zoe Works"]);
+    expect(ours).toEqual([...ours].sort((x, y) => x.localeCompare(y)));
+  });
+
   it("answers 401, 403 and 200 over HTTP", async () => {
     const send = async (who: unknown) => {
       const r = await http(app, who, [{ path: "customer.list" }], { router: appRouter });

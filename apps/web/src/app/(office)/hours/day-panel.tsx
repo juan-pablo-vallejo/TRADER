@@ -315,7 +315,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
         r.sessions.map((s) => (
           <div key={s.rootEventId} className={styles.session}>
             <h3 className="body-strong">
-              {s.job.name} · {f.clock(s.startedAt, zone)} –{" "}
+              {s.job.name} · {f.clock(s.startedAt, zone)}–
               {s.endedAt === null
                 ? ""
                 : // An end on another day than the start says its date.

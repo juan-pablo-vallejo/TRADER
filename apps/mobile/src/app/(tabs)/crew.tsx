@@ -14,10 +14,12 @@
 // `end_required` without one when no shift covers the minute.
 import { Ionicons } from "@expo/vector-icons";
 import {
+  compareNames,
   CREW_STATUSES,
   crewCounts,
   crewStatus,
   type CrewStatus,
+  JOBSITE_RADIUS_M,
 } from "@trader/api/contract";
 import * as Crypto from "expo-crypto";
 import { Redirect, useFocusEffect } from "expo-router";
@@ -57,8 +59,8 @@ import { color, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
 import { Sheet } from "../../ui/sheet";
 
-// The radius a jobsite gets when its location is set from the phone.
-const SET_RADIUS_M = 200;
+// The radius a jobsite gets when its location is set from the phone: the server's default.
+const SET_RADIUS_M = JOBSITE_RADIUS_M;
 
 const mint = createMinter((count) => Crypto.getRandomBytes(count));
 
@@ -266,7 +268,7 @@ export default function CrewTab() {
   // Every jobsite a shift may name: the pull's, open ones only.
   const openJobs = (snapshot?.data.jobs ?? [])
     .filter((j) => j.status === "open")
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => compareNames(a.name, b.name));
   const groups = crew === null ? [] : byJob(crew, minute);
 
   const opened =
@@ -321,7 +323,7 @@ export default function CrewTab() {
             all
               .filter((u) => u.deactivatedAt === null)
               .map((u) => ({ id: u.id, name: u.name }))
-              .sort((a, b) => a.name.localeCompare(b.name)),
+              .sort((a, b) => compareNames(a.name, b.name)),
           ),
         )
         .catch(() => setProblem("failed"));

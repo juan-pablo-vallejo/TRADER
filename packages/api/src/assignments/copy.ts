@@ -27,6 +27,7 @@ import { lockActiveSelf, lockUsersShare } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
 import { type Day, dayOf, type DayShift, judgeDay, loadDays, lockDays } from "./day";
 import { toWallTime, wallTime, workDay } from "./write";
+import { byName } from "../core/order";
 
 const isMonday = (day: string) => new Date(`${day}T00:00:00Z`).getUTCDay() === 1;
 const dayAfter = (day: string, n: number) =>
@@ -138,7 +139,7 @@ async function planCopy(tx: Tx, target: string): Promise<Preview> {
     )
     // One person's day together, its shifts in the order they are taken in.
     .orderBy(
-      asc(users.name),
+      asc(byName(users.name)),
       asc(users.id),
       asc(jobAssignments.workDate),
       asc(jobAssignments.expectedStart),

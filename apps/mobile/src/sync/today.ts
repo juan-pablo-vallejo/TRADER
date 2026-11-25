@@ -1,14 +1,18 @@
 // What Today works out from the last pull, the entries still on this phone and the time.
 // Pure, like clock.ts beside it: the screen draws what these answer and decides nothing.
 // The server alone decides what counts; these say what to expect and what is waiting.
-import type { LaborPayload, PullOutput } from "@trader/api/contract";
+import {
+  CLOCK_SKEW_TOLERANCE_MS,
+  type LaborPayload,
+  type PullOutput,
+} from "@trader/api/contract";
 
 import type { ClockState } from "./clock";
 import type { CycleResult } from "./engine";
 import type { OutboxRecord } from "./types";
 
-// The server tolerates five minutes of skew before it flags an entry.
-const SKEW_MS = 5 * 60_000;
+// The skew the server tolerates before it flags an entry.
+const SKEW_MS = CLOCK_SKEW_TOLERANCE_MS;
 
 // Time worked in the session the clock is in, breaks left out: from its clock-in, through
 // every break start and end the phone knows of, to `now`. The pull's events first, then

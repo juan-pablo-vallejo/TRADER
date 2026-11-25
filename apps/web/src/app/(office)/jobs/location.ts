@@ -5,9 +5,10 @@
 // at all (it is only a redirect), so it is refused by name, and the screen says how to
 // copy the pair instead: nothing here ever follows a link, the office's browser loads no
 // other host.
+import { JOBSITE_RADIUS_M, MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
 
 // The radius a job gets unless the office changes it.
-export const DEFAULT_RADIUS_M = 200;
+export const DEFAULT_RADIUS_M = JOBSITE_RADIUS_M;
 
 export type ParsedLocation =
   | { ok: true; lat: number; lng: number }
@@ -77,10 +78,10 @@ export function parseLocation(text: string): ParsedLocation {
 export const locationText = (location: { lat: number; lng: number } | null): string =>
   location === null ? "" : `${location.lat}, ${location.lng}`;
 
-// The radius as typed: a whole number of meters from 1 to 100 000, or null.
+// The radius as typed: a whole number of meters from 1 to the contract's ceiling, or null.
 export function parseRadius(text: string): number | null {
   const typed = text.trim();
   if (!/^\d{1,6}$/.test(typed)) return null;
   const meters = Number(typed);
-  return meters >= 1 && meters <= 100_000 ? meters : null;
+  return meters >= 1 && meters <= MAX_JOBSITE_RADIUS_M ? meters : null;
 }

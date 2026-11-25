@@ -401,6 +401,8 @@ the iPhone simulator and `trader-ws android`.
 - Hours' day lines are 32 px at 768 too: `--target` there as well.
 - A date typed into Hours' range before the page has loaded is put back to the range shown
   when the page takes over: the fields keep what was typed, as sign-in's field does.
+- Deleting a draft invoice reads the deleted invoice once more and logs a 403: its reads stop
+  once the deletion is sent.
 - The schedule offers "Add a shift" for a deactivated person, whom the form then leaves
   out.
 - Done when: a test for each.

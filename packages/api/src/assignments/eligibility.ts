@@ -19,6 +19,8 @@
 //
 // The answer does not depend on the order of the shifts.
 
+import { EARLY_MINUTES } from "../contract/clock";
+
 // One person's shift on one day. `start` and `end` are HH:MM on a 24-hour clock.
 export type Shift = { id: string; jobId: string; start: string; end: string };
 
@@ -156,9 +158,6 @@ export function resolveDay(shifts: readonly Shift[]): DayResolution {
     })),
   };
 }
-
-// How long before the next shift a start is admitted.
-export const EARLY_MINUTES = 15;
 
 type StartAdmission =
   // The start falls in this shift.

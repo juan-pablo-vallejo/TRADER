@@ -2,7 +2,9 @@
 // figure is never rounded or divided as a float on the way to the screen.
 import { describe, expect, it } from "vitest";
 
-import { hours, looksLikeSignInPhone, signInPhone } from "../src/app/format";
+import { formatters, hours, looksLikeSignInPhone, signInPhone } from "../src/app/format";
+import { en } from "../src/app/i18n/en";
+import { es } from "../src/app/i18n/es";
 
 describe("a sign-in number", () => {
   it("is shown as it is said, and anything else as it is", () => {
@@ -50,5 +52,48 @@ describe("hours from hundredths", () => {
 
   it("keeps the sign of a figure below zero", () => {
     expect([-5, -850].map(hours)).toEqual(["-0.05", "-8.50"]);
+  });
+});
+
+// Intl writes a no-break space before "PM" and inside "p. m."; compared as plain spaces.
+const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, " ");
+
+describe("a time of day and a day", () => {
+  const english = formatters("en", en);
+  const spanish = formatters("es", es);
+  const at = new Date(Date.UTC(2026, 10, 16, 19, 30));
+
+  it("reads a time of day on a 12-hour clock in both languages", () => {
+    expect([
+      plain(english.wall("14:30")),
+      plain(english.wall("07:00")),
+      plain(english.wall("00:15")),
+    ]).toEqual(["2:30 PM", "7:00 AM", "12:15 AM"]);
+    expect([plain(spanish.wall("14:30")), plain(spanish.wall("07:00"))]).toEqual([
+      "2:30 p. m.",
+      "7:00 a. m.",
+    ]);
+    expect(plain(english.span("07:00", "15:30"))).toBe("7:00 AM–3:30 PM");
+    expect(plain(english.clock(at, "America/New_York"))).toBe("2:30 PM");
+    expect(plain(spanish.clock(at, "America/New_York"))).toBe("2:30 p. m.");
+  });
+
+  it("reads a day by kind: worked, due, a column", () => {
+    expect(english.weekDay("2026-11-16")).toBe("Mon, Nov 16");
+    expect(english.day("2026-11-16")).toBe("Nov 16, 2026");
+    expect(english.weekColumn("2026-11-16")).toBe("Mon 16");
+  });
+});
+
+describe("a Spanish sentence that names a time", () => {
+  it("takes one period after a. m. or p. m., and the article the hour asks for", () => {
+    expect(es.todayScreen.late("Ana", "Obra", "7:00 a. m.")).toBe(
+      "Ana va tarde a Obra, que empezó a las 7:00 a. m.",
+    );
+    expect(es.todayScreen.asOf("1:15 p. m.")).toBe("A la 1:15 p. m.");
+    expect(es.todayScreen.asOf("2:30 p. m.")).toBe("A las 2:30 p. m.");
+    expect(es.schedule.did.changed("Ana", "7:00 a. m.–4:15 p. m.")).toBe(
+      "El turno de Ana cambió a 7:00 a. m.–4:15 p. m.",
+    );
   });
 });

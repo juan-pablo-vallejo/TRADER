@@ -29,9 +29,9 @@ import type { Tx } from "../core/context";
 import { forbidden } from "../core/trpc";
 import { eventEffect, sessionAccounting } from "./accounting";
 import { workDate } from "./work-date";
+import { MAX_RANGE_DAYS } from "../contract/limits";
 
-// The longest range one read covers: any month.
-export const MAX_RANGE_DAYS = 31;
+export { MAX_RANGE_DAYS };
 
 const dayNumber = (day: string) => Date.parse(`${day}T00:00:00Z`) / 86_400_000;
 

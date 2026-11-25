@@ -23,7 +23,7 @@ import {
 
 import { PHONE_PROCEDURES } from "../../src/contract";
 import { createContext, type Tx } from "../../src/core/context";
-import type { DemoDoor } from "../../src/core/demo-door";
+import type { DemoDoor } from "../../src/core/context";
 import { localDirectory } from "../../src/core/identity";
 import type { CallLine } from "../../src/core/observe";
 import { createCallerFactory, runtimeRoleChecked } from "../../src/core/trpc";

@@ -2,11 +2,14 @@
 // clock, whatever zone the phone is in: it is the clock the schedule is written on.
 import type { Catalog } from "./i18n/catalog";
 
+// A time of day on a 12-hour clock in both languages, as the office writes it: "2:30 PM",
+// "2:30 p. m.".
 export function timeOfDay(instant: Date, timeZone: string, language: string): string {
   return new Intl.DateTimeFormat(language, {
     timeZone,
     hour: "numeric",
     minute: "2-digit",
+    hourCycle: "h12",
   }).format(instant);
 }
 
@@ -18,11 +21,11 @@ export function wallTime(wall: string, language: string): string {
   return timeOfDay(at, "UTC", language);
 }
 
-// A calendar day, `YYYY-MM-DD`, as a weekday and a date.
+// A calendar day worked or planned, `YYYY-MM-DD`, as the office writes one: "Mon, Nov 16".
 export function dayName(day: string, language: string): string {
   return new Intl.DateTimeFormat(language, {
     timeZone: "UTC",
-    weekday: "long",
+    weekday: "short",
     month: "short",
     day: "numeric",
   }).format(new Date(`${day}T12:00:00Z`));

@@ -1,8 +1,11 @@
 // The session fold (invariant 4): one worker's work sessions, computed from the
 // append-only `work_session_events` ledger and never stored. Pure: no database, no clock. The
-// state machine below is the only encoding of the transition rules; validation (validate.ts)
-// and derivation (work-date.ts) both run through `replay`, so they cannot drift apart.
+// state machine below runs the one transition table (contract/clock.ts, which the phone reads
+// too); validation (validate.ts) and derivation (work-date.ts) both run through `replay`, so
+// they cannot drift apart.
 import type { workSessionEvents } from "@trader/db/schema";
+
+import { clockAfter, type ClockStep } from "../contract/clock";
 
 type Row = typeof workSessionEvents.$inferSelect;
 
@@ -80,14 +83,8 @@ export function compareEvents(a: LaborEvent, b: LaborEvent): number {
 const compareAcceptance = (a: LaborEvent, b: LaborEvent) =>
   a.serverTimestamp.getTime() - b.serverTimestamp.getTime() || compareIds(a.id, b.id);
 
-type State = "idle" | "working" | "paused";
-
-// Positional types only. A void is a reference to a session, not a step in it.
-const TRANSITIONS: Record<State, Partial<Record<PositionalType, State>>> = {
-  idle: { started: "working" },
-  working: { paused: "paused", ended: "idle" },
-  paused: { resumed: "working", ended: "idle" },
-};
+// The transitions are the contract's (contract/clock.ts), which the phone reads too.
+type State = ClockStep;
 
 // Why `type` is not in TRANSITIONS[state]; called only for an illegal pair.
 function illegal(state: State, type: PositionalType): ViolationCode {
@@ -193,7 +190,7 @@ export function replay(events: readonly LaborEvent[]): Replay {
 
   for (const { root, source } of entries) {
     const type = root.type as PositionalType;
-    const next: State | undefined = TRANSITIONS[state][type];
+    const next: State | undefined = clockAfter(state, type);
     if (next === undefined) {
       return {
         sessions,

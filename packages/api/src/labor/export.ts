@@ -13,6 +13,7 @@ import type { Tx } from "../core/context";
 import { csv, hoursText, text } from "../core/csv";
 import type { AppUser } from "../core/resolve-user";
 import { readHours, type HoursOutput } from "./day-hours";
+import { compareNames } from "../contract/order";
 
 // Any range that runs forward: a year of payroll is one file.
 export const exportInput = z
@@ -51,10 +52,10 @@ export function payrollCsv(cells: HoursOutput["cells"]): string {
     .filter((c) => c.hundredths > 0)
     .sort(
       (a, b) =>
-        compare(a.worker.name.toLowerCase(), b.worker.name.toLowerCase()) ||
+        compareNames(a.worker.name, b.worker.name) ||
         compare(a.worker.id, b.worker.id) ||
         compare(a.workDate, b.workDate) ||
-        compare(a.job.name.toLowerCase(), b.job.name.toLowerCase()) ||
+        compareNames(a.job.name, b.job.name) ||
         compare(a.job.id, b.job.id),
     )
     .map((c) => [

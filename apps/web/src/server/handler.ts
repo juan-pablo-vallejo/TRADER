@@ -21,9 +21,10 @@ import type { Db } from "@trader/db";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 import { type EdgeDependencies, guardRequest } from "./edge";
+import { MAX_BATCH_CALLS } from "@trader/api/contract";
 
 export const ENDPOINT = "/api/trpc";
-export const MAX_BATCH_SIZE = 10;
+export const MAX_BATCH_SIZE = MAX_BATCH_CALLS;
 
 type HandlerDependencies = {
   getDb: () => Db;

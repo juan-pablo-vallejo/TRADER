@@ -14,6 +14,7 @@ import { ClerkSessionReset } from "./clerk-session";
 import { TRPCProvider } from "./trpc";
 
 import type { AppRouter } from "@trader/api";
+import { MAX_BATCH_CALLS } from "@trader/api/contract";
 
 // One client per browser, never at module scope on the server (it would be shared across
 // requests) and not thrown away if React suspends during the first render (the vendor's note).
@@ -64,9 +65,15 @@ export function Providers({ children, clerk }: { children: ReactNode; clerk: boo
   const queryClient = getQueryClient();
   const [trpcClient] = useState(() =>
     createTRPCClient<AppRouter>({
-      // `maxItems` is the server's batch cap (server/handler.ts, MAX_BATCH_SIZE): a larger
-      // set of calls is split into several requests instead of being refused.
-      links: [httpBatchLink({ url: "/api/trpc", transformer: superjson, maxItems: 10 })],
+      // `maxItems` is the server's batch cap (the contract's MAX_BATCH_CALLS): a larger set
+      // of calls is split into several requests instead of being refused.
+      links: [
+        httpBatchLink({
+          url: "/api/trpc",
+          transformer: superjson,
+          maxItems: MAX_BATCH_CALLS,
+        }),
+      ],
     }),
   );
   return (

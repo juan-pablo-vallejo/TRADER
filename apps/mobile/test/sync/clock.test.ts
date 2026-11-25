@@ -197,6 +197,25 @@ describe("the clock's state", () => {
     });
     expect(clockState(seen, [kept(start[0]!, "settled")])).toEqual({ status: "off" });
   });
+
+  it("follows the server's rule, so it never offers a pause on a pause", () => {
+    // Clock in, break, then a second clock-in still on the phone: the server refuses that
+    // start (a session is open), so the clock is still on its break, on its first job.
+    const mint = createMinter((n) => new Uint8Array(n).fill(2));
+    const at = (n: number) => capture({ now: T0 + n * 60_000, mint });
+    const start = recordsFor({ action: "start", jobId: J }, { status: "off" }, at(0));
+    const working = clockState(
+      null,
+      start.map((r) => kept(r)),
+    );
+    const pause = recordsFor({ action: "pause" }, working, at(1));
+    const again = recordsFor({ action: "start", jobId: K }, { status: "off" }, at(2));
+    const records = [...start, ...pause, ...again].map((r) => kept(r));
+    const state = clockState(null, records);
+    expect(state).toEqual({ status: "paused", jobId: J, since: new Date(T0) });
+    expect(recordsFor({ action: "pause" }, state, at(3))).toEqual([]);
+    expect(recordsFor({ action: "resume" }, state, at(3))).toHaveLength(1);
+  });
 });
 
 describe("wall clock", () => {

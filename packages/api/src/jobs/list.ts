@@ -2,10 +2,12 @@
 // complete, archived — the enum's order) then name. A plain read under RLS, no locks. Consumed
 // by routers/job.ts and by write.ts for the row each writer answers with.
 import { customers, jobStatus, jobs } from "@trader/db/schema";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import type { Tx } from "../core/context";
+import { MAX_JOBSITE_RADIUS_M } from "../contract/limits";
+import { byName } from "../core/order";
 
 export const location = z.strictObject({
   lat: z.number().min(-90).max(90),
@@ -17,7 +19,7 @@ export const location = z.strictObject({
 // integer, and 100 km is already no jobsite. Only inputs carry the bound, so a row written
 // before it existed still reads back.
 export const locationInput = location.extend({
-  radiusM: z.number().int().min(1).max(100_000),
+  radiusM: z.number().int().min(1).max(MAX_JOBSITE_RADIUS_M),
 });
 
 export const job = z.strictObject({
@@ -81,7 +83,7 @@ const select = (tx: Tx) =>
 export async function listJobs(tx: Tx): Promise<Job[]> {
   const rows = await select(tx).orderBy(
     asc(jobs.status),
-    asc(sql`lower(${jobs.name})`),
+    asc(byName(jobs.name)),
     asc(jobs.id),
   );
   return rows.map(toJob);

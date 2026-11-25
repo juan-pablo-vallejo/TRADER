@@ -93,15 +93,21 @@ export function Toast({
     return () => clearTimeout(timer);
   }, [held, busy, stays, onDone]);
 
-  // Follow a panel opening or closing while the toast shows.
+  // Follow a panel opening or closing while the toast shows. Chosen again once mounted: a
+  // screen that closes its panel in the same render as it raises the toast had the panel
+  // still on the page when the toast first chose, and its removal came before this watch.
   useEffect(() => {
+    const frame = requestAnimationFrame(() => setWhere(host()));
     const watch = new MutationObserver(() => setWhere(host()));
     watch.observe(document.body, {
       subtree: true,
       attributeFilter: ["open"],
       childList: true,
     });
-    return () => watch.disconnect();
+    return () => {
+      cancelAnimationFrame(frame);
+      watch.disconnect();
+    };
   }, []);
 
   useEffect(() => {

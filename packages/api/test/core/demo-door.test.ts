@@ -6,7 +6,7 @@ import { eq, inArray } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createContext } from "../../src/core/context";
-import type { DemoDoor } from "../../src/core/demo-door";
+import type { DemoDoor } from "../../src/core/context";
 import { localDirectory } from "../../src/core/identity";
 import { appRouter } from "../../src/router";
 import { createCallerFactory } from "../../src/core/trpc";

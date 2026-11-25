@@ -24,6 +24,20 @@ export function looksLikeSignInPhone(typed: string): boolean {
 
 export function formatters(language: Language, t: Catalog) {
   const locale = localeOf(language);
+  // Days and times are written in plain `es`, the vocabulary's Spanish ("lun, 16 nov",
+  // "2:30 p. m."), which es-US does not write; money keeps es-US. A time of day reads on a
+  // 12-hour clock in both languages, its parts kept on one line.
+  const timeLocale = language === "es" ? "es" : locale;
+  const timeOfDay = { hour: "numeric", minute: "2-digit", hourCycle: "h12" } as const;
+  const whole = (time: string) => time.replace(/ /g, "\u00a0");
+  const wall = (hhmm: string): string =>
+    whole(
+      new Intl.DateTimeFormat(timeLocale, { ...timeOfDay, timeZone: "UTC" }).format(
+        new Date(
+          Date.UTC(2000, 0, 1, Number(hhmm.slice(0, 2)), Number(hhmm.slice(3, 5))),
+        ),
+      ),
+    );
   return {
     money(cents: number, currency: string): string {
       return new Intl.NumberFormat(locale, {
@@ -36,7 +50,7 @@ export function formatters(language: Language, t: Catalog) {
     day(iso: string): string {
       const [y, m, d] = iso.split("-").map(Number);
       if (y === undefined || m === undefined || d === undefined) return iso;
-      return new Intl.DateTimeFormat(locale, {
+      return new Intl.DateTimeFormat(timeLocale, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -46,7 +60,7 @@ export function formatters(language: Language, t: Catalog) {
     // The calendar day of an instant, as this browser's clock reads it: the day an
     // invoice was issued.
     dayOf(at: Date): string {
-      return new Intl.DateTimeFormat(locale, {
+      return new Intl.DateTimeFormat(timeLocale, {
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -57,7 +71,7 @@ export function formatters(language: Language, t: Catalog) {
     weekDay(iso: string): string {
       const [y, m, d] = iso.split("-").map(Number);
       if (y === undefined || m === undefined || d === undefined) return iso;
-      return new Intl.DateTimeFormat(locale, {
+      return new Intl.DateTimeFormat(timeLocale, {
         weekday: "short",
         month: "short",
         day: "numeric",
@@ -68,7 +82,7 @@ export function formatters(language: Language, t: Catalog) {
     weekColumn(iso: string): string {
       const [y, m, d] = iso.split("-").map(Number);
       if (y === undefined || m === undefined || d === undefined) return iso;
-      const weekday = new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
+      const weekday = new Intl.DateTimeFormat(timeLocale, { weekday: "short" }).format(
         new Date(y, m - 1, d),
       );
       return `${weekday.replace(/\.$/, "")} ${d}`;
@@ -77,22 +91,29 @@ export function formatters(language: Language, t: Catalog) {
     // An instant with its day, in a named zone: an entry is often received or corrected
     // on a later day than the one it is about.
     stamp(at: Date, timeZone: string): string {
-      return new Intl.DateTimeFormat(locale, {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone,
-      }).format(at);
+      return whole(
+        new Intl.DateTimeFormat(timeLocale, {
+          month: "short",
+          day: "numeric",
+          ...timeOfDay,
+          timeZone,
+        }).format(at),
+      );
     },
 
     // The time of day alone, in a named zone, where the day is already said beside it.
     clock(at: Date, timeZone: string): string {
-      return new Intl.DateTimeFormat(locale, {
-        hour: "numeric",
-        minute: "2-digit",
-        timeZone,
-      }).format(at);
+      return whole(
+        new Intl.DateTimeFormat(timeLocale, { ...timeOfDay, timeZone }).format(at),
+      );
+    },
+
+    // A schedule's wall-clock `HH:MM`, a shift's start or end, as a time of day.
+    wall,
+
+    // A shift's hours, start to end: "7:00 AM–3:30 PM".
+    span(start: string, end: string): string {
+      return `${wall(start)}–${wall(end)}`;
     },
 
     // Whole minutes from integer milliseconds, rounded down: a display, not the hours

@@ -3,13 +3,15 @@
 // the entry it describes (work_session_events.flags). A flag is evidence for the office and
 // never keeps an entry from counting.
 import type { entryFlag } from "@trader/db/schema";
+import { CLOCK_SKEW_TOLERANCE_MS } from "../contract/limits";
 
 export type EntryFlag = (typeof entryFlag.enumValues)[number];
 
-// Device skew is |device_now − server_now| against a five-minute
-// tolerance, measured once per push. Strictly beyond it is skewed: exactly five minutes is not.
-// One of the two sources of a labor event's `clock_skewed`; judgeEventTime below is the other.
-export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60 * 1000;
+// Device skew is |device_now − server_now| against the contract's tolerance
+// (CLOCK_SKEW_TOLERANCE_MS), measured once per push. Strictly beyond it is skewed: exactly at it
+// is not. One of the two sources of a labor event's `clock_skewed`; judgeEventTime below is the
+// other.
+export { CLOCK_SKEW_TOLERANCE_MS };
 
 // The push's reading of the device's clock: `deviceNow` as the push carried it, and its skew.
 export type Skew = { clockSkewMs: number; clockSkewed: boolean; deviceNow: Date };

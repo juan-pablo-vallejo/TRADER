@@ -212,6 +212,30 @@ test("a write button keeps the focus through its write", async ({ page }) => {
   await expect(save).toBeFocused();
 });
 
+test("a shift's new hours, saved in its panel, are said with Undo and the focus on it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/schedule");
+  const cards = page.getByRole("main").getByRole("button", { name: /\d:\d{2}/ });
+  await expect(cards.first()).toBeVisible();
+  const count = await cards.count();
+  for (let i = count - 1; i >= 0; i--) {
+    await cards.nth(i).click();
+    const end = page.getByRole("dialog").getByLabel("End");
+    if (await end.isEditable()) {
+      await end.fill("16:15");
+      await page.getByRole("dialog").getByRole("button", { name: "Save shift" }).click();
+      break;
+    }
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  }
+  const toast = page.locator("[data-toast]");
+  await expect(toast.getByText(/changed to .*4:15\sPM/)).toBeVisible();
+  await expect(toast.getByRole("button", { name: "Undo" })).toBeFocused();
+});
+
 test("Schedule keeps its week through a reload", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
   await signIn(page, ADMIN);

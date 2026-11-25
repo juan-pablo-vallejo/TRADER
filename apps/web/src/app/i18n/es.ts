@@ -4,6 +4,11 @@
 // What a customer receives (the invoice, its PDF, its email) is not here: it is English.
 import type { Catalog } from "./en";
 
+// "a la 1:15", "a las 2:30": the article follows the hour. And a sentence that ends with a time
+// whose "a. m." or "p. m." already ends in a period takes no second one.
+const las = (time: string) => (/^1:/.test(time) ? "la" : "las");
+const end = (text: string) => (text.endsWith(".") ? text : `${text}.`);
+
 export const es: Catalog = {
   devSignIn: "Inicio de sesión de desarrollo",
   devSignInBadEmail: "Escribe un correo electrónico.",
@@ -139,15 +144,15 @@ export const es: Catalog = {
     endEarly: "Terminar antes",
     endEarlyAt: "Termina a las",
     endEarlyEffect: (name, jobsite, was, at) =>
-      `El turno de ${name} en ${jobsite} terminará a las ${at} y no a las ${was}. Las horas registradas no cambian: marca salida en su propio teléfono.`,
+      `El turno de ${name} en ${jobsite} terminará a ${las(at)} ${at} y no a ${las(was)} ${was}. Las horas registradas no cambian: marca salida en su propio teléfono.`,
     endedEarly: "El turno ahora termina antes.",
     notEarlier: "Elige una hora anterior al final que el turno tiene ahora.",
     notAfterStart: "Elige una hora posterior al inicio del turno.",
     move: "Mover a otra obra",
     moveTo: "Mover a",
-    moveNow: (time) => `Se mueve a las ${time}, la hora de ahora.`,
+    moveNow: (time) => `Se mueve a ${las(time)} ${time}, la hora de ahora.`,
     moveEffect: (name, from, to, at, end) =>
-      `Desde las ${at}, ${name} tiene turno en ${to} hasta las ${end}, y el turno en ${from} termina a las ${at}. Cambia de obra en su propio teléfono.`,
+      `Desde ${las(at)} ${at}, ${name} tiene turno en ${to} hasta ${las(end)} ${end}, y el turno en ${from} termina a ${las(at)} ${at}. Cambia de obra en su propio teléfono.`,
     moved: "Listo, movido. Cambia de obra en su propio teléfono.",
     moveNotNow: "Mover es para un turno que está en curso hoy.",
     sameJob: "Ya está en esa obra.",
@@ -163,7 +168,7 @@ export const es: Catalog = {
     remove: "Quitar turno",
     did: {
       moved: (name, day) => `El turno de ${name} se movió al ${day}.`,
-      changed: (name, hours) => `El turno de ${name} cambió a ${hours}.`,
+      changed: (name, hours) => end(`El turno de ${name} cambió a ${hours}`),
       removed: (name, day) => `Se quitó el turno de ${name} del ${day}.`,
     },
     undo: "Deshacer",
@@ -175,7 +180,7 @@ export const es: Catalog = {
     notAdded: (day, why) => `${day}: no se agregó. ${why}`,
     pickDay: "Elige al menos un día.",
     endAfterStart: "El final debe ser después del inicio.",
-    overlap: (other, hours) => `Se cruza con ${other} durante ${hours}.`,
+    overlap: (other, hours) => end(`Se cruza con ${other} durante ${hours}`),
     thisShift: "Este turno",
     cannotSave: "Esto no se puede guardar:",
     overlapRefused:
@@ -183,7 +188,7 @@ export const es: Catalog = {
     overlapsHeading: "Cruces",
     issue: {
       duplicate: "Ese turno ya existe.",
-      overlap: (a, b, hours) => `${a} y ${b} se cruzan durante ${hours}.`,
+      overlap: (a, b, hours) => end(`${a} y ${b} se cruzan durante ${hours}`),
       changed: "El horario cambió mientras tanto. Cierra esto e inténtalo de nuevo.",
     },
     refused: {
@@ -236,17 +241,18 @@ export const es: Catalog = {
       `${name} sigue con la entrada marcada en ${job} desde el ${day}.`,
     fix: "Corregir",
     fixOf: (name) => `Corregir en Horas la sesión abierta de ${name}`,
-    late: (name, job, start) => `${name} va tarde a ${job}, que empezó a las ${start}.`,
+    late: (name, job, start) =>
+      end(`${name} va tarde a ${job}, que empezó a ${las(start)} ${start}`),
     call: "Llamar",
     callOf: (name) => `Llamar a ${name}`,
     noNumber: "Sin número",
     more: (n) => (n === 1 ? "Y 1 más" : `Y ${n} más`),
     onTheClock: "Trabajando ahora",
     nobodyWorking: "Nadie tiene la entrada marcada.",
-    at: (job, since) => `${job}, desde las ${since}`,
-    onBreakAt: (job, since) => `En descanso. ${job}, desde las ${since}`,
+    at: (job, since) => `${job}, desde ${las(since)} ${since}`,
+    onBreakAt: (job, since) => `En descanso. ${job}, desde ${las(since)} ${since}`,
     expected: "Por llegar",
-    expectedAt: (job, start) => `${job}, desde las ${start}`,
+    expectedAt: (job, start) => `${job}, desde ${las(start)} ${start}`,
     done: "Terminaron por hoy",
     worked: (hours) => `${hours} trabajadas`,
     money: "Dinero",
@@ -268,7 +274,7 @@ export const es: Catalog = {
           : `${n} obras terminadas no tienen factura`,
     toInvoices: "Facturas",
     toJobs: "Obras",
-    asOf: (time) => `A las ${time}`,
+    asOf: (time) => `A ${las(time)} ${time}`,
   },
   legal: {
     privacy: "Política de privacidad",

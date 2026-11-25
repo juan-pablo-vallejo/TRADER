@@ -3,9 +3,9 @@
 // start is admitted on.
 import { describe, expect, it } from "vitest";
 
+import { EARLY_MINUTES } from "../../src/contract/clock";
 import {
   admitStart,
-  EARLY_MINUTES,
   resolveDay,
   type DayResolution,
   type ResolvedDay,
