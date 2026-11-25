@@ -161,6 +161,9 @@ export function liveSessions(
         mark: m.at,
       };
     } else if (current !== null) {
+      // A break stamped before its session began comes from a clock set back: the timer
+      // leaves it out (sessionWorkedMs), and so do the hours.
+      if (m.type !== "ended" && m.at <= current.startedAt.getTime()) continue;
       settle(current, m.at);
       if (m.type === "ended") {
         finish(current, new Date(m.at));
@@ -222,8 +225,10 @@ export type Waiting = {
 };
 
 // Whether a refused entry has been answered: an entry for the same day of the company's
-// calendar was accepted after it was made, a later one of this phone's or one the pull
-// shows the server took since (the office's correction among them). Until then the chip
+// calendar, made after it, was accepted, a later one of this phone's or one the pull shows
+// (the office's correction among them). "Made after" is read from the ids, which are
+// time-ordered by their making: when the server took an entry says nothing of that, since a
+// day captured offline arrives at once. Until then the chip
 // stays on Needs attention; after, the refusal is still listed in the sheet.
 function corrected(
   refusal: OutboxRecord,
@@ -231,7 +236,6 @@ function corrected(
   records: readonly OutboxRecord[],
 ): boolean {
   const zone = data?.company.timezone ?? "UTC";
-  const made = refusal.payload.clientTimestamp.getTime();
   const day = wallClock(refusal.payload.clientTimestamp, zone).day;
   const sameDay = (at: Date) => wallClock(at, zone).day === day;
   return (
@@ -240,10 +244,7 @@ function corrected(
         r.standing === "settled" &&
         r.id > refusal.id &&
         sameDay(r.payload.clientTimestamp),
-    ) ||
-    (data?.events ?? []).some(
-      (e) => e.serverTimestamp.getTime() > made && sameDay(e.clientTimestamp),
-    )
+    ) || (data?.events ?? []).some((e) => e.id > refusal.id && sameDay(e.clientTimestamp))
   );
 }
 

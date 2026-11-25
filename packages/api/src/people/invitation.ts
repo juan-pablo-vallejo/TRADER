@@ -114,7 +114,7 @@ async function madeBefore(
   tx: Tx,
   input: z.infer<typeof invitationInput>,
   channel: InvitationChannel,
-): Promise<{ mine: boolean; outcome: "sent" | "failed" } | undefined> {
+): Promise<{ mine: boolean; outcome: "sent" | "failed"; recorded: string } | undefined> {
   const [existing] = await tx
     .select({
       userId: invitationSends.userId,
@@ -127,6 +127,7 @@ async function madeBefore(
   return {
     mine: existing.userId === input.userId && existing.channel === channel,
     outcome: existing.outcome === "sent" ? "sent" : "failed",
+    recorded: existing.outcome,
   };
 }
 
@@ -225,7 +226,10 @@ export async function noteInvitation(
   const person = await lockPerson(tx, user, input.userId);
   const before = await madeBefore(tx, input, "whatsapp");
   if (before !== undefined) {
-    return before.mine ? { result: "duplicate" } : refused("id_conflict");
+    // The same note sent again is one note; this id with another act is another note.
+    return before.mine && before.recorded === input.act
+      ? { result: "duplicate" }
+      : refused("id_conflict");
   }
   const no = notInvitable(person);
   if (no !== null) return no;

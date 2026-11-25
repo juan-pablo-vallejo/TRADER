@@ -81,6 +81,9 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
   const fromField = useRef<HTMLInputElement>(null);
   const toField = useRef<HTMLInputElement>(null);
   const tookOver = useRef(false);
+  // Dates typed before the take-over, held until they are the draft: a development double
+  // mount runs this again before the draft arrives, and would put them back.
+  const early = useRef<Range | null>(null);
   useEffect(() => {
     const from = fromField.current;
     const to = toField.current;
@@ -88,11 +91,16 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
     if (!tookOver.current) {
       tookOver.current = true;
       if (from.value !== from.defaultValue || to.value !== to.defaultValue) {
-        setDraft({ from: from.value, to: to.value });
+        early.current = { from: from.value, to: to.value };
+        setDraft(early.current);
         return;
       }
     }
-    if (draft !== null) return;
+    if (draft !== null) {
+      early.current = null;
+      return;
+    }
+    if (early.current !== null) return;
     from.value = shown.from;
     to.value = shown.to;
   }, [draft, shown.from, shown.to]);

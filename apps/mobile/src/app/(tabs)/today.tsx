@@ -12,7 +12,7 @@
 // entry it refused is shown behind the chip as what it is. With nothing loaded yet the
 // screen says why (today.ts, nothingLoaded) and draws the chip. The timer is spoken as hours
 // and minutes, and its size grows with the phone's text only as far as the screen's width.
-import { wallClock, whatsAppLink } from "@trader/api/contract";
+import { compareNames, wallClock, whatsAppLink } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
@@ -129,7 +129,10 @@ export default function Today() {
   for (const j of data.jobs) facts.set(j.id, j);
   const nameOf = (jobId: string) => facts.get(jobId)?.name ?? "—";
 
-  const jobs = data.jobs.filter((job) => job.status !== "archived");
+  // In name order, as Crew and the office list them.
+  const jobs = data.jobs
+    .filter((job) => job.status !== "archived")
+    .sort((a, b) => compareNames(a.name, b.name));
   const offer = data.scheduleEnforced ? offerAt(data.shifts, at.day, at.minute) : null;
 
   // Where a start or a switch would go: the eligible shift's jobsite under the schedule,

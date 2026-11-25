@@ -63,8 +63,8 @@ function useCompany() {
 }
 
 // Company and Time clock while they load: placeholder rows under their headings, about
-// as tall as the two parts drawn (14 rows for the details' card, 8 for the two switches),
-// so Me below does not move a screen when they arrive.
+// as tall as the two parts drawn (22 rows for the details' card, 8 for the two switches;
+// measured at 390 and 1280 wide), so Me below does not move when they arrive.
 function CompanyPlaceholder() {
   const { t } = useStrings();
   return (
@@ -73,7 +73,7 @@ function CompanyPlaceholder() {
         <h2 id="settings-company" className="heading">
           {t.settings.company}
         </h2>
-        <LoadingRows rows={14} />
+        <LoadingRows rows={22} />
       </section>
       <section aria-labelledby="settings-clock" className={styles.part}>
         <h2 id="settings-clock" className="heading">

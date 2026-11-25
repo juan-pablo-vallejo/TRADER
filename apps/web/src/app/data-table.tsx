@@ -134,6 +134,13 @@ export function DataTable<Row>({
                         className={table.cellOpen}
                         data-open={rowKey(row)}
                         onClick={opens.onOpen}
+                        // A hidden span is read after a space ("Edit , name"): where what
+                        // shows is plain words, the name is said whole.
+                        aria-label={
+                          typeof content === "string"
+                            ? `${content}, ${opens.label}`
+                            : undefined
+                        }
                       >
                         {content}
                         <span className="visually-hidden">{`, ${opens.label}`}</span>

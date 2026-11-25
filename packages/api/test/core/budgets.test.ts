@@ -53,6 +53,8 @@ const NY = "America/New_York";
 // The budgets. Phone procedures first (contract/phone.ts), then the hot office reads.
 const READS = {
   "me.get": 6,
+  // After a sign-in by the phone's key: one more, the address changes since it was made.
+  "me.get, by a key": 7,
   "overview.today": 14,
   "people.list": 9,
   "status.get": 0,
@@ -202,6 +204,7 @@ async function grow(tx: Tx, w: World) {
 
 const reads = (w: World): Record<keyof typeof READS, (api: Api) => Promise<unknown>> => ({
   "me.get": (api) => api.me.get(),
+  "me.get, by a key": (api) => api.me.get({ keyMadeAt: new Date() }),
   "overview.today": (api) => api.overview.today(),
   "people.list": (api) => api.people.list(),
   "status.get": (api) =>
@@ -226,7 +229,7 @@ function mondayOf(day: string): string {
 }
 
 // Who calls each: the phone's own reads as the worker, everything else as the admin.
-const AS_WORKER = new Set(["me.get", "sync.pull", "status.get"]);
+const AS_WORKER = new Set(["me.get", "me.get, by a key", "sync.pull", "status.get"]);
 
 describe("statement budgets", () => {
   it("has a budget for every phone procedure", () => {

@@ -439,9 +439,15 @@ function Invitation({ row }: { row: Row }) {
   );
   const [note, setNote] = useState<{ text: string; saved: boolean } | null>(null);
   // What the admin did with the words: noted, and the list says where that leaves it. A
-  // note that does not arrive costs the record and nothing else, so it fails quietly.
+  // copy or an opening that is not noted costs the record and nothing else, so it fails
+  // quietly; "I sent it" is what makes the invitation sent, so its failure is said.
   const noted = useMutation(
-    trpc.people.noteInvitation.mutationOptions({ onSuccess: () => refresh() }),
+    trpc.people.noteInvitation.mutationOptions({
+      onSuccess: () => refresh(),
+      onError: (_error, input) => {
+        if (input.act === "sent") setNote({ saved: false, text: t.requestFailed });
+      },
+    }),
   );
   // An emailed send keeps its id until it is answered, so a retry is the same send.
   const [emailId, setEmailId] = useState(() => uuidv7());

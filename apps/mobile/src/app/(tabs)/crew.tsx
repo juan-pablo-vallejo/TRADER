@@ -384,7 +384,12 @@ export default function CrewTab() {
         days: [{ id: send.id, workDate: crew.today }],
       });
       const refusal = refusalOf(answer.result === "planned" ? answer.days[0] : answer);
-      if (refusal !== null) return refuse(refusal);
+      if (refusal !== null) {
+        // The server answered: a try again after its refusal is a new write, at its own
+        // minute (a lost answer, below, keeps the held one).
+        held.current = heldWrite(mint(Date.now()));
+        return refuse(refusal);
+      }
       await written(t.crew.form.added);
     } catch {
       refuse("failed");
@@ -417,7 +422,12 @@ export default function CrewTab() {
         expectedEnd: end > at ? end : offeredEnd(at),
       });
       const refusal = refusalOf(answer);
-      if (refusal !== null) return refuse(refusal);
+      if (refusal !== null) {
+        // The server answered: a try again after its refusal is a new write, at its own
+        // minute (a lost answer, below, keeps the held one).
+        held.current = heldWrite(mint(Date.now()));
+        return refuse(refusal);
+      }
       await written(t.crew.form.moved);
     } catch {
       refuse("failed");

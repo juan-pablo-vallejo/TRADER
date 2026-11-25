@@ -379,6 +379,18 @@ describe("people.noteInvitation", () => {
       expect(standing?.sends.map((s) => s.outcome).sort()).toEqual(["copied", "opened"]);
       expect(await note("sent")).toEqual({ result: "noted" });
       expect((await o.statusOf(o.byNumber))?.status).toBe("sent");
+      // One id is one note: sent again with another act, it is refused.
+      const id = uuidv7();
+      await call.noteInvitation({ id, userId: o.byNumber, act: "copied" });
+      expect(
+        await call.noteInvitation({ id, userId: o.byNumber, act: "copied" }),
+      ).toEqual({
+        result: "duplicate",
+      });
+      expect(await call.noteInvitation({ id, userId: o.byNumber, act: "sent" })).toEqual({
+        result: "rejected",
+        code: "id_conflict",
+      });
     });
   });
 

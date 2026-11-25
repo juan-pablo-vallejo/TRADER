@@ -105,13 +105,26 @@ describe("invitation_sends", () => {
           }),
           "invitation_sends_failure_code",
         ],
-        // A text is only noted as opened to send: the server has no failure of it, and no
-        // service ever named it.
+        // A WhatsApp message leaves the admin's own phone: the server has no failure of it,
+        // and no service ever named it, whether copied, opened or said to have gone.
         [
           texted(refs, { outcome: "failed", failure: "provider_refused" }),
           "invitation_sends_outcome_facts",
         ],
         [texted(refs, { providerMessageId: "msg_1" }), "invitation_sends_outcome_facts"],
+        [
+          texted(refs, { outcome: "copied", providerMessageId: "msg_1" }),
+          "invitation_sends_outcome_facts",
+        ],
+        // Copied and opened are WhatsApp's alone: TRADER sends an email itself.
+        [
+          emailed(refs, { outcome: "copied", providerMessageId: null }),
+          "invitation_sends_outcome_facts",
+        ],
+        [
+          emailed(refs, { outcome: "opened", providerMessageId: null }),
+          "invitation_sends_outcome_facts",
+        ],
       ] as const) {
         expect([constraint, await refused(tx, row)]).toEqual([
           constraint,

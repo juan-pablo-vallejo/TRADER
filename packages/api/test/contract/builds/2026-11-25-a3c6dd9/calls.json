@@ -13,6 +13,23 @@
     }
   },
   {
+    "path": "me.get",
+    "type": "query",
+    "input": {
+      "json": {
+        "keyMadeAt": "2026-11-24T14:00:00.000Z"
+      },
+      "meta": {
+        "values": {
+          "keyMadeAt": [
+            "Date"
+          ]
+        },
+        "v": 1
+      }
+    }
+  },
+  {
     "path": "status.get",
     "type": "query",
     "input": {

@@ -2306,11 +2306,11 @@
         },
         "invitation_sends_outcome": {
           "name": "invitation_sends_outcome",
-          "value": "\"invitation_sends\".\"outcome\" IN ('sent', 'failed')"
+          "value": "\"invitation_sends\".\"outcome\" IN ('sent', 'failed', 'copied', 'opened')"
         },
         "invitation_sends_outcome_facts": {
           "name": "invitation_sends_outcome_facts",
-          "value": "(\"invitation_sends\".\"outcome\" = 'failed') = (\"invitation_sends\".\"failure\" IS NOT NULL) AND (\"invitation_sends\".\"outcome\" = 'sent' OR \"invitation_sends\".\"provider_message_id\" IS NULL) AND (\"invitation_sends\".\"channel\" = 'email' OR (\"invitation_sends\".\"outcome\" = 'sent' AND \"invitation_sends\".\"provider_message_id\" IS NULL))"
+          "value": "(\"invitation_sends\".\"outcome\" = 'failed') = (\"invitation_sends\".\"failure\" IS NOT NULL) AND (\"invitation_sends\".\"outcome\" = 'sent' OR \"invitation_sends\".\"provider_message_id\" IS NULL) AND (\"invitation_sends\".\"channel\" = 'email' OR (\"invitation_sends\".\"outcome\" IN ('sent', 'copied', 'opened') AND \"invitation_sends\".\"provider_message_id\" IS NULL)) AND (\"invitation_sends\".\"outcome\" NOT IN ('copied', 'opened') OR \"invitation_sends\".\"channel\" = 'whatsapp')"
         },
         "invitation_sends_failure_code": {
           "name": "invitation_sends_failure_code",

@@ -159,6 +159,18 @@ describe("worked today", () => {
     ...over,
   });
 
+  it("agrees with the timer when the phone's clock was set back before a break", () => {
+    // A wrong clock: a break stamped ten minutes before the clock-in the pull shows. The
+    // timer leaves it out, and so do the day's hours.
+    const data = snapshot({ sessions: [open()], events: [pulled(1, "started", T0)] });
+    const early = [record(2, "paused", T0 - 10 * MIN)];
+    const now = T0 + 60 * MIN;
+    expect(workedOn(data, early, DAY, now)).toBe(
+      sessionWorkedMs(data, early, working, now),
+    );
+    expect(workedOn(data, early, DAY, now)).toBe(60 * MIN);
+  });
+
   it("counts an open session after a pull from its clock-in, as the timer does", () => {
     const data = snapshot({ sessions: [open()], events: [pulled(1, "started", T0)] });
     expect(workedOn(data, [], DAY, T0 + 90 * MIN)).toBe(90 * MIN);
@@ -267,7 +279,7 @@ describe("the chip", () => {
   });
 
   it("keeps a refused entry on Needs attention until a correcting entry for its day is accepted", () => {
-    const refusedStart = record(1, "started", T0, "rejected");
+    const refusedStart = record(5, "started", T0, "rejected");
     // Days later, nothing else sent: still attention, however many cycles pass.
     expect(waiting({ ...base, records: [refusedStart] })).toMatchObject({
       state: "attention",
@@ -280,16 +292,24 @@ describe("the chip", () => {
     );
     // A clock-in later the same day, accepted: the chip clears, and the refusal is still
     // listed in the sheet.
-    const again = record(3, "started", T0 + 20 * MIN, "settled");
+    const again = record(7, "started", T0 + 20 * MIN, "settled");
     expect(waiting({ ...base, records: [refusedStart, again] })).toMatchObject({
       state: "sent",
       refused: 1,
     });
     // Once the pull shows it and the settled copy is pruned, it still clears.
-    const shown = snapshot({ events: [pulled(3, "started", T0 + 20 * MIN)] });
+    const shown = snapshot({ events: [pulled(7, "started", T0 + 20 * MIN)] });
     expect(waiting({ ...base, data: shown, records: [refusedStart] }).state).toBe("sent");
-    // An entry the server had before the refused one was made corrects nothing.
-    const earlier = snapshot({ events: [pulled(4, "started", T0 - 60 * MIN)] });
+    // An entry made before the refused one corrects nothing, even when the server took it
+    // after: a day captured offline arrives at once.
+    const earlier = snapshot({
+      events: [
+        {
+          ...pulled(4, "started", T0 - 60 * MIN),
+          serverTimestamp: new Date(T0 + 600 * MIN),
+        },
+      ],
+    });
     expect(waiting({ ...base, data: earlier, records: [refusedStart] }).state).toBe(
       "attention",
     );

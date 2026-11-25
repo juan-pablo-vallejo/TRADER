@@ -7,13 +7,14 @@
 // first whose phone source sends exactly these calls. A kept build's file is never rewritten:
 // when what the phone sends changes, BUILD_DIR names a new directory (that change's commit)
 // and the old one stays for the builds still installed, so `vitest -u` here is a decision.
+import { keyCheck } from "../src/biometric-rules";
 import { expect, it } from "vitest";
 
 import { createApi } from "../src/api";
 import { createMinter } from "../src/ids";
 import { recordsFor } from "../src/sync/clock";
 
-const BUILD_DIR = "../../../packages/api/test/contract/builds/2026-11-25-3bf1671";
+const BUILD_DIR = "../../../packages/api/test/contract/builds/2026-11-25-a3c6dd9";
 const T = Date.UTC(2026, 10, 24, 14, 0, 0);
 const WORKER = "01900000-0000-7000-8000-000000000001";
 const OTHER = "01900000-0000-7000-8000-000000000002";
@@ -39,6 +40,8 @@ it("records every call this build makes, as sent", async () => {
 
   // Signing in and the sync engine (sync/provider.tsx).
   await call(api.me.get.query());
+  // After a sign-in by the phone's key (ui/phone-sign-in.tsx, keyCheck).
+  await call(api.me.get.query(keyCheck("biometric", new Date(T).toISOString())));
   await call(api.status.get.query({ protocolVersion: 1, platform: "ios", build: 1 }));
   const records = recordsFor(
     { action: "start", jobId: JOB },

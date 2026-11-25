@@ -463,6 +463,11 @@ describe("a key sign-in after an address change", () => {
         o.worker.id,
       );
       expect((await me().get()).id).toBe(o.worker.id);
+      // A key dated past the server's clock and its tolerance is taken as the oldest: a
+      // phone whose clock ran ahead when the key was made cannot outlast the change.
+      expect(
+        await outcome(me().get({ keyMadeAt: new Date(Date.now() + 24 * 3_600_000) })),
+      ).toBe("UNAUTHORIZED");
     });
   });
 });

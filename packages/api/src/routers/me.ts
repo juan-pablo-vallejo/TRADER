@@ -16,6 +16,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { z } from "zod";
 
 import { instant } from "../contract/instant";
+import { CLOCK_SKEW_TOLERANCE_MS } from "../contract/limits";
 import { protectedProcedure, router, unauthorized } from "../core/trpc";
 
 const meOutput = z.strictObject({
@@ -49,13 +50,17 @@ export const meRouter = router({
     .output(meOutput)
     .query(async ({ ctx, input }) => {
       if (input != null) {
+        // The key's date is the phone's clock: one later than this server's, past the
+        // tolerance a clock is allowed, says nothing, and is taken as the oldest.
+        const ahead = input.keyMadeAt.getTime() > Date.now() + CLOCK_SKEW_TOLERANCE_MS;
+        const keyMadeAt = ahead ? new Date(0) : input.keyMadeAt;
         const [changed] = await ctx.tx
           .select({ id: addressChanges.id })
           .from(addressChanges)
           .where(
             and(
               eq(addressChanges.userId, ctx.user.id),
-              gt(addressChanges.createdAt, input.keyMadeAt),
+              gt(addressChanges.createdAt, keyMadeAt),
             ),
           )
           .limit(1);
