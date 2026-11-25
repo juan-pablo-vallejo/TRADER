@@ -10,7 +10,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "demo": "tsx src/run-demo.ts"
+    "demo": "tsx src/run-demo.ts",
+    "reference": "tsx src/run-reference.ts"
   },
   "devDependencies": {
     "@types/node": "^24.9.2",
