@@ -110,8 +110,6 @@ export async function rosterInvite(
     `);
     // Neither address is held here, so only the id stopped the insert.
     if (unheld[0]?.free === true) return { result: "rejected", code: "id_conflict" };
-  }
-  if (inserted === undefined) {
     // The row that won is committed or this transaction's own, and a users row is never
     // deleted, so it is there to read.
     const { rows: held } = await tx.execute<{ email_taken: boolean }>(sql`
