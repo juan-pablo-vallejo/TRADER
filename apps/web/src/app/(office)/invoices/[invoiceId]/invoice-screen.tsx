@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 import { uuidv7 } from "../../../uuidv7";
 import controls from "../../../controls.module.css";
@@ -102,6 +102,10 @@ function Totals({
   );
 }
 
+// What the page says once an act changed it into another view (issued, voided): said under
+// its title, where the view that did it no longer stands.
+const Said = createContext<(text: string) => void>(() => {});
+
 function DraftEditor({ invoice }: { invoice: Invoice }) {
   const { t, f } = useStrings();
   const s = t.invoices;
@@ -124,6 +128,8 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   // Whether what is on screen is what is stored: an issue freezes what is stored.
   const [dirty, setDirty] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const say = useContext(Said);
+
   const [tone, setTone] = useState<"saved" | "error">("error");
   const offers = useQuery(trpc.invoice.suggest.queryOptions({ invoiceId: invoice.id }));
 
@@ -148,6 +154,17 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
     ]);
 
   const taxCents = cents(tax);
+  // What the screen holds, as one string: a save clears "not saved yet" only when what it
+  // sent (its onMutate context) is what the screen holds when it answers, so an edit typed
+  // while it was in flight is never called saved.
+  const key = JSON.stringify({ lines, tax, dueOn });
+  // Leaving with lines not saved asks first.
+  useEffect(() => {
+    if (!dirty) return;
+    const ask = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", ask);
+    return () => window.removeEventListener("beforeunload", ask);
+  }, [dirty]);
   const subtotal = lines.reduce((n, l) => {
     const p = parsed(l);
     return p === null ? n : n + amountOf(p.quantity, p.unitPriceCents);
@@ -157,19 +174,28 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
     setNote(text);
   };
 
+  // A refusal or a failure reads the invoice again: what was refused, and whether it went,
+  // is the server's to say.
   const save = useMutation(
     trpc.invoice.save.mutationOptions({
-      onSuccess: async (answer) => {
+      onMutate: () => ({ sent: key }),
+      onSuccess: async (answer, _asked, context) => {
         if (answer.result === "rejected") {
           fail(answer.code === "too_large" ? s.tooLarge : s.isIssued);
+          await refresh();
           return;
         }
-        setDirty(false);
-        setTone("saved");
-        setNote(s.saved);
+        if (context?.sent === key) {
+          setDirty(false);
+          setTone("saved");
+          setNote(s.saved);
+        }
         await refresh();
       },
-      onError: () => fail(t.requestFailed),
+      onError: () => {
+        fail(s.unknownOutcome);
+        void refresh();
+      },
     }),
   );
   const issue = useMutation(
@@ -177,11 +203,16 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
           fail(answer.code === "no_lines" ? s.noLines : s.noSeries);
+          await refresh();
           return;
         }
+        say(s.issued(answer.number));
         await refresh();
       },
-      onError: () => fail(t.requestFailed),
+      onError: () => {
+        fail(s.unknownOutcome);
+        void refresh();
+      },
     }),
   );
   const remove = useMutation(
@@ -192,9 +223,13 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
           return;
         }
         await refresh();
-        router.push("/invoices");
+        // Said on the list, where the page goes.
+        router.push("/invoices?done=removed");
       },
-      onError: () => fail(t.requestFailed),
+      onError: () => {
+        fail(s.unknownOutcome);
+        void refresh();
+      },
     }),
   );
   const busy = save.isPending || issue.isPending || remove.isPending;
@@ -456,11 +491,18 @@ function Payments({ invoice }: { invoice: Invoice }) {
   );
   const reverse = useMutation(
     trpc.invoice.reversePayment.mutationOptions({
-      onSuccess: async () => {
-        setNote(null);
+      onSuccess: async (answer) => {
+        if (answer.result === "rejected") fail(s.notReversed[answer.code]);
+        else {
+          setTone("saved");
+          setNote(s.reversed);
+        }
         await refresh();
       },
-      onError: () => fail(t.requestFailed),
+      onError: () => {
+        fail(s.unknownOutcome);
+        void refresh();
+      },
     }),
   );
   const open = invoice.state === "issued";
@@ -776,6 +818,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const [note, setNote] = useState<string | null>(null);
+  const say = useContext(Said);
   const voidIt = useMutation(
     trpc.invoice.void.mutationOptions({
       onSuccess: async (answer) => {
@@ -783,9 +826,13 @@ function Issued({ invoice }: { invoice: Invoice }) {
           setNote(answer.code === "has_payments" ? s.hasPayments : t.requestFailed);
           return;
         }
+        say(s.voided);
         await queryClient.invalidateQueries(trpc.invoice.pathFilter());
       },
-      onError: () => setNote(t.requestFailed),
+      onError: () => {
+        setNote(s.unknownOutcome);
+        void queryClient.invalidateQueries(trpc.invoice.pathFilter());
+      },
     }),
   );
   return (
@@ -861,6 +908,7 @@ export function InvoiceScreen({
 }) {
   const { t, f } = useStrings();
   const s = t.invoices;
+  const [said, setSaid] = useState<string | null>(null);
   const trpc = useTRPC();
   const read = useQuery(trpc.invoice.read.queryOptions({ invoiceId }));
   const back = (
@@ -895,7 +943,7 @@ export function InvoiceScreen({
   const invoice = read.data;
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return (
-    <>
+    <Said.Provider value={setSaid}>
       {back}
       <RefreshFailed reads={[read]} />
       <PageHeader
@@ -924,6 +972,7 @@ export function InvoiceScreen({
           {s.voidedBy(invoice.voidedBy, f.stamp(invoice.voidedAt, zone))}
         </p>
       )}
+      <Note text={said} tone="saved" />
       {invoice.state === "draft" ? (
         // What is typed stays the editor's own until it is saved: a refetch after a save
         // must not start it afresh and drop the note that said so.
@@ -931,6 +980,6 @@ export function InvoiceScreen({
       ) : (
         <Issued invoice={invoice} />
       )}
-    </>
+    </Said.Provider>
   );
 }

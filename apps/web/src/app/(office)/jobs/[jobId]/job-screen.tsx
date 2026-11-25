@@ -11,7 +11,7 @@
 // that dials, a link to their week in Hours), the job's invoices with their state, and
 // the details: customer, address, notes, location, status, with the way to edit them.
 // Every figure is the server's. Consumed by page.tsx.
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -44,16 +44,22 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
   const s = t.jobPage;
   const trpc = useTRPC();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const read = useQuery(trpc.job.read.queryOptions({ jobId }));
   const [note, setNote] = useState<string | null>(null);
   // The draft's id, kept while the page is open: a press sent again is the same draft.
   const [draftId] = useState(uuidv7);
   const draft = useMutation(
     trpc.invoice.create.mutationOptions({
-      onSuccess: (answer) =>
-        answer.result === "rejected"
-          ? setNote(t.requestFailed)
-          : router.push(`/invoices/${draftId}`),
+      onSuccess: (answer) => {
+        if (answer.result === "rejected") {
+          setNote(t.requestFailed);
+          return;
+        }
+        void queryClient.invalidateQueries(trpc.invoice.pathFilter());
+        void queryClient.invalidateQueries(trpc.job.pathFilter());
+        router.push(`/invoices/${draftId}`);
+      },
       onError: () => setNote(t.requestFailed),
     }),
   );
@@ -89,6 +95,7 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
   const page = read.data;
   const job = page.job;
   const first = STEPS.find((step) => !page.steps[step]) ?? null;
+  const draftOf = page.invoices.find((i) => i.state === "draft");
   type Person = (typeof page.people)[number];
   type Invoice = (typeof page.invoices)[number];
   const dial = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
@@ -208,7 +215,15 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
             </Link>
           </p>
         )}
-        {first === "invoiced" && (
+        {first === "invoiced" && draftOf !== undefined && (
+          // A job has one draft at a time from here: its own, opened, not another made.
+          <p className={styles.action}>
+            <Link className={controls.primary} href={`/invoices/${draftOf.id}`}>
+              {s.openDraft}
+            </Link>
+          </p>
+        )}
+        {first === "invoiced" && draftOf === undefined && (
           <p className={styles.action}>
             <WriteButton
               type="button"

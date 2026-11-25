@@ -440,6 +440,15 @@ export const es: Catalog = {
     voidEffect: (n) =>
       `La factura ${n} quedará anulada. Conserva su número y sus líneas, y no se puede emitir de nuevo.`,
     voided: "Factura anulada.",
+    unknownOutcome:
+      "No pudimos saber si eso se hizo. La factura se volvió a leer: revísala; intentarlo de nuevo es seguro.",
+    reversed: "Pago revertido.",
+    notReversed: {
+      void: "Esta factura está anulada, así que sus pagos quedan como están.",
+      already_reversed: "Ese pago ya está revertido.",
+      is_reversal: "Una reversión no se puede revertir.",
+      id_conflict: "Eso no se pudo hacer. Inténtalo de nuevo.",
+    },
     isIssued: "Esta factura está emitida y ya no se puede cambiar.",
     owed: "Por cobrar",
     paid: "Pagado",
@@ -681,6 +690,7 @@ export const es: Catalog = {
 
   emptyCustomers: "Todavía no hay clientes.",
   addCustomer: "Agregar cliente",
+  customerAdded: (name: string) => `Se agregó ${name}.`,
   address: "Dirección",
   phone: "Teléfono",
   notes: "Notas",
@@ -729,6 +739,7 @@ export const es: Catalog = {
     notYet: (step) => `Todavía no: ${step}`,
     schedule: "Poner turnos",
     createInvoice: "Crear factura",
+    openDraft: "Abrir su borrador",
     waitingForHours:
       "Las horas aparecen aquí cuando la cuadrilla marca entrada en esta obra.",
     waitingForPayment: "Un pago se anota en la factura misma.",

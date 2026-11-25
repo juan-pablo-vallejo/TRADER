@@ -308,6 +308,85 @@ test("a failed refresh keeps the rows on Today, Schedule, Hours, an invoice and 
   await expect(panel.locator("section")).toBeVisible();
 });
 
+test("a job's second Create invoice opens the same draft, and each act ends with its sentence", async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+
+  // A job whose next step is its invoice.
+  await page.goto("/jobs?status=all");
+  const links = page.getByRole("main").locator('a[href^="/jobs/"]');
+  await expect(links.first()).toBeVisible();
+  const hrefs = await links.evaluateAll((all) => all.map((a) => a.getAttribute("href")));
+  let jobPath: string | null = null;
+  for (const href of hrefs) {
+    await page.goto(href!);
+    const create = page.getByRole("button", { name: "Create invoice" });
+    await expect(page.getByRole("main").getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
+    if (await create.isVisible()) {
+      jobPath = href;
+      break;
+    }
+  }
+  expect(jobPath, "a job waiting for its invoice").not.toBeNull();
+  await page.getByRole("button", { name: "Create invoice" }).click();
+  await page.waitForURL((url) => /^\/invoices\/[0-9a-f-]{36}$/.test(url.pathname), {
+    timeout: 90_000,
+  });
+  const draft = page.url();
+
+  // Back on the job, its draft is opened, not another made.
+  await page.goto(jobPath!);
+  await page.getByRole("link", { name: "Open its draft" }).click();
+  await page.waitForURL(draft);
+
+  // Save, issue: each says so.
+  await page.getByRole("button", { name: "Add a line" }).click();
+  await page.getByLabel("Description").fill("Walls, two coats");
+  await page.getByLabel("Quantity").fill("10");
+  await page.getByLabel("Price each").fill("50.00");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page.getByText("Draft saved.")).toBeVisible();
+  await page.getByRole("button", { name: "Issue invoice" }).click();
+  await page.getByRole("button", { name: "Issue invoice" }).last().click();
+  await expect(page.getByText(/^Issued as invoice \d+\.$/)).toBeVisible();
+
+  // Void: said on the page that is now the void invoice.
+  await page.getByRole("button", { name: "Void invoice" }).click();
+  await page.getByRole("button", { name: "Void invoice" }).last().click();
+  await expect(page.getByText("Invoice voided.")).toBeVisible();
+
+  // A draft deleted: said on the list it goes back to.
+  await page.goto("/invoices");
+  await page.getByRole("button", { name: "New invoice" }).click();
+  const form = page.getByRole("form", { name: "New invoice" });
+  await form.locator("#invoice-job").selectOption({ index: 1 });
+  await form.locator('button[type="submit"]').click();
+  await page.waitForURL((url) => /^\/invoices\/[0-9a-f-]{36}$/.test(url.pathname), {
+    timeout: 90_000,
+  });
+  await page.getByRole("button", { name: "Delete draft" }).click();
+  await page.getByRole("button", { name: "Delete draft" }).last().click();
+  await page.waitForURL((url) => url.pathname === "/invoices");
+  await expect(page.getByText("Draft deleted.")).toBeVisible();
+
+  // A customer added says so.
+  await page.goto("/customers");
+  await page.getByRole("button", { name: "Add customer" }).click();
+  await page
+    .getByRole("form", { name: "Add customer" })
+    .getByLabel("Name")
+    .fill("Sentence Customer");
+  await page
+    .getByRole("form", { name: "Add customer" })
+    .getByRole("button", { name: "Add customer" })
+    .click();
+  await expect(page.getByText("Sentence Customer added.")).toBeVisible();
+});
+
 test("a worker is refused the office", async ({ page }) => {
   await signIn(page, WORKER);
   await page.goto("/customers");

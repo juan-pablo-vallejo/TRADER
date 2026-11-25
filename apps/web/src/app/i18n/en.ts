@@ -463,6 +463,15 @@ export const en = {
     voidEffect: (n: number) =>
       `Invoice ${n} will be marked void. It keeps its number and its lines, and it cannot be issued again.`,
     voided: "Invoice voided.",
+    unknownOutcome:
+      "We could not tell whether that went through. The invoice was read again: look at it, and trying again is safe.",
+    reversed: "Payment reversed.",
+    notReversed: {
+      void: "This invoice is void, so its payments stay as they are.",
+      already_reversed: "That payment is already reversed.",
+      is_reversal: "A reversal cannot itself be reversed.",
+      id_conflict: "That did not go through. Try again.",
+    },
     isIssued: "This invoice is issued and can no longer be changed.",
     owed: "Owed",
     paid: "Paid",
@@ -722,6 +731,7 @@ export const en = {
   // Customers
   emptyCustomers: "No customers yet.",
   addCustomer: "Add customer",
+  customerAdded: (name: string) => `${name} added.`,
   address: "Address",
   phone: "Phone",
   notes: "Notes",
@@ -772,6 +782,7 @@ export const en = {
     notYet: (step: string) => `Not yet: ${step}`,
     schedule: "Schedule",
     createInvoice: "Create invoice",
+    openDraft: "Open its draft",
     waitingForHours: "Hours appear here once the crew clocks in on this job.",
     waitingForPayment: "A payment is noted on the invoice itself.",
     people: "People",

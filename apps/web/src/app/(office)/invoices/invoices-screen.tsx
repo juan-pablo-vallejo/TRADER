@@ -8,10 +8,10 @@
 // draft for a jobsite — its customer is the jobsite's — under an id minted here, so a start
 // sent again is the same draft, and opens it.
 import { OUTSTANDING, type InvoiceStatus } from "@trader/api/contract";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
@@ -33,14 +33,21 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
   const s = t.invoices;
   const trpc = useTRPC();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [id] = useState(() => uuidv7());
   const [jobId, setJobId] = useState("");
   const [note, setNote] = useState<string | null>(null);
   const create = useMutation(
     trpc.invoice.create.mutationOptions({
       onSuccess: (answer) => {
-        if (answer.result === "rejected") setNote(t.requestFailed);
-        else router.push(`/invoices/${id}`);
+        if (answer.result === "rejected") {
+          setNote(t.requestFailed);
+          return;
+        }
+        // The lists that count drafts know of this one before the page goes to it.
+        void queryClient.invalidateQueries(trpc.invoice.pathFilter());
+        void queryClient.invalidateQueries(trpc.job.pathFilter());
+        router.push(`/invoices/${id}`);
       },
       onError: () => setNote(t.requestFailed),
     }),
@@ -96,7 +103,8 @@ function useInvoices() {
 }
 
 // Which invoices are shown, in the address.
-const INVOICE_FILTERS = { show: "all" };
+// `done=removed`: the draft this page came from was deleted, and the list says so once.
+const INVOICE_FILTERS = { show: "all", done: "" };
 const PRESETS = ["all", "drafts", "outstanding", "overdue", "paid"] as const;
 type Preset = (typeof PRESETS)[number];
 
@@ -153,6 +161,11 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
   const [asked, clearAsked] = useAsked("invoice");
   const adding = addingHere || asked;
   const [filters, setFilters] = useUrlFilters(INVOICE_FILTERS);
+  // Said once, then dropped from the address, so a reload does not say it again.
+  const [done] = useState(() => (filters.done === "removed" ? s.removed : null));
+  useEffect(() => {
+    if (filters.done !== "") setFilters({ done: "" });
+  }, [filters.done, setFilters]);
   const preset: Preset = (PRESETS as readonly string[]).includes(filters.show)
     ? (filters.show as Preset)
     : "all";
@@ -221,6 +234,7 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
             : undefined
         }
       />
+      <Note text={done} tone="saved" />
       <RefreshFailed reads={[list, jobs]} />
       {list.isPending || jobs.isPending ? (
         <LoadingRows />

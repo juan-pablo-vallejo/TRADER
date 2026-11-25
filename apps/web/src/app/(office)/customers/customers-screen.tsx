@@ -64,6 +64,8 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
   const list = useCustomers();
   const [adding, setAdding] = useState(false);
+  // What the last add made, said under the title once its form has closed.
+  const [added, setAdded] = useState<string | null>(null);
   const [filters, setFilters] = useUrlFilters(CUSTOMER_FILTERS);
   const opened = list.data?.find((row) => row.id === filters.customer);
   const ready = list.isSuccess;
@@ -77,11 +79,15 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
             ? {
                 label: t.addCustomer,
                 open: adding,
-                onToggle: () => setAdding((a) => !a),
+                onToggle: () => {
+                  setAdding((a) => !a);
+                  setAdded(null);
+                },
               }
             : undefined
         }
       />
+      <Note text={added} tone="saved" />
       <RefreshFailed reads={[list]} />
       {list.isPending ? (
         <LoadingRows />
@@ -93,7 +99,14 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
         />
       ) : (
         <>
-          {adding && <CreateForm onDone={() => setAdding(false)} />}
+          {adding && (
+            <CreateForm
+              onDone={(name) => {
+                setAdding(false);
+                setAdded(t.customerAdded(name));
+              }}
+            />
+          )}
           <CustomersTable
             rows={list.data}
             onOpen={(id) => setFilters({ customer: id })}
@@ -161,7 +174,7 @@ function CustomerFields({
   );
 }
 
-function CreateForm({ onDone }: { onDone: () => void }) {
+function CreateForm({ onDone }: { onDone: (name: string) => void }) {
   const { t } = useStrings();
   const trpc = useTRPC();
   const refresh = useRefresh();
@@ -169,11 +182,11 @@ function CreateForm({ onDone }: { onDone: () => void }) {
   const [note, setNote] = useState<string | null>(null);
   const create = useMutation(
     trpc.customer.create.mutationOptions({
-      onSuccess: async () => {
+      onSuccess: async (_answer, asked) => {
         setValue(EMPTY);
         setNote(null);
         await refresh();
-        onDone();
+        onDone(asked.name);
       },
       onError: () => setNote(t.requestFailed),
     }),
