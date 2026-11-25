@@ -13,7 +13,7 @@ import { createApi } from "../src/api";
 import { createMinter } from "../src/ids";
 import { recordsFor } from "../src/sync/clock";
 
-const BUILD_DIR = "../../../packages/api/test/contract/builds/2026-11-24-f84311c";
+const BUILD_DIR = "../../../packages/api/test/contract/builds/2026-11-25-3bf1671";
 const T = Date.UTC(2026, 10, 24, 14, 0, 0);
 const WORKER = "01900000-0000-7000-8000-000000000001";
 const OTHER = "01900000-0000-7000-8000-000000000002";
