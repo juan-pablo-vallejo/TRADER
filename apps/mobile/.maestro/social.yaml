@@ -33,7 +33,7 @@ appId: app.jpteq.trader
     id: "sign-in-google"
 - extendedWaitUntil:
     visible:
-      id: "tab-settings"
+      id: "tab-me"
     timeout: 30000
 - assertNotVisible:
     id: "biometric-offer"
@@ -50,5 +50,5 @@ appId: app.jpteq.trader
           id: "sign-in-apple"
       - extendedWaitUntil:
           visible:
-            id: "tab-settings"
+            id: "tab-me"
           timeout: 30000

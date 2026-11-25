@@ -98,7 +98,7 @@ sql "update companies set phone = '(401) 555-0142';
 api_up
 
 echo "— sign-in: refused, the code step, in Spanish"
-flow sign-in-refused fresh allow nobody.on.a.roster@demo.invalid
+flow sign-in-refused fresh allow nobody.invited@demo.invalid
 flow sign-in-refused fresh allow 4015550199
 expect "an address no roster holds bound nobody" \
   "select count(*) from users where identity_subject like 'dev:nobody%' or identity_subject = 'dev:+14015550199'" 0

@@ -13,7 +13,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import type { Tx } from "../../src/core/context";
 import type { AppUser } from "../../src/core/resolve-user";
 import { pushLaborEvent } from "../../src/sync/labor";
-import { measureSkew } from "../../src/sync/reasons";
+import { measureSkew } from "../../src/sync/flags";
 import { workDate } from "../../src/labor/work-date";
 import { judgeStart, scheduleEnforced } from "../../src/sync/schedule";
 import {
@@ -47,7 +47,7 @@ async function enforce(tx: Tx, d: WorkDay, on = true) {
 }
 
 // A shift written as the owner: these tests are about what push reads, not how the office
-// writes (assignment.test.ts).
+// writes (shift.test.ts).
 async function shift(
   tx: Tx,
   d: WorkDay,
@@ -304,16 +304,16 @@ describe("sync.push with schedule enforcement on", () => {
       // The office can no longer change or remove what admitted it.
       const admin = await boundIn(tx, d.companyId, "admin");
       await asTenant(tx, d.companyId);
-      const office = appCallerIn(tx, admin.who).assignment;
+      const office = appCallerIn(tx, admin.who).shift;
       expect(
         await office.update({
-          assignmentId: id,
+          shiftId: id,
           workDate: DAY,
           expectedStart: "08:00",
           expectedEnd: "15:30",
         }),
       ).toEqual({ result: "rejected", code: "locked" });
-      expect(await office.remove({ assignmentId: id })).toEqual({
+      expect(await office.remove({ shiftId: id })).toEqual({
         result: "rejected",
         code: "locked",
       });

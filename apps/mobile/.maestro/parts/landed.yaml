@@ -9,7 +9,7 @@ appId: app.jpteq.trader
 # (app/biometric-offer.tsx): a flow that is not about it says Not now.
 - extendedWaitUntil:
     visible:
-      id: "biometric-offer|${LANDS_ON}|tab-settings"
+      id: "biometric-offer|${LANDS_ON}|tab-me"
     timeout: 30000
 - runFlow:
     when:

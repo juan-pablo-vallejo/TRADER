@@ -73,7 +73,7 @@ test("Continue with Google leaves for accounts.google.com", async ({ page }) => 
 });
 
 // An address nobody's login holds, at Clerk's reserved test domain: no mail is ever sent.
-const NOBODY = "nobody.on.a.roster+clerk_test@example.com";
+const NOBODY = "nobody.invited+clerk_test@example.com";
 const NOT_ON_ROSTER = "This sign-in is not on a roster. Ask your office.";
 
 test("an address filled before the script arrives is kept and answered", async ({

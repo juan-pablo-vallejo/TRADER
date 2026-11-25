@@ -54,7 +54,7 @@ const NY = "America/New_York";
 const READS = {
   "me.get": 6,
   "overview.today": 14,
-  "roster.list": 9,
+  "people.list": 9,
   "status.get": 0,
   "sync.pull": 13,
   "job.list": 10,
@@ -64,15 +64,15 @@ const READS = {
   "invoice.totals": 9,
   "labor.hours": 11,
   "labor.ledger": 11,
-  "assignment.week": 9,
+  "shift.week": 9,
   "company.get": 7,
 } as const;
 const WRITES = {
   "me.update": 7,
   "job.update": 10,
   "job.setLocation": 10,
-  "assignment.create": 12,
-  "assignment.moveToday": 14,
+  "shift.create": 12,
+  "shift.moveToday": 14,
   "sync.push": 18,
   // Each further record adds 16: a push is one transaction per record, by design (sync/push.ts).
   "sync.push, two records": 34,
@@ -203,7 +203,7 @@ async function grow(tx: Tx, w: World) {
 const reads = (w: World): Record<keyof typeof READS, (api: Api) => Promise<unknown>> => ({
   "me.get": (api) => api.me.get(),
   "overview.today": (api) => api.overview.today(),
-  "roster.list": (api) => api.roster.list(),
+  "people.list": (api) => api.people.list(),
   "status.get": (api) =>
     api.status.get({ protocolVersion: 1, platform: "ios", build: 1 }),
   "sync.pull": (api) => api.sync.pull({ protocolVersion: 1 }),
@@ -215,7 +215,7 @@ const reads = (w: World): Record<keyof typeof READS, (api: Api) => Promise<unkno
   "labor.hours": (api) => api.labor.hours({ from: daysAgo(2), to: w.today }),
   "labor.ledger": (api) =>
     api.labor.ledger({ workerId: w.worker.id, from: daysAgo(2), to: w.today }),
-  "assignment.week": (api) => api.assignment.week({ weekStart: mondayOf(w.today) }),
+  "shift.week": (api) => api.shift.week({ weekStart: mondayOf(w.today) }),
   "company.get": (api) => api.company.get(),
 });
 
@@ -276,8 +276,8 @@ describe("statement budgets", () => {
           location: { lat: 41.8, lng: -71.4, radiusM: 150 },
         }),
       );
-      out["assignment.create"] = await asAdmin((api) =>
-        api.assignment.create({
+      out["shift.create"] = await asAdmin((api) =>
+        api.shift.create({
           userId: w.w1,
           jobId: w.K,
           expectedStart: "07:00",
@@ -285,8 +285,8 @@ describe("statement budgets", () => {
           days: [{ id: uuidv7(), workDate: w.today }],
         }),
       );
-      out["assignment.moveToday"] = await asAdmin((api) =>
-        api.assignment.moveToday({
+      out["shift.moveToday"] = await asAdmin((api) =>
+        api.shift.moveToday({
           id: uuidv7(),
           userId: w.worker.id,
           jobId: w.K,

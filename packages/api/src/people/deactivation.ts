@@ -1,0 +1,58 @@
+// people.deactivate and people.reactivate (deactivated_at, state derived). A
+// deactivated account resolves to no user from its next call on (resolve-user.ts); its bound
+// identity_subject is kept, so reactivation — deactivated_at back to NULL and nothing else —
+// lets the same login in again, and an unbound invitation becomes the one invitation again.
+// Deactivating the last active admin is `rejected` `last_admin` under lock.ts's locks. Neither
+// pseudonymizes.
+import { users } from "@trader/db/schema";
+import { eq, sql } from "drizzle-orm";
+import { z } from "zod";
+
+import type { Tx } from "../core/context";
+import type { AppUser } from "../core/resolve-user";
+import { person } from "./list";
+import { isActiveAdmin, lockPeopleRows } from "./lock";
+import { answerWith, type ChangeResult } from "./role";
+
+export const targetInput = z.strictObject({ userId: z.uuid() });
+
+export type TargetInput = z.infer<typeof targetInput>;
+
+export const reactivateOutput = z.discriminatedUnion("result", [
+  z.strictObject({ result: z.literal("updated"), user: person }),
+  z.strictObject({ result: z.literal("unchanged"), user: person }),
+]);
+
+type ReactivateResult = z.infer<typeof reactivateOutput>;
+
+export async function deactivate(
+  tx: Tx,
+  user: AppUser,
+  input: TargetInput,
+): Promise<ChangeResult> {
+  const { target, otherActiveAdmins } = await lockPeopleRows(tx, user, input.userId);
+  if (target.deactivatedAt !== null) return answerWith(tx, "unchanged", target.id);
+  if (isActiveAdmin(target) && otherActiveAdmins === 0) {
+    return { result: "rejected", code: "last_admin" };
+  }
+  // The database's clock, as created_at is stamped; updated_at follows through the ORM.
+  const [written] = await tx
+    .update(users)
+    .set({ deactivatedAt: sql`now()` })
+    .where(eq(users.id, target.id))
+    .returning({ deactivatedAt: users.deactivatedAt });
+  if (written?.deactivatedAt == null)
+    throw new Error("a locked users row was not updated");
+  return answerWith(tx, "updated", target.id);
+}
+
+export async function reactivate(
+  tx: Tx,
+  user: AppUser,
+  input: TargetInput,
+): Promise<ReactivateResult> {
+  const { target } = await lockPeopleRows(tx, user, input.userId);
+  if (target.deactivatedAt === null) return answerWith(tx, "unchanged", target.id);
+  await tx.update(users).set({ deactivatedAt: null }).where(eq(users.id, target.id));
+  return answerWith(tx, "updated", target.id);
+}

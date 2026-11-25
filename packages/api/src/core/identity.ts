@@ -42,7 +42,7 @@ export type IdentityAdapter = {
 // let them sign in: sign-in is by invitation only. `admit` returns once the provider holds a
 // login for these addresses, whether it made one now or already had one: a second admission
 // is not an error, and it never says whose the existing login is. It throws when the provider
-// could not be reached or refused, and roster.invite then invites no one. A person has a
+// could not be reached or refused, and people.invite then invites no one. A person has a
 // mobile number, an email, or both: never neither. `id` is the roster row's own, which a
 // login made here is tagged with, so that the row's login can later be found by what it
 // is and never by an address someone else may hold.

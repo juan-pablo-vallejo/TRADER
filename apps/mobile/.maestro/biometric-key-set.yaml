@@ -17,7 +17,7 @@ appId: app.jpteq.trader
     id: "biometric-on"
 - extendedWaitUntil:
     visible:
-      id: "tab-settings"
+      id: "tab-me"
     timeout: 30000
 - runFlow:
     file: parts/sign-out.yaml

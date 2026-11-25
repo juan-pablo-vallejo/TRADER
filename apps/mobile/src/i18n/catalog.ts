@@ -67,7 +67,7 @@ export type Catalog = {
     off: string;
     meHelp: string;
   };
-  tabs: { today: string; week: string; crew: string; settings: string };
+  tabs: { today: string; week: string; crew: string; me: string };
   today: {
     title: string;
     jobs: string;
@@ -240,10 +240,10 @@ export type Catalog = {
       pickJob: string;
     };
     refusal: {
-      overlap: string;
-      inactive: string;
-      archived: string;
-      sameJob: string;
+      schedule: string;
+      user_inactive: string;
+      job_archived: string;
+      same_job: string;
       started: string;
       failed: string;
     };
@@ -268,7 +268,7 @@ export type Catalog = {
     hours: (n: number) => string;
     days: (n: number) => string;
   };
-  settings: {
+  me: {
     title: string;
     language: string;
     english: string;

@@ -47,7 +47,7 @@ export const workSessionEvents = pgTable(
     // Evidence behind the `clock_skewed` flag, never a rule of the fold. `clock_skewed` is true
     // when the push's |device_now − server_now| exceeded the 5-minute tolerance, or when the
     // event claimed an online capture more than the tolerance before its receipt
-    // (the constant and both tests live in the API, sync/reasons.ts). The verdict
+    // (the constant and both tests live in the API, sync/flags.ts). The verdict
     // is stored so it never moves if the tolerance does. `clock_skew_ms` is the per-push
     // reading alone, signed, kept because a ledger cannot be backfilled; the receipt
     // comparison's evidence is the row's own two timestamps. bigint: integer caps at ±24.8
@@ -69,7 +69,7 @@ export const workSessionEvents = pgTable(
     voidsEventId: uuid("voids_event_id"),
     // The single event this one replaces: a corrected clock-out is a new `ended` event naming
     // the old one, and the fold reads the newest accepted correction. Never set on a void.
-    // Corrections and voids are the office's (labor.repair), flagged `corrected`.
+    // Corrections and voids are the office's (labor.correct), flagged `corrected`.
     correctsEventId: uuid("corrects_event_id"),
     // The recorded time was set by the user rather than taken from the moment of capture:
     // the `user_timed` flag. NOT NULL with no default: the zod payload requires it.

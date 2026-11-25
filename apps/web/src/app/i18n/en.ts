@@ -117,7 +117,7 @@ export const en = {
     invoices: "Invoices",
   },
   hoursTitle: "Hours",
-  roster: "People",
+  people: "People",
   customers: "Customers",
   jobs: "Jobs",
   // The Weekly Schedule screen: a shift is a "Shift", a job a
@@ -206,7 +206,7 @@ export const en = {
       changed: "The schedule changed meanwhile. Close this and try again.",
     },
     refused: {
-      authorization: (shift: string) =>
+      started: (shift: string) =>
         `Someone has already clocked in on ${shift}, and this would change what allowed it.`,
       locked:
         "Someone has clocked in on this shift, so it cannot change. Correct attendance in Hours.",
@@ -239,7 +239,7 @@ export const en = {
       job_archived: "archived jobsite",
       duplicate: "already there",
       overlap: "would overlap",
-      authorization: "someone has already clocked in that day",
+      started: "someone has already clocked in that day",
     },
   },
   // A person's status on the company's today, as the phone's Crew tab words it.
@@ -661,12 +661,12 @@ export const en = {
     invitationExplain:
       "They have not signed in yet. Send them where to get the app. The message is written, in English and Spanish: text it from your own phone, or have TRADER email it.",
     invitedOn: (day: string) => `Invited ${day}`,
-    sendInvitation: "Send by text",
-    emailInvitation: "Send by email",
+    sendByWhatsApp: "Send by text",
+    sendByEmail: "Send by email",
     emailGoesTo: (email: string) =>
       `By email, TRADER sends the same message to ${email}.`,
     emailed: (email: string) => `Sent to ${email}.`,
-    byText: (by: string, at: string) => `By text from ${by}, ${at}`,
+    byWhatsApp: (by: string, at: string) => `By text from ${by}, ${at}`,
     byEmail: (by: string, at: string) => `By email, sent by ${by}, ${at}`,
     emailNotSent: (by: string, at: string) => `Email not sent (tried by ${by}, ${at})`,
     refused: {
@@ -681,8 +681,8 @@ export const en = {
     },
     copyInvitation: "Copy the message",
     copied: "Copied. Paste it into a text message to them.",
-    // The addresses a worker signs in with, changed by the office (roster.setEmail,
-    // roster.setSignInPhone).
+    // The addresses a worker signs in with, changed by the office (people.setEmail,
+    // people.setSignInPhone).
     addresses: "Sign-in addresses",
     addressesExplain:
       "What they type to sign in. Leave one empty to take it away: one of the two always stays.",
@@ -696,7 +696,7 @@ export const en = {
     removeEffect: (name: string, address: string) =>
       `${name} will no longer sign in with ${address}, and is signed out everywhere.`,
     addressChanged: "Changed. They are signed out, and sign in with it from now on.",
-    addressRepaired: "Their sign-in now matches this.",
+    addressMatched: "Their sign-in now matches this.",
     emailInvalid: "Enter an email address, or leave it empty to take it away.",
     addressRefused: {
       admin:
@@ -835,7 +835,7 @@ export const en = {
   ledgerRange: "Choose up to 31 days, the first no later than the last.",
   emptyLedger: "No hours are recorded for this person on these days.",
   ledgerOpenSession: (day: string) =>
-    `A session started ${day} is still open. They cannot clock in again until it is ended or repaired.`,
+    `A session started ${day} is still open. They cannot clock in again until it is ended or corrected.`,
   sessionCounts: {
     eligible: "Counts",
     voided: "Voided",
@@ -877,25 +877,25 @@ export const en = {
   hoursValue: (hours: string) => `${hours} h`,
   emptyReconciliation: "No hours are recorded on these days.",
 
-  // Labor repair, on the ledger
-  repair: "Correct",
-  repairOf: (job: string, started: string) => `Correct ${job}, ${started}`,
-  repairExplain:
+  // Labor correction, on the ledger
+  correct: "Correct",
+  correctionOf: (job: string, started: string) => `Correct ${job}, ${started}`,
+  correctionExplain:
     "Change a time or the job, or add an entry that is missing. Each change is a new entry and counts at once.",
-  repairTimes: "Times",
-  repairAdded: "Entries to add",
+  correctionTimes: "Times",
+  correctionAdded: "Entries to add",
   addEntry: "Add an entry",
   addedEntryType: (n: number) => `Entry ${n}`,
   addedEntryTime: (n: number) => `Entry ${n} time`,
-  saveRepair: "Save correction",
-  repairSaved: "Saved.",
-  repairBadTime:
+  saveCorrection: "Save correction",
+  correctionSaved: "Saved.",
+  correctionBadTime:
     "Enter a date and a time. A time the clocks skipped that day cannot be used.",
-  repairTooMany: "At most 20 changes at a time. Save some, then make the rest.",
-  repairUnsent:
-    "That didn't go through. Try again: the same repair is sent, so it cannot be recorded twice.",
-  repairChanged:
-    "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
+  correctionTooMany: "At most 20 changes at a time. Save some, then make the rest.",
+  correctionUnsent:
+    "That didn't go through. Try again: the same correction is sent, so it cannot be recorded twice.",
+  correctionChanged:
+    "This ledger changed since it was shown. It has been refreshed: check it, then correct it again.",
   voidSession: "Void session",
   voidSessionEffect:
     "This session's hours will no longer count. A session still open is clocked out first. The session and its entries stay on record.",
@@ -906,9 +906,9 @@ export const en = {
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
   jobOptionArchived: (name: string) => `${name} · archived`,
-  // One sentence per answer of labor.repair (labor/repair.ts); hours/day-panel.tsx holds this
+  // One sentence per answer of labor.correct (labor/correct.ts); hours/day-panel.tsx holds this
   // list to the server's codes.
-  repairRejected: {
+  correctionRejected: {
     no_open_session:
       "There is no open session at that time for one of these entries. Check the times.",
     session_already_open:
@@ -916,27 +916,27 @@ export const en = {
     not_paused: "A break end needs a break start before it.",
     already_paused: "They are already on a break at that time.",
     target_missing:
-      "This ledger changed since it was shown. Show the ledger again, then repair.",
+      "This ledger changed since it was shown. Show the ledger again, then correct it.",
     target_is_correction:
-      "This ledger changed since it was shown. Show the ledger again, then repair.",
+      "This ledger changed since it was shown. Show the ledger again, then correct it.",
     correction_of_void: "A void cannot be corrected.",
     correction_type_mismatch:
-      "This ledger changed since it was shown. Show the ledger again, then repair.",
+      "This ledger changed since it was shown. Show the ledger again, then correct it.",
     correction_job_mismatch: "Only a clock in can move to another job.",
     void_target_not_started:
-      "This ledger changed since it was shown. Show the ledger again, then repair.",
+      "This ledger changed since it was shown. Show the ledger again, then correct it.",
     already_voided: "This session is already voided.",
     breaks_following_event:
-      "That time would put an entry out of order with the ones after it. Change those in the same repair.",
+      "That time would put an entry out of order with the ones after it. Change those in the same correction.",
     correction_superseded:
-      "This ledger changed since it was shown. Show the ledger again, then repair.",
+      "This ledger changed since it was shown. Show the ledger again, then correct it.",
     correction_moves_session:
       "That time would move an entry into another session. Keep it inside its own.",
     job_id_mismatch: "An added entry must be on the session's job.",
     id_conflict: "That didn't go through. Nothing was saved; save again.",
     time_in_future: "One of these times has not happened yet.",
-    repair_stale:
-      "This ledger changed since it was shown. It has been refreshed: check it, then repair again.",
+    correction_stale:
+      "This ledger changed since it was shown. It has been refreshed: check it, then correct it again.",
     void_leaves_session_open:
       "This session is still open, so voiding it alone would keep its worker clocked in. Refresh, then void it again.",
   },

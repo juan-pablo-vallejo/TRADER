@@ -85,9 +85,16 @@ export function byJob(crew: Crew, minute: string): JobGroup[] {
     .filter((g) => g.here.length > 0 || g.scheduled.length > 0);
 }
 
-// Why a shift was not written, as one of the tab's sentences. Anything else is `failed`.
-export type Refusal =
-  "overlap" | "inactive" | "archived" | "sameJob" | "started" | "failed";
+// Why a shift was not written: the server's own code, which names the tab's sentence.
+// Anything else is `failed`.
+const REFUSALS = [
+  "schedule",
+  "user_inactive",
+  "job_archived",
+  "same_job",
+  "started",
+] as const;
+export type Refusal = (typeof REFUSALS)[number] | "failed";
 
 type Answer =
   { result: string; code?: string; issues?: readonly { code: string }[] } | undefined;
@@ -95,20 +102,9 @@ type Answer =
 export function refusalOf(answer: Answer): Refusal | null {
   if (answer === undefined) return "failed";
   if (answer.result !== "rejected") return null;
-  switch (answer.code) {
-    case "schedule":
-      return "overlap";
-    case "user_inactive":
-      return "inactive";
-    case "job_archived":
-      return "archived";
-    case "same_job":
-      return "sameJob";
-    case "authorization":
-      return "started";
-    default:
-      return "failed";
-  }
+  return (REFUSALS as readonly string[]).includes(answer.code ?? "")
+    ? (answer.code as Refusal)
+    : "failed";
 }
 
 // Whether the app opens on Crew: an admin with no shift of their own on the company's

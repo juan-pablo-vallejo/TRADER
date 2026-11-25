@@ -4,14 +4,14 @@
 // docs/ARCHITECTURE.md). test/contract/phone.test.ts holds this list to the phone's source;
 // test/contract/wire.json pins every procedure's schemas.
 export const PHONE_PROCEDURES = [
-  "assignment.create",
-  "assignment.moveToday",
+  "shift.create",
+  "shift.moveToday",
   "demo.signIn",
   "job.setLocation",
   "me.get",
   "me.update",
   "overview.today",
-  "roster.list",
+  "people.list",
   "status.get",
   "sync.pull",
   "sync.push",

@@ -155,11 +155,13 @@ describe("a refusal, as one of the tab's sentences", () => {
     expect(refusalOf({ result: "duplicate" })).toBeNull();
     expect(
       refusalOf({ result: "rejected", code: "schedule", issues: [{ code: "overlap" }] }),
-    ).toBe("overlap");
-    expect(refusalOf({ result: "rejected", code: "user_inactive" })).toBe("inactive");
-    expect(refusalOf({ result: "rejected", code: "job_archived" })).toBe("archived");
-    expect(refusalOf({ result: "rejected", code: "same_job" })).toBe("sameJob");
-    expect(refusalOf({ result: "rejected", code: "authorization" })).toBe("started");
+    ).toBe("schedule");
+    expect(refusalOf({ result: "rejected", code: "user_inactive" })).toBe(
+      "user_inactive",
+    );
+    expect(refusalOf({ result: "rejected", code: "job_archived" })).toBe("job_archived");
+    expect(refusalOf({ result: "rejected", code: "same_job" })).toBe("same_job");
+    expect(refusalOf({ result: "rejected", code: "started" })).toBe("started");
     expect(refusalOf({ result: "rejected", code: "end_required" })).toBe("failed");
     expect(refusalOf({ result: "rejected", code: "id_conflict" })).toBe("failed");
     expect(refusalOf(undefined)).toBe("failed");

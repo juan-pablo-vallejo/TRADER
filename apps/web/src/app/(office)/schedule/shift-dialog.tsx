@@ -3,12 +3,12 @@
 // The shift drawer of the Weekly Schedule: one shift opened to change its day and hours or
 // remove it, or a new shift for one employee at one jobsite on several days of the week. A
 // shift that would overlap another of that person's day cannot be saved: the hours both
-// cover are shown, and the server refuses it again (api assignments/write.ts). That
+// cover are shown, and the server refuses it again (api shifts/write.ts). That
 // person's week stands beside the form, so an overlap is seen before saving.
 //
 // A shift someone has clocked in on is started: its day and start are fixed, and it is
 // not read-only. It can end early, and the person can be moved to another jobsite from
-// the time now (api assignments/move.ts); each says what it will do before it does it.
+// the time now (api shifts/move.ts); each says what it will do before it does it.
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useId, useState, type FormEvent } from "react";
@@ -41,7 +41,7 @@ import type { Formatters } from "../../format";
 function useRefresh() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries(trpc.assignment.pathFilter());
+  return () => queryClient.invalidateQueries(trpc.shift.pathFilter());
 }
 
 const labelOf = (shift: WeekShift, f: Pick<Formatters, "span">) =>
@@ -136,14 +136,14 @@ function Started({
       ? s.notEarlier
       : answer.code === "same_job"
         ? s.sameJob
-        : answer.code === "schedule" || answer.code === "authorization"
+        : answer.code === "schedule" || answer.code === "started"
           ? refusalText(s, answer as Refusal, label, f)
           : answer.code === "user_inactive" || answer.code === "job_archived"
             ? refusalText(s, answer as Refusal, label, f)
             : s.refused.stale;
 
   const endEarly = useMutation(
-    trpc.assignment.endEarly.mutationOptions({
+    trpc.shift.endEarly.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") return setNote(said(answer));
         await refresh();
@@ -153,7 +153,7 @@ function Started({
     }),
   );
   const move = useMutation(
-    trpc.assignment.moveToday.mutationOptions({
+    trpc.shift.moveToday.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") return setNote(said(answer));
         await refresh();
@@ -208,7 +208,7 @@ function Started({
           disabled={busy || endProblem !== null}
           onConfirm={() => {
             setNote(null);
-            endEarly.mutate({ assignmentId: shift.id, expectedEnd: endAt });
+            endEarly.mutate({ shiftId: shift.id, expectedEnd: endAt });
           }}
         />
       </section>
@@ -500,7 +500,7 @@ export function AddShift({
   };
 
   const create = useMutation(
-    trpc.assignment.create.mutationOptions({
+    trpc.shift.create.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
           setNote(refusalText(s, answer, label, f));

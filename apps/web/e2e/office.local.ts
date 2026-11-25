@@ -263,7 +263,7 @@ test("nothing can be added to the week before while the next one loads", async (
   const grid = page.getByRole("main").getByRole("table");
   await expect(grid).toBeVisible();
   // The next week's answer is held back, so the week before stays on screen meanwhile.
-  await page.route("**/api/trpc/**assignment.week**", async (route) => {
+  await page.route("**/api/trpc/**shift.week**", async (route) => {
     await new Promise((done) => setTimeout(done, 4000));
     await route.continue();
   });

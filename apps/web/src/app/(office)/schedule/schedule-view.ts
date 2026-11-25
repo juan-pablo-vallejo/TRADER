@@ -1,4 +1,4 @@
-// What the Weekly Schedule screen works out from `assignment.week` before it draws anything.
+// What the Weekly Schedule screen works out from `shift.week` before it draws anything.
 // Pure: no React, no request. This module only groups what the server answered and puts a
 // refusal into words. The server judges every save.
 import type { AppRouter } from "@trader/api";
@@ -9,7 +9,7 @@ import type { Catalog } from "../../i18n/en";
 import type { Formatters } from "../../format";
 import { compareNames, instantToWall, isDay, mondayOf } from "@trader/api/contract";
 
-type Outputs = inferRouterOutputs<AppRouter>["assignment"];
+type Outputs = inferRouterOutputs<AppRouter>["shift"];
 export type Week = Outputs["week"];
 export type WeekShift = Week["shifts"][number];
 export type CopyPreview = Outputs["copyPreview"];
@@ -204,7 +204,7 @@ export function issueText(
 
 export type Refusal =
   | { code: "schedule"; issues: Issue[] }
-  | { code: "authorization"; shiftId: string }
+  | { code: "started"; shiftId: string }
   | { code: "locked" | "stale" | "id_conflict" | "user_inactive" | "job_archived" };
 
 export function refusalText(
@@ -216,8 +216,8 @@ export function refusalText(
   switch (refusal.code) {
     case "schedule":
       return refusal.issues.map((issue) => issueText(s, issue, label, f)).join(" ");
-    case "authorization":
-      return s.refused.authorization(label(refusal.shiftId));
+    case "started":
+      return s.refused.started(label(refusal.shiftId));
     case "locked":
       return s.refused.locked;
     case "stale":

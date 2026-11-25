@@ -74,7 +74,7 @@ async function world(tx: Tx) {
     const id = uuidv7();
     const office = await bill();
     await office.create({ id, jobId, currency: "USD" });
-    await office.save({
+    await office.update({
       invoiceId: id,
       taxCents: 0,
       lines: [

@@ -376,7 +376,7 @@ describe("batch stamps", () => {
   });
 });
 
-describe("atomic repairs are not possible one record at a time", () => {
+describe("atomic corrections are not possible one record at a time", () => {
   it("cannot add a missed session in front of a later one, one event at a time", () => {
     const ev = builder();
     const later = ev("started", at("13:00"), { job: JOB_B });
@@ -541,7 +541,7 @@ describe("two sources for one worker", () => {
     pushAll([start], officePause, workerResume);
   });
 
-  it("rejects the resume that arrives first; the pause lands; a repair resumes", () => {
+  it("rejects the resume that arrives first; the pause lands; a correction resumes", () => {
     const { ev, start, officePause, workerResume } = setup();
     expect(push([start], workerResume)).toEqual(no("not_paused", start.id));
     const timeline = pushAll([start], officePause);
@@ -550,15 +550,15 @@ describe("two sources for one worker", () => {
   });
 });
 
-// An office repair set: every candidate in place, one replay.
-const repair = (existing: readonly LaborEvent[], ...candidates: LaborEvent[]) =>
+// An office correction set: every candidate in place, one replay.
+const correct = (existing: readonly LaborEvent[], ...candidates: LaborEvent[]) =>
   validateEvents(ctxFor(existing), existing, candidates);
 const noAt = (eventId: string, code: string, conflictingEventId?: string) => ({
   ...no(code, conflictingEventId),
   eventId,
 });
 
-describe("repair sets validated as one timeline", () => {
+describe("correct sets validated as one timeline", () => {
   it("accepts a missed session in front of a later one as a pair", () => {
     const ev = builder();
     const existing = [
@@ -567,8 +567,8 @@ describe("repair sets validated as one timeline", () => {
     ];
     const start = ev("started", at("08:00"), { server: RECEIVED });
     const end = ev("ended", at("12:00"), { server: RECEIVED });
-    expect(repair(existing, start, end)).toEqual(ok);
-    expect(repair(existing, end, start)).toEqual(ok);
+    expect(correct(existing, start, end)).toEqual(ok);
+    expect(correct(existing, end, start)).toEqual(ok);
   });
 
   it("accepts a missed pause before a later pause as a pair", () => {
@@ -581,7 +581,7 @@ describe("repair sets validated as one timeline", () => {
     ];
     const pause = ev("paused", at("10:00"), { server: RECEIVED });
     const resume = ev("resumed", at("10:15"), { server: RECEIVED });
-    expect(repair(existing, pause, resume)).toEqual(ok);
+    expect(correct(existing, pause, resume)).toEqual(ok);
   });
 
   it("rejects a set that is still illegal, naming the candidate it breaks at", () => {
@@ -591,13 +591,13 @@ describe("repair sets validated as one timeline", () => {
     const pause = ev("paused", at("10:00"), { server: RECEIVED });
     const strayResume = ev("resumed", at("11:00"), { server: RECEIVED });
     // No end before 13:00: the stored start breaks, blamed on the set's first candidate.
-    expect(repair(existing, start, pause)).toEqual(
+    expect(correct(existing, start, pause)).toEqual(
       noAt(start.id, "breaks_following_event", existing[0]!.id),
     );
     // A candidate that lands illegally is named itself, whatever its place in the set.
     const end = ev("ended", at("12:00"), { server: RECEIVED });
     const resumeAgain = ev("resumed", at("11:30"), { server: RECEIVED });
-    expect(repair(existing, start, pause, strayResume, resumeAgain, end)).toEqual(
+    expect(correct(existing, start, pause, strayResume, resumeAgain, end)).toEqual(
       noAt(resumeAgain.id, "not_paused", strayResume.id),
     );
   });
@@ -608,7 +608,7 @@ describe("repair sets validated as one timeline", () => {
     const existing = [ev("started", at("08:00")), end];
     const first = ev("ended", at("16:00"), { server: RECEIVED, corrects: end.id });
     const second = ev("ended", at("16:30"), { server: RECEIVED, corrects: end.id });
-    expect(repair(existing, first, second)).toEqual(
+    expect(correct(existing, first, second)).toEqual(
       noAt(first.id, "correction_superseded", second.id),
     );
   });
@@ -618,7 +618,7 @@ describe("repair sets validated as one timeline", () => {
     const start = ev("started", at("08:00"));
     const existing = [start, ev("ended", at("16:00"))];
     const same = ev("started", at("08:00"), { server: RECEIVED, corrects: start.id });
-    expect(repair(existing, same)).toEqual(ok);
+    expect(correct(existing, same)).toEqual(ok);
   });
 
   it("holds every candidate to the per-event checks", () => {
@@ -630,8 +630,8 @@ describe("repair sets validated as one timeline", () => {
     ];
     const end = ev("ended", at("17:00"), { server: RECEIVED });
     const wrongJob = ev("ended", at("17:00"), { server: RECEIVED, job: JOB_B });
-    expect(repair(existing, end)).toEqual(ok);
-    expect(repair(existing, wrongJob)).toEqual(
+    expect(correct(existing, end)).toEqual(ok);
+    expect(correct(existing, wrongJob)).toEqual(
       noAt(wrongJob.id, "job_id_mismatch", existing[2]!.id),
     );
   });
@@ -644,9 +644,9 @@ describe("repair sets validated as one timeline", () => {
     const voidIt = ev("voided", RECEIVED, { server: RECEIVED, voids: start.id });
     const again = ev("voided", RECEIVED, { server: RECEIVED, voids: start.id });
     const voidEnd = ev("voided", RECEIVED, { server: RECEIVED, voids: end.id });
-    expect(repair(existing, voidIt)).toEqual(ok);
-    expect(repair(existing, voidIt, again)).toEqual(noAt(again.id, "already_voided"));
-    expect(repair(existing, voidEnd)).toEqual(
+    expect(correct(existing, voidIt)).toEqual(ok);
+    expect(correct(existing, voidIt, again)).toEqual(noAt(again.id, "already_voided"));
+    expect(correct(existing, voidEnd)).toEqual(
       noAt(voidEnd.id, "void_target_not_started"),
     );
   });
@@ -654,6 +654,6 @@ describe("repair sets validated as one timeline", () => {
   it("throws on ids repeated within a set", () => {
     const ev = builder();
     const start = ev("started", at("08:00"), { server: RECEIVED });
-    expect(() => repair([], start, start)).toThrow(/repeat/);
+    expect(() => correct([], start, start)).toThrow(/repeat/);
   });
 });

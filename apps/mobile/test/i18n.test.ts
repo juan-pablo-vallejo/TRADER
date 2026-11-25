@@ -26,8 +26,8 @@ const said = (leaf: Leaf) =>
 // for an iPhone's lock, which are not translated.
 const SAME = new Set([
   "appName",
-  "settings.english",
-  "settings.spanish",
+  "me.english",
+  "me.spanish",
   "biometric.names.faceId",
   "biometric.names.touchId",
 ]);

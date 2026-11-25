@@ -432,7 +432,7 @@ describe("overview.today", () => {
         const id = uuidv7();
         const office = await bill(c);
         await office.create({ id, jobId, currency: o.currency ?? "USD" });
-        await office.save({
+        await office.update({
           invoiceId: id,
           taxCents: o.tax ?? 0,
           lines: [

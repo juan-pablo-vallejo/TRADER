@@ -17,7 +17,7 @@ import { createContext } from "../core/context";
 import { localDirectory } from "../core/identity";
 import { logReporter } from "../core/report";
 import { appRouter } from "../router";
-import type { EntryFlag } from "../sync/reasons";
+import type { EntryFlag } from "../sync/flags";
 import { createCallerFactory } from "../core/trpc";
 import {
   BASELINE_TIMES,
@@ -46,7 +46,7 @@ export type Summary = {
   customers: number;
   jobs: number;
   events: number;
-  assignments: number;
+  shifts: number;
 };
 
 type RunOptions = {
@@ -98,7 +98,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     customers: 0,
     jobs: 0,
     events: 0,
-    assignments: 0,
+    shifts: 0,
   };
 
   let current: Step = { index: 0, name: "start" };
@@ -154,7 +154,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   const userIds = new Map<string, string>();
   const customerIds = new Map<string, string>();
   const jobIds = new Map<string, string>();
-  // Every accepted labor event by (who, day, type); the repair names one.
+  // Every accepted labor event by (who, day, type); the correction names one.
   const eventIds = new Map<string, string>();
 
   // A push as a phone sends it: oldest first, at most 100 records, the device clock right
@@ -283,7 +283,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   await step("invite the roster", async () => {
     for (const p of PEOPLE) {
       const a = expectResult(
-        await admin().roster.invite({
+        await admin().people.invite({
           id: idAt(now()),
           email: p.email,
           phone: p.phone,
@@ -377,12 +377,12 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
   }
 
   await step("correct a clock-out from the office", async () => {
-    const s = SCENARIOS.repairedEnd;
+    const s = SCENARIOS.correctedEnd;
     const source = eventIds.get(`${s.who}:${s.day}:ended`)!;
     const when = at(s.day, s.time);
     const id = idAt(when);
     const a = expectResult(
-      await admin().labor.repair({
+      await admin().labor.correct({
         workerId: userIds.get(s.who)!,
         operations: [
           {
@@ -414,7 +414,7 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
     const week = planWeek(opts.anchor);
     for (const p of PLANS) {
       const a = expectResult(
-        await admin().assignment.create({
+        await admin().shift.create({
           userId: userIds.get(p.who)!,
           jobId: jobIds.get(p.job)!,
           // Ids from the run's seed, so a second run finds its own shifts.
@@ -431,19 +431,19 @@ export async function runDemo(opts: RunOptions): Promise<Summary> {
       const refusedDay = a.days.find((d) => d.result === "rejected");
       if (refusedDay !== undefined)
         fail(`${p.who} on ${p.job}, ${refusedDay.workDate}: ${refusedDay.code}`);
-      summary.assignments += a.days.filter((d) => d.result === "created").length;
+      summary.shifts += a.days.filter((d) => d.result === "created").length;
     }
   });
 
   await step("deactivate a worker and make another an admin", async () => {
     expectResult(
-      await admin().roster.deactivate({
+      await admin().people.deactivate({
         userId: userIds.get(SCENARIOS.deactivatedWorker)!,
       }),
       "updated",
     );
     expectResult(
-      await admin().roster.setRole({
+      await admin().people.setRole({
         userId: userIds.get(SCENARIOS.madeAdmin)!,
         role: "admin",
       }),

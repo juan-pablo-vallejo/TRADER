@@ -352,7 +352,7 @@ describe("sync.push — the day as the field sends it", () => {
     });
   });
 
-  it("refuses a future event and goes on; the office enters its hours (labor.repair)", async () => {
+  it("refuses a future event and goes on; the office enters its hours (labor.correct)", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await world(tx);
       const admin = await asOwner(tx, d.companyId, () =>
@@ -383,7 +383,7 @@ describe("sync.push — the day as the field sends it", () => {
       // The phone keeps the record; the office recovers the hours as its own events.
       const start = new Date(Date.now() - 8 * 3_600_000);
       const end = new Date(Date.now() - 3_600_000);
-      const repaired = await appCallerIn(tx, admin.who).labor.repair({
+      const corrected = await appCallerIn(tx, admin.who).labor.correct({
         workerId: d.w.id,
         operations: [
           {
@@ -402,7 +402,7 @@ describe("sync.push — the day as the field sends it", () => {
           },
         ],
       });
-      expect(repaired.result).toBe("accepted");
+      expect(corrected.result).toBe("accepted");
       const events = await ledger();
       expect(events.map((e) => e.id)).not.toContain(future.id);
       expect(deriveSessions(events, NY)).toMatchObject([

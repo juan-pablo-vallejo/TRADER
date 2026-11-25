@@ -1,5 +1,5 @@
 // The mail seam: an invoice to a customer (invoices/send.ts) and an invitation to a person
-// (roster/invitation.ts). The API knows a message and whether it went; which service carries it is the host's (apps/web,
+// (people/invitation.ts). The API knows a message and whether it went; which service carries it is the host's (apps/web,
 // server/mailer.ts). A mailer never throws: every way a send can fail is an answer with a
 // short code, which is what the send's record keeps — never the service's own message,
 // which may quote an address.

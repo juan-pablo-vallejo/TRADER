@@ -10,7 +10,7 @@
 //
 // The invitation goes two ways. By text, from the admin's own phone (invitation.ts):
 // TRADER writes the words, sends nothing, and notes that the admin took them to send. By
-// email, from TRADER (roster.sendInvitation). Each is recorded, and the roster answers
+// email, from TRADER (people.sendInvitation). Each is recorded, and the roster answers
 // where the invitation stands: not sent, sent and not verified, or verified once the
 // person has signed in.
 //
@@ -45,19 +45,19 @@ import { WriteButton } from "../../write-button";
 type Roles = keyof Catalog["roles"];
 const ROLES = ["worker", "admin"] as const satisfies readonly Roles[];
 
-type Rows = NonNullable<ReturnType<typeof useRoster>["data"]>;
+type Rows = NonNullable<ReturnType<typeof usePeople>["data"]>;
 type Row = Rows[number];
 
-function useRoster() {
+function usePeople() {
   const trpc = useTRPC();
-  return useQuery(trpc.roster.list.queryOptions());
+  return useQuery(trpc.people.list.queryOptions());
 }
 
 // The invalidation every writer runs: the list.
 function useRefresh() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries(trpc.roster.pathFilter());
+  return () => queryClient.invalidateQueries(trpc.people.pathFilter());
 }
 
 // The person whose panel is open, in the address: a panel can be linked and reloaded.
@@ -65,7 +65,7 @@ const PERSON_FILTERS = { person: "" };
 
 export function PeopleScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
-  const list = useRoster();
+  const list = usePeople();
   const [addingHere, setAdding] = useState(false);
   // The command menu's Invite a person asks for the same form by the address.
   const [asked, clearAsked] = useAsked("invite");
@@ -78,7 +78,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
   return (
     <>
       <PageHeader
-        title={t.roster}
+        title={t.people}
         action={
           list.isSuccess
             ? {
@@ -118,7 +118,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
               <Invitation row={justInvited} />
             </div>
           )}
-          <RosterTable
+          <PeopleTable
             rows={list.data}
             onOpen={(id) => setFilters({ person: id })}
             empty={t.emptyRoster}
@@ -172,7 +172,7 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   // The invitation's id (M10): the same invitation sent again keeps it, so a send whose
   // answer was lost is answered "invited" and not "taken"; anything changed is a new one.
   const minted = useRef<{ key: string; id: string } | null>(null);
-  const invite = useMutation(trpc.roster.invite.mutationOptions());
+  const invite = useMutation(trpc.people.invite.mutationOptions());
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
@@ -294,7 +294,7 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   );
 }
 
-function RosterTable({
+function PeopleTable({
   rows,
   onOpen,
   empty,
@@ -336,7 +336,7 @@ function RosterTable({
   ];
   return (
     <DataTable
-      caption={t.roster}
+      caption={t.people}
       columns={columns}
       rows={rows}
       rowKey={(row) => row.id}
@@ -439,12 +439,12 @@ function Invitation({ row }: { row: Row }) {
   // The admin took the words to send: noted, and the list says where that leaves it. A
   // note that does not arrive costs the status and nothing else, so it fails quietly.
   const noted = useMutation(
-    trpc.roster.noteInvitation.mutationOptions({ onSuccess: () => refresh() }),
+    trpc.people.noteInvitation.mutationOptions({ onSuccess: () => refresh() }),
   );
   // An emailed send keeps its id until it is answered, so a retry is the same send.
   const [emailId, setEmailId] = useState(() => uuidv7());
   const emailed = useMutation(
-    trpc.roster.sendInvitation.mutationOptions({
+    trpc.people.sendInvitation.mutationOptions({
       onSuccess: async (answer) => {
         setEmailId(uuidv7());
         const went =
@@ -492,7 +492,7 @@ function Invitation({ row }: { row: Row }) {
             href={smsLink(row.signInPhone, text)}
             onClick={took}
           >
-            {t.personPanel.sendInvitation}
+            {t.personPanel.sendByWhatsApp}
           </a>
         ) : (
           <button
@@ -521,7 +521,7 @@ function Invitation({ row }: { row: Row }) {
               emailed.mutate({ id: emailId, userId: row.id });
             }}
           >
-            {t.personPanel.emailInvitation}
+            {t.personPanel.sendByEmail}
           </WriteButton>
         )}
       </div>
@@ -543,7 +543,7 @@ function Sends({ row }: { row: Row }) {
         return (
           <li key={send.id} className="secondary">
             {send.channel === "text"
-              ? p.byText(send.by, at)
+              ? p.byWhatsApp(send.by, at)
               : send.outcome === "sent"
                 ? p.byEmail(send.by, at)
                 : [p.emailNotSent(send.by, at), failures[send.failure ?? ""]]
@@ -596,7 +596,7 @@ function Address({ row, kind }: { row: Row; kind: AddressKind }) {
   const [typed, setTyped] = useState(shown(current));
   const [note, setNote] = useState<{ text: string; saved: boolean } | null>(null);
   type Answer =
-    | { result: "changed" | "unchanged" | "repaired"; user: Row }
+    | { result: "changed" | "unchanged" | "matched"; user: Row }
     | { result: "rejected"; code: keyof typeof p.addressRefused };
   const answered = async (answer: Answer) => {
     if (answer.result === "rejected") {
@@ -609,8 +609,8 @@ function Address({ row, kind }: { row: Row; kind: AddressKind }) {
       text:
         answer.result === "changed"
           ? p.addressChanged
-          : answer.result === "repaired"
-            ? p.addressRepaired
+          : answer.result === "matched"
+            ? p.addressMatched
             : t.unchanged,
     });
     await refresh();
@@ -627,10 +627,10 @@ function Address({ row, kind }: { row: Row; kind: AddressKind }) {
           : t.requestFailed,
     });
   const setEmail = useMutation(
-    trpc.roster.setEmail.mutationOptions({ onSuccess: answered, onError: failed }),
+    trpc.people.setEmail.mutationOptions({ onSuccess: answered, onError: failed }),
   );
   const setNumber = useMutation(
-    trpc.roster.setSignInPhone.mutationOptions({ onSuccess: answered, onError: failed }),
+    trpc.people.setSignInPhone.mutationOptions({ onSuccess: answered, onError: failed }),
   );
   const value = typed.trim() === "" ? null : typed.trim();
   const save = () => {
@@ -716,7 +716,7 @@ function Role({ row }: { row: Row }) {
   const me = useQuery(trpc.me.get.queryOptions());
   const own = me.data?.id === row.id;
   const setRoleCall = useMutation(
-    trpc.roster.setRole.mutationOptions({
+    trpc.people.setRole.mutationOptions({
       onSuccess: async (answer) => {
         setNote(noteOf(t, answer));
         await refresh();
@@ -764,7 +764,7 @@ function Location({ row }: { row: Row }) {
   const [choice, setChoice] = useState<LocationChoice>(choiceOf(row.locationStamps));
   const [note, setNote] = useState<string | null>(null);
   const save = useMutation(
-    trpc.roster.setLocation.mutationOptions({
+    trpc.people.setLocationStamps.mutationOptions({
       onSuccess: async (answer) => {
         setNote(answer.result === "unchanged" ? t.unchanged : t.saved);
         await refresh();
@@ -823,10 +823,10 @@ function Access({ row }: { row: Row }) {
   };
   const failed = () => setNote(t.requestFailed);
   const deactivate = useMutation(
-    trpc.roster.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
+    trpc.people.deactivate.mutationOptions({ onSuccess: answered, onError: failed }),
   );
   const reactivate = useMutation(
-    trpc.roster.reactivate.mutationOptions({ onSuccess: answered, onError: failed }),
+    trpc.people.reactivate.mutationOptions({ onSuccess: answered, onError: failed }),
   );
   const busy = deactivate.isPending || reactivate.isPending;
   return (

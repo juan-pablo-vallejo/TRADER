@@ -2,8 +2,8 @@
 // to what, by whom and when. Append-only, so who could sign in as a person at any moment
 // can be read back. A change of the email and a change of the number are two rows. An
 // address added has no `old_value`, one removed has no `new_value`; a row always says
-// something changed. Written by roster.setEmail and roster.setSignInPhone and by nothing
-// else (packages/api, roster/address.ts). Guards and tenancy are hand-written in the
+// something changed. Written by people.setEmail and people.setSignInPhone and by nothing
+// else (packages/api, people/address.ts). Guards and tenancy are hand-written in the
 // migration (drizzle-kit never sees them).
 import { sql } from "drizzle-orm";
 import {

@@ -89,10 +89,10 @@ function AppTabs() {
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="me"
         options={{
-          title: t.tabs.settings,
-          tabBarButtonTestID: "tab-settings",
+          title: t.tabs.me,
+          tabBarButtonTestID: "tab-me",
           tabBarIcon: icon("person-outline"),
         }}
       />

@@ -17,7 +17,7 @@ import { entryFlag, companies, jobs, users, workSessionEvents } from "@trader/db
 import { and, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 
-import { workDay } from "../assignments/write";
+import { workDay } from "../shifts/write";
 import type { Tx } from "../core/context";
 import { groupBy } from "../core/group";
 import type { AppUser } from "../core/resolve-user";
@@ -25,7 +25,7 @@ import { forbidden } from "../core/trpc";
 import { readJob } from "../jobs/list";
 import { sessionAccounting } from "./accounting";
 import { dayHours, type DayCell } from "./hours";
-import { REASON_ORDER } from "../sync/reasons";
+import { REASON_ORDER } from "../sync/flags";
 import { RANGE_REFUSAL, rangeWithinBound } from "./ledger";
 import { compareNames } from "../contract/order";
 

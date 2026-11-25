@@ -61,7 +61,7 @@ export const en: Catalog = {
     off: "Off",
     meHelp: "On this phone only. Signing out keeps it.",
   },
-  tabs: { today: "Today", week: "Week", crew: "Crew", settings: "Me" },
+  tabs: { today: "Today", week: "Week", crew: "Crew", me: "Me" },
   today: {
     title: "Today",
     jobs: "Your jobsites",
@@ -238,10 +238,10 @@ export const en: Catalog = {
       pickJob: "Choose a jobsite.",
     },
     refusal: {
-      overlap: "They already have a shift at that time.",
-      inactive: "This person is deactivated.",
-      archived: "This jobsite is archived.",
-      sameJob: "They are already on that jobsite.",
+      schedule: "They already have a shift at that time.",
+      user_inactive: "This person is deactivated.",
+      job_archived: "This jobsite is archived.",
+      same_job: "They are already on that jobsite.",
       started: "They clocked in on that shift after the time you chose.",
       failed: "That did not go through. Check your connection and try again.",
     },
@@ -268,7 +268,7 @@ export const en: Catalog = {
     hours: (n) => (n === 1 ? "1 hour ago" : `${n} hours ago`),
     days: (n) => (n === 1 ? "1 day ago" : `${n} days ago`),
   },
-  settings: {
+  me: {
     title: "Me",
     language: "Language",
     english: "English",

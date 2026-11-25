@@ -39,7 +39,7 @@ const week = (shifts: WeekShift[]): Week =>
     shifts,
   }) as Week;
 
-const KEY = ["assignment", "week", { weekStart: "2026-11-16" }];
+const KEY = ["shift", "week", { weekStart: "2026-11-16" }];
 function cached(start: Week) {
   const client = new QueryClient();
   client.setQueryData(KEY, start);

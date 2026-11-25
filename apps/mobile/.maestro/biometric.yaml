@@ -22,7 +22,7 @@ appId: app.jpteq.trader
 - runFlow:
     file: parts/landed.yaml
 - tapOn:
-    id: "tab-settings"
+    id: "tab-me"
 - scrollUntilVisible:
     element:
       id: "biometric-me-on"
@@ -42,7 +42,7 @@ appId: app.jpteq.trader
     id: "biometric-offer"
 # Off in Me: the sign-in screen no longer offers it.
 - tapOn:
-    id: "tab-settings"
+    id: "tab-me"
 - scrollUntilVisible:
     element:
       id: "biometric-me-off"
@@ -76,7 +76,7 @@ appId: app.jpteq.trader
       CODE: "123456"
 - extendedWaitUntil:
     visible:
-      id: "tab-settings"
+      id: "tab-me"
     timeout: 30000
 - assertNotVisible:
     id: "biometric-offer"
@@ -96,7 +96,7 @@ appId: app.jpteq.trader
     id: "biometric-on"
 - extendedWaitUntil:
     visible:
-      id: "tab-settings"
+      id: "tab-me"
     timeout: 30000
 - runFlow:
     file: parts/sign-out.yaml
@@ -104,8 +104,8 @@ appId: app.jpteq.trader
     id: "sign-in-key"
 - extendedWaitUntil:
     visible:
-      id: "tab-settings"
+      id: "tab-me"
     timeout: 30000
 - tapOn:
-    id: "tab-settings"
+    id: "tab-me"
 - assertVisible: "Ana Ruiz"

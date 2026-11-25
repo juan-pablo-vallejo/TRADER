@@ -1,6 +1,6 @@
 // labor.ledger, the office's read of one worker's sessions and the events behind
 // them, through the application's router under the runtime role in rolled-back transactions.
-// Fixtures are written by the owner; the one repair here goes through labor.repair itself, to
+// Fixtures are written by the owner; the one correction here goes through labor.correct itself, to
 // show the read hands it the ids it needs.
 import { jobs, workSessionEvents } from "@trader/db/schema";
 import { eq, sql } from "drizzle-orm";
@@ -307,7 +307,7 @@ describe("labor.ledger", () => {
     });
   });
 
-  it("keeps a corrected event beside its correction, and hands labor.repair its ids", async () => {
+  it("keeps a corrected event beside its correction, and hands labor.correct its ids", async () => {
     await rolledBack(owner, async (tx) => {
       const { d, admin } = await office(tx);
       const { started, ended } = await shift(tx, d, d.w1, T("12:00"), T("16:00"));
@@ -319,7 +319,7 @@ describe("labor.ledger", () => {
 
       // The first correction, from what the read shows: the root, and its source in effect.
       const fix = uuidv7();
-      const first = await appCallerIn(tx, admin.who).labor.repair({
+      const first = await appCallerIn(tx, admin.who).labor.correct({
         workerId: d.w1,
         operations: [
           {
@@ -360,7 +360,7 @@ describe("labor.ledger", () => {
 
       // A second correction names the same root and replaces the first.
       const again = uuidv7();
-      const second = await appCallerIn(tx, admin.who).labor.repair({
+      const second = await appCallerIn(tx, admin.who).labor.correct({
         workerId: d.w1,
         operations: [
           {

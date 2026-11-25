@@ -12,7 +12,7 @@
 // code: a location stamp at each clock tap unless switched off (apps/mobile/src/location.ts,
 // packages/api/src/sync/scope.ts), error reports to Sentry (apps/web/src/server/reporter.ts
 // and, for the phone, docs/TASKS.md item 12), sign-in by Clerk (a code, or Google: (auth)/sign-in), invoice and invitation email by
-// Resend (packages/api, invoices/send.ts and roster/invitation.ts),
+// Resend (packages/api, invoices/send.ts and people/invitation.ts),
 // reminders that never leave the phone (apps/mobile/src/reminders.tsx), no analytics.
 // The city on a phone's report is Sentry's own doing: it looks up the connection's address
 // as the report arrives and stores the place, not the address (read on a report, 2026-11-22).

@@ -176,8 +176,8 @@ describe("with enforcement on", () => {
       );
       pushed = start(d.ana.who, d.ana.id, d.J);
       await waitForLockWait(D.owner, "%update job_assignments set locked_at%");
-      edited = caller(d.admin.who).assignment.update({
-        assignmentId: d.shiftId,
+      edited = caller(d.admin.who).shift.update({
+        shiftId: d.shiftId,
         workDate: DAY,
         expectedStart: "12:00",
         expectedEnd: "15:30",

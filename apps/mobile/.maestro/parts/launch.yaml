@@ -20,18 +20,18 @@ appId: app.jpteq.trader
     file: location.yaml
 - extendedWaitUntil:
     visible:
-      id: "sign-in-address|tab-settings"
+      id: "sign-in-address|tab-me"
     timeout: 120000
 # A session that outlived the reset is signed out first: every run starts from sign-in.
 - runFlow:
     when:
       visible:
-        id: "tab-settings"
+        id: "tab-me"
     commands:
       - runFlow:
           file: location.yaml
       - tapOn:
-          id: "tab-settings"
+          id: "tab-me"
       - scrollUntilVisible:
           element:
             id: "sign-out"

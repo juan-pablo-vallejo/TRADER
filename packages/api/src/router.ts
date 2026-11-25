@@ -1,4 +1,4 @@
-import { assignmentRouter } from "./routers/assignment";
+import { shiftRouter } from "./routers/shift";
 import { companyRouter } from "./routers/company";
 import { customerRouter } from "./routers/customer";
 import { demoRouter } from "./routers/demo";
@@ -7,13 +7,13 @@ import { jobRouter } from "./routers/job";
 import { laborRouter } from "./routers/labor";
 import { meRouter } from "./routers/me";
 import { overviewRouter } from "./routers/overview";
-import { rosterRouter } from "./routers/roster";
+import { peopleRouter } from "./routers/people";
 import { statusRouter } from "./routers/status";
 import { syncRouter } from "./routers/sync";
 import { router } from "./core/trpc";
 
 export const appRouter = router({
-  assignment: assignmentRouter,
+  shift: shiftRouter,
   company: companyRouter,
   customer: customerRouter,
   demo: demoRouter,
@@ -22,7 +22,7 @@ export const appRouter = router({
   labor: laborRouter,
   me: meRouter,
   overview: overviewRouter,
-  roster: rosterRouter,
+  people: peopleRouter,
   status: statusRouter,
   sync: syncRouter,
 });

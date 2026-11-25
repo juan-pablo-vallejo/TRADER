@@ -37,11 +37,11 @@ export const users = pgTable(
     phone: text("phone"),
     // The second invitation join key: the mobile number a one-time code is sent to, E.164,
     // United States and Canada only. Written by
-    // roster.invite and by nothing else. Unique per company, as the email is.
+    // people.invite and by nothing else. Unique per company, as the email is.
     signInPhone: text("sign_in_phone"),
     role: userRole("role").notNull().default("worker"),
     // Whether this person's clock taps are stamped with a location. NULL is "as the
-    // company" (companies.location_stamps). Written by roster.setLocation and nothing else.
+    // company" (companies.location_stamps). Written by people.setLocationStamps and nothing else.
     locationStamps: boolean("location_stamps"),
     deactivatedAt,
     createdAt,

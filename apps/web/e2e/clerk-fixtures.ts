@@ -36,7 +36,7 @@ export function sql(statement: string, vars: Record<string, string> = {}): strin
   }).trim();
 }
 
-// The one login the suite makes itself, by roster.invite in the address-change test, at a
+// The one login the suite makes itself, by people.invite in the address-change test, at a
 // number of the fictional range that is none of the staging suite's people. A run that
 // stopped halfway may have left an email on it, which would make the next run's change
 // "already held": every email it holds is taken off before anything runs.

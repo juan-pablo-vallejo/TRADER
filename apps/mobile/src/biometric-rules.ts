@@ -1,5 +1,5 @@
 // When the phone offers Face ID or fingerprint sign-in, and what becomes of its key. Pure:
-// the screens (biometric-offer.tsx, settings.tsx, ui/phone-sign-in.tsx) ask these, as the
+// the screens (biometric-offer.tsx, me.tsx, ui/phone-sign-in.tsx) ask these, as the
 // office's passkey band asks apps/web/src/app/passkey-rules.ts.
 //
 // The key is the provider's (Clerk's biometric credentials, biometrics.ts): one per app

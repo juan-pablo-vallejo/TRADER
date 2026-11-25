@@ -16,7 +16,7 @@ export function signInPhone(e164: string): string {
 }
 
 // Whether what was typed can be a sign-in number, so the form can say so before it asks:
-// ten digits, or eleven starting with 1, however spaced. The server decides (roster.invite).
+// ten digits, or eleven starting with 1, however spaced. The server decides (people.invite).
 export function looksLikeSignInPhone(typed: string): boolean {
   if (typed.trim().startsWith("+") && !typed.trim().startsWith("+1")) return false;
   return /^1?[2-9]\d{9}$/.test(typed.replace(/\D/g, ""));

@@ -8,15 +8,15 @@
 // time, or at most fifteen minutes before the next one (eligibility.ts, admitStart) — and the
 // shift is on the job the start names. A day that does not resolve admits nothing.
 //
-// The day's lock (assignments/day.ts) is taken after the scope's row locks and the worker's
+// The day's lock (shifts/day.ts) is taken after the scope's row locks and the worker's
 // timeline lock, and held to the end of the record's transaction: the schedule a start was
 // admitted on is the schedule its shift is locked under, and an office write to that day
 // either committed before this read or waits and is judged against the lock.
 import { companies } from "@trader/db/schema";
 import { sql } from "drizzle-orm";
 
-import { loadDay, lockPersonDays } from "../assignments/day";
-import { admitStart, resolveDay } from "../assignments/eligibility";
+import { loadDay, lockPersonDays } from "../shifts/day";
+import { admitStart, resolveDay } from "../shifts/eligibility";
 import type { Tx } from "../core/context";
 
 export async function scheduleEnforced(tx: Tx): Promise<boolean> {

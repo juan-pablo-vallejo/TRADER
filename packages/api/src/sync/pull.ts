@@ -5,7 +5,7 @@
 import { companies, jobs, users, workSessionEvents } from "@trader/db/schema";
 import { asc, eq, inArray, ne } from "drizzle-orm";
 
-import { loadDays } from "../assignments/day";
+import { loadDays } from "../shifts/day";
 import type { Tx } from "../core/context";
 import { replay } from "../labor/fold";
 import { readWorkerEvents } from "../labor/timeline";

@@ -5,7 +5,7 @@
 // coordinates are a point in Providence used only as a job's place.
 import type { SeedCompany } from "@trader/db";
 
-import type { EntryFlag } from "../sync/reasons";
+import type { EntryFlag } from "../sync/flags";
 import { addDays } from "../contract/calendar";
 
 export const DEMO: SeedCompany = {
@@ -217,7 +217,7 @@ export const BASELINE_TIMES = {
   ended: "15:30",
 } as const;
 
-// The abnormal scenarios, each once. Expected reasons are in the enum's order (sync/reasons.ts);
+// The abnormal scenarios, each once. Expected reasons are in the enum's order (sync/flags.ts);
 // run.ts compares every acknowledgement to them exactly, so a drifted rule fails the run.
 export const SCENARIOS = {
   // The history is a backlog: every seeded clock event is delivered long after it was
@@ -226,7 +226,7 @@ export const SCENARIOS = {
   backlog: { reasons: ["offline"] as EntryFlag[] },
   // Luis's phone ran days behind on his second Thursday and sent each entry as he tapped it:
   // the push's reading of its clock flags every event, at the time it claims. (Sent days
-  // later instead, it would be an offline capture: sync/reasons.ts, capturedOfflineIn.)
+  // later instead, it would be an offline capture: sync/flags.ts, capturedOfflineIn.)
   lateOnlineDay: { who: "luis", day: 8, reasons: ["clock_skewed"] as EntryFlag[] },
   // Omar forgot to clock out and set the time himself on the last day.
   userTimedEnd: {
@@ -250,7 +250,7 @@ export const SCENARIOS = {
   },
   // The office corrects Elena's last clock-out from 15:30 to 16:00: an office event is
   // `corrected` and user-timed, and never flagged for a location.
-  repairedEnd: {
+  correctedEnd: {
     who: "elena",
     day: 9,
     time: "16:00",
@@ -293,7 +293,7 @@ export const EXPECTED = {
   // office correction.
   events: 6 * 10 * 4 + 4 * 4 + 2 + 1,
   // One row per planned person, job and day.
-  assignments: PLANS.reduce((n, p) => n + p.days.length, 0),
+  shifts: PLANS.reduce((n, p) => n + p.days.length, 0),
 } as const;
 
 // What the run's labor comes to, worked out by hand from the plan above; run.ts reads

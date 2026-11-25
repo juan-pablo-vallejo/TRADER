@@ -1,6 +1,6 @@
 // An invitation's words, and where an invitation stands. The words are the same whether
 // they go as a text from the admin's own phone (apps/web, people/invitation.ts) or as an
-// email TRADER sends (roster/invitation.ts): in English and Spanish, since the office may
+// email TRADER sends (people/invitation.ts): in English and Spanish, since the office may
 // not know which the person reads, with the link to where the app is got. Pure, so the
 // browser and the server say exactly the same thing.
 

@@ -103,7 +103,7 @@ describe("the demo run", () => {
   });
 
   it("shows the office what the plan says", async () => {
-    const roster = await admin().roster.list();
+    const roster = await admin().people.list();
     expect(roster).toHaveLength(EXPECTED.users);
     const byEmail = new Map(roster.map((u) => [u.email, u]));
     expect(byEmail.get("priya.shah@demo.invalid")!.deactivatedAt).not.toBeNull();
@@ -136,8 +136,8 @@ describe("the demo run", () => {
   });
 
   it("shows the office the corrected day through the worker's ledger", async () => {
-    const s = SCENARIOS.repairedEnd;
-    const elena = (await admin().roster.list()).find(
+    const s = SCENARIOS.correctedEnd;
+    const elena = (await admin().people.list()).find(
       (u) => u.email === PEOPLE.find((p) => p.key === s.who)!.email,
     )!;
     const day = workDays(ANCHOR)[s.day]!;

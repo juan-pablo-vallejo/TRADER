@@ -1,4 +1,4 @@
-// The identity directory this server hands to roster.invite and to the roster's address
+// The identity directory this server hands to people.invite and to the roster's address
 // changes (packages/api identity.ts),
 // chosen as the identity adapter is (identity.ts) and read per call: Clerk where Clerk is
 // this server's identity, and nothing where the development identity is — a person invited

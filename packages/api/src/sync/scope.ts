@@ -12,7 +12,7 @@ import type { Tx } from "../core/context";
 import type { Role } from "../contract/enums";
 import type { AppUser } from "../core/resolve-user";
 import { unauthorized } from "../core/trpc";
-import type { JobPlace } from "./reasons";
+import type { JobPlace } from "./flags";
 
 type PushScope = {
   // The caller's role as locked now, never the resolved one: a change committed since the

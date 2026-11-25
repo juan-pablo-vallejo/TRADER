@@ -21,7 +21,7 @@ const CALLS: { path: string; input?: unknown }[] = [
   { path: "me.get" },
   { path: "company.get" },
   { path: "overview.today" },
-  { path: "roster.list" },
+  { path: "people.list" },
   { path: "job.list" },
   { path: "invoice.list" },
   { path: "labor.hours", input: { from: day(-6), to: day(0) } },

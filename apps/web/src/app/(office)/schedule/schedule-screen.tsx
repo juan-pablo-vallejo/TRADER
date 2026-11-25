@@ -6,8 +6,8 @@
 // view; narrow, one day at a time, chosen from seven day buttons. The employee filter reaches
 // any one person without scrolling the roster, at every width. A shift card opens the shift;
 // a cell's own button adds one there. Three queries — the roster and the jobs for the
-// pickers, `assignment.week` for the grid — and every write through the drawers
-// (shift-dialog.tsx, copy-dialog.tsx), which the server judges (api assignments/).
+// pickers, `shift.week` for the grid — and every write through the drawers
+// (shift-dialog.tsx, copy-dialog.tsx), which the server judges (api shifts/).
 //
 // Moving, changing or removing a shift nobody has started is drawn at once and sent at
 // once (optimistic.ts), with Undo offered in a toast for a few seconds. A refusal puts the
@@ -216,19 +216,19 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const panel: Panel = opened ?? (asked ? { kind: "add" } : null);
   const [note, setNote] = useState<string | null>(null);
 
-  const roster = useQuery(trpc.roster.list.queryOptions());
+  const roster = useQuery(trpc.people.list.queryOptions());
   const jobs = useQuery(trpc.job.list.queryOptions());
   const week = useQuery(
-    trpc.assignment.week.queryOptions(
+    trpc.shift.week.queryOptions(
       { weekStart },
       // The week before stays on screen while the next one loads.
       { placeholderData: (previous) => previous },
     ),
   );
   const queryClient = useQueryClient();
-  const update = useMutation(trpc.assignment.update.mutationOptions());
-  const remove = useMutation(trpc.assignment.remove.mutationOptions());
-  const create = useMutation(trpc.assignment.create.mutationOptions());
+  const update = useMutation(trpc.shift.update.mutationOptions());
+  const remove = useMutation(trpc.shift.remove.mutationOptions());
+  const create = useMutation(trpc.shift.create.mutationOptions());
   // What went wrong with a change shown at once, and the toast that offers its Undo.
   const [problem, setProblem] = useState<string | null>(null);
   const [toast, setToast] = useState<{
@@ -248,9 +248,8 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   type Sent = { result: string } & Partial<Refusal>;
   const send = async (change: Change): Promise<Sent> => {
     if (change.kind === "update")
-      return update.mutateAsync({ assignmentId: change.shift.id, ...change.to });
-    if (change.kind === "remove")
-      return remove.mutateAsync({ assignmentId: change.shift.id });
+      return update.mutateAsync({ shiftId: change.shift.id, ...change.to });
+    if (change.kind === "remove") return remove.mutateAsync({ shiftId: change.shift.id });
     // Planned again under its own id: the same shift, not a new one.
     const { shift } = change;
     const answer = await create.mutateAsync({
@@ -267,12 +266,12 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
       : { result: day.result };
   };
   const change = (asked: Change, shown: Week) => {
-    const key = trpc.assignment.week.queryKey({ weekStart });
+    const key = trpc.shift.week.queryKey({ weekStart });
     const cache: WeekCache = {
       read: () => queryClient.getQueryData(key),
       write: (next) => queryClient.setQueryData(key, next),
       hold: () => queryClient.cancelQueries({ queryKey: key }),
-      refresh: () => queryClient.invalidateQueries(trpc.assignment.pathFilter()),
+      refresh: () => queryClient.invalidateQueries(trpc.shift.pathFilter()),
     };
     const label = (id: string) => {
       const shift = shown.shifts.find((x) => x.id === id);

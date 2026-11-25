@@ -95,7 +95,7 @@ async function office(tx: Tx, termsDays = 15) {
   const draft = async (cents: number, dueOn: string | null = null) => {
     const id = uuidv7();
     await bill.create({ id, jobId: d.J, currency: "USD" });
-    await bill.save({
+    await bill.update({
       invoiceId: id,
       taxCents: 0,
       dueOn,
@@ -206,14 +206,14 @@ describe("an invoice through its statuses", () => {
       const named = await o.draft(10_000, "2027-01-31");
       const unnamed = await o.draft(10_000);
       // A draft's due date is the draft's to change, and to clear.
-      await o.bill.save({
+      await o.bill.update({
         invoiceId: unnamed,
         taxCents: 0,
         dueOn: "2027-02-01",
         lines: [],
       });
       expect((await o.at(unnamed, new Date())).dueOn).toBe("2027-02-01");
-      await o.bill.save({
+      await o.bill.update({
         invoiceId: unnamed,
         taxCents: 0,
         dueOn: null,
@@ -238,7 +238,7 @@ describe("an invoice through its statuses", () => {
       // Issued, the due date is frozen with the rest: a save is refused by the API, and a
       // direct write by the database itself.
       expect(
-        await o.bill.save({
+        await o.bill.update({
           invoiceId: named,
           taxCents: 0,
           dueOn: "2027-06-01",

@@ -8,9 +8,9 @@ import {
   removeInput,
   removeInvoice,
   removeOutput,
-  saveInput,
-  saveInvoice,
-  saveOutput,
+  updateInput,
+  updateInvoice,
+  updateOutput,
 } from "../invoices/draft";
 import { invoicePdf, pdfInput, pdfOutput } from "../invoices/pdf";
 import {
@@ -62,10 +62,10 @@ export const invoiceRouter = router({
     .input(createInput)
     .output(createOutput)
     .mutation(({ ctx, input }) => createInvoice(ctx.tx, ctx.user, input)),
-  save: admin
-    .input(saveInput)
-    .output(saveOutput)
-    .mutation(({ ctx, input }) => saveInvoice(ctx.tx, ctx.user, input)),
+  update: admin
+    .input(updateInput)
+    .output(updateOutput)
+    .mutation(({ ctx, input }) => updateInvoice(ctx.tx, ctx.user, input)),
   remove: admin
     .input(removeInput)
     .output(removeOutput)

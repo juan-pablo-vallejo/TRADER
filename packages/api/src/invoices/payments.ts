@@ -14,7 +14,7 @@ import { invoicePayments } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { workDay } from "../assignments/write";
+import { workDay } from "../shifts/write";
 import type { Tx } from "../core/context";
 import { lockActiveSelf } from "../core/locks";
 import { pgFailure } from "../core/pg-error";

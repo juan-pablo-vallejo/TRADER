@@ -10,8 +10,8 @@
 // Edit: nothing is edited. A session opens its editor inside the panel: change the time
 // of an entry in effect or the job of its clock in, add entries that are missing, or void
 // the session; above the sessions, hours nobody recorded are added whole. As the times
-// are typed the hours they would give are shown, a preview only (repair-set.ts). Each save
-// is one `labor.repair` set, written all or nothing, taking effect at once; what it wrote
+// are typed the hours they would give are shown, a preview only (correction-set.ts). Each save
+// is one `labor.correct` set, written all or nothing, taking effect at once; what it wrote
 // is read back from the server, so the panel never shows a correction the server has not
 // confirmed, and the week behind it is read again.
 //
@@ -48,30 +48,30 @@ import {
   type LedgerEvent,
   type LedgerSession,
   type Preview,
-  type RepairInput,
+  type CorrectionInput,
   type SessionDraft,
   type Unminted,
-} from "./repair-set";
+} from "./correction-set";
 
 type Lookup = { workerId: string; from: string; to: string };
 
-// Every answer `labor.repair` refuses with has a sentence: a code added on the server fails
+// Every answer `labor.correct` refuses with has a sentence: a code added on the server fails
 // to compile here until it has one.
-type RepairCode = Extract<
-  inferRouterOutputs<AppRouter>["labor"]["repair"],
+type CorrectionCode = Extract<
+  inferRouterOutputs<AppRouter>["labor"]["correct"],
   { result: "rejected" }
 >["code"];
-// Held to the catalog: `repairRejected` must have a sentence for each.
-type Rejected = Record<RepairCode, string>;
+// Held to the catalog: `correctionRejected` must have a sentence for each.
+type Rejected = Record<CorrectionCode, string>;
 
 // The editor for hours nobody recorded has no session to hang from.
 const MISSING = "missing";
 
-// The button that opens an editor: focus goes back to it when its repair is written.
-const toggleId = (key: string) => `repair-toggle-${key}`;
+// The button that opens an editor: focus goes back to it when its correction is written.
+const toggleId = (key: string) => `correct-toggle-${key}`;
 
 type JobOption = { id: string; name: string; archived: boolean };
-// What a repair did, said beneath the control that opened its editor.
+// What a correction did, said beneath the control that opened its editor.
 type Notice = { key: string; text: string; ok: boolean };
 type Outcome = "saved" | "changed";
 
@@ -211,7 +211,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   const { t, f } = useStrings();
   const trpc = useTRPC();
   // Not refetched behind an open editor, on focus or on reconnect: a new answer would
-  // remount the editor and lose what is typed, and a repair is built from what is on
+  // remount the editor and lose what is typed, and a correction is built from what is on
   // screen; the server refuses one built from an entry no longer in effect.
   const ledger = useQuery(
     trpc.labor.ledger.queryOptions(asked, {
@@ -248,14 +248,14 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
     setNotice(null);
     setOpen((was) => (was === key ? null : key));
   };
-  // A repair that was written closes its editor and hands focus back to what opened it; one
+  // A correction that was written closes its editor and hands focus back to what opened it; one
   // the ledger had moved under stays open on the ledger as it is now. Either way the ledger
   // is read again: what is shown is the server's.
   const settle = (key: string) => (outcome: Outcome) => {
     const written = outcome !== "changed";
     setNotice({
       key,
-      text: outcome === "saved" ? t.repairSaved : t.repairChanged,
+      text: outcome === "saved" ? t.correctionSaved : t.correctionChanged,
       ok: written,
     });
     if (written) {
@@ -294,7 +294,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
           type="button"
           className={controls.secondary}
           aria-expanded={open === MISSING}
-          aria-controls={`repair-${MISSING}`}
+          aria-controls={`correct-${MISSING}`}
           onClick={() => toggle(MISSING)}
         >
           {t.addMissingHours}
@@ -344,16 +344,16 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                 type="button"
                 className={controls.textAction}
                 aria-expanded={open === s.rootEventId}
-                aria-controls={`repair-${s.rootEventId}`}
+                aria-controls={`correct-${s.rootEventId}`}
                 onClick={() => toggle(s.rootEventId)}
               >
-                {t.repair}
+                {t.correct}
                 <span className="visually-hidden">{`: ${s.job.name}, ${f.stamp(s.startedAt, zone)}`}</span>
               </button>
               {noteFor(s.rootEventId)}
             </div>
             {open === s.rootEventId && (
-              <SessionRepair
+              <SessionCorrection
                 // A ledger read again is a new draft: the entries in effect may differ.
                 key={ledger.dataUpdatedAt}
                 session={s}
@@ -370,33 +370,33 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   );
 }
 
-// Sends one repair set and sorts its answer. `accepted` and `duplicate` are both the set as
-// written; `repair_stale` is a ledger that moved, and the screen reads it again; any other
+// Sends one correction set and sorts its answer. `accepted` and `duplicate` are both the set as
+// written; `correction_stale` is a ledger that moved, and the screen reads it again; any other
 // refusal wrote nothing and is said in the editor, which stays as the office left it. The
-// set keeps its ids for as long as it is unchanged (repair-set.ts), so sending again after
+// set keeps its ids for as long as it is unchanged (correction-set.ts), so sending again after
 // no answer cannot record it twice.
-function useRepair(workerId: string, onDone: (outcome: Outcome) => void) {
+function useCorrection(workerId: string, onDone: (outcome: Outcome) => void) {
   const { t } = useStrings();
   const trpc = useTRPC();
-  const repair = useMutation(trpc.labor.repair.mutationOptions());
+  const correct = useMutation(trpc.labor.correct.mutationOptions());
   const minter = useRef(createMinter());
   const [refusal, setRefusal] = useState<string | null>(null);
   const send = (operations: Unminted[]) => {
     setRefusal(null);
-    const input: RepairInput = minter.current(workerId, operations);
-    repair.mutate(input, {
+    const input: CorrectionInput = minter.current(workerId, operations);
+    correct.mutate(input, {
       onSuccess: (answer) => {
         if (answer.result !== "rejected") return onDone("saved");
-        if (answer.code === "repair_stale") return onDone("changed");
+        if (answer.code === "correction_stale") return onDone("changed");
         // The ids are taken: the same set goes again under new ones.
         if (answer.code === "id_conflict") minter.current = createMinter();
-        setRefusal((t.repairRejected satisfies Rejected)[answer.code]);
+        setRefusal((t.correctionRejected satisfies Rejected)[answer.code]);
       },
       onError: (error) =>
-        setRefusal(codeOf(error) === "FORBIDDEN" ? t.notPermitted : t.repairUnsent),
+        setRefusal(codeOf(error) === "FORBIDDEN" ? t.notPermitted : t.correctionUnsent),
     });
   };
-  return { send, sending: repair.isPending, refusal, setRefusal };
+  return { send, sending: correct.isPending, refusal, setRefusal };
 }
 
 // A date and time as the company's clock read it. The control has no zone of its own; the
@@ -431,7 +431,7 @@ function TimeField({
       />
       {bad && (
         <p id={`${id}-error`} className={`secondary ${controls.error}`} role="alert">
-          {t.repairBadTime}
+          {t.correctionBadTime}
         </p>
       )}
     </Field>
@@ -472,11 +472,11 @@ function JobSelect({
 
 const ADDED_TYPES: AddedType[] = ["paused", "resumed", "ended"];
 
-// One session's repair: every entry in effect with its time, the clock in's job, entries to
-// add, and — last and alone — the void. One Save is one set, because some repairs are only
+// One session's correction: every entry in effect with its time, the clock in's job, entries to
+// add, and — last and alone — the void. One Save is one set, because some corrections are only
 // legal together: a break is its start and its end, and a session moved later is its clock
 // in and its clock out.
-function SessionRepair({
+function SessionCorrection({
   session,
   workerId,
   zone,
@@ -493,7 +493,7 @@ function SessionRepair({
   const id = session.rootEventId;
   const [draft, setDraft] = useState<SessionDraft>(() => draftOf(session, zone));
   const [badField, setBadField] = useState<string | null>(null);
-  const { send, sending, refusal, setRefusal } = useRepair(workerId, onDone);
+  const { send, sending, refusal, setRefusal } = useCorrection(workerId, onDone);
   const voided = session.events.some((e) => e.effect === "void");
   // The session's own job is always offered, listed or not.
   const options = jobs.some((j) => j.id === session.job.id)
@@ -519,7 +519,7 @@ function SessionRepair({
       if (built.problem === "bad_time") {
         setRefusal(null);
         setBadField(built.field);
-      } else setRefusal(t.repairTooMany);
+      } else setRefusal(t.correctionTooMany);
       return;
     }
     if (built.operations.length === 0) return setRefusal(t.unchanged);
@@ -528,19 +528,19 @@ function SessionRepair({
 
   return (
     <form
-      id={`repair-${id}`}
+      id={`correct-${id}`}
       className={`${controls.card} ${styles.editor}`}
-      aria-label={t.repairOf(session.job.name, f.stamp(session.startedAt, zone))}
+      aria-label={t.correctionOf(session.job.name, f.stamp(session.startedAt, zone))}
       noValidate
       onSubmit={save}
     >
-      <p className="secondary">{t.repairExplain}</p>
-      <EditorSection heading={t.repairTimes}>
+      <p className="secondary">{t.correctionExplain}</p>
+      <EditorSection heading={t.correctionTimes}>
         <div className={styles.fields}>
           {inEffect(session).map((e) => (
             <TimeField
               key={e.id}
-              id={`repair-${id}-${e.id}`}
+              id={`correct-${id}-${e.id}`}
               label={t.entryTypes[e.type]}
               value={draft.times[e.id] ?? ""}
               required
@@ -551,7 +551,7 @@ function SessionRepair({
             />
           ))}
           <JobSelect
-            id={`repair-${id}-job`}
+            id={`correct-${id}-job`}
             value={draft.jobId}
             jobs={options}
             onChange={(jobId) => change({ ...draft, jobId })}
@@ -559,7 +559,7 @@ function SessionRepair({
         </div>
       </EditorSection>
       <PreviewLine preview={sessionPreview(session, draft, zone)} />
-      <EditorSection heading={t.repairAdded}>
+      <EditorSection heading={t.correctionAdded}>
         {draft.added.map((added, i) => {
           const set = (patch: Partial<SessionDraft["added"][number]>) =>
             change({
@@ -569,9 +569,9 @@ function SessionRepair({
           return (
             // By position: the rows have no identity of their own until they are saved.
             <div key={i} className={styles.added}>
-              <Field id={`repair-${id}-added-${i}-type`} label={t.addedEntryType(i + 1)}>
+              <Field id={`correct-${id}-added-${i}-type`} label={t.addedEntryType(i + 1)}>
                 <select
-                  id={`repair-${id}-added-${i}-type`}
+                  id={`correct-${id}-added-${i}-type`}
                   className={controls.select}
                   value={added.type}
                   onChange={(e) => set({ type: e.target.value as AddedType })}
@@ -584,7 +584,7 @@ function SessionRepair({
                 </select>
               </Field>
               <TimeField
-                id={`repair-${id}-added-${i}`}
+                id={`correct-${id}-added-${i}`}
                 label={t.addedEntryTime(i + 1)}
                 value={added.at}
                 required
@@ -615,7 +615,7 @@ function SessionRepair({
       </EditorSection>
       <EditorSection>
         <button type="submit" className={controls.secondary} disabled={sending}>
-          {t.saveRepair}
+          {t.saveCorrection}
         </button>
         <Note text={refusal} />
       </EditorSection>
@@ -649,7 +649,7 @@ function MissingHours({
   const { t } = useStrings();
   const [draft, setDraft] = useState({ jobId: "", start: "", end: "" });
   const [badField, setBadField] = useState<string | null>(null);
-  const { send, sending, refusal, setRefusal } = useRepair(workerId, onDone);
+  const { send, sending, refusal, setRefusal } = useCorrection(workerId, onDone);
   const change = (patch: Partial<typeof draft>) => {
     setBadField(null);
     setRefusal(null);
@@ -668,7 +668,7 @@ function MissingHours({
   };
   return (
     <form
-      id={`repair-${MISSING}`}
+      id={`correct-${MISSING}`}
       className={`${controls.card} ${styles.editor}`}
       aria-label={t.addMissingHours}
       noValidate

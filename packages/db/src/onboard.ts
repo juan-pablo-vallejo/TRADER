@@ -28,7 +28,7 @@ const onboardingSchema = z.strictObject({
   nextInvoiceNumber: counter,
   adminName: text(200),
   // The binding key, E.164, United States and Canada only: users_sign_in_phone_e164
-  // and the API's signInPhoneSchema hold the same pattern. Required, as roster.invite
+  // and the API's signInPhoneSchema hold the same pattern. Required, as people.invite
   // requires it. Never
   // normalised here: a number is typed as it will be matched.
   adminPhone: z.string().regex(/^\+1[2-9][0-9]{9}$/, "not a +1 E.164 number"),

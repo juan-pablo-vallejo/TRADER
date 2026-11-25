@@ -6,7 +6,7 @@
 // request sent twice is one send. `recipient` is the address it went to as the roster held
 // it then, so a send to an address the person no longer has can be told from one to the
 // address they have. Whether a person is "sent" or "verified" is worked out from these rows
-// and from the users row, never stored (packages/api, roster/list.ts). Guards and tenancy
+// and from the users row, never stored (packages/api, people/list.ts). Guards and tenancy
 // are hand-written in the migration (drizzle-kit never sees them).
 import { sql } from "drizzle-orm";
 import {

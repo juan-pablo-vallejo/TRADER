@@ -70,7 +70,7 @@ export const es: Catalog = {
     off: "Desactivado",
     meHelp: "Solo en este teléfono. Cerrar sesión lo conserva.",
   },
-  tabs: { today: "Hoy", week: "Semana", crew: "Cuadrilla", settings: "Yo" },
+  tabs: { today: "Hoy", week: "Semana", crew: "Cuadrilla", me: "Yo" },
   today: {
     title: "Hoy",
     jobs: "Tus obras",
@@ -254,10 +254,10 @@ export const es: Catalog = {
       pickJob: "Elige una obra.",
     },
     refusal: {
-      overlap: "Ya tiene un turno a esa hora.",
-      inactive: "Esta persona está desactivada.",
-      archived: "Esta obra está archivada.",
-      sameJob: "Ya está en esa obra.",
+      schedule: "Ya tiene un turno a esa hora.",
+      user_inactive: "Esta persona está desactivada.",
+      job_archived: "Esta obra está archivada.",
+      same_job: "Ya está en esa obra.",
       started: "Marcó entrada en ese turno después de la hora que elegiste.",
       failed: "No se pudo. Revisa tu conexión e inténtalo de nuevo.",
     },
@@ -284,7 +284,7 @@ export const es: Catalog = {
     hours: (n) => (n === 1 ? "hace 1 hora" : `hace ${n} horas`),
     days: (n) => (n === 1 ? "hace 1 día" : `hace ${n} días`),
   },
-  settings: {
+  me: {
     title: "Yo",
     language: "Idioma",
     english: "English",

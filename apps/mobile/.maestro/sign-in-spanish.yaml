@@ -6,7 +6,7 @@ appId: app.jpteq.trader
 - runFlow:
     file: parts/sign-in.yaml
 - tapOn:
-    id: "tab-settings"
+    id: "tab-me"
 - tapOn:
     id: "language-es"
 - scrollUntilVisible:

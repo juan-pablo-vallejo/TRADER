@@ -202,7 +202,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   // A refusal or a failure reads the invoice again: what was refused, and whether it went,
   // is the server's to say.
   const save = useMutation(
-    trpc.invoice.save.mutationOptions({
+    trpc.invoice.update.mutationOptions({
       onMutate: () => ({ sent: key }),
       onSuccess: async (answer, _asked, context) => {
         if (answer.result === "rejected") {

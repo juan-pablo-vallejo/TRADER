@@ -10,7 +10,7 @@ import type { Db } from "@trader/db";
 
 import type { Tx } from "../../src/core/context";
 import { pushLaborEvent, type LaborRecord } from "../../src/sync/labor";
-import { measureSkew } from "../../src/sync/reasons";
+import { measureSkew } from "../../src/sync/flags";
 import {
   appCallerIn,
   asTenant,

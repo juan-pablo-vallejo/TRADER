@@ -51,12 +51,12 @@ const as = (email: string) => ({
 
 describe("the roster through the route handler", () => {
   it("answers 401 anonymous and 403 as a worker, with no-store", async () => {
-    const anonymous = await query(GET, "roster.list");
+    const anonymous = await query(GET, "people.list");
     expect(anonymous.status).toBe(401);
     expect(anonymous.headers.get("cache-control")).toBe("no-store");
     const worker = await invitation(owner);
     try {
-      const r = await query(GET, "roster.list", { headers: as(worker.email) });
+      const r = await query(GET, "people.list", { headers: as(worker.email) });
       expect(r.status).toBe(403);
       expect(r.body.error?.json.data.code).toBe("FORBIDDEN");
     } finally {
@@ -65,7 +65,7 @@ describe("the roster through the route handler", () => {
   });
 
   it("lists the roster for an admin and invites by POST, then answers email_taken", async () => {
-    const list = await query(GET, "roster.list", { headers: as(admin.email) });
+    const list = await query(GET, "people.list", { headers: as(admin.email) });
     expect(list.status).toBe(200);
     expect(list.body.result?.data.json).toMatchObject([
       { id: admin.userId, role: "admin" },
@@ -77,7 +77,7 @@ describe("the roster through the route handler", () => {
       phone: "(401) 555-0143",
       name: "New Painter",
     };
-    const first = await mutate(POST, "roster.invite", {
+    const first = await mutate(POST, "people.invite", {
       input,
       headers: as(admin.email),
     });
@@ -86,7 +86,7 @@ describe("the roster through the route handler", () => {
       result: "invited",
       user: { email: input.email, role: "worker", invited: true },
     });
-    const second = await mutate(POST, "roster.invite", {
+    const second = await mutate(POST, "people.invite", {
       input: {
         ...input,
         id: uuidv7(),
@@ -101,13 +101,13 @@ describe("the roster through the route handler", () => {
       code: "email_taken",
     });
 
-    const after = await query(GET, "roster.list", { headers: as(admin.email) });
+    const after = await query(GET, "people.list", { headers: as(admin.email) });
     expect((after.body.result?.data.json as unknown[]).length).toBe(2);
   });
 
   it("invites by mobile number, answers phone_taken, and signs that number in", async () => {
     const phone = "+14015550142";
-    const first = await mutate(POST, "roster.invite", {
+    const first = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), phone: "(401) 555-0142", name: "Painter By Number" },
       headers: as(admin.email),
     });
@@ -116,7 +116,7 @@ describe("the roster through the route handler", () => {
       result: "invited",
       user: { email: null, signInPhone: phone, role: "worker", invited: true },
     });
-    const second = await mutate(POST, "roster.invite", {
+    const second = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), phone: "401-555-0142", name: "Again" },
       headers: as(admin.email),
     });
@@ -124,13 +124,13 @@ describe("the roster through the route handler", () => {
       result: "rejected",
       code: "phone_taken",
     });
-    const neither = await mutate(POST, "roster.invite", {
+    const neither = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), name: "No Address" },
       headers: as(admin.email),
     });
     expect(neither.status).toBe(400);
     // An email alone is an invitation too: that person signs in by a code sent to it.
-    const emailOnly = await mutate(POST, "roster.invite", {
+    const emailOnly = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), email: `only-${admin.run}@web.test`, name: "Email Only" },
       headers: as(admin.email),
     });
@@ -172,13 +172,13 @@ describe("the roster through the route handler", () => {
 
   it("notes a texted invitation, answers where it stands, and emails only with an address of its own to link to", async () => {
     const email = `both-${admin.run}@web.test`;
-    const invited = await mutate(POST, "roster.invite", {
+    const invited = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), phone: "(401) 555-0146", email, name: "Painter By Both" },
       headers: as(admin.email),
     });
     const userId = (invited.body.result?.data.json as { user: { id: string } }).user.id;
     const standing = async () => {
-      const list = await query(GET, "roster.list", { headers: as(admin.email) });
+      const list = await query(GET, "people.list", { headers: as(admin.email) });
       const rows = list.body.result?.data.json as {
         id: string;
         invitation: { status: string; sends: { channel: string; outcome: string }[] };
@@ -187,7 +187,7 @@ describe("the roster through the route handler", () => {
     };
     expect(await standing()).toEqual({ status: "not_sent", sends: [] });
 
-    const noted = await mutate(POST, "roster.noteInvitation", {
+    const noted = await mutate(POST, "people.noteInvitation", {
       input: { id: uuidv7(), userId },
       headers: as(admin.email),
     });
@@ -200,7 +200,7 @@ describe("the roster through the route handler", () => {
     // A server that names no address of its own has no link to mail: nothing is sent.
     vi.stubEnv("TRADER_HOME_HOST", "");
     vi.stubEnv("CLERK_AUTHORIZED_PARTIES", "");
-    const noLink = await mutate(POST, "roster.sendInvitation", {
+    const noLink = await mutate(POST, "people.sendInvitation", {
       input: { id: uuidv7(), userId },
       headers: as(admin.email),
     });
@@ -213,7 +213,7 @@ describe("the roster through the route handler", () => {
     vi.stubEnv("CLERK_AUTHORIZED_PARTIES", "https://office.test");
     vi.stubEnv("RESEND_API_KEY", "");
     vi.stubEnv("MAIL_FROM", "");
-    const unsent = await mutate(POST, "roster.sendInvitation", {
+    const unsent = await mutate(POST, "people.sendInvitation", {
       input: { id: uuidv7(), userId },
       headers: as(admin.email),
     });
@@ -230,13 +230,13 @@ describe("the roster through the route handler", () => {
   });
 
   it("changes a worker's sign-in addresses, keeps the record, and refuses an admin's", async () => {
-    const invited = await mutate(POST, "roster.invite", {
+    const invited = await mutate(POST, "people.invite", {
       input: { id: uuidv7(), phone: "(401) 555-0147", name: "Painter Readdressed" },
       headers: as(admin.email),
     });
     const user = (invited.body.result?.data.json as { user: { id: string } }).user;
     const email = `moved-${admin.run}@web.test`;
-    const given = await mutate(POST, "roster.setEmail", {
+    const given = await mutate(POST, "people.setEmail", {
       input: { userId: user.id, email },
       headers: as(admin.email),
     });
@@ -248,7 +248,7 @@ describe("the roster through the route handler", () => {
         addressChanges: [{ field: "email", from: null, to: email }],
       },
     });
-    const moved = await mutate(POST, "roster.setSignInPhone", {
+    const moved = await mutate(POST, "people.setSignInPhone", {
       input: { userId: user.id, phone: "401-555-0148" },
       headers: as(admin.email),
     });
@@ -269,13 +269,13 @@ describe("the roster through the route handler", () => {
     // An admin's addresses, the caller's own here, are not the office's to change.
     const own = await query(GET, "me.get", { headers: as(admin.email) });
     const mine = (own.body.result?.data.json as { id: string }).id;
-    const refused = await mutate(POST, "roster.setEmail", {
+    const refused = await mutate(POST, "people.setEmail", {
       input: { userId: mine, email: `mine-${admin.run}@web.test` },
       headers: as(admin.email),
     });
     expect(refused.body.result?.data.json).toEqual({ result: "rejected", code: "admin" });
     // And what is not an address is not read as one.
-    const bad = await mutate(POST, "roster.setEmail", {
+    const bad = await mutate(POST, "people.setEmail", {
       input: { userId: user.id, email: "not an email" },
       headers: as(admin.email),
     });
@@ -285,7 +285,7 @@ describe("the roster through the route handler", () => {
   it("refuses an invite by POST from a worker with 403", async () => {
     const worker = await invitation(owner);
     try {
-      const r = await mutate(POST, "roster.invite", {
+      const r = await mutate(POST, "people.invite", {
         input: { phone: "(401) 555-0145", name: "X" },
         headers: as(worker.email),
       });

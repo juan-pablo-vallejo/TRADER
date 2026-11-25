@@ -1,4 +1,4 @@
-// Clerk as the identity directory (packages/api identity.ts, IdentityDirectory): roster.invite
+// Clerk as the identity directory (packages/api identity.ts, IdentityDirectory): people.invite
 // admits a person by creating their Clerk user, since the instance is invitation-only and
 // Clerk has no invitation by SMS. Clerk marks an address created this way as verified; the
 // person still proves it is theirs, by the code sent to it at every sign-in.
@@ -22,7 +22,7 @@
 // number alone.
 //
 // `readdress` brings one row's login to the addresses the roster now holds (packages/api,
-// roster/address.ts). The login is read by its own id, the one bound to the row, or found
+// people/address.ts). The login is read by its own id, the one bound to the row, or found
 // by the row's tag: no call here ever names an address to find anyone by. A new address
 // goes on first, verified and primary, and Clerk's "another user has it" is the answer
 // `held` with nothing yet changed; then links to other accounts and passkeys come off,
@@ -39,11 +39,11 @@ import type { IdentityDirectory, Readdressed } from "@trader/api";
 const API = "https://api.clerk.com/v1";
 const USERS_URL = `${API}/users`;
 
-// roster.invite waits on this inside its transaction (roster/invite.ts): bounded, so a
+// people.invite waits on this inside its transaction (people/invite.ts): bounded, so a
 // stalled provider costs one admin a failed invitation and never a held connection.
 export const ADMIT_TIMEOUT_MS = 5_000;
 
-// roster.setEmail and roster.setSignInPhone wait on this inside their transaction, with the
+// people.setEmail and people.setSignInPhone wait on this inside their transaction, with the
 // person's row locked: one deadline for every call a change makes, not one each.
 export const READDRESS_TIMEOUT_MS = 5_000;
 // What putting a failed change back may take, after it (H6).

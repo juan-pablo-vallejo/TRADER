@@ -44,7 +44,7 @@ async function office(tx: Tx) {
     const api = o.by ?? bill;
     const id = uuidv7();
     await api.create({ id, jobId: o.jobId ?? day.J, currency: "USD" });
-    await api.save({
+    await api.update({
       invoiceId: id,
       taxCents: o.taxCents ?? 0,
       lines: [

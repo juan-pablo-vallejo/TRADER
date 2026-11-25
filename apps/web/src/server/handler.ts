@@ -30,7 +30,7 @@ type HandlerDependencies = {
   getDb: () => Db;
   identity: IdentityAdapter;
   directory: IdentityDirectory;
-  // The mail service for invoice.send and roster.sendInvitation (mailer.ts). Absent, every
+  // The mail service for invoice.send and people.sendInvitation (mailer.ts). Absent, every
   // send fails closed.
   mailer?: Mailer;
   // Where the app is got from on this host (addresses.ts), read per request. Absent or

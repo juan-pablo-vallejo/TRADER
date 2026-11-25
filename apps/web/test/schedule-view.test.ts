@@ -149,9 +149,9 @@ describe("a refusal in words", () => {
     expect(refusalText(S, { code: "locked" }, label, F)).toContain(
       "Correct attendance in Hours",
     );
-    expect(
-      refusalText(S, { code: "authorization", shiftId: id(101) }, label, F),
-    ).toContain("already clocked in on shift 101");
+    expect(refusalText(S, { code: "started", shiftId: id(101) }, label, F)).toContain(
+      "already clocked in on shift 101",
+    );
     expect(refusalText(S, { code: "user_inactive" }, label, F)).toBe(
       "That employee is deactivated.",
     );

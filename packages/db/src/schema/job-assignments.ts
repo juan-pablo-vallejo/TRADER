@@ -21,7 +21,7 @@ import { workSessionEvents } from "./work-session-events";
 // Nothing that counts labor reads this table — not the fold or invoices; the push reads it
 // only where the company's schedule is enforced (api sync/schedule.ts). A row here widens no
 // read but one: the planned person sees that job's name and
-// address. Written by the office (api assignments/write.ts), read by `assignment.week` and
+// address. Written by the office (api shifts/write.ts), read by `shift.week` and
 // by the phone's pull (api sync/pull.ts).
 //
 // work_date is the calendar day in companies.timezone as the office wrote it: a business key,
@@ -36,7 +36,7 @@ import { workSessionEvents } from "./work-session-events";
 //
 // A row is a shift. A person may have several in a day, on one job or several; only the
 // exact duplicate is refused here, and two that overlap are refused by the writers (api
-// assignments/eligibility.ts). locked_at and locked_by_event_id are the punch lock: set
+// shifts/eligibility.ts). locked_at and locked_by_event_id are the punch lock: set
 // once, by the push that admits a `started` on the shift, to that event; from then the row's
 // day, start and job never change and it is never removed; its end may only move earlier,
 // to a minute after that clock-in (a trigger, migration 0002). copy_id marks the

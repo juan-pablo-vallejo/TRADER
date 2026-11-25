@@ -22,7 +22,7 @@
   align-items: center;
   gap: var(--space-1) var(--space-2);
 }
-/* Repair: the line of actions under a session or under the person, the editor that opens
+/* Correction: the line of actions under a session or under the person, the editor that opens
    beneath it, and its fields — one column narrow, two wide. */
 .actions {
   margin: var(--space-2) 0 0;

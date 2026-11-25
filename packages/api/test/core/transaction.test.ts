@@ -53,7 +53,7 @@ describe("the procedure context", () => {
     // `reporter` is a stateless sink (report.ts): it opens no connection and names no one.
     // `waits` is present and undefined, like the pool: a procedure cannot read or change its bounds.
     // `requestId` is the HTTP request's (context.ts): random, and nobody's.
-    // `directory` is the identity provider as roster.invite tells it of a person
+    // `directory` is the identity provider as people.invite tells it of a person
     // (identity.ts): it reaches no database and reads nothing back.
     // `mailer` is the mail service as invoice.send hands it a message (mailer.ts): it
     // reaches no database either, and answers only whether the message went.

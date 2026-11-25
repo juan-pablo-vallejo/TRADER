@@ -20,7 +20,7 @@ import {
   laborReasons,
   type EntryFlag,
   type Skew,
-} from "./reasons";
+} from "./flags";
 import { judgeStart, lockShift, scheduleEnforced } from "./schedule";
 import { lockPushScope, mayRecordLabor } from "./scope";
 
@@ -33,7 +33,7 @@ export type LaborRejection =
   | "id_conflict"
   | "not_permitted"
   // Timed later than its receipt by more than the tolerance. Nothing is written; the record
-  // stays on the device under its id and the office recovers the hours (labor.repair).
+  // stays on the device under its id and the office recovers the hours (labor.correct).
   | "time_in_future"
   // Under schedule enforcement: a start, captured with a connection, that no shift of the
   // worker's admits on that job at that minute. Nothing is written; they ask the office.
@@ -111,7 +111,7 @@ export async function pushLaborEvent(
   await assertReadCommitted(tx, "sync.push");
   const p = r.payload;
 
-  // 1. The caller's own record first: a retry after a demotion or a reassignment answers as
+  // 1. The caller's own record first: a retry after a demotion or a move to another job answers as
   // the first push did. Another initiator's row is not revealed before the scope passes.
   const prior = await byId(tx, r.id);
   if (prior !== undefined && prior.initiatorUserId === user.id) {

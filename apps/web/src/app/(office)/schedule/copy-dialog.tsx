@@ -3,7 +3,7 @@
 // Copy Last Week: a preview first — how many shifts will be created
 // and each one left out with why — then one primary button that states the count. All are
 // created or none: the confirmation names the preview by its fingerprint, and the server
-// writes nothing unless that is still the plan (api assignments/copy.ts). The copy's id is
+// writes nothing unless that is still the plan (api shifts/copy.ts). The copy's id is
 // minted once and kept, so a confirmation sent again creates nothing twice. Beneath: the
 // copies that have shifts in this week, each undone whole or, once someone has clocked in on
 // one of its shifts, not at all.
@@ -41,10 +41,10 @@ export function CopyWeek({
   const s = t.schedule;
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const refresh = () => queryClient.invalidateQueries(trpc.assignment.pathFilter());
+  const refresh = () => queryClient.invalidateQueries(trpc.shift.pathFilter());
   const [copyId] = useState(() => uuidv7());
   const asked = useQuery(
-    trpc.assignment.copyPreview.queryOptions(
+    trpc.shift.copyPreview.queryOptions(
       { weekStart: week.weekStart },
       // Always the plan as it is now: a preview is never shown from an earlier look.
       { staleTime: 0, gcTime: 0 },
@@ -57,7 +57,7 @@ export function CopyWeek({
   const preview = newer ?? asked.data;
 
   const confirm = useMutation(
-    trpc.assignment.copyConfirm.mutationOptions({
+    trpc.shift.copyConfirm.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "stale") {
           setNewer(answer.preview);
@@ -72,7 +72,7 @@ export function CopyWeek({
     }),
   );
   const undo = useMutation(
-    trpc.assignment.copyUndo.mutationOptions({
+    trpc.shift.copyUndo.mutationOptions({
       onSuccess: async (answer) => {
         await refresh();
         if (answer.result === "rejected") {

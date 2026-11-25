@@ -14,7 +14,7 @@ export const MAX_PUSH_RECORDS = 100;
 // network failed: one that never answered would hold every sync cycle behind it.
 export const CALL_DEADLINE_MS = 25_000;
 
-// A device clock this far from the server's is skewed (sync/reasons.ts); exactly this far is
+// A device clock this far from the server's is skewed (sync/flags.ts); exactly this far is
 // not.
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60_000;
 

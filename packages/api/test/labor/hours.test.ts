@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { sessionAccounting } from "../../src/labor/accounting";
 import type { LaborEvent } from "../../src/labor/fold";
 import { dayHours, HUNDREDTH_HOUR_MS, roundHours } from "../../src/labor/hours";
-import type { EntryFlag } from "../../src/sync/reasons";
+import type { EntryFlag } from "../../src/sync/flags";
 import { at, builder, HOUR, JOB_A, JOB_B, MINUTE, WORKER } from "./events";
 
 const ZONE = "America/New_York";

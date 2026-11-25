@@ -126,7 +126,7 @@ describe("the closed company: the door's, in production", () => {
     const before = await userCount(owner, [w.a.companyId]);
     const closed = office(admin.who, { companyId: w.a.companyId, allowed: [] });
     expect(
-      await closed.caller.roster.invite({
+      await closed.caller.people.invite({
         id: uuidv7(),
         phone: testPhone(),
         name: "Anyone",
@@ -142,7 +142,7 @@ describe("the closed company: the door's, in production", () => {
     const open = office(admin.who, null);
     const first = testPhone();
     expect(
-      await open.caller.roster.invite({ id: uuidv7(), phone: first, name: "One" }),
+      await open.caller.people.invite({ id: uuidv7(), phone: first, name: "One" }),
     ).toMatchObject({
       result: "invited",
     });
@@ -150,7 +150,7 @@ describe("the closed company: the door's, in production", () => {
     const other = office(admin.who, { companyId: w.b.companyId, allowed: [] });
     const second = testPhone();
     expect(
-      await other.caller.roster.invite({ id: uuidv7(), phone: second, name: "Two" }),
+      await other.caller.people.invite({ id: uuidv7(), phone: second, name: "Two" }),
     ).toMatchObject({ result: "invited" });
     expect([...open.admitted, ...other.admitted]).toEqual([first, second]);
   });

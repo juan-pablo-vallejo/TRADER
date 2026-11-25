@@ -107,7 +107,7 @@
     }
   },
   {
-    "path": "roster.list",
+    "path": "people.list",
     "type": "query",
     "input": {
       "json": null,
@@ -120,7 +120,7 @@
     }
   },
   {
-    "path": "assignment.create",
+    "path": "shift.create",
     "type": "mutation",
     "input": {
       "json": {
@@ -138,7 +138,7 @@
     }
   },
   {
-    "path": "assignment.moveToday",
+    "path": "shift.moveToday",
     "type": "mutation",
     "input": {
       "json": {

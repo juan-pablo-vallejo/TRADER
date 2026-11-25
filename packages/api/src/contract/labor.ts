@@ -8,7 +8,7 @@ import { instant } from "./instant";
 
 // Schema version 1 of a labor event's payload. Nothing names a company, an initiator, a
 // receipt stamp or a skew: those are the server's. No corrections or voids from a
-// device: the office writes those (labor.repair).
+// device: the office writes those (labor.correct).
 export const laborPayloadV1 = z.strictObject({
   workerId: z.uuid(),
   jobId: z.uuid(),

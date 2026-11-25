@@ -8,7 +8,7 @@
 // renamed person or job is still the same one. A read: no write.
 import { z } from "zod";
 
-import { workDay } from "../assignments/write";
+import { workDay } from "../shifts/write";
 import type { Tx } from "../core/context";
 import { csv, hoursText, text } from "../core/csv";
 import type { AppUser } from "../core/resolve-user";

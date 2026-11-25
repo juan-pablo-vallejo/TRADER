@@ -32,7 +32,7 @@ import {
   type ErrorReporter,
 } from "../src/core/report";
 import type { AppUser } from "../src/core/resolve-user";
-import type { EntryFlag } from "../src/sync/reasons";
+import type { EntryFlag } from "../src/sync/flags";
 import type { Mailer } from "../src/core/mailer";
 import { appRouter } from "../src/router";
 import {

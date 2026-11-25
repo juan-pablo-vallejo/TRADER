@@ -7,10 +7,10 @@
 // and every minute after, and never kept on the phone: when the server cannot be reached
 // the tab says so and shows nothing, because an hour-old "on the clock" read as current
 // is worse than no answer. Every write here is the office's own procedure
-// (`assignment.create`, `assignment.moveToday`, `job.setLocation`), made with a connection.
+// (`shift.create`, `shift.moveToday`, `job.setLocation`), made with a connection.
 //
 // A status is named by the one function the office shares (`@trader/api/contract`,
-// crewStatus). The forms always carry an end time: `assignment.moveToday` answers
+// crewStatus). The forms always carry an end time: `shift.moveToday` answers
 // `end_required` without one when no shift covers the minute.
 import { Ionicons } from "@expo/vector-icons";
 import {
@@ -316,7 +316,7 @@ export default function CrewTab() {
     setOpen({ kind: "add", personId: forPerson });
     if (forPerson === null && api !== null) {
       setRoster(null);
-      void api.roster.list
+      void api.people.list
         .query()
         .then((all) =>
           setRoster(
@@ -350,7 +350,7 @@ export default function CrewTab() {
     if (jobId === null) return setProblem("pickJob");
     setSaving(true);
     try {
-      const answer = await api.assignment.create.mutate({
+      const answer = await api.shift.create.mutate({
         userId: personId,
         jobId,
         expectedStart: start,
@@ -374,7 +374,7 @@ export default function CrewTab() {
     const at = wallClock(new Date(), zone).minute;
     setSaving(true);
     try {
-      const answer = await api.assignment.moveToday.mutate({
+      const answer = await api.shift.moveToday.mutate({
         id: mint(Date.now()),
         userId: open.personId,
         jobId,

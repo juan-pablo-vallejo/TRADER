@@ -3,7 +3,7 @@
 // a range of days, each with every event behind it: the sources in effect, the ones a
 // correction replaced, and its void. Raw facts are the rows as stored; derived state is the
 // fold's (fold.ts) and the accounting's (accounting.ts), computed here by the same functions
-// the hours read uses and never a second way. It also carries what labor.repair names: a
+// the hours read uses and never a second way. It also carries what labor.correct names: a
 // correction's root is the event with no `correctsEventId` (or the one a correction names),
 // the source it replaces is that root's event `in_effect`, and a void names `rootEventId`.
 //
@@ -24,7 +24,7 @@ import {
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 
-import { workDay } from "../assignments/write";
+import { workDay } from "../shifts/write";
 import type { Tx } from "../core/context";
 import { forbidden } from "../core/trpc";
 import { eventEffect, sessionAccounting } from "./accounting";

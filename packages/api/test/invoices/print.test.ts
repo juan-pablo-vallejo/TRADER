@@ -73,7 +73,7 @@ async function office(tx: Tx) {
   const issued = async (cents: number) => {
     const id = uuidv7();
     await bill.create({ id, jobId: d.J, currency: "USD" });
-    await bill.save({
+    await bill.update({
       invoiceId: id,
       taxCents: 0,
       lines: [
@@ -239,7 +239,7 @@ describe("what a customer is sent", () => {
       const o = await office(tx);
       const id = uuidv7();
       await o.bill.create({ id, jobId: o.J, currency: "USD" });
-      await o.bill.save({
+      await o.bill.update({
         invoiceId: id,
         taxCents: 0,
         lines: [

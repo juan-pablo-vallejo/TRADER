@@ -13,7 +13,7 @@ const DSN = "https://0123456789abcdef@o1.ingest.example.test/42";
 const report: ErrorReport = {
   source: "request",
   requestId: "019a4a00-0000-7000-8000-000000000001",
-  path: "roster.invite",
+  path: "people.invite",
   type: "mutation",
   errorNames: ["DrizzleQueryError", "DatabaseError"],
   sqlstate: "23505",
@@ -89,11 +89,11 @@ describe("toSentryEvent", () => {
   it("carries a report's fields as tags, a message and a grouping key, and no more", () => {
     expect(toSentryEvent(report)).toEqual({
       level: "error",
-      message: "trader_error request roster.invite DrizzleQueryError",
+      message: "trader_error request people.invite DrizzleQueryError",
       tags: {
         source: "request",
         type: "mutation",
-        path: "roster.invite",
+        path: "people.invite",
         sqlstate: "23505",
         request_id: "019a4a00-0000-7000-8000-000000000001",
         error_names: "DrizzleQueryError>DatabaseError",
@@ -101,7 +101,7 @@ describe("toSentryEvent", () => {
       fingerprint: [
         "trader_error",
         "request",
-        "roster.invite",
+        "people.invite",
         "DrizzleQueryError>DatabaseError",
         "23505",
       ],

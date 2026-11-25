@@ -22,5 +22,5 @@ export const clockAfter = (step: ClockStep, entry: ClockEntry): ClockStep | unde
   CLOCK_TRANSITIONS[step][entry];
 
 // How many minutes before a shift's start a clock-in is admitted, where the schedule is
-// enforced (assignments/eligibility.ts); the phone offers the shift from the same minute.
+// enforced (shifts/eligibility.ts); the phone offers the shift from the same minute.
 export const EARLY_MINUTES = 15;

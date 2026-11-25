@@ -63,10 +63,10 @@ export function validateEvent(
   return validateEvents(ctx, existing, [candidate]);
 }
 
-// A set of candidates validated as one timeline (an office repair that
+// A set of candidates validated as one timeline (an office correction that
 // needs two events at once): legal only if the whole timeline with every candidate in place is
 // legal, whatever an intermediate state would be. The single-event check above is its
-// one-element case, so push and the office repair run one algorithm. A rejection names the
+// one-element case, so push and the office correction run one algorithm. A rejection names the
 // candidate it is about in `eventId`; a set is accepted or rejected whole.
 export function validateEvents(
   ctx: ValidationContext,

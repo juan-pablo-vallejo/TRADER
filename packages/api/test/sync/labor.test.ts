@@ -13,7 +13,7 @@ import { sessionAccounting } from "../../src/labor/accounting";
 import { readWorkerEvents } from "../../src/labor/timeline";
 import { deriveSessions } from "../../src/labor/work-date";
 import { pushLaborEvent, type LaborRecord } from "../../src/sync/labor";
-import { measureSkew } from "../../src/sync/reasons";
+import { measureSkew } from "../../src/sync/flags";
 import {
   asTenant,
   boundIn,

@@ -64,14 +64,14 @@ it("records every call this build makes, as sent", async () => {
     }),
   );
   await call(api.sync.pull.query({ protocolVersion: 1 }));
-  // Me (app/(tabs)/settings.tsx).
+  // Me (app/(tabs)/me.tsx).
   await call(api.me.update.mutate({ name: "Luis Herrera", phone: "+14015550101" }));
   await call(api.me.update.mutate({ name: "Luis Herrera", phone: null }));
   // The Crew tab (app/(tabs)/crew.tsx).
   await call(api.overview.today.query());
-  await call(api.roster.list.query());
+  await call(api.people.list.query());
   await call(
-    api.assignment.create.mutate({
+    api.shift.create.mutate({
       userId: OTHER,
       jobId: JOB,
       expectedStart: "07:00",
@@ -80,7 +80,7 @@ it("records every call this build makes, as sent", async () => {
     }),
   );
   await call(
-    api.assignment.moveToday.mutate({
+    api.shift.moveToday.mutate({
       id: mint(T),
       userId: OTHER,
       jobId: JOB,

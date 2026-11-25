@@ -111,7 +111,7 @@ export const es: Catalog = {
     invoices: "Facturas",
   },
   hoursTitle: "Horas",
-  roster: "Personal",
+  people: "Personal",
   customers: "Clientes",
   jobs: "Obras",
   schedule: {
@@ -194,7 +194,7 @@ export const es: Catalog = {
       changed: "El horario cambió mientras tanto. Cierra esto e inténtalo de nuevo.",
     },
     refused: {
-      authorization: (shift) =>
+      started: (shift) =>
         `Alguien ya marcó entrada en ${shift}, y esto cambiaría lo que lo permitió.`,
       locked:
         "Alguien marcó entrada en este turno, así que no puede cambiar. Corrige la asistencia en Horas.",
@@ -225,7 +225,7 @@ export const es: Catalog = {
       job_archived: "obra archivada",
       duplicate: "ya estaba",
       overlap: "se cruzaría",
-      authorization: "alguien ya marcó entrada ese día",
+      started: "alguien ya marcó entrada ese día",
     },
   },
   crewStatus: {
@@ -634,11 +634,11 @@ export const es: Catalog = {
     invitationExplain:
       "Todavía no ha iniciado sesión. Mándale dónde obtener la aplicación. El mensaje ya está escrito, en inglés y en español: envíalo por mensaje de texto desde tu propio teléfono, o deja que TRADER lo mande por correo.",
     invitedOn: (day) => `Invitación del ${day}`,
-    sendInvitation: "Enviar por mensaje de texto",
-    emailInvitation: "Enviar por correo",
+    sendByWhatsApp: "Enviar por mensaje de texto",
+    sendByEmail: "Enviar por correo",
     emailGoesTo: (email) => `Por correo, TRADER manda el mismo mensaje a ${email}.`,
     emailed: (email) => `Enviada a ${email}.`,
-    byText: (by, at) => `Por mensaje de texto de ${by}, ${at}`,
+    byWhatsApp: (by, at) => `Por mensaje de texto de ${by}, ${at}`,
     byEmail: (by, at) => `Por correo, enviada por ${by}, ${at}`,
     emailNotSent: (by, at) => `El correo no salió (lo intentó ${by}, ${at})`,
     refused: {
@@ -668,7 +668,7 @@ export const es: Catalog = {
       `${name} ya no iniciará sesión con ${address}, y su sesión se cierra en todas partes.`,
     addressChanged:
       "Cambiado. Su sesión se cerró, y de ahora en adelante inicia sesión con esa dirección.",
-    addressRepaired: "Su acceso ya coincide con esto.",
+    addressMatched: "Su acceso ya coincide con esto.",
     emailInvalid: "Escribe un correo, o déjalo vacío para quitarlo.",
     addressRefused: {
       admin:
@@ -838,23 +838,23 @@ export const es: Catalog = {
   hoursValue: (hours) => `${hours} h`,
   emptyReconciliation: "No hay horas registradas en estos días.",
 
-  repair: "Corregir",
-  repairOf: (job, started) => `Corregir ${job}, ${started}`,
-  repairExplain:
+  correct: "Corregir",
+  correctionOf: (job, started) => `Corregir ${job}, ${started}`,
+  correctionExplain:
     "Cambia una hora o la obra, o agrega un registro que falta. Cada cambio es un registro nuevo y cuenta de inmediato.",
-  repairTimes: "Horas",
-  repairAdded: "Registros por agregar",
+  correctionTimes: "Horas",
+  correctionAdded: "Registros por agregar",
   addEntry: "Agregar un registro",
   addedEntryType: (n) => `Registro ${n}`,
   addedEntryTime: (n) => `Hora del registro ${n}`,
-  saveRepair: "Guardar corrección",
-  repairSaved: "Guardado.",
-  repairBadTime:
+  saveCorrection: "Guardar corrección",
+  correctionSaved: "Guardado.",
+  correctionBadTime:
     "Escribe una fecha y una hora. Una hora que los relojes se saltaron ese día no se puede usar.",
-  repairTooMany: "Máximo 20 cambios a la vez. Guarda algunos y después haz el resto.",
-  repairUnsent:
+  correctionTooMany: "Máximo 20 cambios a la vez. Guarda algunos y después haz el resto.",
+  correctionUnsent:
     "Eso no se pudo hacer. Inténtalo de nuevo: se envía la misma corrección, así que no puede quedar anotada dos veces.",
-  repairChanged:
+  correctionChanged:
     "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
   voidSession: "Anular sesión",
   voidSessionEffect:
@@ -866,7 +866,7 @@ export const es: Catalog = {
   missingClockOut: "Salida (opcional)",
   addHours: "Agregar horas",
   jobOptionArchived: (name) => `${name} · archivada`,
-  repairRejected: {
+  correctionRejected: {
     no_open_session:
       "No hay ninguna sesión abierta a esa hora para uno de estos registros. Revisa las horas.",
     session_already_open:
@@ -893,7 +893,7 @@ export const es: Catalog = {
     job_id_mismatch: "Un registro agregado debe ser de la obra de la sesión.",
     id_conflict: "Eso no se pudo hacer. No se guardó nada; guarda de nuevo.",
     time_in_future: "Una de estas horas todavía no ha pasado.",
-    repair_stale:
+    correction_stale:
       "Estos registros cambiaron desde que se mostraron. Ya se actualizaron: revísalos y corrige de nuevo.",
     void_leaves_session_open:
       "Esta sesión sigue abierta; anularla sola dejaría a su trabajador con la entrada marcada. Actualiza y vuelve a anularla.",

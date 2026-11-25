@@ -15,7 +15,7 @@ import { SignInForm } from "./sign-in-form";
 // checks the code; the form is ours. Or Google, for a person whose invitation carries that
 // address (sso-callback/page.tsx is where the browser comes back to when Google's account
 // is nobody's). There is no sign-up: a person exists at Clerk because
-// roster.invite admitted them. The route answers 404 where the development identity is
+// people.invite admitted them. The route answers 404 where the development identity is
 // this server's, as /dev-signin does everywhere else; a server with no Clerk keys says so
 // instead of drawing a form that could not work.
 export const dynamic = "force-dynamic";

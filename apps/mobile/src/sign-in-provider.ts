@@ -145,7 +145,7 @@ export function standInProvider(apiUrl: string): Provider {
       const to: SignInIdentifier =
         typed !== null && typed.kind === "email"
           ? typed
-          : { kind: "email", email: "nobody.on.a.roster@demo.invalid" };
+          : { kind: "email", email: "nobody.invited@demo.invalid" };
       try {
         await createApi(apiUrl, () => devHeaders(who(to))).me.get.query();
         return { ok: true, session: { kind: "dev", ...who(to) } };

@@ -14,7 +14,7 @@ import { invoiceLineItems, invoices, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
-import { workDay } from "../assignments/write";
+import { workDay } from "../shifts/write";
 import type { Tx } from "../core/context";
 import { lockActiveSelf } from "../core/locks";
 import type { AppUser } from "../core/resolve-user";
@@ -31,7 +31,7 @@ export const createOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("rejected"), code: z.literal("id_conflict") }),
 ]);
 
-export const saveInput = z.strictObject({
+export const updateInput = z.strictObject({
   invoiceId: z.uuid(),
   taxCents: taxInput,
   // The day it is due, when the draft names one; null leaves it to the company's terms,
@@ -44,7 +44,7 @@ export const saveInput = z.strictObject({
       message: "A line id is used once.",
     }),
 });
-export const saveOutput = z.discriminatedUnion("result", [
+export const updateOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("saved") }),
   z.strictObject({
     result: z.literal("rejected"),
@@ -106,11 +106,11 @@ export async function lockInvoice(tx: Tx, invoiceId: string) {
   return invoice;
 }
 
-export async function saveInvoice(
+export async function updateInvoice(
   tx: Tx,
   user: AppUser,
-  input: z.infer<typeof saveInput>,
-): Promise<z.infer<typeof saveOutput>> {
+  input: z.infer<typeof updateInput>,
+): Promise<z.infer<typeof updateOutput>> {
   await lockActiveSelf(tx, user, "admin");
   const invoice = await lockInvoice(tx, input.invoiceId);
   if (invoice === undefined) throw forbidden();

@@ -1,4 +1,4 @@
-// Office labor: the repair (labor/repair.ts), the read it
+// Office labor: the correction (labor/correct.ts), the read it
 // takes its event ids from (labor/ledger.ts), and the hours that count per worker, job and
 // work date (labor/day-hours.ts). Admin only, at the gate: the office client is
 // online, so there is no device retry to keep open across a demotion (unlike
@@ -6,7 +6,7 @@
 import { hoursInput, hoursOutput, listHours } from "../labor/day-hours";
 import { exportHours, exportInput, exportOutput } from "../labor/export";
 import { ledgerInput, ledgerOutput, workerLedger } from "../labor/ledger";
-import { repairInput, repairLabor, repairOutput } from "../labor/repair";
+import { correctionInput, correctLabor, correctionOutput } from "../labor/correct";
 import { roleProcedure, router } from "../core/trpc";
 
 export const laborRouter = router({
@@ -22,8 +22,8 @@ export const laborRouter = router({
     .input(ledgerInput)
     .output(ledgerOutput)
     .query(({ ctx, input }) => workerLedger(ctx.tx, input)),
-  repair: roleProcedure("admin")
-    .input(repairInput)
-    .output(repairOutput)
-    .mutation(({ ctx, input }) => repairLabor(ctx.tx, ctx.user, input)),
+  correct: roleProcedure("admin")
+    .input(correctionInput)
+    .output(correctionOutput)
+    .mutation(({ ctx, input }) => correctLabor(ctx.tx, ctx.user, input)),
 });

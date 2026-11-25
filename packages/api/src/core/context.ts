@@ -30,7 +30,7 @@ export type DemoDoor = {
 // production (the host says when: apps/web, clerk-demo.ts). Its code is shared by design,
 // so whoever holds it can sign in as any of its people, its admin included, and must be
 // harmless: its invoices are emailed only to `allowed` (the deployment's allow-list;
-// blank is nobody), and it invites nobody (roster/invite.ts), since an invitation makes a
+// blank is nobody), and it invites nobody (people/invite.ts), since an invitation makes a
 // login for any number. Null everywhere else, staging included: no rule changes there.
 export type ClosedCompany = { companyId: string; allowed: readonly string[] };
 
@@ -38,13 +38,13 @@ export type ClosedCompany = { companyId: string; allowed: readonly string[] };
 // themselves; it holds no identity and no request state. Required, so a handler cannot forget it.
 // `requestId` is the HTTP request's: made by the handler, never read from the client, shared
 // by every call in a batch. It names a request in an error report.
-// `directory` is the identity provider as roster.invite sees it (identity.ts); required for the
+// `directory` is the identity provider as people.invite sees it (identity.ts); required for the
 // same reason, so no host can invite a person the provider was never told about.
 export type Context = {
   db: Db;
   identity: VerifiedIdentity | null;
   directory: IdentityDirectory;
-  // The mail service as invoice.send and roster.sendInvitation see it (mailer.ts). A host
+  // The mail service as invoice.send and people.sendInvitation see it (mailer.ts). A host
   // that names none gets one that sends nothing and says so.
   mailer: Mailer;
   // Where the app is got from on this host, as an emailed invitation links to it: the

@@ -60,7 +60,7 @@ async function office(tx: Tx) {
   const bill = as(admin.who);
   const invoiceId = uuidv7();
   await bill.create({ id: invoiceId, jobId: day.J, currency: "USD" });
-  await bill.save({
+  await bill.update({
     invoiceId,
     taxCents: 3640,
     lines: [

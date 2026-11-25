@@ -73,7 +73,7 @@ async function draft(
 ) {
   const id = uuidv7();
   await o.bill.create({ id, jobId: o.day.J, currency: "USD" });
-  await o.bill.save({ invoiceId: id, taxCents, lines });
+  await o.bill.update({ invoiceId: id, taxCents, lines });
   return id;
 }
 
@@ -144,7 +144,7 @@ describe("invoice.create", () => {
   });
 });
 
-describe("invoice.save", () => {
+describe("invoice.update", () => {
   it("stores the lines as sent, in order, each amount its quantity times its price", async () => {
     await rolledBack(owner, async (tx) => {
       const o = await office(tx);
@@ -177,7 +177,7 @@ describe("invoice.save", () => {
         totalCents: 12339,
       });
       // Saved again with one line: the draft is what was last sent, whole.
-      await o.bill.save({ invoiceId: id, taxCents: 0, lines: [lines[1]!] });
+      await o.bill.update({ invoiceId: id, taxCents: 0, lines: [lines[1]!] });
       expect((await o.bill.read({ invoiceId: id })).lines.map((l) => l.id)).toEqual([
         lines[1]!.id,
       ]);
@@ -189,7 +189,7 @@ describe("invoice.save", () => {
       const o = await office(tx);
       const id = await draft(o, []);
       const saving = (lines: unknown[], taxCents = 0) =>
-        o.bill.save({ invoiceId: id, taxCents, lines: lines as never });
+        o.bill.update({ invoiceId: id, taxCents, lines: lines as never });
       const twice = line();
       for (const bad of [
         [line({ description: "  " })],
@@ -247,7 +247,7 @@ describe("invoice.suggest", () => {
       const lines = [
         line({ description: "Labor, Oct 5", quantity: offered.labor[0]!.quantity }),
       ];
-      await o.bill.save({ invoiceId: id, taxCents: 0, lines });
+      await o.bill.update({ invoiceId: id, taxCents: 0, lines });
       const before = await o.bill.read({ invoiceId: id });
       // Later: more hours that day.
       await tx.execute(sql`reset role`);
@@ -328,7 +328,7 @@ describe("invoice.issue", () => {
       await o.bill.issue({ invoiceId: id });
       const issued = await o.bill.read({ invoiceId: id });
       expect(
-        await o.bill.save({ invoiceId: id, taxCents: 100, lines: [line()] }),
+        await o.bill.update({ invoiceId: id, taxCents: 100, lines: [line()] }),
       ).toEqual({
         result: "rejected",
         code: "issued",
@@ -429,7 +429,7 @@ describe("another company's invoice", () => {
         () => o.bill.read({ invoiceId }),
         () => o.bill.suggest({ invoiceId }),
         () => o.bill.pdf({ invoiceId }),
-        () => o.bill.save({ invoiceId, taxCents: 0, lines: [line()] }),
+        () => o.bill.update({ invoiceId, taxCents: 0, lines: [line()] }),
         () => o.bill.issue({ invoiceId }),
         () => o.bill.void({ invoiceId }),
       ]) {

@@ -50,13 +50,13 @@ export function Nav() {
       job: () => void queryClient.prefetchQuery(trpc.job.list.queryOptions()),
       customer: () => void queryClient.prefetchQuery(trpc.customer.list.queryOptions()),
       invoice: () => void queryClient.prefetchQuery(trpc.invoice.list.queryOptions()),
-      roster: () => void queryClient.prefetchQuery(trpc.roster.list.queryOptions()),
+      people: () => void queryClient.prefetchQuery(trpc.people.list.queryOptions()),
     };
     if (href === "/jobs") [fetch.job, fetch.customer].forEach((f) => f());
     if (href === "/invoices") [fetch.invoice, fetch.job].forEach((f) => f());
-    if (href === "/people") fetch.roster();
+    if (href === "/people") fetch.people();
     // Schedule opens on the roster and the jobs beside its week.
-    if (href === "/schedule") [fetch.roster, fetch.job].forEach((f) => f());
+    if (href === "/schedule") [fetch.people, fetch.job].forEach((f) => f());
   };
   // Escape closes the menu and hands focus back to the button that opened it.
   const onKeyDown = (e: KeyboardEvent) => {
