@@ -43,7 +43,6 @@ const SAME = new Set([
   "invoices.subtotal",
   "invoices.paymentLine",
   "invoices.hoursOf",
-  "invoices.laborOn",
 ]);
 
 describe("the office's catalogs", () => {

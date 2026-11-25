@@ -106,8 +106,10 @@ function Totals({
 // What the page says once an act changed it into another view (issued, voided): said under
 // its title, where the view that did it no longer stands.
 // Add a line: where the focus goes when the last line is removed.
-// What an invoice's own words are written with: English, as the customer reads them.
+// An invoice's own words, English whatever the office's language, as the customer reads
+// them: a line of hours copied in, and the day it names.
 const onInvoice = formatters("en", en);
+const laborLine = (day: string) => `Labor, ${day}`;
 const ADD_LINE_ID = "invoice-add-line";
 const Said = createContext<(text: string) => void>(() => {});
 
@@ -386,7 +388,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
             {offers.data.labor.map((l) => {
               // The line goes on the customer's invoice, which is in English whatever the
               // office's language (CLAUDE.md, rule 5).
-              const label = en.invoices.laborOn(onInvoice.weekDay(l.workDate));
+              const label = laborLine(onInvoice.weekDay(l.workDate));
               return (
                 <li key={l.workDate}>
                   <span className="body">

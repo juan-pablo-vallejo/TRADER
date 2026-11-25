@@ -1,6 +1,6 @@
-// The numbers the server, the office and the phone all go by, written once. Each is the
-// server's limit or default; a client reads it here so it can never ask for more than the
-// server takes, or show something the server would not do.
+// The numbers the server, the office and the phone all go by, written once: the server's
+// limits, and the defaults both clients fill in. A client reads them here so it never asks for
+// more than the server takes.
 
 // Calls the server answers in one request (apps/web server/handler.ts): a larger batch is
 // refused whole, so both clients' batching links stop here.
@@ -18,7 +18,8 @@ export const CALL_DEADLINE_MS = 25_000;
 // not.
 export const CLOCK_SKEW_TOLERANCE_MS = 5 * 60_000;
 
-// A jobsite's radius unless the office sets another; a location set from the phone takes it.
+// A jobsite's radius when its location is first set, unless the office types another; a
+// location set from the phone takes it. The server takes any radius up to the ceiling below.
 export const JOBSITE_RADIUS_M = 200;
 
 // The largest radius a jobsite takes: 100 km is already no jobsite, and the column is a

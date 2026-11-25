@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { Db } from "@trader/db";
 
 import type { Tx } from "../../src/core/context";
+import { compareNames } from "../../src/contract/order";
 import { PAYROLL_COLUMNS, payrollCsv } from "../../src/labor/export";
 import {
   appCallerIn,
@@ -229,5 +230,23 @@ describe("payrollCsv", () => {
         "ana,id-ana,2026-10-06,'=SUM(A1),id-=SUM(A1),4.50,\r\n" +
         "Tom,id-Tom,2026-10-06,Porch,id-Porch,8.00,\r\n",
     );
+  });
+
+  it("puts an accented name beside its letter, as every list does", () => {
+    const cell = (worker: string) => ({
+      worker: { id: `id-${worker}`, name: worker },
+      job: { id: "id-J", name: "J" },
+      workDate: "2026-10-05",
+      hundredths: 100,
+      openSessions: 0,
+      flaggedEntries: 0,
+      flags: [],
+    });
+    const names = payrollCsv([cell("Zoe"), cell("Ángel"), cell("ana")])
+      .split("\r\n")
+      .slice(1, -1)
+      .map((line) => line.split(",")[0]);
+    expect(names).toEqual(["ana", "Ángel", "Zoe"]);
+    expect(names).toEqual(["Zoe", "Ángel", "ana"].sort(compareNames));
   });
 });

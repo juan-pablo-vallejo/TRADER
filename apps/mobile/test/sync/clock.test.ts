@@ -198,6 +198,23 @@ describe("the clock's state", () => {
     expect(clockState(seen, [kept(start[0]!, "settled")])).toEqual({ status: "off" });
   });
 
+  it("takes a settled record as the server's verdict when the answer before the next pull was lost", () => {
+    // The office ended the open session on the server; this phone, still showing it, switched
+    // jobs. The server refused the end and took the start, and the pull that would say so was
+    // dropped: the clock is on the new job, where its next tap will be judged.
+    const sw = recordsFor(
+      { action: "switch", jobId: K },
+      { status: "working", jobId: J, since: new Date(T0 - 3_600_000) },
+      capture(),
+    );
+    const state = clockState(snapshot({ sessions: [open("working")] }), [
+      kept(sw[0]!, "rejected"),
+      kept(sw[1]!, "settled"),
+    ]);
+    expect(state).toMatchObject({ status: "working", jobId: K });
+    expect(recordsFor({ action: "pause" }, state, capture())[0]?.payload.jobId).toBe(K);
+  });
+
   it("follows the server's rule, so it never offers a pause on a pause", () => {
     // Clock in, break, then a second clock-in still on the phone: the server refuses that
     // start (a session is open), so the clock is still on its break, on its first job.

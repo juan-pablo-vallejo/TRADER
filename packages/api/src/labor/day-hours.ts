@@ -27,6 +27,7 @@ import { sessionAccounting } from "./accounting";
 import { dayHours, type DayCell } from "./hours";
 import { REASON_ORDER } from "../sync/reasons";
 import { RANGE_REFUSAL, rangeWithinBound } from "./ledger";
+import { compareNames } from "../contract/order";
 
 // Every cell of the workers named, whatever its date or job: the caller selects.
 export async function readDayHours(
@@ -245,8 +246,7 @@ export async function readHours(
     })
     .sort(
       (a, b) =>
-        compare(a.worker.name.toLowerCase(), b.worker.name.toLowerCase()) ||
-        compare(a.worker.id, b.worker.id),
+        compareNames(a.worker.name, b.worker.name) || compare(a.worker.id, b.worker.id),
     );
   return {
     timezone,

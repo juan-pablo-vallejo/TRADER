@@ -414,6 +414,10 @@ the iPhone simulator and `trader-ws android`.
   with no refusal shown, three runs in a row; the step runs on the phone alone (the
   development stand-in compares the code) and passes on the iPhone simulator. Find whether
   the keyboard, the emulator or the screen drops the sentence, and fix that.
+- To tell the app from the workstation's emulator, run the suite on this Mac's emulator
+  (`apps/mobile/.maestro/suite.sh android emulator-5554`), after all other work: its
+  development build is older than the app's native modules (it stops at launch on
+  `ExpoWebBrowser`), so `pnpm android` builds and installs a current one first.
 - Done when: `trader-ws android` is whole and green.
 
 ### The owner's

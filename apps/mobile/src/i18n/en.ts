@@ -1,3 +1,4 @@
+import { EARLY_MINUTES } from "@trader/api/contract";
 import type { Catalog } from "./catalog";
 
 export const en: Catalog = {
@@ -78,7 +79,7 @@ export const en: Catalog = {
     hoursToday: (hours) => `${hours} worked today`,
     shiftNow: (job, start, end) => `Your shift: ${job}, ${start}–${end}.`,
     shiftLater: (job, start) =>
-      `Your next shift is at ${job} at ${start}. You can clock in 15 minutes before.`,
+      `Your next shift is at ${job} at ${start}. You can clock in ${EARLY_MINUTES} minutes before.`,
     noMoreShifts: "You have no more shifts today.",
     noShift: "You have no shift today. Call the office.",
     attention: "Needs attention",

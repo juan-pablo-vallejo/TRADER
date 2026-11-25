@@ -2,6 +2,8 @@
 // trade's words are the phone's (apps/mobile/src/i18n/es.ts): a shift is a "turno", a
 // jobsite an "obra", a clock-in "entrada", a break "descanso", the roster "plantilla".
 // What a customer receives (the invoice, its PDF, its email) is not here: it is English.
+import { MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
+
 import type { Catalog } from "./en";
 
 // "a la 1:15", "a las 2:30": the article follows the hour. And a sentence that ends with a time
@@ -406,7 +408,6 @@ export const es: Catalog = {
     draw: "Las horas de esta obra",
     drawExplain:
       "Las horas registradas en esta obra, por día. Copiar un día agrega una línea con esas horas como cantidad. El precio lo escribes tú.",
-    laborOn: (day) => `Labor, ${day}`,
     hoursOf: (quantity) => `${quantity} h`,
     add: "Copiar horas",
     addOf: (label) => `Copiar ${label} a una línea nueva`,
@@ -738,7 +739,7 @@ export const es: Catalog = {
         "Eso no es un par de coordenadas ni una dirección de mapas que las muestre. Se ve así: 41.8240, -71.4128.",
       out_of_range: "Esos números no son un lugar: revisa las coordenadas.",
     },
-    badRadius: "Escribe el radio en metros enteros, de 1 a 100000.",
+    badRadius: `Escribe el radio en metros enteros, de 1 a ${MAX_JOBSITE_RADIUS_M}.`,
   },
   jobPage: {
     back: "Todas las obras",

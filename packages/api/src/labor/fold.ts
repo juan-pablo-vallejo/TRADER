@@ -86,7 +86,8 @@ const compareAcceptance = (a: LaborEvent, b: LaborEvent) =>
 // The transitions are the contract's (contract/clock.ts), which the phone reads too.
 type State = ClockStep;
 
-// Why `type` is not in TRANSITIONS[state]; called only for an illegal pair.
+// Why `type` cannot follow `state` (clockAfter answers undefined); called only for an
+// illegal pair.
 function illegal(state: State, type: PositionalType): ViolationCode {
   if (type === "started") return "session_already_open";
   if (state === "idle") return "no_open_session";

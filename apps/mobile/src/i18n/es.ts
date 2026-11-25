@@ -1,4 +1,11 @@
+import { EARLY_MINUTES } from "@trader/api/contract";
+
 import type { Catalog } from "./catalog";
+
+// "a la 1:15", "a las 2:30": the article follows the hour. A time ending in "a. m." or "p. m."
+// already ends a sentence with its period.
+const las = (time: string) => (/^1:/.test(time) ? "la" : "las");
+const end = (text: string) => (text.endsWith(".") ? text : `${text}.`);
 
 export const es: Catalog = {
   appName: "TRADER",
@@ -71,7 +78,7 @@ export const es: Catalog = {
     firstLoad:
       "Este teléfono todavía no ha cargado tus obras. Conéctate e inténtalo de nuevo.",
     off: "No has marcado entrada.",
-    working: (job, since) => `Trabajando en ${job} desde las ${since}.`,
+    working: (job, since) => end(`Trabajando en ${job} desde ${las(since)} ${since}`),
     paused: (job) => `En descanso en ${job}.`,
     clockIn: "Marcar entrada",
     clockInAt: (job) => `Marcar entrada en ${job}`,
@@ -82,7 +89,7 @@ export const es: Catalog = {
     hoursToday: (hours) => `${hours} trabajadas hoy`,
     shiftNow: (job, start, end) => `Tu turno: ${job}, ${start}–${end}.`,
     shiftLater: (job, start) =>
-      `Tu próximo turno es en ${job} a las ${start}. Puedes marcar entrada 15 minutos antes.`,
+      `${end(`Tu próximo turno es en ${job} a ${las(start)} ${start}`)} Puedes marcar entrada ${EARLY_MINUTES} minutos antes.`,
     noMoreShifts: "No tienes más turnos hoy.",
     noShift: "No tienes turno hoy. Llama a la oficina.",
     attention: "Requiere atención",
@@ -190,7 +197,8 @@ export const es: Catalog = {
       "Este teléfono no deja que TRADER envíe notificaciones. Permítelas en los ajustes del teléfono.",
     channel: "Avisos de turno",
     startTitle: (job) => `Tu turno en ${job} está empezando`,
-    startBody: (time) => `Empieza a las ${time}. Marca entrada cuando llegues.`,
+    startBody: (time) =>
+      `${end(`Empieza a ${las(time)} ${time}`)} Marca entrada cuando llegues.`,
     endTitle: (job) => `Tu turno en ${job} terminó`,
     endBody: (time) => `Terminó a las ${time} y sigues con la entrada marcada.`,
   },

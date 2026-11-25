@@ -22,6 +22,7 @@ import { jobInvoices, listOutput } from "../invoices/read";
 import { companyZone, readDayHours } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
 import { job, readJob } from "./list";
+import { compareNames } from "../contract/order";
 
 export const readInput = z.strictObject({ jobId: z.uuid() });
 
@@ -148,8 +149,7 @@ export async function readJobPage(
     })
     .sort(
       (a, b) =>
-        compare(a.person.name.toLowerCase(), b.person.name.toLowerCase()) ||
-        compare(a.person.id, b.person.id),
+        compareNames(a.person.name, b.person.name) || compare(a.person.id, b.person.id),
     );
 
   const invoices = await jobInvoices(tx, found.id, now);

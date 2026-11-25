@@ -202,8 +202,8 @@ function Started({
           effect={s.endEarlyEffect(
             shift.worker.name,
             shift.job.name,
-            shift.expectedEnd,
-            endAt,
+            f.wall(shift.expectedEnd),
+            f.wall(endAt),
           )}
           disabled={busy || endProblem !== null}
           onConfirm={() => {
@@ -218,7 +218,7 @@ function Started({
           <p className="secondary">{s.moveNotNow}</p>
         ) : (
           <>
-            <p className="secondary">{s.moveNow(now.minute)}</p>
+            <p className="secondary">{s.moveNow(f.wall(now.minute))}</p>
             <Field id={`${formId}-job`} label={s.moveTo}>
               <select
                 id={`${formId}-job`}
@@ -243,8 +243,8 @@ function Started({
                 shift.worker.name,
                 shift.job.name,
                 target?.name ?? "",
-                now.minute,
-                shift.expectedEnd,
+                f.wall(now.minute),
+                f.wall(shift.expectedEnd),
               )}
               disabled={busy || target === undefined}
               onConfirm={() => {

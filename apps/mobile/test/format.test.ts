@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 
 import { dayName, timeOfDay, wallTime } from "../src/format";
+import { es } from "../src/i18n/es";
 
 // Intl writes a no-break space before "PM" and inside "p. m."; compared as plain spaces.
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, " ");
@@ -17,5 +18,16 @@ describe("a time of day and a day on the phone", () => {
 
   it("reads a day worked as the office does", () => {
     expect(dayName("2026-11-16", "en")).toBe("Mon, Nov 16");
+  });
+});
+
+describe("a Spanish sentence on the phone that names a time", () => {
+  it("takes one period after a. m. or p. m., and the article the hour asks for", () => {
+    expect(es.today.shiftLater("Obra", "2:30 p. m.")).toBe(
+      "Tu próximo turno es en Obra a las 2:30 p. m. Puedes marcar entrada 15 minutos antes.",
+    );
+    expect(es.reminders.startBody("1:00 p. m.")).toBe(
+      "Empieza a la 1:00 p. m. Marca entrada cuando llegues.",
+    );
   });
 });

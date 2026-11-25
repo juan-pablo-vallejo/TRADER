@@ -26,6 +26,7 @@ import { job, listJobs } from "../jobs/list";
 import { sessionAccounting } from "../labor/accounting";
 import { companyZone } from "../labor/day-hours";
 import { workDate } from "../labor/work-date";
+import { compareNames } from "../contract/order";
 
 const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
@@ -256,8 +257,7 @@ export async function overviewToday(
     })
     .sort(
       (a, b) =>
-        compare(a.person.name.toLowerCase(), b.person.name.toLowerCase()) ||
-        compare(a.person.id, b.person.id),
+        compareNames(a.person.name, b.person.name) || compare(a.person.id, b.person.id),
     );
 
   const jobIds = new Set<string>();
@@ -324,10 +324,7 @@ export async function overviewToday(
         sinceDay: e.sinceDay,
         state: earlierState.get(e.userId) ?? "working",
       })),
-    jobs: listed.sort(
-      (a, b) =>
-        compare(a.name.toLowerCase(), b.name.toLowerCase()) || compare(a.id, b.id),
-    ),
+    jobs: listed.sort((a, b) => compareNames(a.name, b.name) || compare(a.id, b.id)),
     money: {
       owed: owed.rows.map((r) => ({
         currency: r.currency,

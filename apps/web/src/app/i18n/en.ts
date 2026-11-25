@@ -2,6 +2,8 @@
 // one's keys by the compiler, so a key missing from either fails `pnpm typecheck`. Not
 // `as const`: a sentence is a string in the shape, so another language's sentence fits it.
 // The phone app's strings are its own two catalogs (apps/mobile/src/i18n).
+import { MAX_JOBSITE_RADIUS_M } from "@trader/api/contract";
+
 export const en = {
   devSignIn: "Development sign-in",
   devSignInBadEmail: "Enter an email address.",
@@ -423,7 +425,6 @@ export const en = {
     draw: "This job's hours",
     drawExplain:
       "Hours recorded on this job, by day. Copying a day adds a line with those hours as its quantity. The price is yours to type.",
-    laborOn: (day: string) => `Labor, ${day}`,
     hoursOf: (quantity: string) => `${quantity} h`,
     add: "Copy hours",
     addOf: (label: string) => `Copy ${label} into a new line`,
@@ -773,7 +774,7 @@ export const en = {
         "That is not a pair of coordinates or a maps address that shows them. It looks like 41.8240, -71.4128.",
       out_of_range: "Those numbers are not a place: check the coordinates.",
     },
-    badRadius: "Enter the radius in whole meters, from 1 to 100000.",
+    badRadius: `Enter the radius in whole meters, from 1 to ${MAX_JOBSITE_RADIUS_M}.`,
   },
   // One job's own page.
   jobPage: {

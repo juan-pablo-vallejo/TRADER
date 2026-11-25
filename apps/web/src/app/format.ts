@@ -30,14 +30,17 @@ export function formatters(language: Language, t: Catalog) {
   const timeLocale = language === "es" ? "es" : locale;
   const timeOfDay = { hour: "numeric", minute: "2-digit", hourCycle: "h12" } as const;
   const whole = (time: string) => time.replace(/ /g, "\u00a0");
+  // Anything but a whole `HH:MM` (a field still being typed) is shown as it is.
   const wall = (hhmm: string): string =>
-    whole(
-      new Intl.DateTimeFormat(timeLocale, { ...timeOfDay, timeZone: "UTC" }).format(
-        new Date(
-          Date.UTC(2000, 0, 1, Number(hhmm.slice(0, 2)), Number(hhmm.slice(3, 5))),
-        ),
-      ),
-    );
+    !/^\d{2}:\d{2}$/.test(hhmm)
+      ? hhmm
+      : whole(
+          new Intl.DateTimeFormat(timeLocale, { ...timeOfDay, timeZone: "UTC" }).format(
+            new Date(
+              Date.UTC(2000, 0, 1, Number(hhmm.slice(0, 2)), Number(hhmm.slice(3, 5))),
+            ),
+          ),
+        );
   return {
     money(cents: number, currency: string): string {
       return new Intl.NumberFormat(locale, {

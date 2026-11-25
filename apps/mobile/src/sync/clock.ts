@@ -27,11 +27,12 @@ const stepOf = (state: ClockState): ClockStep =>
   state.status === "off" ? "idle" : state.status;
 
 // The open session the server knows of, then every record of this phone the snapshot does
-// not show yet, in the order they were captured, each moving the clock by the server's own
-// rule (the contract's clockAfter). A record the server refused, or one it will refuse from
-// where the clock stands (a second clock-in while one is open), changes nothing. A voided session still open is open:
-// the server's fold reads it so and refuses a clock-in on top of it (packages/api
-// labor/fold.ts; H1), and the office now ends one before voiding it.
+// not show yet, in the order they were captured. A record the server refused changes nothing;
+// one it accepted moves the clock as it moved the server's; one not answered yet moves it only
+// by the server's own rule (the contract's clockAfter), so a second clock-in while one is open
+// changes nothing. A voided session still open is open: the server's fold reads it so and
+// refuses a clock-in on top of it (packages/api labor/fold.ts), and the office ends one
+// before voiding it.
 export function clockState(
   snapshot: PullOutput | null,
   records: readonly OutboxRecord[],
@@ -45,12 +46,16 @@ export function clockState(
   for (const r of records) {
     if (r.standing === "rejected" || known.has(r.id)) continue;
     const { type, jobId, clientTimestamp } = r.payload;
-    const next = clockAfter(stepOf(state), type);
-    if (next === undefined) continue;
-    if (next === "idle") state = { status: "off" };
-    else if (type === "started")
-      state = { status: "working", jobId, since: clientTimestamp };
-    else if (state.status !== "off") state = { ...state, status: next };
+    // A settled record is the server's own verdict: it moved the server's clock, whatever this
+    // phone's last snapshot still shows. One not answered yet moves it only as the server's
+    // rule would.
+    if (r.standing !== "settled" && clockAfter(stepOf(state), type) === undefined)
+      continue;
+    if (type === "started") state = { status: "working", jobId, since: clientTimestamp };
+    else if (type === "ended") state = { status: "off" };
+    else if (state.status !== "off") {
+      state = { ...state, status: type === "paused" ? "paused" : "working" };
+    }
   }
   return state;
 }
