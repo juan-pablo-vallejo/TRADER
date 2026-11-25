@@ -3,6 +3,7 @@
 // fields and their types, and a mark on the procedures an installed phone calls
 // (PHONE_PROCEDURES). Written by `pnpm --filter @trader/api reference` to a folder outside
 // the repository; nothing of it is committed.
+import { groupBy } from "./core/group";
 
 type Schema = {
   type?: string | string[];
@@ -76,19 +77,19 @@ const page = (title: string, body: string) =>
 // Every page, by file name: index.html and one <router>.html each.
 export function reference(wire: Wire): Record<string, string> {
   const phone = new Set((wire.lists.PHONE_PROCEDURES ?? []).map(String));
-  const routers = new Map<string, string[]>();
-  for (const path of Object.keys(wire.procedures).sort()) {
-    const router = path.split(".")[0]!;
-    routers.set(router, [...(routers.get(router) ?? []), path]);
-  }
+  const routers = groupBy(
+    Object.keys(wire.procedures).sort(),
+    (path) => path.split(".")[0]!,
+  );
   const pages: Record<string, string> = {};
   for (const [router, paths] of routers) {
     const sections = paths.map((path) => {
       const p = wire.procedures[path]!;
-      const mark = phone.has(path) ? ' <span class="phone">phone</span>' : "";
-      const input = p.input.length === 0 ? undefined : p.input[p.input.length - 1];
+      const onPhone = phone.has(path);
+      const mark = onPhone ? ' <span class="phone">phone</span>' : "";
+      const input = p.input.at(-1);
       return (
-        `<section id="${escape(path)}" data-procedure="${escape(path)}"${phone.has(path) ? ' data-phone=""' : ""}>` +
+        `<section id="${escape(path)}" data-procedure="${escape(path)}"${onPhone ? ' data-phone=""' : ""}>` +
         `<h2><code>${escape(path)}</code> · ${escape(p.type)}${mark}</h2>` +
         `<h3>Input</h3>${input === undefined ? "<p>None.</p>" : table(input)}` +
         `<h3>Output</h3>${table(p.output)}</section>`

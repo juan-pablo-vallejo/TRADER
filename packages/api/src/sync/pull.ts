@@ -43,7 +43,8 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     .from(users)
     .where(eq(users.id, user.id));
   if (self === undefined) throw new Error("the caller's own row is not visible");
-  const from = addDays(workDate(serverNow, company.timezone), 1 - WINDOW_DAYS);
+  const today = workDate(serverNow, company.timezone);
+  const from = addDays(today, 1 - WINDOW_DAYS);
 
   // Every job a start may name: not archived. Under the schedule the phone offers the
   // shift's own job; without it, the person picks from these.
@@ -94,7 +95,6 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
   const flagsOf = new Map(flagRows.map((r) => [r.id, r.flags]));
 
   // The caller's own shifts and the hours each is the eligible one, a day at a time.
-  const today = workDate(serverNow, company.timezone);
   const monday = mondayOf(today);
   const ownDays = await loadDays(tx, monday, addDays(monday, SHIFT_DAYS - 1), [user.id]);
   const shiftJobIds = [

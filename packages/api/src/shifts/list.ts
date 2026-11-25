@@ -87,7 +87,6 @@ async function plannedShifts(
 }
 
 // A week, with whether a clock-in has locked each shift.
-
 export const weekInput = z.strictObject({
   weekStart: workDay.refine(isMonday, { message: "A week starts on a Monday." }),
 });

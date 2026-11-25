@@ -1,6 +1,7 @@
 // An invitation's sends: `people.sendInvitation` emails it, `people.noteInvitation` records
-// what the admin did with the ready message on their own phone: copied, opened, or sent. Both write one row of
-// invitation_sends, which People reads back as where the invitation stands (list.ts).
+// what the admin did with the ready message on their own phone: copied, opened, or sent.
+// Both write one row of invitation_sends, which People reads back as where the invitation
+// stands (list.ts).
 //
 // The email is the words of the text message (contract/invitation.ts) with the link to
 // where the app is got, which is the host's to say and never a request's: TRADER sends this

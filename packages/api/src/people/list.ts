@@ -21,12 +21,14 @@ import type { Tx } from "../core/context";
 import { groupBy } from "../core/group";
 import { byName } from "../core/order";
 
-// One time an invitation went out: by which way, when, who sent it, and how it went. A
-// text is the admin's own message, noted when they opened it to send; an email is
-// TRADER's, with the mail service's answer. The address it went to stays in the record and
-// is not output: the panel shows the person's own.
+// How a send stands: an email sent or failed, by the mail service's answer; a WhatsApp
+// message copied, opened, or said by the admin to have gone.
 const OUTCOMES = ["sent", "failed", "copied", "opened"] as const;
 
+// One time an invitation went out, or was readied: by which way, when, who, and how it
+// stands. A WhatsApp message is the admin's own, noted as they copy it, open it and say it
+// went; an email is TRADER's, with the mail service's answer. The address it went to stays in the record and
+// is not output: the panel shows the person's own.
 const invitationSend = z.strictObject({
   id: z.uuid(),
   channel: z.enum(INVITATION_CHANNELS),

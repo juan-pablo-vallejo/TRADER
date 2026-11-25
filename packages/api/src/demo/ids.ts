@@ -1,4 +1,4 @@
-// Deterministic ids and clock arithmetic for the demo fixture.
+// Deterministic ids, and the default anchor week, for the demo fixture.
 // Every demo record carries a UUIDv7 (docs/ARCHITECTURE.md, invariant 2) whose 48-bit time is the
 // record's own client time and whose 74 random bits come from a generator seeded by the run's
 // anchor, so one anchor yields one id set every run: a second run against the same database is
@@ -39,8 +39,9 @@ export function uuidv7At(ms: number, random: () => number): string {
 }
 
 // The default anchor: the Monday two weeks before `now`'s date in the zone, so the office sees
-// two recent recorded weeks and the week it is opened in. ISO weekday arithmetic on the date only.
-export const defaultAnchor = (now: Date, timeZone: string): string =>
-  addDays(mondayOf(dayIn(now, timeZone)), -14);
+// two recent recorded weeks and the week it is opened in.
+export function defaultAnchor(now: Date, timeZone: string): string {
+  return addDays(mondayOf(dayIn(now, timeZone)), -14);
+}
 
 export const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
