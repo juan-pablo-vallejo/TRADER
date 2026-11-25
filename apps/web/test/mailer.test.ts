@@ -15,7 +15,7 @@ import {
 
 const MAIL = {
   to: "billing@customer.test",
-  subject: "Invoice 1042 from D Sierra Painting",
+  subject: "Invoice 1042 from Bluebird Painting",
   text: ["Invoice 1042 is attached.", 'Total: 556.40 USD <due> & "owed"'],
   attachment: { filename: "invoice-1042.pdf", content: new Uint8Array([37, 80, 68, 70]) },
   idempotencyKey: "0190a000-0000-7000-8000-000000000001",
@@ -36,7 +36,7 @@ describe("the Resend mailer", () => {
     const { calls, send } = recorder(accepted);
     const mailer = createResendMailer({
       apiKey: "re_test_key",
-      from: "D Sierra Painting <invoices@mail.test>",
+      from: "Bluebird Painting <invoices@mail.test>",
       fetch: send,
     });
     expect(await mailer.send(MAIL)).toEqual({
@@ -54,7 +54,7 @@ describe("the Resend mailer", () => {
     });
     expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(JSON.parse(init.body as string)).toEqual({
-      from: "D Sierra Painting <invoices@mail.test>",
+      from: "Bluebird Painting <invoices@mail.test>",
       to: ["billing@customer.test"],
       subject: MAIL.subject,
       html: "<p>Invoice 1042 is attached.</p><p>Total: 556.40 USD &lt;due&gt; &amp; &quot;owed&quot;</p>",
@@ -66,7 +66,7 @@ describe("the Resend mailer", () => {
     const { calls, send } = recorder(accepted);
     const mailer = createResendMailer({
       apiKey: "re_test_key",
-      from: "D Sierra Painting <invoices@mail.test>",
+      from: "Bluebird Painting <invoices@mail.test>",
       fetch: send,
     });
     const { attachment: _file, ...invitation } = MAIL;

@@ -10,17 +10,17 @@ import {
 describe("an invitation's words", () => {
   const input = {
     name: "Ana Ruiz",
-    company: "D Sierra Painting",
-    url: "https://dsierrapainting.jpteq.app/get",
+    company: "Bluebird Painting",
+    url: "https://bluebirdpainting.jpteq.app/get",
   };
 
   it("say the same thing in English and in Spanish, with the link", () => {
     const [english, spanish] = invitationParagraphs({ ...input, by: "whatsapp" });
     expect(english).toBe(
-      "Ana Ruiz: D Sierra Painting uses TRADER for your schedule and your hours. Get the app: https://dsierrapainting.jpteq.app/get Then sign in with this mobile number.",
+      "Ana Ruiz: Bluebird Painting uses TRADER for your schedule and your hours. Get the app: https://bluebirdpainting.jpteq.app/get Then sign in with this mobile number.",
     );
     expect(spanish).toBe(
-      "Ana Ruiz: D Sierra Painting usa TRADER para tu horario y tus horas. Obtén la aplicación: https://dsierrapainting.jpteq.app/get Después inicia sesión con este número de celular.",
+      "Ana Ruiz: Bluebird Painting usa TRADER para tu horario y tus horas. Obtén la aplicación: https://bluebirdpainting.jpteq.app/get Después inicia sesión con este número de celular.",
     );
   });
 
@@ -33,8 +33,8 @@ describe("an invitation's words", () => {
   });
 
   it("have a subject in both languages", () => {
-    expect(invitationSubject("D Sierra Painting")).toBe(
-      "D Sierra Painting: get the TRADER app / obtén la aplicación TRADER",
+    expect(invitationSubject("Bluebird Painting")).toBe(
+      "Bluebird Painting: get the TRADER app / obtén la aplicación TRADER",
     );
   });
 });

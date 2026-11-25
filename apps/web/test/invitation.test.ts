@@ -8,8 +8,8 @@ import { invitationText } from "../src/app/(office)/people/invitation";
 describe("the invitation message", () => {
   const text = invitationText({
     name: "Luis Herrera",
-    company: "D Sierra Painting",
-    url: "https://dsierrapainting.jpteq.app/get",
+    company: "Bluebird Painting",
+    url: "https://bluebirdpainting.jpteq.app/get",
   });
 
   it("is in English and in Spanish, each with the name, the company and the link", () => {
@@ -17,8 +17,8 @@ describe("the invitation message", () => {
     expect(more).toEqual([]);
     for (const part of [english!, spanish!]) {
       expect(part).toContain("Luis Herrera");
-      expect(part).toContain("D Sierra Painting");
-      expect(part).toContain("https://dsierrapainting.jpteq.app/get");
+      expect(part).toContain("Bluebird Painting");
+      expect(part).toContain("https://bluebirdpainting.jpteq.app/get");
     }
     expect(english).toContain("Get the app");
     expect(spanish).toContain("Obtén la aplicación");

@@ -29,11 +29,12 @@ afterAll(async () => {
 });
 
 const AS_ISSUED = {
-  name: "D Sierra Painting",
+  name: "Bluebird Painting",
   address: "200 Broad St, Providence, RI 02903",
   phone: "401-555-0142",
-  email: "office@dsierra.test",
-  paymentInstructions: "Check payable to D Sierra Painting LLC.\nZelle: pay@dsierra.test",
+  email: "office@bluebird.test",
+  paymentInstructions:
+    "Check payable to Bluebird Painting LLC.\nZelle: pay@bluebird.test",
   invoiceTermsDays: 15,
 };
 const TO = "billing@customer.test";
@@ -122,9 +123,9 @@ describe("what a customer is sent", () => {
         `Due ${printedDay(dueOn!)}`,
         "Invoice 77",
         "How to pay",
-        "Check payable to D Sierra Painting LLC.",
-        "Zelle: pay@dsierra.test",
-        "D Sierra Painting",
+        "Check payable to Bluebird Painting LLC.",
+        "Zelle: pay@bluebird.test",
+        "Bluebird Painting",
         "200 Broad St, Providence, RI 02903",
         "Payments received",
         "Nov 20, 2026, check",
@@ -136,15 +137,15 @@ describe("what a customer is sent", () => {
         result: "sent",
       });
       const mail = o.sent[0]!;
-      expect(mail.subject).toBe("Invoice 77 from D Sierra Painting");
+      expect(mail.subject).toBe("Invoice 77 from Bluebird Painting");
       expect(mail.text).toEqual([
         "Amount due: $1,000.00",
         `Due: ${printedDay(dueOn!)}`,
-        "Invoice 77 from D Sierra Painting (Partly paid; total $1,234.56)",
+        "Invoice 77 from Bluebird Painting (Partly paid; total $1,234.56)",
         "How to pay:",
-        "Check payable to D Sierra Painting LLC.",
-        "Zelle: pay@dsierra.test",
-        "Questions? Call D Sierra Painting at 401-555-0142.",
+        "Check payable to Bluebird Painting LLC.",
+        "Zelle: pay@bluebird.test",
+        "Questions? Call Bluebird Painting at 401-555-0142.",
         "The invoice is attached as a PDF.",
       ]);
     });
@@ -158,10 +159,10 @@ describe("what a customer is sent", () => {
       const dueBefore = (await o.bill.read({ invoiceId: before })).dueOn;
 
       await o.settings({
-        name: "Sierra & Sons Painting",
+        name: "Bluebird & Sons Painting",
         address: "9 New Road, Cranston, RI",
         phone: "401-555-0999",
-        email: "billing@sierrasons.test",
+        email: "billing@bluebirdsons.test",
         paymentInstructions: "Pay by card at the office.",
         invoiceTermsDays: 60,
       });
@@ -170,20 +171,20 @@ describe("what a customer is sent", () => {
       expect(await o.page(before)).toBe(asItWas);
       expect((await o.bill.read({ invoiceId: before })).dueOn).toBe(dueBefore);
       const old = await o.text(before);
-      expect(old).toContain("D Sierra Painting");
-      expect(old).toContain("Zelle: pay@dsierra.test");
-      expect(old).not.toContain("Sierra & Sons");
+      expect(old).toContain("Bluebird Painting");
+      expect(old).toContain("Zelle: pay@bluebird.test");
+      expect(old).not.toContain("Bluebird & Sons");
       expect(old).not.toContain("Pay by card");
       // Its email too.
       await o.bill.send({ id: uuidv7(), invoiceId: before, to: TO });
-      expect(o.sent[0]!.subject).toBe("Invoice 77 from D Sierra Painting");
+      expect(o.sent[0]!.subject).toBe("Invoice 77 from Bluebird Painting");
       expect(o.sent[0]!.text.join("\n")).toContain(
-        "Call D Sierra Painting at 401-555-0142",
+        "Call Bluebird Painting at 401-555-0142",
       );
 
       // An invoice issued after the change prints the new words.
       const after = await o.text(await o.issued(50_000));
-      expect(after).toContain("Sierra & Sons Painting");
+      expect(after).toContain("Bluebird & Sons Painting");
       expect(after).toContain("Pay by card at the office.");
       expect(after).not.toContain("Zelle");
     });

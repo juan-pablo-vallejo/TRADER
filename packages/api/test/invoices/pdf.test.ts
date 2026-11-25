@@ -20,12 +20,12 @@ import { drawn } from "./drawn";
 
 const page = (over: Partial<InvoicePage> = {}): InvoicePage => ({
   company: {
-    name: "D Sierra Painting",
+    name: "Bluebird Painting",
     address: "200 Broad St, Providence, RI 02903",
     phone: "401-555-0142",
-    email: "office@dsierra.test",
+    email: "office@bluebird.test",
   },
-  howToPay: "Check payable to D Sierra Painting LLC.\nZelle: pay@dsierra.test",
+  howToPay: "Check payable to Bluebird Painting LLC.\nZelle: pay@bluebird.test",
   payments: [{ paidOn: "2026-11-18", method: "check", amountCents: 20000 }],
   number: 1042,
   issuedOn: "2026-11-15",
@@ -114,7 +114,7 @@ describe("renderInvoice", () => {
   it("draws the invoice's own figures and words", async () => {
     const text = drawn(await renderInvoice(page()));
     for (const said of [
-      "D Sierra Painting",
+      "Bluebird Painting",
       "INVOICE",
       "Invoice 1042",
       // What a customer looks for: the amount, the day and the instructions.
@@ -123,14 +123,14 @@ describe("renderInvoice", () => {
       "Status: Issued",
       "200 Broad St, Providence, RI 02903",
       "401-555-0142",
-      "office@dsierra.test",
+      "office@bluebird.test",
       "Payments received",
       "Nov 18, 2026, check",
       "Balance",
       "How to pay",
-      "Check payable to D Sierra Painting LLC.",
-      "Zelle: pay@dsierra.test",
-      "Questions about this invoice: 401-555-0142 or office@dsierra.test",
+      "Check payable to Bluebird Painting LLC.",
+      "Zelle: pay@bluebird.test",
+      "Questions about this invoice: 401-555-0142 or office@bluebird.test",
       "Issued Nov 15, 2026",
       "Whitmore Family",
       "14 Elmgrove Ave, Providence, RI",
@@ -185,7 +185,7 @@ describe("renderInvoice", () => {
     const text = drawn(
       await renderInvoice(
         page({
-          company: { name: "D Sierra Painting", address: null, phone: null, email: " " },
+          company: { name: "Bluebird Painting", address: null, phone: null, email: " " },
           howToPay: null,
           payments: [],
         }),
@@ -272,6 +272,6 @@ describe("renderInvoice", () => {
     for (const l of lines) expect(text).toContain(l.description);
     expect(text).toContain("Invoice 1042, continued");
     expect(text).toContain("Balance");
-    expect(text).toContain("Zelle: pay@dsierra.test");
+    expect(text).toContain("Zelle: pay@bluebird.test");
   });
 });

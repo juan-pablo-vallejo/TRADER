@@ -73,25 +73,25 @@ describe("company.update", () => {
   it("writes the details an invoice prints, blank text as NULL", async () => {
     const admin = await member(owner, w, "a", "admin");
     const answer = await company(admin.who).update({
-      name: " D Sierra Painting ",
+      name: " Bluebird Painting ",
       address: "1 Main St\nProvidence, RI",
       phone: " 401-555-0100 ",
-      email: "office@dsierra.test",
-      paymentInstructions: "Check payable to D Sierra Painting.\nZelle: 401-555-0100",
+      email: "office@bluebird.test",
+      paymentInstructions: "Check payable to Bluebird Painting.\nZelle: 401-555-0100",
       invoiceTermsDays: 15,
     });
     expect(answer).toMatchObject({
-      name: "D Sierra Painting",
+      name: "Bluebird Painting",
       address: "1 Main St\nProvidence, RI",
       phone: "401-555-0100",
-      email: "office@dsierra.test",
-      paymentInstructions: "Check payable to D Sierra Painting.\nZelle: 401-555-0100",
+      email: "office@bluebird.test",
+      paymentInstructions: "Check payable to Bluebird Painting.\nZelle: 401-555-0100",
       invoiceTermsDays: 15,
       scheduleEnforced: false,
       locationStamps: true,
     });
     expect(await row(w.a.companyId)).toMatchObject({
-      name: "D Sierra Painting",
+      name: "Bluebird Painting",
       phone: "401-555-0100",
       invoiceTermsDays: 15,
     });
@@ -107,7 +107,7 @@ describe("company.update", () => {
       email: null,
       paymentInstructions: null,
       // Left out, so left alone.
-      name: "D Sierra Painting",
+      name: "Bluebird Painting",
       invoiceTermsDays: 15,
     });
   });
