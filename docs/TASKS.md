@@ -133,18 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**The office's Undo and feedback**
-
-- Schedule's Undo: Ctrl or Cmd+Z while the toast shows; focus to Undo when focus was lost;
-  the toast above an open panel, its timer paused while covered.
-- The command menu scrolls its highlighted result into view.
-- One busy-button rule on the office's write buttons: the label names the act, with
-  `aria-busy`. Pressed and hover states for every button class. Web-only tokens for easing,
-  overlay shadow, scrim, stacking order and control radius in place of raw values. Shared
-  components only, no new dependency, no new colour in `:root`.
-- Done when: a keyboard test that failed first undoes a move with a panel open.
-- See it working: staging, both languages, reviewed.
-
 **Schedule: the right week, refusals where they happen**
 
 - While another week loads, the grid shows the old week under the new week's label and takes
