@@ -100,7 +100,7 @@ export type Catalog = {
     noMoreShifts: string;
     noShift: string;
     attention: string;
-    // The rebuilt screen (item 8): one card, one button.
+    // The clock's card: one card, one button.
     shiftHours: (start: string, end: string) => string;
     onTheClock: string;
     onBreak: string;

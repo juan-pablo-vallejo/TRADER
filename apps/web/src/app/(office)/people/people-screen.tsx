@@ -16,7 +16,7 @@
 //
 // A worker's sign-in addresses are changed here, each asked about first: whoever has the
 // new address can sign in as that person, and the person is signed out everywhere. An
-// admin's are shown and not changed (the owner's word, 2026-11-23).
+// admin's are shown and not changed.
 import { whatsAppLink } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
@@ -170,7 +170,7 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   const [note, setNote] = useState<{ under: "phone" | "email"; text: string } | null>(
     null,
   );
-  // The invitation's id (M10): the same invitation sent again keeps it, so a send whose
+  // The invitation's id: the same invitation sent again keeps it, so a send whose
   // answer was lost is answered "invited" and not "taken"; anything changed is a new one.
   const minted = useRef<{ key: string; id: string } | null>(null);
   const invite = useMutation(trpc.people.invite.mutationOptions());

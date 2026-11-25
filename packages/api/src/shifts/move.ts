@@ -1,8 +1,8 @@
 // shift.endEarly and shift.moveToday: what an admin does when someone has to be
 // somewhere else mid-day. Under schedule enforcement a second shift cannot be planned while
-// the first still covers the same hours, and a shift someone clocked in on was locked whole.
-// Its end may now move earlier (migration 0002), and these two procedures are the only
-// writers that do it.
+// the first still covers the same hours, and a shift someone clocked in on is locked, all
+// but its end, which may move earlier: these two procedures are the only writers that do
+// it.
 //
 // `endEarly`: one shift and its new end. Earlier than the end it has, after its start, and,
 // for a shift a clock-in has locked, after that clock-in's minute. Nothing else about the

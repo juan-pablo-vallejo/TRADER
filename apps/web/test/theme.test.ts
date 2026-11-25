@@ -100,7 +100,7 @@ describe("the theme", () => {
     expect(
       contrast(web.get("controlBorder")!, web.get("surface")!),
     ).toBeGreaterThanOrEqual(3);
-    // A field's edge is their navy, and is seen on the canvas a page sits on as well.
+    // A field's edge is their navy, and shows on the canvas a page sits on as well.
     expect(web.get("controlBorder")).toBe(web.get("brandNavy"));
     expect(
       contrast(web.get("controlBorder")!, web.get("canvas")!),

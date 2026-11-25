@@ -6,7 +6,7 @@
 /* Google's own, for its button on the sign-in page and nothing else: "The button font is
    Google Sans Medium" (developers.google.com/identity/branding-guidelines). The Latin cut of
    the 500 weight from @fontsource/google-sans 5.3.2, OFL 1.1 (fonts/GoogleSans-LICENSE.txt),
-   served from here like the other two (the owner's word, 2026-11-23). */
+   served from here like the other two. */
 @font-face {
   font-family: "Google Sans";
   font-style: normal;

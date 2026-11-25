@@ -17,8 +17,8 @@ import { measureSkew, type Skew } from "./flags";
 import { MAX_PUSH_RECORDS } from "../contract/limits";
 
 // A batch is the device's, so a cap protects the function, not the
-// device: what is left out comes back next cycle. Vercel Pro allows 300 s by default (checked
-// on vercel.com/docs/functions/configuring-functions/duration, 2026-11-05); a push stops
+// device: what is left out comes back next cycle. Vercel Pro allows 300 s by default
+// (vercel.com/docs/functions/configuring-functions/duration, read 2026-11-05); a push stops
 // starting records after 8 s, and one record waits at most 2 s for a lock and 4 s on a
 // statement (trpc.ts, SYNC_TIMEOUTS), so a response is never held long enough to time the
 // device out.
@@ -172,7 +172,7 @@ export async function pushRecords(
   run: RunRecord,
   clock: () => number = Date.now,
   onRecordFailure: (error: unknown) => void = () => undefined,
-  // Each record answered `rejected`, for the server's own log line (M4).
+  // Each record answered `rejected`, for the server's own log line.
   onRefused: (r: Refusal) => void = () => undefined,
 ): Promise<PushOutput> {
   const started = clock();

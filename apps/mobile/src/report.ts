@@ -67,8 +67,8 @@ export function reportCaptureFailure(error: unknown): void {
   Sentry.captureException(error, { fingerprint: ["capture"] });
 }
 
-// A report made on purpose, to see one arrive with a readable stack (docs/TASKS.md, item
-// 12). A staging build's alone: Me offers it on a long press of the build's number.
+// A report made on purpose, to see one arrive with a readable stack. A staging build's
+// alone: Me offers it on a long press of the build's number.
 // Thrown and caught, so it carries a stack of its own and the app goes on.
 export const reportsOnPurpose = reporting && onPurposeAllowed(environment);
 export function reportOnPurpose(): void {

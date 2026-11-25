@@ -336,7 +336,7 @@ describe("overview.today", () => {
         },
       ]);
       // w2 has nothing today and is listed only there. w1 has a shift: listed, with the
-      // clock as it stands and none of last night's time counted as today's.
+      // clock as it stands and none of last night's time counted in today's.
       expect(answer.people.map((p) => p.person.id)).toEqual([w.w1]);
       expect(of(answer, w.w1)).toMatchObject({
         clock: { status: "paused", sinceDay: EVE },

@@ -105,7 +105,7 @@ export function toErrorReport(error: unknown, where: ReportWhere): ErrorReport {
   return event;
 }
 
-// Where an error was thrown, for the server's log line (M18): at most 8 frames, each
+// Where an error was thrown, for the server's log line: at most 8 frames, each
 // "function at file:line:col", the file only from this repository's `packages/` or `apps/`
 // (a built server's `.next/` too) and never under node_modules. Only the stack after its
 // own header (`Name: message`) is read, so nothing a message holds is taken for a frame; a

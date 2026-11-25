@@ -23,7 +23,7 @@ import styles from "./auth.module.css";
 //
 // A component of the page and not the layout: the layout also wraps the not-found screen
 // that /sign-in answers under the development identity, and a page that does not exist
-// must not wear sign-in's frame (seen locally, 2026-11-23).
+// must not wear sign-in's frame.
 
 // The headline's font, asked for ahead of the stylesheet, as the homepage does
 // ((public)/page.tsx says why it is not next/font's).

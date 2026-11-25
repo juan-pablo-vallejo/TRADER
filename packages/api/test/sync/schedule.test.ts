@@ -399,7 +399,7 @@ describe("sync.push with schedule enforcement on", () => {
     });
   });
 
-  // M3: "captured online" means sent at once. A start pushed more than two minutes after its
+  // "Captured online" means sent at once. A start pushed more than two minutes after its
   // tap waited somewhere, so it is judged as an offline one: stored, flagged, never refused.
   it("stores a worker's late-pushed start that no shift admits, as an offline one", async () => {
     await rolledBack(owner, async (tx) => {
@@ -418,7 +418,7 @@ describe("sync.push with schedule enforcement on", () => {
   it("stores a worker's start captured offline that no shift admits, flagged unscheduled", async () => {
     await rolledBack(owner, async (tx) => {
       const d = await workDayIn(tx);
-      // The phone's copy said J at 07:00; the office has since moved the day to K.
+      // The phone's copy says J at 07:00; the office has moved the day to K since.
       const id = await shift(tx, d, d.w1, d.K, "07:00", "15:30");
       await enforce(tx, d);
       const worker = who(d, d.w1, "worker");

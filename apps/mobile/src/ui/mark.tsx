@@ -1,4 +1,4 @@
-// D Sierra's mark, above sign-in: their roller and brush, the app's own icon, from its one
+// D'Sierra's mark, above sign-in: their roller and brush, the app's own icon, from its one
 // home in assets/brand. Decoration: a screen reader is told the screen's title, not this.
 import { Image, StyleSheet } from "react-native";
 

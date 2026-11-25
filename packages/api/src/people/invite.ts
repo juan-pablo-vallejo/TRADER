@@ -8,7 +8,7 @@
 // (users.ts), so two unique indexes can refuse the insert and one ON CONFLICT target would
 // cover one of them: the statement names none, so no conflict is ever raised and the
 // transaction is never aborted, and a read then says which address is held. The id is the
-// office's own uuidv7 when it sends one (M10), so a retry after a dropped response finds its
+// office's own uuidv7 when it sends one, so a retry after a dropped response finds its
 // own row and answers as the first call did; without one it is the database's.
 import { ROLES } from "../contract/enums";
 import { sql } from "drizzle-orm";

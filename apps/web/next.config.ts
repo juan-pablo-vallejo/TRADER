@@ -26,8 +26,7 @@ const config: NextConfig = {
   },
   // The homepage is its photos: AVIF where a browser takes it, WebP where it does not.
   // Each size of each photo is then made and kept twice, and Vercel bills image
-  // optimization by use: cents a month for this many photos, by the owner's word of
-  // 2026-11-23.
+  // optimization by use: cents a month for this many photos.
   images: { formats: ["image/avif", "image/webp"] },
   // No framework banner on responses.
   poweredByHeader: false,

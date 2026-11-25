@@ -231,7 +231,7 @@ describe("sync.push — the day as the field sends it", () => {
       const answer = await push(tx, d.w.who, [labor(d.w.id, d.J)], ahead);
       expect(answer.clockSkewMs).toBeGreaterThan(599_000);
       expect(answer.clockSkewMs).toBeLessThan(601_000);
-      // An October entry sent in November is also a backlog: offline (M3).
+      // An October entry sent in November is also a backlog: offline.
       expect(answer.results[0]).toMatchObject({
         ack: { clockSkewed: true, flags: ["offline", "clock_skewed"] },
       });
@@ -327,7 +327,7 @@ describe("sync.push — the day as the field sends it", () => {
       );
 
       // Another worker's own hour on a past day, sent now as if captured online then: a push
-      // that late is an offline capture (M3), so it is flagged offline and not clock_skewed.
+      // that late is an offline capture, so it is flagged offline and not clock_skewed.
       const claimed = await push(tx, d.who, [
         labor(d.userId, d.J),
         labor(d.userId, d.J, {

@@ -1,8 +1,8 @@
 // Statement budgets: the exact number of statements each phone procedure and each hot office
 // read sends (the meter, @trader/db meter.ts), and, for every read, the same number after
 // the company has grown. A statement added to one of these turns this red; a budget raised
-// on purpose says why in its commit. Time is not measured here (section H of the backend
-// plan): a count is exact on every machine.
+// on purpose says why in its commit. Time is not measured here: a count is exact on every
+// machine.
 //
 // Counted inside a rolled-back owner transaction, as every rolled-back suite calls: the
 // procedure's own transaction is a savepoint, so `savepoint` and `release` stand where a

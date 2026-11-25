@@ -134,7 +134,7 @@ export function nextSend(
 export function opensOnCrew(data: PullOutput, now: number): boolean {
   if (data.me.role !== "admin") return false;
   const today = wallClock(new Date(now), data.company.timezone).day;
-  // A voided session still open is on the clock, as the server reads it (clock.ts, H1).
+  // A voided session still open is on the clock, as the server reads it (clock.ts).
   const onTheClock = data.sessions.some((s) => s.state !== "ended");
   return !onTheClock && !data.shifts.some((s) => s.workDate === today);
 }

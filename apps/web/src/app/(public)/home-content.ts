@@ -1,18 +1,16 @@
 // D'Sierra Painting's homepage, as content: its words and its pictures in one file, so
 // the page's code never changes when they do. Nothing here is invented. The facts, the
-// number and the address to write to are D'Sierra's own, sent on 2026-11-22 (docs/TASKS.md,
-// the owner's gate 6), in a paragraph the page now says in parts: a headline, a line under
-// it, four facts, a list of services. The Spanish is a translation of theirs, adding and
-// dropping nothing. The town is the one their capability statement prints, and their street
-// address is not published; the area they serve is the owner's word of 2026-11-22. A part
-// left null or empty draws nothing.
+// number and the address to write to are D'Sierra's own, in a paragraph the page says in
+// parts: a headline, a line under it, four facts, a list of services. The Spanish is a
+// translation of theirs, adding and dropping nothing. The town is the one their capability
+// statement prints, and their street address is not published. A part left null or empty
+// draws nothing.
 //
 // The repository is public: a photo goes in `assets/pics/` only with D'Sierra's OK. These
-// are from their own Facebook page and Instagram (@dsierrapainting), on their word that
-// the photos may come from there, chosen with the owner on 2026-11-22: each as the site
-// served it, 2048 px at most, and stripped of every piece of metadata. None shows a face,
-// a plate or a street. A photo of work under way may show the crew, never a face (the
-// owner's word of 2026-11-22). A pair is one job, before and finished.
+// are from their own Facebook page and Instagram (@dsierrapainting), used with their
+// consent: each as the site served it, 2048 px at most, and stripped of every piece of
+// metadata. None shows a face, a plate or a street. A photo of work under way may show the
+// crew, never a face. A pair is one job, before and finished.
 import type { StaticImageData } from "next/image";
 
 import apartmentInterior from "../../../../../assets/pics/apartment-interior.jpg";
@@ -73,7 +71,7 @@ type HomeContent = {
 const both = (words: string): Words => ({ en: words, es: words });
 
 // A painter at work, and the picture on the team's sign-in page ((auth)/sign-in-frame.tsx), where
-// it stands by itself by the owner's word of 2026-11-23: that door is the team's. On the
+// it stands by itself: that door is the team's. On the
 // homepage, a customer's page, it is never shown without the finished ceiling beside it.
 export const SIGN_IN_PHOTO: Photo = {
   image: sprayingCeiling,

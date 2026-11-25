@@ -125,7 +125,7 @@ const REJECTIONS: Record<CorrectionRejection, true> = {
   time_in_future: true,
   // Another correction is in effect for the root than the one the office replaced.
   correction_stale: true,
-  // A void of a session the set leaves open: its worker would stay clocked in (H1). The
+  // A void of a session the set leaves open: its worker would stay clocked in. The
   // office sends the void with the session's end.
   void_leaves_session_open: true,
 };
@@ -352,7 +352,7 @@ export async function correctLabor(
   }
 
   // 8b. A void may not leave its session open: a voided open session keeps its worker
-  // clocked in on the server, and every clock-in after it is refused (H1).
+  // clocked in on the server, and every clock-in after it is refused.
   const voids = input.operations.filter((op) => op.kind === "void");
   if (voids.length > 0) {
     const after = replay([...timeline.events, ...candidates]);

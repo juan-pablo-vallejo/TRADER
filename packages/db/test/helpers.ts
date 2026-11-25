@@ -155,7 +155,7 @@ export const started = (refs: Refs): typeof entries.$inferInsert => ({
 });
 
 // The billing rows on top of fixture(): the job's customer, the admin who issues, and the
-// counter row starting where the partner's series left off. Shared by the invoice, line
+// counter row starting where a company's earlier series left off. Shared by the invoice, line
 // and guard tests.
 export async function billing(tx: Tx, values = company) {
   const refs = await fixture(tx, values);

@@ -1,4 +1,4 @@
-// Staging's API, timed (item 24e): seven of the office's reads, each called ROUNDS times
+// Staging's API, timed: seven of the office's reads, each called ROUNDS times
 // as the suite's admin, one call a second (under the firewall's 60 a minute). For each call:
 // the time the browser waited, and the server's own time and statement count from its
 // Server-Timing answer (handler.ts), which staging sends and production does not. The

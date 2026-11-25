@@ -325,8 +325,9 @@ describe("job.update", () => {
   });
 });
 
-// M6: the phone set a location through job.update, a whole-record replace, and so wrote
-// back whatever facts it had read. Its own procedure writes the location and nothing else.
+// The failure: a phone that sets a location through job.update, a whole-record replace,
+// writes back whatever facts it last read. Its own procedure writes the location and
+// nothing else.
 describe("job.setLocation", () => {
   it("writes the location alone, leaving every fact the office wrote meanwhile", async () => {
     const admin = await member(owner, w, "a", "admin");

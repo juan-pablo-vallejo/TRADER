@@ -435,7 +435,7 @@ describe("labor.correct — append, correct, void", () => {
     });
   });
 
-  // H1: a voided session that is still open keeps its worker clocked in on the server, so
+  // A voided session that is still open keeps its worker clocked in on the server, so
   // every later clock-in is refused. The void of an open session comes with its end.
   it("refuses a void that leaves its session open, and voids one ended in the same set", async () => {
     await rolledBack(owner, async (tx) => {

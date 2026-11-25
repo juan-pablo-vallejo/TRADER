@@ -89,8 +89,8 @@ const NOT_OFFERED_NAMES = ["NotSupportedError", "SecurityError"];
 
 // Whether the sign-in field's own passkey offer, the one it makes unseen as the page loads,
 // has anything to tell the person when it ends without a sign-in. Only a passkey they picked
-// and Clerk refused: a browser with none to offer fails that request at once (seen in the
-// Clerk suite, 2026-11-23), and a person who asked for nothing is told nothing.
+// and Clerk refused: a browser with none to offer fails that request at once, and a person
+// who asked for nothing is told nothing.
 export function fieldOfferSays(error: unknown): boolean {
   if (passkeyFailure(error) === "cancelled") return false;
   const e = error as {

@@ -78,7 +78,7 @@ describe("the Demo door at Clerk", () => {
     expect(TICKET_SECONDS).toBe(60);
   });
 
-  // M9: a bound row's ticket is for its own login, whoever else holds the number now.
+  // A bound row's ticket is for its own login, whoever else holds the number now.
   it("asks a token for a bound person's own login, looking nobody up by number", async () => {
     const c = clerk(token());
     expect(await c.door.ticket({ phone: PHONE, subject: "user_own" })).toBe(TOKEN);

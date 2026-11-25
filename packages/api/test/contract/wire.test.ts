@@ -1,4 +1,4 @@
-// The wire contract, pinned (H4). wire.json holds every procedure's input and output schema,
+// The wire contract, pinned. wire.json holds every procedure's input and output schema,
 // each sync payload version and the contract's shared lists, as JSON Schema from zod's own
 // `z.toJSONSchema`. A change that compiles and passes every other test can still stop an
 // installed phone syncing; here it changes this file, and the diff is read against "The

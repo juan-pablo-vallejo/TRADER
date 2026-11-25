@@ -71,7 +71,7 @@ it("reports a public call, and an observer that throws changes nothing", async (
   expect(lines.map((l) => [l.path, l.ok])).toEqual([["status.get", true]]);
 });
 
-// M4: a refused record leaves a trace on the server, one per refusal, on its call's line:
+// A refused record leaves a trace on the server, one per refusal, on its call's line:
 // the record's own id (random, the phone's), its kind and the code. Nothing of its payload.
 it("carries each refused sync record on the call's line", async () => {
   const w = await world(owner);

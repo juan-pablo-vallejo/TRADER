@@ -14,7 +14,7 @@ try {
 }
 
 async function main() {
-  // A development and CI fixture; the pilot's company is onboarded by its own task.
+  // A development and CI fixture; a real company is onboarded by its own task (onboard.ts).
   assertLocalDatabase(process.env, "the seed");
   const db = createDb();
   try {

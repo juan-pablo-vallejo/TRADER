@@ -1,4 +1,4 @@
-// Every released build's calls, replayed (H4). builds/<date>-<commit>/calls.json is what a
+// Every released build's calls, replayed. builds/<date>-<commit>/calls.json is what a
 // build sends, recorded through the phone's own client (apps/mobile test/calls.test.ts). A
 // build is used for weeks, so this server must still understand each call of every build
 // kept here: none may be refused as malformed (BAD_REQUEST) or fail (INTERNAL_SERVER_ERROR),

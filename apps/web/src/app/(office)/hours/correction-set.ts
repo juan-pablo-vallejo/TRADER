@@ -180,7 +180,7 @@ export const missingPreview = (
   ]);
 
 // A void names the session's root. An open session is ended first, in the same set: the
-// server refuses a void that leaves its session open (labor/correct.ts, H1), since its
+// server refuses a void that leaves its session open (labor/correct.ts), since its
 // worker would stay clocked in. The end is a minute before this browser's now, so a clock up
 // to a minute ahead of the server's is no future time (more is refused time_in_future), and
 // never before the session's last entry.

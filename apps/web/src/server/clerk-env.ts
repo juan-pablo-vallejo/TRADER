@@ -40,8 +40,8 @@ const headerToken = (authorization: string | null): boolean => {
 // and names the origin it was issued to (`azp`); Clerk refuses it unless that origin is
 // listed. The phone's token comes in the `Authorization` header and names no origin at all
 // — a native client has none — and Clerk, given a list, refuses a token without one
-// (`@clerk/backend` 3.27.0, assertAuthorizedPartiesClaim; seen 2026-11-16: a phone's pull
-// 401 with the list set, 200 with it blank). So a header token is verified with no list
+// (`@clerk/backend` 3.27.0's assertAuthorizedPartiesClaim, read 2026-11-16): a phone's pull
+// answers 401 with the list set and 200 with it blank. So a header token is verified with no list
 // here, and `admitsParty` (clerk-identity.ts) then holds any origin it does name to the list.
 export const partiesFor = (authorization: string | null, listed: string[]): string[] =>
   headerToken(authorization) ? [] : listed;

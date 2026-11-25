@@ -240,7 +240,7 @@ describe("reportingOnError and reportConfigFault", () => {
   });
 });
 
-// The server's own log line carries where an error was thrown (M18), and nothing else from
+// The server's own log line carries where an error was thrown, and nothing else from
 // a stack: frames in this repository's code, never a message, never a path outside it.
 describe("frames on the log line", () => {
   function thrownHere(): Error {

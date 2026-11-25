@@ -218,8 +218,9 @@ describe("job.read: the four steps", () => {
   });
 });
 
-// H5: the page read its job's invoices out of the company's newest 500, drafts first, so
-// past that an older job read "not invoiced" and offered Create invoice: billed twice.
+// The failure: a page that reads its job's invoices out of the company's newest 500,
+// drafts first, shows an older job past that as "not invoiced" and offers Create invoice:
+// billed twice.
 describe("job.read: a job's own invoices", () => {
   it("finds every invoice of the job, however many the company has", async () => {
     await rolledBack(owner, async (tx) => {

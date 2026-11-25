@@ -431,7 +431,7 @@ export default function CrewTab() {
     try {
       const fix = await currentFix();
       if (fix === null) return refuse("noFix");
-      // The place alone (M6): job.setLocation writes nothing the office typed.
+      // The place alone: job.setLocation writes nothing the office typed.
       const answer = await api.job.setLocation.mutate({
         jobId: id,
         location: { ...fix, radiusM: SET_RADIUS_M },

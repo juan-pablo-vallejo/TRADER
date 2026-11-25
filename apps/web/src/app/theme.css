@@ -3,7 +3,7 @@
    on the web is the CSS px. */
 :root {
   /* Color. The same names and values as the phone's (apps/mobile/src/theme.ts); a test
-     fails when the two differ (apps/web/test/theme.test.ts). D Sierra's brand: their indigo
+     fails when the two differ (apps/web/test/theme.test.ts). D'Sierra's brand: their indigo
      is the color of every action, link, focus ring and current item inside the office;
      their red and their navy belong to the mark, the homepage and sign-in, never to a
      control of the office and never to a status, save the navy on a control's edge
@@ -37,7 +37,7 @@
   --attention-tint: #fbefd9;
   --problem-ink: #991b1b;
   --problem-tint: #fbe6e6;
-  /* What the screens built before the tones call them: saved, waiting, wrong. */
+  /* The same tones by the names some screens use: saved, waiting, wrong. */
   --synced: var(--done-ink);
   --pending: var(--attention-ink);
   --attention: var(--problem-ink);
@@ -181,9 +181,8 @@ html {
 }
 /* On D'Sierra's homepage every word a visitor reads is inside the `data-brand` root, in
    that root's own fonts, so the document itself names none there. Without this, Next's
-   route announcer, which it appends beside the page once the page is live, inherited the
-   office's Inter and fetched all 352 KB of it a second after the page had drawn (seen on
-   staging, 2026-11-23). */
+   route announcer, which it appends beside the page once the page is live, inherits the
+   office's Inter and fetches all 352 KB of it a second after the page has drawn. */
 html:has([data-brand]) {
   font-family: system-ui, sans-serif;
 }

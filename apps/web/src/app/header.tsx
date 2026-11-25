@@ -7,7 +7,7 @@ import { CommandMenu } from "./command-menu";
 import { CompanyName } from "./company-name";
 import styles from "./header.module.css";
 
-// The office header is 56 px: D Sierra's mark at 32 px, the company's name as Settings
+// The office header is 56 px: D'Sierra's mark at 32 px, the company's name as Settings
 // holds it (company-name.tsx), the command menu's button, and the signed-in person on the
 // right. The asset is imported
 // from its one home in assets/brand, never copied. Which sign-in the person is sent to is

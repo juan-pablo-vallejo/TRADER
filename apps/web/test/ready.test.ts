@@ -100,7 +100,7 @@ describe("/api/ready", () => {
     expect(events).toHaveLength(1);
   });
 
-  // M8: where a Demo door is configured, whether the database flags its company as Demo.
+  // Where a Demo door is configured, whether the database flags its company as Demo.
   // Unflagged, the door refuses everyone; ready either way, since it can serve.
   it("says whether the Demo door's company is flagged, where there is a door", async () => {
     const [made] = await owner

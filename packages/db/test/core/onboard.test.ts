@@ -76,7 +76,7 @@ describe("onboard", () => {
     });
   });
 
-  // M8: the Demo company is flagged when it is onboarded, and only then.
+  // The Demo company is flagged when it is onboarded, and only then.
   it("flags the company as the Demo company when told to", async () => {
     await rolledBack(db, async (tx) => {
       const result = await onboard(tx, { ...input, demo: true });

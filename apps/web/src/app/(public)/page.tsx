@@ -31,9 +31,9 @@ export const dynamic = "force-dynamic";
 // reads (layout.tsx). Each from its @fontsource-variable package at the version in its
 // name, and declared in app/brand-fonts.css, which sign-in imports too.
 // Not next/font: this build lists every preloadable font under every page, so a font
-// declared here was preloaded on every route's response, the office's among them (seen in
-// staging's `Link` headers, 2026-11-23); and with no preload the Spanish headline drew in
-// three lines, then five when the serif arrived. At a fixed address the page asks for the
+// declared here is preloaded in every route's `Link` headers, the office's among them; and
+// with no preload the Spanish headline draws in three lines, then five when the serif
+// arrives. At a fixed address the page asks for the
 // headline's font itself, ahead of its stylesheet, and no page but this one and sign-in,
 // which does the same, hears of either.
 const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";
@@ -88,7 +88,7 @@ export const viewport: Viewport = { themeColor: "#140064" };
 // blurred stand-in until it arrives, and lazy unless it is the page's first: that one is
 // asked for at once and ahead of everything else, as the installed Next's docs say to
 // (`loading` and `fetchPriority`, in place of `preload`; `priority` is retired). With
-// `preload` alone the request carried no priority (Lighthouse on staging, 2026-11-23).
+// `preload` alone the request carries no priority.
 function Shot({
   photo,
   language,

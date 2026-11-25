@@ -1,4 +1,4 @@
-// A latency sample of staging's API (item 24e): `scripts/staging.sh sample` and nothing else
+// A latency sample of staging's API: `scripts/staging.sh sample` and nothing else
 // runs this. It is not a test of anything and is never part of `check` or the deploy job;
 // its file's name keeps it out of the staging suite, which loads `*.spec.ts`. Values come
 // from the environment of that one command.

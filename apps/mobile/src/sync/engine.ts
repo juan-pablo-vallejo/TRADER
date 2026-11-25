@@ -126,7 +126,7 @@ export async function runCycle(
       const snapshot: Snapshot = { shape: SNAPSHOT_SHAPE, pulledAt: now(), data };
       await store.write(SNAPSHOT_KEY, superjson.stringify(snapshot));
       await reached();
-      // Every settled record goes once a pull has succeeded (H2): the server has it, and the
+      // Every settled record goes once a pull has succeeded: the server has it, and the
       // pull read what was committed after it settled, so the snapshot shows it with its
       // flags, or it is older than the pull's window and no longer the clock's business.
       // Kept, one beyond the window was replayed into the clock for good. Cycles never
@@ -148,7 +148,7 @@ export async function runCycle(
   await reached();
   if (state === "paused" || state === "update_required") {
     // Held, the outbox is not touched. A phone with no snapshot still pulls once, so it has
-    // its jobs to clock in to: no state stops a capture (packages/api core/status.ts, H3).
+    // its jobs to clock in to: no state stops a capture (packages/api core/status.ts).
     if ((await readSnapshot(store)) === null) await pull();
     return { outcome: "held", state };
   }

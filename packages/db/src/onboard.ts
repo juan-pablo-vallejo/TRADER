@@ -33,7 +33,7 @@ const onboardingSchema = z.strictObject({
   // normalised here: a number is typed as it will be matched.
   adminPhone: z.string().regex(/^\+1[2-9][0-9]{9}$/, "not a +1 E.164 number"),
   adminEmail: z.email().max(320).optional(),
-  // The Demo company (companies.demo, M8): the one the Demo sign-in may admit people of.
+  // The Demo company (companies.demo): the one the Demo sign-in may admit people of.
   demo: z.boolean().default(false),
 });
 

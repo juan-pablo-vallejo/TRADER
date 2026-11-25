@@ -123,7 +123,7 @@ function judgeCandidate(
   } else if (candidate.type !== "started" && candidate.type !== "voided") {
     // Only an ordinary event is held to its session's job, and only now: a later start
     // correction re-attributes the session and never re-judges it. Any job the start has
-    // carried will do (M2): a phone that captured a pause or an end before it learned the
+    // carried will do: a phone that captured a pause or an end before it learned the
     // office moved the session sends the job it knew, and refused it would be refused for good.
     const opened = after.sessionOf.get(candidate.id);
     const session = after.sessions.find((s) => s.rootEventId === opened);

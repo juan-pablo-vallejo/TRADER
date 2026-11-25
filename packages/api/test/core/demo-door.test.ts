@@ -28,7 +28,7 @@ const owner = ownerDb();
 const app = appDb({ max: 4 });
 let w: World;
 
-// Both companies are flagged Demo (M8) unless a test says otherwise: the door admits people
+// Both companies are flagged Demo unless a test says otherwise: the door admits people
 // of a flagged company only.
 beforeEach(async () => {
   w = await world(owner);
@@ -146,7 +146,7 @@ describe("the closed company: the door's, in production", () => {
     ).toMatchObject({
       result: "invited",
     });
-    // Production, where the closed company is another one: D Sierra invites freely.
+    // Production, where the closed company is another one: D'Sierra invites freely.
     const other = office(admin.who, { companyId: w.b.companyId, allowed: [] });
     const second = testPhone();
     expect(
@@ -165,11 +165,11 @@ describe("demo.signIn", () => {
       ticket: `ticket-for-${person.phone}`,
     });
     expect(d.asked).toEqual([person.phone]);
-    // M9: the ticket is for the admitted row's own login, never whoever holds the number.
+    // The ticket is for the admitted row's own login, never whoever holds the number.
     expect(d.subjects).toEqual([await subjectOf(person.id)]);
   });
 
-  // M8: nothing in the database said the door's company was the Demo company.
+  // The failure: nothing in the database says the door's company is the Demo company.
   it("refuses a company not flagged as the Demo company, and asks the provider for nothing", async () => {
     const person = await personWith("a");
     await owner

@@ -5,7 +5,7 @@
 // holds it FOR UPDATE instead: a customer change must exclude an invoice's KEY SHARE, since
 // invoices reference (company_id, customer_id, id). `setStatus` writes any of the three
 // statuses, `archived` reversible and reading no ledger: an open session on an archived job
-// ends through push as today; leaving `archived` re-judges the customer, so a deactivated one
+// still ends through push; leaving `archived` re-judges the customer, so a deactivated one
 // never regains a live job. Lock order: jobs, customers, then the caller (lockActiveSelf).
 import { invoices, jobStatus, jobs } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
@@ -43,7 +43,7 @@ export const updateInput = z.strictObject({
 
 export type UpdateInput = z.infer<typeof updateInput>;
 
-// The phone's own write (M6): a jobsite's place, set where the admin stands, and nothing
+// The phone's own write: a jobsite's place, set where the admin stands, and nothing
 // else. job.update is a whole-record replace, so a phone sending it would write back
 // whatever facts it last read over what the office typed since.
 export const setLocationInput = z.strictObject({

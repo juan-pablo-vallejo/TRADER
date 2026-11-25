@@ -30,8 +30,8 @@ export const companies = pgTable(
     // Whether a clock tap is stamped with the phone's location. A person's own setting
     // (users.location_stamps) wins where it is set.
     locationStamps: boolean("location_stamps").notNull().default(true),
-    // The Demo company: the one the Demo sign-in may admit people of (api core/demo-door.ts,
-    // M8). Set by the owner alone: the application's role has no grant on it, so only
+    // The Demo company: the one the Demo sign-in may admit people of (api core/demo-door.ts).
+    // Set by the owner alone: the application's role has no grant on it, so only
     // onboarding (`--demo`) or the owner's SQL writes it.
     demo: boolean("demo").notNull().default(false),
     createdAt,

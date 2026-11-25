@@ -392,8 +392,8 @@ describe("an address change at Clerk", () => {
     namesNoAddress(c.calls);
   });
 
-  // H6: a change that stopped after adding an address left the login holding a verified
-  // address its roster row does not, which a first sign-in could then bind elsewhere.
+  // The failure: a change that stops after adding an address leaves the login holding a
+  // verified address its roster row does not, which a first sign-in could then bind elsewhere.
   it("takes an address it added back off, and restores the primary, when a later step fails", async () => {
     const theirs = login("user_theirs", {
       phone_numbers: [{ id: "idn_t", phone_number: NEW_PHONE }],

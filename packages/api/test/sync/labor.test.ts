@@ -365,7 +365,7 @@ describe("sync.push labor — the time an event claims, against its receipt", ()
     });
   });
 
-  // M3 (the owner's decision 6): a push that arrives more than two minutes after its tap,
+  // A push that arrives more than two minutes after its tap,
   // by the device's own clock, is an offline capture whatever the record says: flagged
   // `offline`, never `clock_skewed`. The row keeps what the phone sent.
   it("treats an entry pushed more than two minutes after its tap as captured offline", async () => {

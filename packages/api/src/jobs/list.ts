@@ -16,8 +16,8 @@ export const location = z.strictObject({
 });
 
 // What a writer accepts: the stored shape, with the radius bounded. The column is a 32-bit
-// integer, and 100 km is already no jobsite. Only inputs carry the bound, so a row written
-// before it existed still reads back.
+// integer, and 100 km is already no jobsite. Only inputs carry the bound, so a stored row
+// beyond it still reads back.
 export const locationInput = location.extend({
   radiusM: z.number().int().min(1).max(MAX_JOBSITE_RADIUS_M),
 });

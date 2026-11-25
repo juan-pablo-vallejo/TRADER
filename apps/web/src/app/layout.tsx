@@ -8,11 +8,11 @@ import "./theme.css";
 
 // Inter, from the repository itself (fonts/, with its license): the content security policy
 // admits no font host, so nothing is fetched from one. One variable file, every weight.
-// Not preloaded: at 352 KB, with every script Inter draws, it was asked for on every page,
-// the homepage among them, where it was most of what stood before the first photo on a
-// slow connection (Lighthouse on staging, 2026-11-23: mobile 86, and 98 with this one
-// request blocked). A page that sets text in it fetches it when its stylesheet asks; the
-// homepage sets its text in the Latin cut instead ((public)/page.tsx). The owner's choice.
+// Not preloaded: at 352 KB, with every script Inter draws, it would be asked for on every
+// page, the homepage among them, where it is most of what stands before the first photo on
+// a slow connection (Lighthouse, mobile: 86, and 98 with this one request blocked). A page
+// that sets text in it fetches it when its stylesheet asks; the homepage sets its text in
+// the Latin cut instead ((public)/page.tsx).
 // This build lists every preloadable font under every page, so a preload is all or none.
 const inter = localFont({
   src: "./fonts/InterVariable.woff2",

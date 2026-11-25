@@ -50,7 +50,7 @@ const REFUSALS = [
   "phone_taken",
   // The provider holds it under another login. Whose, it does not say, and neither do we.
   "address_held",
-  // No login is this row's: made before logins were tagged, and never signed in to.
+  // No login is this row's: none carries its tag, and it has never signed in.
   "no_login",
   "company_closed",
 ] as const;
@@ -58,7 +58,7 @@ type Refusal = (typeof REFUSALS)[number];
 
 export const addressOutput = z.discriminatedUnion("result", [
   z.strictObject({ result: z.literal("changed"), user: person }),
-  // The row already had it. `matched`: and the provider's login did not, until now.
+  // The row already had it. `matched`: and the provider's login did not, and now does.
   z.strictObject({ result: z.literal("unchanged"), user: person }),
   z.strictObject({ result: z.literal("matched"), user: person }),
   z.strictObject({ result: z.literal("rejected"), code: z.enum(REFUSALS) }),

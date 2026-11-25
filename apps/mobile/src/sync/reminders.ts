@@ -27,7 +27,7 @@ type Reminder = {
   // Its time has come, within the last few minutes. No exact-alarm permission is asked
   // for, so the phone may deliver a reminder a little late: one that is due is left
   // pending and never set again (reconcile below). Without this the next pull would cancel
-  // a reminder the phone was about to show (seen on Android, 2026-11-19).
+  // a reminder the phone was about to show.
   due: boolean;
 };
 

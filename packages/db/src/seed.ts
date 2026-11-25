@@ -1,6 +1,6 @@
 // The seed: one company, its invoice number counter, and its first admin —
 // the one user nobody exists to invite. A development and CI fixture with
-// placeholder values, never the pilot's onboarding. It runs as the owner: trader_app may
+// placeholder values, never a real company's onboarding. It runs as the owner: trader_app may
 // insert neither companies nor invoice_counters, and FORCE denies every row to
 // a role with no policy that does not bypass row-level security, so the seed refuses any such
 // role, trader_app included, before its first write — the startup guard's inverse.
@@ -23,8 +23,8 @@ export type SeedCompany = {
   adminName: string;
 };
 
-// Placeholders, never the partner's details. The id is fixed because companies has no
-// natural key and a re-run must find its row. America/New_York: the pilot is in RI/MA.
+// Placeholders, never a real company's details. The id is fixed because companies has no
+// natural key and a re-run must find its row. America/New_York: D'Sierra's zone (RI/MA).
 // The email is the invitation key (users.ts); identity_subject stays NULL until the first
 // sign-in binds it.
 export const SEED: SeedCompany = {
@@ -54,7 +54,7 @@ export async function seed(
     ON CONFLICT (id) DO NOTHING
   `);
   // Inserted once and never updated: a re-run must not rewind a series that has issued
-  // numbers. The series starts at 1 until onboarding sets where the partner's series
+  // numbers. The series starts at 1 until onboarding sets where the company's own series
   // continues, before the first issue.
   await executor.execute(sql`
     INSERT INTO invoice_counters (company_id, next_invoice_number)

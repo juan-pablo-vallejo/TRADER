@@ -4,17 +4,17 @@
 //
 // It admits nobody else. A number is let through only when it is the sign-in number of an
 // active person of the one company the host names (`companyId`), and that company is flagged
-// as the Demo company in the database (companies.demo, which the owner alone sets: M8): the
-// Demo company in production, the fixture company on staging. D Sierra's people are in another company, so
+// as the Demo company in the database (companies.demo, which the owner alone sets): the
+// Demo company in production, the fixture company on staging. D'Sierra's people are in another company, so
 // no code, right or wrong, signs anyone in as one of them. What comes back is a single-use
-// ticket from the identity provider for that one person's own login (M9: the row's bound
+// ticket from the identity provider for that one person's own login (the row's bound
 // subject; only an invitation not yet signed in is found by its number), which the phone
 // redeems as an ordinary session: from there every request is judged as any other.
 //
 // One answer for every refusal, so a caller learns nothing of which part was wrong: no
 // door on this host, a wrong code, a number that is not a Demo person's, a provider that
 // did not answer. (Whether a host has a door, and whether its company is flagged, is no
-// secret: /api/ready says so, M8.) The code is compared in constant time. Request rates are the firewall's
+// secret: /api/ready says so.) The code is compared in constant time. Request rates are the firewall's
 // (apps/web, edge.ts); the code is long enough that guessing it is not a plan. The door
 // itself is the host's (apps/web, clerk-demo.ts).
 import { createHash, timingSafeEqual } from "node:crypto";

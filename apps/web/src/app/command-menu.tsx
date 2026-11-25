@@ -12,8 +12,8 @@
 //
 // A text field that is a `combobox` over a `listbox`, inside a native modal `<dialog>`:
 // the browser keeps Tab inside, closes it on Escape and makes the page behind inert. No
-// library: looked up 2026-11-20, cmdk 1.1.1 brings four Radix packages, a dialog among
-// them, for what the platform's dialog and some sixty lines here already do, and this
+// library: cmdk 1.1.1 brings four Radix packages, a dialog among them (its package on npm,
+// read 2026-11-20), for what the platform's dialog and some sixty lines here already do, and this
 // office's style policy allows no inline style where Clerk is not the identity. Mounted
 // by header.tsx.
 import { useQuery } from "@tanstack/react-query";

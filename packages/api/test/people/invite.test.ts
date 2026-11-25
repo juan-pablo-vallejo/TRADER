@@ -385,8 +385,8 @@ describe("people.invite", () => {
   });
 });
 
-// M10: the one office writer that did not re-read its caller under a lock, and whose retry
-// after a dropped response answered "taken" for its own invitation.
+// The failure: an office writer that does not re-read its caller under a lock, and whose
+// retry after a dropped response answers "taken" for its own invitation.
 describe("people.invite, the caller and a retry", () => {
   it("re-reads the caller under lock: a deactivation committed while it waited refuses", async () => {
     const admin = await member(owner, w, "a", "admin");

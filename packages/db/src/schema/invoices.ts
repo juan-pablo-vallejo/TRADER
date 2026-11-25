@@ -67,7 +67,7 @@ export const invoices = pgTable(
     customerId: uuid("customer_id").notNull(),
     jobId: uuid("job_id").notNull(),
     // NULL while draft; assigned at issue by the trigger, never supplied. Unique per
-    // company: the series. The partner's format (prefix, padding) is presentation.
+    // company: the series. The company's format (prefix, padding) is presentation.
     number: integer("number"),
     // ISO 4217, upper case; no default.
     currency: text("currency").notNull(),

@@ -71,7 +71,7 @@ const wordings = (leaf: Leaf) =>
 const word = (alternatives: string) =>
   new RegExp(`(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`, "iu");
 
-// Words the phone no longer shows: the office's list (apps/web/test/i18n.test.ts) but for
+// Words the phone does not show: the office's list (apps/web/test/i18n.test.ts) but for
 // the work session, which only the office leaves unnamed, and the phone's own: a shift
 // reminder is a "recordatorio", a flag stays an "aviso". "jobsite" stays only in a sentence
 // about a place.

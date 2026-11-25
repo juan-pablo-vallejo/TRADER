@@ -10,7 +10,7 @@
 // Clerk is not this server's identity — the development identity, or no keys, as in CI's
 // build — nothing of Clerk runs. Nor does it for a public page (sign-in-paths.ts): a
 // visitor to the homepage has no session to verify, and Clerk's check would send their
-// browser to Clerk's host and back (seen on staging, 2026-11-19).
+// browser to Clerk's host and back.
 // The policy's: on a built app every response it passes carries the content security policy
 // (server/csp.ts) with a nonce made for that request, handed to the page render on the
 // request's headers, where Next looks for it. A development server gets none: it is never

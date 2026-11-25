@@ -32,7 +32,7 @@ export const color = {
   attentionTint: "#FBEFD9",
   problemInk: "#991B1B",
   problemTint: "#FBE6E6",
-  // What the screens built before the tones call them: sent, waiting, wrong.
+  // The same tones by the names some screens use: sent, waiting, wrong.
   synced: "#166534",
   pending: "#92400E",
   attention: "#991B1B",

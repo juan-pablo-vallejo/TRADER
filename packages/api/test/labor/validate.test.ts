@@ -422,7 +422,7 @@ describe("job attribution", () => {
     return { ev, start, end, fix };
   };
 
-  // M2: a phone that captured a pause before it learned the office moved the session sends
+  // A phone that captured a pause before it learned the office moved the session sends
   // the job the session had when it started. Refused, it would be refused for good.
   it("holds an ordinary pause to a job the session's start has carried", () => {
     const { ev, start, end, fix } = corrected();

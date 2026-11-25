@@ -1,6 +1,6 @@
-// One grouping for the whole API (core/group.ts, M13): each key's rows in their input order,
-// keys in the order first seen. Pushed, never copied: grouping a worker's whole history was
-// quadratic at five sites.
+// One grouping for the whole API (core/group.ts): each key's rows in their input order,
+// keys in the order first seen. Pushed, never copied: copying makes grouping a worker's
+// whole history quadratic.
 import { expect, it } from "vitest";
 
 import { groupBy } from "../../src/core/group";

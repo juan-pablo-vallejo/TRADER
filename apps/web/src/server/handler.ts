@@ -54,7 +54,7 @@ type HandlerDependencies = {
   timingHeaders?: () => boolean;
 };
 
-// The call's line, then one line per record it refused (M4), each under the call's request
+// The call's line, then one line per record it refused, each under the call's request
 // id, so a refusal is found by searching for `trader_refusal` alone.
 // The lines are written as records are answered: a call that then fails before any record
 // ran (a deactivated caller) has logged refusals it never answered.

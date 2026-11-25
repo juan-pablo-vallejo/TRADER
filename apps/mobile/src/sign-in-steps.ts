@@ -25,7 +25,7 @@ export type Answer = { ok: true } | { ok: false; code: string | undefined };
 export type Provider = {
   // A session the provider still keeps on the phone from before. Its keychain outlives a
   // cleared app, and an earlier sign-in may have stopped half-way: the provider then
-  // refuses a new one as "already signed in" (seen on staging, 2026-11-19).
+  // refuses a new one as "already signed in".
   forgetStale(): Promise<void>;
   sendCode(to: SignInIdentifier): Promise<Answer>;
   verifyCode(to: SignInIdentifier, code: string): Promise<Answer>;

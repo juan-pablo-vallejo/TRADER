@@ -284,8 +284,8 @@ describe("a cycle", () => {
     expect(SNAPSHOT_SHAPE).toBe(1);
   });
 
-  // H2: a settled record the pull no longer shows (older than its window) was never pruned,
-  // and was replayed into the clock.
+  // The failure: a settled record the pull no longer shows (older than its window) is never
+  // pruned, and is replayed into the clock.
   it("prunes every settled record once a pull has succeeded, shown or not", async () => {
     const p = await phone();
     const [old, recent] = await p.capture(2);
@@ -431,7 +431,7 @@ describe("the service's state", () => {
     },
   );
 
-  // H3: under a hold, a phone with no snapshot had nothing to clock in to.
+  // The failure: under a hold, a phone with no snapshot has nothing to clock in to.
   it.each(["paused", "update_required"] as const)(
     "pulls once under %s when it has no snapshot, and sends nothing",
     async (state) => {
@@ -523,7 +523,8 @@ describe("coalesced triggers", () => {
   });
 });
 
-// M1: a call that never answered held the cycle, and every later one behind it, for good.
+// The failure: a call that never answers holds the cycle, and every later one behind it,
+// for good.
 describe("a call that never answers", () => {
   it("is given up at the deadline, as the network failing is, at every stage", async () => {
     const p = await phone();

@@ -4,12 +4,12 @@
 // person still proves it is theirs, by the code sent to it at every sign-in.
 //
 // One documented call, Clerk's Backend API `POST /v1/users`, made with `fetch` so that its
-// timeout and every answer it can give are stated here. What was read on the development
-// instance (2026-11-12): a number alone is accepted; an address another user holds answers
-// 422 `form_identifier_exists` naming that address. An email with no number answered 422
-// `form_data_missing` while the instance required a number; it requires none since
-// 2026-11-23 (`auth_phone.required_for_sign_up: false`), and a person invited by email alone
-// is created by it.
+// timeout and every answer it can give are stated here. On the development instance (its
+// answers, read 2026-11-12): a number alone is accepted; an address another user holds
+// answers 422 `form_identifier_exists` naming that address. The instance requires no number
+// (`auth_phone.required_for_sign_up: false`, its configuration, read 2026-11-23), so a
+// person invited by email alone is created by it; where a number is required, an email with
+// no number answers 422 `form_data_missing`.
 //
 // A login made here carries the roster row's id as Clerk's `external_id`: the row's login
 // can then be found by what it is, never by an address that someone else may hold. A login
@@ -27,7 +27,7 @@
 // goes on first, verified and primary, and Clerk's "another user has it" is the answer
 // `held` with nothing yet changed; then links to other accounts and passkeys come off,
 // then the addresses the roster no longer holds, then every session is revoked. Each step
-// is one documented Backend API call (paths read from @clerk/backend 3.27.0, 2026-11-23),
+// is one documented Backend API call (paths from @clerk/backend 3.27.0, read 2026-11-23),
 // all under one deadline, and done again from the top they finish what was left. What is
 // not removed here: a Face ID or fingerprint key from the phone app, for which the Backend
 // API of that version has no call.
@@ -46,7 +46,7 @@ export const ADMIT_TIMEOUT_MS = 5_000;
 // people.setEmail and people.setSignInPhone wait on this inside their transaction, with the
 // person's row locked: one deadline for every call a change makes, not one each.
 export const READDRESS_TIMEOUT_MS = 5_000;
-// What putting a failed change back may take, after it (H6).
+// What putting a failed change back may take, after it.
 const UNDO_TIMEOUT_MS = 3_000;
 
 const EXISTS = "form_identifier_exists";
@@ -215,7 +215,7 @@ export function createClerkDirectory(deps: {
     ];
     let changed = false;
     // What this change added, and each primary it moved, so that a step failing before the
-    // old addresses come off puts the login back as it was (H6): an added, verified address
+    // old addresses come off puts the login back as it was: an added, verified address
     // its roster row does not hold could be bound to another company's invitation.
     const added: string[] = [];
     const moved: { path: string; id: string }[] = [];

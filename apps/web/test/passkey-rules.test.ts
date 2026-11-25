@@ -64,9 +64,9 @@ describe("why a passkey was not added, removed or used", () => {
 });
 
 // The sign-in field asks the browser for a passkey by itself, unseen, as the page loads
-// (sign-in-form.tsx). Seen in the Clerk suite, 2026-11-23: in a browser with no passkey to
-// offer, that request fails at once, and the form told a person who had asked for nothing
-// that "that passkey did not work", over the answer to the code they had asked for.
+// (sign-in-form.tsx). In a browser with no passkey to offer, that request fails at once;
+// the failure is a form that tells a person who asked for nothing that "that passkey did not
+// work", over the answer to the code they asked for.
 describe("what the sign-in field's own passkey offer says when it fails", () => {
   it("says nothing when the browser could not offer one, or the offer was set aside", () => {
     for (const code of [

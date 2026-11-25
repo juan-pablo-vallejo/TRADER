@@ -176,7 +176,7 @@ describe("a session's correction set", () => {
     expect(voidOperation(ended, NOW)).toEqual([{ kind: "void", voidsEventId: "start" }]);
   });
 
-  // H1: the server refuses a void that leaves its session open.
+  // The server refuses a void that leaves its session open.
   it("ends an open session before voiding it, a minute back or at its last entry", () => {
     const open = {
       ...session(),

@@ -1,21 +1,21 @@
 // The privacy policy and the terms, as content: the words in English and Spanish, in one
 // file, so the pages' code never changes when the words do.
 //
-// A DRAFT until the owner approves it (docs/TASKS.md, item 21, the owner's gate 7). While
-// `APPROVED` is false both pages say so at the top. Three things are the owner's and are
-// not invented here: who operates TRADER (the legal name) and how to reach them about
-// privacy, both his word of 2026-11-22, and any clause a lawyer wants (liability,
+// A DRAFT until the owner approves it. While `APPROVED` is false both pages say so at the
+// top. Three things are the owner's and are not invented here: who operates TRADER (the
+// legal name), how to reach them about privacy, and any clause a lawyer wants (liability,
 // governing law), of which there is none. A part left null draws a line saying it is
 // still to come, on the draft only.
 //
 // The policy says what the product does and no more. Each sentence below is held to the
 // code: a location stamp at each clock tap unless switched off (apps/mobile/src/location.ts,
 // packages/api/src/sync/scope.ts), error reports to Sentry (apps/web/src/server/reporter.ts
-// and, for the phone, docs/TASKS.md item 12), sign-in by Clerk (a code, or Google: (auth)/sign-in), invoice and invitation email by
+// and, for the phone, apps/mobile/src/report.ts), sign-in by Clerk (a code, or Google: (auth)/sign-in), invoice and invitation email by
 // Resend (packages/api, invoices/send.ts and people/invitation.ts),
 // reminders that never leave the phone (apps/mobile/src/reminders.tsx), no analytics.
-// The city on a phone's report is Sentry's own doing: it looks up the connection's address
-// as the report arrives and stores the place, not the address (read on a report, 2026-11-22).
+// The city on a phone's report is Sentry's own doing: it looks up the connection's
+// address as the report arrives and stores the place, not the address (a Sentry report,
+// read 2026-11-22).
 import type { Language } from "../i18n/language";
 
 export const APPROVED = false;

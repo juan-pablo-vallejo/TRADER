@@ -63,7 +63,7 @@ const header = {
 
 export const LIST_LIMIT = 500;
 export const listOutput = z.array(z.strictObject(header));
-// invoice.list: the newest LIST_LIMIT, and whether there are more than it shows (H5). The
+// invoice.list: the newest LIST_LIMIT, and whether there are more than it shows. The
 // office says so above the list; a job's own invoices are read whole (jobInvoices).
 export const invoiceListOutput = z.strictObject({
   items: listOutput,

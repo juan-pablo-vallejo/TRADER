@@ -1,4 +1,4 @@
-// The phone's API client (src/api.ts): every request given up at its deadline (M1), and no
+// The phone's API client (src/api.ts): every request given up at its deadline, and no
 // request carrying more calls than the server answers in one.
 import { expect, it } from "vitest";
 

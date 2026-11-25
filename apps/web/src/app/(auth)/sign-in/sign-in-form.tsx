@@ -192,8 +192,8 @@ export function SignInForm({
     void attempt(async () => {
       // The field's passkey offer (below) has already started a sign-in of its own, and
       // Clerk's `sso` goes to Google only for a sign-in it starts itself: on one already
-      // started it does nothing at all (@clerk/clerk-js 6.43.1, SignInFuture.sso). Seen
-      // on staging: the button did nothing. So the passkey's is set aside first. The code
+      // started it does nothing at all (@clerk/clerk-js 6.43.1, SignInFuture.sso), and the
+      // button would do nothing. So the passkey's is set aside first. The code
       // buttons need nothing of the kind: each call starts its own sign-in.
       await signIn.reset();
       const { error } = await signIn.sso({
@@ -351,8 +351,8 @@ export function SignInForm({
           maxLength={254}
           // The field's value is the browser's, not this component's: React empties a
           // field whose value it holds as it takes the page over, so an address typed,
-          // pasted or filled in before the script arrived was erased under the person
-          // (seen on staging). `typed` is only what the field starts from when it is
+          // pasted or filled in before the script arrives would be erased under the
+          // person. `typed` is only what the field starts from when it is
           // drawn again, after "Use a different number or email".
           defaultValue={typed}
           aria-invalid={invalid}

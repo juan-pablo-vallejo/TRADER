@@ -5,8 +5,8 @@
 //   - it has a session and cannot mint a token now (no network): the call is not made;
 //   - it has loaded and holds no session: nobody is signed in there, and the call goes with
 //     no header, so the server's 401 is the true answer and the app asks for a sign-in.
-// Sending no header in the first two made the server answer 401 to a signed-in person, and
-// the app said "sign in again" (seen 2026-11-16 on a relaunch).
+// Sending no header in the first two makes the server answer 401 to a signed-in person, and
+// the app says "sign in again" on a relaunch.
 export type TokenSource = {
   loaded: boolean;
   session: { getToken: () => Promise<string | null> } | null | undefined;

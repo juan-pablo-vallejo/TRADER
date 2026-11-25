@@ -13,7 +13,7 @@ export type CallLine = {
   ok: boolean;
   // The tRPC code a failed call answered; null on success.
   code: string | null;
-  // What the call refused as data (M4): each sync record answered `rejected`, by the
+  // What the call refused as data: each sync record answered `rejected`, by the
   // phone's own random id, its kind and the code. Empty for every other call.
   refusals: Refusal[];
 };

@@ -28,8 +28,8 @@ export function measureSkew(deviceNow: Date, serverNow: Date): Skew {
 
 // "Captured online" is the phone's word that an entry was sent as it was tapped. One that
 // reaches the server more than two minutes after its tap, by the device's own clock (so no
-// skew enters it), waited somewhere: it is judged as captured offline (the owner's decision
-// 6, M3). Strictly beyond: exactly two minutes is at once. The row keeps what the phone sent.
+// skew enters it), waited somewhere: it is judged as captured offline. Strictly beyond:
+// exactly two minutes is at once. The row keeps what the phone sent.
 const LATE_PUSH_MS = 2 * 60 * 1000;
 
 export function capturedOfflineIn(

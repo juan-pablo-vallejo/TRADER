@@ -290,8 +290,8 @@ describe("the workflows and the staging key", () => {
     expect(job("check")).not.toMatch(/secrets\.|environment:/);
     expect(deploy).toMatch(/\n {4}needs: check\n/);
     expect(deploy).toMatch(/\n {4}if: github\.event_name == 'push'\n/);
-    // Beside it, the two phone workflows, each with its own named secrets and no other
-    // (the owner's amendment of 2026-11-20). Every other workflow holds none.
+    // Beside it, the two phone workflows, each with its own named secrets and no other.
+    // Every other workflow holds none.
     for (const file of files) {
       if (!["ci.yml", "preview-phone.yml", "release-phone.yml"].includes(file)) {
         expect(text(file), file).not.toMatch(/secrets\./);

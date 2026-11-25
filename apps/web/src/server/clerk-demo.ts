@@ -1,10 +1,11 @@
 // Clerk behind the Demo sign-in's door (packages/api, core/demo-door.ts). The API decides
 // who is admitted, from its own rows; this file only asks Clerk for a single-use sign-in
-// token for that row's own login (M9), or, for an invitation not yet signed in, the one
+// token for that row's own login, or, for an invitation not yet signed in, the one
 // user who holds its number, and never for anybody the API did not admit.
 //
 // Two documented calls, Clerk's Backend API `GET /v1/users` and `POST /v1/sign_in_tokens`
-// (read 2026-11-19; the same two the smoke test's tickets use, e2e/tickets.ts), made with
+// (Clerk's Backend API reference, read 2026-11-19), the same two the smoke test's tickets
+// use (e2e/tickets.ts), made with
 // `fetch` so the timeout and every answer are stated here. A token is good once and for a
 // minute: the phone redeems it at once (`ticket` strategy) or asks again.
 //

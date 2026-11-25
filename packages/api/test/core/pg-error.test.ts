@@ -1,8 +1,8 @@
 // core/pg-error.ts: a database refusal read by shape. The web build can hold two copies of
 // drizzle-orm, and an error from one is no instance of the other's class: a reader that
-// asked `instanceof` answered a refusal the database had named with a 500 on the deployed
-// route (seen 2026-11-15, an overpayment), while every suite, which loads one copy, was
-// green. These errors are of no class this file imports.
+// asks `instanceof` answers a refusal the database named (an overpayment, say) with a 500
+// on the deployed route, while every suite, which loads one copy, is green. These errors
+// are of no class this file imports.
 import { describe, expect, it } from "vitest";
 
 import { pgFailure } from "../../src/core/pg-error";

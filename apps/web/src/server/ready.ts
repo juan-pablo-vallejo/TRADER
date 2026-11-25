@@ -6,7 +6,7 @@
 // trader_app by a startup option over the compose superuser (db.ts), so there it is the
 // runtime guard alone.
 // The answer is a boolean, the commit the deployment was built from and, where a Demo door is
-// configured, whether the database flags its company as the Demo company (M8: unflagged,
+// configured, whether the database flags its company as the Demo company (unflagged,
 // the door refuses everyone), and nothing else:
 // the route is public, and why a deployment is not ready belongs in the error report, not
 // in a response anyone can read. The commit is the platform's own variable, a public

@@ -126,7 +126,7 @@ describe("the sign-in form", () => {
     const sheet = read("(auth)/sign-in/google-button.module.css");
     expect(read("(auth)/auth.module.css")).not.toContain(".google");
     const rule = sheet.slice(sheet.indexOf(".google {"), sheet.indexOf(".google img"));
-    // Google's light button, as its branding page has it (read 2026-11-23).
+    // Google's light button (Google's branding page, read 2026-11-23).
     for (const part of [
       "background: #ffffff;",
       "box-shadow: inset 0 0 0 1px #747775;",

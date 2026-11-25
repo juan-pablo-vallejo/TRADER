@@ -98,7 +98,7 @@ const wordings = (leaf: Leaf) =>
 const word = (alternatives: string) =>
   new RegExp(`(?<![\\p{L}\\p{N}_])(?:${alternatives})(?![\\p{L}\\p{N}_])`, "iu");
 
-// Words the office no longer shows, one word per thing per language: People and Personal,
+// Words the office does not show, one word per thing per language: People and Personal,
 // Hours, Correct, "corrected", "Iniciar sesión", "Trabajando", no noun for a work session,
 // On and Off, full forms, "the office". "jobsite" stays only in a sentence about a place.
 const RETIRED = {

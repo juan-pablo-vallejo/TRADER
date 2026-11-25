@@ -66,7 +66,7 @@ describe("the procedure context", () => {
     // configured, for an emailed invitation to link to.
     // `observe` is where a call's timing line goes (observe.ts): a function that takes
     // numbers and a path, reaching no database and naming no one.
-    // `refused` collects the call's refusals for that line (trpc.ts, M4): a function that
+    // `refused` collects the call's refusals for that line (trpc.ts): a function that
     // takes a record's random id, its kind and a code.
     expect(seen.keys).toEqual([
       "closed",

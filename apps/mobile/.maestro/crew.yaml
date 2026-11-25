@@ -14,7 +14,7 @@ appId: app.jpteq.trader
     timeout: 30000
 - takeScreenshot: crew
 # Centred: just scrolled into view, the button can sit under the tab bar, which then takes
-# the tap (seen on the iPhone 17 simulator once the crew list grew, 2026-11-24).
+# the tap once the crew list is long enough to scroll.
 - scrollUntilVisible:
     element:
       id: "crew-add"

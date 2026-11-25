@@ -40,8 +40,8 @@ export function contentSecurityPolicy(options: {
   // Clerk's Frontend API host, or null where Clerk is not this server's identity.
   clerkFrontendApi: string | null;
   // A public page: a `style` attribute is admitted, and nothing else inline. next/image
-  // draws a photo's blurred stand-in as one, and the homepage is its photos (the owner's
-  // word, 2026-11-22). A `<style>` element and inline script are refused as everywhere.
+  // draws a photo's blurred stand-in as one, and the homepage is its photos. A `<style>`
+  // element and inline script are refused as everywhere.
   styleAttributes?: boolean;
 }): string {
   const fapi =

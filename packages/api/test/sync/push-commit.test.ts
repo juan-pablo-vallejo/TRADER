@@ -200,7 +200,7 @@ describe("sync.push — commits, record by record", () => {
     expect(
       first.results.map((r) => (r.result === "rejected" ? r.code : r.result)),
     ).toEqual(["accepted", "accepted", "time_in_future"]);
-    // The end claims an online capture in October, sent now: offline by its delay (M3), and
+    // The end claims an online capture in October, sent now: offline by its delay, and
     // the resend answers from the stored row, never judging it again.
     expect(first.results[1]).toMatchObject({
       ack: { clockSkewed: false, flags: ["offline"] },

@@ -124,7 +124,7 @@ describe("shift.week", () => {
       await row(ben.id, day.J, "2026-11-15", "08:00", "12:00");
       await row(ben.id, day.J, "2026-11-23", "08:00", "12:00");
       await put(other.companyId, stranger.id, other.J, "2026-11-16");
-      // Two rows older than the validated writers, overlapping: read like any other.
+      // Two rows no validated writer would write, overlapping: read like any other.
       const loose = await row(ben.id, day.J, "2026-11-18", "07:00", "12:00");
       const looser = await row(ben.id, day.K, "2026-11-18", "10:00", "14:00");
       // Ana clocked in on the morning shift at 07:10 in New York.

@@ -2,7 +2,7 @@
 // out; the proxy carries it out before anything is rendered.
 //
 // One deployment answers on more than one host. In production: `app.jpteq.app`, neutral,
-// and `dsierrapainting.jpteq.app`, D Sierra's own. Two rules, in this order.
+// and `dsierrapainting.jpteq.app`, D'Sierra's own. Two rules, in this order.
 //
 // 1. A session belongs to an origin. Where CLERK_AUTHORIZED_PARTIES lists the origins a
 //    session may be issued to, a page asked for on any other host (a Vercel deployment's

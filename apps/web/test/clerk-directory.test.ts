@@ -1,5 +1,5 @@
 // An invitation admits the person at Clerk. Clerk's API is a fake `fetch` here,
-// answering what the development instance was seen to answer (clerk-directory.ts): what is
+// answering what the development instance answers (clerk-directory.ts): what is
 // tested is which call is made, which answers are an admission, and that nothing of the
 // person is carried in a failure.
 import { afterEach, describe, expect, it, vi } from "vitest";
