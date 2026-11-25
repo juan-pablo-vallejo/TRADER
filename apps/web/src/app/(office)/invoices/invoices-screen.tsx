@@ -16,7 +16,7 @@ import { useState, type FormEvent } from "react";
 import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { Note } from "../../note";
 import { CREATE_FORM_ID, PageHeader } from "../../page-header";
@@ -156,8 +156,8 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
   const preset: Preset = (PRESETS as readonly string[]).includes(filters.show)
     ? (filters.show as Preset)
     : "all";
-  const ready = list.isSuccess && jobs.isSuccess;
-  const failed = [list, jobs].find((q) => q.isError);
+  const ready = list.data !== undefined && jobs.data !== undefined;
+  const failed = blocking([list, jobs]);
   const columns: Column<Row>[] = [
     {
       key: "number",
@@ -221,6 +221,7 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
             : undefined
         }
       />
+      <RefreshFailed reads={[list, jobs]} />
       {list.isPending || jobs.isPending ? (
         <LoadingRows />
       ) : failed !== undefined || !ready ? (

@@ -535,8 +535,8 @@ the iPhone simulator and `trader-ws android`.
   returns to the opener, or to the record's own row.
 - At phone width Correct in a day's panel opens its form below the screen: the form comes
   into view with focus on its first field.
-- Settings and one invoice open on the word "Loading…"; Settings' Me section jumps when
-  Company and Time clock arrive: placeholder rows that hold the room.
+- Settings' Me section jumps more than a screen when Company and Time clock arrive above
+  it: placeholder rows that hold the room.
 - On a job's page and in Jobs, Edit and the phone link are named with words they do not
   show; the phone number reads as People writes it. The Search button's name begins with
   its visible word. An invoice's lines table has a caption.

@@ -16,7 +16,8 @@ import { useState } from "react";
 
 import { uuidv7 } from "../../../uuidv7";
 import controls from "../../../controls.module.css";
-import { codeOf, EmptyState, Failure } from "../../../failure";
+import { LoadingRows } from "../../../loading-rows";
+import { blocking, codeOf, EmptyState, Failure, RefreshFailed } from "../../../failure";
 import { Field } from "../../../field";
 import { amount, cents } from "../../../format";
 import { Note } from "../../../note";
@@ -312,8 +313,8 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         <h2 className="heading">{s.draw}</h2>
         <p className={`secondary ${styles.explain}`}>{s.drawExplain}</p>
         {offers.isPending ? (
-          <p className="body">{t.loading}</p>
-        ) : offers.isError ? (
+          <LoadingRows rows={3} />
+        ) : offers.data === undefined ? (
           <p className="body">{t.requestFailed}</p>
         ) : offers.data.labor.length === 0 ? (
           <p className="body">{s.nothingToDraw}</p>
@@ -871,11 +872,11 @@ export function InvoiceScreen({
     return (
       <>
         {back}
-        <p className="body">{t.loading}</p>
+        <LoadingRows rows={6} />
       </>
     );
   }
-  if (read.isError) {
+  if (blocking([read]) !== undefined || read.data === undefined) {
     return (
       <>
         {back}
@@ -896,6 +897,7 @@ export function InvoiceScreen({
   return (
     <>
       {back}
+      <RefreshFailed reads={[read]} />
       <PageHeader
         title={
           invoice.number === null

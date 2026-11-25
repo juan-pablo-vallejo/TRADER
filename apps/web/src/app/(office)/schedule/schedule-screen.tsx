@@ -17,7 +17,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 
 import controls from "../../controls.module.css";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { addDays } from "../../format";
 import { Note } from "../../note";
@@ -334,8 +334,11 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   // The week before, on screen while the one asked for loads: nothing in it, and nothing
   // from the header, may open or add.
   const stale = week.isPlaceholderData;
-  const failed = [roster, jobs, week].find((q) => q.isError);
-  const ready = roster.isSuccess && jobs.isSuccess && week.isSuccess;
+  // A refresh that fails keeps the rows (and an open drawer) under one line; only a read
+  // with nothing to show, or a refused session, replaces the screen.
+  const failed = blocking([roster, jobs, week]);
+  const ready =
+    roster.data !== undefined && jobs.data !== undefined && week.data !== undefined;
 
   const show = (monday: string) => {
     setNote(null);
@@ -420,6 +423,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
     <>
       {header}
       <p className={`secondary ${styles.explain}`}>{s.explain}</p>
+      <RefreshFailed reads={[roster, jobs, week]} />
       <div className={styles.bar}>
         <div className={styles.weekSteps}>
           <button

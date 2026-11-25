@@ -24,7 +24,8 @@ import type { AppRouter } from "@trader/api";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import controls from "../../controls.module.css";
-import { codeOf, EmptyState, Failure } from "../../failure";
+import { blocking, codeOf, EmptyState, Failure, RefreshFailed } from "../../failure";
+import { LoadingRows } from "../../loading-rows";
 import { Field } from "../../field";
 import { Note } from "../../note";
 import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor";
@@ -209,8 +210,8 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  if (ledger.isPending) return <p className="body">{t.loading}</p>;
-  if (ledger.isError) {
+  if (ledger.isPending) return <LoadingRows rows={3} />;
+  if (blocking([ledger]) !== undefined || ledger.data === undefined) {
     return (
       <Failure
         error={ledger.error}
@@ -261,6 +262,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
 
   return (
     <section aria-label={r.worker.name}>
+      <RefreshFailed reads={[ledger]} />
       <p className={`secondary ${styles.line}`}>
         {[t.roles[r.worker.role], r.worker.active ? null : t.deactivated, t.timesIn(zone)]
           .filter((part) => part !== null)

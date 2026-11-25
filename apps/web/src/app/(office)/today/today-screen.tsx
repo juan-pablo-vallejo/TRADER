@@ -22,7 +22,7 @@ import { useEffect, useState } from "react";
 
 import { PasskeyBand } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { useStrings } from "../../i18n";
 import { LoadingRows } from "../../loading-rows";
 import { PageHeader } from "../../page-header";
@@ -61,14 +61,17 @@ export function TodayScreen({ signInHref }: { signInHref: string }) {
       {clerkOn && <PasskeyBand />}
       {read.isPending ? (
         <LoadingRows />
-      ) : read.isError ? (
+      ) : blocking([read]) !== undefined || read.data === undefined ? (
         <Failure
           error={read.error}
           signInHref={signInHref}
           onRetry={() => void read.refetch()}
         />
       ) : (
-        <Shown today={read.data} now={now} />
+        <>
+          <RefreshFailed reads={[read]} />
+          <Shown today={read.data} now={now} />
+        </>
       )}
     </>
   );

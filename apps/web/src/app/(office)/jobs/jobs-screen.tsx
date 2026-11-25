@@ -19,7 +19,7 @@ import { useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { hours } from "../../format";
 import { useStrings } from "../../i18n";
@@ -132,8 +132,8 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
   const [filters, setFilters] = useUrlFilters(JOBS_FILTERS);
   const [adding, setAdding] = useState(false);
   const [note, setNote] = useState<string | null>(null);
-  const failed = [list, customers].find((q) => q.isError);
-  const ready = list.isSuccess && customers.isSuccess;
+  const failed = blocking([list, customers]);
+  const ready = list.data !== undefined && customers.data !== undefined;
   const shown: Status | "all" =
     filters.status === "all" || (STATUSES as readonly string[]).includes(filters.status)
       ? (filters.status as Status | "all")
@@ -162,6 +162,7 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
             : undefined
         }
       />
+      <RefreshFailed reads={[list, customers]} />
       {list.isPending || customers.isPending ? (
         <LoadingRows />
       ) : failed !== undefined ? (

@@ -8,7 +8,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
+import { LoadingRows } from "../../loading-rows";
 import { Field } from "../../field";
 import { signInPhone } from "../../format";
 import { Note } from "../../note";
@@ -50,9 +51,10 @@ export function MeForm({ signInHref }: { signInHref: string }) {
       <h2 id="settings-me" className="heading">
         {t.settings.me}
       </h2>
+      <RefreshFailed reads={[me]} />
       {me.isPending ? (
-        <p className="body">{t.loading}</p>
-      ) : me.isError ? (
+        <LoadingRows rows={3} />
+      ) : blocking([me]) !== undefined || me.data === undefined ? (
         <Failure
           error={me.error}
           signInHref={signInHref}

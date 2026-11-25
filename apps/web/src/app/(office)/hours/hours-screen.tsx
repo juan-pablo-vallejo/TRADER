@@ -25,7 +25,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { hours } from "../../format";
 import { useStrings } from "../../i18n";
@@ -232,13 +232,14 @@ function Shown({
     ),
   );
   const answer = read.data;
-  const failed = read.isError ? (
-    <Failure
-      error={read.error}
-      signInHref={signInHref}
-      onRetry={() => void read.refetch()}
-    />
-  ) : undefined;
+  const failed =
+    blocking([read]) !== undefined ? (
+      <Failure
+        error={read.error}
+        signInHref={signInHref}
+        onRetry={() => void read.refetch()}
+      />
+    ) : undefined;
   const empty = flagged ? t.week.emptyFlagged : t.emptyReconciliation;
   const days = daysIn(range);
 
@@ -331,6 +332,7 @@ function Shown({
           </button>
         </p>
       )}
+      <RefreshFailed reads={[read]} />
       {answer !== undefined && <OpenStrip cells={stillOpen(answer)} />}
       {answer !== undefined && answer.cells.length > 0 && (
         <p className={`body-strong ${styles.total}`}>

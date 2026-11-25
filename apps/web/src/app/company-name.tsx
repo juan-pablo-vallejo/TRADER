@@ -11,6 +11,7 @@ import { useTRPC } from "./trpc";
 export function CompanyName({ className }: { className: string }) {
   const trpc = useTRPC();
   const company = useQuery(trpc.company.get.queryOptions());
-  if (!company.isSuccess) return null;
+  // Kept through a refresh that failed: the name the read last had.
+  if (company.data === undefined) return null;
   return <span className={className}>{company.data.name}</span>;
 }

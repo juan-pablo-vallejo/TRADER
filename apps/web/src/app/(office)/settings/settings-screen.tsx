@@ -21,7 +21,7 @@ import { useState, type FormEvent } from "react";
 
 import { PasskeySection } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { useStrings } from "../../i18n";
 import { LoadingRows } from "../../loading-rows";
@@ -60,7 +60,7 @@ function useCompany() {
 function CompanyParts({ signInHref }: { signInHref: string }) {
   const company = useCompany();
   if (company.isPending) return <LoadingRows rows={4} />;
-  if (company.isError) {
+  if (blocking([company]) !== undefined || company.data === undefined) {
     return (
       <Failure
         error={company.error}
@@ -71,6 +71,7 @@ function CompanyParts({ signInHref }: { signInHref: string }) {
   }
   return (
     <>
+      <RefreshFailed reads={[company]} />
       <Details company={company.data} />
       <Clock company={company.data} />
     </>

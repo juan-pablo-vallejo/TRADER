@@ -12,7 +12,8 @@ import { useState } from "react";
 
 import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
+import { LoadingRows } from "../../loading-rows";
 import { addDays } from "../../format";
 import { Note } from "../../note";
 import { DestructiveAction } from "../../row-editor";
@@ -89,9 +90,10 @@ export function CopyWeek({
       <p className="secondary">
         {s.copyExplain(f.weekDay(addDays(week.weekStart, -7)), f.weekDay(week.weekStart))}
       </p>
+      <RefreshFailed reads={[asked]} />
       {asked.isPending ? (
-        <p className="body">{t.loading}</p>
-      ) : asked.isError ? (
+        <LoadingRows rows={3} />
+      ) : blocking([asked]) !== undefined || asked.data === undefined ? (
         <Failure
           error={asked.error}
           signInHref={signInHref}

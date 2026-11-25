@@ -17,6 +17,7 @@ import { useClerkOn } from "./providers";
 import { useStrings } from "./i18n";
 import { KEYS_HELP_EVENT } from "./keyboard-rows";
 import { LANGUAGES } from "./i18n/language";
+import { blocking } from "./failure";
 import { useTRPC } from "./trpc";
 
 export function Account({ signInHref }: { signInHref: string }) {
@@ -27,7 +28,9 @@ export function Account({ signInHref }: { signInHref: string }) {
   const path = usePathname();
   const me = useQuery(trpc.me.get.queryOptions());
   if (me.isPending) return null;
-  if (me.isError) {
+  // Signed out only when the server says so, or nothing was ever read: a refresh that
+  // failed keeps the name (failure.tsx, blocking).
+  if (blocking([me]) !== undefined || me.data === undefined) {
     return (
       <div className={styles.account}>
         {clerk ? (

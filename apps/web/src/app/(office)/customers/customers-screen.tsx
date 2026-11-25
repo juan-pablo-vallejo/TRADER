@@ -10,7 +10,7 @@ import { useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { Note } from "../../note";
 import { DestructiveAction, EditorFooter, EditorSection } from "../../row-editor";
@@ -82,9 +82,10 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
             : undefined
         }
       />
+      <RefreshFailed reads={[list]} />
       {list.isPending ? (
         <LoadingRows />
-      ) : list.isError ? (
+      ) : blocking([list]) !== undefined || list.data === undefined ? (
         <Failure
           error={list.error}
           signInHref={signInHref}

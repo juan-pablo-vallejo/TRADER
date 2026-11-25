@@ -519,6 +519,8 @@ export const es: Catalog = {
   notPermitted: "No tienes permiso.",
   requestFailed: "Eso no se pudo hacer. No se guardó nada; inténtalo de nuevo.",
   loadFailed: "Esta página no cargó.",
+  refreshFailed: (time: string) =>
+    `No se pudo actualizar: esto es lo último leído (${time}).`,
   loadFailedHelp: "No se cambió nada. Revisa la conexión e inténtalo de nuevo.",
   tryAgain: "Intentar de nuevo",
   pageError: "Algo salió mal en esta página.",

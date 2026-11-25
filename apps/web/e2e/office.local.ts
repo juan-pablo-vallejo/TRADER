@@ -243,6 +243,71 @@ test("nothing can be added to the week before while the next one loads", async (
   await expect(grid).not.toHaveAttribute("aria-busy", "true", { timeout: 15_000 });
 });
 
+// A read that fails behind rows already on screen: every later read answers 500, the
+// clock moves past the 30 s a list stays fresh, and the tab is shown again, which is when
+// TanStack Query refetches.
+async function failTheNextRefresh(page: Page): Promise<void> {
+  await page.route("**/api/trpc/**", (route) =>
+    route.request().method() === "GET"
+      ? route.fulfill({ status: 500, contentType: "application/json", body: "{}" })
+      : route.continue(),
+  );
+  await page.clock.fastForward("01:00");
+  await page.evaluate(() => {
+    window.dispatchEvent(new Event("visibilitychange"));
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+}
+
+test("a failed refresh keeps the rows on Today, Schedule, Hours, an invoice and a day", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  // The invoice made by the first test of this file.
+  await page.goto("/invoices");
+  const invoice = page.getByRole("main").locator('a[href^="/invoices/"]').first();
+  await expect(invoice).toBeVisible();
+  const invoiceHref = await invoice.getAttribute("href");
+
+  const screens: { path: string; rows: (p: Page) => ReturnType<Page["locator"]> }[] = [
+    {
+      path: "/today",
+      rows: (p) => p.getByRole("main").getByRole("heading", { level: 2 }).first(),
+    },
+    { path: "/schedule", rows: (p) => p.getByRole("main").getByRole("table") },
+    { path: "/hours?range=last", rows: (p) => p.getByRole("main").getByRole("table") },
+    {
+      path: invoiceHref ?? "/invoices",
+      rows: (p) => p.getByRole("main").getByRole("heading", { level: 1 }),
+    },
+  ];
+  for (const screen of screens) {
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    await page.goto(screen.path);
+    await expect(screen.rows(page), `${screen.path}: its rows`).toBeVisible();
+    await failTheNextRefresh(page);
+    await expect(
+      page.locator("[data-refresh-failed]"),
+      `${screen.path}: the line`,
+    ).toBeVisible();
+    await expect(screen.rows(page), `${screen.path}: the rows stay`).toBeVisible();
+    await expect(page.getByText("This page didn't load.")).toHaveCount(0);
+  }
+
+  // A day's panel on Hours.
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+  await page.goto("/hours?range=last");
+  await page.getByRole("main").getByRole("table").getByRole("button").first().click();
+  const panel = page.getByRole("dialog");
+  await expect(panel.getByRole("button", { name: "Close" })).toBeVisible();
+  await expect(panel.locator("section")).toBeVisible();
+  await failTheNextRefresh(page);
+  await expect(panel).toBeVisible();
+  await expect(panel.locator("section")).toBeVisible();
+});
+
 test("a worker is refused the office", async ({ page }) => {
   await signIn(page, WORKER);
   await page.goto("/customers");

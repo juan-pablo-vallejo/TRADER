@@ -22,7 +22,7 @@ import Link from "next/link";
 import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
-import { Failure } from "../../failure";
+import { blocking, Failure, RefreshFailed } from "../../failure";
 import { looksLikeSignInPhone, signInPhone } from "../../format";
 import { Field } from "../../field";
 import { Note } from "../../note";
@@ -92,9 +92,10 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
             : undefined
         }
       />
+      <RefreshFailed reads={[list]} />
       {list.isPending ? (
         <LoadingRows />
-      ) : list.isError ? (
+      ) : blocking([list]) !== undefined || list.data === undefined ? (
         <Failure
           error={list.error}
           signInHref={signInHref}

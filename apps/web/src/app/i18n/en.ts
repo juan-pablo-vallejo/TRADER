@@ -546,6 +546,7 @@ export const en = {
   notPermitted: "Not permitted.",
   requestFailed: "That didn't go through. Nothing was saved; try again.",
   loadFailed: "This page didn't load.",
+  refreshFailed: (time: string) => `Could not refresh: this is as of ${time}.`,
   loadFailedHelp: "Nothing was changed. Check the connection and try again.",
   tryAgain: "Try again",
   pageError: "Something went wrong on this page.",

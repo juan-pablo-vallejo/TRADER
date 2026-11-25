@@ -18,7 +18,7 @@ import { useState } from "react";
 
 import controls from "../../../controls.module.css";
 import { DataTable, type Column } from "../../../data-table";
-import { EmptyState, Failure, codeOf } from "../../../failure";
+import { blocking, codeOf, EmptyState, Failure, RefreshFailed } from "../../../failure";
 import { hours } from "../../../format";
 import { useStrings } from "../../../i18n";
 import { LoadingRows } from "../../../loading-rows";
@@ -70,7 +70,7 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
       </>
     );
   }
-  if (read.isError) {
+  if (blocking([read]) !== undefined || read.data === undefined) {
     return (
       <>
         {back}
@@ -176,6 +176,7 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
   return (
     <>
       {back}
+      <RefreshFailed reads={[read]} />
       <div className={styles.head}>
         <h1 className="title">{job.name}</h1>
         <StatusBadge tone={JOB_TONES[job.status]} label={t.jobStatus[job.status]} />
