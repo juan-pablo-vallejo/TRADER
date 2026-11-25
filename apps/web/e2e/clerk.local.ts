@@ -111,14 +111,34 @@ test("an unknown email is told to ask the office, and so is a Google account nob
   // Still the first step: nothing was sent, so there is no code to ask for.
   await expect(page.locator("#sign-in-code")).toHaveCount(0);
 
-  // The callback page with no sign-in behind it: back to the form, to be told.
+  // The callback page with no sign-in behind it: back to the form, told it failed and not
+  // that the account is unknown, which only Clerk's answer can say; no field is marked.
   await page.goto("/sign-in/sso-callback");
   await page.waitForURL(
     (url) => url.pathname === "/sign-in" && url.search.includes("refused"),
   );
   await expect(page.locator("#sign-in-note")).toHaveText(
-    "That Google account is not on a roster. Ask your office.",
+    "That did not work. Check your connection and try again.",
   );
+  await expect(page.locator("#sign-in-address")).toHaveAttribute("aria-invalid", "false");
+});
+
+test("when Clerk's script never arrives, the form and the Google return say so", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.route("**/npm/@clerk/**", (route) => route.abort());
+  await page.goto("/sign-in");
+  await expect(page.locator("#sign-in-note")).toHaveText(
+    "Sign-in could not load. Check your connection, then reload this page.",
+    { timeout: 20_000 },
+  );
+  await page.goto("/sign-in/sso-callback");
+  await expect(page.getByText("Sign-in could not load.", { exact: false })).toBeVisible({
+    timeout: 20_000,
+  });
+  await expect(page.getByRole("link", { name: "Back to sign-in" })).toBeVisible();
+  await expect(page.getByText("Signing you in…")).toHaveCount(0);
 });
 
 test.describe("in Spanish on a phone", () => {

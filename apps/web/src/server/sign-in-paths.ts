@@ -51,9 +51,12 @@ const carrying = (path: string, returnTo: string, more = ""): string => {
 };
 export const ssoCallbackFrom = (returnTo: string): string =>
   carrying(SSO_CALLBACK_PATH, returnTo);
+// Why a Google return came back to the form: an account Clerk knows nobody by, or a
+// return that failed some other way, said as a failure and never as "not on a roster".
 export const GOOGLE_REFUSED = "google";
-export const signInRefused = (returnTo: string): string =>
-  carrying(SIGN_IN_PATH, returnTo, `refused=${GOOGLE_REFUSED}`);
+export const GOOGLE_FAILED = "google-failed";
+export const signInRefused = (returnTo: string, unknown = true): string =>
+  carrying(SIGN_IN_PATH, returnTo, `refused=${unknown ? GOOGLE_REFUSED : GOOGLE_FAILED}`);
 
 // The way back to the homepage from sign-in. Where a deployment names the host whose `/`
 // is the homepage (TRADER_HOME_HOST, server/addresses.ts), that host: on any other, `/`

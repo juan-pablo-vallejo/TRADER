@@ -9,15 +9,23 @@ type Tone = "saved" | "neutral" | "info" | "error";
 
 export function Note({ text, tone }: { text: string | null; tone?: Tone }) {
   const { t } = useStrings();
-  if (text === null) return null;
-  const shown: Tone =
-    tone ?? (text === t.saved ? "saved" : text === t.unchanged ? "neutral" : "error");
+  const shown: Tone | null =
+    text === null
+      ? null
+      : (tone ??
+        (text === t.saved ? "saved" : text === t.unchanged ? "neutral" : "error"));
+  // The status region is on the page before its words: a region inserted already holding
+  // them may not be announced. A refusal or a failure is an alert, said at once.
   return (
-    <p
-      className={`secondary ${controls.note} ${shown === "info" ? "" : controls[shown]}`}
-      role={shown === "error" ? "alert" : "status"}
-    >
-      {text}
-    </p>
+    <div role="status">
+      {text !== null && shown !== null && (
+        <p
+          className={`secondary ${controls.note} ${shown === "info" ? "" : controls[shown]}`}
+          role={shown === "error" ? "alert" : undefined}
+        >
+          {text}
+        </p>
+      )}
+    </div>
   );
 }

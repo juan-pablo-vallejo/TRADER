@@ -23,7 +23,9 @@ const inter = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "TRADER",
+  // A page names itself (i18n/server.ts, titled); "TRADER" follows, and stands alone where
+  // a page names nothing.
+  title: { default: "TRADER", template: "%s · TRADER" },
   description: "Time tracking, scheduling and invoicing for painting contractors",
 };
 

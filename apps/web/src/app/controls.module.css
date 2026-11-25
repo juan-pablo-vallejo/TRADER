@@ -1,6 +1,12 @@
 /* The office's UI components: buttons, the form field, the card, the empty state
    and the attention banner, the page header and the result note. Consumed by every office
    screen. */
+/* A link that stands alone on its line: the density's height, as a button has. */
+.linkTarget {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
 .primary,
 .secondary,
 .destructive,

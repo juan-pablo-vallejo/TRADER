@@ -76,7 +76,7 @@ export const es: Catalog = {
       "En cualquier tabla y en el horario. Una tecla no hace nada mientras escribes en un campo. Todo esto también se puede hacer con el puntero o con Tab.",
     space: "Espacio",
     does: {
-      next: "Fila siguiente. Desde cualquier parte de la pantalla, J va a la primera fila.",
+      next: "Fila siguiente. Con el foco en una tabla, J y K recorren sus filas.",
       previous: "Fila anterior.",
       along:
         "A lo largo de la fila: la siguiente celda de la semana en Horas y en el horario.",
@@ -93,6 +93,7 @@ export const es: Catalog = {
 
   navigation: "Oficina",
   menu: "Menú",
+  skipToContent: "Saltar al contenido",
   nav: {
     today: "Hoy",
     people: "Personal",
@@ -495,6 +496,9 @@ export const es: Catalog = {
     googleRefused:
       "Esa cuenta de Google no está en ninguna plantilla. Pregunta en tu oficina.",
     signingIn: "Iniciando tu sesión…",
+    notLoaded:
+      "No se pudo cargar el inicio de sesión. Revisa tu conexión y vuelve a cargar esta página.",
+    backToSignIn: "Volver a iniciar sesión",
     usePasskey: "Usar una llave de acceso",
     passkeyFailed: "Esa llave de acceso no funcionó. Inicia sesión con un código.",
     helper: "Escribe tu número de celular o tu correo. Te enviaremos un código.",
@@ -606,6 +610,9 @@ export const es: Catalog = {
     makeAdminEffect: (name) =>
       `${name} verá y podrá cambiar todo en esta oficina: las horas de todos, el horario, las facturas y esta lista.`,
     makeWorker: "Hacer trabajador",
+    makeWorkerEffect: (name) =>
+      `${name} ya no abrirá esta oficina: solo su propia semana, sus horas y Yo.`,
+    ownRole: "Tu propio rol lo cambia otro administrador.",
     location: "Ubicación al marcar",
     locationExplain:
       "Si al marcar se anota dónde está el teléfono. Como la empresa sigue el ajuste de todos.",
@@ -644,7 +651,7 @@ export const es: Catalog = {
     addressesExplain:
       "Lo que escribe para iniciar sesión. Deja una vacía para quitarla: una de las dos siempre se queda.",
     adminAddresses:
-      "Las direcciones de acceso de un administrador no se cambian aquí. Pídeselo al dueño de este TRADER.",
+      "Las direcciones de acceso de un administrador no se cambian aquí. Pide ayuda al soporte de TRADER: support@jpteq.app",
     signInNumberField: "Número de acceso",
     changeEmail: "Cambiar el correo",
     changeNumber: "Cambiar el número de acceso",
@@ -657,14 +664,15 @@ export const es: Catalog = {
     addressRepaired: "Su acceso ya coincide con esto.",
     emailInvalid: "Escribe un correo, o déjalo vacío para quitarlo.",
     addressRefused: {
-      admin: "Las direcciones de acceso de un administrador no se cambian aquí.",
+      admin:
+        "Las direcciones de acceso de un administrador no se cambian aquí. Pide ayuda al soporte de TRADER: support@jpteq.app",
       deactivated: "Esta persona está desactivada. No se cambió nada.",
       last_address: "Necesita una dirección para iniciar sesión. Dale primero la otra.",
       email_taken: "Alguien de esta plantilla ya tiene ese correo.",
       phone_taken: "Alguien de esta plantilla ya tiene ese número de celular.",
       address_held: "Esa dirección no se puede usar. No se cambió nada.",
       no_login:
-        "Su acceso se creó antes de que aquí se pudieran cambiar direcciones. Se podrá cambiar cuando haya iniciado sesión.",
+        "Esta persona aún no tiene un acceso que cambiar. Se podrá cambiar cuando haya iniciado sesión.",
       company_closed:
         "Esta empresa de demostración no puede cambiar la dirección de nadie.",
     },
@@ -766,6 +774,8 @@ export const es: Catalog = {
   jobStatus: { open: "Abierta", complete: "Terminada", archived: "Archivada" },
   saveDetails: "Guardar datos",
   setStatus: "Cambiar estado",
+  archiveJobEffect:
+    "La obra sale de la lista de obras de los teléfonos y nadie puede tener turno en ella. Sus horas y facturas se conservan.",
   customerInactive: "Ese cliente está desactivado.",
   customerInactiveOnStatus:
     "Este cliente está desactivado. Reactívalo, o pasa primero la obra a otro cliente.",
@@ -929,7 +939,8 @@ export const es: Catalog = {
   duration: (h, m) => `${h} h ${String(m).padStart(2, "0")} min`,
 
   contactPhone: "Teléfono de contacto",
-  managedBySignIn: "Lo gestiona tu proveedor de acceso",
+  managedBySignIn: "La oficina lo cambia.",
+  adminAddressesCaption: "Pide al soporte de TRADER que lo cambie: support@jpteq.app",
   signInNumber: "Número de acceso",
   signInNumberCaption:
     "Tu código para iniciar sesión se envía aquí. La oficina lo cambia.",

@@ -711,6 +711,10 @@ function Role({ row }: { row: Row }) {
   const trpc = useTRPC();
   const refresh = useRefresh();
   const [note, setNote] = useState<string | null>(null);
+  // The signed-in admin's own row: their own role is not changed from here, so nobody
+  // takes away their own office by a press.
+  const me = useQuery(trpc.me.get.queryOptions());
+  const own = me.data?.id === row.id;
   const setRoleCall = useMutation(
     trpc.roster.setRole.mutationOptions({
       onSuccess: async (answer) => {
@@ -731,15 +735,16 @@ function Role({ row }: { row: Row }) {
           disabled={setRoleCall.isPending || row.deactivatedAt !== null}
           onConfirm={() => setRoleCall.mutate({ userId: row.id, role: "admin" })}
         />
+      ) : own ? (
+        <p className="secondary">{t.personPanel.ownRole}</p>
       ) : (
-        <WriteButton
-          type="button"
-          className={controls.secondary}
-          pending={setRoleCall.isPending}
-          onClick={() => setRoleCall.mutate({ userId: row.id, role: "worker" })}
-        >
-          {t.personPanel.makeWorker}
-        </WriteButton>
+        // It takes the office away: asked first, as making an admin is.
+        <DestructiveAction
+          label={t.personPanel.makeWorker}
+          effect={t.personPanel.makeWorkerEffect(row.name)}
+          disabled={setRoleCall.isPending}
+          onConfirm={() => setRoleCall.mutate({ userId: row.id, role: "worker" })}
+        />
       )}
       <Note text={note} />
     </EditorSection>

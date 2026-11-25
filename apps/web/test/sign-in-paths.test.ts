@@ -178,11 +178,13 @@ describe("the sign-in form", () => {
       expect(ssoCallbackFrom(elsewhere)).toBe("/sign-in/sso-callback");
       expect(signInRefused(elsewhere)).toBe("/sign-in?refused=google");
     }
+    // A return that failed for any other reason than an unknown account says so.
+    expect(signInRefused("/today", false)).toBe("/sign-in?refused=google-failed");
     // The callback finishes a sign-in that is complete, takes up a session Clerk has,
     // and otherwise sends the person back: three ways out and no fourth.
     expect(back).toContain('signIn.status === "complete"');
     expect(back).toContain("signIn.existingSession?.sessionId");
-    expect(back).toContain("signInRefused(returnTo)");
+    expect(back).toContain("signInRefused(returnTo, signIn.isTransferable)");
     // And the page is no page where sign-in is none.
     expect(backPage.indexOf("notFound()")).toBeGreaterThan(0);
     expect(backPage.indexOf("notFound()")).toBeLessThan(

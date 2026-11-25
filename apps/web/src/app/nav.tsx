@@ -18,6 +18,7 @@ import styles from "./nav.module.css";
 import { useStrings } from "./i18n";
 import type { Catalog } from "./i18n/en";
 import { useTRPC } from "./trpc";
+import { MAIN_ID } from "./main-id";
 
 type Destination = {
   href: string;
@@ -90,7 +91,16 @@ export function Nav() {
                   href={href}
                   className={`${styles.link} ${within ? styles.current : ""}`}
                   aria-current={here ? "page" : within ? "true" : undefined}
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    // Narrow, the choice closes the menu and hides the link that had the
+                    // focus: the focus goes to the screen, not to nothing.
+                    if (open) {
+                      setOpen(false);
+                      requestAnimationFrame(() =>
+                        document.getElementById(MAIN_ID)?.focus(),
+                      );
+                    }
+                  }}
                   onMouseEnter={() => warm(href)}
                   onFocus={() => warm(href)}
                 >

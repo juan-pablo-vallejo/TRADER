@@ -104,6 +104,8 @@ function Totals({
 
 // What the page says once an act changed it into another view (issued, voided): said under
 // its title, where the view that did it no longer stands.
+// Add a line: where the focus goes when the last line is removed.
+const ADD_LINE_ID = "invoice-add-line";
 const Said = createContext<(text: string) => void>(() => {});
 
 function DraftEditor({ invoice }: { invoice: Invoice }) {
@@ -140,11 +142,21 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
   };
   const edit = (id: string, patch: Partial<Draft>) =>
     change(lines.map((l) => (l.id === id ? { ...l, ...patch } : l)));
-  const add = (line: Partial<Draft>) =>
+  // The focus follows the lines: into a line just added, onto a neighbour of one removed
+  // (its description, or the Add a line button when none is left).
+  const focusLine = (id: string | undefined) =>
+    requestAnimationFrame(() =>
+      (id === undefined
+        ? document.getElementById(ADD_LINE_ID)
+        : document.getElementById(`line-${id}-d`)
+      )?.focus(),
+    );
+  const add = (line: Partial<Draft>) => {
+    const id = uuidv7();
     change([
       ...lines,
       {
-        id: uuidv7(),
+        id,
         description: "",
         quantity: "",
         unit: "",
@@ -152,6 +164,14 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         ...line,
       },
     ]);
+    focusLine(id);
+  };
+  const removeLine = (id: string) => {
+    const at = lines.findIndex((l) => l.id === id);
+    const rest = lines.filter((l) => l.id !== id);
+    change(rest);
+    focusLine((rest[at] ?? rest[at - 1])?.id);
+  };
 
   const taxCents = cents(tax);
   // What the screen holds, as one string: a save clears "not saved yet" only when what it
@@ -312,7 +332,7 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
                 <button
                   type="button"
                   className={controls.quiet}
-                  onClick={() => change(lines.filter((l) => l.id !== line.id))}
+                  onClick={() => removeLine(line.id)}
                 >
                   {s.removeLine(n)}
                 </button>
@@ -320,7 +340,12 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
             </div>
           );
         })}
-        <button type="button" className={controls.secondary} onClick={() => add({})}>
+        <button
+          id={ADD_LINE_ID}
+          type="button"
+          className={controls.secondary}
+          onClick={() => add({})}
+        >
           {s.addLine}
         </button>
       </section>
@@ -365,12 +390,12 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
                   <button
                     type="button"
                     className={controls.secondary}
-                    aria-label={s.addOf(label)}
                     onClick={() =>
                       add({ description: label, quantity: l.quantity, unit: "h" })
                     }
                   >
                     {s.add}
+                    <span className="visually-hidden">{`: ${label}`}</span>
                   </button>
                 </li>
               );
@@ -840,6 +865,7 @@ function Issued({ invoice }: { invoice: Invoice }) {
       <section className={styles.section} aria-label={s.lines}>
         <h2 className="heading">{s.lines}</h2>
         <table className={table.table}>
+          <caption className="visually-hidden">{s.lines}</caption>
           <thead>
             <tr>
               <th scope="col">{s.description}</th>
@@ -946,6 +972,11 @@ export function InvoiceScreen({
     <Said.Provider value={setSaid}>
       {back}
       <RefreshFailed reads={[read]} />
+      <title>{`${
+        invoice.number === null
+          ? s.draftOf(invoice.job.name)
+          : s.invoiceNo(invoice.number)
+      } · ${t.nav.invoices} · TRADER`}</title>
       <PageHeader
         title={
           invoice.number === null

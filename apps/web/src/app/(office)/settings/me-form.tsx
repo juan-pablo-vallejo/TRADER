@@ -106,7 +106,9 @@ export function MeForm({ signInHref }: { signInHref: string }) {
                 readOnly
                 value={me.data.email}
               />
-              <p className={`secondary ${controls.caption}`}>{t.managedBySignIn}</p>
+              <p className={`secondary ${controls.caption}`}>
+                {me.data.role === "admin" ? t.adminAddressesCaption : t.managedBySignIn}
+              </p>
             </Field>
           )}
           {/* Kept on this browser, and changed at once: it is not part of the record

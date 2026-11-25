@@ -22,7 +22,7 @@ const config: NextConfig = {
   // reads at request time and the deployment must therefore trace.
   outputFileTracingRoot: path.join(__dirname, "../../"),
   outputFileTracingIncludes: {
-    "/favicon.ico": ["../../assets/brand/logo.png"],
+    "/favicon.ico": ["../../assets/brand/favicon.png"],
   },
   // The homepage is its photos: AVIF where a browser takes it, WebP where it does not.
   // Each size of each photo is then made and kept twice, and Vercel bills image

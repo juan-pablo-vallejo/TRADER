@@ -2,10 +2,11 @@ import { headers } from "next/headers";
 
 import { appLinks, deviceOf } from "../../../server/app-links";
 import controls from "../../controls.module.css";
-import { requestStrings } from "../../i18n/server";
+import { requestStrings, titled } from "../../i18n/server";
 import { LanguageSwitch } from "../../language-switch";
 import { Logo } from "../../logo";
 import styles from "../../shell.module.css";
+import { homeHref } from "../../../server/sign-in-paths";
 
 // `/get`: where an invitation's message points. In the phone's language, one button for
 // this phone: the TestFlight link on an iPhone, the Play testing link on Android, and both
@@ -13,6 +14,8 @@ import styles from "../../shell.module.css";
 // unset the page says to ask the office instead of drawing a button that goes nowhere.
 // A public page: nothing of Clerk, and nothing loaded from another host.
 export const dynamic = "force-dynamic";
+
+export const generateMetadata = () => titled((t) => t.get.title);
 
 export default async function GetTheApp() {
   const { t } = await requestStrings();
@@ -46,7 +49,9 @@ export default async function GetTheApp() {
           <p className={`secondary ${styles.about}`}>{t.get.androidNote}</p>
         )}
         <p className={`secondary ${styles.about}`}>{t.get.thenSignIn}</p>
-        <a href="/">{t.get.home}</a>
+        <a className={controls.linkTarget} href={homeHref(process.env)}>
+          {t.get.home}
+        </a>
         <LanguageSwitch />
       </div>
     </main>

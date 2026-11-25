@@ -34,6 +34,7 @@ import { SidePanel } from "../../side-panel";
 import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import styles from "./day-panel.module.css";
+import { instantToWall } from "../../zoned";
 import {
   createMinter,
   draftOf,
@@ -74,6 +75,11 @@ type JobOption = { id: string; name: string; archived: boolean };
 type Notice = { key: string; text: string; ok: boolean };
 type Outcome = "saved" | "changed";
 
+// Two instants on the same calendar day in the company's zone.
+const sameDay = (a: string | Date, b: string | Date, zone: string): boolean =>
+  instantToWall(new Date(a), zone).slice(0, 10) ===
+  instantToWall(new Date(b), zone).slice(0, 10);
+
 export function DayPanel({
   workerId,
   day,
@@ -90,7 +96,10 @@ export function DayPanel({
   const asked: Lookup = { workerId, from: day, to: day };
   // The same read the ledger below makes: here only for the person's name in the title.
   const ledger = useQuery(
-    trpc.labor.ledger.queryOptions(asked, { refetchOnWindowFocus: false }),
+    trpc.labor.ledger.queryOptions(asked, {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }),
   );
   const title =
     ledger.data === undefined
@@ -201,10 +210,14 @@ function PreviewLine({ preview }: { preview: Preview }) {
 function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   const { t, f } = useStrings();
   const trpc = useTRPC();
-  // Not refetched behind an open editor: a repair is built from what is on screen, and the
-  // server refuses one built from an entry that is no longer in effect.
+  // Not refetched behind an open editor, on focus or on reconnect: a new answer would
+  // remount the editor and lose what is typed, and a repair is built from what is on
+  // screen; the server refuses one built from an entry no longer in effect.
   const ledger = useQuery(
-    trpc.labor.ledger.queryOptions(asked, { refetchOnWindowFocus: false }),
+    trpc.labor.ledger.queryOptions(asked, {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    }),
   );
   const jobs = useQuery(trpc.job.list.queryOptions());
   const queryClient = useQueryClient();
@@ -303,7 +316,12 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
           <div key={s.rootEventId} className={styles.session}>
             <h3 className="body-strong">
               {s.job.name} · {f.clock(s.startedAt, zone)} –{" "}
-              {s.endedAt === null ? "" : f.clock(s.endedAt, zone)}
+              {s.endedAt === null
+                ? ""
+                : // An end on another day than the start says its date.
+                  sameDay(s.startedAt, s.endedAt, zone)
+                  ? f.clock(s.endedAt, zone)
+                  : f.stamp(s.endedAt, zone)}
             </h3>
             <p className={`secondary ${styles.line} ${styles.flags}`}>
               <span>
@@ -327,10 +345,10 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
                 className={controls.textAction}
                 aria-expanded={open === s.rootEventId}
                 aria-controls={`repair-${s.rootEventId}`}
-                aria-label={t.repairOf(s.job.name, f.stamp(s.startedAt, zone))}
                 onClick={() => toggle(s.rootEventId)}
               >
                 {t.repair}
+                <span className="visually-hidden">{`: ${s.job.name}, ${f.stamp(s.startedAt, zone)}`}</span>
               </button>
               {noteFor(s.rootEventId)}
             </div>

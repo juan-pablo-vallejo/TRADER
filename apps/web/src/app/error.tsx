@@ -1,8 +1,8 @@
 "use client";
 
-// The route's error boundary: what a screen shows when rendering it throws. The shell stays
-// (layout.tsx is above this boundary), so the navigation still works. `reset` renders the
-// route again; a write that failed answered through its own result note, never here.
+// The route's error boundary: what a screen shows when rendering it throws. The office
+// places it inside its own layout ((office)/error.tsx), so the header and menu stay. `reset`
+// renders the route again; a write that failed answered through its own result note.
 import controls from "./controls.module.css";
 import { useStrings } from "./i18n";
 

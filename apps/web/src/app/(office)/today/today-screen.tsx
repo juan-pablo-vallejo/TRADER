@@ -18,7 +18,7 @@
 import { wallMinute } from "@trader/api/contract";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 
 import { PasskeyBand } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
@@ -84,13 +84,27 @@ function Shown({ today, now }: { today: Today; now: number }) {
   const minute = wallMinute(new Date(now), zone);
   const jobName = new Map(today.jobs.map((j) => [j.id, j.name]));
   const job = (id: string) => jobName.get(id) ?? "";
+  // A sentence that names a job, with the name a link to the job's page. The catalog's
+  // sentence is kept whole, in either language: the name is found in it and only it links.
+  const withJob = (sentence: string, id: string) => {
+    const name = job(id);
+    const at = name === "" ? -1 : sentence.indexOf(name);
+    if (at < 0) return sentence;
+    return (
+      <>
+        {sentence.slice(0, at)}
+        <Link href={`/jobs/${id}`}>{name}</Link>
+        {sentence.slice(at + name.length)}
+      </>
+    );
+  };
   const rows = attention(today, minute);
   const shown = rows.slice(0, ATTENTION_ROWS);
   const more = rows.length - shown.length;
   const { working, expected, done } = bands(today, minute);
   const dial = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
 
-  const person = (p: Person, line: string) => (
+  const person = (p: Person, line: ReactNode) => (
     <li key={p.person.id}>
       <span className="body-strong">{p.person.name}</span>
       <span className="secondary">{line}</span>
@@ -118,10 +132,13 @@ function Shown({ today, now }: { today: Today; now: number }) {
                 <li key={row.key} data-kind="open">
                   <StatusBadge tone="problem" label={t.stillOpen} />
                   <span className={`body ${styles.grow}`}>
-                    {s.stillOpen(
-                      row.person.name,
-                      job(row.jobId),
-                      f.weekDay(row.sinceDay),
+                    {withJob(
+                      s.stillOpen(
+                        row.person.name,
+                        job(row.jobId),
+                        f.weekDay(row.sinceDay),
+                      ),
+                      row.jobId,
                     )}
                   </span>
                   <Link
@@ -136,7 +153,10 @@ function Shown({ today, now }: { today: Today; now: number }) {
                 <li key={row.key} data-kind="late">
                   <StatusBadge tone="attention" label={t.crewStatus.late} />
                   <span className={`body ${styles.grow}`}>
-                    {s.late(row.person.name, job(row.jobId), row.start)}
+                    {withJob(
+                      s.late(row.person.name, job(row.jobId), row.start),
+                      row.jobId,
+                    )}
                   </span>
                   {row.person.phone === null ? (
                     <span className="secondary">{s.noNumber}</span>
@@ -182,11 +202,14 @@ function Shown({ today, now }: { today: Today; now: number }) {
                 <li key={p.person.id} data-kind={p.clock.status}>
                   <span className="body-strong">{p.person.name}</span>
                   <span className="secondary">
-                    {(p.clock.status === "paused" ? s.onBreakAt : s.at)(
-                      job(p.clock.jobId),
-                      p.clock.sinceDay === today.today
-                        ? f.clock(p.clock.since, zone)
-                        : f.stamp(p.clock.since, zone),
+                    {withJob(
+                      (p.clock.status === "paused" ? s.onBreakAt : s.at)(
+                        job(p.clock.jobId),
+                        p.clock.sinceDay === today.today
+                          ? f.clock(p.clock.since, zone)
+                          : f.stamp(p.clock.since, zone),
+                      ),
+                      p.clock.jobId,
                     )}
                   </span>
                 </li>
@@ -204,7 +227,9 @@ function Shown({ today, now }: { today: Today; now: number }) {
                 const shift = nextShift(p);
                 return person(
                   p,
-                  shift === null ? "" : s.expectedAt(job(shift.jobId), shift.start),
+                  shift === null
+                    ? ""
+                    : withJob(s.expectedAt(job(shift.jobId), shift.start), shift.jobId),
                 );
               })}
             </ul>
@@ -239,7 +264,7 @@ function Shown({ today, now }: { today: Today; now: number }) {
                   <strong>{s.owed(f.money(o.cents, o.currency))}</strong>{" "}
                   {s.owedInvoices(o.invoices)}
                 </span>
-                <Link href="/invoices">{s.toInvoices}</Link>
+                <Link href="/invoices?show=outstanding">{s.toInvoices}</Link>
               </li>
             ))
           )}
@@ -257,13 +282,14 @@ function Shown({ today, now }: { today: Today; now: number }) {
           ))}
           <li data-kind="drafts">
             <span className="body">{s.drafts(today.money.drafts)}</span>
-            <Link href="/invoices">{s.toInvoices}</Link>
+            <Link href="/invoices?show=drafts">{s.toInvoices}</Link>
           </li>
           <li data-kind="not-invoiced">
             <span className="body">
               {s.notInvoiced(today.money.completeJobsNotInvoiced)}
             </span>
-            <Link href="/jobs">{s.toJobs}</Link>
+            {/* Complete jobs: the ones counted here are among them. */}
+            <Link href="/jobs?status=complete">{s.toJobs}</Link>
           </li>
         </ul>
       </section>

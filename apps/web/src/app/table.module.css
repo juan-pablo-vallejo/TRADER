@@ -183,8 +183,11 @@
   .table tbody tr:not(.editor) {
     min-height: var(--target);
     box-sizing: border-box;
-    padding: var(--space-3) calc(var(--space-6) * 3 + var(--space-4)) var(--space-3)
-      var(--space-4);
+    padding: var(--space-3) var(--space-4);
+  }
+  /* Room at the right for the row's toggle, only where a row draws one. */
+  .table tbody tr:not(.editor):has(> td.toggle) {
+    padding-right: calc(var(--space-6) * 3 + var(--space-4));
   }
   .table tr:not(.editor) td {
     display: inline;
@@ -304,10 +307,18 @@
     content: attr(data-label) !important;
     flex: none;
   }
+  /* A day's line is the target, as tall as the density asks: its button takes the room
+     beside the day's name, which stays the cell's own label. */
+  .table.lines tr:not(.editor) td:has(> .cellOpen) {
+    min-height: var(--target);
+  }
   .table.lines .cellOpen {
     display: inline-flex;
+    flex: 1;
     flex-wrap: wrap;
     justify-content: flex-end;
+    align-self: stretch;
+    min-height: var(--target);
     padding: var(--space-1) 0;
     text-decoration: none;
     color: var(--ink);

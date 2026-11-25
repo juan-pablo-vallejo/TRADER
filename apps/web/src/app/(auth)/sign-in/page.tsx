@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { clerkEnv } from "../../../server/clerk-env";
 import { identityMode } from "../../../server/identity-mode";
-import { GOOGLE_REFUSED, returnPath } from "../../../server/sign-in-paths";
+import { GOOGLE_FAILED, GOOGLE_REFUSED, returnPath } from "../../../server/sign-in-paths";
 import { requestStrings } from "../../i18n/server";
 import styles from "../auth.module.css";
 import { SignInFrame } from "../sign-in-frame";
@@ -49,7 +49,16 @@ export default async function SignInPage({
   if (userId !== null) redirect(returnTo);
   return (
     <SignInFrame>
-      <SignInForm returnTo={returnTo} googleRefused={asked.refused === GOOGLE_REFUSED} />
+      <SignInForm
+        returnTo={returnTo}
+        googleBack={
+          asked.refused === GOOGLE_REFUSED
+            ? "google_refused"
+            : asked.refused === GOOGLE_FAILED
+              ? "failed"
+              : null
+        }
+      />
     </SignInFrame>
   );
 }

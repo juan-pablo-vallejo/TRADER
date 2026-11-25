@@ -17,3 +17,10 @@ export async function requestStrings(): Promise<{ t: Catalog; language: Language
   const language = await requestLanguage();
   return { t: CATALOGS[language], language };
 }
+
+// A page's own title, in the request's language: the tab, the history and a screen reader's
+// announcement of a new page then tell the screens apart. The root layout adds "· TRADER".
+export async function titled(pick: (t: Catalog) => string): Promise<{ title: string }> {
+  const { t } = await requestStrings();
+  return { title: pick(t) };
+}

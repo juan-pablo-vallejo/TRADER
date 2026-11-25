@@ -5,6 +5,24 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
 }
+/* The skip link: out of sight until it has the focus, then above the header's left edge. */
+.skip {
+  position: absolute;
+  left: var(--space-2);
+  top: -100px;
+  z-index: var(--z-menu);
+  padding: var(--space-2) var(--space-4);
+  background: var(--surface);
+  color: var(--accent);
+  border: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
+}
+.skip:focus {
+  top: var(--space-2);
+}
+.main:focus {
+  outline: none;
+}
 .main {
   padding: var(--space-4);
   max-width: var(--wide);

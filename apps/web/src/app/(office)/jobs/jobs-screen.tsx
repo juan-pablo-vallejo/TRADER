@@ -15,7 +15,7 @@
 // beneath the control it came from. Consumed by page.tsx.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { type FormEvent, useState } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
@@ -28,7 +28,7 @@ import { JobsTabs } from "../../jobs-tabs";
 import { LoadingRows } from "../../loading-rows";
 import { Note } from "../../note";
 import { PageHeader, CREATE_FORM_ID } from "../../page-header";
-import { EditorSection } from "../../row-editor";
+import { DestructiveAction, EditorSection } from "../../row-editor";
 import { SidePanel } from "../../side-panel";
 import { StatusBadge, type Tone } from "../../status-badge";
 import { useTRPC } from "../../trpc";
@@ -42,6 +42,7 @@ import {
   type ParsedLocation,
 } from "./location";
 import { WriteButton } from "../../write-button";
+import table from "../../table.module.css";
 
 type Rows = NonNullable<ReturnType<typeof useJobs>["data"]>;
 type Row = Rows[number];
@@ -219,7 +220,11 @@ function JobsTable({ rows, onOpen }: { rows: Rows; onOpen: (jobId: string) => vo
       header: t.job,
       // A job's name, anywhere in the office, goes to its own page.
       cell: (row) => (
-        <Link href={`/jobs/${row.id}`} aria-label={t.jobPage.openJob(row.name)}>
+        <Link
+          className={table.rowLink}
+          href={`/jobs/${row.id}`}
+          aria-label={t.jobPage.openJob(row.name)}
+        >
           {row.name}
         </Link>
       ),
@@ -582,14 +587,25 @@ function StatusEditor({ row }: { row: Row }) {
           ))}
         </select>
       </Field>
-      <WriteButton
-        type="button"
-        className={controls.secondary}
-        pending={setStatusCall.isPending}
-        onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
-      >
-        {t.setStatus}
-      </WriteButton>
+      {status === "archived" && row.status !== "archived" ? (
+        // Archiving takes the job off every phone: asked first, as deactivating a
+        // customer is.
+        <DestructiveAction
+          label={t.setStatus}
+          effect={t.archiveJobEffect}
+          disabled={setStatusCall.isPending}
+          onConfirm={() => setStatusCall.mutate({ jobId: row.id, status })}
+        />
+      ) : (
+        <WriteButton
+          type="button"
+          className={controls.secondary}
+          pending={setStatusCall.isPending}
+          onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
+        >
+          {t.setStatus}
+        </WriteButton>
+      )}
       <Note text={statusNote} tone={statusNote === t.archivedNote ? "info" : undefined} />
     </EditorSection>
   );

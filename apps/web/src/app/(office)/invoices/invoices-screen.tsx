@@ -27,6 +27,7 @@ import { useTRPC } from "../../trpc";
 import { useAsked, useUrlFilters } from "../../use-url-filters";
 import styles from "./invoices.module.css";
 import { WriteButton } from "../../write-button";
+import table from "../../table.module.css";
 
 function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
   const { t } = useStrings();
@@ -176,7 +177,7 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
       key: "number",
       header: s.number,
       cell: (i) => (
-        <Link href={`/invoices/${i.id}`}>
+        <Link className={table.rowLink} href={`/invoices/${i.id}`}>
           {i.number === null ? s.states.draft : s.invoiceNo(i.number)}
         </Link>
       ),
@@ -262,7 +263,9 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
               </button>
             ))}
           </div>
-          {list.data.truncated && <Note text={s.truncated(list.data.items.length)} />}
+          {list.data.truncated && (
+            <Note text={s.truncated(list.data.items.length)} tone="info" />
+          )}
           <DataTable
             caption={s.title}
             columns={columns}

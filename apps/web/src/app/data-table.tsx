@@ -104,6 +104,9 @@ export function DataTable<Row>({
                 return (
                   <td
                     key={c.key}
+                    // The row's first cell names the row, for a screen reader's table
+                    // reading; a cell kept as td, so the stacked layout's rules hold.
+                    role={index === 0 ? "rowheader" : undefined}
                     data-label={c.label ?? c.header}
                     data-empty={c.empty?.(row) ? "" : undefined}
                     className={[
@@ -116,13 +119,15 @@ export function DataTable<Row>({
                     {opens === null ? (
                       content
                     ) : (
+                      // Its name is what it shows, then the row and the act: a person who
+                      // says the figure they see reaches it.
                       <button
                         type="button"
                         className={table.cellOpen}
-                        aria-label={opens.label}
                         onClick={opens.onOpen}
                       >
                         {content}
+                        <span className="visually-hidden">{`, ${opens.label}`}</span>
                       </button>
                     )}
                   </td>
@@ -138,6 +143,7 @@ export function DataTable<Row>({
             {columns.map((c, index) => (
               <td
                 key={c.key}
+                role={index === 0 ? "rowheader" : undefined}
                 data-label={c.label ?? c.header}
                 data-empty={index !== 0 && c.total === undefined ? "" : undefined}
                 className={[c.number ? table.number : "", "body-strong"].join(" ").trim()}

@@ -135,8 +135,9 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
         p.person.phone === null ? (
           ""
         ) : (
-          <a href={dial(p.person.phone)} aria-label={t.todayScreen.callOf(p.person.name)}>
+          <a href={dial(p.person.phone)}>
             {p.person.phone}
+            <span className="visually-hidden">{`, ${t.todayScreen.callOf(p.person.name)}`}</span>
           </a>
         ),
     },
@@ -182,6 +183,7 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
 
   return (
     <>
+      <title>{`${job.name} · ${t.nav.jobs} · TRADER`}</title>
       {back}
       <RefreshFailed reads={[read]} />
       <div className={styles.head}>

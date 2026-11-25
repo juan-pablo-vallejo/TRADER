@@ -5,12 +5,16 @@
 // `signUp.create({ transfer: true })`). Nobody signs up here: a login exists only because
 // the office made it. So this is that component's sign-in half and no more: a sign-in that
 // is complete is finished and the person goes on; a session Clerk already has is taken up;
-// anything else is a Google account no roster holds, and the person is sent back to the
-// form to be told so. Consumed by page.tsx.
+// a Google account Clerk knows nobody by (`isTransferable`) sends the person back to the
+// form to be told to ask their office; anything else sends them back to be told it failed.
+// If Clerk's script never arrives, the page says so and offers the way back.
 import { useClerk, useSignIn } from "@clerk/nextjs";
 import { useEffect, useRef } from "react";
 
-import { signInRefused } from "../../../../server/sign-in-paths";
+import Link from "next/link";
+
+import { SIGN_IN_PATH, signInRefused } from "../../../../server/sign-in-paths";
+import { useClerkStalled } from "../sign-in-form";
 import { useStrings } from "../../../i18n";
 import styles from "../../auth.module.css";
 
@@ -19,6 +23,7 @@ export function SsoCallback({ returnTo }: { returnTo: string }) {
   const clerk = useClerk();
   const { signIn } = useSignIn();
   const ran = useRef(false);
+  const stalled = useClerkStalled();
   useEffect(() => {
     if (!clerk.loaded || ran.current) return;
     ran.current = true;
@@ -26,7 +31,8 @@ export function SsoCallback({ returnTo }: { returnTo: string }) {
     const goOn = ({ decorateUrl }: { decorateUrl: (url: string) => string }) => {
       window.location.assign(decorateUrl(returnTo));
     };
-    const refuse = () => window.location.replace(signInRefused(returnTo));
+    const refuse = () =>
+      window.location.replace(signInRefused(returnTo, signIn.isTransferable));
     void (async () => {
       try {
         if (signIn.status === "complete") {
@@ -50,9 +56,18 @@ export function SsoCallback({ returnTo }: { returnTo: string }) {
   return (
     <div className={styles.fields}>
       <h1 className={styles.heading}>{t.teamSignIn}</h1>
-      <p className={styles.helper} role="status">
-        {t.signInForm.signingIn}
-      </p>
+      <div role="status">
+        {stalled ? (
+          <>
+            <p className={styles.problem}>{t.signInForm.notLoaded}</p>
+            <p className={styles.helper}>
+              <Link href={SIGN_IN_PATH}>{t.signInForm.backToSignIn}</Link>
+            </p>
+          </>
+        ) : (
+          <p className={styles.helper}>{t.signInForm.signingIn}</p>
+        )}
+      </div>
     </div>
   );
 }

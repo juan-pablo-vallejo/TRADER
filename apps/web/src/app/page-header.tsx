@@ -25,7 +25,18 @@ export function PageHeader({
           className={action.open ? controls.secondary : controls.primary}
           aria-expanded={action.open}
           aria-controls={CREATE_FORM_ID}
-          onClick={action.onToggle}
+          onClick={() => {
+            const opening = !action.open;
+            action.onToggle();
+            // Opened, the form takes the focus to its first field.
+            if (opening)
+              requestAnimationFrame(() =>
+                document
+                  .getElementById(CREATE_FORM_ID)
+                  ?.querySelector<HTMLElement>("input, select, textarea")
+                  ?.focus(),
+              );
+          }}
         >
           {action.open ? t.close : action.label}
         </button>

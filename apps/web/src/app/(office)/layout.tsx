@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 
 import { Header } from "../header";
+import { requestStrings } from "../i18n/server";
+import { MAIN_ID } from "../main-id";
 import { KeyboardRows } from "../keyboard-rows";
 import { Nav } from "../nav";
 import { SessionFrame } from "../session-frame";
@@ -10,13 +12,21 @@ import styles from "../shell.module.css";
 // mode and the keys are read per request (session-frame.tsx).
 export const dynamic = "force-dynamic";
 
-export default function OfficeLayout({ children }: { children: ReactNode }) {
+// The skip link is the page's first stop: the header and the six menu links are passed in
+// one press, to the screen itself.
+export default async function OfficeLayout({ children }: { children: ReactNode }) {
+  const { t } = await requestStrings();
   return (
     <SessionFrame>
+      <a className={styles.skip} href={`#${MAIN_ID}`}>
+        {t.skipToContent}
+      </a>
       <Header />
       <div className={styles.shell}>
         <Nav />
-        <main className={styles.main}>{children}</main>
+        <main id={MAIN_ID} tabIndex={-1} className={styles.main}>
+          {children}
+        </main>
       </div>
       <KeyboardRows />
     </SessionFrame>

@@ -35,8 +35,39 @@ import google from "./google-button.module.css";
 // neither a number nor an email; or a sign-in Clerk left at a step this form has none for.
 // Or a Google account no roster holds, said when the browser comes back from Google.
 // Or a passkey Clerk did not take.
+// Or Clerk's script that never arrived, so nothing on the form can work.
 type Note =
-  SignInFailure | "bad_address" | "unfinished" | "google_refused" | "passkey_failed";
+  | SignInFailure
+  | "bad_address"
+  | "unfinished"
+  | "google_refused"
+  | "passkey_failed"
+  | "not_loaded";
+// The notes that are about what was typed: only these mark the field invalid.
+const ABOUT_THE_FIELD: ReadonlySet<Note> = new Set<Note>([
+  "unknown",
+  "wrong_code",
+  "expired_code",
+  "bad_address",
+]);
+// How long Clerk's script may take before the form says it has not come.
+export const CLERK_LOAD_WAIT_MS = 10_000;
+
+// Clerk's script, given its time: false while it may still come, true once it has failed
+// or the wait is over with nothing loaded. Shared with the Google return (sso-callback).
+export function useClerkStalled(): boolean {
+  const clerk = useClerk();
+  const [late, setLate] = useState(false);
+  useEffect(() => {
+    if (clerk.loaded) return;
+    const timer = window.setTimeout(() => setLate(true), CLERK_LOAD_WAIT_MS);
+    return () => window.clearTimeout(timer);
+  }, [clerk.loaded]);
+  return !clerk.loaded && (late || clerk.status === "error");
+}
+
+// What a step answers when the browser is on its way to the office.
+const LEAVING = Symbol("leaving");
 
 // What only the browser knows, and that does not change under a page.
 const unchanging = () => () => undefined;
@@ -50,11 +81,12 @@ function codeOf(error: unknown): string | undefined {
 
 export function SignInForm({
   returnTo,
-  googleRefused,
+  googleBack,
 }: {
   returnTo: string;
-  // The browser has just come back from Google with an account no roster holds.
-  googleRefused: boolean;
+  // The browser has just come back from Google: with an account no roster holds, or
+  // from a return that failed.
+  googleBack: "google_refused" | "failed" | null;
 }) {
   const { t } = useStrings();
   const s = t.signInForm;
@@ -65,7 +97,10 @@ export function SignInForm({
   const [sentTo, setSentTo] = useState<SignInIdentifier | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<Note | null>(googleRefused ? "google_refused" : null);
+  const [note, setNote] = useState<Note | null>(googleBack);
+  const stalled = useClerkStalled();
+  // "Use a different number or email" sends the focus back to the field on any width.
+  const backToField = useRef(false);
   const [wait, setWait] = useState(0);
   const address = useRef<HTMLInputElement>(null);
   const codeField = useRef<HTMLInputElement>(null);
@@ -75,7 +110,10 @@ export function SignInForm({
   // before it has been read. The code's always: they have just asked for it.
   useEffect(() => {
     if (sentTo !== null) codeField.current?.focus();
-    else if (window.matchMedia("(min-width: 768px)").matches) address.current?.focus();
+    else if (backToField.current || window.matchMedia("(min-width: 768px)").matches) {
+      backToField.current = false;
+      address.current?.focus();
+    }
   }, [sentTo]);
   // And back to the code's field when a try has been answered: it is cleared and empty.
   useEffect(() => {
@@ -101,18 +139,22 @@ export function SignInForm({
       unfinished: s.unfinished,
       google_refused: s.googleRefused,
       passkey_failed: s.passkeyFailed,
+      not_loaded: s.notLoaded,
     })[which];
 
   // One step of the sign-in: busy while it runs, and whatever it threw is a failure said
   // in the form, never an unhandled one.
-  const attempt = async (step: () => Promise<Note | null>) => {
+  const attempt = async (step: () => Promise<Note | null | typeof LEAVING>) => {
     setBusy(true);
     setNote(null);
     try {
-      setNote(await step());
+      const answer = await step();
+      // A finished sign-in is leaving for the office: the form stays busy through that.
+      if (answer === LEAVING) return;
+      setNote(answer);
+      setBusy(false);
     } catch {
       setNote("failed");
-    } finally {
       setBusy(false);
     }
   };
@@ -165,7 +207,7 @@ export function SignInForm({
 
   // A sign-in Clerk has verified becomes a session, and the browser goes to the office as
   // a fresh page, so everything it draws is asked for as the person now signed in.
-  const finish = async (): Promise<Note | null> => {
+  const finish = async (): Promise<Note | null | typeof LEAVING> => {
     if (signIn.status !== "complete") {
       // A second factor, a device check or a challenge: nothing this instance asks of
       // anyone, and nothing this form can answer. Said, and left in the console for
@@ -178,7 +220,7 @@ export function SignInForm({
         window.location.assign(decorateUrl(returnTo));
       },
     });
-    return refused === null ? null : signInFailure(codeOf(refused));
+    return refused === null ? LEAVING : signInFailure(codeOf(refused));
   };
 
   const verify = (entered: string) => {
@@ -201,7 +243,9 @@ export function SignInForm({
   // the request waits, unseen, until the person picks their passkey from the field's
   // suggestions, and ends by itself when they sign in another way). A sheet the person
   // closed is nothing to say; a passkey Clerk did not take is.
-  const withPasskey = async (flow: "discoverable" | "autofill"): Promise<Note | null> => {
+  const withPasskey = async (
+    flow: "discoverable" | "autofill",
+  ): Promise<Note | null | typeof LEAVING> => {
     const { error } = await signIn.passkey({ flow });
     if (error !== null) {
       // The field's own offer speaks only of a passkey the person picked (fieldOfferSays);
@@ -229,7 +273,8 @@ export function SignInForm({
         (await window.PublicKeyCredential.isConditionalMediationAvailable?.()) === true;
       if (!inField || gone) return;
       const note = await withPasskey("autofill").catch(() => null);
-      if (!gone && note !== null) setNote(note);
+      if (note === LEAVING) setBusy(true);
+      else if (!gone && note !== null) setNote(note);
     })();
     return () => {
       gone = true;
@@ -250,6 +295,7 @@ export function SignInForm({
   };
 
   const startOver = () => {
+    backToField.current = true;
     void signIn.reset();
     setSentTo(null);
     setCode("");
@@ -257,11 +303,13 @@ export function SignInForm({
     setWait(0);
   };
 
-  const problem = note !== null && (
+  const shown: Note | null = note ?? (stalled ? "not_loaded" : null);
+  const problem = shown !== null && (
     <p id="sign-in-note" className={styles.problem} role="alert">
-      {sentence(note)}
+      {sentence(shown)}
     </p>
   );
+  const invalid = note !== null && ABOUT_THE_FIELD.has(note);
   // Until Clerk has loaded there is nothing to send a code with.
   const idle = busy || !clerk.loaded;
 
@@ -307,8 +355,8 @@ export function SignInForm({
           // (seen on staging). `typed` is only what the field starts from when it is
           // drawn again, after "Use a different number or email".
           defaultValue={typed}
-          aria-invalid={note !== null}
-          aria-describedby={note !== null ? "sign-in-note" : undefined}
+          aria-invalid={invalid}
+          aria-describedby={shown !== null ? "sign-in-note" : undefined}
         />
         {problem}
         <button type="submit" className={styles.send} disabled={idle}>
@@ -356,7 +404,8 @@ export function SignInForm({
         inputMode="numeric"
         autoComplete="one-time-code"
         pattern="[0-9]*"
-        maxLength={SIGN_IN_CODE_LENGTH}
+        // No length limit on the field: a pasted "123 456" would lose its last digit to
+        // one. signInCode keeps the digits and cuts them to the code's length.
         value={code}
         disabled={busy}
         onChange={(event) => {
@@ -365,8 +414,8 @@ export function SignInForm({
           // The last digit sends it: nobody types a code and then looks for a button.
           verify(entered);
         }}
-        aria-invalid={note !== null}
-        aria-describedby={note !== null ? "sign-in-note" : undefined}
+        aria-invalid={invalid}
+        aria-describedby={shown !== null ? "sign-in-note" : undefined}
       />
       {problem}
       <button

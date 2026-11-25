@@ -339,7 +339,11 @@ export function EditShift({
       <Drawer title={title} onClose={() => onClose(null)} wide>
         <div className={styles.beside}>
           <div>
-            <p className="body-strong">{shift.job.name}</p>
+            <p className="body-strong">
+              <Link className={controls.linkTarget} href={`/jobs/${shift.job.id}`}>
+                {shift.job.name}
+              </Link>
+            </p>
             <p className={`body ${styles.hours}`}>
               {f.weekDay(shift.workDate)} · {hoursOf(shift)}{" "}
               <StatusBadge tone="active" label={s.locked} />
@@ -360,7 +364,11 @@ export function EditShift({
     <Drawer title={title} onClose={() => onClose(null)} wide>
       <div className={styles.beside}>
         <div>
-          <p className="body-strong">{shift.job.name}</p>
+          <p className="body-strong">
+            <Link className={controls.linkTarget} href={`/jobs/${shift.job.id}`}>
+              {shift.job.name}
+            </Link>
+          </p>
           <form onSubmit={submit} className={styles.form}>
             <Field id={`${formId}-day`} label={s.day}>
               <select

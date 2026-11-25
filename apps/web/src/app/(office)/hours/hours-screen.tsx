@@ -73,6 +73,12 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
   const shown = range ?? weekOf(today());
   const [draft, setDraft] = useState<Range | null>(null);
   const typed = draft ?? shown;
+  // Whether the dates in the form, typed or shown, are a range the rule refuses: said under
+  // the field as they are typed, and cleared as soon as they are a range again.
+  const refused =
+    draft === null
+      ? range === null
+      : rangeOf({ ...filters, range: "dates", ...draft }, today()) === null;
   const [exportingHere, setExporting] = useState(false);
   // The command menu's Export hours asks for the same dialog by the address.
   const [asked, clearAsked] = useAsked("export");
@@ -84,10 +90,17 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
     setDraft(null);
     setFilters({ range: name, from: "", to: "" });
   };
+  // The dates typed become the range. A range the rule refuses keeps what was typed in
+  // its fields, under the reason, rather than falling back to this week.
+  const apply = () => {
+    const asked = { ...filters, range: "dates", from: typed.from, to: typed.to };
+    setFilters({ range: "dates", from: typed.from, to: typed.to });
+    if (rangeOf(asked, today()) !== null) setDraft(null);
+    return rangeOf(asked, today());
+  };
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    setFilters({ range: "dates", from: typed.from, to: typed.to });
-    setDraft(null);
+    apply();
   };
   const said = (r: Range) => `${f.day(r.from)} – ${f.day(r.to)}`;
 
@@ -140,11 +153,11 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
               type="date"
               required
               value={typed.to}
-              aria-invalid={range === null}
-              aria-describedby={range === null ? "hours-range" : undefined}
+              aria-invalid={refused}
+              aria-describedby={refused ? "hours-range" : undefined}
               onChange={(e) => setDraft({ ...typed, to: e.target.value })}
             />
-            {range === null && (
+            {refused && (
               <p id="hours-range" className={`secondary ${controls.error}`} role="alert">
                 {t.ledgerRange}
               </p>
@@ -158,8 +171,11 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
           <button
             type="button"
             className={controls.secondary}
-            disabled={range === null}
-            onClick={() => setExporting(true)}
+            disabled={refused}
+            onClick={() => {
+              // Export takes the dates just typed, as Show would.
+              if (draft === null || apply() !== null) setExporting(true);
+            }}
           >
             {t.week.export}
           </button>

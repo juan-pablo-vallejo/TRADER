@@ -84,7 +84,7 @@ export const en = {
     // (keyboard-rows.tsx), but for the space bar.
     space: "Space",
     does: {
-      next: "Next row. From anywhere on the screen, J goes to the first row.",
+      next: "Next row. Once the focus is in a table, J and K move through its rows.",
       previous: "Previous row.",
       along: "Along the row: the next cell of the week in Hours and in the schedule.",
       open: "Open the row's panel or page.",
@@ -104,6 +104,7 @@ export const en = {
   // Navigation
   navigation: "Office",
   menu: "Menu",
+  skipToContent: "Skip to content",
   nav: {
     today: "Today",
     people: "People",
@@ -524,6 +525,8 @@ export const en = {
     or: "or",
     googleRefused: "That Google account is not on a roster. Ask your office.",
     signingIn: "Signing you in…",
+    notLoaded: "Sign-in could not load. Check your connection, then reload this page.",
+    backToSignIn: "Back to sign-in",
     usePasskey: "Use a passkey",
     passkeyFailed: "That passkey did not work. Sign in with a code.",
     helper: "Enter your mobile number or email. We'll send you a code.",
@@ -640,6 +643,9 @@ export const en = {
     makeAdminEffect: (name: string) =>
       `${name} will see and change everything in this office: everyone's hours, the schedule, invoices and this list.`,
     makeWorker: "Make a worker",
+    makeWorkerEffect: (name: string) =>
+      `${name} will no longer open this office: only their own week, their hours and Me.`,
+    ownRole: "Your own role is changed by another admin.",
     location: "Location stamps",
     locationExplain:
       "Whether their clock taps record where the phone is. As the company follows the setting for everyone.",
@@ -680,7 +686,7 @@ export const en = {
     addressesExplain:
       "What they type to sign in. Leave one empty to take it away: one of the two always stays.",
     adminAddresses:
-      "An admin's sign-in addresses are not changed here. Ask the owner of this TRADER.",
+      "An admin's sign-in addresses are not changed here. Ask TRADER support: support@jpteq.app",
     signInNumberField: "Sign-in number",
     changeEmail: "Change the email",
     changeNumber: "Change the sign-in number",
@@ -692,7 +698,8 @@ export const en = {
     addressRepaired: "Their sign-in now matches this.",
     emailInvalid: "Enter an email address, or leave it empty to take it away.",
     addressRefused: {
-      admin: "An admin's sign-in addresses are not changed here.",
+      admin:
+        "An admin's sign-in addresses are not changed here. Ask TRADER support: support@jpteq.app",
       deactivated: "They are deactivated. Nothing was changed.",
       last_address:
         "They need one address to sign in with. Give them the other one first.",
@@ -700,7 +707,7 @@ export const en = {
       phone_taken: "Someone on this roster already has that mobile number.",
       address_held: "That address cannot be used. Nothing was changed.",
       no_login:
-        "Their sign-in was made before addresses could be changed here. It can be changed once they have signed in.",
+        "This person has no sign-in to change yet. It can be changed once they have signed in.",
       company_closed: "This demo company cannot change anyone's address.",
     },
     addressWas: {
@@ -809,6 +816,8 @@ export const en = {
   jobStatus: { open: "Open", complete: "Complete", archived: "Archived" },
   saveDetails: "Save details",
   setStatus: "Set status",
+  archiveJobEffect:
+    "The job leaves the phones' job list and nobody can be scheduled on it. Its hours and invoices stay.",
   customerInactive: "That customer is deactivated.",
   customerInactiveOnStatus:
     "This customer is deactivated. Reactivate them, or move the job to another customer first.",
@@ -981,7 +990,8 @@ export const en = {
 
   // Profile
   contactPhone: "Contact phone",
-  managedBySignIn: "Managed by your sign-in provider",
+  managedBySignIn: "The office changes it.",
+  adminAddressesCaption: "Ask TRADER support to change it: support@jpteq.app",
   signInNumber: "Sign-in number",
   signInNumberCaption: "Your sign-in code is sent here. The office changes it.",
   save: "Save",

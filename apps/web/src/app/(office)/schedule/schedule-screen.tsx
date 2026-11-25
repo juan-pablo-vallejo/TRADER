@@ -90,17 +90,15 @@ function ShiftCard({
       data-shift={shift.id}
       disabled={busy}
       onClick={onOpen}
-      aria-label={s.openShift(
-        shift.worker.name,
-        shift.job.name,
-        hoursOf(shift),
-        f.weekDay(shift.workDate),
-      )}
     >
+      {/* Its name is what it shows, then whose shift and which day. */}
       <span className={`compact ${styles.cardName}`}>
         {view === "employee" ? shift.job.name : shift.worker.name}
       </span>
       <span className={`secondary ${styles.hours}`}>{hoursOf(shift)}</span>
+      <span className="visually-hidden">
+        {`, ${view === "employee" ? shift.worker.name : shift.job.name}, ${f.weekDay(shift.workDate)}`}
+      </span>
       {shift.locked && <StatusBadge tone="active" label={s.locked} />}
     </button>
   );

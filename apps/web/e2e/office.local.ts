@@ -387,6 +387,235 @@ test("a job's second Create invoice opens the same draft, and each act ends with
   await expect(page.getByText("Sentence Customer added.")).toBeVisible();
 });
 
+test("Hours: Export takes the typed dates, a day line is a full target, a correction survives a reconnect", async ({
+  page,
+}) => {
+  await signIn(page, ADMIN);
+
+  // Export, pressed with dates typed and not shown: the file is for those dates.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/hours");
+  await page.getByLabel("From").fill("2026-01-05");
+  await page.getByLabel("Through").fill("2026-01-11");
+  // The office's buttons keep their shared look: the density's text, radius and cursor.
+  const look = await page
+    .getByRole("button", { name: "Show these dates" })
+    .evaluate((b) => {
+      const c = getComputedStyle(b);
+      return [c.fontSize, c.cursor, c.borderTopLeftRadius !== "0px"];
+    });
+  expect(look).toEqual(["15px", "pointer", true]);
+  await page.getByRole("button", { name: "Export for payroll" }).click();
+  await expect(page.getByRole("dialog").getByText(/Jan 5, 2026/)).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // At phone width each day of a week is a line the height of a target.
+  await page.setViewportSize({ width: 390, height: 800 });
+  await page.goto("/hours?range=last");
+  const day = page.getByRole("main").getByRole("table").getByRole("button").first();
+  await expect(day).toBeVisible();
+  expect((await day.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(48);
+
+  // A correction being typed in a day's panel is kept through a reconnect.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/hours?range=last");
+  await page.getByRole("main").getByRole("table").getByRole("button").first().click();
+  const panel = page.getByRole("dialog");
+  await panel
+    .getByRole("button", { name: /^Correct / })
+    .first()
+    .click();
+  const time = panel.locator('input[type="datetime-local"]').first();
+  await expect(time).toBeVisible();
+  const typed = (await time.inputValue()).replace(/T\d{2}:\d{2}$/, "T06:15");
+  await time.fill(typed);
+  await page.context().setOffline(true);
+  await page.context().setOffline(false);
+  await page.waitForTimeout(1500);
+  await expect(time).toHaveValue(typed);
+});
+
+test("the office for a screen reader: titles, names, row headers, quiet regions, the skip link", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+
+  // Each screen names itself.
+  for (const [path, title] of [
+    ["/today", "Today"],
+    ["/schedule", "Schedule"],
+    ["/hours", "Hours"],
+    ["/jobs", "Jobs"],
+    ["/customers", "Customers"],
+    ["/invoices", "Invoices"],
+    ["/people", "People"],
+    ["/settings", "Settings"],
+  ] as const) {
+    await page.goto(path);
+    await expect(page).toHaveTitle(`${title} · TRADER`);
+  }
+
+  // A day's cell is named by the figure it shows, then whose and which day; rows have headers.
+  await page.goto("/hours?range=last");
+  const cell = page.getByRole("main").getByRole("table").getByRole("button").first();
+  await expect(cell).toBeVisible();
+  const shows = (await cell.evaluate((b) => b.firstChild?.textContent ?? "")).trim();
+  expect(shows.length).toBeGreaterThan(0);
+  await expect(cell).toHaveAccessibleName(
+    new RegExp(`^${shows.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`),
+  );
+  await expect(page.getByRole("rowheader").first()).toBeVisible();
+
+  // A result note's status region is on the page before its words.
+  await page.goto("/settings");
+  await expect(page.getByRole("button", { name: "Save company" })).toBeVisible();
+  expect(await page.locator('main [role="status"]:empty').count()).toBeGreaterThan(0);
+
+  // The page's first stop skips to the screen.
+  await page.goto("/today");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main")).toBeFocused();
+});
+
+test("focus is placed, the account menu closes, a wrong address keeps the office's header", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+
+  // Add job opens with the focus in its first field.
+  await page.goto("/jobs");
+  await page.getByRole("button", { name: "Add job" }).click();
+  await expect(
+    page.getByRole("form", { name: "Add job" }).locator("input, select").first(),
+  ).toBeFocused();
+
+  // The account menu closes on a choice and on a press elsewhere.
+  await page.goto("/today");
+  const name = page.locator("header summary");
+  await name.click();
+  await page.getByRole("link", { name: "Settings" }).click();
+  await expect(page).toHaveURL(/\/settings/);
+  await expect(page.locator("header details")).not.toHaveAttribute("open", "");
+  await name.click();
+  await page.getByRole("main").click({ position: { x: 5, y: 5 } });
+  await expect(page.locator("header details")).not.toHaveAttribute("open", "");
+
+  // A wrong address is answered inside the office.
+  await page.goto("/no-such-screen");
+  await expect(page.getByRole("navigation", { name: "Office" })).toBeVisible();
+  await expect(page).toHaveTitle("There is no page at this address. · TRADER");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "There is no page at this address." }),
+  ).toBeVisible();
+  await expect(page.getByText("There is no page at this address.")).toBeVisible();
+});
+
+test("People: Make a worker asks first and not on one's own row; J only acts inside a table", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/people");
+  const rows = page.getByRole("main").getByRole("table").getByRole("rowheader");
+  await expect(rows.first()).toBeVisible();
+
+  // J pressed with the focus outside any table moves nothing.
+  await page.getByRole("heading", { level: 1 }).click();
+  await page.keyboard.press("j");
+  expect(
+    await page.evaluate(() => document.activeElement?.closest("[data-keys]") ?? null),
+  ).toBeNull();
+
+  // One's own row offers no change of role.
+  const own = (await page.locator("header summary").innerText()).trim();
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: new RegExp(`^${own}`) })
+    .first()
+    .click();
+  const panel = page.getByRole("dialog");
+  await expect(
+    panel.getByText("Your own role is changed by another admin."),
+  ).toBeVisible();
+  await panel.getByRole("button", { name: "Close" }).click();
+
+  // Another admin's row: Make a worker says what it takes away before it does it.
+  await page
+    .getByRole("main")
+    .getByRole("table")
+    .getByRole("button")
+    .filter({ hasNotText: own })
+    .first()
+    .click();
+  const admin = panel.getByRole("button", { name: "Make an admin" });
+  if (await admin.isVisible()) {
+    await admin.click();
+    await panel
+      .getByRole("group", { name: "Make an admin" })
+      .getByRole("button", { name: "Make an admin" })
+      .click();
+  }
+  await panel.getByRole("button", { name: "Make a worker" }).click();
+  await expect(panel.getByText(/will no longer open this office/)).toBeVisible();
+});
+
+test("small fixes: a small favicon, job names link, archiving asks, the right captions", async ({
+  page,
+  request,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+
+  // The favicon is a small icon, not the 2048 px logo.
+  const icon = await request.get("/favicon.ico");
+  expect((await icon.body()).length).toBeLessThan(8_000);
+
+  await signIn(page, ADMIN);
+
+  // Today names jobs as links to their pages; its money links are filtered.
+  await page.goto("/today");
+  await expect(page.locator('main a[href^="/jobs/"]').first()).toBeVisible();
+  await expect(page.locator('main a[href="/invoices?show=drafts"]')).toBeVisible();
+
+  // A shift's panel links to its job.
+  await page.goto("/schedule");
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: /\d:\d{2}/ })
+    .first()
+    .click();
+  const jobLink = page.getByRole("dialog").locator('a[href^="/jobs/"]');
+  await expect(jobLink).toBeVisible();
+  expect((await jobLink.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(36);
+  // The job's page names the job in its title.
+  const jobName = (await jobLink.innerText()).trim();
+  await jobLink.click();
+  await expect(page).toHaveTitle(`${jobName} · Jobs · TRADER`);
+  await page.goto("/schedule");
+  await page.keyboard.press("Escape");
+
+  // Archiving a job says what it does before it does it.
+  await page.goto("/jobs");
+  await page.getByRole("main").getByRole("table").getByRole("button").first().click();
+  const panel = page.getByRole("dialog");
+  await panel.getByLabel("Status").selectOption("archived");
+  await panel.getByRole("button", { name: "Set status" }).click();
+  await expect(panel.getByText(/leaves the phones' job list/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await page.waitForLoadState("networkidle");
+
+  // Settings says who changes the signed-in admin's email.
+  await page.goto("/settings");
+  // An admin's own email is changed by TRADER support, not by the office.
+  await expect(
+    page.getByText("Ask TRADER support to change it: support@jpteq.app").first(),
+  ).toBeVisible();
+});
+
 test("a worker is refused the office", async ({ page }) => {
   await signIn(page, WORKER);
   await page.goto("/customers");

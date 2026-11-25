@@ -518,16 +518,22 @@ the iPhone simulator and `trader-ws android`.
 - A required field left empty is refused by the browser's own bubble, in the browser's
   language ("Please fill out this field." under a Spanish office): the office's own sentence
   under the field, in the chosen language, on every form.
-- Focus is lost to the page after a language change in the account menu, after closing
-  Keyboard shortcuts opened from it, and after closing a panel opened by its address: it
-  returns to the opener, or to the record's own row.
+- Focus is lost to the page after closing a panel opened by its address (a job's edit
+  panel reached from its page): it returns to the record's own row.
 - At phone width Correct in a day's panel opens its form below the screen: the form comes
   into view with focus on its first field.
 - Settings' Me section jumps more than a screen when Company and Time clock arrive above
   it: placeholder rows that hold the room.
-- On a job's page and in Jobs, Edit and the phone link are named with words they do not
-  show; the phone number reads as People writes it. The Search button's name begins with
-  its visible word. An invoice's lines table has a caption.
+- In Jobs, Edit is named with words it does not show; on a job's page the phone number
+  reads as People writes it. The Search button's name begins with its visible word.
+- Stacked rows at phone width: a name's target spans its line, not only its words; a row's
+  Edit is 48 px tall on a line of its own; a middle dot stays with the cell it introduces;
+  People and Customers set their names as Jobs does.
+- At 390 the header keeps at least the person's first name beside the company's.
+- A draft with no lines says at its foot why it cannot be issued yet, not "from below".
+- In Spanish at 768 a draft line's "Precio por unidad" sits level with the fields beside
+  it.
+- Spanish says "a la 1:45", not "a las", for one o'clock.
 - Hours' day lines are 32 px at 768 too: `--target` there as well.
 - The schedule offers "Add a shift" for a deactivated person, whom the form then leaves
   out.

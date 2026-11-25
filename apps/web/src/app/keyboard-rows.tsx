@@ -6,10 +6,10 @@
 // focus ring is the browser's own and Enter or Space opens what a click would. Escape
 // closing a panel and handing the focus back is the panel's own doing (side-panel.tsx).
 //
-// A key never acts while a field has the focus, nor with a modifier held. J and K enter
-// the screen's table from anywhere; the arrow keys act only once the focus is in a table,
-// since elsewhere they scroll the page. While a panel is open the keys stay inside it.
-// `?` lists the keys, and so does the account menu, for a pointer. Mounted by the office's
+// A key never acts while a field has the focus, nor with a modifier held, and acts only
+// once the focus is in a table: elsewhere a letter is a screen reader's own key, and an
+// arrow scrolls the page. While a panel is open the keys stay inside it. `?` in a table
+// lists the keys, and so does the account menu, from anywhere. Mounted by the office's
 // layout.
 import { useEffect, useState } from "react";
 
@@ -66,29 +66,26 @@ export function KeyboardRows() {
       const active = document.activeElement;
       if (isField(active)) return;
       const dialog = document.querySelector("dialog[open]");
+      const inside = active?.closest("[data-keys]") ?? null;
+      if (inside === null) return;
       if (event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey) {
         if (dialog !== null) return;
         event.preventDefault();
         setHelp(true);
         return;
       }
-      const inside = active?.closest("[data-keys]") ?? null;
       // Space opens a link as it presses a button: a row's page is a link.
-      if (event.key === " " && inside !== null && active instanceof HTMLAnchorElement) {
+      if (event.key === " " && active instanceof HTMLAnchorElement) {
         event.preventDefault();
         active.click();
         return;
       }
       const direction = directionOf(event);
       if (direction === null) return;
-      const letter = event.key.length === 1;
-      // The arrows belong to the page until the focus is in a table.
-      if (inside === null && !letter) return;
-      const scope = dialog ?? document;
-      const table = inside ?? [...scope.querySelectorAll("[data-keys]")].find(shown);
-      if (table === undefined || (dialog !== null && !dialog.contains(table))) return;
+      const table = inside;
+      if (dialog !== null && !dialog.contains(table)) return;
       const stops = stopsOf(table);
-      const at = inside === null || active === null ? null : placeOf(stops, active);
+      const at = active === null ? null : placeOf(stops, active);
       const next = move(
         stops.map((row) => row.map((cell) => cell.length)),
         at,

@@ -67,7 +67,13 @@ export function Gallery({ photos }: { photos: GalleryPhoto[] }) {
       >
         <div className={styles.viewerBar}>
           <p className={styles.viewerCount} aria-live="polite">
-            {at !== null && t.home.photoOf(at + 1, total)}
+            {at !== null && (
+              <>
+                {/* The caption is said with the count; the eye reads it under the photo. */}
+                <span className="visually-hidden">{`${shown?.alt ?? ""}. `}</span>
+                {t.home.photoOf(at + 1, total)}
+              </>
+            )}
           </p>
           <button
             type="button"
@@ -86,7 +92,8 @@ export function Gallery({ photos }: { photos: GalleryPhoto[] }) {
               placeholder="blur"
               sizes="100vw"
             />
-            <figcaption>{shown.alt}</figcaption>
+            {/* Read already, as the image's name and in the count's announcement. */}
+            <figcaption aria-hidden="true">{shown.alt}</figcaption>
           </figure>
         )}
         {total > 1 && (

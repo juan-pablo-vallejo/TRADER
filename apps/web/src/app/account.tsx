@@ -8,6 +8,7 @@
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 import { DEV_SIGN_IN_PATH } from "../server/sign-in-paths";
 import { ClerkHeaderRefused, ClerkSignOut } from "./clerk-session";
@@ -26,6 +27,15 @@ export function Account({ signInHref }: { signInHref: string }) {
   const devSignIn = signInHref === DEV_SIGN_IN_PATH;
   const trpc = useTRPC();
   const path = usePathname();
+  const menu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const outside = (e: PointerEvent) => {
+      const open = menu.current;
+      if (open?.open && !open.contains(e.target as Node)) open.open = false;
+    };
+    document.addEventListener("pointerdown", outside);
+    return () => document.removeEventListener("pointerdown", outside);
+  }, []);
   const me = useQuery(trpc.me.get.queryOptions());
   if (me.isPending) return null;
   // Signed out only when the server says so, or nothing was ever read: a refresh that
@@ -43,12 +53,26 @@ export function Account({ signInHref }: { signInHref: string }) {
       </div>
     );
   }
+  // A choice made, or a press anywhere outside, closes the menu; a native disclosure
+  // otherwise stays open over the screen it led to.
+  const close = () => {
+    if (menu.current === null) return;
+    menu.current.open = false;
+    // The focus stays on the person's name, not on a link the menu has just hidden.
+    menu.current.querySelector("summary")?.focus();
+  };
   // The person's name opens what is theirs: Settings, and Sign out. A native
   // disclosure: it opens by pointer, Enter or Space, and Escape closes it with the focus
   // back on the name.
   return (
     <details
+      ref={menu}
       className={styles.account}
+      // The focus leaving the menu closes it, as a click elsewhere does (below).
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null))
+          e.currentTarget.open = false;
+      }}
       onKeyDown={(e) => {
         if (e.key !== "Escape" || !e.currentTarget.open) return;
         e.currentTarget.open = false;
@@ -61,6 +85,7 @@ export function Account({ signInHref }: { signInHref: string }) {
       <div className={styles.menu}>
         <Link
           href="/settings"
+          onClick={close}
           className={`${styles.item} ${path === "/settings" ? styles.current : ""}`}
           aria-current={path === "/settings" ? "page" : undefined}
         >
@@ -74,7 +99,10 @@ export function Account({ signInHref }: { signInHref: string }) {
             type="button"
             lang={l}
             className={controls.textAction}
-            onClick={() => setLanguage(l)}
+            onClick={() => {
+              close();
+              setLanguage(l);
+            }}
           >
             {t.languages[l]}
           </button>
@@ -82,9 +110,8 @@ export function Account({ signInHref }: { signInHref: string }) {
         <button
           type="button"
           className={controls.textAction}
-          onClick={(e) => {
-            const menu = e.currentTarget.closest("details");
-            if (menu !== null) menu.open = false;
+          onClick={() => {
+            close();
             document.dispatchEvent(new Event(KEYS_HELP_EVENT));
           }}
         >

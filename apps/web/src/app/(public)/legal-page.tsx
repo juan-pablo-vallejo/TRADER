@@ -10,6 +10,7 @@ import {
   type Document,
 } from "./legal-content";
 import type { Language } from "../i18n/language";
+import { homeHref } from "../../server/sign-in-paths";
 
 // The privacy policy and the terms are one page drawn twice: a title, the day the words
 // last changed, the sections, who operates TRADER and how to reach them, and the way to
@@ -64,7 +65,7 @@ export async function LegalPage({
         </section>
         <p className={styles.legalLinks}>
           <a href={other.href}>{other.label(t)}</a>
-          <a href="/">{t.get.home}</a>
+          <a href={homeHref(process.env)}>{t.get.home}</a>
           <LanguageSwitch />
         </p>
       </article>
