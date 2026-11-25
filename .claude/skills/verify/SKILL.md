@@ -25,10 +25,10 @@ the workstation and runs `scripts/check-ci.sh` there, which is CI's `check` step
    `clerk-*.tsx`, `server/clerk-*.ts`, `server/directory.ts`, `e2e/clerk*`): also
    `scripts/staging.sh local`, real Clerk on this Mac only, which records the `clerk` line
    the pre-push hook asks for.
-4. **Once per batch.** On the tree that is pushed, and before a release's merge, the full
-   suites of the apps the batch touches: `trader-ws e2e` for the office (`pnpm e2e:local`
-   here, with port 3000 free); `apps/mobile/.maestro/suite.sh ios <udid>` here and
-   `trader-ws android`, then `trader-ws wait android`, for the phone.
+4. **Full suites: once, before a release's merge.** Never for a commit or a push. The
+   `release` skill runs them on the tree it ships: `trader-ws e2e` for the office
+   (`pnpm e2e:local` here, with port 3000 free); `apps/mobile/.maestro/suite.sh ios <udid>`
+   here and `trader-ws android`, then `trader-ws wait android`, for the phone.
 5. **Workstation off.** The session's first lines say so. `trader-ws check --local` runs the
    same steps here and records the same line. Android waits for the workstation.
 6. **Commit what was checked.** `git add -A`, then `git write-tree` prints the tree the

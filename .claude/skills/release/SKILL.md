@@ -14,16 +14,21 @@ The owner merges a release; this only prepares it. Nothing here merges, pushes t
 2. **Main is what staging runs.** The `staging-status` skill: main's commit is the deployed
    commit, the last deploy run is green, migrations applied equal the journal's count.
    Anything else is fixed first.
-3. **Phone flows.** `trader-ws android`, then `trader-ws wait android`, green on main's
-   tree, and the iPhone flows green here (`apps/mobile/.maestro/suite.sh ios <udid>`). A
-   flow that was not run is named in the pull request, never left out.
-4. **Facts.** `git fetch origin`, then `scripts/release-facts.sh origin/production origin/main`.
-5. **Audit.** Hand the facts to the `release-auditor` agent. It reads
+3. **Full suites, once.** On main's tree: the office in a browser (`trader-ws e2e`),
+   `trader-ws android` then `trader-ws wait android`, and the iPhone flows here
+   (`apps/mobile/.maestro/suite.sh ios <udid>`), all green. A flow that was not run is named
+   in the pull request, never left out.
+4. **The screens, reviewed once.** `visual-qa` on Fable over every screen the release
+   changes (the finishing commits name them): the office at 390, 768 and 1280, the phone on
+   both platforms, both languages, against the `interface-change` skill's standards. A
+   Critical or High finding is fixed, and its fix seen, before the pull request.
+5. **Facts.** `git fetch origin`, then `scripts/release-facts.sh origin/production origin/main`.
+6. **Audit.** Hand the facts to the `release-auditor` agent. It reads
    `origin/production...origin/main` in a context that did not write the code, and returns
    findings ranked by what the owner must read himself.
-6. **Pull request.** `gh pr create --base production --head main`, its body in this order:
+7. **Pull request.** `gh pr create --base production --head main`, its body in this order:
    what a person using the product will see changed; what the owner must read (the
    auditor's findings, each with file and line); the facts, verbatim; what was seen working,
    as `scripts/release-facts.sh` gathers it from the finishing commits; what was not
    checked.
-7. **Stop.** From here until the owner merges or closes it, nothing is pushed to `main`.
+8. **Stop.** From here until the owner merges or closes it, nothing is pushed to `main`.

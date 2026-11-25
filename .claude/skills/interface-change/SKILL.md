@@ -1,6 +1,6 @@
 ---
 name: interface-change
-description: The lifecycle for a TRADER batch that changes what a person sees or touches, in the office (apps/web/src/app) or on the phone (apps/mobile/src/app, ui, i18n, theme.ts) - look before, build on the tokens, look after at three widths in both languages, the phone on both platforms, then one review of the rendered screens by an agent that did not write them. Use for every such batch.
+description: The lifecycle for a TRADER batch that changes what a person sees or touches, in the office (apps/web/src/app) or on the phone (apps/mobile/src/app, ui, i18n, theme.ts) - look before, build on the tokens, look after at three widths in both languages, the phone on both platforms; the rendered screens a release changes are reviewed once, before its merge, by the release skill. Use for every such batch.
 ---
 
 # An interface batch
@@ -45,13 +45,11 @@ Three layouts (`apps/web/src/app`, one route group each):
 8. **States.** A first load (placeholder rows, never the word "Loading"), empty, a refusal
    under its field, a load failure, and the saved note: each seen, or named as not seen in
    the report. A screen visited before opens on its rows at once.
-9. **The phone.** A phone screen is seen on the iPhone simulator and the Android emulator in
-   both languages; the `verify` skill says how its flows are run.
-10. **Review.** Hand the rendered screens to `visual-qa` as the method's gate says: the
-    item's requirement, the standards as paths (this file, `theme.css`, the MVP), the local
-    address and its sign-in, the evidence folder. Opus for a small change; Fable for a
-    screen with the clock, hours or money, and for an audit. A Critical or High finding
-    blocks. Where the reviewer is not installed, the report says "not independently
-    reviewed".
-11. **Report** what was seen at which width and in which language, what the review found,
-    and what was not seen; then `pnpm demo --reset`.
+9. **The phone.** A phone screen is seen in both languages on the simulator or the emulator,
+   with the on-screen keyboard showing; its flows are the ones of what changed (the `verify`
+   skill).
+10. **Review.** None per batch. The `release` skill hands every screen a release changes to
+    `visual-qa` on Fable, once, before its merge. The report names the screens this batch
+    changed, for that review.
+11. **Report** what was seen at which width and in which language, and what was not seen;
+    then `pnpm demo --reset`.

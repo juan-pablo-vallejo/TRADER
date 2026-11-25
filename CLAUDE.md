@@ -16,8 +16,9 @@ disagrees with them, the code is wrong: fix it, or stop and ask.
 5. Watch `check` and the staging deploy (`gh run watch`). Red: fix it before anything else.
    A batch of only `apps/mobile/` and Markdown deploys nothing, and staging then serves an
    older commit than `main`, by design.
-6. See it working: on staging in a browser for the office; on the simulator and the
-   emulator for the phone. Collect everything wrong; one follow-up push at most.
+6. See it working: on staging in a browser for the office; for the phone, the flows of what
+   changed on the simulator or the emulator. Collect everything wrong; one follow-up push at
+   most.
 7. Finish the batch with one commit of Markdown alone, pushed alone. It deletes the batch's
    items from `docs/TASKS.md`; its message says what was seen, where and at which commit,
    each on a line that begins "Seen", and the reviewers' running total. Next batch.
@@ -63,14 +64,14 @@ read-only for you.
    `scripts/trader-ws check`, `--local` on this Mac. A commit that changes Markdown alone
    needs no check. A green run on the workstation counts when the tree committed is exactly
    the tree it checked. A change to the office's sign-in also needs its suite against Clerk's
-   development instance green on that tree, on this Mac. Before a commit, run the tests and
-   flows of what changed; the office's browser suite and both phone suites, iPhone and
-   Android, run whole once per batch, on the tree that is pushed, and before a release's
-   merge. A batch that changes the server or the phone's sync
-   path is simplified once and reviewed once by agents that did not write it (the
-   `backend-change` skill). A batch that changes what a person sees is seen rendered in
-   both languages and reviewed once by an agent that did not build it (the
-   `interface-change` skill). A batch that changes comments alone runs neither: a check
+   development instance green on that tree, on this Mac. A commit and a push run the tests
+   and flows of what changed. The office's browser suite and both phone suites, iPhone and
+   Android, run whole once, before a release's merge, on the tree it ships. A batch that
+   changes the server or the phone's sync path is simplified once and reviewed once by
+   agents that did not write it (the `backend-change` skill). A batch that changes what a
+   person sees is seen rendered in both languages (the `interface-change` skill); the
+   screens a release changes are reviewed once, on Fable, by an agent that did not build
+   them, before its merge (the `release` skill). A batch that changes comments alone runs neither: a check
    that no code token changed, the files compared with their comments stripped, is pasted
    in its commit message.
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
