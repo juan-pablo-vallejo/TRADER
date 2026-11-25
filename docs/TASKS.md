@@ -133,19 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**The rendered audit**
-
-- Every screen, both apps, both languages: the office at 390, 768 and 1280; the phone on the
-  simulator and the emulator, at the largest text too; spoken names and contrast read.
-- Settles what reading the code could not: whether a focused link hides behind the
-  homepage's sticky header or its fixed Call bar; whether Hours' week table scrolls
-  sideways at 1280 and loses Total; whether the phone's timer and labels fit at the largest
-  text; whether the homepage's header overflows at 320 in Spanish.
-- A control a person cannot use or read becomes an item at the end of this part; the rest
-  joins After MVP's lines or nothing. What these rules do not settle goes to the owner.
-- Done when: every screen is captured and every finding sorted.
-- See it working: the captures reviewed on Fable; the sorted findings shown to the owner.
-
 **The office's Undo and feedback**
 
 - Schedule's Undo: Ctrl or Cmd+Z while the toast shows; focus to Undo when focus was lost;
@@ -536,6 +523,46 @@ the iPhone simulator and `trader-ws android`.
 - Done when: every line holds on one commit.
 - See it working: the results in the finishing commit's message.
 
+**Phone: the Face ID offer at the largest text**
+
+- On an iPhone at the largest text size the Face ID offer after a first sign-in by code does
+  not scroll, so neither "Turn on Face ID" nor "Not now" can be reached and the person cannot
+  get into the app. The offer scrolls, as every tab does.
+- At that size the sign-in heading breaks word by word ("Team / sign- / in") and pushes the
+  field down: it wraps by words.
+- Done when: a Maestro flow at the largest text reaches "Not now" on the iPhone simulator.
+- See it working: simulator and emulator at the largest text, both languages, reviewed; both
+  suites whole.
+
+**Invitations: copied or opened is not sent** (backend-change)
+
+- Copy the message, and Send by WhatsApp once it replaces texting, record "Copied" or
+  "Opened in WhatsApp" with who and when; the invitation stays Not sent until the admin
+  presses "I sent it". Email keeps its provider's answer.
+- Done when: a test that failed first leaves a copied invitation Not sent.
+- See it working: staging, both languages, reviewed.
+
+**Office: what the rendered audit added**
+
+- A required field left empty is refused by the browser's own bubble, in the browser's
+  language ("Please fill out this field." under a Spanish office): the office's own sentence
+  under the field, in the chosen language, on every form.
+- Focus is lost to the page after a language change in the account menu, after closing
+  Keyboard shortcuts opened from it, and after closing a panel opened by its address: it
+  returns to the opener, or to the record's own row.
+- At phone width Correct in a day's panel opens its form below the screen: the form comes
+  into view with focus on its first field.
+- Settings and one invoice open on the word "Loading…"; Settings' Me section jumps when
+  Company and Time clock arrive: placeholder rows that hold the room.
+- On a job's page and in Jobs, Edit and the phone link are named with words they do not
+  show; the phone number reads as People writes it. The Search button's name begins with
+  its visible word. An invoice's lines table has a caption.
+- Hours' day lines are 32 px at 768 too: `--target` there as well.
+- The schedule offers "Add a shift" for a deactivated person, whom the form then leaves
+  out.
+- Done when: a test for each.
+- See it working: staging, both languages, reviewed.
+
 ### The owner's
 
 `<angle brackets>` mark a value only the owner holds.
@@ -860,7 +887,8 @@ In the order it would come back. The owner reorders at will.
 - One main button a screen: Settings, an issued invoice, Me, the sync sheet when only a
   refusal is listed.
 - Office layout: less above the table (Hours, Schedule); a full-screen panel keeps Close in
-  view; a long company name in the header at 390; Passkeys in a card (Settings).
+  view; a long company or person's name in the header at 390; Passkeys in a card (Settings);
+  the switches that are not destructive drawn apart from Void and Deactivate.
 - Office steps: a forgotten clock-out closed in one action (Hours); New invoice's job list
   marks archived jobs and tells like names apart.
 - Office tables and panels: an issued invoice's lines named on a phone; the email shown once
@@ -871,4 +899,5 @@ In the order it would come back. The owner reorders at will.
   hold still under Reduce Motion.
 - Public pages and speed: reading sizes on Privacy and Terms; the small font on Get the app,
   Privacy and Terms; Schedule's first paint on two reads; the theme test compares sizes as
-  well as colours.
+  well as colours; the homepage's headline holds its box while its font arrives; Get the
+  app's "Back to the homepage" at the target height it has on Privacy and Terms.
