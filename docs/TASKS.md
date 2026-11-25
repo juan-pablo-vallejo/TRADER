@@ -133,18 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**A failed refresh keeps its rows**
-
-- A failed background refresh replaces good rows with the failure banner on Today, Schedule
-  (unmounting an open drawer and what was typed in it), Hours, one invoice and the day panel
-  (which then says "Nothing was changed" after a saved correction). The whole-screen failure
-  only when there is no data; otherwise the rows stay under a "could not refresh" line with
-  the as-of time, and an open drawer is never unmounted.
-- One note, one refusal map, one refresh hook for the office. Placeholder rows where three
-  panels, the invoice page, its hours list and Me show the word "Loading…".
-- Done when: a test that failed first keeps the rows on each of the five.
-- See it working: staging, both languages, reviewed.
-
 **One invoice: drafts, unknown outcomes, sentences**
 
 - A refused or failed save of a draft is re-read, and the screen says the outcome is not
