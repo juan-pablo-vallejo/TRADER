@@ -22,6 +22,7 @@ import { useTRPC } from "../../trpc";
 import { Drawer } from "./drawer";
 import styles from "./schedule.module.css";
 import { copiesIn, type CopyPreview, leftOutText, type Week } from "./schedule-view";
+import { WriteButton } from "../../write-button";
 
 const line = (f: Formatters, o: CopyPreview["create"][number]) =>
   `${o.worker.name} · ${o.job.name} · ${f.weekDay(o.workDate)} ${o.expectedStart}–${o.expectedEnd}`;
@@ -127,10 +128,10 @@ export function CopyWeek({
               {preview.create.length === 0 ? (
                 <p className="body">{s.copyNothing}</p>
               ) : (
-                <button
+                <WriteButton
                   type="button"
                   className={controls.primary}
-                  disabled={confirm.isPending}
+                  pending={confirm.isPending}
                   onClick={() => {
                     setNote(null);
                     confirm.mutate({
@@ -141,7 +142,7 @@ export function CopyWeek({
                   }}
                 >
                   {s.copyCreate(preview.create.length)}
-                </button>
+                </WriteButton>
               )}
             </div>
             <Note text={note} tone={note === s.copyStale ? "info" : undefined} />

@@ -33,6 +33,7 @@ import { StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import { MeForm } from "./me-form";
 import styles from "./settings.module.css";
+import { WriteButton } from "../../write-button";
 
 export function SettingsScreen({ signInHref }: { signInHref: string }) {
   const { t } = useStrings();
@@ -239,9 +240,9 @@ function Details({ company }: { company: Company }) {
           </p>
         </Field>
         <Note text={note} />
-        <button type="submit" className={controls.primary} disabled={save.isPending}>
+        <WriteButton type="submit" className={controls.primary} pending={save.isPending}>
           {t.settings.saveCompany}
-        </button>
+        </WriteButton>
       </form>
     </section>
   );

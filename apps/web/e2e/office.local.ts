@@ -124,6 +124,81 @@ test("an admin adds a customer, rewrites their notes, and reads them back", asyn
   expect(wrong, "nothing went wrong").toEqual([]);
 });
 
+test("Ctrl or Cmd+Z brings back a removed shift while another shift's panel is open", async ({
+  page,
+}) => {
+  const wrong = watch(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/schedule");
+  // A shift's card is named with its hours; a started shift's panel offers no Remove.
+  const cards = page.getByRole("main").getByRole("button", { name: /\d:\d{2}/ });
+  await expect(cards.first()).toBeVisible();
+  const count = await cards.count();
+  let removed = false;
+  for (let i = count - 1; i >= 0 && !removed; i--) {
+    await cards.nth(i).click();
+    const panel = page.getByRole("dialog");
+    const remove = panel.getByRole("button", { name: "Remove shift" });
+    if (await remove.isVisible()) {
+      await remove.click();
+      removed = true;
+    } else {
+      await panel.getByRole("button", { name: "Close" }).click();
+    }
+  }
+  expect(removed, "a shift that can be removed").toBe(true);
+  await expect(page.getByText(/shift on .* removed\./)).toBeVisible();
+  await expect(cards).toHaveCount(count - 1);
+
+  // Another shift's panel now covers the page; Undo still answers the keyboard.
+  await cards.first().click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("ControlOrMeta+z");
+  await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  await expect(page.getByText("Undone: the shift is as it was.")).toBeVisible();
+  await expect(cards).toHaveCount(count);
+  expect(wrong, "nothing went wrong").toEqual([]);
+});
+
+test("Undo by keyboard leaves the focus on the shift that came back", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/schedule");
+  const cards = page.getByRole("main").getByRole("button", { name: /\d:\d{2}/ });
+  await expect(cards.first()).toBeVisible();
+  const count = await cards.count();
+  for (let i = count - 1; i >= 0; i--) {
+    await cards.nth(i).click();
+    const remove = page.getByRole("dialog").getByRole("button", { name: "Remove shift" });
+    if (await remove.isVisible()) {
+      await remove.focus();
+      await page.keyboard.press("Enter");
+      break;
+    }
+    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+  }
+  // The shift is gone, so the focus went to Undo.
+  const undo = page.locator("[data-toast]").getByRole("button", { name: "Undo" });
+  await expect(undo).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Undone: the shift is as it was.")).toBeVisible();
+  await expect(cards).toHaveCount(count);
+  await expect(page.locator("[data-shift]:focus")).toHaveCount(1);
+});
+
+test("a write button keeps the focus through its write", async ({ page }) => {
+  await signIn(page, ADMIN);
+  await page.goto("/settings");
+  const save = page.getByRole("button", { name: "Save company" });
+  await save.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Saved.").first()).toBeVisible();
+  await expect(save).toBeFocused();
+});
+
 test("a worker is refused the office", async ({ page }) => {
   await signIn(page, WORKER);
   await page.goto("/customers");

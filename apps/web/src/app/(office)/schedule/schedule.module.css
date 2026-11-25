@@ -82,7 +82,7 @@
 .grid thead th {
   position: sticky;
   top: 0;
-  z-index: 1;
+  z-index: var(--z-sticky);
   background: var(--surface);
   color: var(--ink-secondary);
   vertical-align: middle;

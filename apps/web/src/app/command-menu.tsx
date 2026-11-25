@@ -69,6 +69,15 @@ function Menu({ onClose }: { onClose: () => void }) {
   };
   const optionId = (item: Item) => `${listId}-${item.id}`;
   const current = found[Math.min(active, found.length - 1)];
+  const currentId = current === undefined ? undefined : optionId(current);
+
+  // The highlighted result stays in view as the arrows move it, so Enter never opens
+  // something unseen.
+  useEffect(() => {
+    if (currentId !== undefined) {
+      document.getElementById(currentId)?.scrollIntoView({ block: "nearest" });
+    }
+  }, [currentId]);
 
   return (
     <dialog

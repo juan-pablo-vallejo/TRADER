@@ -26,6 +26,7 @@ import {
 } from "./passkey-rules";
 import { DestructiveAction } from "./row-editor";
 import styles from "./passkeys.module.css";
+import { WriteButton } from "./write-button";
 
 // What only the browser knows, and that does not change under a page.
 const unchanging = () => () => undefined;
@@ -156,14 +157,14 @@ export function PasskeyBand() {
         <>
           <p className="body">{p.offer}</p>
           <div className={controls.actions}>
-            <button
+            <WriteButton
               type="button"
               className={controls.primary}
-              disabled={keys.busy}
+              pending={keys.busy}
               onClick={() => void keys.add().then((went) => setAdded(went))}
             >
               {p.add}
-            </button>
+            </WriteButton>
             <button
               type="button"
               className={controls.secondary}
@@ -221,14 +222,14 @@ export function PasskeySection({ className }: { className: string | undefined })
         </ul>
       )}
       {supported ? (
-        <button
+        <WriteButton
           type="button"
           className={controls.secondary}
-          disabled={keys.busy}
+          pending={keys.busy}
           onClick={() => void keys.add()}
         >
           {p.add}
-        </button>
+        </WriteButton>
       ) : (
         <p className="secondary">{p.failures.unsupported}</p>
       )}

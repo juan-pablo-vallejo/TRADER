@@ -24,6 +24,7 @@ import table from "../../table.module.css";
 import { useTRPC } from "../../trpc";
 import { useUrlFilters } from "../../use-url-filters";
 import styles from "./customers.module.css";
+import { WriteButton } from "../../write-button";
 
 type Rows = NonNullable<ReturnType<typeof useCustomers>["data"]>;
 type Row = Rows[number];
@@ -190,9 +191,9 @@ function CreateForm({ onDone }: { onDone: () => void }) {
     >
       <CustomerFields id="new-customer" value={value} onChange={setValue} />
       <Note text={note} />
-      <button type="submit" className={controls.primary} disabled={create.isPending}>
+      <WriteButton type="submit" className={controls.primary} pending={create.isPending}>
         {t.addCustomer}
-      </button>
+      </WriteButton>
     </form>
   );
 }
@@ -297,13 +298,13 @@ function Editor({ row }: { row: Row }) {
       <EditorSection>
         <form onSubmit={submit}>
           <CustomerFields id={`customer-${row.id}`} value={value} onChange={setValue} />
-          <button
+          <WriteButton
             type="submit"
             className={`${controls.secondary} ${table.stretch}`}
-            disabled={busy}
+            pending={busy}
           >
             {t.save}
-          </button>
+          </WriteButton>
           <Note text={note} />
         </form>
       </EditorSection>
@@ -316,14 +317,14 @@ function Editor({ row }: { row: Row }) {
             onConfirm={() => deactivate.mutate({ customerId: row.id })}
           />
         ) : (
-          <button
+          <WriteButton
             type="button"
             className={`${controls.secondary} ${table.stretch}`}
-            disabled={busy}
+            pending={busy}
             onClick={() => reactivate.mutate({ customerId: row.id })}
           >
             {t.reactivate}
-          </button>
+          </WriteButton>
         )}
         <Note text={stateNote} />
       </EditorFooter>

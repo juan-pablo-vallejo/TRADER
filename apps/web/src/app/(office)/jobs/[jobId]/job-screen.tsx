@@ -29,6 +29,7 @@ import { uuidv7 } from "../../../uuidv7";
 import { locationText } from "../location";
 import { STATUS_TONES } from "../../invoices/invoices-screen";
 import styles from "./job.module.css";
+import { WriteButton } from "../../../write-button";
 
 const STEPS = ["scheduled", "hoursRecorded", "invoiced", "paid"] as const;
 type Step = (typeof STEPS)[number];
@@ -208,17 +209,17 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
         )}
         {first === "invoiced" && (
           <p className={styles.action}>
-            <button
+            <WriteButton
               type="button"
               className={controls.primary}
-              disabled={draft.isPending}
+              pending={draft.isPending}
               onClick={() => {
                 setNote(null);
                 draft.mutate({ id: draftId, jobId: job.id, currency: "USD" });
               }}
             >
               {s.createInvoice}
-            </button>
+            </WriteButton>
           </p>
         )}
         {first === "hoursRecorded" && <p className="secondary">{s.waitingForHours}</p>}

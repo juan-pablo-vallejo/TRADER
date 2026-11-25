@@ -32,7 +32,7 @@ summary.name::after {
   border-right: 2px solid var(--ink-secondary);
   border-bottom: 2px solid var(--ink-secondary);
   transform: translateY(-2px) rotate(45deg);
-  transition: transform var(--move);
+  transition: transform var(--move) var(--ease);
 }
 .account[open] summary.name::after {
   transform: translateY(2px) rotate(225deg);
@@ -51,7 +51,7 @@ summary.name::after {
   position: absolute;
   top: calc(100% + var(--space-1));
   right: 0;
-  z-index: 10;
+  z-index: var(--z-menu);
   min-width: 180px;
   display: flex;
   flex-direction: column;
@@ -59,7 +59,7 @@ summary.name::after {
   background: var(--surface);
   border: var(--hairline) solid var(--border);
   border-radius: var(--radius-card);
-  box-shadow: 0 8px 24px rgb(17 24 39 / 0.12);
+  box-shadow: var(--shadow-overlay);
 }
 .menu form {
   margin: 0;

@@ -58,6 +58,17 @@
   --header: 56px;
   /* A change of state moves in this long, and not at all under reduced motion (below). */
   --move: 150ms;
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* The office's own, with no counterpart on the phone: what lies over the page. */
+  --scrim: color-mix(in srgb, var(--ink) 45%, transparent);
+  --shadow-overlay: 0 8px 24px rgb(17 24 39 / 15%);
+  --radius-small: 4px;
+  /* Stacking, lowest first: a sticky heading, a menu, the toast. A modal dialog is above
+     them all, in the browser's top layer. */
+  --z-sticky: 1;
+  --z-menu: 10;
+  --z-toast: 60;
 
   /* Density, narrow: a phone in a hand. 17 px text, 48 px targets. */
   --target: 48px;
@@ -196,10 +207,10 @@ select,
 textarea,
 summary {
   transition:
-    background-color var(--move),
-    border-color var(--move),
-    color var(--move),
-    box-shadow var(--move);
+    background-color var(--move) var(--ease),
+    border-color var(--move) var(--ease),
+    color var(--move) var(--ease),
+    box-shadow var(--move) var(--ease);
 }
 @media (prefers-reduced-motion: reduce) {
   *,

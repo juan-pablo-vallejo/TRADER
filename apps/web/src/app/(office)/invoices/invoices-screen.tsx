@@ -26,6 +26,7 @@ import { StatusBadge, type Tone } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import { useAsked, useUrlFilters } from "../../use-url-filters";
 import styles from "./invoices.module.css";
+import { WriteButton } from "../../write-button";
 
 function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
   const { t } = useStrings();
@@ -73,9 +74,13 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
         </select>
       </Field>
       <div className={controls.actions}>
-        <button type="submit" className={controls.primary} disabled={create.isPending}>
+        <WriteButton
+          type="submit"
+          className={controls.primary}
+          pending={create.isPending}
+        >
           {s.start}
-        </button>
+        </WriteButton>
       </div>
       <Note text={note} />
     </form>

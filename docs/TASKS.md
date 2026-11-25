@@ -219,6 +219,13 @@ the iPhone simulator and `trader-ws android`.
   menu; not-found points to Today.
 - If the rendered audit saw it: scroll padding on the homepage, so a focused link is never
   hidden.
+- A write whose button is replaced by its opposite (Reactivate and Deactivate in a
+  customer's or a person's panel, Settings' enforcement confirm) puts the focus on the
+  control that takes its place; a write that closes its panel or form (Add shift, Add
+  customer, Add a person) returns the focus to the opener or the new row.
+- Inside a side panel at 768 and in a full-screen panel, Schedule's toast sits clear of the
+  panel's own buttons; an undo refused for an overlap names the other shift by its job and
+  hours, not "this shift" twice.
 - Done when: failing-first keyboard tests for focus placed, the menu closing, and the
   office's header kept on a wrong address.
 - See it working: staging by keyboard, both languages, reviewed.

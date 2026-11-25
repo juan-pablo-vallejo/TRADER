@@ -4,7 +4,7 @@
   left: 50%;
   bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   transform: translateX(-50%);
-  z-index: 60;
+  z-index: var(--z-toast);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -17,5 +17,14 @@
   background: var(--surface);
   border: var(--hairline) solid var(--border);
   border-radius: var(--radius-card);
-  box-shadow: 0 6px 24px rgb(0 0 0 / 18%);
+  box-shadow: var(--shadow-overlay);
+}
+/* Inside an open side panel: at the foot's left, beside the panel rather than over its
+   buttons, which sit at its foot and on its right. */
+.inPanel {
+  left: var(--space-4);
+  transform: none;
+  /* The width a side panel (32rem, side-panel.module.css) leaves; a full-screen panel
+     leaves none, and the toast then sits at its foot. */
+  max-width: min(28rem, max(14rem, calc(100vw - 34rem)));
 }

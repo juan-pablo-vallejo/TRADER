@@ -29,6 +29,7 @@ import { StatusBadge } from "../../../status-badge";
 import { useTRPC } from "../../../trpc";
 import { STATUS_TONES } from "../invoices-screen";
 import styles from "../invoices.module.css";
+import { WriteButton } from "../../../write-button";
 
 type Invoice = inferRouterOutputs<AppRouter>["invoice"]["read"];
 
@@ -358,14 +359,14 @@ function DraftEditor({ invoice }: { invoice: Invoice }) {
         </Field>
         <Totals subtotal={subtotal} tax={taxCents ?? 0} currency={invoice.currency} />
         <div className={controls.actions}>
-          <button
+          <WriteButton
             type="button"
             className={controls.primary}
-            disabled={busy}
+            pending={busy}
             onClick={submit}
           >
             {s.save}
-          </button>
+          </WriteButton>
         </div>
         <Note text={note} tone={tone} />
       </section>
@@ -593,13 +594,13 @@ function Payments({ invoice }: { invoice: Invoice }) {
               </Field>
             </div>
             <div className={controls.actions}>
-              <button
+              <WriteButton
                 type="submit"
                 className={controls.primary}
-                disabled={record.isPending}
+                pending={record.isPending}
               >
                 {s.record}
-              </button>
+              </WriteButton>
             </div>
             <Note text={note} tone={tone} />
           </form>
@@ -647,14 +648,14 @@ function PdfFile({ invoiceId, beside = false }: { invoiceId: string; beside?: bo
     }
   };
   const button = (
-    <button
+    <WriteButton
       type="button"
       className={controls.secondary}
-      disabled={busy}
+      pending={busy}
       onClick={() => void save()}
     >
-      {busy ? t.loading : s.pdf}
-    </button>
+      {s.pdf}
+    </WriteButton>
   );
   // Beside Send, it is one of that form's two actions; alone (a void invoice has no
   // Send), it is a section of its own.
@@ -752,9 +753,13 @@ function Sends({ invoice }: { invoice: Invoice }) {
             />
           </Field>
           <div className={controls.actions}>
-            <button type="submit" className={controls.primary} disabled={send.isPending}>
-              {send.isPending ? t.loading : s.send}
-            </button>
+            <WriteButton
+              type="submit"
+              className={controls.primary}
+              pending={send.isPending}
+            >
+              {s.send}
+            </WriteButton>
             <PdfFile invoiceId={invoice.id} beside />
           </div>
           <Note text={note} tone={sent ? "saved" : undefined} />

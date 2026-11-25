@@ -16,6 +16,7 @@ import { useStrings } from "../../i18n";
 import { LANGUAGES, type Language } from "../../i18n/language";
 import { useTRPC } from "../../trpc";
 import styles from "./settings.module.css";
+import { WriteButton } from "../../write-button";
 
 export function MeForm({ signInHref }: { signInHref: string }) {
   const { t, language, setLanguage } = useStrings();
@@ -123,9 +124,13 @@ export function MeForm({ signInHref }: { signInHref: string }) {
             </select>
           </Field>
           <Note text={note} />
-          <button type="submit" className={controls.primary} disabled={save.isPending}>
+          <WriteButton
+            type="submit"
+            className={controls.primary}
+            pending={save.isPending}
+          >
             {t.save}
-          </button>
+          </WriteButton>
         </form>
       )}
     </section>

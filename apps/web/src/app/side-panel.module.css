@@ -19,7 +19,7 @@
   width: min(44rem, 100vw);
 }
 .panel::backdrop {
-  background: color-mix(in srgb, var(--ink) 45%, transparent);
+  background: var(--scrim);
 }
 .head {
   display: flex;

@@ -41,6 +41,7 @@ import {
   parseRadius,
   type ParsedLocation,
 } from "./location";
+import { WriteButton } from "../../write-button";
 
 type Rows = NonNullable<ReturnType<typeof useJobs>["data"]>;
 type Row = Rows[number];
@@ -481,9 +482,9 @@ function CreateForm({
         mayAddCustomer
       />
       <Note text={note} />
-      <button type="submit" className={controls.primary} disabled={busy}>
+      <WriteButton type="submit" className={controls.primary} pending={busy}>
         {t.addJob}
-      </button>
+      </WriteButton>
     </form>
   );
 }
@@ -532,9 +533,9 @@ function FactsEditor({ row, customers }: { row: Row; customers: Customers }) {
         onChange={setFacts}
         mayAddCustomer={false}
       />
-      <button type="submit" className={controls.secondary} disabled={save.isPending}>
+      <WriteButton type="submit" className={controls.secondary} pending={save.isPending}>
         {t.saveDetails}
-      </button>
+      </WriteButton>
       <Note text={note} />
     </form>
   );
@@ -580,14 +581,14 @@ function StatusEditor({ row }: { row: Row }) {
           ))}
         </select>
       </Field>
-      <button
+      <WriteButton
         type="button"
         className={controls.secondary}
-        disabled={setStatusCall.isPending}
+        pending={setStatusCall.isPending}
         onClick={() => setStatusCall.mutate({ jobId: row.id, status })}
       >
         {t.setStatus}
-      </button>
+      </WriteButton>
       <Note text={statusNote} tone={statusNote === t.archivedNote ? "info" : undefined} />
     </EditorSection>
   );

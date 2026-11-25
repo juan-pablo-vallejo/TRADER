@@ -12,7 +12,11 @@
 .primary:disabled,
 .secondary:disabled,
 .destructive:disabled,
-.textAction:disabled {
+.textAction:disabled,
+.primary[aria-disabled="true"],
+.secondary[aria-disabled="true"],
+.destructive[aria-disabled="true"],
+.textAction[aria-disabled="true"] {
   cursor: default;
   opacity: 0.6;
 }
@@ -28,7 +32,8 @@
   border-radius: var(--radius-primary);
   font-weight: 600;
 }
-.primary:disabled {
+.primary:disabled,
+.primary[aria-disabled="true"] {
   background: var(--muted);
   opacity: 1;
 }
@@ -41,8 +46,34 @@
   color: var(--ink);
   border: var(--hairline) solid var(--control-border);
 }
-.secondary:hover:not(:disabled) {
-  background: var(--canvas);
+/* Every button answers the pointer: a press darker than at rest and, where a pointer can
+   hover, a hover between the two. Mixed from the button's own colours, so no colour is
+   added. A busy write button (aria-disabled) answers neither. */
+@media (hover: hover) and (pointer: fine) {
+  .secondary:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--canvas);
+  }
+  .primary:hover:not(:disabled, [aria-disabled="true"]) {
+    background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+  }
+  .destructive:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--problem-tint);
+  }
+  .textAction:hover:not(:disabled, [aria-disabled="true"]) {
+    text-decoration: underline;
+  }
+}
+.primary:active:not(:disabled, [aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--accent) 76%, var(--ink));
+}
+.secondary:active:not(:disabled, [aria-disabled="true"]) {
+  background: var(--border);
+}
+.destructive:active:not(:disabled, [aria-disabled="true"]) {
+  background: color-mix(in srgb, var(--problem-tint) 70%, var(--attention));
+}
+.textAction:active:not(:disabled, [aria-disabled="true"]) {
+  color: color-mix(in srgb, currentColor 75%, var(--ink));
 }
 
 /* Destructive button: the secondary shape, attention border and label; never full width. */
@@ -215,7 +246,7 @@
 }
 .loadingRow span {
   height: 10px;
-  border-radius: 5px;
+  border-radius: var(--radius-small);
   background: var(--neutral-tint);
   flex: 0 1 32%;
 }

@@ -35,6 +35,7 @@ import {
   type WeekShift,
 } from "./schedule-view";
 import { sameAs, type Change } from "./optimistic";
+import { WriteButton } from "../../write-button";
 
 function useRefresh() {
   const trpc = useTRPC();
@@ -628,13 +629,14 @@ export function AddShift({
               </div>
             ))}
           <div className={controls.actions}>
-            <button
+            <WriteButton
               type="submit"
               className={controls.primary}
-              disabled={create.isPending || cannot}
+              pending={create.isPending}
+              disabled={cannot}
             >
               {days.length === 0 ? s.add : s.addShifts(days.length)}
-            </button>
+            </WriteButton>
           </div>
           <Note text={note} tone={noteTone} />
           {refusals.length > 0 && (

@@ -82,6 +82,7 @@ function ShiftCard({
     <button
       type="button"
       className={styles.card}
+      data-shift={shift.id}
       onClick={onOpen}
       aria-label={s.openShift(
         shift.worker.name,
@@ -221,7 +222,12 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const [toast, setToast] = useState<{
     id: number;
     text: string;
-    undo: () => void;
+    // None once the undo has its answer: the toast then says what came of it.
+    undo?: () => void;
+    // Undo pressed, its answer not yet come.
+    busy?: boolean;
+    // The undo was refused: said where the toast was, until closed.
+    refused?: boolean;
   } | null>(null);
   const toasts = useRef(0);
   const dismiss = useCallback(() => setToast(null), []);
@@ -282,14 +288,24 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
             : s.did.changed(name, `${asked.to.expectedStart}–${asked.to.expectedEnd}`)
           : s.did.removed(name, f.weekDay(asked.shift.workDate)),
       // Undo waits for the first answer: a change the server refused has nothing to undo.
+      // The toast stays, busy, until the undo's answer, and then says it where it was.
       undo: () => {
-        setToast(null);
+        setToast((now) => (now?.id === id ? { ...now, busy: true } : now));
         void sent.then(async (first) => {
           if (first.outcome !== "done") return;
           const back = inverse(asked);
           const undone = await attempt(cache, back, () => send(back));
-          if (undone.outcome === "done") setNote(s.undoneChange);
-          else setProblem(s.notUndone(why(undone)));
+          if (undone.outcome === "done") {
+            setToast({ id, text: s.undoneChange });
+            // The focus on the shift that came back.
+            requestAnimationFrame(() =>
+              document
+                .querySelector<HTMLElement>(`[data-shift="${asked.shift.id}"]`)
+                ?.focus(),
+            );
+          } else {
+            setToast({ id, text: s.notUndone(why(undone)), refused: true });
+          }
         });
       },
     });
@@ -499,8 +515,10 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
         <Toast
           key={toast.id}
           text={toast.text}
-          action={s.undo}
-          onAction={toast.undo}
+          action={toast.refused ? t.close : toast.undo === undefined ? undefined : s.undo}
+          onAction={toast.refused ? dismiss : toast.undo}
+          busy={toast.busy}
+          stays={toast.refused}
           onDone={dismiss}
         />
       )}

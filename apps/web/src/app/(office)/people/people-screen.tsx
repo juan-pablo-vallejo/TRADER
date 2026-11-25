@@ -40,6 +40,7 @@ import { useAsked, useUrlFilters } from "../../use-url-filters";
 import { uuidv7 } from "../../uuidv7";
 import { invitationText, isPhone, smsLink } from "./invitation";
 import styles from "./people.module.css";
+import { WriteButton } from "../../write-button";
 
 type Roles = keyof Catalog["roles"];
 const ROLES = ["worker", "admin"] as const satisfies readonly Roles[];
@@ -285,9 +286,9 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
       </div>
       <p className={`secondary ${controls.caption}`}>{t.inviteAddressHint}</p>
       {invite.isError && <Note text={t.requestFailed} />}
-      <button type="submit" className={controls.primary} disabled={invite.isPending}>
+      <WriteButton type="submit" className={controls.primary} pending={invite.isPending}>
         {t.addToRoster}
-      </button>
+      </WriteButton>
     </form>
   );
 }
@@ -510,17 +511,17 @@ function Invitation({ row }: { row: Row }) {
           </button>
         )}
         {row.email !== null && (
-          <button
+          <WriteButton
             type="button"
             className={controls.secondary}
-            disabled={emailed.isPending}
+            pending={emailed.isPending}
             onClick={() => {
               setNote(null);
               emailed.mutate({ id: emailId, userId: row.id });
             }}
           >
-            {emailed.isPending ? t.loading : t.personPanel.emailInvitation}
-          </button>
+            {t.personPanel.emailInvitation}
+          </WriteButton>
         )}
       </div>
       <Note text={note?.text ?? null} tone={note?.saved ? "saved" : undefined} />
@@ -730,14 +731,14 @@ function Role({ row }: { row: Row }) {
           onConfirm={() => setRoleCall.mutate({ userId: row.id, role: "admin" })}
         />
       ) : (
-        <button
+        <WriteButton
           type="button"
           className={controls.secondary}
-          disabled={setRoleCall.isPending}
+          pending={setRoleCall.isPending}
           onClick={() => setRoleCall.mutate({ userId: row.id, role: "worker" })}
         >
           {t.personPanel.makeWorker}
-        </button>
+        </WriteButton>
       )}
       <Note text={note} />
     </EditorSection>
@@ -786,10 +787,10 @@ function Location({ row }: { row: Row }) {
           ))}
         </select>
       </Field>
-      <button
+      <WriteButton
         type="button"
         className={controls.secondary}
-        disabled={save.isPending}
+        pending={save.isPending}
         onClick={() =>
           save.mutate({
             userId: row.id,
@@ -798,7 +799,7 @@ function Location({ row }: { row: Row }) {
         }
       >
         {t.personPanel.saveLocation}
-      </button>
+      </WriteButton>
       <Note text={note} />
     </EditorSection>
   );
@@ -832,14 +833,14 @@ function Access({ row }: { row: Row }) {
           onConfirm={() => deactivate.mutate({ userId: row.id })}
         />
       ) : (
-        <button
+        <WriteButton
           type="button"
           className={`${controls.secondary} ${table.stretch}`}
-          disabled={busy}
+          pending={busy}
           onClick={() => reactivate.mutate({ userId: row.id })}
         >
           {t.reactivate}
-        </button>
+        </WriteButton>
       )}
       <Note text={note} />
     </>
