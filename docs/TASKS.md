@@ -133,18 +133,6 @@ the iPhone simulator and `trader-ws android`.
 
 ### Claude's
 
-**Schedule: the right week, refusals where they happen**
-
-- While another week loads, the grid shows the old week under the new week's label and takes
-  an add. While the previous answer shows: add and open disabled, the label and totals on
-  its own range, the grid dimmed and `aria-busy`.
-- A refused move is said where the toast was, until dismissed; in Add shift each refusal sits
-  at its field, not under the submit button.
-- The week, the view and the filters live in the address, as Hours' do, so a reload, Back or
-  a pasted link keeps them.
-- Done when: failing-first tests: no add lands in the old week; a reload keeps the week.
-- See it working: staging, both languages, reviewed.
-
 **A failed refresh keeps its rows**
 
 - A failed background refresh replaces good rows with the failure banner on Today, Schedule
