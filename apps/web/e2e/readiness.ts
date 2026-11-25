@@ -9,7 +9,7 @@
 // suite failed, on a host that was serving the right commit.
 import type { APIRequest } from "@playwright/test";
 
-export type Readiness = { status: number; commit: string | null };
+type Readiness = { status: number; commit: string | null };
 
 export async function askReadiness(
   request: APIRequest,

@@ -10,7 +10,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 export const DB = "trader_demo_clerk";
-export const ADMIN_NAME = "Clerk Suite Admin";
+const ADMIN_NAME = "Clerk Suite Admin";
 
 // The compose role, from the repository's `.env`, as the phone's flow suite reads it.
 function role(): { user: string; password: string } {

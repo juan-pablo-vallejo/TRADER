@@ -182,6 +182,29 @@ describe("assignment.week", () => {
     });
   });
 
+  it("reads a shift on the day the clocks change at its written times, and the Sunday as the week's last", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { day, admin, ana, put } = await office(tx);
+      // New York's clocks go back on Sunday 2026-11-01: 01:30 happens twice that night.
+      await put(day.companyId, ana.id, day.J, "2026-11-01", {
+        expectedStart: "01:30",
+        expectedEnd: "03:00",
+      });
+      await put(day.companyId, ana.id, day.J, "2026-10-26");
+      await becomeApp(tx);
+      const week = await appCallerIn(tx, admin.who).assignment.week({
+        weekStart: "2026-10-26",
+      });
+      expect(week.days[6]).toBe("2026-11-01");
+      expect(
+        week.shifts.map((s) => [s.workDate, s.expectedStart, s.expectedEnd]),
+      ).toEqual([
+        ["2026-10-26", "07:00", "15:30"],
+        ["2026-11-01", "01:30", "03:00"],
+      ]);
+    });
+  });
+
   it("refuses a week that does not start on a Monday, and a malformed day", async () => {
     await rolledBack(owner, async (tx) => {
       const { admin } = await office(tx);

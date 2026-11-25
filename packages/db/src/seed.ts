@@ -35,7 +35,7 @@ export const SEED: SeedCompany = {
   adminName: "Admin",
 };
 
-export type SeedResult = {
+type SeedResult = {
   currentUser: string;
   companies: number;
   invoiceCounters: number;

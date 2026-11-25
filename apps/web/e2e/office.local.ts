@@ -63,13 +63,20 @@ test("every office screen opens for an admin, with nothing thrown or refused", a
     expect(wrong, `${screen}: nothing went wrong`).toEqual([]);
   }
 
-  // An address that is no screen is answered inside the office, as not found.
-  await page.goto("/profile");
+  // An address that is no screen is answered inside the office, as not found: that 404 and
+  // the browser's line about it are asked for, and anything else is a fault.
+  const asked = wrong.length;
+  const missing = await page.goto("/profile");
+  expect(missing?.status()).toBe(404);
   await expect(
     page.getByRole("heading", { name: "There is no page at this address." }),
   ).toBeVisible();
-  // That 404 was asked for: it is not something that went wrong.
-  wrong.length = 0;
+  expect(
+    wrong
+      .splice(asked)
+      .filter((w) => !w.startsWith("404 /profile") && !w.includes("status of 404")),
+    "/profile: nothing else went wrong",
+  ).toEqual([]);
 
   // One job, by the first link to one on the list.
   await page.goto("/jobs");
@@ -399,6 +406,9 @@ test("Hours: Export takes the typed dates, a day line is a full target, a correc
   // Export, pressed with dates typed and not shown: the file is for those dates.
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.goto("/hours");
+  // Typed only once the page is the browser's: a date typed into the server's markup before
+  // hydration is put back to the range shown.
+  await page.waitForLoadState("networkidle");
   await page.getByLabel("From").fill("2026-01-05");
   await page.getByLabel("Through").fill("2026-01-11");
   // The office's buttons keep their shared look: the density's text, radius and cursor.

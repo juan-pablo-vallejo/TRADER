@@ -86,8 +86,8 @@ export const todayOutput = z.strictObject({
       state: z.enum(["working", "paused"]),
     }),
   ),
-  // Every job named above, by name then id, with what `job.update` needs to write its
-  // location back.
+  // Every job named above, by name then id, with its location: the phone sets a jobsite's
+  // place through `job.setLocation`.
   jobs: z.array(job),
   // What the office's Today says of money: counts and sums as the invoices stand, each
   // behind a link to its own list. Whole cents; a currency is never added to another.

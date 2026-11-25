@@ -166,7 +166,8 @@ the iPhone simulator and `trader-ws android`.
   and `npm pkg set` refused; a relative path read from after a `cd`; each package's `test`
   and `typecheck` scripts, `.gitleaksignore` and `.prettierignore` guarded; `tsc -p` and
   `vitest run --config` ask nothing.
-- `scripts/trader-ws.d/audit` leaves itself out of its own scan.
+- `scripts/trader-ws.d/audit` leaves itself out of its own scan, and stops naming
+  `DATABASE_DRIVER` (lines 4 and 31): the variable is gone from the code.
 - `scripts/staging.sh reset` empties staging with its own keys, migrates it, onboards its
   company with `--demo` and the suite's two people, and prints the company's id.
 - The new names of the variables in the workflows and `scripts/staging.sh`; the new paths in
@@ -410,6 +411,8 @@ the iPhone simulator and `trader-ws android`.
   it.
 - Spanish says "a la 1:45", not "a las", for one o'clock.
 - Hours' day lines are 32 px at 768 too: `--target` there as well.
+- A date typed into Hours' range before the page has loaded is put back to the range shown
+  when the page takes over: the fields keep what was typed, as sign-in's field does.
 - The schedule offers "Add a shift" for a deactivated person, whom the form then leaves
   out.
 - Done when: a test for each.

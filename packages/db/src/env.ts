@@ -76,7 +76,8 @@ export function databaseConnection(
 // Refuses a deployed database. Tests commit fixtures and create and drop databases, and the
 // seed writes a placeholder company: all three belong on the local compose server or CI's
 // service container, both reached through the POSTGRES_* variables. DATABASE_URL is the
-// deployed shape, so its presence means the target is not one of those.
+// deployed shape, so its presence means the target is not one of those. The migrator does not
+// call it: a deployed database is migrated, under assertMigrationPurpose below.
 export function assertLocalDatabase(
   env: Record<string, string | undefined>,
   what: string,

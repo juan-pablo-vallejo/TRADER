@@ -312,7 +312,7 @@ const gate = router({
 
 export const GATES = ["protected", "worker", "admin", "either"] as const;
 
-export const testRouter = router({ probe, gate });
+const testRouter = router({ probe, gate });
 
 export const caller = (db: Db, who: unknown) =>
   createCallerFactory(testRouter)(
@@ -549,7 +549,7 @@ export async function asTenant(tx: Tx, companyId: string) {
   await tx.execute(sql`select set_config('app.company_id', ${companyId}, true)`);
 }
 
-export type HttpCall = { path: string; input?: unknown; mutation?: boolean };
+type HttpCall = { path: string; input?: unknown; mutation?: boolean };
 
 // One HTTP request through tRPC's fetch adapter: what the route handler does. One
 // call is sent unbatched, so `status` is that call's own; several are one batch, whose status
@@ -607,7 +607,7 @@ export async function http(
   };
 }
 
-export type HttpResult = {
+type HttpResult = {
   result?: { data: { json: unknown } };
   error?: {
     json: { message: string; data: { code: string; httpStatus: number; stack?: string } };

@@ -19,7 +19,7 @@ export const REQUEST_TIMEOUT_MS = 15_000;
 // What the suite must be told and has no default for: its two people. A default would let
 // a run with one of them unset go on as people nobody named.
 export const SUITE_SETTINGS = ["E2E_ADMIN_PHONE", "E2E_WORKER_PHONE"] as const;
-export type SuiteSetting = (typeof SUITE_SETTINGS)[number];
+type SuiteSetting = (typeof SUITE_SETTINGS)[number];
 
 // The names among `names` that `env` leaves unset. A variable set and blank, as an unset
 // one arrives from a workflow, is unset.
@@ -36,7 +36,7 @@ const FICTIONAL = /^\+1[2-9][0-9]{2}55501[0-9]{2}$/;
 const DEVELOPMENT_KEY = /^sk_test_[A-Za-z0-9]+$/;
 const USER_ID = /^user_[A-Za-z0-9]+$/;
 
-export type TicketFailure =
+type TicketFailure =
   | "key_not_set"
   | "key_not_of_a_development_instance"
   | "number_not_fictional"
@@ -46,8 +46,7 @@ export type TicketFailure =
   | "clerk_unreachable"
   | "answer_unreadable";
 
-export type TicketResult =
-  { ok: true; ticket: string } | { ok: false; failure: TicketFailure };
+type TicketResult = { ok: true; ticket: string } | { ok: false; failure: TicketFailure };
 
 type Deps = { secretKey: string; fetch: typeof fetch; timeoutMs?: number };
 

@@ -141,8 +141,6 @@
     border: var(--hairline) solid var(--border);
     border-radius: var(--radius-card);
     margin-bottom: var(--space-2);
-  }
-  .table tbody tr {
     min-height: var(--target);
     box-sizing: border-box;
     padding: var(--space-3) var(--space-4);
@@ -174,16 +172,15 @@
     padding: var(--space-3) 0;
     margin: calc(-1 * var(--space-3)) 0;
   }
-  /* This label rule and the separator rules below must keep equal specificity, the `number`
-     one last: a :not() added to one and not the other drops the label from narrow rows. */
+  /* A figure's label in a narrow row. The separator rules below are longer selectors; the
+     `number` one, the most specific and the last, says the label with its dot: lowering it
+     under the plain separator drops the label from narrow rows. */
   .table tr td.number::before {
     content: attr(data-label) " ";
   }
   .table tr td:not(:first-child):not([data-empty]) ~ td:not([data-empty])::before {
     content: "\00a0· ";
   }
-  /* The row's buttons take the line beneath its text, full width of the card. */
-
   .table tr td:not(:first-child):not([data-empty]) ~ td.number:not([data-empty])::before {
     content: "\00a0· " attr(data-label) " ";
   }
@@ -226,10 +223,6 @@
      of its own, its column's name at the left and its figure at the right, where the
      joined line of a plain table would run seven figures together. `important`: the
      separator rules above are longer selectors and would put their dot back. */
-  .table.lines tbody tr:not(.group),
-  .table.lines tfoot tr {
-    padding-right: var(--space-4);
-  }
   .table.lines tr td:not(:first-child):not([data-empty]) {
     display: flex;
     align-items: center;
