@@ -62,9 +62,14 @@ export async function judgeStart(
 // carry times that may not be the clock-in's), and holding no other shift's lock (the same
 // job twice in a day is two shifts). With none, it comes off, and the shift can be edited,
 // moved or removed again. The database refuses any other handover
-// (check_job_assignment_mutation). One statement, written only by a correction that voids.
+// (check_job_assignment_mutation). Written only by a correction that voids.
 export async function releaseVoided(tx: Tx, voidedIds: string[]) {
-  if (voidedIds.length === 0) return;
+  // One statement per voided clock-in, each seeing the one before: in a single statement two
+  // freed shifts could pick the same clock-in, and the database would refuse the second.
+  for (const voidedId of voidedIds) await releaseOne(tx, voidedId);
+}
+
+async function releaseOne(tx: Tx, voidedId: string) {
   await tx.execute(sql`
     update job_assignments a
     set locked_by_event_id = next.id,
@@ -88,10 +93,7 @@ export async function releaseVoided(tx: Tx, voidedIds: string[]) {
         limit 1
       ) as id
       from job_assignments s
-      where s.locked_by_event_id in (${sql.join(
-        voidedIds.map((id) => sql`${id}`),
-        sql`, `,
-      )})
+      where s.locked_by_event_id = ${voidedId}
     ) next
     where a.id = next.shift_id
   `);

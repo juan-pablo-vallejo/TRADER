@@ -612,7 +612,7 @@ describe("a shift locked by a clock-in", () => {
       expect(await lockOf(morning)).toBe(later);
       expect(await lockOf(afternoon)).toBe(b);
       // The answer was lost and the office sends the same void again: nothing moves.
-      expect((await repair([voidA])).result).not.toBe("accepted");
+      expect((await repair([voidA])).result).toBe("duplicate");
       expect(await lockOf(morning)).toBe(later);
       // That one voided too, nothing of the morning stands: the shift is free.
       expect(
@@ -621,6 +621,55 @@ describe("a shift locked by a clock-in", () => {
       expect(await lockOf(morning)).toBeNull();
       expect(await lockOf(afternoon)).toBe(b);
       expect(await plan.remove({ assignmentId: morning })).toEqual({ result: "removed" });
+    });
+  });
+
+  it("frees two shifts voided in one correction, the one clock-in left taken by one of them", async () => {
+    await rolledBack(owner, async (tx) => {
+      const { day, plan, admin } = await office(tx);
+      const morning = (await shift(plan, day, "07:00", "11:00")).id;
+      const afternoon = (await shift(plan, day, "13:00", "17:00")).id;
+      await tx.execute(sql`reset role`);
+      const worked = async (from: string, to: string) => {
+        const id = await eventIn(tx, day, {
+          worker: day.w1,
+          job: day.J,
+          type: "started",
+          client: from,
+        });
+        await eventIn(tx, day, { worker: day.w1, job: day.J, type: "ended", client: to });
+        return id;
+      };
+      const a = await worked("2026-11-16T12:05:00Z", "2026-11-16T15:00:00Z");
+      const left = await worked("2026-11-16T15:10:00Z", "2026-11-16T15:50:00Z");
+      const b = await worked("2026-11-16T18:05:00Z", "2026-11-16T21:00:00Z");
+      for (const [shiftId, by] of [
+        [morning, a],
+        [afternoon, b],
+      ] as const) {
+        await tx.execute(sql`
+          update job_assignments set locked_at = now(), locked_by_event_id = ${by}
+          where id = ${shiftId}
+        `);
+      }
+      await becomeApp(tx);
+      const answer = await appCallerIn(tx, admin.who).labor.repair({
+        workerId: day.w1,
+        operations: [
+          { kind: "void", id: uuidv7(), voidsEventId: a },
+          { kind: "void", id: uuidv7(), voidsEventId: b },
+        ],
+      });
+      expect(answer.result).toBe("accepted");
+      const locks = await tx
+        .select({ id: jobAssignments.id, by: jobAssignments.lockedByEventId })
+        .from(jobAssignments)
+        .where(eq(jobAssignments.userId, day.w1));
+      const byShift = new Map(locks.map((l) => [l.id, l.by]));
+      // The clock-in left holds one shift; the other is free.
+      expect([byShift.get(morning), byShift.get(afternoon)].sort()).toEqual(
+        [left, null].sort(),
+      );
     });
   });
 
