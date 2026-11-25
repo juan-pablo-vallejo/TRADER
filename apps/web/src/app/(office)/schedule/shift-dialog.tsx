@@ -462,7 +462,12 @@ export function AddShift({
   const [note, setNote] = useState<string | null>(null);
   // What was added reads as done; anything else in the note is a refusal.
   const [noteTone, setNoteTone] = useState<"saved" | "error">("error");
-  const [refusals, setRefusals] = useState<string[]>([]);
+  // A refusal for one day, said beside that day's choice; a field's own problem beside it.
+  const [refusals, setRefusals] = useState<Map<string, string>>(new Map());
+  const [fieldError, setFieldError] = useState<{
+    field: "days" | "end";
+    text: string;
+  } | null>(null);
   // One id per day of the week, minted when the form opens and kept while it is open: a
   // save sent again is the same shifts.
   const [ids] = useState(() => new Map(week.days.map((day) => [day, uuidv7()])));
@@ -494,15 +499,17 @@ export function AddShift({
         await refresh();
         const count = (result: string) =>
           answer.days.filter((d) => d.result === result).length;
-        const refused = answer.days.flatMap((d) =>
-          d.result === "rejected"
-            ? [s.notAdded(f.weekDay(d.workDate), refusalText(s, d as Refusal, label))]
-            : [],
+        const refused = new Map(
+          answer.days.flatMap((d) =>
+            d.result === "rejected"
+              ? [[d.workDate, refusalText(s, d as Refusal, label)] as const]
+              : [],
+          ),
         );
         const done =
           s.added(count("created")) +
           (count("duplicate") === 0 ? "" : s.alreadyThere(count("duplicate")));
-        if (refused.length === 0) {
+        if (refused.size === 0) {
           onClose(done);
           return;
         }
@@ -522,13 +529,18 @@ export function AddShift({
     e.preventDefault();
     setNote(null);
     setNoteTone("error");
-    setRefusals([]);
+    setRefusals(new Map());
+    setFieldError(null);
+    // A refused submit puts the focus, and so the view, on the field with the problem.
+    const form = e.currentTarget as HTMLFormElement;
     if (days.length === 0) {
-      setNote(s.pickDay);
+      setFieldError({ field: "days", text: s.pickDay });
+      form.querySelector<HTMLElement>('input[type="checkbox"]')?.focus();
       return;
     }
     if (end <= start) {
-      setNote(s.endAfterStart);
+      setFieldError({ field: "end", text: s.endAfterStart });
+      document.getElementById(`${formId}-end`)?.focus();
       return;
     }
     create.mutate({
@@ -579,12 +591,30 @@ export function AddShift({
               ))}
             </select>
           </Field>
-          <fieldset className={styles.days}>
+          <fieldset
+            className={styles.days}
+            aria-describedby={
+              fieldError?.field === "days" ? `${formId}-days-error` : undefined
+            }
+          >
             <legend className="label">{s.days}</legend>
+            {fieldError?.field === "days" && (
+              <p
+                id={`${formId}-days-error`}
+                className={`secondary ${controls.error}`}
+                role="alert"
+              >
+                {fieldError.text}
+              </p>
+            )}
             {week.days.map((day) => (
               <label key={day} className={controls.check}>
                 <input
                   type="checkbox"
+                  aria-invalid={refusals.has(day) || undefined}
+                  aria-describedby={
+                    refusals.has(day) ? `${formId}-${day}-refused` : undefined
+                  }
                   checked={days.includes(day)}
                   onChange={(e) =>
                     setDays((current) =>
@@ -593,8 +623,20 @@ export function AddShift({
                         : current.filter((d) => d !== day),
                     )
                   }
+                  onInput={() => {
+                    if (fieldError?.field === "days") setFieldError(null);
+                  }}
                 />
                 <span>{f.weekDay(day)}</span>
+                {refusals.has(day) && (
+                  <span
+                    id={`${formId}-${day}-refused`}
+                    className={`secondary ${controls.error}`}
+                    role="alert"
+                  >
+                    {s.notAdded(f.weekDay(day), refusals.get(day)!)}
+                  </span>
+                )}
               </label>
             ))}
           </fieldset>
@@ -606,7 +648,12 @@ export function AddShift({
                 type="time"
                 required
                 value={start}
-                onChange={(e) => setStart(e.target.value)}
+                onChange={(e) => {
+                  setStart(e.target.value);
+                  // The End sentence follows the pair: a start moved before the end clears it.
+                  if (fieldError?.field === "end" && end > e.target.value)
+                    setFieldError(null);
+                }}
               />
             </Field>
             <Field id={`${formId}-end`} label={s.end}>
@@ -615,9 +662,25 @@ export function AddShift({
                 className={controls.input}
                 type="time"
                 required
+                aria-invalid={fieldError?.field === "end" || undefined}
+                aria-describedby={
+                  fieldError?.field === "end" ? `${formId}-end-error` : undefined
+                }
                 value={end}
-                onChange={(e) => setEnd(e.target.value)}
+                onChange={(e) => {
+                  setEnd(e.target.value);
+                  if (fieldError?.field === "end") setFieldError(null);
+                }}
               />
+              {fieldError?.field === "end" && (
+                <p
+                  id={`${formId}-end-error`}
+                  className={`secondary ${controls.error}`}
+                  role="alert"
+                >
+                  {fieldError.text}
+                </p>
+              )}
             </Field>
           </div>
           {perDay
@@ -639,15 +702,6 @@ export function AddShift({
             </WriteButton>
           </div>
           <Note text={note} tone={noteTone} />
-          {refusals.length > 0 && (
-            <ul className={styles.refusals} role="alert">
-              {refusals.map((line) => (
-                <li key={line} className={`secondary ${controls.error}`}>
-                  {line}
-                </li>
-              ))}
-            </ul>
-          )}
         </form>
         {userId !== "" && (
           <PersonWeek

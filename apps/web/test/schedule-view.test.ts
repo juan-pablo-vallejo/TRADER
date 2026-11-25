@@ -16,6 +16,9 @@ import {
   peopleOn,
   personWeek,
   refusalText,
+  SCHEDULE_FILTERS,
+  scheduleOf,
+  weekFilter,
   type WeekShift,
 } from "../src/app/(office)/schedule/schedule-view";
 
@@ -274,5 +277,57 @@ describe("a person's week, beside the form", () => {
       ["2026-11-11", ["Kitchen 07:00"]],
     ]);
     expect(personWeek(week, id(99)).every((d) => d.shifts.length === 0)).toBe(true);
+  });
+});
+
+describe("the schedule's place in the address", () => {
+  const today = "2026-11-25"; // a Wednesday
+
+  it("opens on this week, by employee, today chosen, when the address says nothing", () => {
+    expect(scheduleOf(SCHEDULE_FILTERS, today)).toEqual({
+      weekStart: "2026-11-23",
+      selected: "2026-11-25",
+      view: "employee",
+      only: "",
+    });
+  });
+
+  it("keeps the week, the day, the view and the person it names", () => {
+    const filters = {
+      ...SCHEDULE_FILTERS,
+      week: "2026-11-30",
+      day: "2026-12-02",
+      view: "jobsite",
+      who: "p1",
+    };
+    expect(scheduleOf(filters, today)).toEqual({
+      weekStart: "2026-11-30",
+      selected: "2026-12-02",
+      view: "jobsite",
+      only: "p1",
+    });
+  });
+
+  it("chooses another week's Monday when it names no day in it", () => {
+    const filters = { ...SCHEDULE_FILTERS, week: "2026-11-30" };
+    expect(scheduleOf(filters, today).selected).toBe("2026-11-30");
+  });
+
+  it("reads a week that is no Monday, or no date, as this week", () => {
+    for (const week of ["2026-12-01", "next", "2026-13-40"]) {
+      expect(scheduleOf({ ...SCHEDULE_FILTERS, week }, today).weekStart).toBe(
+        "2026-11-23",
+      );
+    }
+  });
+
+  it("reads a day outside the week as the week's own default", () => {
+    const filters = { ...SCHEDULE_FILTERS, day: "2026-12-09" };
+    expect(scheduleOf(filters, today).selected).toBe("2026-11-25");
+  });
+
+  it("writes this week as nothing, so the plain address is the plain screen", () => {
+    expect(weekFilter("2026-11-23", today)).toBe("");
+    expect(weekFilter("2026-11-30", today)).toBe("2026-11-30");
   });
 });

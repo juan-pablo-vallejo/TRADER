@@ -22,6 +22,46 @@ export function mondayOf(day: string): string {
   return addDays(day, -((weekday + 6) % 7));
 }
 
+// The schedule's place, kept in the address (use-url-filters.ts) as Hours keeps its own: a
+// reload, Back or a pasted link shows the same week, day, view and person. This week, by
+// employee and everyone are the defaults, so the plain address is the plain screen.
+export type View = "employee" | "jobsite";
+export const SCHEDULE_FILTERS = { week: "", day: "", view: "employee", who: "" };
+export type ScheduleFilters = typeof SCHEDULE_FILTERS;
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+// A real calendar day: "2026-13-40" has the shape and is no day.
+function isDay(value: string): boolean {
+  if (!ISO_DAY.test(value)) return false;
+  const at = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(at.getTime()) && at.toISOString().startsWith(value);
+}
+
+export function scheduleOf(
+  filters: ScheduleFilters,
+  today: string,
+): { weekStart: string; selected: string; view: View; only: string } {
+  const thisWeek = mondayOf(today);
+  const weekStart =
+    isDay(filters.week) && mondayOf(filters.week) === filters.week
+      ? filters.week
+      : thisWeek;
+  // Narrow shows one day: the one named, else today in this week, else the week's Monday.
+  const inWeek = isDay(filters.day) && mondayOf(filters.day) === weekStart;
+  const selected = inWeek ? filters.day : weekStart === thisWeek ? today : weekStart;
+  return {
+    weekStart,
+    selected,
+    view: filters.view === "jobsite" ? "jobsite" : "employee",
+    only: filters.who,
+  };
+}
+
+// A week as the address writes it: this week is no week at all.
+export function weekFilter(weekStart: string, today: string): string {
+  return weekStart === mondayOf(today) ? "" : weekStart;
+}
+
 // The day and the minute it is now on a zone's wall clock: what "today's column" and "the
 // time now" mean on a schedule written on the company's clock, wherever the browser is.
 export function nowIn(

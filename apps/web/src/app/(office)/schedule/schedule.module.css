@@ -202,8 +202,7 @@
   color: var(--ink-secondary);
 }
 .preview ul,
-.copyList,
-.refusals {
+.copyList {
   margin: var(--space-1) 0 0;
   padding-left: var(--space-4);
   font-variant-numeric: tabular-nums;
@@ -272,4 +271,10 @@
 }
 .started h3 {
   margin: 0 0 var(--space-2);
+}
+
+/* The week before, still on screen while the one asked for loads: dimmed, and nothing in
+   it can be opened or added to (schedule-screen.tsx). */
+.stale {
+  opacity: 0.55;
 }

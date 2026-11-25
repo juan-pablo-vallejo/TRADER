@@ -85,9 +85,11 @@ test("every office screen opens for an admin, with nothing thrown or refused", a
   await draft.locator("#invoice-job").selectOption({ index: 1 });
   await draft.locator('button[type="submit"]').click();
   // A refusal shows as a note under the form and no navigation: say what the server said.
+  // The development server compiles the invoice page on its first visit, which has taken
+  // longer than 30 s while the rest of the suite's pages were compiling.
   const opened = await page
     .waitForURL((url) => /^\/invoices\/[0-9a-f-]{36}$/.test(url.pathname), {
-      timeout: 30_000,
+      timeout: 90_000,
     })
     .then(() => true)
     .catch(() => false);
@@ -197,6 +199,48 @@ test("a write button keeps the focus through its write", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(page.getByText("Saved.").first()).toBeVisible();
   await expect(save).toBeFocused();
+});
+
+test("Schedule keeps its week through a reload", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/schedule");
+  const range = page.getByRole("main").locator("p[aria-live]").first();
+  await expect(range).toBeVisible();
+  const thisWeek = await range.textContent();
+  await page.getByRole("button", { name: "Next week" }).click();
+  await expect(range).not.toHaveText(thisWeek ?? "");
+  const nextWeek = await range.textContent();
+  await page.reload();
+  await expect(range).toHaveText(nextWeek ?? "");
+
+  // A person the week does not list filters nothing: the week's rows still show.
+  await page.goto("/schedule?who=nobody");
+  await expect(page.getByRole("main").getByRole("table")).toBeVisible();
+});
+
+test("nothing can be added to the week before while the next one loads", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await signIn(page, ADMIN);
+  await page.goto("/schedule");
+  const grid = page.getByRole("main").getByRole("table");
+  await expect(grid).toBeVisible();
+  // The next week's answer is held back, so the week before stays on screen meanwhile.
+  await page.route("**/api/trpc/**assignment.week**", async (route) => {
+    await new Promise((done) => setTimeout(done, 4000));
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Next week" }).click();
+  await expect(grid).toHaveAttribute("aria-busy", "true");
+  await expect(
+    grid.getByRole("button", { name: /^Add a shift for / }).first(),
+  ).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Add shift", exact: true }),
+  ).toBeDisabled();
+  await expect(grid).not.toHaveAttribute("aria-busy", "true", { timeout: 15_000 });
 });
 
 test("a worker is refused the office", async ({ page }) => {

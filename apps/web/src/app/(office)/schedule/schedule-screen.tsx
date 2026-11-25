@@ -26,7 +26,7 @@ import { useStrings } from "../../i18n";
 import { StatusBadge } from "../../status-badge";
 import { Toast } from "../../toast";
 import { useTRPC } from "../../trpc";
-import { useAsked } from "../../use-url-filters";
+import { useAsked, useUrlFilters } from "../../use-url-filters";
 import { CopyWeek } from "./copy-dialog";
 import styles from "./schedule.module.css";
 import {
@@ -37,8 +37,12 @@ import {
   nowIn,
   peopleOn,
   refusalText,
+  SCHEDULE_FILTERS,
+  scheduleOf,
+  weekFilter,
   type Refusal,
   type Row,
+  type View,
   type Week,
   type WeekShift,
 } from "./schedule-view";
@@ -60,7 +64,6 @@ function today(): string {
   return `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
 }
 
-type View = "employee" | "jobsite";
 type Panel =
   | { kind: "add"; userId?: string; day?: string }
   | { kind: "edit"; shiftId: string }
@@ -70,10 +73,12 @@ type Panel =
 function ShiftCard({
   shift,
   view,
+  busy,
   onOpen,
 }: {
   shift: WeekShift;
   view: View;
+  busy: boolean;
   onOpen: () => void;
 }) {
   const { t, f } = useStrings();
@@ -83,6 +88,7 @@ function ShiftCard({
       type="button"
       className={styles.card}
       data-shift={shift.id}
+      disabled={busy}
       onClick={onOpen}
       aria-label={s.openShift(
         shift.worker.name,
@@ -106,6 +112,7 @@ function Grid({
   view,
   selected,
   today: todayDay,
+  busy,
   onOpen,
   onAdd,
 }: {
@@ -117,6 +124,8 @@ function Grid({
   // Today on the company's clock: its column's Add is a named button, one click to a
   // shift for today.
   today: string;
+  // The week before, shown while the one asked for loads: nothing in it opens or adds.
+  busy: boolean;
   onOpen: (shiftId: string) => void;
   onAdd: (userId: string, day: string) => void;
 }) {
@@ -124,7 +133,11 @@ function Grid({
   const s = t.schedule;
   return (
     // `data-keys`: the keys move through the grid's cards and cells (keyboard-rows.tsx).
-    <table className={styles.grid} data-keys>
+    <table
+      className={busy ? `${styles.grid} ${styles.stale}` : styles.grid}
+      data-keys
+      aria-busy={busy || undefined}
+    >
       <thead>
         <tr>
           <th scope="col" className="label">
@@ -163,6 +176,7 @@ function Grid({
                       key={shift.id}
                       shift={shift}
                       view={view}
+                      busy={busy}
                       onOpen={() => onOpen(shift.id)}
                     />
                   ))}
@@ -175,6 +189,7 @@ function Grid({
                           : styles.addCell
                       }
                       aria-label={s.addShiftFor(row.name, f.weekDay(day))}
+                      disabled={busy}
                       onClick={() => onAdd(row.id, day)}
                     >
                       {day === todayDay ? `+ ${s.addToday}` : "+"}
@@ -194,10 +209,9 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const { t, f } = useStrings();
   const s = t.schedule;
   const trpc = useTRPC();
-  const [weekStart, setWeekStart] = useState(() => mondayOf(today()));
-  const [selected, setSelected] = useState(today);
-  const [view, setView] = useState<View>("employee");
-  const [only, setOnly] = useState("");
+  // The week, the day shown when narrow, the view and the person live in the address.
+  const [filters, setFilters] = useUrlFilters(SCHEDULE_FILTERS);
+  const { weekStart, selected, view, only } = scheduleOf(filters, today());
   const [opened, setPanel] = useState<Panel>(null);
   // The command menu's New shift asks for the Add panel by the address.
   const [asked, clearAsked] = useAsked("shift");
@@ -311,22 +325,22 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
     });
     void sent.then((first) => {
       if (first.outcome === "done") return;
-      // The week is already back as it was; its toast has nothing left to offer.
-      setToast((now) => (now?.id === id ? null : now));
-      setProblem(s.notDone(why(first)));
+      // The week is already back as it was; the refusal is said where its toast was, and
+      // stays until closed.
+      setToast({ id, text: s.notDone(why(first)), refused: true });
     });
   };
 
+  // The week before, on screen while the one asked for loads: nothing in it, and nothing
+  // from the header, may open or add.
+  const stale = week.isPlaceholderData;
   const failed = [roster, jobs, week].find((q) => q.isError);
   const ready = roster.isSuccess && jobs.isSuccess && week.isSuccess;
 
   const show = (monday: string) => {
     setNote(null);
     setProblem(null);
-    setWeekStart(monday);
-    // Narrow shows one day: today when it is in the week, else the week's Monday.
-    const now = today();
-    setSelected(mondayOf(now) === monday ? now : monday);
+    setFilters({ week: weekFilter(monday, today()), day: "" });
   };
   // A drawer closed: what it did is said beneath the week bar.
   const closed = (result: string | null) => {
@@ -344,6 +358,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           <button
             type="button"
             className={controls.secondary}
+            disabled={stale}
             onClick={() => setPanel({ kind: "copy" })}
           >
             {s.copyLastWeek}
@@ -351,6 +366,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           <button
             type="button"
             className={controls.primary}
+            disabled={stale}
             onClick={() => setPanel({ kind: "add" })}
           >
             {s.addShift}
@@ -380,6 +396,8 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
     );
   }
 
+  // The week drawn: the one asked for once it has come, the one before until then.
+  const drawn = week.data.days[0] ?? weekStart;
   const people = roster.data.map((p) => ({
     id: p.id,
     name: p.name,
@@ -389,8 +407,11 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
     view === "employee"
       ? byEmployee(week.data.shifts, people)
       : byJobsite(week.data.shifts);
+  // A person the address names but the week does not list is no filter: the Show choice
+  // would say everyone while every row was hidden.
+  const person = all.some((row) => row.id === only) ? only : "";
   const rows =
-    view === "employee" && only !== "" ? all.filter((row) => row.id === only) : all;
+    view === "employee" && person !== "" ? all.filter((row) => row.id === person) : all;
   const editing =
     panel?.kind === "edit"
       ? week.data.shifts.find((shift) => shift.id === panel.shiftId)
@@ -427,7 +448,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           </button>
         </div>
         <p className={`body-strong ${styles.range}`} aria-live="polite">
-          {s.weekOf(f.day(weekStart), f.day(addDays(weekStart, 6)))}
+          {s.weekOf(f.day(drawn), f.day(addDays(drawn, 6)))}
         </p>
         <div className={styles.choices}>
           <fieldset className={styles.view}>
@@ -438,7 +459,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
                   type="radio"
                   name="schedule-view"
                   checked={view === v}
-                  onChange={() => setView(v)}
+                  onChange={() => setFilters({ view: v })}
                 />
                 <span>{v === "employee" ? s.byEmployee : s.byJobsite}</span>
               </label>
@@ -449,8 +470,8 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
               <select
                 id="schedule-only"
                 className={controls.select}
-                value={only}
-                onChange={(e) => setOnly(e.target.value)}
+                value={person}
+                onChange={(e) => setFilters({ who: e.target.value })}
               >
                 <option value="">{s.allEmployees}</option>
                 {all.map((row) => (
@@ -470,7 +491,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
               type="button"
               className={styles.dayTab}
               aria-pressed={day === selected}
-              onClick={() => setSelected(day)}
+              onClick={() => setFilters({ day })}
             >
               {f.weekDay(day)}
             </button>
@@ -486,8 +507,9 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
           week={week.data}
           rows={rows}
           view={view}
-          selected={week.data.days.includes(selected) ? selected : weekStart}
+          selected={week.data.days.includes(selected) ? selected : drawn}
           today={nowIn(week.data.timezone).day}
+          busy={stale}
           onOpen={(shiftId) => setPanel({ kind: "edit", shiftId })}
           onAdd={(userId, day) => setPanel({ kind: "add", userId, day })}
         />
