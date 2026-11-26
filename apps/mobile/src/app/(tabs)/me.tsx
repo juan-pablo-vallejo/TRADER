@@ -1,7 +1,7 @@
-// Me: the language, the person's own name and contact phone, Face ID or fingerprint sign-in
-// on this phone, the build they are on, and the way out. The name and the phone are the
-// person's to write (`me.update`); the number they sign in with is the office's, and is not
-// here. The contact phone comes from the server alone: asked as Me comes into focus and as
+// Me: the language, the person's name and sign-in addresses, Face ID or fingerprint sign-in
+// on this phone, the build they are on, and the way out. A worker's name and addresses are
+// the office's, shown greyed; an admin writes their own name (`me.update`). A person whose
+// login has no email may add one, proved by a code mailed to it (ui/add-email.tsx). The contact phone comes from the server alone: asked as Me comes into focus and as
 // the app comes back, until it has answered once (me.ts); not loaded, it says why and
 // offers Try again. Saving needs a connection and says so when it has none. The three pairs
 // are radio groups, each side's selected state said. A verdict is said aloud as it is
@@ -27,13 +27,7 @@ import { KEY_FOR, KEY_MADE_AT, useBiometrics } from "../../biometrics";
 import { apiUrl, BUILD } from "../../config";
 import { announce, felt } from "../../feedback";
 import { useSpeech, useStrings } from "../../i18n";
-import {
-  contactLoader,
-  mePairs,
-  shownContactPhone,
-  signInRows,
-  type SignInRow,
-} from "../../me";
+import { contactLoader, mePairs, signInRows, type SignInRow } from "../../me";
 import { useReminders } from "../../reminders";
 import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
@@ -41,6 +35,7 @@ import { deviceStore } from "../../store/device";
 import { useSync } from "../../sync/provider";
 import { color, size, space, type } from "../../theme";
 import { Button, Pair, Screen, text } from "../../ui/controls";
+import { AddEmail } from "../../ui/add-email";
 import { SyncChip } from "../../ui/sync-chip";
 import { Text } from "../../ui/text";
 
@@ -65,7 +60,6 @@ export default function Me() {
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<"saved" | "failed" | null>(null);
   const reminders = useReminders();
-  const [remindersRefused, setRemindersRefused] = useState(false);
   const [reported, setReported] = useState(false);
   // The phone's key: on for this person's, off for none or another's, absent where none can
   // be (biometric-rules.ts). Sign out leaves it where it is.
@@ -122,7 +116,7 @@ export default function Me() {
               setContact(state.phase);
               if (state.phase === "loaded") {
                 setName(state.contact.name);
-                setPhone(shownContactPhone(state.contact.phone));
+                setPhone(state.contact.phone ?? "");
                 setSignIn(signInRows(state.contact));
               }
             },
@@ -142,17 +136,17 @@ export default function Me() {
 
   const save = async () => {
     if (api === null || !loaded || name.trim() === "") return;
-    // The number pad has no key that closes it, and it covers the answer and the tabs.
     Keyboard.dismiss();
     setBusy(true);
     setNote(null);
     try {
+      // The contact phone is no longer edited here: what the server holds goes back as it is.
       const saved = await api.me.update.mutate({
         name,
         phone: phone === "" ? null : phone,
       });
       setName(saved.name);
-      setPhone(shownContactPhone(saved.phone));
+      setPhone(saved.phone ?? "");
       setNote("saved");
       felt("success");
       announce(t.me.saved);
@@ -167,7 +161,10 @@ export default function Me() {
     }
   };
 
-  const pairs = mePairs({ language, reminders: reminders.setting, key });
+  // A worker's name is the office's, as both addresses are: greyed, and no Save.
+  const admin = snapshot?.data.me.role === "admin";
+  const hasEmail = signIn.some((row) => row.kind === "email");
+  const pairs = mePairs({ language, key });
   const unsent = records.filter(
     (r) => r.standing === "pending" || r.standing === "syncing",
   ).length;
@@ -208,33 +205,34 @@ export default function Me() {
           </Pair>
 
           <Text style={text.label}>{t.me.name}</Text>
-          <TextInput
-            testID="me-name"
-            accessibilityLabel={t.me.name}
-            accessibilityLanguage={speech}
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            maxLength={120}
-            autoCapitalize="words"
-            autoComplete="name"
-            textContentType="name"
-          />
-          <Text style={text.label}>{t.me.phone}</Text>
-          <TextInput
-            testID="me-phone"
-            accessibilityLabel={t.me.phone}
-            accessibilityLanguage={speech}
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            maxLength={32}
-            editable={loaded}
-            keyboardType="phone-pad"
-            autoComplete="tel"
-            textContentType="telephoneNumber"
-          />
-          <Text style={text.secondary}>{t.me.phoneHelp}</Text>
+          {admin ? (
+            <TextInput
+              testID="me-name"
+              accessibilityLabel={t.me.name}
+              accessibilityLanguage={speech}
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              maxLength={120}
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+            />
+          ) : (
+            <>
+              <TextInput
+                testID="me-name"
+                accessibilityLabel={t.me.name}
+                accessibilityLanguage={speech}
+                accessibilityState={{ disabled: true }}
+                style={[styles.input, styles.readOnly]}
+                value={name}
+                editable={false}
+                selectTextOnFocus={false}
+              />
+              <Text style={text.secondary}>{t.me.nameByOffice}</Text>
+            </>
+          )}
           {signIn.map((row) => (
             <View key={row.kind} style={styles.field}>
               <Text style={text.label}>
@@ -259,29 +257,34 @@ export default function Me() {
               </Text>
             </View>
           ))}
+          {loaded && !hasEmail && api !== null && (
+            <AddEmail api={api} onAdded={() => void loadContact()} />
+          )}
           {contact === "failed" && (
             <>
               <Text
-                testID="me-phone-not-loaded"
+                testID="me-not-loaded"
                 accessibilityLiveRegion="polite"
                 style={text.attention}
               >
-                {t.me.phoneNotLoaded}
+                {t.me.notLoaded}
               </Text>
               <Button
-                testID="me-phone-retry"
+                testID="me-retry"
                 kind="secondary"
                 label={t.retry}
                 onPress={() => void loadContact()}
               />
             </>
           )}
-          <Button
-            testID="me-save"
-            label={busy ? t.loading : t.me.save}
-            disabled={busy || !loaded || name.trim() === ""}
-            onPress={() => void save()}
-          />
+          {admin && (
+            <Button
+              testID="me-save"
+              label={busy ? t.loading : t.me.save}
+              disabled={busy || !loaded || name.trim() === ""}
+              onPress={() => void save()}
+            />
+          )}
           {note !== null && (
             <Text
               testID={`me-${note}`}
@@ -296,34 +299,8 @@ export default function Me() {
             </Text>
           )}
 
-          <Text style={text.label}>{t.reminders.label}</Text>
-          <Pair>
-            {pairs.reminders.map(({ value, selected }) => (
-              <View key={value} style={styles.fill}>
-                <Button
-                  testID={`reminders-${value}`}
-                  kind={selected ? "primary" : "secondary"}
-                  selected={selected}
-                  label={value === "on" ? t.reminders.on : t.reminders.off}
-                  onPress={() => {
-                    if (value === "on") {
-                      void reminders.turnOn().then((granted) => {
-                        setRemindersRefused(!granted);
-                        if (!granted) {
-                          felt("error");
-                          announce(t.reminders.refused);
-                        }
-                      });
-                    } else {
-                      setRemindersRefused(false);
-                      void reminders.turnOff();
-                    }
-                  }}
-                />
-              </View>
-            ))}
-          </Pair>
-          {remindersRefused && (
+          {/* Shift reminders are always on; the phone's own refusal is the one way off. */}
+          {reminders.refused && (
             <Text testID="reminders-refused" style={text.attention}>
               {t.reminders.refused}
             </Text>

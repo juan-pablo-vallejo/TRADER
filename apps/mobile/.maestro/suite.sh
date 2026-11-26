@@ -117,8 +117,6 @@ flow sign-in-spanish fresh allow $LUIS
 
 echo "— smoke"
 flow smoke
-expect "Me saved the contact phone, and left the sign-in address alone" \
-  "select phone || ' ' || email from users where email = '$LUIS'" "4015550177 $LUIS"
 
 # A link to a screen the app does not have: the not-found screen, and the way back.
 flow not-found
@@ -179,8 +177,9 @@ expect "yesterday's session is closed, by one clock-out" \
      and e.client_timestamp > now() - interval '1 hour'" 1
 
 echo "— location stamps off for one person"
-sql "update users set location_stamps = false where email = '$MARCUS';"
-flow stamps-off fresh never $MARCUS crew
+# A worker for this flow: an admin's Today has no clock-in.
+sql "update users set location_stamps = false, role = 'worker' where email = '$MARCUS';"
+flow stamps-off fresh never $MARCUS
 expect "two entries, neither with a location, neither flagged for one" \
   "select count(*) || ' ' || count(e.location_lat) || ' '
      || count(*) filter (where 'location' = any (e.flags))
@@ -260,5 +259,12 @@ sql "insert into users (company_id, name, role, sign_in_phone)
 flow sign-in-number fresh allow 4015550109
 expect "the number bound the person invited by it" \
   "select identity_subject from users where name = 'Number Sign-in'" "dev:+14015550109"
+
+echo "— an email added by its person, proved by a code"
+flow add-email resume
+expect "the email is the person's, recorded as their own change" \
+  "select u.email || ' ' || (a.changed_by_user_id = u.id) from users u
+     join address_changes a on a.user_id = u.id where u.name = 'Number Sign-in'" \
+  "number.added@demo.invalid true"
 
 echo "all flows green on $platform"

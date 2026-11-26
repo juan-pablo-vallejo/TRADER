@@ -116,7 +116,6 @@ export const es: Catalog = {
     keepWorking: "Seguir trabajando",
     earlier: (job, day) => `Sigues trabajando en ${job} desde el ${day}.`,
     clockOutNow: "Marcar salida ahora",
-    whatsApp: "WhatsApp",
     whatsAppSpoken: "Escribir a la oficina por WhatsApp",
     captured: "Guardado",
     notSaved: "No se guardó. Inténtalo de nuevo.",
@@ -207,16 +206,10 @@ export const es: Catalog = {
     },
   },
   reminders: {
-    why: "TRADER puede recordarte cuando empieza un turno y no has marcado entrada, y cuando termina y sigues trabajando.",
-    turnOn: "Activar recordatorios",
-    notNow: "Ahora no",
-    label: "Recordatorios de turno",
-    on: "Activado",
-    off: "Desactivado",
     refused:
       "Este teléfono no deja que TRADER envíe notificaciones. Permítelas en los ajustes del teléfono.",
     channel: "Recordatorios de turno",
-    startTitle: (job) => `Tu turno en ${job} está empezando`,
+    startTitle: (job) => `Tu turno en ${job} empieza pronto`,
     startBody: (time) =>
       `${end(`Empieza a ${las(time)} ${time}`)} Marca entrada cuando llegues.`,
     endTitle: (job) => `Tu turno en ${job} terminó`,
@@ -245,7 +238,6 @@ export const es: Catalog = {
       shifts: "Turnos de hoy",
       noShifts: "Sin turno hoy.",
       at: (job) => `En ${job}`,
-      whatsApp: "WhatsApp",
       whatsAppSpoken: (name) => `Escribir a ${name} por WhatsApp`,
       noPhone: "No hay teléfono de esta persona.",
       add: "Agregar un turno hoy",
@@ -305,6 +297,69 @@ export const es: Catalog = {
     hours: (n) => (n === 1 ? "hace 1 hora" : `hace ${n} horas`),
     days: (n) => (n === 1 ? "hace 1 día" : `hace ${n} días`),
   },
+  addEmail: {
+    title: "Añadir un correo",
+    help: "Añade un correo para iniciar sesión también con él. Le enviamos un código para comprobar que es tuyo.",
+    email: "Correo",
+    invalid: "Escribe un correo completo.",
+    send: "Envíame un código",
+    sending: "Enviando…",
+    codeTitle: (email) => `Escribe el código que enviamos a ${email}`,
+    codeHelp: "Sirve durante 10 minutos.",
+    code: "Código",
+    add: "Añadir el correo",
+    adding: "Añadiendo…",
+    again: "Enviar otro código",
+    other: "Usar otro correo",
+    added: "Añadido. También puedes iniciar sesión con este correo.",
+    refused: {
+      has_email: "Ya tienes un correo. La oficina lo cambia.",
+      email_taken: "Alguien de tu empresa ya tiene este correo.",
+      too_soon:
+        "Se envió un código hace menos de un minuto. Espera un momento y vuelve a pedirlo.",
+      not_sent: "No se pudo enviar el código. Revisa el correo e inténtalo de nuevo.",
+      no_code: "Primero pide un código.",
+      expired: "Ese código ha caducado. Pide uno nuevo.",
+      wrong_code: "Ese código no funcionó. Revísalo o pide uno nuevo.",
+      too_many: "Demasiados códigos incorrectos. Pide uno nuevo.",
+      address_held: "Este correo inicia sesión en otra cuenta. Usa otro correo.",
+      failed: "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.",
+    },
+  },
+  adminToday: {
+    attention: "Requiere atención",
+    attentionClear: "Nada requiere atención.",
+    stillOpen: (name, job, day) => `${name} sigue trabajando en ${job} desde el ${day}.`,
+    fixInOffice: "Corrígelo en Horas, en la oficina.",
+    late: (name, job, start) =>
+      end(`${name} va tarde a ${job}, que empezó a ${las(start)} ${start}`),
+    noNumber: "Sin número",
+    onTheClock: "Trabajando ahora",
+    nobodyWorking: "Nadie está trabajando.",
+    at: (job, since) => `${job}, desde ${las(since)} ${since}`,
+    onBreakAt: (job, since) => `En descanso. ${job}, desde ${las(since)} ${since}`,
+    expected: "Por llegar",
+    expectedAt: (job, start) => `${job}, desde ${las(start)} ${start}`,
+    money: "Dinero",
+    owed: (amount, invoices) =>
+      `${amount} por cobrar en ${invoices === 1 ? "1 factura" : `${invoices} facturas`}`,
+    nothingOwed: "No se debe nada.",
+    overdue: (amount) => `${amount} vencido`,
+    drafts: (n) =>
+      n === 0
+        ? "No hay borradores pendientes."
+        : n === 1
+          ? "1 borrador pendiente de emitir"
+          : `${n} borradores pendientes de emitir`,
+    notInvoiced: (n) =>
+      n === 0
+        ? "Todas las obras terminadas tienen factura."
+        : n === 1
+          ? "1 obra terminada no tiene factura"
+          : `${n} obras terminadas no tienen factura`,
+    offline:
+      "Hoy necesita conexión. No se muestra nada hasta que este teléfono llegue a la oficina.",
+  },
   fallback: {
     notFoundCode: "Error 404",
     notFoundTitle: "Esta pantalla no está aquí",
@@ -329,16 +384,14 @@ export const es: Catalog = {
         ? "1 registro no se ha enviado. Se queda en este teléfono y se envía cuando inicies sesión de nuevo."
         : `${count} registros no se han enviado. Se quedan en este teléfono y se envían cuando inicies sesión de nuevo.`,
     name: "Tu nombre",
-    phone: "Teléfono de contacto",
-    phoneHelp:
-      "Donde la oficina puede contactarte. No es el número con el que inicias sesión.",
     signInPhone: "Número de acceso",
     signInEmail: "Correo de acceso",
     signInByOffice: "Inicias sesión con esto. La oficina lo cambia.",
+    nameByOffice: "La oficina lo cambia.",
     signInBySupport:
       "Inicias sesión con esto. Pide al soporte de TRADER que lo cambie: support@jpteq.app",
-    phoneNotLoaded:
-      "Este teléfono no pudo llegar a la oficina para cargar tu teléfono de contacto. Conéctate e inténtalo de nuevo.",
+    notLoaded:
+      "No se pudieron cargar tus datos: este teléfono no llegó a la oficina. Conéctate e inténtalo de nuevo.",
     save: "Guardar",
     saved: "Guardado.",
     saveFailed: "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.",

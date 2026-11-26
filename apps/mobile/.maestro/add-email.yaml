@@ -1,0 +1,52 @@
+# Adding an email, on Me: the person suite.sh invited by number alone, signed in by it
+# (sign-in-number.yaml, before this one), has no email. Their name is greyed and there is
+# no Save; they type an email, ask for a code, and type the code the development identity
+# proves every email with, 123456. The email then shows greyed with the number, and the
+# step to add one is gone. Every selector is a testID.
+appId: app.jpteq.trader
+---
+- tapOn:
+    id: "tab-me"
+- assertVisible:
+    id: "me-name"
+- assertNotVisible:
+    id: "me-save"
+- scrollUntilVisible:
+    element:
+      id: "add-email-address"
+    centerElement: true
+- takeScreenshot: me-add-email
+- tapOn:
+    id: "add-email-address"
+- inputText: "number.added@demo.invalid"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "add-email-send"
+    centerElement: true
+- tapOn:
+    id: "add-email-send"
+- extendedWaitUntil:
+    visible:
+      id: "add-email-code"
+    timeout: 30000
+- tapOn:
+    id: "add-email-code"
+- inputText: "123456"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "add-email-add"
+    centerElement: true
+- takeScreenshot: me-add-email-code
+- tapOn:
+    id: "add-email-add"
+- scrollUntilVisible:
+    element:
+      id: "me-sign-in-email"
+    direction: UP
+    centerElement: true
+    timeout: 30000
+- assertNotVisible:
+    id: "add-email"
+- takeScreenshot: me-email-added

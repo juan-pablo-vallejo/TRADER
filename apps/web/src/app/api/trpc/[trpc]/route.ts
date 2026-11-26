@@ -8,6 +8,7 @@ import { originsFrom } from "../../../../server/edge";
 import { answersTimings } from "../../../../server/environment";
 import { createTrpcHandler, logToStdout } from "../../../../server/handler";
 import { webIdentity } from "../../../../server/identity";
+import { identityMode } from "../../../../server/identity-mode";
 import { webMailer } from "../../../../server/mailer";
 import { webReporter } from "../../../../server/reporter";
 
@@ -19,6 +20,8 @@ const handler = createTrpcHandler({
   identity: webIdentity,
   directory: webDirectory,
   mailer: webMailer,
+  // Under the development identity nothing is mailed: the phone's stand-in code proves it.
+  emailCode: () => (identityMode(process.env) === "dev" ? "123456" : null),
   getAppUrl: () => getAppUrl(process.env),
   demo: webDemo,
   closed: webClosed,

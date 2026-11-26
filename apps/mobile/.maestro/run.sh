@@ -69,6 +69,9 @@ case "$platform" in
     trap 'kill "$fixes" 2>/dev/null || true' EXIT
     if [ "$start" = fresh ]; then
       "$adb" -s "$device" shell pm clear app.jpteq.trader >/dev/null
+      # Notifications granted before launch: the app asks for them as it opens (shift
+      # reminders are always on), and the system's question would cover the screen.
+      "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.POST_NOTIFICATIONS
       if [ "$location" = allow ]; then
         "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.ACCESS_FINE_LOCATION
         "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.ACCESS_COARSE_LOCATION

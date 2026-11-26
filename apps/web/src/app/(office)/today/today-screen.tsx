@@ -22,6 +22,7 @@ import { type ReactNode, useEffect, useState } from "react";
 
 import { PasskeyBand } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
+import { WhatsAppMark } from "../../whatsapp-mark";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { useStrings } from "../../i18n";
 import { LoadingRows } from "../../loading-rows";
@@ -167,7 +168,7 @@ function Shown({ today, now }: { today: Today; now: number }) {
                       rel="noreferrer"
                       aria-label={s.whatsAppOf(row.person.name)}
                     >
-                      {s.whatsApp}
+                      <WhatsAppMark label={s.whatsApp} height={20} />
                     </a>
                   )}
                 </li>

@@ -33,6 +33,9 @@ type HandlerDependencies = {
   // The mail service for invoice.send and people.sendInvitation (mailer.ts). Absent, every
   // send fails closed.
   mailer?: Mailer;
+  // The one code an added email is proved by, read per request (me/add-email.ts): the
+  // development identity's, where nothing is mailed. Absent or null: a mailed random code.
+  emailCode?: () => string | null;
   // Where the app is got from on this host (addresses.ts), read per request. Absent or
   // null, no invitation is emailed.
   getAppUrl?: () => string | null;
@@ -99,6 +102,7 @@ export function createTrpcHandler(deps: HandlerDependencies) {
           identity,
           directory: deps.directory,
           ...(deps.mailer !== undefined && { mailer: deps.mailer }),
+          ...(deps.emailCode !== undefined && { emailCode: deps.emailCode() }),
           ...(deps.getAppUrl !== undefined && { getAppUrl: deps.getAppUrl() }),
           ...(deps.demo !== undefined && { demo: deps.demo() }),
           ...(deps.closed !== undefined && { closed: deps.closed() }),

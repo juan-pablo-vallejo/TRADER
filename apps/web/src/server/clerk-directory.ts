@@ -303,8 +303,30 @@ export function createClerkDirectory(deps: {
     return "done";
   };
 
+  const addEmail = async (
+    person: Parameters<IdentityDirectory["addEmail"]>[0],
+  ): Promise<Awaited<ReturnType<IdentityDirectory["addEmail"]>>> => {
+    const signal = AbortSignal.timeout(READDRESS_TIMEOUT_MS);
+    const login = await loginOf(signal, person);
+    if (login === null) return "no_login";
+    const have = listOf(login.user, "email_addresses", "email_address");
+    if (have.some((h) => h.value.toLowerCase() === person.email.toLowerCase())) {
+      return "unchanged";
+    }
+    const answer = await call(signal, "POST", "/email_addresses", {
+      user_id: login.id,
+      email_address: person.email,
+      verified: true,
+      primary: true,
+    });
+    if (onlyExists(answer)) return "held";
+    done(answer);
+    return "done";
+  };
+
   return {
     readdress,
+    addEmail,
     async admit(person) {
       const first = await create(person);
       if (first.status === 200) return;

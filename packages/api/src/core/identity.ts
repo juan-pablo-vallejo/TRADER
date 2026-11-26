@@ -78,6 +78,16 @@ export type IdentityDirectory = {
     phone: string | null;
     fresh: boolean;
   }): Promise<Readdressed>;
+  // An email the person proved by a code sent to it (me.addEmail), added to the login of a
+  // row that had none, verified, and nothing else: no session, passkey or linked account is
+  // touched, since the one signed in is the one who proved it. The login is found as
+  // `readdress` finds it. `unchanged`: the login already held it; `held`: another login
+  // does, and nothing was changed. It throws as `readdress` does.
+  addEmail(person: {
+    id: string;
+    subject: string | null;
+    email: string;
+  }): Promise<"done" | "unchanged" | "held" | "no_login">;
 };
 
 // The directory where no provider is connected — the development identity, the demo and the
@@ -85,4 +95,5 @@ export type IdentityDirectory = {
 export const localDirectory: IdentityDirectory = {
   admit: () => Promise.resolve(),
   readdress: () => Promise.resolve("unchanged"),
+  addEmail: () => Promise.resolve("unchanged"),
 };

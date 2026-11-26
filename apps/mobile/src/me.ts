@@ -47,17 +47,11 @@ export type Side<T extends string> = { value: T; selected: boolean };
 const pair = <T extends string>(values: readonly [T, T], chosen: T): Side<T>[] =>
   values.map((value) => ({ value, selected: value === chosen }));
 
-// Me's three pairs, each read as two radio buttons with the chosen side selected: the
-// language; reminders, off until turned on; and Face ID or fingerprint, absent where this
-// phone can hold no key.
-export function mePairs(input: {
-  language: Language;
-  reminders: "on" | "off" | null;
-  key: "on" | "off" | "absent";
-}) {
+// Me's pairs, each read as two radio buttons with the chosen side selected: the language,
+// and Face ID or fingerprint, absent where this phone can hold no key.
+export function mePairs(input: { language: Language; key: "on" | "off" | "absent" }) {
   return {
     language: pair(["en", "es"] as const, input.language),
-    reminders: pair(["on", "off"] as const, input.reminders === "on" ? "on" : "off"),
     key: input.key === "absent" ? null : pair(["on", "off"] as const, input.key),
   };
 }
@@ -78,16 +72,4 @@ export function signInRows(contact: Contact): SignInRow[] {
   if (contact.email !== null)
     rows.push({ kind: "email", value: contact.email, changedBy });
   return rows;
-}
-
-// The contact phone as Me shows it once loaded: a United States number, ten digits with or
-// without its 1 or +1, as it is said aloud; anything else as it was typed.
-export function shownContactPhone(stored: string | null): string {
-  if (stored === null) return "";
-  const digits = stored.replace(/\D/g, "");
-  const national =
-    digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
-  return national.length === 10 && /^[+\d\s().-]+$/.test(stored)
-    ? shownSignInPhone(`+1${national}`)
-    : stored;
 }

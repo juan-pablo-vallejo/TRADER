@@ -1018,7 +1018,6 @@ export const en = {
   duration: (h: number, m: number) => `${h} h ${String(m).padStart(2, "0")} min`,
 
   // Me
-  contactPhone: "Contact phone",
   managedBySignIn: "The office changes it.",
   adminAddressesCaption: "Ask TRADER support to change it: support@jpteq.app",
   signInNumber: "Sign-in number",

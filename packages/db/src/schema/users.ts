@@ -3,7 +3,9 @@ import {
   boolean,
   check,
   pgTable,
+  integer,
   text,
+  timestamp,
   unique,
   uniqueIndex,
   uuid,
@@ -43,6 +45,14 @@ export const users = pgTable(
     // Whether this person's clock taps are stamped with a location. NULL is "as the
     // company" (companies.location_stamps). Written by people.setLocationStamps and nothing else.
     locationStamps: boolean("location_stamps"),
+    // An email the person is adding to a login that has none, until they prove it: the
+    // address, a hash of the code sent to it, when the code stops working and how many wrong
+    // codes have been tried. Written by me.sendEmailCode and me.addEmail and by nothing else
+    // (packages/api, me/add-email.ts); cleared once the email is the person's.
+    emailClaim: text("email_claim"),
+    emailClaimCodeHash: text("email_claim_code_hash"),
+    emailClaimSentAt: timestamp("email_claim_sent_at", { withTimezone: true }),
+    emailClaimTries: integer("email_claim_tries").notNull().default(0),
     deactivatedAt,
     createdAt,
     updatedAt,

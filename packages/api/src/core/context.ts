@@ -47,6 +47,10 @@ export type Context = {
   // The mail service as invoice.send and people.sendInvitation see it (mailer.ts). A host
   // that names none gets one that sends nothing and says so.
   mailer: Mailer;
+  // The code every email a person adds is proved by, where nothing is mailed: the
+  // development identity's, as the phone's sign-in stand-in takes one code (me/add-email.ts).
+  // Null everywhere else: a random code, mailed.
+  emailCode: string | null;
   // Where the app is got from on this host, as an emailed invitation links to it: the
   // host's own configured address, never anything of a request. Null where the host names
   // none, and then no invitation is emailed.
@@ -78,6 +82,7 @@ export function createContext(opts: {
   identity: unknown;
   directory: IdentityDirectory;
   mailer?: Mailer;
+  emailCode?: string | null;
   getAppUrl?: string | null;
   demo?: DemoDoor | null;
   closed?: ClosedCompany | null;
@@ -92,6 +97,7 @@ export function createContext(opts: {
     identity: parsed.success ? parsed.data : null,
     directory: opts.directory,
     mailer: opts.mailer ?? unconfiguredMailer,
+    emailCode: opts.emailCode ?? null,
     getAppUrl: opts.getAppUrl ?? null,
     demo: opts.demo ?? null,
     closed: opts.closed ?? null,

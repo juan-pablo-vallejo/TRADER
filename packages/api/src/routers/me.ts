@@ -7,17 +7,27 @@
 // validated and narrowed: no identity subject, no deactivation state (a deactivated caller
 // never reaches here). `update` writes the caller's `name` and
 // `phone` and nothing else: email, role, company and identity are not in its input and are
-// never self-written; an email changes through the identity provider's verified flow.
+// never self-written. A worker's name is the office's: `update` refuses a worker, whose Me
+// shows the name and both addresses greyed. `sendEmailCode` and `addEmail` let a person
+// whose login has no email add one, proved by a code mailed to it (me/add-email.ts).
 // `signInPhone` is the number the office invited (users.ts): read here, written by no one
 // through this router.
 import { ROLES } from "../contract/enums";
 import { addressChanges, users } from "@trader/db/schema";
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { instant } from "../contract/instant";
 import { CLOCK_SKEW_TOLERANCE_MS } from "../contract/limits";
-import { protectedProcedure, router, unauthorized } from "../core/trpc";
+import { forbidden, protectedProcedure, router, unauthorized } from "../core/trpc";
+import {
+  addEmail,
+  addEmailInput,
+  addEmailOutput,
+  sendEmailCode,
+  sendEmailCodeInput,
+  sendEmailCodeOutput,
+} from "../me/add-email";
 
 const meOutput = z.strictObject({
   id: z.uuid(),
@@ -60,6 +70,8 @@ export const meRouter = router({
           .where(
             and(
               eq(addressChanges.userId, ctx.user.id),
+              // An email the person added themselves leaves their own key standing.
+              ne(addressChanges.changedByUserId, ctx.user.id),
               gt(addressChanges.createdAt, keyMadeAt),
             ),
           )
@@ -80,6 +92,8 @@ export const meRouter = router({
     .input(updateInput)
     .output(meOutput)
     .mutation(async ({ ctx, input }) => {
+      // A worker's name and addresses are the office's to change.
+      if (ctx.user.role !== "admin") throw forbidden();
       // Own row, last writer wins; updated_at follows through the ORM.
       const [row] = await ctx.tx
         .update(users)
@@ -97,4 +111,12 @@ export const meRouter = router({
         signInPhone: ctx.user.signInPhone,
       };
     }),
+  sendEmailCode: protectedProcedure
+    .input(sendEmailCodeInput)
+    .output(sendEmailCodeOutput)
+    .mutation(({ ctx, input }) => sendEmailCode(ctx.tx, ctx.user, input, ctx)),
+  addEmail: protectedProcedure
+    .input(addEmailInput)
+    .output(addEmailOutput)
+    .mutation(({ ctx, input }) => addEmail(ctx.tx, ctx.user, input, ctx)),
 });

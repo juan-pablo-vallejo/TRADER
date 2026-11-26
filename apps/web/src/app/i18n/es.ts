@@ -974,7 +974,6 @@ export const es: Catalog = {
   timeCorrected: "Corregido",
   duration: (h, m) => `${h} h ${String(m).padStart(2, "0")} min`,
 
-  contactPhone: "Teléfono de contacto",
   managedBySignIn: "La oficina lo cambia.",
   adminAddressesCaption: "Pide al soporte de TRADER que lo cambie: support@jpteq.app",
   signInNumber: "Número de acceso",

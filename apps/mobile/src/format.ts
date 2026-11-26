@@ -44,3 +44,11 @@ export function age(ms: number, t: Catalog["age"]): string {
   if (minutes < 48 * 60) return t.hours(Math.floor(minutes / 60));
   return t.days(Math.floor(minutes / (24 * 60)));
 }
+
+// Money as the office writes it, in the person's language: "$1,250.50".
+export function money(cents: number, currency: string, language: string): string {
+  return new Intl.NumberFormat(language === "es" ? "es-US" : "en-US", {
+    style: "currency",
+    currency,
+  }).format(cents / 100);
+}

@@ -10,11 +10,13 @@ appId: app.jpteq.trader
     when:
       true: ${LAUNCH == "maestro"}
     commands:
-      # Maestro grants everything on launch unless told: the location is this run's own.
+      # The location is this run's own; notifications are granted, since the app asks for
+      # them as it opens (shift reminders are always on) and the question would cover it.
       - launchApp:
           clearState: true
           permissions:
             location: ${IOS_LOCATION}
+            notifications: allow
       - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
 - runFlow:
     file: location.yaml

@@ -82,8 +82,8 @@ describe("the reminders", () => {
       ],
     });
     expect(said(got)).toEqual([
-      "start 01 2026-11-16T12:00:00.000Z",
-      "start 02 2026-11-17T12:00:00.000Z",
+      "start 01 2026-11-16T11:45:00.000Z",
+      "start 02 2026-11-17T11:45:00.000Z",
     ]);
     expect(got[0]).toMatchObject({ jobName: "Elm St", wall: "07:00" });
   });
@@ -96,7 +96,7 @@ describe("the reminders", () => {
     ];
     // Well past 07:00, the first one is over and done with.
     expect(said(reminders({ ...base, now: at("2026-11-16", "07:20"), shifts }))).toEqual([
-      "start 03 2026-11-17T12:00:00.000Z",
+      "start 03 2026-11-17T11:45:00.000Z",
     ]);
   });
 
@@ -139,7 +139,7 @@ describe("the reminders", () => {
           clock: on(J, at("2026-11-16", "07:00")),
         }),
       ),
-    ).toEqual(["end 01 2026-11-16T16:00:00.000Z", "start 02 2026-11-16T17:00:00.000Z"]);
+    ).toEqual(["end 01 2026-11-16T16:00:00.000Z", "start 02 2026-11-16T16:45:00.000Z"]);
     // Still on J at 11:30, well past its end: that reminder is over; K's remains.
     expect(
       said(
@@ -150,10 +150,10 @@ describe("the reminders", () => {
           clock: on(J, at("2026-11-16", "07:00")),
         }),
       ),
-    ).toEqual(["start 02 2026-11-16T17:00:00.000Z"]);
+    ).toEqual(["start 02 2026-11-16T16:45:00.000Z"]);
     // Clocked out: no end reminder at all.
     expect(said(reminders({ ...base, shifts, now: at("2026-11-16", "09:00") }))).toEqual([
-      "start 02 2026-11-16T17:00:00.000Z",
+      "start 02 2026-11-16T16:45:00.000Z",
     ]);
   });
 
@@ -168,7 +168,7 @@ describe("the reminders", () => {
           clock: on(J, at("2026-11-16", "19:00")),
         }),
       ),
-    ).toEqual(["start 01 2026-11-17T12:00:00.000Z"]);
+    ).toEqual(["start 01 2026-11-17T11:45:00.000Z"]);
   });
 
   it("are none when turned off, and never more than the phone will keep", () => {
@@ -210,9 +210,9 @@ describe("the reminders", () => {
 describe("a reminder whose time has just come", () => {
   const shifts = [shift(1, "2026-11-16", "07:00", "15:30")];
 
-  it("is still wanted for a quarter of an hour, marked due, and then no more", () => {
-    const before = reminders({ ...base, shifts, now: at("2026-11-16", "06:59") });
-    const just = reminders({ ...base, shifts, now: at("2026-11-16", "07:00") });
+  it("comes 15 minutes before the start, and is wanted until a quarter past it", () => {
+    const before = reminders({ ...base, shifts, now: at("2026-11-16", "06:44") });
+    const just = reminders({ ...base, shifts, now: at("2026-11-16", "06:45") });
     const late = reminders({ ...base, shifts, now: at("2026-11-16", "07:14") });
     const over = reminders({ ...base, shifts, now: at("2026-11-16", "07:15") });
     expect(before.map((r) => r.due)).toEqual([false]);

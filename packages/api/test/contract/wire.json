@@ -5091,6 +5091,71 @@
         "additionalProperties": false
       }
     },
+    "me.addEmail": {
+      "type": "mutation",
+      "input": [
+        {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "pattern": "^[0-9]{6}$"
+            }
+          },
+          "required": [
+            "code"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "output": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "result": {
+                "type": "string",
+                "const": "added"
+              },
+              "email": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "result",
+              "email"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "result": {
+                "type": "string",
+                "const": "rejected"
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "has_email",
+                  "no_code",
+                  "expired",
+                  "wrong_code",
+                  "too_many",
+                  "email_taken",
+                  "address_held"
+                ]
+              }
+            },
+            "required": [
+              "result",
+              "code"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
     "me.get": {
       "type": "query",
       "input": [
@@ -5166,6 +5231,74 @@
           "signInPhone"
         ],
         "additionalProperties": false
+      }
+    },
+    "me.sendEmailCode": {
+      "type": "mutation",
+      "input": [
+        {
+          "type": "object",
+          "properties": {
+            "email": {
+              "type": "string",
+              "maxLength": 254,
+              "format": "email",
+              "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "en",
+                "es"
+              ]
+            }
+          },
+          "required": [
+            "email",
+            "language"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "output": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "result": {
+                "type": "string",
+                "const": "sent"
+              }
+            },
+            "required": [
+              "result"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "result": {
+                "type": "string",
+                "const": "rejected"
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "has_email",
+                  "email_taken",
+                  "too_soon",
+                  "not_sent"
+                ]
+              }
+            },
+            "required": [
+              "result",
+              "code"
+            ],
+            "additionalProperties": false
+          }
+        ]
       }
     },
     "me.update": {
@@ -12336,7 +12469,9 @@
       "shift.moveToday",
       "demo.signIn",
       "job.setLocation",
+      "me.addEmail",
       "me.get",
+      "me.sendEmailCode",
       "me.update",
       "overview.today",
       "people.list",

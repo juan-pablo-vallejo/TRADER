@@ -71,6 +71,8 @@ const READS = {
 } as const;
 const WRITES = {
   "me.update": 7,
+  "me.sendEmailCode": 9,
+  "me.addEmail": 11,
   "job.update": 10,
   "job.setLocation": 10,
   "shift.create": 12,
@@ -85,7 +87,12 @@ const WRITES = {
 const callerOf = createCallerFactory(appRouter);
 type Api = ReturnType<typeof callerOf>;
 
-function counter(tx: Tx, who: unknown, demo: DemoDoor | null = null) {
+function counter(
+  tx: Tx,
+  who: unknown,
+  demo: DemoDoor | null = null,
+  emailCode: string | null = null,
+) {
   const lines: CallLine[] = [];
   const api: Api = callerOf(
     createContext({
@@ -97,6 +104,7 @@ function counter(tx: Tx, who: unknown, demo: DemoDoor | null = null) {
       waits: "inherit",
       observe: (line) => lines.push(line),
       demo,
+      emailCode,
     }),
   );
   // The statements of one call, which must succeed; `answer`, when given, is what it must
@@ -267,7 +275,8 @@ describe("statement budgets", () => {
       const asWorker = counter(tx, w.worker.who);
       const asAdmin = counter(tx, w.admin.who);
       const out: Record<string, number> = {};
-      out["me.update"] = await asWorker((api) =>
+      // A worker's name is the office's: the admin's own.
+      out["me.update"] = await asAdmin((api) =>
         api.me.update({ name: "Renamed", phone: null }),
       );
       out["job.update"] = await asAdmin((api) =>
@@ -322,6 +331,22 @@ describe("statement budgets", () => {
         push([event("paused"), event("resumed")]),
         accepted(2),
       );
+      // A worker invited by number adds an email: the code, then the check. The development
+      // identity's one code, so no mail is sent and the path is the whole of it.
+      await tx.execute(sql`reset role`);
+      await tx
+        .update(users)
+        .set({ email: null, signInPhone: "+14015550188" })
+        .where(eq(users.id, w.worker.id));
+      await asTenant(tx, w.companyId);
+      const adding = counter(tx, w.worker.who, null, "123456");
+      out["me.sendEmailCode"] = await adding(
+        (api) => api.me.sendEmailCode({ email: "added@crew.test", language: "en" }),
+        { result: "sent" },
+      );
+      out["me.addEmail"] = await adding((api) => api.me.addEmail({ code: "123456" }), {
+        result: "added",
+      });
       // No Demo door on this host: refused as data, before any statement.
       out["demo.signIn"] = await counter(tx, null)(
         (api) => api.demo.signIn({ phone: "+14015550100", code: "000000" }),

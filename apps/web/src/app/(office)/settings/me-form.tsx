@@ -1,8 +1,8 @@
 "use client";
 
-// Settings' third part, Me: name and contact phone as form fields, and the language;
-// email read-only, captioned "Managed by your sign-in provider"; no role, company or
-// identity field. `me.get` fills it, `me.update` saves it and invalidates `me.get`. The
+// Settings' third part, Me: the name, and the language; the sign-in addresses read-only.
+// An admin writes their own name; a worker's is the office's, read-only like the addresses,
+// with no Save. No role, company or identity field. `me.get` fills it, `me.update` saves it and invalidates `me.get`. The
 // language is kept on this browser and changes at once.
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
@@ -25,7 +25,8 @@ export function MeForm({ signInHref }: { signInHref: string }) {
   const queryClient = useQueryClient();
   const me = useQuery(trpc.me.get.queryOptions());
   // What the person has typed, or null: then the fields show the record as fetched. A save
-  // clears the draft, so the refetched record is what the form shows next.
+  // clears the draft, so the refetched record is what the form shows next. The contact
+  // phone is not edited here; what the server holds goes back as it is.
   const [draft, setDraft] = useState<{ name: string; phone: string } | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const save = useMutation(
@@ -42,6 +43,8 @@ export function MeForm({ signInHref }: { signInHref: string }) {
     draft ?? { name: record.name, phone: record.phone ?? "" };
   const submit = (record: { name: string; phone: string | null }) => (e: FormEvent) => {
     e.preventDefault();
+    // Return in a worker's read-only field submits the form too: nothing is theirs to save.
+    if (me.data?.role !== "admin") return;
     const { name, phone } = fields(record);
     setNote(null);
     save.mutate({ name, phone: phone === "" ? null : phone });
@@ -70,20 +73,13 @@ export function MeForm({ signInHref }: { signInHref: string }) {
               autoComplete="name"
               required
               maxLength={120}
+              readOnly={me.data.role !== "admin"}
               value={fields(me.data).name}
               onChange={(e) => setDraft({ ...fields(me.data), name: e.target.value })}
             />
-          </Field>
-          <Field id="profile-phone" label={t.contactPhone}>
-            <input
-              id="profile-phone"
-              className={controls.input}
-              type="tel"
-              autoComplete="tel"
-              maxLength={32}
-              value={fields(me.data).phone}
-              onChange={(e) => setDraft({ ...fields(me.data), phone: e.target.value })}
-            />
+            {me.data.role !== "admin" && (
+              <p className={`secondary ${controls.caption}`}>{t.managedBySignIn}</p>
+            )}
           </Field>
           {me.data.signInPhone !== null && (
             <Field id="profile-sign-in-phone" label={t.signInNumber}>
@@ -127,14 +123,18 @@ export function MeForm({ signInHref }: { signInHref: string }) {
               ))}
             </select>
           </Field>
-          <Note text={note} />
-          <WriteButton
-            type="submit"
-            className={controls.primary}
-            pending={save.isPending}
-          >
-            {t.save}
-          </WriteButton>
+          {me.data.role === "admin" && (
+            <>
+              <Note text={note} />
+              <WriteButton
+                type="submit"
+                className={controls.primary}
+                pending={save.isPending}
+              >
+                {t.save}
+              </WriteButton>
+            </>
+          )}
         </form>
       )}
     </section>

@@ -58,6 +58,7 @@ import { Button, Screen, text } from "../../ui/controls";
 import { Sheet } from "../../ui/sheet";
 import { SyncChip } from "../../ui/sync-chip";
 import { Text } from "../../ui/text";
+import { WhatsAppButton } from "../../ui/whatsapp-button";
 
 // The radius a jobsite gets when its location is set from the phone: the server's default.
 const SET_RADIUS_M = JOBSITE_RADIUS_M;
@@ -614,10 +615,8 @@ export default function CrewTab() {
                         </Text>
                       </View>
                       {chat !== null && (
-                        <Button
+                        <WhatsAppButton
                           testID={`crew-earlier-whatsapp-${i}`}
-                          kind="secondary"
-                          label={t.crew.person.whatsApp}
                           spoken={t.crew.person.whatsAppSpoken(e.person.name)}
                           onPress={() =>
                             void Linking.openURL(chat).catch(() => undefined)
@@ -759,9 +758,8 @@ export default function CrewTab() {
                     {t.crew.person.noPhone}
                   </Text>
                 ) : (
-                  <Button
+                  <WhatsAppButton
                     testID="person-whatsapp"
-                    label={t.crew.person.whatsApp}
                     spoken={t.crew.person.whatsAppSpoken(opened.person.name)}
                     onPress={() =>
                       void Linking.openURL(whatsAppLink(opened.person.phone)!).catch(

@@ -1,5 +1,6 @@
-// me.update — any active role edits its own name and phone, those two columns only,
-// and nothing else about the row moves; a deactivated or anonymous caller is UNAUTHORIZED.
+// me.update — an admin edits their own name and phone, those two columns only, and nothing
+// else about the row moves; a worker's name is the office's, so a worker is FORBIDDEN; a
+// deactivated or anonymous caller is UNAUTHORIZED.
 import { users } from "@trader/db/schema";
 import { eq } from "drizzle-orm";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -35,8 +36,8 @@ type Input = Parameters<ReturnType<typeof appCaller>["me"]["update"]>[0];
 const update = (who: unknown, input: Input) => appCaller(app, who).me.update(input);
 
 describe("me.update", () => {
-  it("writes the caller's own name and phone, for every role, and nothing else", async () => {
-    for (const role of ["worker", "admin"] as const) {
+  it("writes an admin's own name and phone, and nothing else", async () => {
+    for (const role of ["admin"] as const) {
       const m = await member(owner, w, "a", role);
       const before = await userRow(owner, m.id);
       const answer = await update(m.who, {
@@ -64,8 +65,17 @@ describe("me.update", () => {
     }
   });
 
-  it("stores an empty or null phone as NULL and refuses a blank name or a foreign field", async () => {
+  it("refuses a worker, whose name is the office's, and changes nothing", async () => {
     const m = await member(owner, w, "a", "worker");
+    const before = await userRow(owner, m.id);
+    expect(await outcome(update(m.who, { name: "Renamed", phone: null }))).toBe(
+      "FORBIDDEN",
+    );
+    expect(await userRow(owner, m.id)).toEqual(before);
+  });
+
+  it("stores an empty or null phone as NULL and refuses a blank name or a foreign field", async () => {
+    const m = await member(owner, w, "a", "admin");
     expect((await update(m.who, { name: "Name", phone: "" })).phone).toBeNull();
     expect((await update(m.who, { name: "Name", phone: null })).phone).toBeNull();
     for (const input of [
@@ -77,11 +87,11 @@ describe("me.update", () => {
     ]) {
       expect(await outcome(update(m.who, input as Input))).toBe("BAD_REQUEST");
     }
-    expect(await userRow(owner, m.id)).toMatchObject({ role: "worker" });
+    expect(await userRow(owner, m.id)).toMatchObject({ role: "admin" });
   });
 
   it("cannot change a number that is a binding key", async () => {
-    const m = await member(owner, w, "a", "worker");
+    const m = await member(owner, w, "a", "admin");
     const signInPhone = testPhone();
     await owner.update(users).set({ signInPhone }).where(eq(users.id, m.id));
     // Not in the input at all, and the contact phone is another column.
@@ -100,17 +110,18 @@ describe("me.update", () => {
 
   it("never touches another row, even on first sign-in", async () => {
     const before = await userRow(owner, w.a.boundId);
+    const invited = await userRow(owner, w.a.inviteId);
     const who = {
       subject: `sub-new-${w.run}`,
       email: w.a.inviteEmail,
       emailVerified: true,
     };
-    expect((await update(who, { name: "Invitee", phone: null })).id).toBe(w.a.inviteId);
+    // The invitee is a worker: refused, and the whole call with it.
+    expect(await outcome(update(who, { name: "Invitee", phone: null }))).toBe(
+      "FORBIDDEN",
+    );
     expect(await userRow(owner, w.a.boundId)).toEqual(before);
-    expect(await userRow(owner, w.a.inviteId)).toMatchObject({
-      name: "Invitee",
-      identity_subject: `sub-new-${w.run}`,
-    });
+    expect(await userRow(owner, w.a.inviteId)).toEqual(invited);
   });
 
   it("is UNAUTHORIZED anonymous or deactivated", async () => {

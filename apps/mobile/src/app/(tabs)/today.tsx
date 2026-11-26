@@ -21,7 +21,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { announce, felt } from "../../feedback";
 import { dayName, duration, timeOfDay, wallTime } from "../../format";
 import { useSpeech, useStrings } from "../../i18n";
-import { useReminders } from "../../reminders";
 import { offerAt, type Tap } from "../../sync/clock";
 import { useSync } from "../../sync/provider";
 import {
@@ -33,11 +32,13 @@ import {
   workedOn,
 } from "../../sync/today";
 import { color, size, space } from "../../theme";
+import { AdminToday } from "../../ui/admin-today";
 import { Button, Screen, text } from "../../ui/controls";
 import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { Sheet } from "../../ui/sheet";
 import { SyncChip } from "../../ui/sync-chip";
 import { Text } from "../../ui/text";
+import { WhatsAppButton } from "../../ui/whatsapp-button";
 
 // How long the check mark stays after a tap was saved.
 const CAPTURED_MS = 1600;
@@ -55,8 +56,6 @@ export default function Today() {
   const [captured, setCaptured] = useState(false);
   // A tap the store would not write: said until the next tap.
   const [notSaved, setNotSaved] = useState(false);
-  const { setting: remindersSetting, turnOn, turnOff } = useReminders();
-  const [askReminders, setAskReminders] = useState(false);
   const capturedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The second moves the timer while the clock runs; the minute moves the offer and the
   // hours otherwise. Nothing else on the screen needs a clock.
@@ -169,8 +168,6 @@ export default function Today() {
       return;
     }
     if (done !== "saved") return;
-    // Asked once, after the first clock-in: the moment a reminder first makes sense.
-    if (what.action === "start" && remindersSetting === null) setAskReminders(true);
     setCaptured(true);
     if (capturedTimer.current !== null) clearTimeout(capturedTimer.current);
     capturedTimer.current = setTimeout(() => setCaptured(false), CAPTURED_MS);
@@ -186,6 +183,9 @@ export default function Today() {
   const spoken = spokenTimer(session);
   const noShift = offer !== null && offer.kind !== "eligible" && clock.status === "off";
   const sheetJob = opened === null ? null : (facts.get(opened) ?? null);
+
+  // An admin's Today is the office's at a glance: what needs attention, never a clock-in.
+  if (data?.me.role === "admin") return <AdminToday />;
 
   return (
     <Screen testID="today">
@@ -390,9 +390,8 @@ export default function Today() {
           </Text>
         )}
         {noShift && officeChat !== null && (
-          <Button
+          <WhatsAppButton
             testID="whatsapp-office"
-            label={t.today.whatsApp}
             spoken={t.today.whatsAppSpoken}
             onPress={() => void Linking.openURL(officeChat).catch(() => undefined)}
           />
@@ -500,39 +499,6 @@ export default function Today() {
       </Sheet>
 
       <JobSheet job={sheetJob} onClose={() => setOpened(null)} />
-
-      {/* One sentence of why, before the system's own question. Either answer is kept, so
-          this is never asked again; Me has the switch. */}
-      <Sheet
-        visible={askReminders}
-        onClose={() => {
-          setAskReminders(false);
-          void turnOff();
-        }}
-        title={t.reminders.label}
-        testID="reminders-sheet"
-      >
-        <Text testID="reminders-why" style={text.body}>
-          {t.reminders.why}
-        </Text>
-        <Button
-          testID="reminders-turn-on"
-          label={t.reminders.turnOn}
-          onPress={() => {
-            setAskReminders(false);
-            void turnOn();
-          }}
-        />
-        <Button
-          testID="reminders-not-now"
-          kind="secondary"
-          label={t.reminders.notNow}
-          onPress={() => {
-            setAskReminders(false);
-            void turnOff();
-          }}
-        />
-      </Sheet>
     </Screen>
   );
 }

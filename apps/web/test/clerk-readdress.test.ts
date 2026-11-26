@@ -525,3 +525,74 @@ describe("the web directory, for an address change", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+// An email a person proved by a code (clerk-directory.ts, addEmail): the login gains it,
+// verified, and nothing that could sign in as it is touched.
+describe("an email added by its person at Clerk", () => {
+  const byNumber = () =>
+    login("user_bound", {
+      external_id: ROW,
+      phone_numbers: [{ id: "idn_p", phone_number: PHONE }],
+      primary_phone_number_id: "idn_p",
+      passkeys: [{ id: "idn_k" }],
+      sessions: [{ id: "sess_1", status: "active" }],
+    });
+
+  it("adds the email, verified and primary, and leaves the person signed in", async () => {
+    const c = clerk([byNumber()]);
+    expect(
+      await c.directory.addEmail({ id: ROW, subject: "user_bound", email: NEW_EMAIL }),
+    ).toBe("done");
+    expect(stateOf(c.logins[0]!)).toEqual({
+      emails: [NEW_EMAIL],
+      phones: [PHONE],
+      primaryEmail: NEW_EMAIL,
+      primaryPhone: PHONE,
+      passkeys: 1,
+      linked: 0,
+      signedIn: 1,
+    });
+    expect(c.calls.find((x) => x.method === "POST")?.body).toMatchObject({
+      user_id: "user_bound",
+      email_address: NEW_EMAIL,
+      verified: true,
+    });
+    expect(c.calls.some((x) => x.method === "DELETE" || x.path.includes("revoke"))).toBe(
+      false,
+    );
+  });
+
+  it("finds a login not yet bound by the row's tag, never by the address", async () => {
+    const c = clerk([byNumber()]);
+    expect(await c.directory.addEmail({ id: ROW, subject: null, email: NEW_EMAIL })).toBe(
+      "done",
+    );
+    expect(c.calls[0]!.path).toBe(`/users?external_id=${ROW}&limit=2`);
+  });
+
+  it("says another login holds it, and changes nothing", async () => {
+    const other = login("user_other", {
+      email_addresses: [{ id: "idn_o", email_address: NEW_EMAIL }],
+    });
+    const c = clerk([byNumber(), other]);
+    expect(
+      await c.directory.addEmail({
+        id: ROW,
+        subject: "user_bound",
+        email: NEW_EMAIL.toUpperCase(),
+      }),
+    ).toBe("held");
+    expect(stateOf(c.logins[0]!).emails).toEqual([]);
+  });
+
+  it("answers unchanged where the login has it, and no_login where none is the row's", async () => {
+    const c = clerk([byNumber()]);
+    await c.directory.addEmail({ id: ROW, subject: "user_bound", email: NEW_EMAIL });
+    expect(
+      await c.directory.addEmail({ id: ROW, subject: "user_bound", email: NEW_EMAIL }),
+    ).toBe("unchanged");
+    expect(
+      await c.directory.addEmail({ id: ROW, subject: "user_gone", email: NEW_EMAIL }),
+    ).toBe("no_login");
+  });
+});

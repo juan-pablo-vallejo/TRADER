@@ -53,7 +53,7 @@
   object-fit: cover;
 }
 
-/* The two things a customer can do. Call is the only red on the page. */
+/* The two things a customer can do: WhatsApp and Email. */
 .call,
 .email {
   display: inline-flex;
@@ -67,16 +67,17 @@
   text-align: center;
   text-decoration: none;
 }
+/* WhatsApp's own logo on white (whatsapp-mark.tsx), edged in navy as Email is: the logo
+   stays as WhatsApp made it, and the button around it is ours. */
 .call {
-  background: var(--red-600);
-  color: var(--surface);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 2px var(--navy-700);
 }
 .call:hover {
-  background: var(--red-700);
-  color: var(--surface);
+  background: var(--navy-50);
 }
 .call:active {
-  background: var(--red-800);
+  background: var(--navy-100);
 }
 .email {
   background: var(--surface);

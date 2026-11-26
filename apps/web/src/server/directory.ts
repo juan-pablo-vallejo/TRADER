@@ -30,4 +30,12 @@ export const webDirectory: IdentityDirectory = {
     }
     return createClerkDirectory({ secretKey: env.secretKey, fetch }).readdress(person);
   },
+  addEmail(person) {
+    if (identityMode(process.env) === "dev") return localDirectory.addEmail(person);
+    const env = clerkEnv(process.env);
+    if (env === null) {
+      return Promise.reject(new Error("no identity provider is configured"));
+    }
+    return createClerkDirectory({ secretKey: env.secretKey, fetch }).addEmail(person);
+  },
 };

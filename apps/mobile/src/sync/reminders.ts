@@ -3,7 +3,7 @@
 // here (ui/reminders.ts does that with what this answers). No server, no push token, no
 // location in the background: the phone's own alarm, set from what it already holds.
 //
-// Two kinds. At a shift's start, when nobody has clocked in on it. At a shift's end, while
+// Two kinds. Fifteen minutes before a shift's start, when nobody has clocked in on it. At a shift's end, while
 // the clock is still running on its job. The set is decided again after every pull and
 // every tap, so a clock-in takes the start reminder away and puts the end one in its place,
 // and a clock-out takes that away too.
@@ -34,6 +34,9 @@ type Reminder = {
 // How long after its time a reminder is still left for the phone to deliver.
 const LATE_MS = 15 * 60_000;
 
+// How long before a shift's start its reminder comes: time to get there and clock in.
+export const LEAD_MS = 15 * 60_000;
+
 // iOS keeps 64 pending notifications for an app and silently drops the rest. Two weeks of
 // shifts is far under it; the cap is here so a strange schedule cannot starve the nearest.
 export const MAX_REMINDERS = 40;
@@ -42,7 +45,7 @@ const idOf = (kind: Reminder["kind"], shift: Shift, at: Date) =>
   `shift-${kind}:${shift.id}:${String(at.getTime())}`;
 
 export function reminders(input: {
-  // Off in Me, or the permission never given: nothing is scheduled at all.
+  // The phone's permission never given: nothing is scheduled at all.
   enabled: boolean;
   shifts: readonly Shift[];
   clock: ClockState;
@@ -78,14 +81,15 @@ export function reminders(input: {
     // Somebody clocked in on it already (the server locked it), or its start is well
     // past: there is nothing left to remind of.
     if (shift.locked || start.getTime() <= now - LATE_MS) continue;
+    const ahead = new Date(start.getTime() - LEAD_MS);
     out.push({
-      id: idOf("start", shift, start),
+      id: idOf("start", shift, ahead),
       kind: "start",
-      at: start,
+      at: ahead,
       shiftId: shift.id,
       jobName: shift.job.name,
       wall: shift.start,
-      due: start.getTime() <= now,
+      due: ahead.getTime() <= now,
     });
   }
   return out.sort((a, b) => a.at.getTime() - b.at.getTime()).slice(0, MAX_REMINDERS);

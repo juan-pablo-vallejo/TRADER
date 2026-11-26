@@ -8,6 +8,13 @@
       "when": 1795642620531,
       "tag": "0000_baseline",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1795711720118,
+      "tag": "0001_email_claim",
+      "breakpoints": true
     }
   ]
 }

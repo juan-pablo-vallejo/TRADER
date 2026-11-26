@@ -4,13 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { shownSignInPhone } from "@trader/api/contract";
 
-import {
-  contactLoader,
-  mePairs,
-  shownContactPhone,
-  signInRows,
-  type ContactLoad,
-} from "../src/me";
+import { contactLoader, mePairs, signInRows, type ContactLoad } from "../src/me";
 
 const LUIS = {
   name: "Luis Herrera",
@@ -60,21 +54,19 @@ describe("the contact phone", () => {
   });
 });
 
-describe("the three pairs", () => {
+describe("Me's pairs", () => {
   const selected = (pair: readonly { value: string; selected: boolean }[] | null) =>
     pair?.filter((side) => side.selected).map((side) => side.value);
 
   it("carry a selected state on the side chosen, and on that side alone", () => {
-    const pairs = mePairs({ language: "es", reminders: "on", key: "off" });
+    const pairs = mePairs({ language: "es", key: "off" });
     expect(selected(pairs.language)).toEqual(["es"]);
-    expect(selected(pairs.reminders)).toEqual(["on"]);
     expect(selected(pairs.key)).toEqual(["off"]);
     expect(pairs.language.map((side) => side.value)).toEqual(["en", "es"]);
   });
 
-  it("read reminders never chosen as off, and leave out a key no phone can hold", () => {
-    const pairs = mePairs({ language: "en", reminders: null, key: "absent" });
-    expect(selected(pairs.reminders)).toEqual(["off"]);
+  it("leave out a key no phone can hold", () => {
+    const pairs = mePairs({ language: "en", key: "absent" });
     expect(pairs.key).toBeNull();
   });
 });
@@ -93,16 +85,5 @@ describe("the sign-in addresses on Me", () => {
     expect(signInRows({ ...LUIS, role: "admin" })).toEqual([
       { kind: "email", value: "luis.herrera@demo.invalid", changedBy: "support" },
     ]);
-  });
-});
-
-describe("the contact phone as Me shows it", () => {
-  it("writes a United States number as it is said, and leaves anything else as typed", () => {
-    expect(shownContactPhone("4015550177")).toBe("(401) 555-0177");
-    expect(shownContactPhone("+1 401 555 0177")).toBe("(401) 555-0177");
-    expect(shownContactPhone("1-401-555-0177")).toBe("(401) 555-0177");
-    expect(shownContactPhone("+52 55 1234 5678")).toBe("+52 55 1234 5678");
-    expect(shownContactPhone("401 555 0177 ext 2")).toBe("401 555 0177 ext 2");
-    expect(shownContactPhone(null)).toBe("");
   });
 });

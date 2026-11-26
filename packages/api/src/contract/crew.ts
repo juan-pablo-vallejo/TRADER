@@ -44,3 +44,53 @@ export function crewCounts(
   for (const p of people) counts[crewStatus(p, minute)]++;
   return counts;
 }
+
+// What needs attention on the company's today, in the order it is drawn: sessions left
+// open from an earlier day first, oldest first (the server's order), then the late, by how
+// long ago their shift started. The office's Today and an admin's Today on the phone show
+// these rows, each with what can be done about it there.
+export type Attention<P> =
+  | { kind: "open"; key: string; person: P; jobId: string; sinceDay: string }
+  | { kind: "late"; key: string; person: P; jobId: string; start: string };
+
+export function attention<P extends { id: string }>(
+  today: {
+    earlier: readonly { person: P; jobId: string; sinceDay: string }[];
+    people: readonly (Omit<CrewFacts, "shifts"> & {
+      person: P;
+      shifts: readonly { jobId: string; start: string; clockedIn: boolean }[];
+    })[];
+  },
+  minute: string,
+): Attention<P>[] {
+  const open: Attention<P>[] = today.earlier.map((e) => ({
+    kind: "open",
+    key: `open-${e.person.id}`,
+    person: e.person,
+    jobId: e.jobId,
+    sinceDay: e.sinceDay,
+  }));
+  const late = today.people
+    .filter((p) => crewStatus(p, minute) === "late")
+    .flatMap((p) => {
+      // The shift they are late for: the earliest nobody clocked in on that is past its
+      // quarter hour.
+      const shift = p.shifts
+        .filter((s) => !s.clockedIn)
+        .filter((s) => minutes(minute) >= minutes(s.start) + LATE_AFTER_MINUTES)
+        .sort((a, b) => minutes(a.start) - minutes(b.start))[0];
+      return shift === undefined
+        ? []
+        : [
+            {
+              kind: "late" as const,
+              key: `late-${p.person.id}`,
+              person: p.person,
+              jobId: shift.jobId,
+              start: shift.start,
+            },
+          ];
+    })
+    .sort((a, b) => minutes(a.start) - minutes(b.start));
+  return [...open, ...late];
+}

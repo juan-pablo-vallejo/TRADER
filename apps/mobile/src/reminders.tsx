@@ -7,14 +7,12 @@
 // `enableRemoteNotifications: false`). No exact-alarm permission either, so on Android a
 // reminder may come a few minutes late.
 //
-// The setting lives on the phone (the store's key-value table): never asked, on, or off.
-// Permission is asked once, after the first clock-in, behind one sentence of why (Today);
-// refused, the app works as before. The switch in Me turns reminders on or off after that.
+// Always on: there is no switch. The phone's permission is asked once, when the app opens
+// signed in; refused, the app works as before, and Me says how to allow them.
 import * as Notifications from "expo-notifications";
 import { useRouter } from "expo-router";
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -25,22 +23,15 @@ import { Platform } from "react-native";
 
 import { wallTime } from "./format";
 import { useStrings } from "./i18n";
-import { deviceStore } from "./store/device";
 import { useSync } from "./sync/provider";
 import { reconcile, reminders } from "./sync/reminders";
 import { color } from "./theme";
 
-const KEY = "reminders";
 const CHANNEL = "shifts";
 
-type RemindersSetting = "on" | "off" | null;
-
 type Value = {
-  // Null until the person has been asked.
-  setting: RemindersSetting;
-  // Asks the phone for permission and turns reminders on; false when the phone refused.
-  turnOn: () => Promise<boolean>;
-  turnOff: () => Promise<void>;
+  // The phone refused notifications: Me says so, and how to allow them.
+  refused: boolean;
 };
 const RemindersContext = createContext<Value | null>(null);
 
@@ -70,26 +61,13 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   const { t, language } = useStrings();
   const { snapshot, clock } = useSync();
   const router = useRouter();
-  const [setting, setSetting] = useState<RemindersSetting>(null);
-  const [loaded, setLoaded] = useState(false);
-
+  // Asked once, as the app opens signed in (the phone itself never asks twice).
+  const [granted, setGranted] = useState<boolean | null>(null);
   useEffect(() => {
-    void deviceStore.read(KEY).then((kept) => {
-      setSetting(kept === "on" || kept === "off" ? kept : null);
-      setLoaded(true);
-    });
+    void allowed(true)
+      .catch(() => false)
+      .then(setGranted);
   }, []);
-
-  const keep = useCallback(async (next: "on" | "off") => {
-    await deviceStore.write(KEY, next);
-    setSetting(next);
-  }, []);
-  const turnOn = useCallback(async () => {
-    const granted = await allowed(true).catch(() => false);
-    await keep(granted ? "on" : "off");
-    return granted;
-  }, [keep]);
-  const turnOff = useCallback(() => keep("off"), [keep]);
 
   // A tap on a reminder opens Today.
   useEffect(() => {
@@ -99,14 +77,14 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     return () => tapped.remove();
   }, [router]);
 
-  // The pending set follows the pull, the clock, the setting and the language: this runs
+  // The pending set follows the pull, the clock, the permission and the language: this runs
   // after every pull and every tap, because each changes one of them.
   const data = snapshot?.data ?? null;
   useEffect(() => {
-    if (!loaded) return;
+    if (granted === null) return;
     let live = true;
     const apply = async () => {
-      const enabled = setting === "on" && data !== null && (await allowed(false));
+      const enabled = granted && data !== null;
       const wanted = reminders({
         enabled,
         shifts: data?.shifts ?? [],
@@ -156,9 +134,9 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
     return () => {
       live = false;
     };
-  }, [loaded, setting, data, clock, language, t]);
+  }, [granted, data, clock, language, t]);
 
-  const value = useMemo(() => ({ setting, turnOn, turnOff }), [setting, turnOn, turnOff]);
+  const value = useMemo(() => ({ refused: granted === false }), [granted]);
   return <RemindersContext.Provider value={value}>{children}</RemindersContext.Provider>;
 }
 

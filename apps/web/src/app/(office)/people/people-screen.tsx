@@ -23,6 +23,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
+import { WhatsAppMark } from "../../whatsapp-mark";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { looksLikeSignInPhone, signInPhone } from "../../format";
 import { Field } from "../../field";
@@ -526,16 +527,17 @@ function Invitation({ row }: { row: Row }) {
         {link !== null && text !== null && (
           <>
             <a
-              className={controls.primary}
+              className={controls.secondary}
               href={link}
               target="_blank"
               rel="noreferrer"
+              aria-label={t.personPanel.sendByWhatsApp}
               onClick={() => {
                 setNote({ saved: true, text: t.personPanel.opened });
                 did("opened");
               }}
             >
-              {t.personPanel.sendByWhatsApp}
+              <WhatsAppMark label={t.personPanel.sendByWhatsApp} height={20} />
             </a>
             <button
               type="button"

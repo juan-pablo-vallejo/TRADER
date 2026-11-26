@@ -105,7 +105,6 @@ export const en: Catalog = {
     keepWorking: "Keep working",
     earlier: (job, day) => `You are still on the clock at ${job} from ${day}.`,
     clockOutNow: "Clock out now",
-    whatsApp: "WhatsApp",
     whatsAppSpoken: "Message the office on WhatsApp",
     captured: "Saved",
     notSaved: "Not saved. Try again.",
@@ -193,16 +192,10 @@ export const en: Catalog = {
     },
   },
   reminders: {
-    why: "TRADER can remind you when a shift starts and you have not clocked in, and when it ends and you are still on the clock.",
-    turnOn: "Turn on reminders",
-    notNow: "Not now",
-    label: "Shift reminders",
-    on: "On",
-    off: "Off",
     refused:
       "This phone is not letting TRADER send notifications. Allow them in the phone's settings.",
     channel: "Shift reminders",
-    startTitle: (job) => `Your shift at ${job} is starting`,
+    startTitle: (job) => `Your shift at ${job} starts soon`,
     startBody: (time) => `It starts at ${time}. Clock in when you are there.`,
     endTitle: (job) => `Your shift at ${job} has ended`,
     endBody: (time) => `It ended at ${time} and you are still on the clock.`,
@@ -230,7 +223,6 @@ export const en: Catalog = {
       shifts: "Today's shifts",
       noShifts: "No shift today.",
       at: (job) => `At ${job}`,
-      whatsApp: "WhatsApp",
       whatsAppSpoken: (name) => `Message ${name} on WhatsApp`,
       noPhone: "No phone number for this person.",
       add: "Add a shift today",
@@ -289,6 +281,68 @@ export const en: Catalog = {
     hours: (n) => (n === 1 ? "1 hour ago" : `${n} hours ago`),
     days: (n) => (n === 1 ? "1 day ago" : `${n} days ago`),
   },
+  addEmail: {
+    title: "Add an email",
+    help: "Add an email to sign in with it too. We send it a code to prove it is yours.",
+    email: "Email",
+    invalid: "Type a full email address.",
+    send: "Send me a code",
+    sending: "Sending…",
+    codeTitle: (email) => `Enter the code we emailed to ${email}`,
+    codeHelp: "It works for 10 minutes.",
+    code: "Code",
+    add: "Add the email",
+    adding: "Adding…",
+    again: "Send another code",
+    other: "Use another email",
+    added: "Added. You can sign in with this email too.",
+    refused: {
+      has_email: "You already have an email. The office changes it.",
+      email_taken: "Someone in your company already has this email.",
+      too_soon: "A code went out less than a minute ago. Wait a moment, then ask again.",
+      not_sent: "The code could not be sent. Check the email and try again.",
+      no_code: "Ask for a code first.",
+      expired: "That code has expired. Ask for a new one.",
+      wrong_code: "That code did not work. Check it, or ask for a new one.",
+      too_many: "Too many wrong codes. Ask for a new one.",
+      address_held: "This email signs in to another account. Use another email.",
+      failed: "That did not go through. Check your connection and try again.",
+    },
+  },
+  adminToday: {
+    attention: "Needs attention",
+    attentionClear: "Nothing needs attention.",
+    stillOpen: (name, job, day) =>
+      `${name} is still on the clock at ${job} since ${day}.`,
+    fixInOffice: "Correct it in Hours, in the office.",
+    late: (name, job, start) => `${name} is late for ${job}, which started at ${start}.`,
+    noNumber: "No number",
+    onTheClock: "On the clock now",
+    nobodyWorking: "Nobody is on the clock.",
+    at: (job, since) => `${job}, since ${since}`,
+    onBreakAt: (job, since) => `On a break. ${job}, since ${since}`,
+    expected: "Expected",
+    expectedAt: (job, start) => `${job}, from ${start}`,
+    money: "Money",
+    owed: (amount, invoices) =>
+      `${amount} owed on ${invoices === 1 ? "1 invoice" : `${invoices} invoices`}`,
+    nothingOwed: "Nothing is owed.",
+    overdue: (amount) => `${amount} overdue`,
+    drafts: (n) =>
+      n === 0
+        ? "No drafts waiting."
+        : n === 1
+          ? "1 draft waiting to be issued"
+          : `${n} drafts waiting to be issued`,
+    notInvoiced: (n) =>
+      n === 0
+        ? "Every complete job has an invoice."
+        : n === 1
+          ? "1 complete job has no invoice"
+          : `${n} complete jobs have no invoice`,
+    offline:
+      "Today needs a connection. Nothing is shown until this phone reaches the office.",
+  },
   fallback: {
     notFoundCode: "Error 404",
     notFoundTitle: "This screen is not here",
@@ -313,15 +367,14 @@ export const en: Catalog = {
         ? "1 entry has not been sent. It stays on this phone and is sent when you sign in again."
         : `${count} entries have not been sent. They stay on this phone and are sent when you sign in again.`,
     name: "Your name",
-    phone: "Contact phone",
-    phoneHelp: "Where the office can reach you. It is not the number you sign in with.",
     signInPhone: "Sign-in number",
     signInEmail: "Sign-in email",
     signInByOffice: "You sign in with this. The office changes it.",
+    nameByOffice: "The office changes it.",
     signInBySupport:
       "You sign in with this. Ask TRADER support to change it: support@jpteq.app",
-    phoneNotLoaded:
-      "This phone could not reach the office to load your contact phone. Connect and try again.",
+    notLoaded:
+      "Your details could not load: this phone could not reach the office. Connect and try again.",
     save: "Save",
     saved: "Saved.",
     saveFailed: "That did not go through. Check your connection and try again.",

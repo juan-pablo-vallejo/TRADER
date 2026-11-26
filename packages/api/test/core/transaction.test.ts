@@ -62,6 +62,8 @@ describe("the procedure context", () => {
     expect(seen.demoIsUndefined).toBe(true);
     // `closed` names the company that reaches nobody outside, or is null (demo-door.ts):
     // a company's id and a list of addresses, no secret and no connection.
+    // `emailCode` is the development identity's one code for an added email, or null
+    // (me/add-email.ts): six digits every such server shares, no secret.
     // `getAppUrl` is where the app is got from on this host, or null: an address the host
     // configured, for an emailed invitation to link to.
     // `observe` is where a call's timing line goes (observe.ts): a function that takes
@@ -73,6 +75,7 @@ describe("the procedure context", () => {
       "db",
       "demo",
       "directory",
+      "emailCode",
       "getAppUrl",
       "identity",
       "mailer",

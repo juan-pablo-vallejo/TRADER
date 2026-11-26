@@ -15,28 +15,19 @@ appId: app.jpteq.trader
     id: "tab-me"
 - assertVisible:
     id: "me-name"
-# Me: the person's own contact phone, saved through the server (suite.sh reads it back).
-- tapOn:
-    id: "me-phone"
-- inputText: "4015550177"
-# Under a tall keyboard Save is below the fold: scrolled to, as a person would.
-- scrollUntilVisible:
-    element:
-      id: "me-save"
-    centerElement: true
-- tapOn:
+# A worker's name is the office's: greyed, and no Save.
+- assertNotVisible:
     id: "me-save"
-- extendedWaitUntil:
-    visible:
-      id: "me-saved"
-    timeout: 15000
+# Me: no contact phone to edit; how the person signs in, as the office has it, read-only.
+- assertNotVisible:
+    id: "me-phone"
 - takeScreenshot: me
 # The address the office invited this person with: shown, and read-only.
 - scrollUntilVisible:
     element:
       id: "me-sign-in-email"
     centerElement: true
-# Back up to the language, above where Save was scrolled to.
+# Back up to the language, above the sign-in email.
 - scrollUntilVisible:
     element:
       id: "language-es"

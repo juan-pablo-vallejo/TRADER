@@ -6,6 +6,7 @@ import { preload } from "react-dom";
 import { whatsAppLink } from "@trader/api/contract";
 
 import { signInPath } from "../../server/identity-mode";
+import { WhatsAppMark } from "../whatsapp-mark";
 import "../brand-fonts.css";
 import type { Language } from "../i18n/language";
 import { requestStrings } from "../i18n/server";
@@ -156,7 +157,7 @@ export default async function Home() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {t.whatsAppChat}
+                    <WhatsAppMark label={t.whatsAppChat} height={24} />
                   </a>
                 )}
                 {mail !== null && HOME.email !== null && (
@@ -287,7 +288,7 @@ export default async function Home() {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    {t.whatsAppChat}
+                    <WhatsAppMark label={t.whatsAppChat} height={24} />
                   </a>
                 )}
                 {mail !== null && HOME.email !== null && (
@@ -335,7 +336,7 @@ export default async function Home() {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t.whatsAppChat}
+              <WhatsAppMark label={t.whatsAppChat} height={24} />
             </a>
           )}
           {mail !== null && (

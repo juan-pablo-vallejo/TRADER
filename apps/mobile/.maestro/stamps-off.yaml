@@ -6,8 +6,7 @@ appId: app.jpteq.trader
 ---
 - runFlow:
     file: parts/sign-in.yaml
-# This person is the demo's second admin and has no shift today, so the app opened on Crew
-# (suite.sh says so, as what the sign-in lands on). Their own clock is on Today.
+# A worker for this flow (suite.sh makes them one): their clock is on Today.
 - tapOn:
     id: "tab-today"
 - extendedWaitUntil:
@@ -18,8 +17,6 @@ appId: app.jpteq.trader
     id: "job-row-0"
 - tapOn:
     id: "clock-in"
-- runFlow:
-    file: parts/reminders.yaml
 - assertVisible:
     id: "clock-working"
 - runFlow:

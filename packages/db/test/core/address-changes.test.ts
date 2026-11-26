@@ -83,14 +83,39 @@ describe("address_changes", () => {
           "address_changes_changed",
         ],
         [change(refs, { oldValue: null, newValue: null }), "address_changes_changed"],
-        // An admin's own addresses are not the office's to change.
-        [change(refs, { userId: refs.adminId }), "address_changes_not_own"],
+        // Nobody changes their own addresses: neither replaces an email nor touches a number.
+        [
+          change(refs, { userId: refs.adminId, oldValue: "old@crew.test" }),
+          "address_changes_not_own",
+        ],
+        [
+          change(refs, {
+            userId: refs.adminId,
+            field: "sign_in_phone",
+            newValue: "+14015550100",
+          }),
+          "address_changes_not_own",
+        ],
       ] as const) {
         expect([constraint, await refused(tx, row)]).toEqual([
           constraint,
           { code: "23514", constraint },
         ]);
       }
+    });
+  });
+
+  it("records an email a person added to their own login that had none", async () => {
+    await rolledBack(db, async (tx) => {
+      const refs = await billing(tx);
+      await tx
+        .insert(addressChanges)
+        .values(change(refs, { changedByUserId: refs.workerId }));
+      const rows = await tx
+        .select({ by: addressChanges.changedByUserId })
+        .from(addressChanges)
+        .where(eq(addressChanges.userId, refs.workerId));
+      expect(rows).toEqual([{ by: refs.workerId }]);
     });
   });
 

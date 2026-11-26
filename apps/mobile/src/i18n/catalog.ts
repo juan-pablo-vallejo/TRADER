@@ -117,7 +117,6 @@ export type Catalog = {
     clockOutNow: string;
     // The office's button where there is no shift: a WhatsApp chat with the office's number,
     // and what a screen reader says of it.
-    whatsApp: string;
     whatsAppSpoken: string;
     // Said by a screen reader when a tap has been saved; the mark itself is a check.
     captured: string;
@@ -193,14 +192,7 @@ export type Catalog = {
   };
   // Shift reminders: the phone's own notifications (reminders.tsx).
   reminders: {
-    // One sentence of why, before the system's own question.
-    why: string;
-    turnOn: string;
-    notNow: string;
-    // In Me.
-    label: string;
-    on: string;
-    off: string;
+    // In Me, when the phone has refused notifications.
     refused: string;
     // Android's name for the kind of notification, in the system's settings.
     channel: string;
@@ -232,8 +224,7 @@ export type Catalog = {
       shifts: string;
       noShifts: string;
       at: (job: string) => string;
-      // A WhatsApp chat with the person, and what a screen reader says of it.
-      whatsApp: string;
+      // What a screen reader says of the WhatsApp chat with the person.
       whatsAppSpoken: (name: string) => string;
       noPhone: string;
       add: string;
@@ -291,6 +282,58 @@ export type Catalog = {
     days: (n: number) => string;
   };
   // What stands in for a screen that could not be shown (ui/fallback.tsx).
+  // Me, for a person whose login has no email: add one, proved by a code mailed to it
+  // (ui/add-email.tsx). `refused` is keyed by the server's own codes (me/add-email.ts).
+  addEmail: {
+    title: string;
+    help: string;
+    email: string;
+    invalid: string;
+    send: string;
+    sending: string;
+    codeTitle: (email: string) => string;
+    codeHelp: string;
+    code: string;
+    add: string;
+    adding: string;
+    again: string;
+    other: string;
+    added: string;
+    refused: {
+      has_email: string;
+      email_taken: string;
+      too_soon: string;
+      not_sent: string;
+      no_code: string;
+      expired: string;
+      wrong_code: string;
+      too_many: string;
+      address_held: string;
+      failed: string;
+    };
+  };
+  // An admin's Today: what needs attention, as the office's Today says it (no clock-in).
+  adminToday: {
+    attention: string;
+    attentionClear: string;
+    stillOpen: (name: string, job: string, day: string) => string;
+    fixInOffice: string;
+    late: (name: string, job: string, start: string) => string;
+    noNumber: string;
+    onTheClock: string;
+    nobodyWorking: string;
+    at: (job: string, since: string) => string;
+    onBreakAt: (job: string, since: string) => string;
+    expected: string;
+    expectedAt: (job: string, start: string) => string;
+    money: string;
+    owed: (amount: string, invoices: number) => string;
+    nothingOwed: string;
+    overdue: (amount: string) => string;
+    drafts: (n: number) => string;
+    notInvoiced: (n: number) => string;
+    offline: string;
+  };
   fallback: {
     notFoundCode: string;
     notFoundTitle: string;
@@ -309,16 +352,16 @@ export type Catalog = {
     spanish: string;
     signOut: string;
     unsentKept: (count: number) => string;
-    // Me: the person's own name and contact phone, and the build they are on.
+    // Me: the person's own name, how they sign in, and the build they are on.
     name: string;
-    phone: string;
-    phoneHelp: string;
     signInPhone: string;
     signInEmail: string;
     signInByOffice: string;
+    // Under a worker's name, greyed: the office changes it.
+    nameByOffice: string;
     signInBySupport: string;
-    // The server has not answered with the contact phone yet.
-    phoneNotLoaded: string;
+    // The server has not answered with the person's details yet.
+    notLoaded: string;
     save: string;
     saved: string;
     saveFailed: string;

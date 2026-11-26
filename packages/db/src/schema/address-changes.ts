@@ -1,9 +1,9 @@
 // Each time the office changed the address a person signs in with: which one, from what
-// to what, by whom and when. Append-only, so who could sign in as a person at any moment
+// to what, by whom and when, and each email a person added to their own login. Append-only, so who could sign in as a person at any moment
 // can be read back. A change of the email and a change of the number are two rows. An
 // address added has no `old_value`, one removed has no `new_value`; a row always says
-// something changed. Written by people.setEmail and people.setSignInPhone and by nothing
-// else (packages/api, people/address.ts). Guards and tenancy are hand-written in the
+// something changed. Written by people.setEmail, people.setSignInPhone and me.addEmail and by
+// nothing else (packages/api, people/address.ts). Guards and tenancy are hand-written in the
 // migration (drizzle-kit never sees them).
 import { sql } from "drizzle-orm";
 import {
@@ -50,7 +50,12 @@ export const addressChanges = pgTable(
     index("address_changes_user_id_idx").on(t.userId),
     check("address_changes_field", sql`${t.field} IN ('email', 'sign_in_phone')`),
     check("address_changes_changed", sql`${t.oldValue} IS DISTINCT FROM ${t.newValue}`),
-    // Nobody changes their own: an admin's addresses are not the office's to change.
-    check("address_changes_not_own", sql`${t.userId} <> ${t.changedByUserId}`),
+    // Nobody changes their own, but for one case: an email added, proved by a code sent to
+    // it, to a login that had none (me.addEmail). An admin's addresses are not the office's
+    // to change.
+    check(
+      "address_changes_not_own",
+      sql`${t.userId} <> ${t.changedByUserId} OR (${t.field} = 'email' AND ${t.oldValue} IS NULL)`,
+    ),
   ],
 );

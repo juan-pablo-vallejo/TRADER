@@ -1,5 +1,6 @@
 import { getImageProps } from "next/image";
 
+import { WhatsAppMark } from "../whatsapp-mark";
 import mark from "../../../../../assets/brand/icon.png";
 import { LanguageSwitch } from "../language-switch";
 import styles from "./home.module.css";
@@ -40,7 +41,7 @@ export function SiteHeader({
             target="_blank"
             rel="noopener noreferrer"
           >
-            {chat.label}
+            <WhatsAppMark label={chat.label} tone="white" height={20} />
           </a>
         )}
         <LanguageSwitch className={styles.headLink} />
