@@ -5137,6 +5137,7 @@
               "code": {
                 "type": "string",
                 "enum": [
+                  "company_closed",
                   "has_email",
                   "no_code",
                   "expired",
@@ -5285,9 +5286,11 @@
               "code": {
                 "type": "string",
                 "enum": [
+                  "company_closed",
                   "has_email",
                   "email_taken",
                   "too_soon",
+                  "too_many",
                   "not_sent"
                 ]
               }

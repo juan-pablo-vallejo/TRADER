@@ -300,6 +300,7 @@ export type Catalog = {
     other: string;
     added: string;
     refused: {
+      company_closed: string;
       has_email: string;
       email_taken: string;
       too_soon: string;

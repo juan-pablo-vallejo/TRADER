@@ -11,7 +11,7 @@ import { createContext, type Tx } from "../../src/core/context";
 import { localDirectory, type IdentityDirectory } from "../../src/core/identity";
 import type { Mail, Mailer } from "../../src/core/mailer";
 import { createCallerFactory } from "../../src/core/trpc";
-import { CODE_LIFE_MS, RESEND_AFTER_MS, WRONG_TRIES } from "../../src/me/add-email";
+import { CODE_LIFE_MS, RESEND_AFTER_MS, TRIES_A_DAY } from "../../src/me/add-email";
 import { appRouter } from "../../src/router";
 import {
   becomeApp,
@@ -86,6 +86,7 @@ async function crew(tx: Tx) {
       mailer?: Mailer;
       directory?: IdentityDirectory;
       emailCode?: string | null;
+      closed?: { companyId: string; allowed: string[] };
     } = {},
   ) =>
     createCallerFactory(appRouter)(
@@ -93,6 +94,7 @@ async function crew(tx: Tx) {
         directory: opts.directory ?? provider().directory,
         ...(opts.mailer !== undefined && { mailer: opts.mailer }),
         ...(opts.emailCode !== undefined && { emailCode: opts.emailCode }),
+        ...(opts.closed !== undefined && { closed: opts.closed }),
         db: txAsDb(tx),
         identity,
         reporter: quietReporter,
@@ -152,7 +154,7 @@ describe("me.sendEmailCode and me.addEmail", () => {
       const code = box.code();
       expect(code).toMatch(/^\d{6}$/);
       const pending = await k.state();
-      expect(pending).toMatchObject({ email: null, claim: email, tries: 0 });
+      expect(pending).toMatchObject({ email: null, claim: email, tries: 1 });
       expect(pending.hash).not.toContain(code);
 
       expect(await me.addEmail({ code })).toEqual({ result: "added", email });
@@ -162,7 +164,7 @@ describe("me.sendEmailCode and me.addEmail", () => {
         email,
         claim: null,
         hash: null,
-        tries: 0,
+        tries: 1,
         changes: [{ field: "email", from: null, to: email, by: k.workerId }],
       });
       // Now the email is the office's to change: a second claim is refused.
@@ -188,30 +190,92 @@ describe("me.sendEmailCode and me.addEmail", () => {
     });
   });
 
-  it(`counts wrong codes and ends the claim at the ${WRONG_TRIES}th`, async () => {
+  it(`holds sends and wrong codes to ${TRIES_A_DAY} a day, which a new code does not reset`, async () => {
     await rolledBack(owner, async (tx) => {
       const k = await crew(tx);
       const box = mailbox();
       const me = k.as(k.who, { mailer: box.mailer });
-      await me.sendEmailCode({ email: `nora-${k.run}@crew.test`, language: "en" });
-      const right = box.code();
-      const wrong = right === "000000" ? "111111" : "000000";
-      for (let i = 1; i < WRONG_TRIES; i++) {
-        expect(await me.addEmail({ code: wrong })).toEqual({
+      const email = `nora-${k.run}@crew.test`;
+      const wrongFor = (right: string) => (right === "000000" ? "111111" : "000000");
+      // A send and four wrong codes, then a new code a minute later: five more tries.
+      await me.sendEmailCode({ email, language: "en" });
+      for (let i = 0; i < 4; i++) {
+        expect(await me.addEmail({ code: wrongFor(box.code()) })).toEqual({
           result: "rejected",
           code: "wrong_code",
         });
       }
-      expect(await me.addEmail({ code: wrong })).toEqual({
+      await k.age(RESEND_AFTER_MS + 1_000);
+      expect(await me.sendEmailCode({ email, language: "en" })).toEqual({
+        result: "sent",
+      });
+      const right = box.code();
+      for (let i = 0; i < 3; i++) {
+        expect(await me.addEmail({ code: wrongFor(right) })).toEqual({
+          result: "rejected",
+          code: "wrong_code",
+        });
+      }
+      // The tenth: the day's last.
+      expect(await me.addEmail({ code: wrongFor(right) })).toEqual({
         result: "rejected",
         code: "too_many",
       });
-      // Even the right code: a new one is needed.
+      // Neither the right code nor a new one, for the rest of the day.
       expect(await me.addEmail({ code: right })).toEqual({
         result: "rejected",
         code: "too_many",
       });
+      await k.age(RESEND_AFTER_MS + 1_000);
+      expect(await me.sendEmailCode({ email, language: "en" })).toEqual({
+        result: "rejected",
+        code: "too_many",
+      });
       expect((await k.state()).email).toBeNull();
+      // A day after the last send, the count starts again.
+      await k.age(24 * 60 * 60_000 + 1_000);
+      expect(await me.sendEmailCode({ email, language: "en" })).toEqual({
+        result: "sent",
+      });
+      expect(await me.addEmail({ code: box.code() })).toEqual({ result: "added", email });
+    });
+  });
+
+  it("refuses the closed company: a Demo login gains no email", async () => {
+    await rolledBack(owner, async (tx) => {
+      const k = await crew(tx);
+      const box = mailbox();
+      const me = k.as(k.who, {
+        mailer: box.mailer,
+        closed: { companyId: k.c.companyId, allowed: [] },
+      });
+      expect(
+        await me.sendEmailCode({ email: `nora-${k.run}@crew.test`, language: "en" }),
+      ).toEqual({ result: "rejected", code: "company_closed" });
+      expect(await me.addEmail({ code: "123456" })).toEqual({
+        result: "rejected",
+        code: "company_closed",
+      });
+      expect(box.sent).toHaveLength(0);
+      expect(await k.state()).toMatchObject({ email: null, claim: null });
+    });
+  });
+
+  it("refuses a caller deactivated before the row was theirs", async () => {
+    await rolledBack(owner, async (tx) => {
+      const k = await crew(tx);
+      const me = k.as(k.who, { emailCode: "123456" });
+      await me.sendEmailCode({ email: `nora-${k.run}@crew.test`, language: "en" });
+      // Deactivated after the request found its caller: the lock sees it.
+      await tx.execute(sql`reset role`);
+      await tx
+        .update(users)
+        .set({ deactivatedAt: new Date() })
+        .where(eq(users.id, k.workerId));
+      await becomeApp(tx);
+      await expect(me.addEmail({ code: "123456" })).rejects.toMatchObject({
+        code: "UNAUTHORIZED",
+      });
     });
   });
 
@@ -284,8 +348,8 @@ describe("me.sendEmailCode and me.addEmail", () => {
           .as(k.who, { mailer: refused.mailer })
           .sendEmailCode({ email, language: "en" }),
       ).toEqual({ result: "rejected", code: "not_sent" });
-      expect(await k.state()).toMatchObject({ claim: null, hash: null });
-      // Nothing holds the next send back.
+      // A send that did not go counts for nothing, and holds the next back by nothing.
+      expect(await k.state()).toMatchObject({ claim: null, hash: null, tries: 0 });
       const box = mailbox();
       expect(
         await k
@@ -344,6 +408,20 @@ describe("me.sendEmailCode and me.addEmail", () => {
       await me.sendEmailCode({ email: `nora-${k.run}@crew.test`, language: "en" });
       await me.addEmail({ code: "123456" });
       expect(await me.get({ keyMadeAt: madeBefore })).toMatchObject({ id: k.workerId });
+      // The office's change after it still stops the key.
+      await tx.execute(sql`reset role`);
+      await tx.insert(addressChanges).values({
+        companyId: k.c.companyId,
+        userId: k.workerId,
+        field: "sign_in_phone",
+        oldValue: "+14015550177",
+        newValue: "+14015550178",
+        changedByUserId: k.c.userId,
+      });
+      await becomeApp(tx);
+      await expect(me.get({ keyMadeAt: madeBefore })).rejects.toMatchObject({
+        code: "UNAUTHORIZED",
+      });
     });
   });
 });

@@ -297,6 +297,7 @@ export const en: Catalog = {
     other: "Use another email",
     added: "Added. You can sign in with this email too.",
     refused: {
+      company_closed: "The demo company cannot add an email.",
       has_email: "You already have an email. The office changes it.",
       email_taken: "Someone in your company already has this email.",
       too_soon: "A code went out less than a minute ago. Wait a moment, then ask again.",
@@ -304,7 +305,7 @@ export const en: Catalog = {
       no_code: "Ask for a code first.",
       expired: "That code has expired. Ask for a new one.",
       wrong_code: "That code did not work. Check it, or ask for a new one.",
-      too_many: "Too many wrong codes. Ask for a new one.",
+      too_many: "Too many tries for today. Try again tomorrow.",
       address_held: "This email signs in to another account. Use another email.",
       failed: "That did not go through. Check your connection and try again.",
     },

@@ -139,7 +139,14 @@ after it is seen working: one already built says so in the commits since `origin
 
 ### Claude's
 
-Nothing open: the next is the owner's.
+Nothing open before the release: the next is the owner's.
+
+**Validate the widened address check** (backend-change)
+
+- In the release after the one that ships `0001_email_claim.sql`: a migration that runs
+  `VALIDATE CONSTRAINT address_changes_not_own`, added NOT VALID there
+  (`docs/ARCHITECTURE.md`, Migrating a live database).
+- Done when: `convalidated` is true for it on staging and in production.
 
 ### The owner's
 

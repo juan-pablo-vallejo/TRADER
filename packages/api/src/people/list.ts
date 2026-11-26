@@ -38,8 +38,9 @@ const invitationSend = z.strictObject({
   failure: z.string().nullable(),
 });
 
-// One time the office changed an address the person signs in with: which, from what to
-// what (null: there was none, or it was taken away), by whom and when.
+// One time an address the person signs in with changed: which, from what to what (null:
+// there was none, or it was taken away), by whom and when. The office makes every change
+// but one: an email the person added to a login that had none (me.addEmail), by themselves.
 const addressChange = z.strictObject({
   id: z.uuid(),
   field: z.enum(["email", "sign_in_phone"]),

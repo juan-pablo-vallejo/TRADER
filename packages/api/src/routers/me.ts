@@ -94,13 +94,15 @@ export const meRouter = router({
     .mutation(async ({ ctx, input }) => {
       // A worker's name and addresses are the office's to change.
       if (ctx.user.role !== "admin") throw forbidden();
-      // Own row, last writer wins; updated_at follows through the ORM.
+      // Own row, last writer wins; updated_at follows through the ORM. The write itself
+      // re-checks the role as it takes the row: an admin made a worker meanwhile writes
+      // nothing.
       const [row] = await ctx.tx
         .update(users)
         .set({ name: input.name, phone: input.phone })
-        .where(eq(users.id, ctx.user.id))
+        .where(and(eq(users.id, ctx.user.id), eq(users.role, "admin")))
         .returning({ name: users.name, phone: users.phone });
-      if (row === undefined) throw new Error("the caller's own row is not visible");
+      if (row === undefined) throw forbidden();
       return {
         id: ctx.user.id,
         companyId: ctx.user.companyId,

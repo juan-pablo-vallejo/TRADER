@@ -1,6 +1,6 @@
 -- An email a person adds to their own login, proved by a code sent to it (me.addEmail):
 -- the pending claim on the person's row, and the address log taking that one self-change.
-SET lock_timeout = '2s';--> statement-breakpoint
+SET LOCAL lock_timeout = '3s';--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "email_claim" text;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "email_claim_code_hash" text;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "email_claim_sent_at" timestamp with time zone;--> statement-breakpoint

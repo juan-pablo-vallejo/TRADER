@@ -35,7 +35,8 @@ export const users = pgTable(
     // two on every row.
     email: text("email"),
     name: text("name").notNull(),
-    // Contact data the person writes themselves (me.update); it identifies nobody.
+    // Contact data an admin writes for themselves (me.update); it identifies nobody. A
+    // worker's is written by no one any more: Today's WhatsApp takes the sign-in number first.
     phone: text("phone"),
     // The second invitation join key: the mobile number a one-time code is sent to, E.164,
     // United States and Canada only. Written by

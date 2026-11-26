@@ -368,7 +368,7 @@ describe("overview.today", () => {
     });
   });
 
-  it("gives Call the contact phone, else the sign-in number, and each job its facts", async () => {
+  it("gives WhatsApp the sign-in number, else the contact phone, and each job its facts", async () => {
     await rolledBack(owner, async (tx) => {
       const w = await world(tx);
       await tx
@@ -377,7 +377,7 @@ describe("overview.today", () => {
         .where(eq(users.id, w.w1));
       await tx
         .update(users)
-        .set({ signInPhone: "+14015550122" })
+        .set({ phone: "401-555-0122", signInPhone: null })
         .where(eq(users.id, w.w2));
       await tx
         .update(jobs)
@@ -393,8 +393,8 @@ describe("overview.today", () => {
       await w.shift(w.w2, w.J, "07:00", "15:30");
       const answer = await w.read("06:00");
       expect(answer.people.map((p) => p.person.phone)).toEqual([
-        "401-555-0100",
-        "+14015550122",
+        "+14015550111",
+        "401-555-0122",
       ]);
       expect(answer.jobs).toEqual([
         {

@@ -313,6 +313,7 @@ export const es: Catalog = {
     other: "Usar otro correo",
     added: "Añadido. También puedes iniciar sesión con este correo.",
     refused: {
+      company_closed: "La empresa de demostración no puede añadir un correo.",
       has_email: "Ya tienes un correo. La oficina lo cambia.",
       email_taken: "Alguien de tu empresa ya tiene este correo.",
       too_soon:
@@ -321,7 +322,7 @@ export const es: Catalog = {
       no_code: "Primero pide un código.",
       expired: "Ese código ha caducado. Pide uno nuevo.",
       wrong_code: "Ese código no funcionó. Revísalo o pide uno nuevo.",
-      too_many: "Demasiados códigos incorrectos. Pide uno nuevo.",
+      too_many: "Demasiados intentos por hoy. Inténtalo de nuevo mañana.",
       address_held: "Este correo inicia sesión en otra cuenta. Usa otro correo.",
       failed: "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.",
     },

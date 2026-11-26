@@ -33,7 +33,7 @@ const wallTime = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const person = z.strictObject({
   id: z.uuid(),
   name: z.string(),
-  // What Call dials: their contact phone, else the number they sign in with.
+  // What WhatsApp opens a chat with: the number they sign in with, else their contact phone.
   phone: z.string().nullable(),
 });
 
@@ -226,7 +226,9 @@ export async function overviewToday(
   const personOf = new Map(
     personRows.map((p) => [
       p.id,
-      { id: p.id, name: p.name, phone: p.phone ?? p.signInPhone },
+      // The number the office has on file first: a contact phone nobody can change any more
+      // must not stand before it.
+      { id: p.id, name: p.name, phone: p.signInPhone ?? p.phone },
     ]),
   );
   const who = (id: string) => {

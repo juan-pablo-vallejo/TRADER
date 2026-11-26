@@ -19,7 +19,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Platform } from "react-native";
+import { AppState, Platform } from "react-native";
 
 import { wallTime } from "./format";
 import { useStrings } from "./i18n";
@@ -61,12 +61,20 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
   const { t, language } = useStrings();
   const { snapshot, clock } = useSync();
   const router = useRouter();
-  // Asked once, as the app opens signed in (the phone itself never asks twice).
+  // Asked once, as the app opens signed in (the phone itself never asks twice), and read
+  // again each time the app comes back: allowed in Settings meanwhile, reminders start.
   const [granted, setGranted] = useState<boolean | null>(null);
   useEffect(() => {
     void allowed(true)
       .catch(() => false)
       .then(setGranted);
+    const back = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      void allowed(false)
+        .catch(() => false)
+        .then(setGranted);
+    });
+    return () => back.remove();
   }, []);
 
   // A tap on a reminder opens Today.

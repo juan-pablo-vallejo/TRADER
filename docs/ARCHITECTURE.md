@@ -17,8 +17,9 @@ the target: where the code differs, the code is wrong.
   the owner's to change. No passkeys in the phone app.
 - A login belongs to exactly one company. New people start as workers; making an admin is a
   deliberate act.
-- Worker can: see own week, clock in / switch / out on own shift, see own hours, edit own
-  name and phone.
+- Worker can: see own week, clock in / switch / out on own shift, see own hours, and add an
+  email to a login that has none, proved by a code sent to it. A worker's name and sign-in
+  addresses are the office's.
 - Worker cannot: see anyone else's hours or schedule, or change a recorded entry.
 - Admin can: everything in the office, for their company only; on the phone, see today's
   crew, message them on WhatsApp, add a shift for today, move someone to another job, set a

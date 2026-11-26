@@ -310,7 +310,14 @@ export function createClerkDirectory(deps: {
     const login = await loginOf(signal, person);
     if (login === null) return "no_login";
     const have = listOf(login.user, "email_addresses", "email_address");
-    if (have.some((h) => h.value.toLowerCase() === person.email.toLowerCase())) {
+    const held = have.find((h) => h.value.toLowerCase() === person.email.toLowerCase());
+    if (held !== undefined) {
+      // Already on the login, perhaps unverified: the person has just proved it.
+      done(
+        await call(signal, "PATCH", `/email_addresses/${segment(held.id)}`, {
+          verified: true,
+        }),
+      );
       return "unchanged";
     }
     const answer = await call(signal, "POST", "/email_addresses", {
