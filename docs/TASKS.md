@@ -68,10 +68,10 @@ sees only Me.
 filters kept in the address, Undo on schedule edits, keyboard row movement, a command menu.
 Compact on a laptop, large targets on a phone.
 
-**The look.** D'Sierra's brand. Their roller and brush is the icon, and their indigo is the
-color of every action inside the office and the app. Their red belongs to the mark, the
-homepage and the two sign-in screens, which take the homepage's navy, its red for their one
-main button and Bodoni Moda for their heading. Red never sits on navy.
+**The look.** D'Sierra's brand. Their roller and brush is the icon. In the office their
+indigo is the color of every action; the phone app is on their own red for an action and
+their navy for what is chosen, a link and the active tab, as the homepage and the two
+sign-in screens are, which take Bodoni Moda for their heading. Red never sits on navy.
 
 **Finish line.** D'Sierra's whole crew runs one full pay period on it: every hour clocked on
 a phone, payroll hours exported from TRADER, one real invoice issued and emailed.

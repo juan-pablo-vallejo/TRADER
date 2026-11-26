@@ -504,6 +504,7 @@ export const es: Catalog = {
     googleRefused:
       "Ninguna empresa ha agregado esa cuenta de Google. Pregunta en la oficina.",
     signingIn: "Iniciando tu sesión…",
+    gettingReady: "Preparando el acceso…",
     notLoaded:
       "No se pudo cargar el inicio de sesión. Revisa tu conexión y vuelve a cargar esta página.",
     backToSignIn: "Volver a iniciar sesión",

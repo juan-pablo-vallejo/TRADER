@@ -309,6 +309,12 @@ export function SignInForm({
       {sentence(shown)}
     </p>
   );
+  // While Clerk is on its way the buttons wait, and say so: never disabled with no word.
+  const getting = !clerk.loaded && shown === null && (
+    <p className="secondary" role="status">
+      {s.gettingReady}
+    </p>
+  );
   const invalid = note !== null && ABOUT_THE_FIELD.has(note);
   // Until Clerk has loaded there is nothing to send a code with.
   const idle = busy || !clerk.loaded;
@@ -359,6 +365,7 @@ export function SignInForm({
           aria-describedby={shown !== null ? "sign-in-note" : undefined}
         />
         {problem}
+        {getting}
         <button type="submit" className={styles.send} disabled={idle}>
           {busy ? s.sending : s.send}
         </button>

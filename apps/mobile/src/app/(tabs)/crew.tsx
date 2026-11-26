@@ -206,6 +206,11 @@ function TimeStepper({
   );
 }
 
+// A shift's hours as one piece, "5:00 AM – 8:00 AM", never broken across lines: on a line
+// of its own under the job's name, so no separator is left at a line's start or end.
+const timeRange = (start: string, end: string, language: string): string =>
+  `${wallTime(start, language)} – ${wallTime(end, language)}`.replace(/ /g, "\u00a0");
+
 export default function CrewTab() {
   const { t, language } = useStrings();
   const speech = useSpeech();
@@ -306,14 +311,14 @@ export default function CrewTab() {
   const statusLabel = (status: CrewStatus) => t.crew.status[status];
   const line = (person: CrewPerson): string => {
     if (person.clock.status !== "off") {
-      return `${nameOf(person.clock.jobId)} · ${t.today.since(
+      return `${nameOf(person.clock.jobId)}\n${t.today.since(
         timeOfDay(person.clock.since, zone, language),
       )}`;
     }
     const next = person.shifts.find((s) => !s.clockedIn) ?? person.shifts.at(-1);
     return next === undefined
       ? t.crew.noShift
-      : `${nameOf(next.jobId)} · ${wallTime(next.start, language)} – ${wallTime(next.end, language)}`;
+      : `${nameOf(next.jobId)}\n${timeRange(next.start, next.end, language)}`;
   };
   const workedNow = (person: CrewPerson) =>
     person.workedMs +
@@ -745,8 +750,7 @@ export default function CrewTab() {
                 ) : (
                   opened.shifts.map((s, i) => (
                     <Text key={s.id} testID={`person-shift-${i}`} style={text.body}>
-                      {nameOf(s.jobId)} · {wallTime(s.start, language)} –{" "}
-                      {wallTime(s.end, language)}
+                      {`${nameOf(s.jobId)}\n${timeRange(s.start, s.end, language)}`}
                     </Text>
                   ))
                 )}

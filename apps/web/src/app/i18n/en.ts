@@ -527,6 +527,7 @@ export const en = {
     or: "or",
     googleRefused: "No company has added that Google account. Ask the office.",
     signingIn: "Signing you in…",
+    gettingReady: "Getting sign-in ready…",
     notLoaded: "Sign-in could not load. Check your connection, then reload this page.",
     backToSignIn: "Back to sign-in",
     usePasskey: "Use a passkey",

@@ -598,7 +598,12 @@ function TextButton({
       onPress={onPress}
       style={styles.textButton}
     >
-      <Text style={[styles.textButtonLabel, disabled && styles.textButtonDisabled]}>
+      {/* Keyed by its state: Android draws a style that changes back without its
+          underline, and a fresh label is drawn whole. */}
+      <Text
+        key={disabled ? "off" : "on"}
+        style={[styles.textButtonLabel, disabled && styles.textButtonDisabled]}
+      >
         {label}
       </Text>
     </Pressable>
@@ -641,7 +646,9 @@ const styles = StyleSheet.create({
     color: color.action,
     textDecorationLine: "underline",
   },
-  textButtonDisabled: { color: color.muted, textDecorationLine: "none" },
+  // Disabled while a request is out: muted, and still underlined, so the link looks the same
+  // once it comes back (Android drew it again without its underline).
+  textButtonDisabled: { color: color.muted },
   trouble: { gap: space[2] },
   // Google's "G" at the size of its own assets, 20 pt in a 44 pt button.
   googleG: { width: 20, height: 20 },
