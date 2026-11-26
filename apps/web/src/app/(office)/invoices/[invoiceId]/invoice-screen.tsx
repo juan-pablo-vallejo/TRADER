@@ -553,6 +553,20 @@ function Payments({ invoice }: { invoice: Invoice }) {
   const [tone, setTone] = useState<"saved" | "error">("error");
   // The form is a dialog: opened by its button, closed by a payment that was recorded.
   const [paying, setPaying] = useState(false);
+  // A refused amount, said under its field, which takes the focus.
+  const [amountRefused, setAmountRefused] = useState<string | null>(null);
+  const refuseAmount = (text: string) => {
+    setAmountRefused(text);
+    document.getElementById("pay-amount")?.focus();
+  };
+  // Closed without recording: what was typed and what was said go with it.
+  const discard = () => {
+    setPaying(false);
+    setPaid("");
+    setMemo("");
+    setNote(null);
+    setAmountRefused(null);
+  };
   const fail = (text: string) => {
     setTone("error");
     setNote(text);
@@ -561,11 +575,9 @@ function Payments({ invoice }: { invoice: Invoice }) {
     trpc.invoice.recordPayment.mutationOptions({
       onSuccess: async (answer) => {
         if (answer.result === "rejected") {
-          fail(
-            answer.code === "overpaid"
-              ? s.overpaid(f.money(invoice.owedCents, invoice.currency))
-              : t.requestFailed,
-          );
+          if (answer.code === "overpaid")
+            refuseAmount(s.overpaid(f.money(invoice.owedCents, invoice.currency)));
+          else fail(t.requestFailed);
           return;
         }
         // The next payment is a new record, under an id of its own.
@@ -574,9 +586,11 @@ function Payments({ invoice }: { invoice: Invoice }) {
         setMemo("");
         setTone("saved");
         setNote(s.recorded);
-        // Recorded: the dialog closes, and the note stands beneath the button.
+        // Recorded: the dialog closes, and the note stands beneath the button. A payment in
+        // full takes the button away: the focus goes to the payments' heading, above it.
         setPaying(false);
         await refresh();
+        requestAnimationFrame(() => document.getElementById("invoice-payments")?.focus());
       },
       onError: () => fail(t.requestFailed),
     }),
@@ -600,7 +614,9 @@ function Payments({ invoice }: { invoice: Invoice }) {
   const open = invoice.state === "issued";
   return (
     <section className={styles.section} aria-label={s.payments}>
-      <h2 className="heading">{s.payments}</h2>
+      <h2 id="invoice-payments" tabIndex={-1} className={`heading ${styles.said}`}>
+        {s.payments}
+      </h2>
       {open && (
         <p className="body-strong">
           {invoice.owedCents === 0
@@ -664,15 +680,17 @@ function Payments({ invoice }: { invoice: Invoice }) {
       )}
       {!paying && <Note text={note} tone={tone} />}
       {paying && (
-        <SidePanel title={s.recordPayment} onClose={() => setPaying(false)}>
+        <SidePanel title={s.recordPayment} onClose={discard}>
           <form
             className={styles.payForm}
             aria-label={s.recordPayment}
             onSubmit={(e) => {
               e.preventDefault();
               setNote(null);
+              setAmountRefused(null);
               const amountCents = cents(paid);
-              if (amountCents === null || amountCents === 0) return fail(s.badAmount);
+              if (amountCents === null || amountCents === 0)
+                return refuseAmount(s.badAmount);
               record.mutate({
                 id,
                 invoiceId: invoice.id,
@@ -690,9 +708,25 @@ function Payments({ invoice }: { invoice: Invoice }) {
                   id="pay-amount"
                   className={controls.input}
                   inputMode="decimal"
+                  aria-invalid={amountRefused !== null}
+                  aria-describedby={
+                    amountRefused !== null ? "pay-amount-error" : undefined
+                  }
                   value={paid}
-                  onChange={(e) => setPaid(e.target.value)}
+                  onChange={(e) => {
+                    setAmountRefused(null);
+                    setPaid(e.target.value);
+                  }}
                 />
+                {amountRefused !== null && (
+                  <p
+                    id="pay-amount-error"
+                    className={`secondary ${controls.error}`}
+                    role="alert"
+                  >
+                    {amountRefused}
+                  </p>
+                )}
               </Field>
               <Field id="pay-day" label={s.paymentDay}>
                 <input
@@ -1062,7 +1096,9 @@ export function InvoiceScreen({
       />
       <p className={`body ${styles.meta}`}>
         {invoice.customer.name} ·{" "}
-        <Link href={`/jobs/${invoice.job.id}`}>{invoice.job.name}</Link>{" "}
+        <Link className={controls.linkTarget} href={`/jobs/${invoice.job.id}`}>
+          {invoice.job.name}
+        </Link>{" "}
         <StatusBadge
           tone={STATUS_TONES[invoice.status]}
           label={s.status[invoice.status]}

@@ -20,7 +20,7 @@
 import { whatsAppLink } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useRef, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
 import { blocking, Failure, RefreshFailed } from "../../failure";
@@ -174,6 +174,10 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
   // answer was lost is answered "invited" and not "taken"; anything changed is a new one.
   const minted = useRef<{ key: string; id: string } | null>(null);
   const invite = useMutation(trpc.people.invite.mutationOptions());
+  // A refusal is said under its field, which takes the focus.
+  useEffect(() => {
+    if (note !== null) document.getElementById(`invite-${note.under}`)?.focus();
+  }, [note]);
   const submit = (e: FormEvent) => {
     e.preventDefault();
     setNote(null);
@@ -244,6 +248,7 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
             type="tel"
             autoComplete="off"
             maxLength={32}
+            aria-invalid={note?.under === "phone"}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
@@ -255,6 +260,7 @@ function InviteForm({ onDone }: { onDone: (userId: string) => void }) {
             className={controls.input}
             type="email"
             autoComplete="off"
+            aria-invalid={note?.under === "email"}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
           />
@@ -398,6 +404,8 @@ function Numbers({ row }: { row: Row }) {
                 rel="noreferrer"
               >
                 {t.personPanel.signInNumber(signInPhone(row.signInPhone))}
+                {/* Where it leads, said: a chat, not a call. */}
+                {" · WhatsApp"}
               </a>
             </li>
           )}
@@ -409,6 +417,7 @@ function Numbers({ row }: { row: Row }) {
                 rel="noreferrer"
               >
                 {t.personPanel.contactNumber(contact)}
+                {" · WhatsApp"}
               </a>
             </li>
           )}

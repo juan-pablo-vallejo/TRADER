@@ -48,7 +48,7 @@ export const en = {
     androidNote:
       "On Android the office must first add your Google account to the testers. If the page says the app is not available, ask them to add you.",
     thenSignIn:
-      "Then open the app and sign in with the mobile number the office invited.",
+      "Then open the app and sign in with the mobile number or the email the office invited you with.",
     home: "Back to the homepage",
   },
   // The header's menu behind the person's name.

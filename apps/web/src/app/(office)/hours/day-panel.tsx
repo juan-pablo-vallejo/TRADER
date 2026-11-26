@@ -64,6 +64,21 @@ type CorrectionCode = Extract<
 // Held to the catalog: `correctionRejected` must have a sentence for each.
 type Rejected = Record<CorrectionCode, string>;
 
+// The server's refusal of a correction: it names the entries, not one field, so the
+// sentence itself takes the focus (read at once, scrolled to), and the focus stays in the
+// editor rather than falling to the page.
+function Refusal({ text }: { text: string | null }) {
+  const at = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (text !== null) at.current?.focus();
+  }, [text]);
+  return (
+    <div ref={at} tabIndex={-1} className={styles.refusal}>
+      <Note text={text} />
+    </div>
+  );
+}
+
 // The editor for hours nobody recorded has no session to hang from.
 const MISSING = "missing";
 
@@ -632,7 +647,7 @@ function SessionCorrection({
         <button type="submit" className={controls.secondary} disabled={sending}>
           {t.saveCorrection}
         </button>
-        <Note text={refusal} />
+        <Refusal text={refusal} />
       </EditorSection>
       {!voided && (
         <EditorFooter>
@@ -724,7 +739,7 @@ function MissingHours({
       >
         {t.addHours}
       </button>
-      <Note text={refusal} />
+      <Refusal text={refusal} />
     </form>
   );
 }

@@ -50,7 +50,7 @@ export const es: Catalog = {
     androidNote:
       "En Android la oficina primero tiene que agregar tu cuenta de Google a la lista de pruebas. Si la página dice que la aplicación no está disponible, pídeles que te agreguen.",
     thenSignIn:
-      "Después abre la aplicación e inicia sesión con el número de celular que la oficina invitó.",
+      "Después abre la aplicación e inicia sesión con el número de celular o el correo electrónico con el que la oficina te invitó.",
     home: "Volver a la página principal",
   },
   account: "Tu cuenta",
@@ -854,7 +854,7 @@ export const es: Catalog = {
     corrected: "corregido",
     user_timed: "hora puesta a mano",
     location: "ubicación",
-    clock_skewed: "reloj desajustado",
+    clock_skewed: "reloj erróneo",
     unscheduled: "fuera del horario",
   },
   reconExplain:

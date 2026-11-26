@@ -88,6 +88,18 @@ export function SidePanel({
     // Once, as the panel opens: what it returns to is fixed then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // What is typed, or a date or a time changed (which says so by `change` alone), is what
+  // a stray Escape would lose; a choice in a list, a box or a switch is made again in a
+  // moment.
+  const typedIn = (target: EventTarget) => {
+    const typed =
+      target instanceof HTMLTextAreaElement ||
+      (target instanceof HTMLInputElement &&
+        !["checkbox", "radio"].includes(target.type));
+    if (!typed) return;
+    unsaved.current = true;
+    setWarned(false);
+  };
   return (
     <dialog
       ref={ref}
@@ -96,23 +108,16 @@ export function SidePanel({
       // Escape: the browser closes the dialog; the screen forgets the panel.
       onClose={onClose}
       onCancel={(e) => {
-        if (unsaved.current && !warned) {
+        // A refusal still on the panel means what was sent is still there, unsaved.
+        const refused =
+          e.currentTarget.querySelector('[aria-invalid="true"], [role="alert"]') !== null;
+        if ((unsaved.current || refused) && !warned) {
           e.preventDefault();
           setWarned(true);
         }
       }}
-      onInput={(e) => {
-        // What is typed is what a stray Escape would lose; a choice in a list, a box or a
-        // switch is made again in a moment.
-        const target = e.target as HTMLElement;
-        const typed =
-          target instanceof HTMLTextAreaElement ||
-          (target instanceof HTMLInputElement &&
-            !["checkbox", "radio"].includes(target.type));
-        if (!typed) return;
-        unsaved.current = true;
-        setWarned(false);
-      }}
+      onChange={(e) => typedIn(e.target)}
+      onInput={(e) => typedIn(e.target)}
       onSubmit={() => {
         unsaved.current = false;
       }}

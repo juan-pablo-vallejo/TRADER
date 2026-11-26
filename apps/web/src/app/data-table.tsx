@@ -142,7 +142,9 @@ export function DataTable<Row>({
                             : undefined
                         }
                       >
-                        {content}
+                        {/* Plain words in an element of their own: the drawing of an
+                            opener (table.module.css) is on its first child. */}
+                        {typeof content === "string" ? <span>{content}</span> : content}
                         <span className="visually-hidden">{`, ${opens.label}`}</span>
                       </button>
                     )}

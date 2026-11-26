@@ -13,7 +13,7 @@ from the same record.
 **Public**
 
 - Home, at `dsierrapainting.jpteq.app`: D'Sierra Painting's homepage. One page: their logo,
-  what they do and where, call, WhatsApp and email, their own photos, Team sign-in, Get the
+  what they do and where, WhatsApp and email, their own photos, Team sign-in, Get the
   app.
 - Get the app: where the invitation message points.
 - Privacy. Terms.

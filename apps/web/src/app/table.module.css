@@ -81,10 +81,16 @@
 .number .cellOpen {
   justify-content: flex-end;
 }
+/* A link in a cell other than the row's name (the job an invoice is for) is a full target
+   tall, at every width: the density's 36 in a 40 row, 48 on a stacked row's second line. */
+.table tr td:not(:first-child) a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
 /* What opens something is drawn so at every width, as a narrow row draws it: underlined,
    and a row's name in the link's color. Plain text that opens a panel on a click is
    found only by pointing at it. */
-.cellOpen:not(:has(> *)),
 .cellOpen > :first-child {
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -103,6 +109,13 @@
 }
 .lines td span {
   white-space: normal;
+  /* A word longer than the day (none is, at 1280) breaks only as a last resort, so a flag
+     never spills into the next day. */
+  overflow-wrap: anywhere;
+}
+.lines .cellOpen > :not(:first-child) > * {
+  max-width: 100%;
+  min-width: 0;
 }
 /* The week's columns: the days share the width alike, the name and the total keep room for
    theirs on one line. In a day, the figure stands at the cell's right edge on the first
@@ -111,10 +124,14 @@
   table-layout: fixed;
 }
 .lines thead th:first-child {
-  width: 9.5rem;
+  width: 8.5rem;
 }
 .lines thead th:last-child {
-  width: 6.5rem;
+  width: 6rem;
+}
+/* A day's cell gives its flags the width: "sin conexión" stands on one line. */
+.lines td:not(:first-child):not(:last-child) {
+  padding: 0 var(--space-1);
 }
 .lines .cellOpen {
   flex-direction: column;
@@ -265,13 +282,7 @@
     margin: calc(-1 * var(--space-3)) 0;
     color: var(--accent);
   }
-  /* A link on a row's second line (the job an invoice is for) is a full target tall, and
-     the name above it stops at its own line, so the two never overlap. */
-  .table tr td:not(:first-child) a {
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--target);
-  }
+  /* The name above a second line's link stops at its own line, so the two never overlap. */
   .table tr td:first-child .rowLink,
   .table tr td:first-child .cellOpen {
     margin-bottom: 0;

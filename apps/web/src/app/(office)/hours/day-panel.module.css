@@ -106,3 +106,8 @@
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+
+/* A refusal focused by the page, not by a person: no ring around words read as it lands. */
+.refusal:focus {
+  outline: none;
+}

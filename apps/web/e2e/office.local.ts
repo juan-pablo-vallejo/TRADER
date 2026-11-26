@@ -395,6 +395,42 @@ test("a job's second Create invoice opens the same draft, and each act ends with
   await page.getByRole("button", { name: "Issue invoice" }).last().click();
   await expect(page.getByText(/^Issued as invoice \d+\.$/)).toBeVisible();
 
+  // A payment: a refused amount is said at its field, which takes the focus; a panel closed
+  // without recording forgets what was typed; one recorded hands the focus to Payments.
+  const pay = page.getByRole("button", { name: "Record a payment" });
+  await pay.click();
+  const amount = page.getByRole("dialog").getByLabel("Amount", { exact: true });
+  await amount.fill("abc");
+  await amount.press("Enter");
+  await expect(amount).toBeFocused();
+  await expect(amount).toHaveAttribute("aria-invalid", "true");
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(
+    "Enter the amount paid, above zero.",
+  );
+  await amount.fill("999999");
+  await amount.press("Enter");
+  await expect(page.getByRole("dialog").getByRole("alert")).toHaveText(/still owed\.$/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog").getByRole("status").first()).toContainText(
+    "is not saved",
+  );
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
+  await pay.click();
+  await expect(amount).toHaveValue("");
+  await amount.fill("100.00");
+  await amount.press("Enter");
+  await expect(page.getByText("Payment recorded.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Payments" })).toBeFocused();
+  // A payment that stands keeps the invoice from being voided: reversed first.
+  await page.getByRole("button", { name: "Reverse the payment of $100.00" }).click();
+  await page
+    .getByRole("button", { name: "Reverse the payment of $100.00" })
+    .last()
+    .click();
+  await expect(page.getByText("Payment reversed.")).toBeVisible();
+
   // Void: said on the page that is now the void invoice.
   await page.getByRole("button", { name: "Void invoice" }).click();
   await page.getByRole("button", { name: "Void invoice" }).last().click();
