@@ -27,7 +27,11 @@ const refused = [
   "gh auth switch --user someone",
   "gh secret set X --env production",
   "gh variable delete X --env staging",
-  "gh workflow run preview-phone.yml",
+  "gh workflow run release-phone.yml",
+  "gh workflow run ci.yml",
+  "gh workflow run preview-phone.yml --ref production",
+  'gh workflow run "Preview builds" --ref some-branch',
+  "gh workflow run preview-phone.yml -f profile=production",
   "gh repo edit --visibility private",
   "git credential fill",
   "security find-generic-password -s gh:github.com -w",
@@ -42,6 +46,8 @@ const refused = [
   "nohup git push origin production",
 ];
 const allowed = [
+  'gh workflow run "Preview builds" --ref main',
+  "gh workflow run preview-phone.yml",
   "git push origin main",
   "git push -u origin item-12-sentry",
   "git push ws 0123abc:refs/trees/0123abc",

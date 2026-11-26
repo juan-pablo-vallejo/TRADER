@@ -196,8 +196,16 @@ export function refusal(script, lookup = baseOf, depth = 0) {
         return "gh auth changes or reveals the login";
       if (["secret", "variable"].includes(rest[0]) && !["list", "get"].includes(rest[1]))
         return `gh ${rest[0]} ${rest[1] ?? ""} changes what a workflow is handed`;
-      if (rest[0] === "workflow" && rest[1] === "run")
-        return "a workflow started by hand is the owner's to start";
+      if (rest[0] === "workflow" && rest[1] === "run") {
+        // Claude may start the preview builds of main, on the owner's word: each spends the
+        // Expo account's allowance, so only that workflow, only main, and nothing added.
+        // Every other workflow started by hand is the owner's.
+        const at = rest.indexOf("--ref");
+        const ref = at === -1 ? "main" : rest[at + 1];
+        const preview = ["Preview builds", "preview-phone.yml"].includes(rest[2]);
+        if (!preview || ref !== "main" || rest.length !== (at === -1 ? 3 : 5))
+          return "a workflow started by hand is the owner's to start, but for the preview builds of main";
+      }
       if (
         rest[0] === "repo" &&
         ["edit", "delete", "deploy-key", "archive", "rename"].includes(rest[1])

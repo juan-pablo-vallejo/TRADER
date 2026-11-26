@@ -2,8 +2,8 @@ name: Preview builds
 
 # A preview build of the phone app for one commit, for both platforms: internal
 # distribution (an ad hoc iPhone build and an Android APK), pointed at staging. Started by
-# hand and by nothing else: every build is drawn from the Expo account's monthly allowance,
-# which is the owner's money to spend.
+# hand and by nothing else, by the owner or, for `main`, by Claude on his word: every build
+# is drawn from the Expo account's monthly allowance, which is the owner's money to spend.
 #
 #   Actions, Preview builds, Run workflow, and the branch or tag to build.
 #
