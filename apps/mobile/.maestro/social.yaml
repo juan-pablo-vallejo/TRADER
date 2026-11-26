@@ -1,7 +1,7 @@
 # Google, and Apple's own button on an iPhone, with the development stand-in, which signs in
 # as the account whose email the field holds (src/sign-in-provider.ts): ${EMAIL} lands on
 # Today and is offered no key; an empty field is an account no company has added, told to ask the
-# office.
+# office, and on Apple's button told how to undo Hide My Email.
 appId: app.jpteq.trader
 ---
 - runFlow:
@@ -43,6 +43,12 @@ appId: app.jpteq.trader
     commands:
       - runFlow:
           file: parts/sign-out.yaml
+      # Apple's account no login holds: its own sentence, on how Hide My Email is undone.
+      - tapOn:
+          id: "sign-in-apple"
+      - extendedWaitUntil:
+          visible: "Apple did not share an email the office has.*"
+          timeout: 30000
       - tapOn:
           id: "sign-in-address"
       - inputText: ${EMAIL}

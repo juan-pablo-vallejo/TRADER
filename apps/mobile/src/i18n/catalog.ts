@@ -30,6 +30,10 @@ export type Catalog = {
     resendIn: (seconds: number) => string;
     change: string;
     notAdded: string;
+    // An Apple account no login holds: Hide My Email sends an address nobody added. The
+    // Settings path and its words are Apple's (support.apple.com/en-us/102571 and
+    // es-us/102571, read 2026-11-26).
+    notAddedApple: string;
     codeWrong: string;
     codeExpired: string;
     tooMany: string;

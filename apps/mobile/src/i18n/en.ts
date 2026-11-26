@@ -26,6 +26,8 @@ export const en: Catalog = {
     resendIn: (seconds) => `Send another code in ${seconds} s`,
     change: "Use a different number or email",
     notAdded: "No company has added this sign-in. Ask the office.",
+    notAddedApple:
+      "Apple did not share an email the office has. If you used Hide My Email, open Settings, tap your name, then Sign in with Apple, TRADER and Delete. Then try again and share your email. Or sign in with your number or email.",
     codeWrong: "That code did not work. Check it, or ask for a new one.",
     codeExpired: "That code has expired. Ask for a new one.",
     tooMany: "Too many tries. Wait a few minutes, then try again.",

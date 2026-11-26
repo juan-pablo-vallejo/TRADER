@@ -32,6 +32,8 @@ export const es: Catalog = {
     resendIn: (seconds) => `Enviar otro código en ${seconds} s`,
     change: "Usar otro número o correo",
     notAdded: "Ninguna empresa ha agregado este acceso. Pregunta en la oficina.",
+    notAddedApple:
+      "Apple no compartió un correo que tenga la oficina. Si usaste Ocultar mi correo, abre Configuración, toca tu nombre y luego Iniciar sesión con Apple, TRADER y Eliminar. Después inténtalo de nuevo y comparte tu correo. O inicia sesión con tu número o tu correo.",
     codeWrong: "Ese código no funcionó. Revísalo o pide uno nuevo.",
     codeExpired: "Ese código venció. Pide uno nuevo.",
     tooMany: "Demasiados intentos. Espera unos minutos e inténtalo de nuevo.",

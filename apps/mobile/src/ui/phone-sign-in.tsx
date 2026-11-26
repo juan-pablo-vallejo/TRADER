@@ -89,6 +89,7 @@ const HEADING_GROWS = 1.5;
 export function sentence(s: Catalog["signIn"], note: Note): string {
   return {
     unknown: s.notAdded,
+    apple_unknown: s.notAddedApple,
     wrong_code: s.codeWrong,
     expired_code: s.codeExpired,
     too_many: s.tooMany,

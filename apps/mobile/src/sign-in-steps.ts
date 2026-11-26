@@ -47,7 +47,9 @@ export type SocialAnswer =
 
 // What the form says under its field: a refusal, by name; a field that is neither a number
 // nor an email; a Demo number and code the door did not take.
-export type Note = SignInFailure | "bad_address" | "bad_demo";
+// `apple_unknown`: Apple's account matched no login. Apple may have hidden the email, which
+// the person can change, so it is told how, apart from an unknown address.
+export type Note = SignInFailure | "bad_address" | "bad_demo" | "apple_unknown";
 
 export type Form =
   { at: "field" } | { at: "code"; to: SignInIdentifier; sentAt: number } | { at: "demo" };
@@ -130,7 +132,8 @@ export async function demoDoor(
 
 // Google or Apple. An account no login holds comes back from the provider with no session
 // (Clerk's answer is a sign-up, which is never completed here, and the instance refuses
-// sign-ups besides): it is told to ask the office, as an unknown address is.
+// sign-ups besides): it is told to ask the office, as an unknown address is. Apple's is told
+// more: "Hide My Email" sends an address no company can have added.
 export async function socialSignIn(
   p: Provider,
   kind: Social,
@@ -140,5 +143,6 @@ export async function socialSignIn(
   const answer = await p.social(kind, hint);
   if (answer.ok) return { session: answer.session };
   if (answer.cancelled) return { form: FIELD, note: null };
-  return { form: FIELD, note: answer.code === undefined ? "failed" : "unknown" };
+  if (answer.code === undefined) return { form: FIELD, note: "failed" };
+  return { form: FIELD, note: kind === "apple" ? "apple_unknown" : "unknown" };
 }

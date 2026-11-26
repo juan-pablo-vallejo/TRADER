@@ -186,9 +186,14 @@ describe("Google and Apple", () => {
   it("tell an account no login holds to ask the office, and say nothing of a closed sheet", async () => {
     for (const code of ["external_account_not_found", "not_allowed_access", "sign_up"]) {
       const { p } = provider({ social: { ok: false, code, cancelled: false } });
-      expect(await socialSignIn(p, "apple", "")).toEqual({
+      expect(await socialSignIn(p, "google", "")).toEqual({
         form: FIELD,
         note: "unknown",
+      });
+      // Apple's own note: its email may be hidden, and the person can change that.
+      expect(await socialSignIn(p, "apple", "")).toEqual({
+        form: FIELD,
+        note: "apple_unknown",
       });
     }
     const closed = provider({ social: { ok: false, code: "cancel", cancelled: true } });
