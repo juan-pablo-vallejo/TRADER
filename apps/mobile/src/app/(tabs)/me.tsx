@@ -258,7 +258,16 @@ export default function Me() {
             </View>
           ))}
           {loaded && !hasEmail && api !== null && (
-            <AddEmail api={api} onAdded={() => void loadContact()} />
+            <AddEmail
+              api={api}
+              // The loader asks only until its first answer: the added email is read here.
+              onAdded={() =>
+                void api.me.get
+                  .query()
+                  .then((contact) => setSignIn(signInRows(contact)))
+                  .catch(() => setContact("failed"))
+              }
+            />
           )}
           {contact === "failed" && (
             <>
