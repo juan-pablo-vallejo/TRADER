@@ -24,6 +24,7 @@ import { itemsOf, search, stepped, type Item } from "./command-items";
 import styles from "./command-menu.module.css";
 import controls from "./controls.module.css";
 import { useStrings } from "./i18n";
+import { LoadingRows } from "./loading-rows";
 import { useTRPC } from "./trpc";
 
 function Menu({ onClose }: { onClose: () => void }) {
@@ -128,6 +129,9 @@ function Menu({ onClose }: { onClose: () => void }) {
             }
           }}
         />
+        {/* While the lists are still on their way and nothing is found yet: placeholder rows,
+            as every list here has, never the word. */}
+        {found.length === 0 && loading && <LoadingRows rows={3} />}
         <ul id={listId} role="listbox" aria-label={s.results} className={styles.list}>
           {found.map((item) => (
             <li
@@ -147,13 +151,7 @@ function Menu({ onClose }: { onClose: () => void }) {
           ))}
         </ul>
         <p className={`secondary ${styles.foot}`} role="status">
-          {found.length === 0
-            ? loading
-              ? t.loading
-              : s.none
-            : loading
-              ? t.loading
-              : s.hint}
+          {found.length === 0 ? (loading ? "" : s.none) : s.hint}
         </p>
       </div>
     </dialog>

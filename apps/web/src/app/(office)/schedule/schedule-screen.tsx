@@ -159,6 +159,13 @@ function Grid({
           <tr key={row.id}>
             <th scope="row" className="body-strong">
               {row.name}
+              {/* No add on a deactivated person's row: the badge says why. */}
+              {view === "employee" && row.active === false && (
+                <>
+                  {" "}
+                  <StatusBadge tone="neutral" label={t.deactivated} />
+                </>
+              )}
             </th>
             {week.days.map((day) => {
               const shifts = row.days.get(day) ?? [];

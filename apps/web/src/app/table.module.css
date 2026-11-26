@@ -84,7 +84,8 @@
 /* What opens something is drawn so at every width, as a narrow row draws it: underlined,
    and a row's name in the link's color. Plain text that opens a panel on a click is
    found only by pointing at it. */
-.cellOpen {
+.cellOpen:not(:has(> *)),
+.cellOpen > :first-child {
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -102,6 +103,31 @@
 }
 .lines td span {
   white-space: normal;
+}
+/* The week's columns: the days share the width alike, the name and the total keep room for
+   theirs on one line. In a day, the figure stands at the cell's right edge on the first
+   line, and the flags under it: figures line up down a column whatever flags they carry. */
+.lines {
+  table-layout: fixed;
+}
+.lines thead th:first-child {
+  width: 9.5rem;
+}
+.lines thead th:last-child {
+  width: 6.5rem;
+}
+.lines .cellOpen {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-end;
+}
+.lines .cellOpen > :not(:first-child) {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  /* A flag's own words read from the left, whatever the figure's column does. */
+  text-align: left;
 }
 .cellOpen:hover {
   color: var(--accent);
