@@ -126,10 +126,13 @@ office changes the moment a release merges.
 ## The list
 
 Claude's items first, in the order they are built; then what waits on the owner, on D'Sierra
-and on vendors, in the order it blocks. "Both languages, reviewed" means the
-`interface-change` skill: the screens seen at 390, 768 and 1280 in English and Spanish, then
-reviewed. "backend-change" means that skill. "Both suites whole" means the Maestro suite on
-the iPhone simulator and `trader-ws android`.
+and on vendors, in the order it blocks. "Both languages" means the `interface-change`
+skill: the screens seen at 390, 768 and 1280 in English and Spanish. "backend-change" means
+that skill. Where an item asks for both suites whole (the Maestro suite on the iPhone
+simulator and `trader-ws android`) or for a review of the rendered screens, that is the one
+run before a release's merge (`CLAUDE.md`, rule 3); a commit and a push run the tests and
+flows of what changed. An item stays here until the Markdown commit that finishes its batch,
+after it is seen working: one already built says so in the commits since `origin/main`.
 
 ### Claude's
 
@@ -440,7 +443,7 @@ the iPhone simulator and `trader-ws android`.
 Part a. The check prints `1` while the string is cut off:
 
 ```sh
-cd ~/Documents/TRADER && grep -cE '^STAGING_MIGRATOR_URL=.*&ch.?$' .env.staging
+cd ~/Documents/TRADER && grep -cE '^(STAGING_)?MIGRATOR_URL=.*&ch.?$' .env.staging
 ```
 
 The repair: copy staging's direct connection string in Neon (`Trader-staging`, the owner's
@@ -498,7 +501,7 @@ belongs to its owners>`."
 
 **Guard sitting 2, with staging's variables**
 
-- When: once, when Claude asks, before "Names: shift, people, correct". Three moments.
+- When: once, when Claude asks, before the push that carries the new names. Three moments.
 - A, at the sitting. Claude shows each diff; answer each prompt yes where it equals the diff
   shown. Then add the new names beside the old:
 

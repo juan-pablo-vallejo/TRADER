@@ -37,7 +37,7 @@ export function useClerkProvider(): Provider {
   const { signIn } = useSignIn();
   const { startSSOFlow } = useSSO();
   const { startAppleAuthenticationFlow } = useSignInWithApple();
-  // Google: the phone's browser sheet comes back to trader://sso-callback (app.json's
+  // Google: the phone's browser sheet comes back to app.jpteq.trader://sso-callback (app.json's
   // scheme; Clerk's allowed redirects list it). Apple: its own sheet, on an iPhone alone.
   // A result with no session is an account no login holds, for which Clerk starts a
   // sign-up: it is never activated here, and the instance refuses sign-ups besides.

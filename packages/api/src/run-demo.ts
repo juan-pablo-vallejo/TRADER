@@ -3,7 +3,7 @@
 // the root .env as run-seed.ts does; shell variables win over it. Flags: --db <name> (default
 // trader_demo, must match the demo pattern), --anchor YYYY-MM-DD (a Monday; default two weeks
 // back), --reset (drop an existing demo database of that name first). Point the office at it
-// with `POSTGRES_DB=trader_demo pnpm --filter @trader/web dev` and sign in as the demo admin.
+// as README.md's "Run it on a new machine" says, and sign in as the demo admin.
 import path from "node:path";
 import { parseArgs } from "node:util";
 

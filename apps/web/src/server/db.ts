@@ -10,7 +10,7 @@ import { MAX_BATCH_SIZE } from "./handler";
 const KEY = Symbol.for("trader.web.db");
 type Holder = { [KEY]?: Db };
 
-// The pool rule (docs/ARCHITECTURE.md, Schema rule): at least twice the calls one request
+// The pool rule (docs/ARCHITECTURE.md, Pool): at least twice the calls one request
 // may batch, since each holds a connection while it runs, and idle clients closed after five
 // seconds. attachDatabasePool lets Vercel keep a function alive until an idle client is
 // closed, rather than suspend it holding one; outside Vercel it does nothing.

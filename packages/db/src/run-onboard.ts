@@ -1,4 +1,4 @@
-// Entry point for `pnpm --filter @trader/db onboard` (README.md, Onboarding). The owner runs
+// Entry point for `pnpm --filter @trader/db onboard` (README.md, Make production exist). The owner runs
 // it from a terminal with DATABASE_URL set in the shell to the direct endpoint, as the
 // database's owner; shell variables win over .env. It is the one writer meant for a deployed
 // database, so it does not call assertLocalDatabase. Without --apply every statement runs

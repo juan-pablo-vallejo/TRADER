@@ -17,8 +17,9 @@ database. The screens are the MVP's, in `docs/TASKS.md`.
 - `apps/mobile`: the phone app (Expo, React Native), over a local SQLite store and its
   outbox. `.maestro/` holds the phone flows.
 - `apps/web`: the office (Next.js). It also serves the API at `/api/trpc` and the readiness
-  check at `/api/ready`. `e2e/` holds the staging smoke test and the browser suite on the
-  demo data.
+  check at `/api/ready`. `e2e/` holds the browser suites, one config each: the demo
+  data's, the staging smoke test, and those `scripts/staging.sh` runs against Clerk's
+  development instance.
 - `packages/api`: the tRPC API, one folder per domain. `src/demo/` builds the demo company.
 - `packages/db`: the schema, its migrations, the seed and the onboarding script.
 - `.github/workflows`: `ci.yml` runs `check`, then `deploy`. `audit.yml` reads the lockfile
@@ -28,7 +29,9 @@ database. The screens are the MVP's, in `docs/TASKS.md`.
 - `scripts/`: `check-ci.sh` is CI's `check` for a machine that is not CI; `staging.sh`
   uses staging's keys for one command; `release-facts.sh` lists what a release would ship;
   `trader-ws` runs the check and the Android flows on a second machine, named by
-  `TRADER_WS_HOST` (an ssh name) and never in this repository.
+  `TRADER_WS_HOST` (an ssh name, with `TRADER_WS_ADMIN` for `trader-ws audit`) and never in
+  this repository. The skills and hooks call it as `trader-ws`, a shim on the owner's PATH
+  that runs this copy.
 - `.githooks/pre-push`, and under `.claude/` the hooks, skills and agents Claude Code works
   with here.
 - `.env.example`: the environment variables and what reads them.
@@ -47,8 +50,11 @@ pnpm db:migrate
 pnpm db:seed
 pnpm check                    # typecheck, lint, format, tests
 pnpm demo                     # a demo company in its own database
-git config core.hooksPath .githooks   # the pre-push hook; it needs gitleaks
+git config core.hooksPath .githooks   # the pre-push hook
 ```
+
+The pre-push hook needs gitleaks, a signed-in `gh` (it refuses when GitHub does not answer),
+and, for a push to `main`, a green recorded by `scripts/trader-ws check` for that tree.
 
 It checks on Linux x86_64 as on a Mac: Node 24, pnpm through corepack, Docker Engine for
 the database or any Postgres 18 on loopback with the three `POSTGRES_*` names in `.env`.
@@ -65,8 +71,9 @@ POSTGRES_DB=trader_demo DATABASE_URL= TRADER_DEV_IDENTITY=enabled pnpm --filter 
 
 Then open `http://localhost:3000/dev-signin` and sign in as `office@demo.invalid`.
 
-The phone app, as a development build on a booted simulator (needs Xcode or Android Studio;
-the flows need Maestro):
+The phone app, as a development build on a booted simulator (needs Xcode with CocoaPods, or
+Android Studio; the flows need Maestro and Postgres' client, `psql`). Android's builds and
+flows run on the workstation (`trader-ws android`); this Mac's emulator serves a diagnosis:
 
 ```sh
 EXPO_PUBLIC_DEV_IDENTITY=enabled pnpm --filter @trader/mobile ios      # or: android

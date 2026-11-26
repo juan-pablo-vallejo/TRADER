@@ -1,4 +1,4 @@
-# The field app's smoke flow: the development build launches, a demo worker
+# The phone app's smoke flow: the development build launches, a demo worker
 # signs in with the development identity, and the jobsites the server answers are on screen.
 # Every selector is a testID: the visible words are in two languages. Run on the iOS
 # simulator and the Android emulator against `next dev` serving the demo database; never in
