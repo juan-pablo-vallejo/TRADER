@@ -5,7 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { clerkEnv } from "../../../server/clerk-env";
 import { identityMode } from "../../../server/identity-mode";
 import { GOOGLE_FAILED, GOOGLE_REFUSED, returnPath } from "../../../server/sign-in-paths";
-import { requestStrings } from "../../i18n/server";
+import { requestStrings, titled } from "../../i18n/server";
 import styles from "../auth.module.css";
 import { SignInFrame } from "../sign-in-frame";
 import { SignInForm } from "./sign-in-form";
@@ -23,6 +23,9 @@ export const dynamic = "force-dynamic";
 // The browser's own bar takes the navy: --brand-navy (theme.css), which a test holds
 // this to.
 export const viewport: Viewport = { themeColor: "#140064" };
+
+// Named in the browser's tab as every page is: "Team sign-in · TRADER".
+export const generateMetadata = () => titled((t) => t.teamSignIn);
 
 export default async function SignInPage({
   searchParams,
