@@ -45,6 +45,25 @@ export function LanguageProvider({
     (next: Language) => {
       document.cookie = `${LANGUAGE_COOKIE}=${next}; Path=/; Max-Age=${LANGUAGE_COOKIE_MAX_AGE}; SameSite=Lax`;
       document.documentElement.lang = next;
+      // The page is drawn again in the new language, and the focus would fall to its top:
+      // the control that changed it keeps it (by its id, or, for a language switch, which
+      // of the page's switches it was).
+      const active = document.activeElement;
+      const id = active instanceof HTMLElement ? active.id : "";
+      const switches = [...document.querySelectorAll("[data-language-switch]")];
+      const at = active === null ? -1 : switches.indexOf(active);
+      const back = () => {
+        const now = document.activeElement;
+        if (now !== null && now !== document.body) return;
+        const target =
+          id !== ""
+            ? document.getElementById(id)
+            : at >= 0
+              ? document.querySelectorAll<HTMLElement>("[data-language-switch]")[at]
+              : null;
+        target?.focus();
+      };
+      for (const wait of [50, 300, 1000]) window.setTimeout(back, wait);
       setChosen(next);
       router.refresh();
     },

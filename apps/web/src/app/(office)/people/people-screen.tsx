@@ -76,6 +76,11 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
   const [filters, setFilters] = useUrlFilters(PERSON_FILTERS);
   const opened = list.data?.find((row) => row.id === filters.person);
   const justInvited = list.data?.find((row) => row.id === invited);
+  // The form that held the focus is gone: it goes to what was done, and the next step.
+  useEffect(() => {
+    if (invited !== null)
+      requestAnimationFrame(() => document.getElementById("just-invited")?.focus());
+  }, [invited]);
   return (
     <>
       <PageHeader
@@ -114,7 +119,7 @@ export function PeopleScreen({ signInHref }: { signInHref: string }) {
             />
           )}
           {justInvited !== undefined && justInvited.invited && (
-            <div className={controls.card} role="status">
+            <div id="just-invited" tabIndex={-1} className={controls.card} role="status">
               <p className="body-strong">{t.personPanel.invitedNote(justInvited.name)}</p>
               <Invitation row={justInvited} />
             </div>

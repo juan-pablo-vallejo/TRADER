@@ -18,6 +18,7 @@ export function LanguageSwitch({ className }: { className?: string }) {
           key={l}
           type="button"
           lang={l}
+          data-language-switch
           className={className ?? controls.textAction}
           onClick={() => setLanguage(l)}
         >
