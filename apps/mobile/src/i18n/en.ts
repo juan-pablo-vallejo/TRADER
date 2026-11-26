@@ -80,6 +80,7 @@ export const en: Catalog = {
     paused: (job) => `On a break at ${job}.`,
     clockIn: "Clock in",
     clockInAt: (job) => `Clock in at ${job}`,
+    pickToClockIn: "Choose a job above to clock in.",
     clockOut: "Clock out",
     pause: "Start break",
     resume: "End break",

@@ -79,3 +79,15 @@ export function signInRows(contact: Contact): SignInRow[] {
     rows.push({ kind: "email", value: contact.email, changedBy });
   return rows;
 }
+
+// The contact phone as Me shows it once loaded: a United States number, ten digits with or
+// without its 1 or +1, as it is said aloud; anything else as it was typed.
+export function shownContactPhone(stored: string | null): string {
+  if (stored === null) return "";
+  const digits = stored.replace(/\D/g, "");
+  const national =
+    digits.length === 11 && digits.startsWith("1") ? digits.slice(1) : digits;
+  return national.length === 10 && /^[+\d\s().-]+$/.test(stored)
+    ? shownSignInPhone(`+1${national}`)
+    : stored;
+}

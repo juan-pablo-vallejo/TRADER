@@ -47,6 +47,16 @@ type Draft = {
 const QUANTITY = /^\d{1,9}(\.\d{1,3})?$/;
 
 // A typed line as the API takes it, or null while it is not one yet.
+// Which of a line's fields keeps it from being sent, first in reading order: what Save
+// marks, focuses and names under the line.
+function wrongField(line: Draft): "d" | "q" | "p" | null {
+  if (line.description.trim() === "") return "d";
+  const quantity = line.quantity.trim();
+  if (!QUANTITY.test(quantity) || Number(quantity) === 0) return "q";
+  if (cents(line.price) === null) return "p";
+  return null;
+}
+
 function parsed(line: Draft) {
   const unitPriceCents = cents(line.price);
   const quantity = line.quantity.trim();
@@ -157,8 +167,15 @@ function DraftEditor({
     setDirty(true);
     setNote(null);
   };
-  const edit = (id: string, patch: Partial<Draft>) =>
+  // The line Save refused, and its field: marked until that line is edited again.
+  const [refused, setRefused] = useState<{
+    lineId: string;
+    field: "d" | "q" | "p";
+  } | null>(null);
+  const edit = (id: string, patch: Partial<Draft>) => {
+    if (refused?.lineId === id) setRefused(null);
     change(lines.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+  };
   // The focus follows the lines: into a line just added, onto a neighbour of one removed
   // (its description, or the Add a line button when none is left).
   const focusLine = (id: string | undefined) =>
@@ -277,9 +294,15 @@ function DraftEditor({
   const submit = () => {
     setNote(null);
     const sent = [];
-    for (const [i, line] of lines.entries()) {
+    for (const line of lines) {
       const p = parsed(line);
-      if (p === null) return fail(s.badLine(i + 1));
+      if (p === null) {
+        // Said under the line, on the field that stops it, which takes the focus.
+        const field = wrongField(line) ?? "d";
+        setRefused({ lineId: line.id, field });
+        document.getElementById(`line-${line.id}-${field}`)?.focus();
+        return;
+      }
       sent.push(p);
     }
     if (taxCents === null) return fail(s.badTax);
@@ -311,6 +334,10 @@ function DraftEditor({
                 <input
                   id={`${id}-d`}
                   className={controls.input}
+                  aria-invalid={refused?.lineId === line.id && refused.field === "d"}
+                  aria-describedby={
+                    refused?.lineId === line.id ? `${id}-refused` : undefined
+                  }
                   maxLength={500}
                   value={line.description}
                   onChange={(e) => edit(line.id, { description: e.target.value })}
@@ -320,6 +347,10 @@ function DraftEditor({
                 <input
                   id={`${id}-q`}
                   className={controls.input}
+                  aria-invalid={refused?.lineId === line.id && refused.field === "q"}
+                  aria-describedby={
+                    refused?.lineId === line.id ? `${id}-refused` : undefined
+                  }
                   inputMode="decimal"
                   value={line.quantity}
                   onChange={(e) => edit(line.id, { quantity: e.target.value })}
@@ -338,11 +369,24 @@ function DraftEditor({
                 <input
                   id={`${id}-p`}
                   className={controls.input}
+                  aria-invalid={refused?.lineId === line.id && refused.field === "p"}
+                  aria-describedby={
+                    refused?.lineId === line.id ? `${id}-refused` : undefined
+                  }
                   inputMode="decimal"
                   value={line.price}
                   onChange={(e) => edit(line.id, { price: e.target.value })}
                 />
               </Field>
+              {refused?.lineId === line.id && (
+                <p
+                  id={`${id}-refused`}
+                  className={`secondary ${controls.error}`}
+                  role="alert"
+                >
+                  {s.badLine(n)}
+                </p>
+              )}
               <div className={styles.lineFoot}>
                 <span className="body">
                   {s.amount}:{" "}

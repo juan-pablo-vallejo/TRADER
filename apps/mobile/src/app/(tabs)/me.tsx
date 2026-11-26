@@ -27,7 +27,13 @@ import { KEY_FOR, KEY_MADE_AT, useBiometrics } from "../../biometrics";
 import { apiUrl, BUILD } from "../../config";
 import { announce, felt } from "../../feedback";
 import { useSpeech, useStrings } from "../../i18n";
-import { contactLoader, mePairs, signInRows, type SignInRow } from "../../me";
+import {
+  contactLoader,
+  mePairs,
+  shownContactPhone,
+  signInRows,
+  type SignInRow,
+} from "../../me";
 import { useReminders } from "../../reminders";
 import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
@@ -116,7 +122,7 @@ export default function Me() {
               setContact(state.phase);
               if (state.phase === "loaded") {
                 setName(state.contact.name);
-                setPhone(state.contact.phone ?? "");
+                setPhone(shownContactPhone(state.contact.phone));
                 setSignIn(signInRows(state.contact));
               }
             },
@@ -146,7 +152,7 @@ export default function Me() {
         phone: phone === "" ? null : phone,
       });
       setName(saved.name);
-      setPhone(saved.phone ?? "");
+      setPhone(shownContactPhone(saved.phone));
       setNote("saved");
       felt("success");
       announce(t.me.saved);

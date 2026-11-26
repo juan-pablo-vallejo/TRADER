@@ -87,6 +87,7 @@ export type Catalog = {
     paused: (job: string) => string;
     clockIn: string;
     clockInAt: (job: string) => string;
+    pickToClockIn: string;
     clockOut: string;
     pause: string;
     resume: string;

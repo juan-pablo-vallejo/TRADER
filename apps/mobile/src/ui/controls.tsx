@@ -65,9 +65,11 @@ export function Button({
     >
       {mark}
       <Text
-        numberOfLines={2}
+        // Beside a mark the words have less width: never cut short, they take a third line.
+        numberOfLines={mark === undefined ? 2 : 3}
         style={[
           styles.buttonLabel,
+          mark !== undefined && styles.labelBesideMark,
           { color: chosen ? color.onAction : primary ? color.onPrimary : color.ink },
         ]}
       >
@@ -130,5 +132,8 @@ const styles = StyleSheet.create({
   disabled: { backgroundColor: color.muted },
   buttonLabel: { ...(type.bodyStrong as TextStyle), textAlign: "center" },
   withMark: { flexDirection: "row", gap: space[3] },
+  // Beside a mark the words give way, wrapping, so the mark keeps its place at the
+  // largest text instead of being pushed against the edge.
+  labelBesideMark: { flexShrink: 1 },
   pair: { flexDirection: "row", gap: space[2] },
 });

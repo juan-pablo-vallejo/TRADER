@@ -91,6 +91,7 @@ export const es: Catalog = {
     paused: (job) => `En descanso en ${job}.`,
     clockIn: "Marcar entrada",
     clockInAt: (job) => `Marcar entrada en ${job}`,
+    pickToClockIn: "Elige una obra arriba para marcar entrada.",
     clockOut: "Marcar salida",
     pause: "Empezar descanso",
     resume: "Terminar descanso",

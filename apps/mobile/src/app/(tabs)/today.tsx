@@ -383,6 +383,12 @@ export default function Today() {
             }}
           />
         )}
+        {/* A disabled button says why: no job is chosen yet. */}
+        {clock.status === "off" && !noShift && target === null && jobs.length > 0 && (
+          <Text testID="clock-in-why" style={[text.secondary, styles.why]}>
+            {t.today.pickToClockIn}
+          </Text>
+        )}
         {noShift && officeChat !== null && (
           <Button
             testID="whatsapp-office"
@@ -581,5 +587,6 @@ const styles = StyleSheet.create({
   },
   chosen: { borderColor: color.action, backgroundColor: color.actionTint },
   foot: { gap: space[2] },
+  why: { textAlign: "center" },
   pair: { flexDirection: "row", gap: space[2] },
 });
