@@ -70,7 +70,7 @@ export const es: Catalog = {
     off: "Desactivado",
     meHelp: "Solo en este teléfono. Cerrar sesión lo conserva.",
   },
-  tabs: { today: "Hoy", week: "Semana", crew: "Cuadrilla", me: "Yo" },
+  tabs: { today: "Hoy", week: "Semana", crew: "Equipo", me: "Yo" },
   today: {
     title: "Hoy",
     jobs: "Tus obras",
@@ -187,7 +187,7 @@ export const es: Catalog = {
     updated: (age) => `Actualizado ${age}.`,
     never: "Todavía no se ha cargado en este teléfono.",
     stale: "Puede estar desactualizado. Conéctate para revisarlo.",
-    refresh: "Revisar ahora",
+    refresh: "Actualizar ahora",
     empty: "No tienes turnos en las próximas dos semanas.",
     today: "Hoy",
     hours: "Tus horas",
@@ -220,11 +220,11 @@ export const es: Catalog = {
     endBody: (time) => `Terminó a ${las(time)} ${time} y sigues trabajando.`,
   },
   crew: {
-    title: "Cuadrilla",
+    title: "Equipo",
     offline:
-      "La cuadrilla necesita conexión. No se muestra nada hasta que este teléfono llegue a la oficina.",
+      "El equipo necesita conexión. No se muestra nada hasta que este teléfono llegue a la oficina.",
     empty: "Nadie tiene turno ni ha marcado entrada hoy.",
-    refresh: "Revisar ahora",
+    refresh: "Actualizar ahora",
     byPerson: "Por persona",
     byJob: "Por obra",
     status: {

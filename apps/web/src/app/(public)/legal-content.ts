@@ -20,7 +20,7 @@ import type { Language } from "../i18n/language";
 
 export const APPROVED = false;
 // The day the words below last changed.
-export const LAST_CHANGED = "2026-11-23";
+export const LAST_CHANGED = "2026-11-26";
 
 // The legal name of whoever operates TRADER, and where a person writes about privacy.
 export const OPERATOR: string | null = "JPTEQ LLC";
@@ -97,7 +97,7 @@ export const PRIVACY: Record<Language, Document> = {
   es: {
     title: "Política de privacidad",
     intro:
-      "TRADER es una herramienta de trabajo: la cuadrilla de un contratista de pintura ve su semana y marca entrada y salida en un teléfono, y la oficina del contratista organiza a la cuadrilla, lee las horas y factura a sus clientes. Esta página dice qué anota TRADER sobre ti, para qué, y quién más lo maneja. No anota nada más.",
+      "TRADER es una herramienta de trabajo: el equipo de un contratista de pintura ve su semana y marca entrada y salida en un teléfono, y la oficina del contratista organiza al equipo, lee las horas y factura a sus clientes. Esta página dice qué anota TRADER sobre ti, para qué, y quién más lo maneja. No anota nada más.",
     sections: [
       {
         heading: "De quién son estos registros",
@@ -218,13 +218,13 @@ export const TERMS: Record<Language, Document> = {
       {
         heading: "Quién puede usarlo",
         paragraphs: [
-          "TRADER es para la oficina y la cuadrilla de un contratista. Lo usas porque tu empresa te invitó, con el número de celular o el correo que ella dio. Inicia sesión solo como tú, y no dejes que otra persona marque entrada o salida por ti.",
+          "TRADER es para la oficina y el equipo de un contratista. Lo usas porque tu empresa te invitó, con el número de celular o el correo que ella dio. Inicia sesión solo como tú, y no dejes que otra persona marque entrada o salida por ti.",
         ],
       },
       {
         heading: "Para qué es",
         paragraphs: [
-          "La cuadrilla ve su horario y registra sus horas. La oficina planea turnos, lee y corrige horas, y escribe y envía facturas. Úsalo para ese trabajo y para nada más.",
+          "El equipo ve su horario y registra sus horas. La oficina planea turnos, lee y corrige horas, y escribe y envía facturas. Úsalo para ese trabajo y para nada más.",
         ],
       },
       {
@@ -242,7 +242,7 @@ export const TERMS: Record<Language, Document> = {
       {
         heading: "Los registros son de la empresa",
         paragraphs: [
-          "Todo lo que una empresa y su cuadrilla anotan es de esa empresa. La política de privacidad dice qué se anota y quién lo maneja.",
+          "Todo lo que una empresa y su equipo anotan es de esa empresa. La política de privacidad dice qué se anota y quién lo maneja.",
         ],
       },
       {

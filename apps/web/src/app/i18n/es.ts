@@ -736,13 +736,13 @@ export const es: Catalog = {
     newCustomerName: "Nombre del cliente nuevo",
     hoursWeek: "Horas esta semana",
     hoursToDate: "Horas hasta hoy",
-    notes: "Notas para la cuadrilla",
-    notesHint: "La cuadrilla las ve en su teléfono, en la tarjeta de la obra.",
+    notes: "Notas para el equipo",
+    notesHint: "El equipo las ve en su teléfono, en la tarjeta de la obra.",
     location: "Ubicación (opcional)",
     locationHint:
       "Pega las coordenadas de un mapa, como 41.8240, -71.4128, o una dirección de mapas que las muestre.",
     locationFromCrew:
-      "Un administrador también puede fijarla desde la pestaña Cuadrilla del teléfono, estando en la obra.",
+      "Un administrador también puede fijarla desde la pestaña Equipo del teléfono, estando en la obra.",
     locationProblem: {
       empty: "Pega las coordenadas, o deja la ubicación vacía.",
       short_link:
@@ -768,7 +768,7 @@ export const es: Catalog = {
     createInvoice: "Crear factura",
     openDraft: "Abrir su borrador",
     waitingForHours:
-      "Las horas aparecen aquí cuando la cuadrilla marca entrada en esta obra.",
+      "Las horas aparecen aquí cuando el equipo marca entrada en esta obra.",
     waitingForPayment: "Un pago se anota en la factura misma.",
     people: "Personas",
     hoursLine: (week, toDate) => `${week} h esta semana, ${toDate} h hasta hoy.`,
