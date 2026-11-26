@@ -127,11 +127,19 @@ export function Toast({
     return () => document.removeEventListener("keydown", keys);
   }, []);
 
-  // Focus that fell to the page goes to the action, so the keyboard reaches it in time.
+  // Focus that fell to the page goes to the action, so the keyboard reaches it in time:
+  // now, and once more after the frame, since the toast can appear while a panel that is
+  // closing still holds the focus (Remove, in the shift's panel). This frame's check runs
+  // before the panel's own return of the focus, which then leaves it where it is.
   useEffect(() => {
     if (where === null) return;
-    const active = document.activeElement;
-    if (active === null || active === document.body) button.current?.focus();
+    const free = () => {
+      const active = document.activeElement;
+      if (active === null || active === document.body) button.current?.focus();
+    };
+    free();
+    const frame = requestAnimationFrame(free);
+    return () => cancelAnimationFrame(frame);
   }, [where]);
 
   // The action gone while it held the focus: the heading takes it, until the screen puts

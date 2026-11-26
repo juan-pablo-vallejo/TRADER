@@ -64,10 +64,16 @@ export function SidePanel({
         else if (was instanceof HTMLElement && was.isConnected && was !== document.body)
           was.focus();
       };
-      back();
-      // Closing also rewrites the address, and the router may move the focus as it
-      // navigates: once more after that frame, so the focus ends where it belongs.
-      requestAnimationFrame(back);
+      // Two frames after the close, and only if nothing holds the focus then: the router may
+      // drop it as the address is rewritten, and what the screen focused meanwhile keeps it.
+      // A change the panel made says so in a toast whose Undo takes the focus a frame after
+      // it appears (toast.tsx); the second frame lets it go first.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          const now = document.activeElement;
+          if (now === null || now === document.body) back();
+        }),
+      );
     };
     // Once, as the panel opens: what it returns to is fixed then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
