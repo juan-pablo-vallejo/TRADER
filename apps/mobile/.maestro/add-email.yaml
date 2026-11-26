@@ -19,13 +19,8 @@ appId: app.jpteq.trader
 - tapOn:
     id: "add-email-address"
 - inputText: "number.added@demo.invalid"
-- hideKeyboard
-- scrollUntilVisible:
-    element:
-      id: "add-email-send"
-    centerElement: true
-- tapOn:
-    id: "add-email-send"
+# The keyboard's Send: what a person does with it up, and what Send me a code does.
+- pressKey: Enter
 - extendedWaitUntil:
     visible:
       id: "add-email-code"
@@ -33,7 +28,7 @@ appId: app.jpteq.trader
 - tapOn:
     id: "add-email-code"
 - inputText: "123456"
-- hideKeyboard
+# A drag of the page puts the number pad away (Me scrolls with keyboardDismissMode on-drag).
 - scrollUntilVisible:
     element:
       id: "add-email-add"
