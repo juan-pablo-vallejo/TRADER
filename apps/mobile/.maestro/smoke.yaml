@@ -15,11 +15,6 @@ appId: app.jpteq.trader
     id: "tab-me"
 - assertVisible:
     id: "me-name"
-# The address the office invited this person with: shown, and read-only.
-- scrollUntilVisible:
-    element:
-      id: "me-sign-in-email"
-    centerElement: true
 # Me: the person's own contact phone, saved through the server (suite.sh reads it back).
 - tapOn:
     id: "me-phone"
@@ -36,6 +31,11 @@ appId: app.jpteq.trader
       id: "me-saved"
     timeout: 15000
 - takeScreenshot: me
+# The address the office invited this person with: shown, and read-only.
+- scrollUntilVisible:
+    element:
+      id: "me-sign-in-email"
+    centerElement: true
 # Back up to the language, above where Save was scrolled to.
 - scrollUntilVisible:
     element:
