@@ -89,7 +89,6 @@ async function lockOwn(tx: Tx, user: AppUser) {
   const [row] = await tx
     .select({
       email: users.email,
-      signInPhone: users.signInPhone,
       subject: users.identitySubject,
       claim: users.emailClaim,
       hash: users.emailClaimCodeHash,
