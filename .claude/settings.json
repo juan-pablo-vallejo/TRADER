@@ -7,7 +7,6 @@
       "Bash(gh auth*)",
       "Bash(gh secret*)",
       "Bash(gh variable*)",
-      "Bash(gh workflow run*)",
       "Bash(gh repo edit*)",
       "Bash(gh repo delete*)",
       "Bash(gh repo deploy-key*)",
