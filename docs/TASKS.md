@@ -228,17 +228,6 @@ belongs to its owners>`."
 - Tell Claude: "Clerk's development redirects hold app.jpteq.trader://sso-callback. Sign in
   with Apple is on for the App ID."
 
-**Reading the Spanish in the final captures**
-
-- When: now: Claude has named the folder of captures. The
-  builds wait on it.
-- Do: read every Spanish capture once, office and phone. Expect tú everywhere, "Iniciar
-  sesión", "Trabajando", "recordatorio" on the phone and "avisos" in the office, "Activado /
-  Desactivado" and "Activa / Desactivada", "Yo", "2:30 p. m.", "corregido".
-- Tell Claude: "Spanish read. Nothing to fix." Or: "Spanish read. Fix these: `<capture, the
-words, the words wanted>`." Claude lands the fixes, runs the check and both phone suites
-  again on that tree, then asks for the builds.
-
 **The preview builds and the walk**
 
 - When: when Claude asks for the builds. Production waits on it.
