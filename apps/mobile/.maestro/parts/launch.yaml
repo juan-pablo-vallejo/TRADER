@@ -18,9 +18,11 @@ appId: app.jpteq.trader
       - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
 - runFlow:
     file: location.yaml
+# The sign-in screen or the tabs: the screen itself, since at the largest text its field is
+# below the fold until a flow scrolls to it.
 - extendedWaitUntil:
     visible:
-      id: "sign-in-address|tab-me"
+      id: "sign-in|sign-in-address|tab-me"
     timeout: 120000
 # A session that outlived the reset is signed out first: every run starts from sign-in.
 - runFlow:

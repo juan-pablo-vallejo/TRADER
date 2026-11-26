@@ -19,6 +19,11 @@ appId: app.jpteq.trader
 - tapOn:
     id: "me-phone"
 - inputText: "4015550177"
+# Under a tall keyboard Save is below the fold: scrolled to, as a person would.
+- scrollUntilVisible:
+    element:
+      id: "me-save"
+    centerElement: true
 - tapOn:
     id: "me-save"
 - extendedWaitUntil:
