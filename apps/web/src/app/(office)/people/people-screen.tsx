@@ -443,7 +443,11 @@ function Invitation({ row }: { row: Row }) {
   // quietly; "I sent it" is what makes the invitation sent, so its failure is said.
   const noted = useMutation(
     trpc.people.noteInvitation.mutationOptions({
-      onSuccess: () => refresh(),
+      onSuccess: (answer, input) => {
+        if (input.act === "sent" && answer.result === "rejected")
+          setNote({ saved: false, text: t.personPanel.refused[answer.code] });
+        return refresh();
+      },
       onError: (_error, input) => {
         if (input.act === "sent") setNote({ saved: false, text: t.requestFailed });
       },

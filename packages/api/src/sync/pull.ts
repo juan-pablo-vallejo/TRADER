@@ -2,6 +2,7 @@
 // admits, never anyone else's labor. One protected transaction; under READ COMMITTED each
 // statement reads its own committed state, so the snapshot may combine moments, and the next
 // pull converges.
+import { PULL_WINDOW_DAYS } from "../contract/limits";
 import { companies, jobs, users, entries } from "@trader/db/schema";
 import { asc, eq, inArray, ne } from "drizzle-orm";
 
@@ -17,7 +18,6 @@ import { addDays, mondayOf } from "../contract/calendar";
 
 // Today and the 13 days before it in the company's zone, plus any
 // open session whatever its age.
-const WINDOW_DAYS = 14;
 
 export { pullInput, pullOutput, type PullOutput } from "../contract/pull";
 
@@ -44,7 +44,7 @@ export async function pullSnapshot(tx: Tx, user: AppUser): Promise<PullOutput> {
     .where(eq(users.id, user.id));
   if (self === undefined) throw new Error("the caller's own row is not visible");
   const today = workDate(serverNow, company.timezone);
-  const from = addDays(today, 1 - WINDOW_DAYS);
+  const from = addDays(today, 1 - PULL_WINDOW_DAYS);
 
   // Every job a start may name: not archived. Under the schedule the phone offers the
   // shift's own job; without it, the person picks from these.

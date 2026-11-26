@@ -39,6 +39,7 @@ import { headersFor, useSession } from "../../session";
 import {
   byJob,
   coveringShift,
+  answered,
   heldWrite,
   type HeldWrite,
   nextSend,
@@ -385,9 +386,7 @@ export default function CrewTab() {
       });
       const refusal = refusalOf(answer.result === "planned" ? answer.days[0] : answer);
       if (refusal !== null) {
-        // The server answered: a try again after its refusal is a new write, at its own
-        // minute (a lost answer, below, keeps the held one).
-        held.current = heldWrite(mint(Date.now()));
+        held.current = answered(send, true, () => mint(Date.now()));
         return refuse(refusal);
       }
       await written(t.crew.form.added);
@@ -423,9 +422,7 @@ export default function CrewTab() {
       });
       const refusal = refusalOf(answer);
       if (refusal !== null) {
-        // The server answered: a try again after its refusal is a new write, at its own
-        // minute (a lost answer, below, keeps the held one).
-        held.current = heldWrite(mint(Date.now()));
+        held.current = answered(send, true, () => mint(Date.now()));
         return refuse(refusal);
       }
       await written(t.crew.form.moved);

@@ -24,6 +24,9 @@ const SKIP = new Set([
   "ios",
   ".expo",
   "test-results",
+  ".vercel",
+  "coverage",
+  ".turbo",
   "migrations",
 ]);
 function files(dir: string, out: { path: string; text: string }[] = []) {

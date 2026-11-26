@@ -7,6 +7,7 @@ import {
   byJob,
   coveringShift,
   heldWrite,
+  answered,
   nextSend,
   offeredEnd,
   opensOnCrew,
@@ -313,5 +314,21 @@ describe("a write from Crew's sheets, tried again", () => {
     expect(changed.at).toBe("09:05");
     // The sheet opened again for a fresh write holds a fresh id.
     expect(heldWrite(mint()).id).not.toBe(first.id);
+  });
+});
+
+describe("a write the server refused", () => {
+  it("is tried again as a new write, at its own minute; a lost answer keeps the held one", () => {
+    let n = 0;
+    const mint = () => `id-${++n}`;
+    const form = ["person", "job", "16:00"];
+    const first = nextSend(heldWrite(mint()), form, "09:00", mint);
+    // Answered with a refusal: the next try is a new write, read at its own minute.
+    const fresh = nextSend(answered(first, true, mint), form, "09:05", mint);
+    expect(fresh.id).not.toBe(first.id);
+    expect(fresh.at).toBe("09:05");
+    // No answer came: the same write, its id and its first minute.
+    const again = nextSend(answered(first, false, mint), form, "09:05", mint);
+    expect(again).toEqual(first);
   });
 });

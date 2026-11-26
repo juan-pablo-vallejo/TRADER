@@ -28,3 +28,7 @@ export const MAX_JOBSITE_RADIUS_M = 100_000;
 
 // The longest range of days one read of hours covers: any month.
 export const MAX_RANGE_DAYS = 31;
+
+// The days a pull carries entries and sessions for: today and the thirteen before. What is
+// older is no longer on the phone's record, its own refusals included.
+export const PULL_WINDOW_DAYS = 14;

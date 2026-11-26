@@ -2,8 +2,10 @@
 // Pure, like clock.ts beside it: the screen draws what these answer and decides nothing.
 // The server alone decides what counts; these say what to expect and what is waiting.
 import {
+  addDays,
   CLOCK_SKEW_TOLERANCE_MS,
   clockAfter,
+  PULL_WINDOW_DAYS,
   type LaborPayload,
   type PullOutput,
   wallClock,
@@ -228,8 +230,11 @@ export type Waiting = {
 // calendar, made after it, was accepted, a later one of this phone's or one the pull shows
 // (the office's correction among them). "Made after" is read from the ids, which are
 // time-ordered by their making: when the server took an entry says nothing of that, since a
-// day captured offline arrives at once. Until then the chip
-// stays on Needs attention; after, the refusal is still listed in the sheet.
+// day captured offline arrives at once. A refusal for a day the pull no longer carries is
+// past anything the phone can see or do: taken as answered. Until then the chip stays on
+// Needs attention; after, the refusal is still listed in the sheet. The ids of the phone and
+// of the office's browser come from two clocks: a phone running ahead can leave a day on
+// Needs attention after the office corrected it, until the day leaves the window.
 function corrected(
   refusal: OutboxRecord,
   data: PullOutput | null,
@@ -237,6 +242,10 @@ function corrected(
 ): boolean {
   const zone = data?.company.timezone ?? "UTC";
   const day = wallClock(refusal.payload.clientTimestamp, zone).day;
+  if (data !== null) {
+    const today = wallClock(data.serverNow, zone).day;
+    if (day < addDays(today, 1 - PULL_WINDOW_DAYS)) return true;
+  }
   const sameDay = (at: Date) => wallClock(at, zone).day === day;
   return (
     records.some(

@@ -118,6 +118,15 @@ export type Send = { id: string; sent: string; at: string };
 
 export const heldWrite = (id: string): HeldWrite => ({ id, sent: null, at: null });
 
+// What is held after a send: once the server refused it, a try again is a new write, at its
+// own minute (the refusal may have been for that minute, as a move after the company's
+// midnight is); with no answer, the same write, which the server answers as done.
+export const answered = (
+  sent: HeldWrite,
+  refused: boolean,
+  mint: () => string,
+): HeldWrite => (refused ? heldWrite(mint()) : sent);
+
 export function nextSend(
   held: HeldWrite,
   form: readonly string[],

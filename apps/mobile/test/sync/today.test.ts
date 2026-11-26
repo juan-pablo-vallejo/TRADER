@@ -5,7 +5,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type PullOutput, whatsAppLink } from "@trader/api/contract";
+import { PULL_WINDOW_DAYS, type PullOutput, whatsAppLink } from "@trader/api/contract";
 import { describe, expect, it } from "vitest";
 
 import type { ClockState } from "../../src/sync/clock";
@@ -265,6 +265,16 @@ describe("the chip", () => {
     expect(
       waiting({ ...base, records: [record(1, "started", T0, "settled")] }).state,
     ).toBe("sent");
+  });
+
+  it("takes a refusal as answered once its day has left the pull's window", () => {
+    // A refusal the office corrected long ago: neither record is on the phone now. Two
+    // weeks on, the chip is not back on Needs attention with nothing left to do.
+    const old = record(5, "started", T0 - PULL_WINDOW_DAYS * 24 * 60 * MIN, "rejected");
+    expect(waiting({ ...base, records: [old] })).toMatchObject({
+      state: "sent",
+      refused: 1,
+    });
   });
 
   it("stays Saved on phone with no connection, never Sending and never an alarm", () => {
