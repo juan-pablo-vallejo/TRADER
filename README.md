@@ -222,14 +222,14 @@ git fetch -q origin && test "$(git rev-parse HEAD)" = "$(git rev-parse origin/pr
    - `TRADER_HOME_HOST=dsierrapainting.jpteq.app`, so `/` there is D'Sierra's homepage
      and `/` on `app.jpteq.app` opens the office
    - `RESEND_API_KEY` and `MAIL_FROM`, both or neither. `MAIL_FROM` is
-     `TRADER <an address at jpteq.app>`. Leave `INVOICE_EMAIL_ALLOWLIST` blank: in
+     `TRADER <an address at jpteq.app>`. Leave `MAIL_ALLOWLIST` blank: in
      production that means any customer may be emailed, except by the Demo company, which
      then emails nobody.
    - `DEMO_SIGN_IN_CODE` and `DEMO_COMPANY_ID`, both or neither, after step 7: a code of
      your own (`openssl rand -base64 24`) and the Demo company's id as onboarding printed
      it. With them a Demo person signs in on the phone with their number and that code,
      and no text message. Never D'Sierra's id. From then the Demo company can invite nobody.
-   - `NEXT_PUBLIC_GET_IOS_URL`, `NEXT_PUBLIC_GET_ANDROID_URL`, `TRADER_MIN_BUILD_IOS` and
+   - `TRADER_GET_IOS_URL`, `TRADER_GET_ANDROID_URL`, `TRADER_MIN_BUILD_IOS` and
      `TRADER_MIN_BUILD_ANDROID` come with the release.
 
    The server refuses to start, naming the variable, when one of the first five lines is
@@ -237,8 +237,8 @@ git fetch -q origin && test "$(git rev-parse HEAD)" = "$(git rev-parse origin/pr
    200 only when the deployment is logged in as `trader_app` and every company table has
    row-level security forced; pointed at the owner's connection string it answers 503.
 
-5. **GitHub.** The `production` environment's secrets: `PRODUCTION_MIGRATOR_URL` (the direct
-   endpoint, as the owner), `PRODUCTION_DEPLOY_HOOK`, `PRODUCTION_URL`
+5. **GitHub.** The `production` environment's secrets: `MIGRATOR_URL` (the direct
+   endpoint, as the owner), `DEPLOY_HOOK`, `APP_URL`
    (`https://app.jpteq.app`). And the phone's five, which the release workflow
    (`.github/workflows/release-phone.yml`) reads and nothing else does. No store credential
    is kept at Expo, so no token of staging's can submit.
@@ -321,7 +321,7 @@ git fetch -q origin && test "$(git rev-parse HEAD)" = "$(git rev-parse origin/pr
    (step 6 of "Make production exist"), add the build to the external group, submit. After
    Apple approves: the group's Public Link, capped at the crew's size. Play: Internal
    testing shows the release; copy the testers' link.
-6. Vercel, `trader-production`: `NEXT_PUBLIC_GET_IOS_URL` and `NEXT_PUBLIC_GET_ANDROID_URL`
+6. Vercel, `trader-production`: `TRADER_GET_IOS_URL` and `TRADER_GET_ANDROID_URL`
    to those two links, which `https://dsierrapainting.jpteq.app/get` hands to the phone that
    asks (blank, that page says to ask the office); `TRADER_MIN_BUILD_IOS` and
    `TRADER_MIN_BUILD_ANDROID` to the two build numbers. Redeploy. Every older build, the

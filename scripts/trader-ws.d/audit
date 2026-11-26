@@ -1,12 +1,13 @@
 # Run on the workstation by `trader-ws audit` (bash -s <the account's one .env>), once as
 # the job account (trader/.env) and once as the admin (trader-pg/.env). Names only, never
 # contents. Allowed: ~/.ssh/authorized_keys, ~/.ssh/known_hosts, ~/.android/debug.keystore,
-# ~/.android/adbkey{,.pub}, and that one .env (POSTGRES_* and DATABASE_DRIVER only); the
+# ~/.android/adbkey{,.pub}, and that one .env (POSTGRES_* only); the
 # debug keystore `expo prebuild` writes into the disposable android/ project; ~/.expo while
 # its state.json holds no sign-in; and the desktop's own login keyring (GNOME's, made by
 # the installer for the account that logs in at the screen: it is not handed to any job).
 # Also allowed: a file named .env.example anywhere, while it holds none of the secret
-# patterns below (every one found is scanned).
+# patterns below (every one found is scanned). The synced tree's copy of this file holds
+# the patterns as text, so the tree's scan leaves it out.
 # Key files are matched as id_*, except id_*.pak: Chromium ships locale files with that name.
 envfile=$HOME/${1:-trader/.env}; envdir=$(dirname "$envfile")
 pat='sk_(live|test)_[A-Za-z0-9]{10}|ghp_[A-Za-z0-9]{20}|github_pat_|sntrys_|re_[A-Za-z0-9]{20}|^-----BEGIN [A-Z ]*PRIVATE KEY-----'
@@ -27,8 +28,8 @@ find ~ -xdev \( -name node_modules -o -name .gradle -o -path ~/Android \) -prune
   -exec grep -IlE "$pat" {} + 2>/dev/null | sed 's/^/FOUND /; s/$/ (a secret pattern)/' | grep . && bad=1
 grep -rIlE "$pat" "$envdir" \
   --exclude-dir=node_modules --exclude-dir=.gradle --exclude-dir=build --exclude-dir=.next --exclude-dir=android \
-  --exclude-dir=.expo --exclude-dir=dist --exclude='*.tsbuildinfo' 2>/dev/null | sed 's/^/FOUND pattern in /' | grep . && bad=1
-grep -vE '^(POSTGRES_(USER|PASSWORD|DB)|DATABASE_DRIVER)=|^[A-Z_]+=$|^#|^$' "$envfile" 2>/dev/null | cut -d= -f1 | sed 's/^/FOUND .env sets /' | grep . && bad=1
+  --exclude-dir=.expo --exclude-dir=dist --exclude='*.tsbuildinfo' --exclude=audit 2>/dev/null | sed 's/^/FOUND pattern in /' | grep . && bad=1
+grep -vE '^POSTGRES_(USER|PASSWORD|DB)=|^[A-Z_]+=$|^#|^$' "$envfile" 2>/dev/null | cut -d= -f1 | sed 's/^/FOUND .env sets /' | grep . && bad=1
 ssh-add -l >/dev/null 2>&1 && { echo "FOUND a reachable ssh agent"; bad=1; }
 echo "-- allowed and present:"
 for p in ~/.ssh/authorized_keys ~/.ssh/known_hosts ~/.android/debug.keystore ~/.android/adbkey ~/.android/adbkey.pub "$envfile" ~/trader/apps/mobile/android/app/debug.keystore ~/.expo/state.json ~/.local/share/keyrings/user.keystore ~/.local/share/keyrings/login.keyring; do [ -e "$p" ] && echo "   $p"; done

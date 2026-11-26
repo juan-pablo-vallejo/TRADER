@@ -147,7 +147,7 @@ describe("the mail environment", () => {
   it("reads the allow-list as trimmed lower-case addresses", () => {
     expect(allowList({})).toEqual([]);
     expect(
-      allowList({ INVOICE_EMAIL_ALLOWLIST: " Owner@Test.Invalid , ,b@test.invalid" }),
+      allowList({ MAIL_ALLOWLIST: " Owner@Test.Invalid , ,b@test.invalid" }),
     ).toEqual(["owner@test.invalid", "b@test.invalid"]);
   });
 
@@ -185,7 +185,7 @@ describe("the mail environment", () => {
       const listed = {
         ...SERVICE,
         ...where,
-        INVOICE_EMAIL_ALLOWLIST: "Billing@Customer.test",
+        MAIL_ALLOWLIST: "Billing@Customer.test",
       };
       expect((await mailerFor(listed, send).send(MAIL)).ok).toBe(true);
       expect(calls).toHaveLength(1);
@@ -197,10 +197,9 @@ describe("the mail environment", () => {
     const production = { ...SERVICE, TRADER_ENVIRONMENT: "production" };
     expect((await mailerFor(production, send).send(MAIL)).ok).toBe(true);
     expect(
-      await mailerFor(
-        { ...production, INVOICE_EMAIL_ALLOWLIST: "other@test.invalid" },
-        send,
-      ).send(MAIL),
+      await mailerFor({ ...production, MAIL_ALLOWLIST: "other@test.invalid" }, send).send(
+        MAIL,
+      ),
     ).toEqual({ ok: false, failure: "recipient_not_allowed" });
     expect(calls).toHaveLength(1);
   });

@@ -59,7 +59,7 @@ jobs:
         working-directory: apps/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          STAGING_URL: ${{ secrets.STAGING_URL }}
+          APP_URL: ${{ secrets.APP_URL }}
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail

@@ -4,7 +4,7 @@
 // in by the single-use ticket `scripts/staging.sh` made, then one call to `people.invite`,
 // the same procedure the People screen calls. The number comes from the command line of
 // the person running it and is never printed, logged or stored here: the answer's one
-// word is all this says. Staging only: the config holds the address to STAGING_URL.
+// word is all this says. Staging only: the config holds the address to APP_URL.
 import { expect, test } from "@playwright/test";
 
 import { uuidv7 } from "../src/app/uuidv7";

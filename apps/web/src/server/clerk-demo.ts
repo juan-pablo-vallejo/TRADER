@@ -140,7 +140,7 @@ export function webDemo(): DemoDoor | null {
 
 // The company that reaches nobody outside (packages/api, core/demo-door.ts): the door's
 // company, in TRADER's own production and nowhere else. There its invoices are emailed
-// only to INVOICE_EMAIL_ALLOWLIST, blank meaning nobody (for every other company in
+// only to MAIL_ALLOWLIST, blank meaning nobody (for every other company in
 // production blank means anyone), and it invites nobody. Staging's fixture company, the
 // door's company there, is not closed: staging mails only its allow-list as it is, and its
 // people are invited freely. Pure, and read per request by the route.

@@ -12,9 +12,9 @@ who decided and no id from outside the code. Change a comment only when your own
 Never touch: packages/db/migrations/**, packages/db/src/schema/**, any test file;
 packages/db/src/guard.ts; packages/api/src/core/{trpc,resolve-user,locks,demo-door}.ts;
 packages/api/src/sync/{labor,push,scope,schedule}.ts;
-packages/api/src/labor/{fold,validate,repair,timeline}.ts;
-packages/api/src/invoices/{issue,payments}.ts; packages/api/src/roster/{lock,address}.ts;
-packages/api/src/contract/**; packages/api/src/assignments/eligibility.ts;
+packages/api/src/labor/{fold,validate,correct,timeline}.ts;
+packages/api/src/invoices/{issue,payments}.ts; packages/api/src/people/{lock,address}.ts;
+packages/api/src/contract/**; packages/api/src/shifts/eligibility.ts;
 apps/web/src/server/{sentry-event,edge}.ts and apps/web/src/server/clerk-*.ts;
 any procedure's input or output schema; any refusal literal.
 Bash: read-only commands and `pnpm --filter <pkg> exec vitest run <files>` only. Never git

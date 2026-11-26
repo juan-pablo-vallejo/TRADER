@@ -1,9 +1,9 @@
-// The mail service this server hands to invoice.send (packages/api, core/mailer.ts): Resend
-// over its HTTP API, read per call from the environment (invoice delivery
-// only). No mail package: one POST.
+// The mail service this server hands to invoice.send and people.sendInvitation (packages/api,
+// core/mailer.ts): Resend over its HTTP API, read per call from the environment. No mail
+// package: one POST.
 //
 // Three variables (.env.example): `RESEND_API_KEY` and `MAIL_FROM` together make a mail
-// service; blank, every send fails closed as `mail_not_configured`. `INVOICE_EMAIL_ALLOWLIST`
+// service; blank, every send fails closed as `mail_not_configured`. `MAIL_ALLOWLIST`
 // names who may be sent to. Anywhere but production the list is the whole of it — a
 // deployment with no list sends to nobody — so a staging or development server can never
 // mail a customer by accident; in production a blank list means no restriction.
@@ -36,7 +36,7 @@ export function mailEnvFaults(env: Env): string[] {
 }
 
 export const allowList = (env: Env): string[] =>
-  (env.INVOICE_EMAIL_ALLOWLIST ?? "")
+  (env.MAIL_ALLOWLIST ?? "")
     .split(",")
     .map((a) => a.trim().toLowerCase())
     .filter((a) => a !== "");

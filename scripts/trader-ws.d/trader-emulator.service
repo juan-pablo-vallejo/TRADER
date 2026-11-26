@@ -2,7 +2,7 @@
 # The Android emulator, headless, started when a phone job asks for it and stopped when the
 # job ends. Software GPU: the flows need a screen that draws the same every run, not a fast
 # one. A full boot every time (-no-snapshot): the device's data stays, its RAM image does not.
-# Flags checked against `emulator -help` of emulator 37.3.10 on 2026-11-22.
+# The flags are emulator 37.3.10's (`emulator -help`, read 2026-11-22).
 [Unit]
 Description=TRADER Android emulator (headless)
 

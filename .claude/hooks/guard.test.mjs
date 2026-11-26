@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { guards, refusal, touches } from "./guard.mjs";
+import { guards, refusal, scriptChange, touches } from "./guard.mjs";
 
 const base = (sel) => (sel === "41" || sel === undefined ? "production" : "main");
 const refused = [
@@ -91,14 +91,21 @@ const asked = [
   "/Users/x/TRADER/tsconfig.base.json",
   "/Users/x/TRADER/apps/web/tsconfig.json",
   "/Users/x/TRADER/packages/api/vitest.config.ts",
+  "/Users/x/TRADER/.gitleaksignore",
+  "/Users/x/TRADER/.prettierignore",
   "package.json",
   "./package.json",
+  // This Mac's disk is not case-sensitive: these are the same files.
+  "/Users/x/TRADER/Package.JSON",
+  "/Users/x/TRADER/.Claude/Hooks/guard.mjs",
+  "Scripts/Trader-WS",
 ];
 const denied = [
   "/Users/x/TRADER/.claude/settings.json",
   "/Users/x/TRADER/.claude/settings.local.json",
   "/Users/x/TRADER/.git/trader/green",
   ".git/trader/green",
+  "/Users/x/TRADER/.Claude/Settings.json",
 ];
 const free = [
   "/Users/x/TRADER/apps/web/package.json",
@@ -116,6 +123,32 @@ for (const p of free) assert.equal(guards(p, root), null, `should pass: ${p}`);
 assert.equal(guards("/Users/x/TRADER/package.json", root)?.decision, "ask");
 assert.equal(guards("/Users/x/other/package.json", root), null);
 
+// A package's test and typecheck scripts: an edit that changes either is asked; one that
+// adds a dependency is not.
+const manifest = (test, deps = {}) =>
+  JSON.stringify({
+    scripts: { test, typecheck: "tsc --noEmit" },
+    dependencies: deps,
+  });
+assert.equal(
+  scriptChange("apps/web/package.json", manifest("vitest run"), manifest("true"))
+    ?.decision,
+  "ask",
+);
+assert.equal(
+  scriptChange(
+    "apps/web/package.json",
+    manifest("vitest run"),
+    manifest("vitest run", { zod: "4.0.0" }),
+  ),
+  null,
+);
+assert.equal(
+  scriptChange("apps/web/package.json", manifest("vitest run"), "{")?.decision,
+  "ask",
+);
+assert.equal(scriptChange("apps/web/src/a.ts", "x", "y"), null);
+
 const changing = [
   ["sed -i '' s/a/b/ scripts/trader-ws", "ask"],
   ["echo x > scripts/trader-ws.d/audit", "ask"],
@@ -132,6 +165,15 @@ const changing = [
   ["jq '.scripts.check=\"true\"' package.json > /tmp/p && mv /tmp/p package.json", "ask"],
   ["node -e \"fs.writeFileSync('package.json','{}')\"", "ask"],
   ["echo '{}' > packages/db/tsconfig.json", "ask"],
+  // A relative path after a `cd`.
+  ["cd scripts && sed -i '' s/a/b/ trader-ws", "ask"],
+  ["cd .claude/hooks; echo x > guard.mjs", "ask"],
+  ["cd .git && echo x >> trader/green", "deny"],
+  // The root manifest, changed without being named.
+  ["pnpm pkg set scripts.check=true", "ask"],
+  ["npm pkg delete scripts.lint", "ask"],
+  ["cp /tmp/p Package.json", "ask"],
+  ["echo x > .prettierignore", "ask"],
 ];
 const unchanged = [
   "scripts/trader-ws check",
@@ -155,9 +197,18 @@ const unchanged = [
   "echo 'see scripts/trader-ws and .claude/hooks/guard.mjs'",
   "git commit -m 'scripts/trader-ws moves into the repository'",
   "ls scripts/trader-ws.d/",
+  // Tools that read a guard file to run: no change.
+  "tsc -p tsconfig.json --noEmit",
+  "pnpm exec tsc -p packages/api/tsconfig.json",
+  "pnpm exec vitest run --config vitest.config.ts",
+  "npx vitest run --config packages/api/vitest.config.ts",
+  "pnpm --filter @trader/web pkg set scripts.dev=next",
+  "cd apps/web && pnpm pkg set scripts.dev=next",
+  "cd apps/web && cat package.json",
 ];
-for (const [c, d] of changing) assert.equal(touches(c)?.decision, d, `should ${d}: ${c}`);
-for (const c of unchanged) assert.equal(touches(c), null, `should pass: ${c}`);
+for (const [c, d] of changing)
+  assert.equal(touches(c, 0, root)?.decision, d, `should ${d}: ${c}`);
+for (const c of unchanged) assert.equal(touches(c, 0, root), null, `should pass: ${c}`);
 console.log(
-  `guard: ${refused.length} refused, ${allowed.length} allowed, ${asked.length + changing.length + denied.length} guard-file cases, as expected`,
+  `guard: ${refused.length} refused, ${allowed.length} allowed, ${asked.length + changing.length + denied.length + 4} guard-file cases, as expected`,
 );

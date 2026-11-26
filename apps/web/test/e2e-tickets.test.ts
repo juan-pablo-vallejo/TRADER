@@ -148,10 +148,7 @@ describe("mintForWorkflow", () => {
   const both = [user("user_admin1", ADMIN_PHONE), user("user_worker1", WORKER_PHONE)];
 
   it("writes both tickets to the environment file and masks each before anything else", async () => {
-    const { exit, written, said } = await run(
-      { CLERK_STAGING_SECRET_KEY: ` ${KEY}\n` },
-      both,
-    );
+    const { exit, written, said } = await run({ CLERK_SECRET_KEY: ` ${KEY}\n` }, both);
     expect(exit).toBe(0);
     expect(written).toEqual([
       `E2E_ADMIN_TICKET=${TICKET}`,
@@ -166,9 +163,7 @@ describe("mintForWorkflow", () => {
   });
 
   it("writes neither ticket when one cannot be made, and says only why", async () => {
-    const { exit, written, said } = await run({ CLERK_STAGING_SECRET_KEY: KEY }, [
-      both[0],
-    ]);
+    const { exit, written, said } = await run({ CLERK_SECRET_KEY: KEY }, [both[0]]);
     expect(exit).toBe(1);
     expect(written).toEqual([]);
     expect(said.at(-1)).toBe(
@@ -180,7 +175,7 @@ describe("mintForWorkflow", () => {
   it("makes no ticket and asks Clerk nothing when a number is not given", async () => {
     for (const name of ["E2E_ADMIN_PHONE", "E2E_WORKER_PHONE"]) {
       const { exit, written, said, calls } = await run(
-        { CLERK_STAGING_SECRET_KEY: KEY, [name]: "" },
+        { CLERK_SECRET_KEY: KEY, [name]: "" },
         both,
       );
       expect(exit).toBe(1);
@@ -217,7 +212,7 @@ describe("the suite's required settings", () => {
         encoding: "utf8",
         env: {
           ...process.env,
-          STAGING_URL: "https://staging.invalid",
+          APP_URL: "https://staging.invalid",
           E2E_ADMIN_TICKET: "",
           E2E_WORKER_TICKET: "",
           ...given,
@@ -272,14 +267,12 @@ describe("the workflows and the staging key", () => {
     for (const file of files) {
       const named = text(file)
         .split("\n")
-        .filter((l) => l.includes("CLERK_STAGING_SECRET_KEY"));
+        .filter((l) => l.includes("CLERK_SECRET_KEY"));
       if (file !== "ci.yml") expect(named, file).toEqual([]);
     }
-    expect(
-      ci.split("\n").filter((l) => l.includes("CLERK_STAGING_SECRET_KEY")),
-    ).toHaveLength(1);
-    expect(deploy).toContain("secrets.CLERK_STAGING_SECRET_KEY");
-    const step = stepAt("secrets.CLERK_STAGING_SECRET_KEY");
+    expect(ci.split("\n").filter((l) => l.includes("CLERK_SECRET_KEY"))).toHaveLength(1);
+    expect(deploy).toContain("secrets.CLERK_SECRET_KEY");
+    const step = stepAt("secrets.CLERK_SECRET_KEY");
     expect(step).toContain("node apps/web/e2e/tickets.ts");
     // The step that holds the key installs nothing and runs no package's code.
     expect(step).not.toMatch(/pnpm|npm |npx|playwright/);
@@ -311,7 +304,7 @@ describe("the workflows and the staging key", () => {
     expect(changes).toContain("/api/ready");
     expect(changes).toContain("'^apps/mobile/|\\.md$'");
     expect(changes).toContain('if [ "$TARGET" = staging ]');
-    expect(changes).not.toMatch(/pnpm|npm |npx|playwright|secrets\.(?!STAGING_URL\b)/);
+    expect(changes).not.toMatch(/pnpm|npm |npx|playwright|secrets\.(?!APP_URL\b)/);
     // Every step after it waits on its answer: none migrates, deploys or tests alone.
     const after = deploy.slice(deploy.indexOf(STEP, deploy.indexOf("id: changes")));
     const steps = after.split(STEP).slice(1);
@@ -325,7 +318,7 @@ describe("the workflows and the staging key", () => {
 
   it("builds a preview by hand alone, with staging's Expo token and no store key", () => {
     const preview = text("preview-phone.yml");
-    expect(secretsIn("preview-phone.yml")).toEqual(["EXPO_TOKEN", "STAGING_URL"]);
+    expect(secretsIn("preview-phone.yml").sort()).toEqual(["APP_URL", "EXPO_TOKEN"]);
     expect(preview).toMatch(/\non:\n {2}workflow_dispatch:\n\npermissions:/);
     expect(preview).toContain("\n    environment: staging\n");
     expect(preview).toContain("--profile preview");
@@ -387,22 +380,21 @@ describe("the workflows and the staging key", () => {
   });
 
   it("migrates with a stated purpose and the environment's own migrator", () => {
-    const step = stepAt("secrets.STAGING_MIGRATOR_URL");
-    expect(step).toContain("secrets.PRODUCTION_MIGRATOR_URL");
+    const step = stepAt("secrets.MIGRATOR_URL");
+    expect(step).toContain("secrets.MIGRATOR_URL");
+    // One name in each environment: no branch on the target picks it.
+    expect(step).not.toContain('$TARGET" = production');
     expect(step).toContain(
-      'if [ "$TARGET" = production ]; then url=$PRODUCTION_MIGRATOR_URL',
-    );
-    expect(step).toContain(
-      'DATABASE_URL="$url" TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate',
+      'DATABASE_URL="$MIGRATOR_URL" TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate',
     );
   });
 
   it("deploys by the hook alone, held to Vercel's address and to this run's commit", () => {
     expect(ci).not.toMatch(/git push|contents: write|ssh-key|DEPLOY_KEY/);
-    expect(
-      ci.split("\n").filter((l) => l.includes("secrets.STAGING_DEPLOY_HOOK")),
-    ).toHaveLength(1);
-    const step = stepAt("secrets.STAGING_DEPLOY_HOOK");
+    expect(ci.split("\n").filter((l) => l.includes("secrets.DEPLOY_HOOK"))).toHaveLength(
+      1,
+    );
+    const step = stepAt("secrets.DEPLOY_HOOK");
     expect(step).toContain("https://api.vercel.com/v1/integrations/deploy/*)");
     // The hook builds the branch's head, so it is called only while that is this commit.
     expect(step).toContain('[ "$head" != "$SHA" ]');

@@ -106,12 +106,12 @@ jobs:
       - name: What this commit adds to the one staging serves
         id: changes
         env:
-          STAGING_URL: ${{ secrets.STAGING_URL }}
+          APP_URL: ${{ secrets.APP_URL }}
         run: |
           set -euo pipefail
           deploy=true
           if [ "$TARGET" = staging ]; then
-            serving=$(curl -sS --max-time 10 "$STAGING_URL/api/ready" | jq -r '.commit // empty' 2>/dev/null || true)
+            serving=$(curl -sS --max-time 10 "$APP_URL/api/ready" | jq -r '.commit // empty' 2>/dev/null || true)
             if printf '%s' "$serving" | grep -Eqx '[0-9a-f]{40}' && [ "$serving" != "$SHA" ] &&
               git fetch --no-tags --depth=1 origin "$serving" 2>/dev/null; then
               changed=$(git diff --name-only "$serving" "$SHA")
@@ -139,13 +139,11 @@ jobs:
       - name: Migrate the environment's database
         if: steps.changes.outputs.deploy == 'true'
         env:
-          STAGING_MIGRATOR_URL: ${{ secrets.STAGING_MIGRATOR_URL }}
-          PRODUCTION_MIGRATOR_URL: ${{ secrets.PRODUCTION_MIGRATOR_URL }}
+          MIGRATOR_URL: ${{ secrets.MIGRATOR_URL }}
         run: |
           set -euo pipefail
-          if [ "$TARGET" = production ]; then url=$PRODUCTION_MIGRATOR_URL; else url=$STAGING_MIGRATOR_URL; fi
-          if [ -z "$url" ]; then echo "::error::the $TARGET migrator URL secret is not set"; exit 1; fi
-          DATABASE_URL="$url" TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate
+          if [ -z "$MIGRATOR_URL" ]; then echo "::error::the $TARGET environment's MIGRATOR_URL is not set"; exit 1; fi
+          DATABASE_URL="$MIGRATOR_URL" TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate
           echo "- $TARGET database migrated to \`$SHA\`'s journal" >> "$GITHUB_STEP_SUMMARY"
 
       # A Vercel deploy hook takes no commit: it builds its branch's head at the moment it
@@ -158,20 +156,17 @@ jobs:
         id: hook
         if: steps.changes.outputs.deploy == 'true'
         env:
-          STAGING_DEPLOY_HOOK: ${{ secrets.STAGING_DEPLOY_HOOK }}
-          STAGING_URL: ${{ secrets.STAGING_URL }}
-          PRODUCTION_DEPLOY_HOOK: ${{ secrets.PRODUCTION_DEPLOY_HOOK }}
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          hook: ${{ secrets.DEPLOY_HOOK }}
+          host: ${{ secrets.APP_URL }}
         run: |
           set -euo pipefail
-          if [ "$TARGET" = production ]; then hook=$PRODUCTION_DEPLOY_HOOK; host=$PRODUCTION_URL; else hook=$STAGING_DEPLOY_HOOK; host=$STAGING_URL; fi
           # Anyone holding the hook's address can deploy with it, so it is sent to Vercel's
           # own host and nowhere else, and never printed.
           case "$hook" in
             https://api.vercel.com/v1/integrations/deploy/*) ;;
-            *) echo "::error::the $TARGET deploy hook secret is not set, or is not a Vercel deploy hook"; exit 1 ;;
+            *) echo "::error::the $TARGET environment's DEPLOY_HOOK is not set, or is not a Vercel deploy hook"; exit 1 ;;
           esac
-          case "$host" in https://*) ;; *) echo "::error::the $TARGET URL secret is not set"; exit 1 ;; esac
+          case "$host" in https://*) ;; *) echo "::error::the $TARGET environment's APP_URL is not set"; exit 1 ;; esac
 
           serving=$(curl -sS --max-time 10 "$host/api/ready" | jq -r '.commit // empty' 2>/dev/null || true)
           if [ "$serving" = "$SHA" ]; then
@@ -191,9 +186,9 @@ jobs:
             exit 0
           fi
 
-          # Two minutes: on 2026-11-22 the hook gave no answer in thirty seconds, three
-          # runs in a row, and the deployment it had started appeared fifty seconds
-          # after the call: the job failed with staging about to serve the commit.
+          # Two minutes: the hook can take more than thirty seconds to answer, and the
+          # deployment it starts can appear fifty seconds after the call; a shorter wait
+          # fails the job with staging about to serve the commit.
           answer=$(curl -sS --proto '=https' --max-time 120 -X POST "$hook" || true)
           state=$(printf '%s' "$answer" | jq -r '.job.state // empty' 2>/dev/null || true)
           if [ -z "$state" ]; then
@@ -206,11 +201,9 @@ jobs:
       - name: Wait until the host serves this commit and is ready
         if: steps.changes.outputs.deploy == 'true' && steps.hook.outputs.result != 'superseded'
         env:
-          STAGING_URL: ${{ secrets.STAGING_URL }}
-          PRODUCTION_URL: ${{ secrets.PRODUCTION_URL }}
+          host: ${{ secrets.APP_URL }}
         run: |
           set -euo pipefail
-          if [ "$TARGET" = production ]; then host=$PRODUCTION_URL; else host=$STAGING_URL; fi
           for attempt in $(seq 1 90); do
             body=$(curl -sS --max-time 10 "$host/api/ready" || true)
             commit=$(printf '%s' "$body" | jq -r '.commit // empty' 2>/dev/null || true)
@@ -227,8 +220,8 @@ jobs:
       # The smoke test's browser, kept between runs: installing it took 21 s to 8 m 47 s.
       # The key is Playwright's own version, which decides the browser's build, so a bump
       # installs afresh. A restored browser skips the install whole, system libraries
-      # included: the ubuntu-24.04 image already carries every one `--with-deps` asks for
-      # (seen 2026-11-19, all "already the newest version"). If an image ever drops one, the
+      # included: the ubuntu-24.04 image carries every one `--with-deps` asks for, each
+      # "already the newest version". If an image ever drops one, the
       # smoke test fails naming it, and the fix is `playwright install-deps chromium` here.
       - name: Playwright's version, for the browser cache's key
         id: playwright
@@ -264,7 +257,7 @@ jobs:
           steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
           steps.hook.outputs.result != 'superseded'
         env:
-          CLERK_STAGING_SECRET_KEY: ${{ secrets.CLERK_STAGING_SECRET_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
           E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
         run: node apps/web/e2e/tickets.ts
@@ -276,7 +269,7 @@ jobs:
           steps.changes.outputs.deploy == 'true' && env.TARGET == 'staging' &&
           steps.hook.outputs.result != 'superseded'
         env:
-          STAGING_URL: ${{ secrets.STAGING_URL }}
+          APP_URL: ${{ secrets.APP_URL }}
           E2E_ADMIN_PHONE: ${{ vars.E2E_ADMIN_PHONE }}
           E2E_WORKER_PHONE: ${{ vars.E2E_WORKER_PHONE }}
           E2E_EXPECT_COMMIT: ${{ env.SHA }}

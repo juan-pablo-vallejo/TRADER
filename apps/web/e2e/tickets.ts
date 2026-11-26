@@ -151,7 +151,7 @@ export async function mintForWorkflow(
   const lines: string[] = [];
   for (const [name, phone] of people) {
     const result = await mintTicket(
-      { secretKey: (env.CLERK_STAGING_SECRET_KEY ?? "").trim(), fetch: deps.fetch },
+      { secretKey: (env.CLERK_SECRET_KEY ?? "").trim(), fetch: deps.fetch },
       phone,
     );
     if (!result.ok) {

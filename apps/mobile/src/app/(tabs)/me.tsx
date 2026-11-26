@@ -13,6 +13,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AppState,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   StyleSheet,
   TextInput,
@@ -168,193 +170,201 @@ export default function Me() {
         </Text>
         <SyncChip />
       </View>
-      <ScrollView
-        contentContainerStyle={styles.page}
-        keyboardShouldPersistTaps="handled"
-        keyboardDismissMode="on-drag"
-        // The page scrolls clear of the keyboard, so Save is never under it.
-        automaticallyAdjustKeyboardInsets
+      {/* The page scrolls clear of the keyboard, so Save is never under it: on iOS by the
+          scroll view's own insets; on Android, where that prop does nothing, by padding the
+          keyboard's height under the page. */}
+      <KeyboardAvoidingView
+        style={styles.room}
+        behavior={Platform.OS === "android" ? "padding" : undefined}
       >
-        <Text style={text.label}>{t.me.language}</Text>
-        <Pair>
-          {pairs.language.map(({ value, selected }) => (
-            <View key={value} style={styles.fill}>
-              <Button
-                testID={`language-${value}`}
-                kind={selected ? "primary" : "secondary"}
-                selected={selected}
-                label={value === "en" ? t.me.english : t.me.spanish}
-                onPress={() => setLanguage(value)}
-              />
-            </View>
-          ))}
-        </Pair>
+        <ScrollView
+          contentContainerStyle={styles.page}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+        >
+          <Text style={text.label}>{t.me.language}</Text>
+          <Pair>
+            {pairs.language.map(({ value, selected }) => (
+              <View key={value} style={styles.fill}>
+                <Button
+                  testID={`language-${value}`}
+                  kind={selected ? "primary" : "secondary"}
+                  selected={selected}
+                  label={value === "en" ? t.me.english : t.me.spanish}
+                  onPress={() => setLanguage(value)}
+                />
+              </View>
+            ))}
+          </Pair>
 
-        <Text style={text.label}>{t.me.name}</Text>
-        <TextInput
-          testID="me-name"
-          accessibilityLabel={t.me.name}
-          accessibilityLanguage={speech}
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          maxLength={120}
-          autoCapitalize="words"
-          autoComplete="name"
-          textContentType="name"
-        />
-        <Text style={text.label}>{t.me.phone}</Text>
-        <TextInput
-          testID="me-phone"
-          accessibilityLabel={t.me.phone}
-          accessibilityLanguage={speech}
-          style={styles.input}
-          value={phone}
-          onChangeText={setPhone}
-          maxLength={32}
-          editable={loaded}
-          keyboardType="phone-pad"
-          autoComplete="tel"
-          textContentType="telephoneNumber"
-        />
-        <Text style={text.secondary}>{t.me.phoneHelp}</Text>
-        {contact === "failed" && (
-          <>
+          <Text style={text.label}>{t.me.name}</Text>
+          <TextInput
+            testID="me-name"
+            accessibilityLabel={t.me.name}
+            accessibilityLanguage={speech}
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            maxLength={120}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+          />
+          <Text style={text.label}>{t.me.phone}</Text>
+          <TextInput
+            testID="me-phone"
+            accessibilityLabel={t.me.phone}
+            accessibilityLanguage={speech}
+            style={styles.input}
+            value={phone}
+            onChangeText={setPhone}
+            maxLength={32}
+            editable={loaded}
+            keyboardType="phone-pad"
+            autoComplete="tel"
+            textContentType="telephoneNumber"
+          />
+          <Text style={text.secondary}>{t.me.phoneHelp}</Text>
+          {contact === "failed" && (
+            <>
+              <Text
+                testID="me-phone-not-loaded"
+                accessibilityLiveRegion="polite"
+                style={text.attention}
+              >
+                {t.me.phoneNotLoaded}
+              </Text>
+              <Button
+                testID="me-phone-retry"
+                kind="secondary"
+                label={t.retry}
+                onPress={() => void loadContact()}
+              />
+            </>
+          )}
+          <Button
+            testID="me-save"
+            label={busy ? t.loading : t.me.save}
+            disabled={busy || !loaded || name.trim() === ""}
+            onPress={() => void save()}
+          />
+          {note !== null && (
             <Text
-              testID="me-phone-not-loaded"
+              testID={`me-${note}`}
               accessibilityLiveRegion="polite"
-              style={text.attention}
+              style={
+                note === "saved"
+                  ? [text.secondary, { color: color.doneInk }]
+                  : text.attention
+              }
             >
-              {t.me.phoneNotLoaded}
+              {note === "saved" ? t.me.saved : t.me.saveFailed}
             </Text>
-            <Button
-              testID="me-phone-retry"
-              kind="secondary"
-              label={t.retry}
-              onPress={() => void loadContact()}
-            />
-          </>
-        )}
-        <Button
-          testID="me-save"
-          label={busy ? t.loading : t.me.save}
-          disabled={busy || !loaded || name.trim() === ""}
-          onPress={() => void save()}
-        />
-        {note !== null && (
+          )}
+
+          <Text style={text.label}>{t.reminders.label}</Text>
+          <Pair>
+            {pairs.reminders.map(({ value, selected }) => (
+              <View key={value} style={styles.fill}>
+                <Button
+                  testID={`reminders-${value}`}
+                  kind={selected ? "primary" : "secondary"}
+                  selected={selected}
+                  label={value === "on" ? t.reminders.on : t.reminders.off}
+                  onPress={() => {
+                    if (value === "on") {
+                      void reminders.turnOn().then((granted) => {
+                        setRemindersRefused(!granted);
+                        if (!granted) {
+                          felt("error");
+                          announce(t.reminders.refused);
+                        }
+                      });
+                    } else {
+                      setRemindersRefused(false);
+                      void reminders.turnOff();
+                    }
+                  }}
+                />
+              </View>
+            ))}
+          </Pair>
+          {remindersRefused && (
+            <Text testID="reminders-refused" style={text.attention}>
+              {t.reminders.refused}
+            </Text>
+          )}
+
+          {pairs.key !== null && (
+            <>
+              <Text style={text.label}>
+                {t.biometric.meLabel(t.biometric.names[biometrics.name])}
+              </Text>
+              <Pair>
+                {pairs.key.map(({ value, selected }) => (
+                  <View key={value} style={styles.fill}>
+                    <Button
+                      testID={`biometric-me-${value}`}
+                      kind={selected ? "primary" : "secondary"}
+                      selected={selected}
+                      label={value === "on" ? t.biometric.on : t.biometric.off}
+                      disabled={keyBusy}
+                      onPress={() => void setKeyOn(value === "on")}
+                    />
+                  </View>
+                ))}
+              </Pair>
+              <Text style={text.secondary}>{t.biometric.meHelp}</Text>
+              {keyFailed && (
+                <Text testID="biometric-me-failed" style={text.attention}>
+                  {t.biometric.failed}
+                </Text>
+              )}
+            </>
+          )}
+
+          {unsent > 0 && (
+            <Text testID="sign-out-unsent" style={text.attention}>
+              {t.me.unsentKept(unsent)}
+            </Text>
+          )}
+          <Button
+            testID="sign-out"
+            kind="secondary"
+            label={t.me.signOut}
+            onPress={() => {
+              void signOut().then(() => router.replace("/sign-in"));
+            }}
+          />
+          {/* In a staging build a long press sends one report on purpose (report.ts). */}
           <Text
-            testID={`settings-${note}`}
-            accessibilityLiveRegion="polite"
-            style={
-              note === "saved"
-                ? [text.secondary, { color: color.doneInk }]
-                : text.attention
+            testID="me-build"
+            style={[text.secondary, styles.build]}
+            onLongPress={
+              reportsOnPurpose
+                ? () => {
+                    reportOnPurpose();
+                    setReported(true);
+                  }
+                : undefined
             }
           >
-            {note === "saved" ? t.me.saved : t.me.saveFailed}
+            {t.me.build(String(BUILD))}
           </Text>
-        )}
-
-        <Text style={text.label}>{t.reminders.label}</Text>
-        <Pair>
-          {pairs.reminders.map(({ value, selected }) => (
-            <View key={value} style={styles.fill}>
-              <Button
-                testID={`reminders-${value}`}
-                kind={selected ? "primary" : "secondary"}
-                selected={selected}
-                label={value === "on" ? t.reminders.on : t.reminders.off}
-                onPress={() => {
-                  if (value === "on") {
-                    void reminders.turnOn().then((granted) => {
-                      setRemindersRefused(!granted);
-                      if (!granted) {
-                        felt("error");
-                        announce(t.reminders.refused);
-                      }
-                    });
-                  } else {
-                    setRemindersRefused(false);
-                    void reminders.turnOff();
-                  }
-                }}
-              />
-            </View>
-          ))}
-        </Pair>
-        {remindersRefused && (
-          <Text testID="reminders-refused" style={text.attention}>
-            {t.reminders.refused}
-          </Text>
-        )}
-
-        {pairs.key !== null && (
-          <>
-            <Text style={text.label}>
-              {t.biometric.meLabel(t.biometric.names[biometrics.name])}
+          {reported && (
+            <Text testID="me-reported" style={[text.secondary, styles.build]}>
+              {t.me.testReportSent}
             </Text>
-            <Pair>
-              {pairs.key.map(({ value, selected }) => (
-                <View key={value} style={styles.fill}>
-                  <Button
-                    testID={`biometric-me-${value}`}
-                    kind={selected ? "primary" : "secondary"}
-                    selected={selected}
-                    label={value === "on" ? t.biometric.on : t.biometric.off}
-                    disabled={keyBusy}
-                    onPress={() => void setKeyOn(value === "on")}
-                  />
-                </View>
-              ))}
-            </Pair>
-            <Text style={text.secondary}>{t.biometric.meHelp}</Text>
-            {keyFailed && (
-              <Text testID="biometric-me-failed" style={text.attention}>
-                {t.biometric.failed}
-              </Text>
-            )}
-          </>
-        )}
-
-        {unsent > 0 && (
-          <Text testID="sign-out-unsent" style={text.attention}>
-            {t.me.unsentKept(unsent)}
-          </Text>
-        )}
-        <Button
-          testID="sign-out"
-          kind="secondary"
-          label={t.me.signOut}
-          onPress={() => {
-            void signOut().then(() => router.replace("/sign-in"));
-          }}
-        />
-        {/* In a staging build a long press sends one report on purpose (report.ts). */}
-        <Text
-          testID="me-build"
-          style={[text.secondary, styles.build]}
-          onLongPress={
-            reportsOnPurpose
-              ? () => {
-                  reportOnPurpose();
-                  setReported(true);
-                }
-              : undefined
-          }
-        >
-          {t.me.build(String(BUILD))}
-        </Text>
-        {reported && (
-          <Text testID="me-reported" style={[text.secondary, styles.build]}>
-            {t.me.testReportSent}
-          </Text>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  room: { flex: 1 },
   fill: { flex: 1 },
   head: { gap: space[2] },
   page: { gap: space[3], paddingBottom: space[6] },

@@ -17,8 +17,8 @@ const link = (value: string | undefined): string | null => {
 };
 
 export const appLinks = (env: Env): AppLinks => ({
-  ios: link(env.NEXT_PUBLIC_GET_IOS_URL),
-  android: link(env.NEXT_PUBLIC_GET_ANDROID_URL),
+  ios: link(env.TRADER_GET_IOS_URL),
+  android: link(env.TRADER_GET_ANDROID_URL),
 });
 
 // Which phone is asking, from its own description of itself: an iPhone or iPad, an

@@ -6,10 +6,10 @@
 // file.
 import { defineConfig, devices } from "@playwright/test";
 
-const stagingUrl = process.env.STAGING_URL ?? "";
+const stagingUrl = process.env.APP_URL ?? "";
 if (!/^https:\/\/[a-z0-9.-]+$/.test(stagingUrl)) {
   throw new Error(
-    "STAGING_URL must be the preview's origin: https, a host, nothing after it",
+    "APP_URL must be the preview's origin: https, a host, nothing after it",
   );
 }
 

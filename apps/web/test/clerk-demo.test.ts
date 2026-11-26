@@ -173,7 +173,7 @@ describe("the Demo pair in the environment", () => {
     expect(
       closedCompany({
         ...production,
-        INVOICE_EMAIL_ALLOWLIST: " Owner@jpteq.test , second@jpteq.test",
+        MAIL_ALLOWLIST: " Owner@jpteq.test , second@jpteq.test",
       }),
     ).toEqual({ companyId: COMPANY, allowed: ["owner@jpteq.test", "second@jpteq.test"] });
     // Staging's door admits the fixture company, and neither rule touches it.

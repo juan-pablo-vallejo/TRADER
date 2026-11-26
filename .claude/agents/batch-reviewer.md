@@ -33,7 +33,10 @@ Each finding: file, line, one sentence of why. No praise.
    `wire.json` must be one the item names.
 4. **Migrations.** Adds only; starts with a lock timeout; no CONCURRENTLY (all pending
    migrations run in one transaction); NOT VALID now and VALIDATE in a later release; no
-   trigger disabled; can it run twice; what a failure halfway leaves.
+   trigger disabled; can it run twice; what a failure halfway leaves. One exception, until
+   the first production release: the baseline (`0000_baseline.sql`) may be rewritten whole,
+   and is checked by comparing the schema it builds with the schema before it, object by
+   object (`pg_dump --schema-only`), not by these rules.
 5. **Statement budgets.** Every changed procedure has one; a raised budget says why in its
    commit; no query per row; no whole-ledger read added to a hot path; no new lock held
    across a Clerk or Resend call.

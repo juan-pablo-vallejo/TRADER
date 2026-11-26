@@ -7,25 +7,26 @@ describe("where the app is got from", () => {
   it("is each variable's https address, and nothing for one unset or malformed", () => {
     expect(
       appLinks({
-        NEXT_PUBLIC_GET_IOS_URL: "https://testflight.apple.com/join/abc123",
-        NEXT_PUBLIC_GET_ANDROID_URL: " https://play.google.com/apps/internaltest/1 ",
+        TRADER_GET_IOS_URL: "https://testflight.apple.com/join/abc123",
+        TRADER_GET_ANDROID_URL: " https://play.google.com/apps/internaltest/1 ",
       }),
     ).toEqual({
       ios: "https://testflight.apple.com/join/abc123",
       android: "https://play.google.com/apps/internaltest/1",
     });
     expect(appLinks({})).toEqual({ ios: null, android: null });
-    expect(
-      appLinks({ NEXT_PUBLIC_GET_IOS_URL: "", NEXT_PUBLIC_GET_ANDROID_URL: "   " }),
-    ).toEqual({ ios: null, android: null });
+    expect(appLinks({ TRADER_GET_IOS_URL: "", TRADER_GET_ANDROID_URL: "   " })).toEqual({
+      ios: null,
+      android: null,
+    });
     // Not a link a page should send anyone to.
     expect(
       appLinks({
-        NEXT_PUBLIC_GET_IOS_URL: "javascript:alert(1)",
-        NEXT_PUBLIC_GET_ANDROID_URL: "http://play.google.com/x",
+        TRADER_GET_IOS_URL: "javascript:alert(1)",
+        TRADER_GET_ANDROID_URL: "http://play.google.com/x",
       }),
     ).toEqual({ ios: null, android: null });
-    expect(appLinks({ NEXT_PUBLIC_GET_IOS_URL: "ask the office" }).ios).toBeNull();
+    expect(appLinks({ TRADER_GET_IOS_URL: "ask the office" }).ios).toBeNull();
   });
 });
 

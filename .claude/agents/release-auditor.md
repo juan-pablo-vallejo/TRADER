@@ -29,11 +29,9 @@ matters. No praise, and no account of what is fine.
 4. **What the release changes about releasing.** Anything under `.github/workflows`,
    `apps/mobile/eas.json`, `apps/mobile/app.json`, `.claude`, `.githooks` or
    `pnpm-workspace.yaml`: a secret handed to a new step, a permission widened, a pin
-   loosened, a build setting changed. And every change, however small, to a guard file:
-   `scripts/trader-ws`, `scripts/trader-ws.d/`, `scripts/check-ci.sh`, `scripts/staging.sh`,
-   `scripts/release-facts.sh`, `.claude/hooks/`, `.claude/agents/`, `.claude/skills/`,
-   `.claude/settings.json`, `.githooks/`, `.github/workflows/`, the root `package.json`,
-   `pnpm-workspace.yaml`, `eslint.config.mjs` and every `tsconfig` and `vitest.config.ts`.
+   loosened, a build setting changed. And every change, however small, to a guard file: the
+   paths `.claude/hooks/guard.mjs` lists (GUARDED, AT_ROOT, OWNERS), and a package's `test`
+   or `typecheck` script.
    Name each one with what it now lets through or records that it did not before; a
    machine, user or address named in `scripts/` is a finding by itself. A change to the
    contract snapshot (`packages/api/test/contract/`) is read against "The phone's
