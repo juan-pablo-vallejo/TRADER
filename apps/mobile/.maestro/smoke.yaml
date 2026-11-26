@@ -31,6 +31,12 @@ appId: app.jpteq.trader
       id: "me-saved"
     timeout: 15000
 - takeScreenshot: me
+# Back up to the language, above where Save was scrolled to.
+- scrollUntilVisible:
+    element:
+      id: "language-es"
+    direction: UP
+    centerElement: true
 - tapOn:
     id: "language-es"
 - tapOn:

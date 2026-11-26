@@ -42,5 +42,5 @@ appId: app.jpteq.trader
           id: "sign-out"
 - extendedWaitUntil:
     visible:
-      id: "sign-in-address"
+      id: "sign-in|sign-in-address"
     timeout: 30000
