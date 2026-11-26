@@ -6,9 +6,11 @@ import { tokenCache } from "@clerk/expo/token-cache";
 import { type ErrorBoundaryProps, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { maybeCompleteAuthSession } from "expo-web-browser";
+import { useFonts } from "expo-font";
 import { useEffect } from "react";
 
 import { apiUrl, clerkKey } from "../config";
+import { FONTS } from "../fonts";
 import {
   reportScreen,
   reportScreenFailure,
@@ -30,6 +32,10 @@ maybeCompleteAuthSession();
 function RootLayout() {
   const pathname = usePathname();
   useEffect(() => reportScreen(pathname), [pathname]);
+  // The app's font, from inside the app: nothing is drawn before it, so no screen is laid
+  // out in one font and shown in another. A font that will not load leaves the phone's.
+  const [fontsLoaded, fontsFailed] = useFonts(FONTS);
+  if (!fontsLoaded && fontsFailed === null) return null;
   if (apiUrl === null) {
     return (
       <Screen testID="config-missing">

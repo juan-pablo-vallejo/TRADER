@@ -18,7 +18,6 @@
 // Android (Google's page, read 2026-11-25). The page is
 // https://developers.google.com/identity/branding-guidelines, and the mark is cut from its
 // download bundle (assets/google).
-import { BodoniModa_700Bold, useFonts } from "@expo-google-fonts/bodoni-moda";
 import { SIGN_IN_CODE_LENGTH, type SignInIdentifier } from "@trader/api/contract";
 import {
   AppleAuthenticationButton,
@@ -74,6 +73,7 @@ import { color, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
 import { Text } from "./text";
+import { fontFile } from "../fonts";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- React Native's way to name a bundled image
 const googleG = require("../../assets/google/g.png") as number;
@@ -120,8 +120,6 @@ export function PhoneSignIn({
   const codeField = useRef<ComponentRef<typeof TextInput>>(null);
   const { signIn: keep } = useSession();
   const router = useRouter();
-  // Until the heading's face has loaded, the system's serif stands in: nothing waits on it.
-  const [fontLoaded] = useFonts({ BodoniModa_700Bold });
   const [form, setForm] = useState<Form>(FIELD);
   const [note, setNote] = useState<Note | null>(null);
   const [busy, setBusy] = useState(false);
@@ -315,7 +313,6 @@ export function PhoneSignIn({
     setDemoCode("");
   };
 
-  const heading = [styles.heading, fontLoaded && styles.bodoni];
   // A refusal sits right under the field it is about: anything lower is under the keyboard
   // on Android, where the page does not scroll clear of it.
   const noteLine = note !== null && (
@@ -343,7 +340,7 @@ export function PhoneSignIn({
         {form.at === "field" && (
           <>
             <Text
-              style={heading}
+              style={styles.heading}
               accessibilityRole="header"
               accessibilityLabel={s.title}
               maxFontSizeMultiplier={HEADING_GROWS}
@@ -424,7 +421,7 @@ export function PhoneSignIn({
         {form.at === "code" && (
           <>
             <Text
-              style={heading}
+              style={styles.heading}
               accessibilityRole="header"
               maxFontSizeMultiplier={HEADING_GROWS}
             >
@@ -490,7 +487,7 @@ export function PhoneSignIn({
         {form.at === "demo" && (
           <>
             <Text
-              style={heading}
+              style={styles.heading}
               accessibilityRole="header"
               maxFontSizeMultiplier={HEADING_GROWS}
             >
@@ -621,11 +618,11 @@ const styles = StyleSheet.create({
     ...(type.title as TextStyle),
     fontSize: 32,
     lineHeight: 38,
-    fontWeight: "700",
     color: color.brandNavy,
+    // Bodoni Moda draws its own weight: a weight asked of it as well would be faked.
+    fontFamily: "BodoniModa_700Bold",
+    fontWeight: "normal",
   },
-  // Bodoni Moda draws its own weight: a weight asked of it as well would be faked.
-  bodoni: { fontFamily: "BodoniModa_700Bold", fontWeight: "normal" },
   input: {
     minHeight: 64,
     paddingHorizontal: space[3],
@@ -635,6 +632,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: 22,
+    fontFamily: fontFile("400"),
   },
   code: { letterSpacing: 6, textAlign: "center", fontVariant: ["tabular-nums"] },
   textButton: {

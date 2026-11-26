@@ -4,6 +4,7 @@
 // email the person's; from then on it shows greyed with the number, and the office changes
 // it. A refusal is said in the server's own terms (catalog, addEmail.refused), beside the
 // step it belongs to, and aloud. Needs a connection: a call that does not go through says so.
+import { fontFile } from "../fonts";
 import { signInIdentifier } from "@trader/api/contract";
 import { useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
@@ -177,5 +178,6 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: type.body.fontSize,
+    fontFamily: fontFile("400"),
   },
 });

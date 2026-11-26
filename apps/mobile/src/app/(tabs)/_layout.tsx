@@ -1,5 +1,6 @@
 // The signed-in app: Today, the person's own week, Crew for an admin, and Me, over the sync
 // layer they all read. Nobody signed in is sent to sign in.
+import { fontFile } from "../../fonts";
 import { Ionicons } from "@expo/vector-icons";
 import { type ErrorBoundaryProps, Redirect, Tabs, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
@@ -62,7 +63,7 @@ function AppTabs() {
         tabBarActiveTintColor: color.action,
         tabBarInactiveTintColor: color.inkSecondary,
         // 15 pt, as `type.label` is (theme.ts).
-        tabBarLabelStyle: { fontSize: type.label.fontSize, fontWeight: "600" },
+        tabBarLabelStyle: { fontSize: type.label.fontSize, fontFamily: fontFile("600") },
       }}
     >
       <Tabs.Screen

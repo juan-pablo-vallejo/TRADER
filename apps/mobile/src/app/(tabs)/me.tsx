@@ -8,6 +8,7 @@
 // shown (feedback.ts). Signing out never discards an entry: what has not been sent stays in
 // the outbox under its owner and goes when they sign in again, and the screen says so
 // before the button.
+import { fontFile } from "../../fonts";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -396,6 +397,7 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: type.body.fontSize,
+    fontFamily: fontFile("400"),
   },
   build: { textAlign: "center" },
   field: { gap: space[3] },
