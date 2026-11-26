@@ -318,6 +318,7 @@ export const en = {
     termsHint:
       "Days from the day an invoice is issued to the day it is due. 0 is due on receipt.",
     badTerms: "Enter a whole number of days from 0 to 365.",
+    badPhone: "Enter a phone number WhatsApp can open, with its country code.",
     timezone: "Timezone",
     timezoneHint:
       "Shown, not changed here: the hours already recorded are placed on their days by it.",
@@ -569,11 +570,21 @@ export const en = {
   loadFailedHelp: "Nothing was changed. Check the connection and try again.",
   tryAgain: "Try again",
   pageError: "Something went wrong on this page.",
-  pageErrorHelp:
-    "Nothing was saved by the step that failed. Reload the page to carry on.",
+  pageErrorHelp: "Nothing was saved by the step that failed. Try again to carry on.",
   reload: "Reload",
-  notFound: "There is no page at this address.",
-  goToSchedule: "Go to the schedule",
+  // What stands in for a page that could not be shown (status-screen.tsx).
+  fallback: {
+    notFoundCode: "Error 404",
+    notFoundTitle: "We cannot find that page",
+    notFoundBody:
+      "The address may be mistyped, or the page may have moved. Nothing was changed.",
+    errorCode: "Something went wrong",
+    goToToday: "Go to Today",
+    goHome: "Go to the homepage",
+    goBack: "Go back",
+    tryAgain: "Try again",
+    reference: "Reference",
+  },
   cancel: "Cancel",
 
   // Editors and create forms

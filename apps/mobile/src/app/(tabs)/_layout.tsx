@@ -1,11 +1,13 @@
 // The signed-in app: Today, the person's own week, Crew for an admin, and Me, over the sync
 // layer they all read. Nobody signed in is sent to sign in.
 import { Ionicons } from "@expo/vector-icons";
-import { Redirect, Tabs, useRouter } from "expo-router";
+import { type ErrorBoundaryProps, Redirect, Tabs, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import type { ColorValue } from "react-native";
 
 import { useStrings } from "../../i18n";
+import { reportScreenFailure } from "../../report";
+import { Fallback } from "../../ui/fallback";
 import { RemindersProvider } from "../../reminders";
 import { useSession } from "../../session";
 import { opensOnCrew } from "../../sync/crew";
@@ -98,5 +100,22 @@ function AppTabs() {
         }}
       />
     </Tabs>
+  );
+}
+
+// A tab that threw: said in the person's language, reported, and tried again on a tap.
+// The tabs, the session and the phone's record are untouched.
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const { t } = useStrings();
+  useEffect(() => reportScreenFailure(error), [error]);
+  return (
+    <Fallback
+      testID="screen-failed"
+      code={t.fallback.errorCode}
+      title={t.fallback.errorTitle}
+      body={t.fallback.errorBody}
+      action={{ label: t.fallback.tryAgain, onPress: () => void retry() }}
+      reference={`${t.fallback.reference}: ${error.message}`}
+    />
   );
 }

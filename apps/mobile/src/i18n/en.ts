@@ -286,6 +286,19 @@ export const en: Catalog = {
     hours: (n) => (n === 1 ? "1 hour ago" : `${n} hours ago`),
     days: (n) => (n === 1 ? "1 day ago" : `${n} days ago`),
   },
+  fallback: {
+    notFoundCode: "Error 404",
+    notFoundTitle: "This screen is not here",
+    notFoundBody:
+      "The link may be old, or the screen may have moved. Nothing on this phone was changed.",
+    errorCode: "Something went wrong",
+    errorTitle: "This screen could not be shown",
+    errorBody:
+      "Nothing on this phone was lost: your hours are kept and sent as usual. Try again.",
+    goToToday: "Go to Today",
+    tryAgain: "Try again",
+    reference: "Reference",
+  },
   me: {
     title: "Me",
     language: "Language",

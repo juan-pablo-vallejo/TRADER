@@ -16,6 +16,7 @@
 // The first two are the company's and an admin's alone (`company.get`, `company.update`,
 // which writes the keys it is given and no others, so a switch is saved without resending
 // the details); anyone else sees Me.
+import { whatsAppLink } from "@trader/api/contract";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 
@@ -132,10 +133,12 @@ function Details({ company }: { company: Company }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [badTerms, setBadTerms] = useState(false);
+  const [badPhone, setBadPhone] = useState(false);
   const fields = draft ?? draftOf(company);
   const change = (patch: Partial<Draft>) => {
     setNote(null);
     setBadTerms(false);
+    setBadPhone(false);
     setDraft({ ...fields, ...patch });
   };
   const save = useMutation(
@@ -153,7 +156,18 @@ function Details({ company }: { company: Company }) {
     e.preventDefault();
     setNote(null);
     const days = /^\d{1,3}$/.test(fields.terms.trim()) ? Number(fields.terms) : NaN;
-    if (!(days >= 0 && days <= 365)) return setBadTerms(true);
+    // The crew's WhatsApp button is built from the phone: one it cannot open is refused
+    // here, under its field, which takes the focus. Blank is no phone.
+    if (fields.phone.trim() !== "" && whatsAppLink(fields.phone) === null) {
+      setBadPhone(true);
+      document.getElementById("company-phone")?.focus();
+      return;
+    }
+    if (!(days >= 0 && days <= 365)) {
+      setBadTerms(true);
+      document.getElementById("company-terms")?.focus();
+      return;
+    }
     save.mutate({
       name: fields.name,
       address: fields.address,
@@ -200,10 +214,22 @@ function Details({ company }: { company: Company }) {
             type="tel"
             maxLength={32}
             autoComplete="tel"
-            aria-describedby="company-phone-help"
+            aria-invalid={badPhone}
+            aria-describedby={
+              badPhone ? "company-phone-error company-phone-help" : "company-phone-help"
+            }
             value={fields.phone}
             onChange={(e) => change({ phone: e.target.value })}
           />
+          {badPhone && (
+            <p
+              id="company-phone-error"
+              className={`secondary ${controls.error}`}
+              role="alert"
+            >
+              {t.settings.badPhone}
+            </p>
+          )}
           <p id="company-phone-help" className="secondary">
             {t.companyPhoneHelp}
           </p>

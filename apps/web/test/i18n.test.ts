@@ -33,6 +33,7 @@ const counted = (leaf: Leaf, n: number) =>
 // name, a dash for nothing, an id's label, and patterns that are only their blanks.
 const SAME = new Set([
   "todayScreen.whatsApp",
+  "fallback.notFoundCode",
   "languages.en",
   "languages.es",
   "dayOf",

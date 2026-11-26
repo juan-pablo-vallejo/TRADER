@@ -229,6 +229,17 @@
     margin: calc(-1 * var(--space-3)) 0;
     color: var(--accent);
   }
+  /* A link on a row's second line (the job an invoice is for) is a full target tall, and
+     the name above it stops at its own line, so the two never overlap. */
+  .table tr td:not(:first-child) a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--target);
+  }
+  .table tr td:first-child .rowLink,
+  .table tr td:first-child .cellOpen {
+    margin-bottom: 0;
+  }
   /* A row's act (its Edit) is a line of its own under the rest, a full target tall, with
      no dot before it. `important`: the separator rules above are longer selectors. */
   .table tr td.action {

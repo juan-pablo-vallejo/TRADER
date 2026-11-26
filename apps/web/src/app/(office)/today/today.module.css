@@ -61,6 +61,12 @@
 .money a {
   text-decoration: underline;
 }
+/* The job a person is expected at, named inside their line: a full target tall. */
+.people a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target);
+}
 .more {
   margin: var(--space-2) 0 0;
 }

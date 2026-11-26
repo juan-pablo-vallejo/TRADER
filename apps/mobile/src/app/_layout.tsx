@@ -3,16 +3,22 @@
 // where its API is says so and goes no further — never a guess at an address.
 import { ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
-import { Stack, usePathname } from "expo-router";
+import { type ErrorBoundaryProps, Stack, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { maybeCompleteAuthSession } from "expo-web-browser";
 import { useEffect } from "react";
 
 import { apiUrl, clerkKey } from "../config";
-import { reportScreen, startReporting, withReporting } from "../report";
+import {
+  reportScreen,
+  reportScreenFailure,
+  startReporting,
+  withReporting,
+} from "../report";
 import { StringsProvider } from "../i18n";
 import { SessionProvider } from "../session";
 import { Screen, text } from "../ui/controls";
+import { Fallback } from "../ui/fallback";
 import { Text } from "../ui/text";
 
 // Before anything is drawn, so an error in the first render is reported too. With no DSN
@@ -50,3 +56,19 @@ function RootLayout() {
 }
 
 export default withReporting(RootLayout);
+
+// The last fallback: the app's own shell threw, so not even the language is known. Both
+// languages, reported, and tried again on a tap; what the phone holds is untouched.
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => reportScreenFailure(error), [error]);
+  return (
+    <Fallback
+      testID="app-failed"
+      code="TRADER"
+      title="Something went wrong. · Algo salió mal."
+      body="Nothing on this phone was lost. Try again. · No se perdió nada en este teléfono. Inténtalo de nuevo."
+      action={{ label: "Try again · Intentar de nuevo", onPress: () => void retry() }}
+      reference={`Reference · Referencia: ${error.message}`}
+    />
+  );
+}

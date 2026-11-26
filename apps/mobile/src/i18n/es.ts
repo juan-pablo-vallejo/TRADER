@@ -302,6 +302,19 @@ export const es: Catalog = {
     hours: (n) => (n === 1 ? "hace 1 hora" : `hace ${n} horas`),
     days: (n) => (n === 1 ? "hace 1 día" : `hace ${n} días`),
   },
+  fallback: {
+    notFoundCode: "Error 404",
+    notFoundTitle: "Esta pantalla no está aquí",
+    notFoundBody:
+      "Puede que el enlace sea antiguo o que la pantalla se haya movido. No se cambió nada en este teléfono.",
+    errorCode: "Algo salió mal",
+    errorTitle: "No se pudo mostrar esta pantalla",
+    errorBody:
+      "No se perdió nada en este teléfono: tus horas se guardan y se envían como siempre. Inténtalo de nuevo.",
+    goToToday: "Ir a Hoy",
+    tryAgain: "Intentar de nuevo",
+    reference: "Referencia",
+  },
   me: {
     title: "Yo",
     language: "Idioma",

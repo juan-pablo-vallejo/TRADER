@@ -1,19 +1,21 @@
-// An address with no screen: its own title, the sentence as the page's heading, and one
-// action. A not-found page takes no metadata export, so the title is rendered here.
-import Link from "next/link";
+"use client";
 
-import controls from "./controls.module.css";
-import { requestStrings } from "./i18n/server";
+// An address with no page. Inside the office ((office)/not-found.tsx) its header and menu
+// stay; here, outside it, the way on is the office's first screen or the homepage.
+import { useStrings } from "./i18n";
+import { StatusScreen } from "./status-screen";
 
-export default async function NotFound() {
-  const { t } = await requestStrings();
+export default function NotFound() {
+  const { t } = useStrings();
   return (
-    <div>
-      <title>{`${t.notFound} · TRADER`}</title>
-      <h1 className="heading">{t.notFound}</h1>
-      <Link className={controls.linkTarget} href="/schedule">
-        {t.goToSchedule}
-      </Link>
-    </div>
+    <StatusScreen
+      code={t.fallback.notFoundCode}
+      title={t.fallback.notFoundTitle}
+      body={t.fallback.notFoundBody}
+      actions={[
+        { label: t.fallback.goToToday, href: "/today", primary: true },
+        { label: t.fallback.goHome, href: "/" },
+      ]}
+    />
   );
 }

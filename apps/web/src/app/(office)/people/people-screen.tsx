@@ -349,7 +349,7 @@ function PeopleTable({
 function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
   const { t } = useStrings();
   return (
-    <SidePanel title={row.name} onClose={onClose} returnTo={row.id}>
+    <SidePanel title={row.name} onClose={onClose} returnTo={row.id} opensAt="top">
       <p className={`secondary ${styles.line}`}>
         {t.roles[row.role]} · {statusOf(t, row)}
       </p>

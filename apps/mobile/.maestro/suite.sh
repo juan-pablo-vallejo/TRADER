@@ -120,6 +120,9 @@ flow smoke
 expect "Me saved the contact phone, and left the sign-in address alone" \
   "select phone || ' ' || email from users where email = '$LUIS'" "4015550177 $LUIS"
 
+# A link to a screen the app does not have: the not-found screen, and the way back.
+flow not-found
+
 echo "— clock, with a connection"
 flow clock
 expect "six events, once each" "$(events_of $LUIS)" 6

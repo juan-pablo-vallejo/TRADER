@@ -1,0 +1,64 @@
+/* A page that stands in for one that could not be shown: a wrong address, a screen that
+   threw. Centred in the space a screen has, one column the width of a sentence. */
+.screen {
+  display: flex;
+  justify-content: center;
+  padding: calc(var(--space-6) * 2) var(--space-4);
+}
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-width: 32rem;
+  width: 100%;
+}
+.code {
+  margin: 0;
+  color: var(--ink-secondary);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.title {
+  margin: 0;
+}
+/* Focused by the page, not by a person: a screen reader starts here; no ring is drawn. */
+.title:focus {
+  outline: none;
+}
+.body {
+  margin: 0;
+  color: var(--ink-secondary);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+/* Side by side from the wider density up; a primary is full width below it. */
+@media (min-width: 768px) {
+  .actions > * {
+    width: auto;
+  }
+}
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+/* What a person reads out to support, or pastes: the address asked for, or the error's
+   code. Selectable, set apart, never the first thing read. */
+.reference {
+  margin: var(--space-6) 0 0;
+  padding-top: var(--space-3);
+  border-top: var(--hairline) solid var(--border);
+  color: var(--ink-secondary);
+  overflow-wrap: anywhere;
+}
+.reference code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95em;
+  user-select: all;
+}

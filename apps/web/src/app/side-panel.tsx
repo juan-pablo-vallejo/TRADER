@@ -19,6 +19,7 @@ export function SidePanel({
   onClose,
   wide = false,
   returnTo,
+  opensAt = "field",
   children,
 }: {
   title: string;
@@ -27,6 +28,9 @@ export function SidePanel({
   wide?: boolean;
   // The key of the row whose control opens this panel, for a panel opened by its address.
   returnTo?: string;
+  // Where the focus lands as it opens: a form's first field, or the top (its Close) for a
+  // record read before it is changed, so its title and what it says come first.
+  opensAt?: "field" | "top";
   children: ReactNode;
 }) {
   const { t } = useStrings();
@@ -46,10 +50,12 @@ export function SidePanel({
       // The focus goes to what the panel is for: the field a form marks `data-autofocus`,
       // else its first field, else the browser's choice, its Close.
       const field =
-        dialog.querySelector<HTMLElement>("[data-autofocus]") ??
-        dialog.querySelector<HTMLElement>(
-          "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
-        );
+        opensAt === "top"
+          ? dialog.querySelector<HTMLElement>("[data-close]")
+          : (dialog.querySelector<HTMLElement>("[data-autofocus]") ??
+            dialog.querySelector<HTMLElement>(
+              "input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])",
+            ));
       field?.focus();
     }
     // Registered on every mount, the second of a development double mount included, so the
@@ -90,7 +96,7 @@ export function SidePanel({
         <h2 id={titleId} className="heading">
           {title}
         </h2>
-        <button type="button" className={controls.secondary} onClick={onClose}>
+        <button type="button" className={controls.secondary} onClick={onClose} data-close>
           {t.close}
         </button>
       </div>

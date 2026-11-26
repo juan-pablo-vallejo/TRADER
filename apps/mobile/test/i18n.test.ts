@@ -27,6 +27,7 @@ const said = (leaf: Leaf) =>
 const SAME = new Set([
   "appName",
   "today.whatsApp",
+  "fallback.notFoundCode",
   "crew.person.whatsApp",
   "me.english",
   "me.spanish",

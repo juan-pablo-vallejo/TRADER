@@ -1,0 +1,25 @@
+# A link to a screen the app does not have: the not-found screen says so, with the address
+# for support, and Go to Today leads back into the app. Nothing is written. Run it with
+# `run.sh`.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: parts/sign-in.yaml
+- openLink: app.jpteq.trader://no-such-screen
+# iOS asks whether to open the link in the app the first time.
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
+- extendedWaitUntil:
+    visible:
+      id: "not-found"
+    timeout: 20000
+- takeScreenshot: not-found
+- tapOn:
+    id: "not-found-action"
+- extendedWaitUntil:
+    visible:
+      id: "tab-me"
+    timeout: 20000

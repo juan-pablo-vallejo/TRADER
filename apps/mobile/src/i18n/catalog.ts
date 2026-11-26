@@ -287,6 +287,18 @@ export type Catalog = {
     hours: (n: number) => string;
     days: (n: number) => string;
   };
+  // What stands in for a screen that could not be shown (ui/fallback.tsx).
+  fallback: {
+    notFoundCode: string;
+    notFoundTitle: string;
+    notFoundBody: string;
+    errorCode: string;
+    errorTitle: string;
+    errorBody: string;
+    goToToday: string;
+    tryAgain: string;
+    reference: string;
+  };
   me: {
     title: string;
     language: string;

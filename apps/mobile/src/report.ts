@@ -67,6 +67,13 @@ export function reportCaptureFailure(error: unknown): void {
   Sentry.captureException(error, { fingerprint: ["capture"] });
 }
 
+// A screen that threw, caught by a fallback screen (ui/fallback.tsx): the person was shown
+// what happened and a way on.
+export function reportScreenFailure(error: unknown): void {
+  if (!reporting) return;
+  Sentry.captureException(error, { fingerprint: ["screen"] });
+}
+
 // A report made on purpose, to see one arrive with a readable stack. A staging build's
 // alone: Me offers it on a long press of the build's number.
 // Thrown and caught, so it carries a stack of its own and the app goes on.

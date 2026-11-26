@@ -12,7 +12,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 
 import { uuidv7 } from "../../../uuidv7";
 import controls from "../../../controls.module.css";
@@ -958,6 +958,12 @@ export function InvoiceScreen({
   const { t, f } = useStrings();
   const s = t.invoices;
   const [said, setSaid] = useState<string | null>(null);
+  // Once an act changes the page into another view (issued, voided), the control that did
+  // it is gone: the focus goes to what it says, under the title, and the page scrolls to it.
+  const saidAt = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (said !== null) saidAt.current?.focus();
+  }, [said]);
   const trpc = useTRPC();
   const [deleting, setDeleting] = useState(false);
   const read = useQuery(
@@ -1029,7 +1035,9 @@ export function InvoiceScreen({
           {s.voidedBy(invoice.voidedBy, f.stamp(invoice.voidedAt, zone))}
         </p>
       )}
-      <Note text={said} tone="saved" />
+      <div ref={saidAt} tabIndex={-1} className={styles.said}>
+        <Note text={said} tone="saved" />
+      </div>
       {invoice.state === "draft" ? (
         // What is typed stays the editor's own until it is saved: a refetch after a save
         // must not start it afresh and drop the note that said so.

@@ -69,7 +69,13 @@ test("every office screen opens for an admin, with nothing thrown or refused", a
   const missing = await page.goto("/profile");
   expect(missing?.status()).toBe(404);
   await expect(
-    page.getByRole("heading", { name: "There is no page at this address." }),
+    page.getByRole("heading", { name: "We cannot find that page" }),
+  ).toBeVisible();
+  // The way on, and the address asked for, for support.
+  await expect(page.getByRole("link", { name: "Go to Today" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Go back" })).toBeVisible();
+  await expect(
+    page.getByRole("main").getByText("/profile", { exact: true }),
   ).toBeVisible();
   expect(
     wrong
@@ -543,11 +549,11 @@ test("focus is placed, the account menu closes, a wrong address keeps the office
   // A wrong address is answered inside the office.
   await page.goto("/no-such-screen");
   await expect(page.getByRole("navigation", { name: "Office" })).toBeVisible();
-  await expect(page).toHaveTitle("There is no page at this address. · TRADER");
+  await expect(page).toHaveTitle("We cannot find that page · TRADER");
+  // The page changed under the person: the focus starts at what it now says.
   await expect(
-    page.getByRole("heading", { level: 1, name: "There is no page at this address." }),
-  ).toBeVisible();
-  await expect(page.getByText("There is no page at this address.")).toBeVisible();
+    page.getByRole("heading", { level: 1, name: "We cannot find that page" }),
+  ).toBeFocused();
 });
 
 test("People: Make a worker asks first and not on one's own row; J only acts inside a table", async ({

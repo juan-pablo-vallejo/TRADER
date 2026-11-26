@@ -302,6 +302,7 @@ export const es: Catalog = {
     termsHint:
       "Días desde que se emite una factura hasta que vence. 0 es pago al recibirla.",
     badTerms: "Escribe un número entero de días, de 0 a 365.",
+    badPhone: "Escribe un número que WhatsApp pueda abrir, con su código de país.",
     timezone: "Zona horaria",
     timezoneHint:
       "Se muestra, no se cambia aquí: las horas ya registradas se ponen en sus días según ella.",
@@ -549,10 +550,20 @@ export const es: Catalog = {
   loadFailedHelp: "No se cambió nada. Revisa la conexión e inténtalo de nuevo.",
   tryAgain: "Intentar de nuevo",
   pageError: "Algo salió mal en esta página.",
-  pageErrorHelp: "El paso que falló no guardó nada. Recarga la página para seguir.",
+  pageErrorHelp: "El paso que falló no guardó nada. Inténtalo de nuevo para seguir.",
   reload: "Recargar",
-  notFound: "No hay ninguna página en esta dirección.",
-  goToSchedule: "Ir al horario",
+  fallback: {
+    notFoundCode: "Error 404",
+    notFoundTitle: "No encontramos esa página",
+    notFoundBody:
+      "Puede que la dirección esté mal escrita o que la página se haya movido. No se cambió nada.",
+    errorCode: "Algo salió mal",
+    goToToday: "Ir a Hoy",
+    goHome: "Ir a la página de inicio",
+    goBack: "Volver",
+    tryAgain: "Intentar de nuevo",
+    reference: "Referencia",
+  },
   cancel: "Cancelar",
 
   details: "Datos",
