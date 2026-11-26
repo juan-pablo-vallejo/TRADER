@@ -108,7 +108,7 @@ function Started({
 }: {
   shift: WeekShift;
   week: Week;
-  jobs: { id: string; name: string }[];
+  jobs: { id: string; name: string; status?: "open" | "complete" | "archived" }[];
   onClose: (note: string | null) => void;
 }) {
   const { t, f } = useStrings();
@@ -303,7 +303,7 @@ export function EditShift({
   shift: WeekShift;
   week: Week;
   // The jobsites a started shift's person can be moved to.
-  jobs: { id: string; name: string }[];
+  jobs: { id: string; name: string; status?: "open" | "complete" | "archived" }[];
   onClose: (note: string | null) => void;
   // A change to a shift nobody has started: the screen draws it at once, sends it and
   // offers Undo (optimistic.ts). This dialog only says what is wanted, and closes.
@@ -452,7 +452,7 @@ export function AddShift({
 }: {
   week: Week;
   people: { id: string; name: string }[];
-  jobs: { id: string; name: string }[];
+  jobs: { id: string; name: string; status?: "open" | "complete" | "archived" }[];
   // The employee and the day the form opens on, when a cell's own button opened it.
   first: { userId?: string; day?: string };
   onClose: (note: string | null) => void;
@@ -595,8 +595,11 @@ export function AddShift({
             >
               <option value="" />
               {jobs.map((j) => (
+                // A complete job still takes a shift (a touch-up), and says it is complete.
                 <option key={j.id} value={j.id}>
-                  {j.name}
+                  {j.status === "complete"
+                    ? `${j.name} (${t.jobStatus.complete})`
+                    : j.name}
                 </option>
               ))}
             </select>

@@ -294,7 +294,7 @@ export const es: Catalog = {
     company: "Empresa",
     companyExplain: "Estos datos se imprimen en todas las facturas.",
     companyName: "Nombre de la empresa",
-    companyEmail: "Correo",
+    companyEmail: "Correo electrónico",
     howToPay: "Cómo pagar",
     howToPayHint:
       "Unas pocas líneas, impresas tal como las escribas bajo “How to pay” en todas las facturas.",
@@ -575,6 +575,8 @@ export const es: Catalog = {
   role: "Rol",
   status: "Estado",
   edit: "Editar",
+  unsavedInPanel:
+    "Lo que cambiaste aquí no está guardado. Guárdalo, o pulsa Escape otra vez para descartarlo.",
   close: "Cerrar",
   emailTaken: "Otra persona ya tiene ese correo.",
   phoneTaken: "Otra persona ya tiene ese número de celular.",
@@ -591,11 +593,11 @@ export const es: Catalog = {
   deactivatePersonEffect: (name) =>
     `${name} no podrá iniciar sesión ni enviar horas desde su teléfono. Las horas que la oficina ya tiene se conservan.`,
   unchanged: "Sin cambios.",
-  active: "Activo",
+  active: "Activa",
   invitationStatus: {
     not_sent: "Sin enviar",
     sent: "Enviada · sin verificar",
-    verified: "Verificado",
+    verified: "Verificada",
   },
   deactivated: "Desactivada",
   roles: { admin: "Administrador", worker: "Trabajador" },
@@ -778,6 +780,8 @@ export const es: Catalog = {
     schedule: "Poner turnos",
     createInvoice: "Crear factura",
     openDraft: "Abrir su borrador",
+    noHoursClosed:
+      "No se registraron horas en esta obra, así que no hay nada que facturar.",
     waitingForHours:
       "Las horas aparecen aquí cuando el equipo marca entrada en esta obra.",
     waitingForPayment: "Un pago se anota en la factura misma.",

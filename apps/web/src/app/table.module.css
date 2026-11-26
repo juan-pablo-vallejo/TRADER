@@ -81,6 +81,16 @@
 .number .cellOpen {
   justify-content: flex-end;
 }
+/* What opens something is drawn so at every width, as a narrow row draws it: underlined,
+   and a row's name in the link's color. Plain text that opens a panel on a click is
+   found only by pointing at it. */
+.cellOpen {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.table tr td:first-child .cellOpen {
+  color: var(--accent);
+}
 .scroll {
   overflow-x: auto;
 }

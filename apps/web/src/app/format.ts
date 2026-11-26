@@ -13,6 +13,19 @@ import { localeOf, type Language } from "./i18n/language";
 // A sign-in number as it is said aloud: the contract's rule, which the phone shows too.
 export const signInPhone = shownSignInPhone;
 
+// A time zone as people say it, "Eastern Time", with its id for anyone who needs the exact
+// one: "Eastern Time (America/New_York)". The id alone where the browser has no name for it.
+export function zoneName(zone: string, language: Language): string {
+  const named = new Intl.DateTimeFormat(localeOf(language), {
+    timeZone: zone,
+    timeZoneName: "longGeneric",
+  })
+    .formatToParts(new Date(0))
+    .find((p) => p.type === "timeZoneName")?.value;
+  if (named === undefined || named === zone) return zone;
+  return `${named.charAt(0).toUpperCase()}${named.slice(1)} (${zone})`;
+}
+
 // A person's first name: the first word of the name they gave, where the header has room
 // for no more (account.tsx).
 export function firstName(name: string): string {

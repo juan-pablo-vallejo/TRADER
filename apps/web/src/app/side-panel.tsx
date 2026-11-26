@@ -7,7 +7,7 @@
 // panel is open is the screen's to keep, in the address where a panel
 // should be linkable (use-url-filters.ts). Lifted from the schedule's drawer; consumed by
 // the Schedule and Hours screens.
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import controls from "./controls.module.css";
 import { rowOpener } from "./data-table";
@@ -38,6 +38,10 @@ export function SidePanel({
   const titleId = useId();
   // What had the focus when the panel opened, kept across a development double mount.
   const opener = useRef<Element | null>(null);
+  // Something typed and not yet sent: the first Escape keeps the panel open and says so;
+  // a second discards. Close, pressed on purpose, closes.
+  const unsaved = useRef(false);
+  const [warned, setWarned] = useState(false);
   useEffect(() => {
     const dialog = ref.current;
     if (dialog === null) return;
@@ -91,6 +95,27 @@ export function SidePanel({
       aria-labelledby={titleId}
       // Escape: the browser closes the dialog; the screen forgets the panel.
       onClose={onClose}
+      onCancel={(e) => {
+        if (unsaved.current && !warned) {
+          e.preventDefault();
+          setWarned(true);
+        }
+      }}
+      onInput={(e) => {
+        // What is typed is what a stray Escape would lose; a choice in a list, a box or a
+        // switch is made again in a moment.
+        const target = e.target as HTMLElement;
+        const typed =
+          target instanceof HTMLTextAreaElement ||
+          (target instanceof HTMLInputElement &&
+            !["checkbox", "radio"].includes(target.type));
+        if (!typed) return;
+        unsaved.current = true;
+        setWarned(false);
+      }}
+      onSubmit={() => {
+        unsaved.current = false;
+      }}
     >
       <div className={styles.head}>
         <h2 id={titleId} className="heading">
@@ -99,6 +124,13 @@ export function SidePanel({
         <button type="button" className={controls.secondary} onClick={onClose} data-close>
           {t.close}
         </button>
+      </div>
+      <div role="status">
+        {warned && (
+          <p className={`secondary ${controls.note} ${controls.error}`}>
+            {t.unsavedInPanel}
+          </p>
+        )}
       </div>
       {children}
     </dialog>

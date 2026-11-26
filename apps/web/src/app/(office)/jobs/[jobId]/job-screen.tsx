@@ -95,7 +95,12 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
   }
   const page = read.data;
   const job = page.job;
-  const first = STEPS.find((step) => !page.steps[step]) ?? null;
+  // A job that is no longer open takes no more shifts: its steps start at its hours, and
+  // with none recorded it says so rather than waiting for them.
+  const steps =
+    job.status === "open" ? STEPS : STEPS.filter((step) => step !== "scheduled");
+  const first = steps.find((step) => !page.steps[step]) ?? null;
+  const closedWithoutHours = job.status !== "open" && first === "hoursRecorded";
   const draftOf = page.invoices.find((i) => i.state === "draft");
   type Person = (typeof page.people)[number];
   type Invoice = (typeof page.invoices)[number];
@@ -197,7 +202,7 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
           {s.steps}
         </h2>
         <ol className={styles.steps}>
-          {STEPS.map((step: Step) => (
+          {steps.map((step: Step) => (
             <li
               key={step}
               data-step={step}
@@ -240,7 +245,11 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
             </WriteButton>
           </p>
         )}
-        {first === "hoursRecorded" && <p className="secondary">{s.waitingForHours}</p>}
+        {first === "hoursRecorded" && (
+          <p className="secondary">
+            {closedWithoutHours ? s.noHoursClosed : s.waitingForHours}
+          </p>
+        )}
         {first === "paid" && <p className="secondary">{s.waitingForPayment}</p>}
         <Note text={note} />
       </section>

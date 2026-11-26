@@ -24,6 +24,7 @@ import { PasskeySection } from "../../clerk-passkeys";
 import controls from "../../controls.module.css";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
+import { zoneName } from "../../format";
 import { useStrings } from "../../i18n";
 import { LoadingRows } from "../../loading-rows";
 import { Note } from "../../note";
@@ -126,7 +127,7 @@ const draftOf = (c: Company): Draft => ({
 });
 
 function Details({ company }: { company: Company }) {
-  const { t } = useStrings();
+  const { t, language } = useStrings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   // What was typed, or null: then the fields show the record as fetched.
@@ -292,7 +293,7 @@ function Details({ company }: { company: Company }) {
             type="text"
             readOnly
             aria-describedby="company-zone-hint"
-            value={company.timezone}
+            value={zoneName(company.timezone, language)}
           />
           <p id="company-zone-hint" className={`secondary ${controls.caption}`}>
             {t.settings.timezoneHint}

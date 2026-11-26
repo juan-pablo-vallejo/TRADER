@@ -598,6 +598,8 @@ export const en = {
   role: "Role",
   status: "Status",
   edit: "Edit",
+  unsavedInPanel:
+    "What you changed here is not saved. Save it, or press Escape again to discard it.",
   close: "Close",
   emailTaken: "Another person already has that email.",
   phoneTaken: "Another person already has that mobile number.",
@@ -815,6 +817,7 @@ export const en = {
     schedule: "Schedule",
     createInvoice: "Create invoice",
     openDraft: "Open its draft",
+    noHoursClosed: "No hours were recorded on this job, so there is nothing to invoice.",
     waitingForHours: "Hours appear here once the crew clocks in on this job.",
     waitingForPayment: "A payment is noted on the invoice itself.",
     people: "People",
@@ -888,9 +891,9 @@ export const en = {
   reasonTags: {
     offline: "offline",
     corrected: "corrected",
-    user_timed: "time set by user",
+    user_timed: "entered by hand",
     location: "location",
-    clock_skewed: "clock skew",
+    clock_skewed: "phone clock off",
     unscheduled: "not on the schedule",
   },
   reconExplain:
@@ -925,7 +928,7 @@ export const en = {
     "This time will no longer count. If it is still on the clock, it is clocked out first. Its entries stay on record.",
   addMissingHours: "Add missing hours",
   missingHoursExplain:
-    "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once, flagged as time set by user.",
+    "Hours nobody recorded: a clock in and, when it is known, the clock out. They count at once, flagged as entered by hand.",
   missingClockIn: "Clock in",
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
