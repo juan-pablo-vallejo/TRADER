@@ -14,7 +14,7 @@
 // through this router.
 import { ROLES } from "../contract/enums";
 import { addressChanges, users } from "@trader/db/schema";
-import { and, eq, gt, ne } from "drizzle-orm";
+import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { z } from "zod";
 
 import { instant } from "../contract/instant";
@@ -95,12 +95,18 @@ export const meRouter = router({
       // A worker's name and addresses are the office's to change.
       if (ctx.user.role !== "admin") throw forbidden();
       // Own row, last writer wins; updated_at follows through the ORM. The write itself
-      // re-checks the role as it takes the row: an admin made a worker meanwhile writes
-      // nothing.
+      // re-checks the role and the person as it takes the row: an admin made a worker, or
+      // deactivated, meanwhile writes nothing.
       const [row] = await ctx.tx
         .update(users)
         .set({ name: input.name, phone: input.phone })
-        .where(and(eq(users.id, ctx.user.id), eq(users.role, "admin")))
+        .where(
+          and(
+            eq(users.id, ctx.user.id),
+            eq(users.role, "admin"),
+            isNull(users.deactivatedAt),
+          ),
+        )
         .returning({ name: users.name, phone: users.phone });
       if (row === undefined) throw forbidden();
       return {

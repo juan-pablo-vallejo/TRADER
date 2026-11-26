@@ -585,6 +585,19 @@ describe("an email added by its person at Clerk", () => {
     expect(stateOf(c.logins[0]!).emails).toEqual([]);
   });
 
+  it("marks verified an email the login already lists, and touches nothing else", async () => {
+    const listed = byNumber();
+    listed.email_addresses.push({ id: "idn_u", email_address: NEW_EMAIL });
+    const c = clerk([listed]);
+    expect(
+      await c.directory.addEmail({ id: ROW, subject: "user_bound", email: NEW_EMAIL }),
+    ).toBe("unchanged");
+    const writes = c.calls.filter((x) => x.method !== "GET");
+    expect(writes.map((x) => [x.method, x.path, x.body])).toEqual([
+      ["PATCH", "/email_addresses/idn_u", { verified: true }],
+    ]);
+  });
+
   it("answers unchanged where the login has it, and no_login where none is the row's", async () => {
     const c = clerk([byNumber()]);
     await c.directory.addEmail({ id: ROW, subject: "user_bound", email: NEW_EMAIL });

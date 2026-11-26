@@ -322,7 +322,7 @@ export const es: Catalog = {
       no_code: "Primero pide un código.",
       expired: "Ese código ha caducado. Pide uno nuevo.",
       wrong_code: "Ese código no funcionó. Revísalo o pide uno nuevo.",
-      too_many: "Demasiados intentos por hoy. Inténtalo de nuevo mañana.",
+      too_many: "Demasiados intentos. Inténtalo de nuevo en un día.",
       address_held: "Este correo inicia sesión en otra cuenta. Usa otro correo.",
       failed: "No se pudo completar. Revisa tu conexión e inténtalo de nuevo.",
     },

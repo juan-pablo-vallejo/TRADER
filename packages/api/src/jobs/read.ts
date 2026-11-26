@@ -48,7 +48,7 @@ export const readOutput = z.strictObject({
       person: z.strictObject({
         id: z.uuid(),
         name: z.string(),
-        // Their contact phone, else the number they sign in with.
+        // The number they sign in with, else their contact phone, as on Today.
         phone: z.string().nullable(),
       }),
       scheduledThisWeek: z.boolean(),
@@ -136,7 +136,7 @@ export async function readJobPage(
     .map((u) => {
       const sum = byPerson.get(u.id);
       return {
-        person: { id: u.id, name: u.name, phone: u.phone ?? u.signInPhone },
+        person: { id: u.id, name: u.name, phone: u.signInPhone ?? u.phone },
         scheduledThisWeek: thisWeek.has(u.id),
         onItNow: sum?.open ?? false,
         hours: { week: sum?.week ?? 0, toDate: sum?.toDate ?? 0 },

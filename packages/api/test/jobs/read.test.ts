@@ -278,7 +278,7 @@ describe("job.read: the people of a job", () => {
         .where(eq(users.id, w.w1));
       await tx
         .update(users)
-        .set({ signInPhone: "+14015550122" })
+        .set({ phone: "401-555-0122", signInPhone: null })
         .where(eq(users.id, w.w2));
       // w1: scheduled this week, eight hours last week and four this week, on it now.
       await w.shift(w.w1, w.J, "2026-11-19");
@@ -294,13 +294,14 @@ describe("job.read: the people of a job", () => {
       const page = await w.read(w.J);
       expect(page.people).toEqual([
         {
-          person: { id: w.w1, name: "w1", phone: "401-555-0100" },
+          // The sign-in number first, as on Today; else the contact phone.
+          person: { id: w.w1, name: "w1", phone: "+14015550111" },
           scheduledThisWeek: true,
           onItNow: true,
           hours: { week: 400, toDate: 1200 },
         },
         {
-          person: { id: w.w2, name: "w2", phone: "+14015550122" },
+          person: { id: w.w2, name: "w2", phone: "401-555-0122" },
           scheduledThisWeek: false,
           onItNow: false,
           hours: { week: 0, toDate: 200 },
