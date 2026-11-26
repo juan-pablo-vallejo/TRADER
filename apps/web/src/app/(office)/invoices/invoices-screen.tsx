@@ -15,6 +15,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { uuidv7 } from "../../uuidv7";
 import controls from "../../controls.module.css";
+import { jobOption } from "../../format";
 import { DataTable, type Column } from "../../data-table";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
@@ -29,7 +30,11 @@ import styles from "./invoices.module.css";
 import { WriteButton } from "../../write-button";
 import table from "../../table.module.css";
 
-function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
+function NewDraft({
+  jobs,
+}: {
+  jobs: { id: string; name: string; status: "open" | "complete" | "archived" }[];
+}) {
   const { t } = useStrings();
   const s = t.invoices;
   const trpc = useTRPC();
@@ -76,7 +81,7 @@ function NewDraft({ jobs }: { jobs: { id: string; name: string }[] }) {
           <option value="" />
           {jobs.map((j) => (
             <option key={j.id} value={j.id}>
-              {j.name}
+              {jobOption(j.name, j.status, t)}
             </option>
           ))}
         </select>

@@ -36,7 +36,7 @@ import {
 } from "./schedule-view";
 import { sameAs, type Change } from "./optimistic";
 import { WriteButton } from "../../write-button";
-import type { Formatters } from "../../format";
+import { jobOption, type Formatters } from "../../format";
 
 function useRefresh() {
   const trpc = useTRPC();
@@ -232,7 +232,7 @@ function Started({
                 <option value="" />
                 {others.map((j) => (
                   <option key={j.id} value={j.id}>
-                    {j.name}
+                    {jobOption(j.name, j.status, t)}
                   </option>
                 ))}
               </select>
@@ -597,9 +597,7 @@ export function AddShift({
               {jobs.map((j) => (
                 // A complete job still takes a shift (a touch-up), and says it is complete.
                 <option key={j.id} value={j.id}>
-                  {j.status === "complete"
-                    ? `${j.name} (${t.jobStatus.complete})`
-                    : j.name}
+                  {jobOption(j.name, j.status, t)}
                 </option>
               ))}
             </select>

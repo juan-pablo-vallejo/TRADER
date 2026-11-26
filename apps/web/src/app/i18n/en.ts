@@ -675,10 +675,11 @@ export const en = {
     signInNumber: (number: string) => `Sign-in: ${number}`,
     contactNumber: (number: string) => `Contact: ${number}`,
     noNumber: "No number on record.",
+    whileDeactivated: "Reactivate this person first to change this.",
     theirWeek: "Their week in Hours",
     invitation: "Invitation",
     invitationExplain:
-      "They have not signed in yet. Send them where to get the app. The message is written, in English and Spanish: text it from your own phone, or have TRADER email it.",
+      "They have not signed in yet. Send them where to get the app: the message is written, in English and Spanish, ready to send with the buttons below.",
     invitedOn: (day: string) => `Invited ${day}`,
     sendByWhatsApp: "Send by WhatsApp",
     sentIt: "I sent it",
@@ -932,7 +933,6 @@ export const en = {
   missingClockIn: "Clock in",
   missingClockOut: "Clock out (optional)",
   addHours: "Add hours",
-  jobOptionArchived: (name: string) => `${name} · archived`,
   // One sentence per answer of labor.correct (labor/correct.ts); hours/day-panel.tsx holds this
   // list to the server's codes.
   correctionRejected: {

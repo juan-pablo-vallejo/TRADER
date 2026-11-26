@@ -130,8 +130,9 @@
 .lines thead th:last-child {
   width: 6rem;
 }
-/* A day's cell gives its flags the width: "sin conexión" stands on one line. */
-.lines td:not(:first-child):not(:last-child) {
+/* A day's cell gives its flags the width ("sin conexión" stands on one line); the total
+   keeps the same edge, so figures line up down a stacked row too. */
+.lines td:not(:first-child) {
   padding: 0 var(--space-1);
 }
 .lines .cellOpen {

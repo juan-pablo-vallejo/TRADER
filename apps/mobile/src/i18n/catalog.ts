@@ -157,6 +157,8 @@ export type Catalog = {
     signInAgain: string;
     wrongClock: string;
     now: string;
+    check: string;
+    checking: string;
     // The chip under a screen's title: where this phone's entries stand, in a word.
     chip: { sent: string; saved: string; sending: string; attention: string };
     // Said at once when a cycle hears entries refused; the chip turns to Needs attention.

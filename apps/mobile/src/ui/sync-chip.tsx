@@ -181,9 +181,21 @@ export function SyncChip() {
             ))}
           </View>
         )}
+        {/* Something waits: Send now, the sheet's action. Nothing waits (all sent, or only
+            a refusal the office answers): the same call, as Check now, a quiet button, so it
+            never offers to send what is sent or what was refused. */}
         <Button
           testID="sync-now"
-          label={syncing ? t.sync.working : t.sync.now}
+          kind={where.unsent > 0 ? "primary" : "secondary"}
+          label={
+            where.unsent > 0
+              ? syncing
+                ? t.sync.working
+                : t.sync.now
+              : syncing
+                ? t.sync.checking
+                : t.sync.check
+          }
           disabled={syncing}
           onPress={() => void sync()}
         />

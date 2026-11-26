@@ -25,6 +25,7 @@ import type { AppRouter } from "@trader/api";
 import type { inferRouterOutputs } from "@trpc/server";
 
 import controls from "../../controls.module.css";
+import { jobOption } from "../../format";
 import { blocking, codeOf, EmptyState, Failure, RefreshFailed } from "../../failure";
 import { LoadingRows } from "../../loading-rows";
 import { Field } from "../../field";
@@ -85,7 +86,11 @@ const MISSING = "missing";
 // The button that opens an editor: focus goes back to it when its correction is written.
 const toggleId = (key: string) => `correct-toggle-${key}`;
 
-type JobOption = { id: string; name: string; archived: boolean };
+type JobOption = {
+  id: string;
+  name: string;
+  status: "open" | "complete" | "archived";
+};
 // What a correction did, said beneath the control that opened its editor.
 type Notice = { key: string; text: string; ok: boolean };
 type Outcome = "saved" | "changed";
@@ -256,7 +261,7 @@ function Ledger({ asked, signInHref }: { asked: Lookup; signInHref: string }) {
   const jobOptions: JobOption[] = (jobs.data ?? []).map((j) => ({
     id: j.id,
     name: j.name,
-    archived: j.status === "archived",
+    status: j.status,
   }));
 
   const toggle = (key: string) => {
@@ -490,7 +495,7 @@ function JobSelect({
         {value === "" && <option value="">{t.chooseJob}</option>}
         {jobs.map((j) => (
           <option key={j.id} value={j.id}>
-            {j.archived ? t.jobOptionArchived(j.name) : j.name}
+            {jobOption(j.name, j.status, t)}
           </option>
         ))}
       </select>
@@ -531,7 +536,7 @@ function SessionCorrection({
         {
           id: session.job.id,
           name: session.job.name,
-          archived: session.job.status === "archived",
+          status: session.job.status,
         },
         ...jobs,
       ];

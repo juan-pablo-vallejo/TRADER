@@ -604,6 +604,8 @@ function Payments({ invoice }: { invoice: Invoice }) {
           setNote(s.reversed);
         }
         await refresh();
+        // The payment's row, and its Reverse with it, are gone: the focus to Payments.
+        requestAnimationFrame(() => document.getElementById("invoice-payments")?.focus());
       },
       onError: () => {
         fail(s.unknownOutcome);
@@ -984,15 +986,16 @@ function Issued({ invoice }: { invoice: Invoice }) {
           <tbody>
             {invoice.lines.map((l) => (
               <tr key={l.id}>
-                <td>{l.description}</td>
-                <td className={table.number}>
+                {/* `data-label`: what names each figure when the row stacks at 390. */}
+                <td data-label={s.description}>{l.description}</td>
+                <td className={table.number} data-label={s.quantity}>
                   {l.quantity.replace(/\.?0+$/, "")}
                   {l.unit === null ? "" : ` ${l.unit}`}
                 </td>
-                <td className={table.number}>
+                <td className={table.number} data-label={s.price}>
                   {f.money(l.unitPriceCents, invoice.currency)}
                 </td>
-                <td className={table.number}>
+                <td className={table.number} data-label={s.amount}>
                   {f.money(l.amountCents, invoice.currency)}
                 </td>
               </tr>

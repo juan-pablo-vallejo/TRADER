@@ -26,6 +26,18 @@ export function zoneName(zone: string, language: Language): string {
   return `${named.charAt(0).toUpperCase()}${named.slice(1)} (${zone})`;
 }
 
+// A job as a list of jobs offers it: its name, and its state in brackets when it is no
+// longer open, "Harbor View (Complete)", the same in every picker.
+export function jobOption(
+  name: string,
+  status: "open" | "complete" | "archived" | undefined,
+  t: Catalog,
+): string {
+  return status === undefined || status === "open"
+    ? name
+    : `${name} (${t.jobStatus[status]})`;
+}
+
 // A person's first name: the first word of the name they gave, where the header has room
 // for no more (account.tsx).
 export function firstName(name: string): string {

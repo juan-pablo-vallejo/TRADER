@@ -155,6 +155,8 @@ export const en: Catalog = {
     wrongClock:
       "This phone's clock looks wrong. Set the time automatically in the phone's settings.",
     now: "Send now",
+    check: "Check now",
+    checking: "Checking…",
     chip: {
       sent: "Sent",
       saved: "Saved on phone",

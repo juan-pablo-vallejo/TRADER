@@ -621,14 +621,15 @@ function Addresses({ row }: { row: Row }) {
     <EditorSection heading={p.addresses}>
       {row.role === "admin" ? (
         <p className="secondary">{p.adminAddresses}</p>
+      ) : row.deactivatedAt === null ? (
+        <>
+          <p className="secondary">{p.addressesExplain}</p>
+          <Address row={row} kind="email" />
+          <Address row={row} kind="sign_in_phone" />
+        </>
       ) : (
-        row.deactivatedAt === null && (
-          <>
-            <p className="secondary">{p.addressesExplain}</p>
-            <Address row={row} kind="email" />
-            <Address row={row} kind="sign_in_phone" />
-          </>
-        )
+        // Nothing to change here while deactivated: said, never an empty heading.
+        <p className="secondary">{p.whileDeactivated}</p>
       )}
       <AddressChanges row={row} />
     </EditorSection>
@@ -784,12 +785,18 @@ function Role({ row }: { row: Row }) {
     <EditorSection heading={t.role}>
       <p className="body">{t.roles[row.role]}</p>
       {other === "admin" ? (
-        <DestructiveAction
-          label={t.personPanel.makeAdmin}
-          effect={t.personPanel.makeAdminEffect(row.name)}
-          disabled={setRoleCall.isPending || row.deactivatedAt !== null}
-          onConfirm={() => setRoleCall.mutate({ userId: row.id, role: "admin" })}
-        />
+        <>
+          <DestructiveAction
+            label={t.personPanel.makeAdmin}
+            effect={t.personPanel.makeAdminEffect(row.name)}
+            disabled={setRoleCall.isPending || row.deactivatedAt !== null}
+            onConfirm={() => setRoleCall.mutate({ userId: row.id, role: "admin" })}
+          />
+          {row.deactivatedAt !== null && (
+            // A disabled button says why.
+            <p className="secondary">{t.personPanel.whileDeactivated}</p>
+          )}
+        </>
       ) : own ? (
         <p className="secondary">{t.personPanel.ownRole}</p>
       ) : (
@@ -875,6 +882,11 @@ function Access({ row }: { row: Row }) {
   const answered = async (answer: { result: string }) => {
     setNote(noteOf(t, answer));
     await refresh();
+    // Deactivate and Reactivate take each other's place: the focus follows to the one now
+    // standing there, the person's state said beside it.
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>("[data-access] button")?.focus(),
+    );
   };
   const failed = () => setNote(t.requestFailed);
   const deactivate = useMutation(
@@ -886,23 +898,26 @@ function Access({ row }: { row: Row }) {
   const busy = deactivate.isPending || reactivate.isPending;
   return (
     <>
-      {row.deactivatedAt === null ? (
-        <DestructiveAction
-          label={t.deactivate}
-          effect={t.deactivatePersonEffect(row.name)}
-          disabled={busy}
-          onConfirm={() => deactivate.mutate({ userId: row.id })}
-        />
-      ) : (
-        <WriteButton
-          type="button"
-          className={`${controls.secondary} ${table.stretch}`}
-          pending={busy}
-          onClick={() => reactivate.mutate({ userId: row.id })}
-        >
-          {t.reactivate}
-        </WriteButton>
-      )}
+      {/* `contents`: a place to find the button by, with no box of its own in the footer. */}
+      <div data-access style={{ display: "contents" }}>
+        {row.deactivatedAt === null ? (
+          <DestructiveAction
+            label={t.deactivate}
+            effect={t.deactivatePersonEffect(row.name)}
+            disabled={busy}
+            onConfirm={() => deactivate.mutate({ userId: row.id })}
+          />
+        ) : (
+          <WriteButton
+            type="button"
+            className={`${controls.secondary} ${table.stretch}`}
+            pending={busy}
+            onClick={() => reactivate.mutate({ userId: row.id })}
+          >
+            {t.reactivate}
+          </WriteButton>
+        )}
+      </div>
       <Note text={note} />
     </>
   );

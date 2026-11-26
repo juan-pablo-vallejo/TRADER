@@ -42,6 +42,11 @@ export function SidePanel({
   // a second discards. Close, pressed on purpose, closes.
   const unsaved = useRef(false);
   const [warned, setWarned] = useState(false);
+  // The notice is said where it can be seen: a long panel may be scrolled past its top.
+  const notice = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (warned) notice.current?.scrollIntoView({ block: "nearest" });
+  }, [warned]);
   useEffect(() => {
     const dialog = ref.current;
     if (dialog === null) return;
@@ -108,10 +113,17 @@ export function SidePanel({
       // Escape: the browser closes the dialog; the screen forgets the panel.
       onClose={onClose}
       onCancel={(e) => {
-        // A refusal still on the panel means what was sent is still there, unsaved.
+        // A refusal still on the panel means what was sent is still there, unsaved. A date
+        // or time field holding the focus may not have said its change yet (a keyboard
+        // changes it in place): the person is in the middle of one, and is asked too.
         const refused =
           e.currentTarget.querySelector('[aria-invalid="true"], [role="alert"]') !== null;
-        if ((unsaved.current || refused) && !warned) {
+        const active = document.activeElement;
+        const midTime =
+          active instanceof HTMLInputElement &&
+          e.currentTarget.contains(active) &&
+          ["date", "time", "datetime-local"].includes(active.type);
+        if ((unsaved.current || refused || midTime) && !warned) {
           e.preventDefault();
           setWarned(true);
         }
@@ -130,7 +142,7 @@ export function SidePanel({
           {t.close}
         </button>
       </div>
-      <div role="status">
+      <div role="status" ref={notice}>
         {warned && (
           <p className={`secondary ${controls.note} ${controls.error}`}>
             {t.unsavedInPanel}

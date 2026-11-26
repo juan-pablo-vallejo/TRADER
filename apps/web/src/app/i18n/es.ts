@@ -647,10 +647,11 @@ export const es: Catalog = {
     signInNumber: (number) => `Acceso: ${number}`,
     contactNumber: (number) => `Contacto: ${number}`,
     noNumber: "No hay ningún número anotado.",
+    whileDeactivated: "Primero vuelve a activar a esta persona para cambiar esto.",
     theirWeek: "Su semana en Horas",
     invitation: "Invitación",
     invitationExplain:
-      "Todavía no ha iniciado sesión. Mándale dónde obtener la aplicación. El mensaje ya está escrito, en inglés y en español: envíalo por mensaje de texto desde tu propio teléfono, o deja que TRADER lo mande por correo.",
+      "Todavía no ha iniciado sesión. Mándale dónde obtener la aplicación: el mensaje ya está escrito, en inglés y en español, listo para enviar con los botones de abajo.",
     invitedOn: (day) => `Invitación del ${day}`,
     sendByWhatsApp: "Enviar por WhatsApp",
     sentIt: "Ya lo envié",
@@ -892,7 +893,6 @@ export const es: Catalog = {
   missingClockIn: "Entrada",
   missingClockOut: "Salida (opcional)",
   addHours: "Agregar horas",
-  jobOptionArchived: (name) => `${name} · archivada`,
   correctionRejected: {
     no_open_session:
       "No estaba trabajando a esa hora para uno de estos registros. Revisa las horas.",

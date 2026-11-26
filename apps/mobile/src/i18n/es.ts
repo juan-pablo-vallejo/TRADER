@@ -169,6 +169,8 @@ export const es: Catalog = {
     wrongClock:
       "El reloj de este teléfono parece estar mal. Pon la hora en automático en los ajustes del teléfono.",
     now: "Enviar ahora",
+    check: "Actualizar ahora",
+    checking: "Actualizando…",
     chip: {
       sent: "Enviado",
       saved: "Guardado en el teléfono",
