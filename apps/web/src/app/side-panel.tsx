@@ -93,6 +93,22 @@ export function SidePanel({
     // Once, as the panel opens: what it returns to is fixed then.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Whether a close is held once, to say what would be lost: something typed and not sent,
+  // a refusal still on the panel (what was sent is still there, unsaved), or a date or time
+  // field holding the focus, whose change a keyboard makes in place and may not have said.
+  const holds = (dialog: HTMLDialogElement): boolean => {
+    if (warned) return false;
+    const refused =
+      dialog.querySelector('[aria-invalid="true"], [role="alert"]') !== null;
+    const active = document.activeElement;
+    const midTime =
+      active instanceof HTMLInputElement &&
+      dialog.contains(active) &&
+      ["date", "time", "datetime-local"].includes(active.type);
+    if (!unsaved.current && !refused && !midTime) return false;
+    setWarned(true);
+    return true;
+  };
   // What is typed, or a date or a time changed (which says so by `change` alone), is what
   // a stray Escape would lose; a choice in a list, a box or a switch is made again in a
   // moment.
@@ -112,21 +128,18 @@ export function SidePanel({
       aria-labelledby={titleId}
       // Escape: the browser closes the dialog; the screen forgets the panel.
       onClose={onClose}
-      onCancel={(e) => {
-        // A refusal still on the panel means what was sent is still there, unsaved. A date
-        // or time field holding the focus may not have said its change yet (a keyboard
-        // changes it in place): the person is in the middle of one, and is asked too.
-        const refused =
-          e.currentTarget.querySelector('[aria-invalid="true"], [role="alert"]') !== null;
-        const active = document.activeElement;
-        const midTime =
-          active instanceof HTMLInputElement &&
-          e.currentTarget.contains(active) &&
-          ["date", "time", "datetime-local"].includes(active.type);
-        if ((unsaved.current || refused || midTime) && !warned) {
+      // Escape is caught as a key, before the browser acts on it: from inside a date or
+      // time field Chrome closes the dialog without a `cancel` to stop. `onCancel` stays
+      // for whatever else asks the dialog to close.
+      onKeyDownCapture={(e) => {
+        if (e.key !== "Escape") return;
+        if (holds(e.currentTarget)) {
           e.preventDefault();
-          setWarned(true);
+          e.stopPropagation();
         }
+      }}
+      onCancel={(e) => {
+        if (holds(e.currentTarget)) e.preventDefault();
       }}
       onChange={(e) => typedIn(e.target)}
       onInput={(e) => typedIn(e.target)}
