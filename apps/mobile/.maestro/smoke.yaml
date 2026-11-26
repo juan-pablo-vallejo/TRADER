@@ -15,6 +15,11 @@ appId: app.jpteq.trader
     id: "tab-me"
 - assertVisible:
     id: "me-name"
+# The address the office invited this person with: shown, and read-only.
+- scrollUntilVisible:
+    element:
+      id: "me-sign-in-email"
+    centerElement: true
 # Me: the person's own contact phone, saved through the server (suite.sh reads it back).
 - tapOn:
     id: "me-phone"

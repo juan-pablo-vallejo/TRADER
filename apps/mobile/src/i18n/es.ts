@@ -316,6 +316,11 @@ export const es: Catalog = {
     phone: "Teléfono de contacto",
     phoneHelp:
       "Donde la oficina puede contactarte. No es el número con el que inicias sesión.",
+    signInPhone: "Número de acceso",
+    signInEmail: "Correo de acceso",
+    signInByOffice: "Inicias sesión con esto. La oficina lo cambia.",
+    signInBySupport:
+      "Inicias sesión con esto. Pide al soporte de TRADER que lo cambie: support@jpteq.app",
     phoneNotLoaded:
       "Este teléfono no pudo llegar a la oficina para cargar tu teléfono de contacto. Conéctate e inténtalo de nuevo.",
     save: "Guardar",

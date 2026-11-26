@@ -24,7 +24,8 @@ export function Button({
   testID: string;
   onPress: () => void;
   disabled?: boolean;
-  // `brand`: the sign-in screen's one button, in D'Sierra's red as the office's is.
+  // `primary`: an action, in D'Sierra's red; the chosen side of a pair is their navy.
+  // `brand`: the sign-in screen's button, the same red.
   kind?: "primary" | "secondary" | "brand";
   // One side of a pair: read as a radio button, selected or not, inside a `Pair`.
   selected?: boolean;
@@ -34,6 +35,9 @@ export function Button({
   spoken?: string;
 }) {
   const primary = kind !== "secondary";
+  // A primary button that is one side of a pair says what is chosen: navy, not the red of
+  // an action.
+  const chosen = primary && selected === true;
   const speech = useSpeech();
   return (
     <Pressable
@@ -44,10 +48,17 @@ export function Button({
       accessibilityState={{ disabled, ...(selected !== undefined && { selected }) }}
       disabled={disabled}
       onPress={onPress}
-      style={[
+      style={({ pressed }) => [
         styles.button,
         primary ? styles.primary : styles.secondary,
-        kind === "brand" && styles.brand,
+        chosen && styles.chosen,
+        pressed &&
+          !disabled &&
+          (chosen
+            ? styles.chosenPressed
+            : primary
+              ? styles.primaryPressed
+              : styles.secondaryPressed),
         disabled && primary && styles.disabled,
         mark !== undefined && styles.withMark,
       ]}
@@ -55,7 +66,10 @@ export function Button({
       {mark}
       <Text
         numberOfLines={2}
-        style={[styles.buttonLabel, { color: primary ? color.onAccent : color.ink }]}
+        style={[
+          styles.buttonLabel,
+          { color: chosen ? color.onAction : primary ? color.onPrimary : color.ink },
+        ]}
       >
         {label}
       </Text>
@@ -101,8 +115,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     paddingVertical: space[2],
   },
-  primary: { minHeight: size.primary, backgroundColor: color.accent },
-  brand: { backgroundColor: color.brand },
+  primary: { minHeight: size.primary, backgroundColor: color.primary },
+  primaryPressed: { backgroundColor: color.primaryPressed },
+  // The chosen side of a pair: the pair's own height, so its two sides line up.
+  chosen: { minHeight: size.target, backgroundColor: color.action },
+  chosenPressed: { backgroundColor: color.actionPressed },
+  secondaryPressed: { backgroundColor: color.actionTint },
   secondary: {
     minHeight: size.target,
     backgroundColor: color.surface,

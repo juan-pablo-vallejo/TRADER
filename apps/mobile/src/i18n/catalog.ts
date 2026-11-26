@@ -298,6 +298,10 @@ export type Catalog = {
     name: string;
     phone: string;
     phoneHelp: string;
+    signInPhone: string;
+    signInEmail: string;
+    signInByOffice: string;
+    signInBySupport: string;
     // The server has not answered with the contact phone yet.
     phoneNotLoaded: string;
     save: string;

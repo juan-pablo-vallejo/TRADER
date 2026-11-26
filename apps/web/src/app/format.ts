@@ -5,15 +5,13 @@
 // Dates and money follow the person's language: `formatters` binds them to it, and a
 // screen reads them from `useStrings().f`. What does not depend on a language (digits to
 // cents, hundredths to hours, a phone number) is a plain function here.
+import { shownSignInPhone } from "@trader/api/contract";
+
 import type { Catalog } from "./i18n/en";
 import { localeOf, type Language } from "./i18n/language";
 
-// A sign-in number as the server stores it, +1 and ten digits, shown as it is said aloud:
-// "(401) 555-0100". Anything else is shown as it is.
-export function signInPhone(e164: string): string {
-  const m = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164);
-  return m === null ? e164 : `(${m[1]}) ${m[2]}-${m[3]}`;
-}
+// A sign-in number as it is said aloud: the contract's rule, which the phone shows too.
+export const signInPhone = shownSignInPhone;
 
 // A person's first name: the first word of the name they gave, where the header has room
 // for no more (account.tsx).

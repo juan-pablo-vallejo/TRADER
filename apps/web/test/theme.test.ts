@@ -65,11 +65,43 @@ describe("the theme", () => {
   const web = webColors();
   const phone = phoneColors();
 
+  // The phone is on D'Sierra's red and navy for its actions; the office keeps its indigo.
+  const PHONE_OWN = [
+    "primary",
+    "primaryPressed",
+    "onPrimary",
+    "action",
+    "actionPressed",
+    "onAction",
+    "actionTint",
+  ];
+  const OFFICE_OWN = ["accent", "onAccent", "accentTint"];
+
   it("holds the same colors under the same names in the office and on the phone", () => {
     expect(web.size).toBeGreaterThan(20);
-    expect(Object.fromEntries([...phone].sort())).toEqual(
-      Object.fromEntries([...web].sort()),
-    );
+    const shared = (colors: Map<string, string>, own: string[]) =>
+      Object.fromEntries([...colors].filter(([name]) => !own.includes(name)).sort());
+    expect(shared(phone, PHONE_OWN)).toEqual(shared(web, OFFICE_OWN));
+    for (const name of PHONE_OWN) expect([name, phone.has(name)]).toEqual([name, true]);
+  });
+
+  it("puts the phone's actions on D'Sierra's red and navy, each readable", () => {
+    expect(phone.get("primary")).toBe(web.get("brand"));
+    expect(phone.get("action")).toBe(web.get("brandNavy"));
+    for (const [ink, ground] of [
+      ["onPrimary", "primary"],
+      ["onPrimary", "primaryPressed"],
+      ["onAction", "action"],
+      ["onAction", "actionPressed"],
+      ["action", "surface"],
+      ["action", "canvas"],
+      ["action", "actionTint"],
+      ["ink", "actionTint"],
+    ] as const) {
+      expect([ink, ground, contrast(phone.get(ink)!, phone.get(ground)!) >= 4.5]).toEqual(
+        [ink, ground, true],
+      );
+    }
   });
 
   it("is the owner's palette", () => {

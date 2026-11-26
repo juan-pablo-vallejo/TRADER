@@ -125,7 +125,7 @@ export function RemindersProvider({ children }: { children: ReactNode }) {
         await Notifications.setNotificationChannelAsync(CHANNEL, {
           name: t.reminders.channel,
           importance: Notifications.AndroidImportance.HIGH,
-          lightColor: color.accent,
+          lightColor: color.action,
         });
       }
       for (const r of schedule) {

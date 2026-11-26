@@ -354,7 +354,7 @@ export default function Today() {
                       <Ionicons
                         name={chosen ? "radio-button-on" : "radio-button-off"}
                         size={22}
-                        color={chosen ? color.accent : color.controlBorder}
+                        color={chosen ? color.action : color.controlBorder}
                       />
                       <View style={styles.fill}>
                         <Text style={text.bodyStrong}>{job.name}</Text>
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.border,
   },
-  chosen: { borderColor: color.accent, backgroundColor: color.accentTint },
+  chosen: { borderColor: color.action, backgroundColor: color.actionTint },
   foot: { gap: space[2] },
   pair: { flexDirection: "row", gap: space[2] },
 });

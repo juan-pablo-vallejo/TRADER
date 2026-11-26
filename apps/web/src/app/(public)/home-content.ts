@@ -54,7 +54,7 @@ type HomeContent = {
   // As a customer should dial and write them.
   phone: string | null;
   email: string | null;
-  // What an estimate costs, said above Call and Email.
+  // What an estimate costs, said above WhatsApp and Email.
   estimates: Words;
   facts: Fact[];
   // The kinds of work, and the kinds of project they do it for.

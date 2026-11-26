@@ -638,7 +638,7 @@ const styles = StyleSheet.create({
   },
   textButtonLabel: {
     ...(type.bodyStrong as TextStyle),
-    color: color.accent,
+    color: color.action,
     textDecorationLine: "underline",
   },
   textButtonDisabled: { color: color.muted, textDecorationLine: "none" },

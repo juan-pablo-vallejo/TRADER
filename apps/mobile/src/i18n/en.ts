@@ -299,6 +299,11 @@ export const en: Catalog = {
     name: "Your name",
     phone: "Contact phone",
     phoneHelp: "Where the office can reach you. It is not the number you sign in with.",
+    signInPhone: "Sign-in number",
+    signInEmail: "Sign-in email",
+    signInByOffice: "You sign in with this. The office changes it.",
+    signInBySupport:
+      "You sign in with this. Ask TRADER support to change it: support@jpteq.app",
     phoneNotLoaded:
       "This phone could not reach the office to load your contact phone. Connect and try again.",
     save: "Save",

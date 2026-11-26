@@ -1,11 +1,11 @@
 // The phone app's tokens: color, type, layout and spacing. Light theme
 // only. Text is never under `secondary`
 // (15 pt), a target never under 48 pt, the primary button 56 pt.
-// Color: the same names and values as the office's (apps/web/src/app/theme.css); a test
-// fails when the two differ (apps/web/test/theme.test.ts). The accent is the color of
-// every action; `brand` and `brandNavy` belong to the mark, never to a control or a status,
-// save a control's edge, which is the navy, and the sign-in screen, which is on D'Sierra's
-// brand as the office's is: its navy band and its one red button (ui/phone-sign-in.tsx).
+// Color: where a name is the office's too (apps/web/src/app/theme.css), the same value; a
+// test fails when the two differ (apps/web/test/theme.test.ts). The phone is on D'Sierra's
+// own scheme, as their homepage and sign-in are: their red for an action, their navy for
+// what is chosen, a link, the active tab and a control's edge. Red never sits on navy
+// (2.63:1). The office keeps its indigo; the status tones are the office's.
 export const color = {
   ink: "#111827",
   inkSecondary: "#4B5563",
@@ -15,9 +15,16 @@ export const color = {
   border: "#D9DCE3",
   // The edge of a control, a field's included: the navy, 3:1 and more on white and canvas.
   controlBorder: "#140064",
-  accent: "#2808AC",
-  onAccent: "#FFFFFF",
-  accentTint: "#EEEBFA",
+  // An action: a primary button, white on their red (6.57:1), darker while pressed.
+  primary: "#BC0C0C",
+  primaryPressed: "#9A0A0A",
+  onPrimary: "#FFFFFF",
+  // What is chosen, a link, the active tab: their navy, and its lightest tint behind a
+  // chosen row.
+  action: "#140064",
+  actionPressed: "#0D0041",
+  onAction: "#FFFFFF",
+  actionTint: "#E3E0EC",
   brand: "#BC0C0C",
   brandNavy: "#140064",
   muted: "#6B7280",

@@ -2,7 +2,17 @@
 // the server has answered once; and the three pairs, each with one side selected.
 import { describe, expect, it } from "vitest";
 
-import { contactLoader, mePairs, type ContactLoad } from "../src/me";
+import { shownSignInPhone } from "@trader/api/contract";
+
+import { contactLoader, mePairs, signInRows, type ContactLoad } from "../src/me";
+
+const LUIS = {
+  name: "Luis Herrera",
+  phone: "4015550177",
+  role: "worker" as const,
+  email: "luis.herrera@demo.invalid",
+  signInPhone: null,
+};
 
 describe("the contact phone", () => {
   it("is fetched again when Me comes back into focus, after a first try with no signal", async () => {
@@ -12,7 +22,7 @@ describe("the contact phone", () => {
       async () => {
         calls += 1;
         if (calls === 1) throw new Error("no signal");
-        return { name: "Luis Herrera", phone: "4015550177" };
+        return LUIS;
       },
       (state) => seen.push(state),
     );
@@ -23,7 +33,7 @@ describe("the contact phone", () => {
     await load();
     expect(seen.at(-1)).toEqual({
       phase: "loaded",
-      contact: { name: "Luis Herrera", phone: "4015550177" },
+      contact: LUIS,
     });
     // Once loaded, a later focus leaves what the person may be typing alone.
     await load();
@@ -35,7 +45,7 @@ describe("the contact phone", () => {
     const load = contactLoader(
       async () => {
         calls += 1;
-        return { name: "Ana", phone: null };
+        return { ...LUIS, name: "Ana", phone: null };
       },
       () => undefined,
     );
@@ -60,5 +70,22 @@ describe("the three pairs", () => {
     const pairs = mePairs({ language: "en", reminders: null, key: "absent" });
     expect(selected(pairs.reminders)).toEqual(["off"]);
     expect(pairs.key).toBeNull();
+  });
+});
+
+describe("the sign-in addresses on Me", () => {
+  it("shows each address the office gave, never editable, with who changes it", () => {
+    expect(signInRows({ ...LUIS, signInPhone: "+14015550177" })).toEqual([
+      { kind: "phone", value: shownSignInPhone("+14015550177"), changedBy: "office" },
+      { kind: "email", value: "luis.herrera@demo.invalid", changedBy: "office" },
+    ]);
+    // Invited by number alone: the number only.
+    expect(signInRows({ ...LUIS, email: null, signInPhone: "+14015550177" })).toEqual([
+      { kind: "phone", value: "(401) 555-0177", changedBy: "office" },
+    ]);
+    // An admin's own addresses are changed by TRADER's support, not the office.
+    expect(signInRows({ ...LUIS, role: "admin" })).toEqual([
+      { kind: "email", value: "luis.herrera@demo.invalid", changedBy: "support" },
+    ]);
   });
 });

@@ -138,7 +138,7 @@ function Choice({
       <Ionicons
         name={chosen ? "radio-button-on" : "radio-button-off"}
         size={22}
-        color={chosen ? color.accent : color.controlBorder}
+        color={chosen ? color.action : color.controlBorder}
       />
       <Text style={[text.body, styles.fill]}>{label}</Text>
     </Pressable>
@@ -637,7 +637,7 @@ export default function CrewTab() {
                   style={[styles.view, view === which && styles.viewOn]}
                 >
                   <Text
-                    style={[text.bodyStrong, view === which && { color: color.onAccent }]}
+                    style={[text.bodyStrong, view === which && { color: color.onAction }]}
                   >
                     {which === "person" ? t.crew.byPerson : t.crew.byJob}
                   </Text>
@@ -1043,7 +1043,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.controlBorder,
   },
-  viewOn: { backgroundColor: color.accent, borderColor: color.accent },
+  viewOn: { backgroundColor: color.action, borderColor: color.action },
   list: { gap: space[2] },
   row: {
     flexDirection: "row",
@@ -1072,7 +1072,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.controlBorder,
   },
-  chosen: { borderColor: color.accent, backgroundColor: color.accentTint },
+  chosen: { borderColor: color.action, backgroundColor: color.actionTint },
   stepper: { gap: space[1] },
   stepperRow: { flexDirection: "row", alignItems: "center", gap: space[3] },
   step: {

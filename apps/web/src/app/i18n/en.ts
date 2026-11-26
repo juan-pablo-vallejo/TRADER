@@ -14,7 +14,7 @@ export const en = {
   teamSignIn: "Team sign-in",
   // The homepage and `/get`, the page an invitation points to.
   getApp: "Get the app",
-  call: (number: string) => `Call ${number}`,
+  whatsAppChat: "Message us on WhatsApp",
   emailUs: (address: string) => `Email ${address}`,
   photos: "Our work",
   // Under a photo of work under way, which carries the finished job beside it.

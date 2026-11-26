@@ -1,8 +1,18 @@
 // What Me works out apart from the screen: the contact phone's loading, and its three pairs.
 // Pure but for the fetch it is handed, so it is tested with nothing of a device beneath it.
+import { shownSignInPhone } from "@trader/api/contract";
+
 import type { Language } from "./i18n/catalog";
 
-export type Contact = { name: string; phone: string | null };
+// What the server answers for Me: the person's own name and contact phone, which they edit,
+// and the sign-in addresses and role, which only the office changes.
+export type Contact = {
+  name: string;
+  phone: string | null;
+  role: "admin" | "worker";
+  email: string | null;
+  signInPhone: string | null;
+};
 export type ContactLoad =
   { phase: "loading" } | { phase: "failed" } | { phase: "loaded"; contact: Contact };
 
@@ -50,4 +60,22 @@ export function mePairs(input: {
     reminders: pair(["on", "off"] as const, input.reminders === "on" ? "on" : "off"),
     key: input.key === "absent" ? null : pair(["on", "off"] as const, input.key),
   };
+}
+
+// The addresses a person signs in with, as Me shows them: read-only, the number first, each
+// with who changes it. The office changes a worker's; TRADER's support an admin's, since
+// no one in the company is above them.
+export type SignInRow = {
+  kind: "phone" | "email";
+  value: string;
+  changedBy: "office" | "support";
+};
+export function signInRows(contact: Contact): SignInRow[] {
+  const changedBy = contact.role === "admin" ? "support" : "office";
+  const rows: SignInRow[] = [];
+  if (contact.signInPhone !== null)
+    rows.push({ kind: "phone", value: shownSignInPhone(contact.signInPhone), changedBy });
+  if (contact.email !== null)
+    rows.push({ kind: "email", value: contact.email, changedBy });
+  return rows;
 }

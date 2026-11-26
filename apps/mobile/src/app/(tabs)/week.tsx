@@ -88,7 +88,7 @@ export default function Week() {
             testID={`week-day-${d}`}
             style={[styles.card, day === today && styles.today]}
           >
-            <Text style={[text.label, day === today && { color: color.accent }]}>
+            <Text style={[text.label, day === today && { color: color.action }]}>
               {day === today ? `${t.week.today} · ` : ""}
               {dayName(day, language)}
             </Text>
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: color.border,
   },
-  today: { borderColor: color.accent },
+  today: { borderColor: color.action },
   shift: {
     flexDirection: "row",
     alignItems: "center",

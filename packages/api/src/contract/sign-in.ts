@@ -80,3 +80,10 @@ const FAILURE_OF: Record<string, SignInFailure> = {
 export const signInFailure = (code: string | null | undefined): SignInFailure =>
   (code != null && Object.hasOwn(FAILURE_OF, code) ? FAILURE_OF[code] : undefined) ??
   "failed";
+
+// A sign-in number as the row holds it, +1 and ten digits, shown as it is said aloud:
+// "(401) 555-0100". Anything else is shown as it is. Both apps show it this way.
+export function shownSignInPhone(e164: string): string {
+  const m = /^\+1(\d{3})(\d{3})(\d{4})$/.exec(e164);
+  return m === null ? e164 : `(${m[1]}) ${m[2]}-${m[3]}`;
+}

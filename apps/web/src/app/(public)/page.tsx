@@ -3,6 +3,8 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import { preload } from "react-dom";
 
+import { whatsAppLink } from "@trader/api/contract";
+
 import { signInPath } from "../../server/identity-mode";
 import "../brand-fonts.css";
 import type { Language } from "../i18n/language";
@@ -16,7 +18,7 @@ import { SiteHeader } from "./site-header";
 // `/`: D'Sierra Painting's homepage, one page in English and Spanish, and the first thing
 // a customer of theirs sees. A header that stays, a photo of their work, what they do and
 // where, four facts a customer checks, jobs before and after, a gallery, what they do as
-// a list, then Call and Email, the only two things a customer can do here. The team's way
+// a list, then WhatsApp and Email, the only two things a customer can do here. The team's way
 // in is the header's; Get the app, the policy and the terms are the footer's. Its words
 // and pictures are home-content.ts, and a part with no content draws nothing. Whose `/`
 // this is, on a deployment with more than one host, is the proxy's to say
@@ -37,9 +39,6 @@ export const dynamic = "force-dynamic";
 // headline's font itself, ahead of its stylesheet, and no page but this one and sign-in,
 // which does the same, hears of either.
 const HEADING_FONT = "/fonts/BodoniModa-latin-5.3.0.woff2";
-
-// A number as a `tel:` link dials it: the digits, and a leading plus.
-const dialable = (phone: string) => phone.replace(/[^\d+]/g, "");
 
 // The address a shared link's picture is fetched from: this request's own host. Null for
 // a host header that is not one.
@@ -113,7 +112,8 @@ function Shot({
 
 export default async function Home() {
   const { t, language } = await requestStrings();
-  const tel = HOME.phone === null ? null : `tel:${dialable(HOME.phone)}`;
+  // A customer writes to D'Sierra on WhatsApp: a chat with their number, no call.
+  const chat = whatsAppLink(HOME.phone);
   const mail = HOME.email === null ? null : `mailto:${HOME.email}`;
   const place = HOME.place?.[language];
   preload(HEADING_FONT, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
@@ -123,11 +123,7 @@ export default async function Home() {
         name={HOME.name}
         signIn={t.teamSignIn}
         signInHref={signInPath(process.env)}
-        call={
-          tel !== null && HOME.phone !== null
-            ? { href: tel, label: t.call(HOME.phone) }
-            : null
-        }
+        chat={chat === null ? null : { href: chat, label: t.whatsAppChat }}
       />
       <main>
         <section className={styles.hero}>
@@ -151,11 +147,16 @@ export default async function Home() {
             </h1>
             <p className={styles.lede}>{HOME.summary[language]}</p>
             {place !== undefined && <p className={styles.place}>{place}</p>}
-            {(tel !== null || mail !== null) && (
+            {(chat !== null || mail !== null) && (
               <p className={styles.heroActions}>
-                {tel !== null && HOME.phone !== null && (
-                  <a className={styles.call} href={tel}>
-                    {t.call(HOME.phone)}
+                {chat !== null && (
+                  <a
+                    className={styles.call}
+                    href={chat}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t.whatsAppChat}
                   </a>
                 )}
                 {mail !== null && HOME.email !== null && (
@@ -271,7 +272,7 @@ export default async function Home() {
           </section>
         )}
 
-        {(tel !== null || mail !== null) && (
+        {(chat !== null || mail !== null) && (
           <section className={styles.band} aria-labelledby="estimates">
             <div className={styles.bandInner}>
               <h2 id="estimates" className={styles.h2}>
@@ -279,9 +280,14 @@ export default async function Home() {
               </h2>
               {place !== undefined && <p className={styles.place}>{place}</p>}
               <p className={styles.actions}>
-                {tel !== null && HOME.phone !== null && (
-                  <a className={styles.call} href={tel}>
-                    {t.call(HOME.phone)}
+                {chat !== null && (
+                  <a
+                    className={styles.call}
+                    href={chat}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {t.whatsAppChat}
                   </a>
                 )}
                 {mail !== null && HOME.email !== null && (
@@ -319,12 +325,17 @@ export default async function Home() {
         </div>
       </footer>
 
-      {(tel !== null || mail !== null) && (
-        // A phone only: Call one tap away, wherever the page has been scrolled to.
+      {(chat !== null || mail !== null) && (
+        // A phone only: WhatsApp one tap away, wherever the page has been scrolled to.
         <nav className={styles.callBar} aria-label={t.home.contact}>
-          {tel !== null && HOME.phone !== null && (
-            <a className={styles.call} href={tel}>
-              {t.call(HOME.phone)}
+          {chat !== null && (
+            <a
+              className={styles.call}
+              href={chat}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {t.whatsAppChat}
             </a>
           )}
           {mail !== null && (

@@ -6,20 +6,20 @@ import styles from "./home.module.css";
 
 // The homepage's header, pinned to the top: D'Sierra's roller and brush on a white tile
 // (the mark is drawn on white and has no transparent version), their name, then the other
-// language and the way in for the team. On a laptop it also carries the number to call; on
+// language and the way in for the team. On a laptop it also carries the WhatsApp chat; on
 // a phone that is the bar at the bottom of the screen (page.tsx). Navy, so nothing on it is
 // red: red on this navy is 2.63:1.
 export function SiteHeader({
   name,
   signIn,
   signInHref,
-  call,
+  chat,
 }: {
   name: string;
   signIn: string;
   signInHref: string;
   // The number as a link and as it reads, or null where D'Sierra has given none.
-  call: { href: string; label: string } | null;
+  chat: { href: string; label: string } | null;
 }) {
   const { props } = getImageProps({ src: mark, alt: "", width: 36, height: 36 });
   const { style: _inline, ...img } = props;
@@ -33,9 +33,14 @@ export function SiteHeader({
             {name}
           </span>
         </a>
-        {call !== null && (
-          <a className={styles.headCall} href={call.href}>
-            {call.label}
+        {chat !== null && (
+          <a
+            className={styles.headCall}
+            href={chat.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {chat.label}
           </a>
         )}
         <LanguageSwitch className={styles.headLink} />

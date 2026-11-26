@@ -27,7 +27,7 @@ import { KEY_FOR, KEY_MADE_AT, useBiometrics } from "../../biometrics";
 import { apiUrl, BUILD } from "../../config";
 import { announce, felt } from "../../feedback";
 import { useSpeech, useStrings } from "../../i18n";
-import { contactLoader, mePairs } from "../../me";
+import { contactLoader, mePairs, signInRows, type SignInRow } from "../../me";
 import { useReminders } from "../../reminders";
 import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
@@ -51,6 +51,8 @@ export default function Me() {
   const pulledName = snapshot?.data.me.name ?? "";
   const [name, setName] = useState(pulledName);
   const [phone, setPhone] = useState("");
+  // The addresses this person signs in with: shown, never edited here.
+  const [signIn, setSignIn] = useState<SignInRow[]>([]);
   // Until the server has answered with the phone it holds, saving would blank it.
   const [contact, setContact] = useState<"loading" | "failed" | "loaded">("loading");
   const loaded = contact === "loaded";
@@ -115,6 +117,7 @@ export default function Me() {
               if (state.phase === "loaded") {
                 setName(state.contact.name);
                 setPhone(state.contact.phone ?? "");
+                setSignIn(signInRows(state.contact));
               }
             },
           ),
@@ -226,6 +229,30 @@ export default function Me() {
             textContentType="telephoneNumber"
           />
           <Text style={text.secondary}>{t.me.phoneHelp}</Text>
+          {signIn.map((row) => (
+            <View key={row.kind} style={styles.field}>
+              <Text style={text.label}>
+                {row.kind === "phone" ? t.me.signInPhone : t.me.signInEmail}
+              </Text>
+              {/* Read-only: greyed, and said as not editable. Only the office (or TRADER's
+                  support, for an admin) changes how a person signs in. */}
+              <TextInput
+                testID={`me-sign-in-${row.kind}`}
+                accessibilityLabel={
+                  row.kind === "phone" ? t.me.signInPhone : t.me.signInEmail
+                }
+                accessibilityLanguage={speech}
+                accessibilityState={{ disabled: true }}
+                style={[styles.input, styles.readOnly]}
+                value={row.value}
+                editable={false}
+                selectTextOnFocus={false}
+              />
+              <Text style={text.secondary}>
+                {row.changedBy === "office" ? t.me.signInByOffice : t.me.signInBySupport}
+              </Text>
+            </View>
+          ))}
           {contact === "failed" && (
             <>
               <Text
@@ -379,4 +406,12 @@ const styles = StyleSheet.create({
     fontSize: type.body.fontSize,
   },
   build: { textAlign: "center" },
+  field: { gap: space[3] },
+  // Greyed, so it reads as locked: a grey fill, a hairline in place of a control's navy
+  // edge, and the secondary ink (above 4.5:1 on the fill).
+  readOnly: {
+    backgroundColor: color.neutralTint,
+    borderColor: color.border,
+    color: color.inkSecondary,
+  },
 });

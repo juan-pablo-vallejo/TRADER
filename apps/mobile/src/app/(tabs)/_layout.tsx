@@ -57,7 +57,7 @@ function AppTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: color.accent,
+        tabBarActiveTintColor: color.action,
         tabBarInactiveTintColor: color.inkSecondary,
         // 15 pt, as `type.label` is (theme.ts).
         tabBarLabelStyle: { fontSize: type.label.fontSize, fontWeight: "600" },

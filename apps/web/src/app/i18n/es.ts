@@ -19,7 +19,7 @@ export const es: Catalog = {
   signOut: "Cerrar sesión",
   teamSignIn: "Acceso del equipo",
   getApp: "Obtener la aplicación",
-  call: (number) => `Llamar al ${number}`,
+  whatsAppChat: "Escríbenos por WhatsApp",
   emailUs: (address) => `Escribir a ${address}`,
   photos: "Nuestro trabajo",
   swipeFinished: "Desliza para verlo terminado",
