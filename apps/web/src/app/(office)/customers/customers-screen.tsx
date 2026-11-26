@@ -248,7 +248,8 @@ function CustomersTable({
       key: "phone",
       header: t.phone,
       empty: (row) => row.phone === null,
-      cell: (row) => row.phone ?? "",
+      // A phone number is read whole: never broken at its hyphen in a narrow column.
+      cell: (row) => <span style={{ whiteSpace: "nowrap" }}>{row.phone ?? ""}</span>,
     },
     {
       key: "email",
