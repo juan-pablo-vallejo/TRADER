@@ -194,8 +194,9 @@ case ${1:-} in
     # owns the schema and bypasses row-level security, as onboarding requires; the runtime
     # role trader_app is the cluster's and keeps its password. Nothing of the URL is printed.
     need MIGRATOR_URL E2E_ADMIN_PHONE E2E_WORKER_PHONE
-    psql "$MIGRATOR_URL" -X -q -v ON_ERROR_STOP=1 \
-      -c 'DROP SCHEMA IF EXISTS drizzle CASCADE' -c 'DROP SCHEMA public CASCADE' \
+    # One transaction: a run stopped half-way leaves the schema as it was, and runs again.
+    psql "$MIGRATOR_URL" -X -q -1 -v ON_ERROR_STOP=1 \
+      -c 'DROP SCHEMA IF EXISTS drizzle CASCADE' -c 'DROP SCHEMA IF EXISTS public CASCADE' \
       -c 'CREATE SCHEMA public' >/dev/null
     cd "$root"
     DATABASE_URL=$MIGRATOR_URL TRADER_MIGRATE_PURPOSE=deploy pnpm db:migrate >/dev/null

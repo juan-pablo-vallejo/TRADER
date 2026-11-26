@@ -173,6 +173,13 @@ const changing = [
   ["pnpm pkg set scripts.check=true", "ask"],
   ["npm pkg delete scripts.lint", "ask"],
   ["cp /tmp/p Package.json", "ask"],
+  // A package's manifest, by pkg set in any folder; tsc and vitest writing a file.
+  ["pnpm --filter @trader/web pkg set scripts.test=true", "ask"],
+  ["cd apps/web && pnpm pkg set scripts.typecheck=true", "ask"],
+  ["cd ~/Documents/TRADER && pnpm pkg set scripts.check=true", "ask"],
+  ["tsc x.ts --outFile .claude/hooks/guard.mjs", "ask"],
+  ["pnpm exec tsc -p packages/api/tsconfig.json --outDir scripts/trader-ws.d", "ask"],
+  ["vitest run --reporter=json --outputFile=.github/workflows/ci.yml", "ask"],
   ["echo x > .prettierignore", "ask"],
 ];
 const unchanged = [
@@ -202,8 +209,6 @@ const unchanged = [
   "pnpm exec tsc -p packages/api/tsconfig.json",
   "pnpm exec vitest run --config vitest.config.ts",
   "npx vitest run --config packages/api/vitest.config.ts",
-  "pnpm --filter @trader/web pkg set scripts.dev=next",
-  "cd apps/web && pnpm pkg set scripts.dev=next",
   "cd apps/web && cat package.json",
 ];
 for (const [c, d] of changing)

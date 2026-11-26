@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ~/bin/trader-android on the workstation's job account: the phone flows on the Android
 # emulator, against one checkout. Installed by `trader-ws install`; run by `trader-ws
-# android` on ~/trader and by the nightly run on its own clone. It holds no credential and
+# android` on ~/trader. It holds no credential and
 # reaches no deployed service: the suite builds its own demo database in the local Postgres.
 #   trader-android <checkout>
 set -euo pipefail

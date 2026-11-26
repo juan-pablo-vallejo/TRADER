@@ -319,7 +319,7 @@ export function scriptChange(path, before, after) {
 
 // Commands that read a file they are given and never change it.
 const READERS = new Set(
-  "cat head tail less more grep egrep fgrep rg wc ls stat file diff cmp shasum sha256sum md5 md5sum nl od xxd cut sort uniq jq test [ echo printf gitleaks shellcheck trader-ws tsc vitest".split(
+  "cat head tail less more grep egrep fgrep rg wc ls stat file diff cmp shasum sha256sum md5 md5sum nl od xxd cut sort uniq jq test [ echo printf gitleaks shellcheck trader-ws".split(
     " ",
   ),
 );
@@ -376,16 +376,15 @@ export function touches(script, depth = 0, root = ROOT) {
         continue;
       }
     }
-    // `pnpm pkg set` and `npm pkg set` or `delete` write the manifest of the folder they run
-    // in without naming it: at the root, a guard file.
+    // `pnpm pkg set` and `npm pkg set` or `delete` write a manifest without naming it: the
+    // root's, or a package's test or typecheck script. Which folder it runs in is not always
+    // known from the text (a `cd` to a variable, a subshell, `-C`), so it is always asked.
     if (
       ["pnpm", "npm"].includes(name) &&
       rest.includes("pkg") &&
-      rest.some((a) => ["set", "delete"].includes(a)) &&
-      !rest.some((a) => /^(--filter|-F|--prefix|-C|--dir)(=|$)/.test(a)) &&
-      cwd === resolve(root)
+      rest.some((a) => ["set", "delete"].includes(a))
     )
-      return ask(`${name} pkg changes the root package.json`);
+      return ask(`${name} pkg changes a package.json`);
     // A redirection writes whatever the command is.
     for (let i = 0; i < argv.length; i++) {
       const m = /^\d*>{1,2}\|?(.*)$/.exec(argv[i]);
@@ -413,6 +412,11 @@ export function touches(script, depth = 0, root = ROOT) {
       continue;
     }
     if (READERS.has(name)) continue;
+    // tsc and vitest read a config they are given; with an output flag they write a file.
+    const writes =
+      /^(--outDir|--outFile|--declarationDir|--tsBuildInfoFile|--init|-b|--build|--outputFile.*|-u|--update)(=|$)/;
+    if ((name === "tsc" || name === "vitest") && !rest.some((a) => writes.test(a)))
+      continue;
     if (name === "sed" && !rest.some((a) => /^-[a-zA-Z]*i|^--in-place/.test(a))) continue;
     if (name === "find" && !rest.some((a) => /^-(delete|exec|execdir|ok)$/.test(a)))
       continue;
