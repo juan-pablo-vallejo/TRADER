@@ -135,12 +135,12 @@ describe("a stacked row", () => {
     expect(button).toContain("min-height: var(--target)");
   });
 
-  it("keeps a middle dot with the cell it introduces", () => {
+  it("wraps its cells whole, with a gap and no separator left at a line's end", () => {
+    const row = rule(css, "  .table:not(.lines) tbody tr:not(.group)", NARROW);
+    expect(row).toContain("flex-wrap: wrap");
+    expect(row).toContain("gap:");
     for (const file of ["table.module.css", "(office)/people/people.module.css"]) {
-      const source = read(file);
-      // The space that may break is before the dot; the one after it never breaks.
-      expect(source, file).not.toContain('"\\00a0· "');
-      expect(source, file).toContain('" ·\\00a0"');
+      expect(read(file), file).not.toContain("·");
     }
   });
 

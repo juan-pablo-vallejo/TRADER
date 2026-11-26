@@ -1,7 +1,8 @@
 /* The office data table: sticky header, 44 px rows, numbers right aligned, no zebra
    striping; status words in ink-secondary. A row's record opens in a side panel. Narrow: each
-   row two lines — its name, then the other cells joined by a middle dot, an empty one
-   omitted — every stretching control full width, the destructive button never. */
+   row a card — its name on a line of its own, then the other cells as items that wrap
+   whole, an empty one omitted — every stretching control full width, the destructive
+   button never. */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -226,18 +227,9 @@
     padding: var(--space-3) 0;
     margin: calc(-1 * var(--space-3)) 0;
   }
-  /* A figure's label in a narrow row. The separator rules below are longer selectors; the
-     `number` one, the most specific and the last, says the label with its dot: lowering it
-     under the plain separator drops the label from narrow rows. */
+  /* A figure's label in a narrow row: "Jobs 1". */
   .table tr td.number::before {
     content: attr(data-label) " ";
-  }
-  /* The dot belongs to the cell it introduces: the line may break before it, never after. */
-  .table tr td:not(:first-child):not([data-empty]) ~ td:not([data-empty])::before {
-    content: " ·\00a0";
-  }
-  .table tr td:not(:first-child):not([data-empty]) ~ td.number:not([data-empty])::before {
-    content: " ·\00a0" attr(data-label) " ";
   }
 
   /* A group's heading is a line of its own, not a card; the totals are a card like a
@@ -287,14 +279,10 @@
   .table tr td:first-child .cellOpen {
     margin-bottom: 0;
   }
-  /* A row's act (its Edit) is a line of its own under the rest, a full target tall, with
-     no dot before it. `important`: the separator rules above are longer selectors. */
+  /* A row's act (its Edit) is a line of its own under the rest, a full target tall. */
   .table tr td.action {
     display: block;
     margin-top: var(--space-2);
-  }
-  .table tr td.action::before {
-    content: none !important;
   }
   .table tr td.action .cellOpen {
     display: flex;
@@ -307,8 +295,7 @@
   }
   /* A table of figures by column (a week of days): in a narrow row each cell is a line
      of its own, its column's name at the left and its figure at the right, where the
-     joined line of a plain table would run seven figures together. `important`: the
-     separator rules above are longer selectors and would put their dot back. */
+     joined line of a plain table would run seven figures together. */
   .table.lines tr td:not(:first-child):not([data-empty]) {
     display: flex;
     align-items: center;
@@ -318,7 +305,7 @@
     font-variant-numeric: tabular-nums;
   }
   .table.lines tr td:not(:first-child):not([data-empty])::before {
-    content: attr(data-label) !important;
+    content: attr(data-label);
     flex: none;
   }
   /* A day's line is the target, as tall as the density asks at every width below the
@@ -334,6 +321,27 @@
     padding: var(--space-1) 0;
     text-decoration: none;
     color: var(--ink);
+  }
+
+  /* A plain table's row (not a table of figures): its name on a line of its own, then the
+     other cells as items that wrap whole, a gap between them, so nothing is left at a
+     line's end or start; a cell breaks inside only
+     when it alone is wider than the line (a long address), never a phone number at its
+     hyphen. A figure keeps its label ("Jobs 1"). */
+  .table:not(.lines) tbody tr:not(.group) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+  }
+  .table:not(.lines) tbody tr:not(.group) td:first-child,
+  .table:not(.lines) tbody tr:not(.group) td.action {
+    flex: 0 0 100%;
+  }
+  .table:not(.lines) tbody tr td:not(:first-child) {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: break-word;
   }
 
   /* The destructive button is never full width; the others stretch on narrow. */

@@ -4,20 +4,23 @@
   display: grid;
   gap: 0 var(--space-3);
 }
-/* A sign-in address, the number or the email. In the narrow row a cell is a run of text, so
-   two addresses are separated as cells are; in the wide table each is a line of its own. */
+/* A sign-in address, the number or the email. In a narrow row each is a whole item with a
+   gap before the next, no dot that could be left at a line's start; in the wide table each
+   is a line of its own. */
 .address {
+  display: inline-block;
+  max-width: 100%;
   overflow-wrap: anywhere;
 }
-.address + .address::before {
-  content: " ·\00a0";
+.address:not(:last-child) {
+  margin-right: var(--space-3);
 }
 @container (min-width: 720px) {
   .address {
     display: block;
   }
-  .address + .address::before {
-    content: none;
+  .address:not(:last-child) {
+    margin-right: 0;
   }
 }
 
