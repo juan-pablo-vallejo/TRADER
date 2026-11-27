@@ -22,11 +22,14 @@ database. The screens are the MVP's, in `docs/TASKS.md`.
   development instance.
 - `packages/api`: the tRPC API, one folder per domain. `src/demo/` builds the demo company.
 - `packages/db`: the schema, its migrations, the seed and the onboarding script.
-- `.github/workflows`: `ci.yml` runs `check`, then `deploy`. `audit.yml` reads the lockfile
+- `.github/workflows`: `ci.yml` runs `static`, `build` and `test` side by side, `check`
+  when all three are green, then `deploy`. `audit.yml` reads the lockfile
   for advisories and every commit for a leaked secret. `preview-phone.yml` builds a preview
   of the phone app for a commit, when started by hand. `release-phone.yml` builds and
   submits the phone app on a release.
-- `scripts/`: `check-ci.sh` is CI's `check` for a machine that is not CI; `staging.sh`
+- `scripts/`: `check-ci.sh` is CI's three jobs for a machine that is not CI, as three
+  lanes; `check-fast.sh` checks what changed since `origin/main`; `ci-scope.sh` tells CI
+  when a push changed Markdown alone; `staging.sh`
   uses staging's keys for one command; `release-facts.sh` lists what a release would ship;
   `trader-ws` runs the check and the Android flows on a second machine, named by
   `TRADER_WS_HOST` (an ssh name, with `TRADER_WS_ADMIN` for `trader-ws audit`) and never in
@@ -101,16 +104,22 @@ Moto g04s's shape, a 1080×2400 phone, and Android 7, the app's oldest.
 
 ## Everyday commands
 
-- `pnpm check`: typecheck, lint, format check and every test. The quick loop. Never piped:
-  a pipe's exit status hides a red run.
-- `scripts/trader-ws check`: CI's `check` step for step, the build and the migration
-  included (`scripts/check-ci.sh`), on the workstation; `--local` runs it on this Mac. Before
-  every commit. It records a green for the exact tree, and the pre-push hook lets a tree
-  onto `main` only when one was recorded for it, or when it differs from such a tree in
-  Markdown alone.
+- `pnpm check:fast`: what changed since `origin/main`: the typecheck of the packages it
+  reaches, lint and format of the changed files, the tests related to them, and the tests
+  that read the documents. A change outside `apps/` and `packages/`, to a manifest or to a
+  config runs `pnpm check` instead. Before every commit. Never piped: a pipe's exit status
+  hides a red run.
+- `pnpm check`: typecheck, lint, format check and every test.
+- `scripts/trader-ws check`: CI's three jobs, the build and the migration included
+  (`scripts/check-ci.sh`), on the workstation; `--local` runs it on this Mac. Before every
+  push. It records a green for the exact tree, and the pre-push hook lets a tree onto
+  `main` only when one was recorded for it, or when it differs from such a tree in Markdown
+  alone.
+- `apps/mobile/.maestro/affected.sh`: the phone flows and sweep steps a change can break,
+  and whether it touches Android's code (`affected.map`).
 - `pnpm test`: the tests alone. They need the local database and refuse a deployed one. One
   file: `pnpm exec vitest run <file>`, from its package's folder.
-- `pnpm build`: builds the office. CI's `check` and `scripts/trader-ws check` run it;
+- `pnpm build`: builds the office. CI's `build` and `scripts/trader-ws check` run it;
   `pnpm check` does not.
 - `pnpm e2e:local`: the office in a real browser on the demo data (`apps/web/e2e`,
   `office.local.ts`). It rebuilds the database `trader_demo_browser` and starts its own
@@ -124,7 +133,8 @@ Moto g04s's shape, a 1080×2400 phone, and Android 7, the app's oldest.
 
 ## Ship to staging
 
-Land the commit on `main`. `check` runs on every push. When it is green, the deploy job
+Land the commit on `main`. `check` runs on every push; a push to `main` of Markdown alone
+runs only the format check and the documents' test. When it is green, the deploy job
 migrates staging's database, deploys, waits until `/api/ready` answers on that commit, and
 runs the browser smoke test. A push of only `apps/mobile/` and Markdown deploys nothing.
 

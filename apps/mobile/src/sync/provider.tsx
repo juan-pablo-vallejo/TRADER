@@ -28,7 +28,7 @@ import { reportCaptureFailure, reportSyncFailure } from "../report";
 import { headersFor, useSession } from "../session";
 import { deviceStore } from "../store/device";
 import { capture, type Captured } from "./capture";
-import { clockState, type ClockState, type Tap } from "./clock";
+import { clockState, CYCLE_MS, type ClockState, type Tap } from "./clock";
 import {
   createSyncer,
   readSnapshot,
@@ -39,9 +39,6 @@ import {
 import { createFailureLog } from "./failures";
 import { attentionNews, newlyRefused, stampsOn, waiting } from "./today";
 import type { OutboxRecord, Snapshot, Transport } from "./types";
-
-// While the app is in front. The reachability reading is fresh for two of these (clock.ts).
-export const CYCLE_MS = 60_000;
 
 const mint = createMinter((count) => Crypto.getRandomBytes(count));
 

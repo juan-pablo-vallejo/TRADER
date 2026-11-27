@@ -6,7 +6,9 @@
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
-HOST=${TRADER_WS_HOST:?the ssh name of the workstation's job account}
+# No apostrophe in the message: this Mac's sh, bash 3.2, reads one inside ${...:?} as an
+# open quote, and the rest of the file with it.
+HOST=${TRADER_WS_HOST:?the ssh name of the job account on the workstation}
 OUT=$HOME/.trader-ws/time-$(date +%Y%m%dT%H%M%S).tsv
 clean='find . -name node_modules -prune -o -name "*.tsbuildinfo" -type f -print | xargs rm -f; rm -rf node_modules/.cache apps/*/node_modules/.cache packages/*/node_modules/.cache apps/web/.next .eslintcache'
 

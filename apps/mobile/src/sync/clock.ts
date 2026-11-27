@@ -11,10 +11,23 @@ import {
 
 import type { NewRecord, OutboxRecord } from "./types";
 
-// A capture is "online" only on a confirmed reading of the API no
-// older than this. The cycle's timer runs every minute while the app is in front
-// (provider.tsx), so a fresh reading means at most one cycle was missed.
-export const READING_FRESH_MS = 2 * 60_000;
+// How often the sync cycle runs while the app is in front (provider.tsx), and the Crew tab
+// and the admin's Today refresh (crew.tsx, admin-today.tsx): every minute. A
+// development build may be told a shorter one, from 5 to 60 seconds, in
+// EXPO_PUBLIC_CYCLE_MS, so that the phone suite need not wait minutes for a reading to go
+// stale; a release build never reads it. `__DEV__` is React Native's, absent under vitest.
+export function cycleMs(dev: boolean, configured: string | undefined): number {
+  const n = Number(configured);
+  return dev && Number.isInteger(n) && n >= 5_000 && n <= 60_000 ? n : 60_000;
+}
+export const CYCLE_MS = cycleMs(
+  typeof __DEV__ !== "undefined" && __DEV__,
+  process.env.EXPO_PUBLIC_CYCLE_MS,
+);
+
+// A capture is "online" only on a confirmed reading of the API no older than two cycles,
+// so a fresh reading means at most one cycle was missed.
+export const READING_FRESH_MS = 2 * CYCLE_MS;
 
 export function capturedOffline(reading: number | null, now: number): boolean {
   return reading === null || now < reading || now - reading > READING_FRESH_MS;

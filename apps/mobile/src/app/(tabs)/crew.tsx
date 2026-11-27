@@ -51,7 +51,8 @@ import {
   type CrewPerson,
   type Refusal,
 } from "../../sync/crew";
-import { CYCLE_MS, useSync } from "../../sync/provider";
+import { CYCLE_MS } from "../../sync/clock";
+import { useSync } from "../../sync/provider";
 import { mapsLink } from "../../sync/today";
 import { border, color, icon, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";

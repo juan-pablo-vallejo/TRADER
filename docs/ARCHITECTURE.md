@@ -203,8 +203,12 @@ temporary.
 **`main`**
 
 - Work lands on it by a direct push.
-- `check` runs on every push. Staging deploys only a green commit. A red `main` is fixed
-  before anything else.
+- `check` runs on every push: the jobs `static`, `build` and `test` side by side, and
+  `check` green only when all three are. A push of Markdown alone runs the format check and
+  the documents' test, and nothing else. Staging deploys only a green commit. A red `main`
+  is fixed before anything else.
+- The pre-push hook lets onto `main` only a tip whose tree has a recorded green of the
+  whole check; the commits before it are checked on what they change (`pnpm check:fast`).
 - GitHub blocks force-push and deletion.
 
 **`production`** (GitHub rulesets)

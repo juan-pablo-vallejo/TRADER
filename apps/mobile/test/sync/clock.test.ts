@@ -1,12 +1,14 @@
 // What the clock shows and what a tap records (src/sync/clock.ts), and that what it records
 // is what the server parses (the contract's own schema).
 import { laborPayloadV1, type PullOutput, wallClock } from "@trader/api/contract";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createMinter } from "../../src/ids";
 import {
   capturedOffline,
   clockState,
+  CYCLE_MS,
+  cycleMs,
   offerAt,
   READING_FRESH_MS,
   recordsFor,
@@ -61,6 +63,59 @@ const open = (state: "working" | "paused"): PullOutput["sessions"][number] => ({
   workedMs: 3_600_000,
   breakMs: 0,
   voided: false,
+});
+
+describe("the sync cycle", () => {
+  it("is a minute in every release build, whatever the build was told", () => {
+    expect(cycleMs(false, undefined)).toBe(60_000);
+    expect(cycleMs(false, "10000")).toBe(60_000);
+  });
+
+  it("is what a development build is told, from 5 to 60 seconds, and a minute otherwise", () => {
+    expect(cycleMs(true, "10000")).toBe(10_000);
+    expect(cycleMs(true, "5000")).toBe(5_000);
+    expect(cycleMs(true, "60000")).toBe(60_000);
+    for (const junk of [
+      undefined,
+      "",
+      "4999",
+      "60001",
+      "10000.5",
+      "10s",
+      "-10000",
+      "1e4x",
+    ])
+      expect(cycleMs(true, junk)).toBe(60_000);
+  });
+
+  // The module's own wiring: what the build's __DEV__ and Metro's variable make of it.
+  it("takes the variable only where __DEV__ is true", async () => {
+    vi.stubEnv("EXPO_PUBLIC_CYCLE_MS", "10000");
+    try {
+      for (const [dev, cycle] of [
+        [false, 60_000],
+        [true, 10_000],
+      ] as const) {
+        vi.stubGlobal("__DEV__", dev);
+        vi.resetModules();
+        const fresh = await import("../../src/sync/clock");
+        expect(fresh.CYCLE_MS, `__DEV__ ${dev}`).toBe(cycle);
+        expect(fresh.READING_FRESH_MS, `__DEV__ ${dev}`).toBe(2 * cycle);
+        expect(fresh.capturedOffline(T0 - 2 * cycle, T0)).toBe(false);
+        expect(fresh.capturedOffline(T0 - 2 * cycle - 1, T0)).toBe(true);
+      }
+    } finally {
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
+
+  it("makes a reading stale after two cycles", () => {
+    // Under vitest there is no __DEV__: the release value.
+    expect(CYCLE_MS).toBe(60_000);
+    expect(READING_FRESH_MS).toBe(2 * CYCLE_MS);
+  });
 });
 
 describe("offline evidence", () => {

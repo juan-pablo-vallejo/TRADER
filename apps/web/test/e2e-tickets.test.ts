@@ -279,8 +279,19 @@ describe("the workflows and the staging key", () => {
   });
 
   it("holds every secret in the deploy job, which runs only on a push", () => {
-    expect(jobs.map((j) => j.slice(0, j.indexOf(":")))).toEqual(["check", "deploy"]);
-    expect(job("check")).not.toMatch(/secrets\.|environment:/);
+    expect(jobs.map((j) => j.slice(0, j.indexOf(":")))).toEqual([
+      "static",
+      "build",
+      "test",
+      "check",
+      "deploy",
+    ]);
+    // The four a pull request's event reaches.
+    for (const name of ["static", "build", "test", "check"])
+      expect(job(name), name).not.toMatch(/secrets\.|environment:/);
+    expect(job("check")).toMatch(
+      /\n {4}needs: \[static, build, test\]\n {4}if: always\(\)\n/,
+    );
     expect(deploy).toMatch(/\n {4}needs: check\n/);
     expect(deploy).toMatch(/\n {4}if: github\.event_name == 'push'\n/);
     // Beside it, the two phone workflows, each with its own named secrets and no other.

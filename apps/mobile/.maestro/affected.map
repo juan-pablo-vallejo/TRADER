@@ -1,0 +1,79 @@
+# Which phone flows and layout-sweep steps a change can break; affected.sh reads it.
+# One line a pattern: a shell `case` pattern from the repository's root (`*` crosses
+# folders), then the flows, then the sweep steps, each comma-separated, `-` for none and
+# `all` for every one. The first line whose pattern matches a file decides it. A file of
+# apps/mobile that no line matches runs smoke, and gets its line in the same commit.
+# A flow or sweep step changed itself, and parts/ and the scripts here, are affected.sh's.
+
+# What every screen draws with.
+apps/mobile/src/theme.ts                 smoke                        all
+apps/mobile/src/layout.ts                smoke                        all
+apps/mobile/src/fonts.ts                 smoke                        all
+apps/mobile/src/motion.ts                smoke                        all
+apps/mobile/src/ui/text.tsx              smoke                        all
+apps/mobile/src/ui/band.tsx              smoke                        all
+apps/mobile/src/ui/controls.tsx          smoke,clock                  all
+apps/mobile/src/ui/press.tsx             smoke,clock                  all
+apps/mobile/src/ui/sheet.tsx             smoke,clock,crew             all
+apps/mobile/src/ui/field.tsx             sign-in-codes,add-email      all
+apps/mobile/src/ui/mark.tsx              smoke                        all
+apps/mobile/src/ui/fallback.tsx          not-found                    all
+apps/mobile/src/i18n/*                   smoke,sign-in-spanish        all
+apps/mobile/src/format.ts                smoke,clock                  all
+
+# The app's frame, the session and the API.
+apps/mobile/src/app/_layout.tsx          smoke,not-found              all
+apps/mobile/src/app/index.tsx            smoke,sign-in-codes          00-start,01-sign-in
+apps/mobile/src/app/(tabs)/_layout.tsx   smoke,crew                   all
+apps/mobile/src/session.tsx              smoke,sign-in-codes,biometric -
+apps/mobile/src/token.ts                 smoke,sign-in-codes,biometric -
+apps/mobile/src/api.ts                   smoke,clock,deliver,offline-capture -
+apps/mobile/src/config.ts                smoke,sign-in-codes          -
+apps/mobile/src/store/*                  clock,deliver,offline-capture,biometric -
+apps/mobile/src/ids.ts                   clock,deliver                -
+apps/mobile/src/me.ts                    add-email,sign-in-number     11-me,18-me-admin
+apps/mobile/src/report*.ts               smoke                        -
+apps/mobile/src/feedback.ts              clock                        -
+
+# Signing in.
+apps/mobile/src/app/sign-in.tsx          sign-in-refused,sign-in-codes,sign-in-number,sign-in-spanish,social 01-sign-in,02-sign-in-demo,03-sign-in-code
+apps/mobile/src/ui/phone-sign-in.tsx     sign-in-refused,sign-in-codes,sign-in-number,sign-in-spanish 01-sign-in,02-sign-in-demo,03-sign-in-code
+apps/mobile/src/sign-in-*.ts             sign-in-refused,sign-in-codes,sign-in-number,social 01-sign-in,02-sign-in-demo,03-sign-in-code
+apps/mobile/src/app/sso-callback.tsx     social                       -
+apps/mobile/src/app/biometric-offer.tsx  biometric,biometric-key-set,biometric-largest-text 04-key-offer
+apps/mobile/src/biometric*.ts            biometric,biometric-key-set,biometric-key-refused,biometric-largest-text 04-key-offer,11-me
+
+# Today, the clock and the sync path.
+apps/mobile/src/app/(tabs)/today.tsx     clock,schedule,schedule-offered,schedule-none,earlier-day,location-denied,stamps-off 05-today,07-today-working,09-today-break,12-today-no-shift
+apps/mobile/src/ui/job-sheet.tsx         clock                        06-job-sheet
+apps/mobile/src/ui/whatsapp-button.tsx   schedule-none,crew           12-today-no-shift,15-crew
+apps/mobile/src/ui/sync-chip.tsx         deliver,offline-capture,schedule-stale-capture,schedule-stale-review 08-sync-sheet
+apps/mobile/src/sync/crew.ts             crew                         -
+apps/mobile/src/sync/week.ts             schedule,schedule-none       -
+apps/mobile/src/sync/today.ts            clock,schedule-offered,schedule-none,earlier-day -
+apps/mobile/src/sync/reminders.ts        clock                        -
+apps/mobile/src/sync/*                   clock,deliver,offline-capture,schedule-offered,schedule-refused,schedule-stale-capture,schedule-stale-review,earlier-day -
+apps/mobile/src/reminders.tsx            clock                        -
+apps/mobile/src/location.ts              clock,location-denied,stamps-off -
+
+# Week, Me, Crew, and a screen the app does not have.
+apps/mobile/src/app/(tabs)/week.tsx      schedule,schedule-none       10-week
+apps/mobile/src/app/(tabs)/me.tsx        add-email,biometric,sign-in-spanish 11-me,13-add-email,18-me-admin
+apps/mobile/src/ui/add-email.tsx         add-email                    13-add-email
+apps/mobile/src/ui/admin-today.tsx       crew                         14-admin-today
+apps/mobile/src/app/(tabs)/crew.tsx      crew                         15-crew,16-crew-person,17-crew-add
+apps/mobile/src/app/+not-found.tsx       not-found                    19-not-found
+
+# The server's side of what the phone does.
+packages/api/src/contract/*              smoke,clock,deliver,crew     -
+packages/api/src/sync/*                  clock,deliver,offline-capture,schedule-refused,schedule-stale-review -
+packages/api/src/labor/*                 clock,deliver,earlier-day,stamps-off -
+packages/api/src/shifts/*                schedule,schedule-offered,schedule-refused,crew -
+packages/api/src/me/*                    add-email,sign-in-number     -
+packages/api/src/core/dev-identity.ts    sign-in-refused,sign-in-codes -
+
+# Not the app: tests, its native project's inputs (Android's own, below), the rest.
+apps/mobile/test/*                       -                            -
+apps/mobile/app.json                     smoke                        -
+apps/mobile/package.json                 smoke                        -
+apps/mobile/*.md                         -                            -

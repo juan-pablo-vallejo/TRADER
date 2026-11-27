@@ -20,12 +20,74 @@ concurrency:
   cancel-in-progress: ${{ github.event_name != 'push' }}
 
 jobs:
-  # The job id is the status check `production`'s ruleset requires. Renaming it disarms the
-  # ruleset. It holds no secret: a pull request's event reaches this job and no other.
-  check:
+  # `static`, `build` and `test` run side by side: scripts/check-ci.sh runs the same commands
+  # in the same three lanes on a machine that is not CI, so change one, change the other.
+  # They and `check` hold no secret: a pull request's event reaches these four jobs and no
+  # other. Each first asks scripts/ci-scope.sh whether the push changed Markdown alone; on a
+  # pull request, `production`, or any doubt, it says no and everything runs.
+  static:
     # The image is a version, pinned like node-version. `ubuntu-latest` is 24.04 today and
     # moves on GitHub's schedule (26.04 is already listed), which would change the toolchain
     # under the job without a commit.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: What this push changed
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: sh scripts/ci-scope.sh >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Writes apps/web/.next/types (`next typegen`), which the typed lint rules read.
+      - run: pnpm typecheck
+        if: steps.scope.outputs.docs_only != 'true'
+      - run: pnpm lint
+        if: steps.scope.outputs.docs_only != 'true'
+      - run: pnpm format:check
+
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: What this push changed
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: sh scripts/ci-scope.sh >> "$GITHUB_OUTPUT"
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        if: steps.scope.outputs.docs_only != 'true'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.scope.outputs.docs_only != 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.scope.outputs.docs_only != 'true'
+      # Next's own build cache: the same dependencies and the same source restore it whole,
+      # the same dependencies alone the nearest one (Next's ci-build-caching guide, read
+      # 2026-11-27).
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        if: steps.scope.outputs.docs_only != 'true'
+        with:
+          path: apps/web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('apps/web/src/**', 'packages/*/src/**') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+      # The web app builds with no database: its routes are dynamic and the pool is lazy.
+      - run: pnpm build
+        if: steps.scope.outputs.docs_only != 'true'
+
+  test:
     runs-on: ubuntu-24.04
 
     # The three compose variables, named as in .env.example. The service below, the migrate
@@ -55,6 +117,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: What this push changed
+        id: scope
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          BEFORE: ${{ github.event.before }}
+          SHA: ${{ github.sha }}
+        run: sh scripts/ci-scope.sh >> "$GITHUB_OUTPUT"
 
       - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
         # Version comes from the packageManager field in package.json.
@@ -65,14 +135,31 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm format:check
-      # The web app builds with no database: its routes are dynamic and the pool is lazy.
-      - run: pnpm build
       # Before the tests: they run against the migrated schema.
       - run: pnpm db:migrate
+        if: steps.scope.outputs.docs_only != 'true'
       - run: pnpm test
+        if: steps.scope.outputs.docs_only != 'true'
+      # Markdown alone: the documents' own rules still hold (rule 9 of CLAUDE.md).
+      - run: pnpm --filter @trader/api exec vitest run test/core/documents.test.ts
+        if: steps.scope.outputs.docs_only == 'true'
+
+  # The job id is the status check `production`'s ruleset requires. Renaming it disarms the
+  # ruleset. It runs whatever became of the three (`if: always()`) and is green only when
+  # each of them succeeded: without that a red or skipped job would leave it skipped, and a
+  # skipped required check counts as passing.
+  check:
+    needs: [static, build, test]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - env:
+          STATIC: ${{ needs.static.result }}
+          BUILD: ${{ needs.build.result }}
+          TEST: ${{ needs.test.result }}
+        run: |
+          echo "static: $STATIC, build: $BUILD, test: $TEST"
+          [ "$STATIC" = success ] && [ "$BUILD" = success ] && [ "$TEST" = success ]
 
   # One deploy per branch at a time, on a push alone: migrate, call the deploy hook, wait
   # until the host serves this commit, then, on staging, the browser smoke test. On staging

@@ -9,16 +9,19 @@ disagrees with them, the code is wrong: fix it, or stop and ask.
 ## The loop
 
 1. Read `docs/TASKS.md`. Take the top open item.
-2. Build it. Run `pnpm check` until green, never piped.
+2. Build it. Run `pnpm check:fast` until green, never piped.
 3. Commit locally, each tree green as rule 3 says. A finding rides along as rule 8 says.
-4. Push a batch: the related items together, once, straight to `main`. Never push to find
-   out: a defect seen on staging is first reproduced as a failing local test.
-5. Watch `check` and the staging deploy (`gh run watch`). Red: fix it before anything else.
-   A batch of only `apps/mobile/` and Markdown deploys nothing, and staging then serves an
-   older commit than `main`, by design.
+4. Push a batch: the related items together, once, straight to `main`, its tip checked as
+   rule 3 says. Never push to find out: a defect seen on staging is first reproduced as a
+   failing local test.
+5. Watch `check` and the staging deploy in the background
+   (`gh run watch <id> --exit-status`) and carry on locally with the next item; read the
+   result before the next push. Red: fix it before anything else, and push nothing else
+   while `main` is red. A batch of only `apps/mobile/` and Markdown deploys nothing, and
+   staging then serves an older commit than `main`, by design.
 6. See it working: on staging in a browser for the office; for the phone, the flows of what
-   changed on the simulator or the emulator. Collect everything wrong; one follow-up push at
-   most.
+   changed (`apps/mobile/.maestro/affected.sh`) on the simulator, and on the emulator when
+   it says Android. Collect everything wrong; one follow-up push at most.
 7. Finish the batch with one commit of Markdown alone, pushed alone. It deletes the batch's
    items from `docs/TASKS.md`; its message says what was seen, where and at which commit,
    each on a line that begins "Seen", and the reviewers' running total. Next batch.
@@ -60,18 +63,22 @@ read-only for you.
 
 1. Scope is the MVP. Nothing outside it is built without the owner's word.
 2. The six invariants are never weakened.
-3. `main` stays green. Before every commit one command is green on the exact tree:
-   `scripts/trader-ws check`, `--local` on this Mac. A commit that changes Markdown alone
-   needs no check. A green run on the workstation counts when the tree committed is exactly
-   the tree it checked. A change to the office's sign-in also needs its suite against Clerk's
-   development instance green on that tree, on this Mac. A commit and a push run the tests
-   and flows of what changed. The office's browser suite and both phone suites, iPhone and
-   Android, run whole once, before a release's merge, on the tree it ships. A batch that
-   changes the server or the phone's sync path is simplified once and reviewed once by
-   agents that did not write it (the `backend-change` skill). A batch that changes what a
-   person sees is seen rendered in both languages (the `interface-change` skill); the
-   screens a release changes are reviewed once, on Fable, by an agent that did not build
-   them, before its merge (the `release` skill). A batch that changes comments alone runs neither: a check
+3. `main` stays green. Before every push one command is green on the exact tree of the
+   pushed tip: `scripts/trader-ws check`, `--local` on this Mac; the pre-push hook refuses a
+   tip without it. Each commit before it runs `pnpm check:fast`, which checks what changed
+   since `origin/main`. A commit that changes Markdown alone needs neither. A green run on
+   the workstation counts when the tree pushed is exactly the tree it checked. A change to
+   the office's sign-in also needs its suite against Clerk's development instance green on
+   that tree, on this Mac. A batch runs the tests and flows of what changed: the phone's are
+   the ones `apps/mobile/.maestro/affected.sh` names, on the iPhone, and on Android only
+   when it says the change touches Android's code. The office's browser suite, both phone
+   suites and the whole layout sweep run once, before a release's merge, on the tree it
+   ships. A batch that changes the sync path is simplified once and reviewed once by agents
+   that did not write it; the rest of the server is, once a release, over the release's
+   diff (the `backend-change` skill names the path). A batch that changes what a person sees is
+   seen rendered in both languages (the `interface-change` skill); the screens a release
+   changes are reviewed once, on Fable, by an agent that did not build them, before its
+   merge (the `release` skill). A batch that changes comments alone runs neither: a check
    that no code token changed, the files compared with their comments stripped, is pasted
    in its commit message.
 4. The clock and sync path gets failure tests: a dropped response, a duplicate send, a wrong
@@ -94,6 +101,14 @@ read-only for you.
    One test in `pnpm check` holds that `.env.example` lists exactly the variables the code
    reads, that README's opening sentence is the MVP's, that no date sits outside rule 6's
    form, and that code cites no plan or item number.
+
+## Working without waiting
+
+- Independent reads, searches and workstation runs start together, in one message.
+- A sweep, a suite or a CI watch runs in the background while the next step is prepared.
+- A search across many files goes to an Explore agent.
+- Files are read, searched and edited with Read, Grep and Edit: an inline `python3`,
+  `cat >` or `sed -i` waits on a permission prompt.
 
 ## Staging is yours
 
