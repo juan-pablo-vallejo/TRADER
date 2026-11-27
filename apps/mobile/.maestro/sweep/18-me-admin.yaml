@@ -1,0 +1,30 @@
+# Me, as an admin: the name editable, with Save.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# A sheet left open closes when the app goes to the background between steps; one still
+# showing is closed here.
+- runFlow:
+    when:
+      visible:
+        id: "add-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "form-cancel"
+          centerElement: true
+          optional: true
+          timeout: 60000
+          speed: 70
+      - tapOn:
+          id: "form-cancel"
+          optional: true
+- tapOn:
+    id: "tab-me"
+- extendedWaitUntil:
+    visible:
+      id: "me"
+    timeout: 10000

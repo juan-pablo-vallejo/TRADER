@@ -1,0 +1,19 @@
+# The demo code's form.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- scrollUntilVisible:
+    element:
+      id: "sign-in-demo"
+    centerElement: true
+- tapOn:
+    id: "sign-in-demo"
+# At the largest text the form opens with its field above the screen.
+- scrollUntilVisible:
+    element:
+      id: "sign-in-demo-phone"
+    direction: UP
+    centerElement: true

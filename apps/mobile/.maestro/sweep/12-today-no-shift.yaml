@@ -1,0 +1,14 @@
+# Today with no shift: the schedule is enforced and Sam has none (matrix.sh).
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: ../parts/sign-out.yaml
+- runFlow:
+    file: in.yaml
+    env:
+      ADDRESS: ${SAM}
+      LANDS_ON: today

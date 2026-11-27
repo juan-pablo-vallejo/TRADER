@@ -2,6 +2,8 @@
 // home in assets/brand. Decoration: a screen reader is told the screen's title, not this.
 import { Image, StyleSheet } from "react-native";
 
+import { size } from "../theme";
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- React Native's way to name a bundled image
 const icon = require("../../../../assets/brand/icon.png") as number;
 
@@ -18,5 +20,10 @@ export function Mark() {
 }
 
 const styles = StyleSheet.create({
-  mark: { width: 72, height: 72, borderRadius: 16, alignSelf: "center" },
+  mark: {
+    width: size.mark,
+    height: size.mark,
+    borderRadius: size.radiusMark,
+    alignSelf: "center",
+  },
 });

@@ -1,0 +1,17 @@
+# A link to a screen the app does not have.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- openLink: app.jpteq.trader://no-such-screen
+- runFlow:
+    when:
+      visible: "Open"
+    commands:
+      - tapOn: "Open"
+- extendedWaitUntil:
+    visible:
+      id: "not-found"
+    timeout: 20000

@@ -58,8 +58,9 @@ export const lift = {
 } as const;
 
 // How far a style grows with the phone's text size, at most. Body text grows all the way;
-// display type (a band's title, a name set large) half again, or it fills the screen.
-export const grows = { display: 1.5 } as const;
+// a heading (20 pt and up) to twice its size, or a long word breaks inside itself; display
+// type (a band's title, a name set large) half again, or it fills the screen.
+export const grows = { heading: 2, display: 1.5 } as const;
 
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 6: 24 } as const;
 
@@ -68,7 +69,31 @@ export const size = {
   primary: 56,
   radiusCard: 8,
   radiusPrimary: 12,
+  // A pill's ends: round at any height.
+  radiusPill: 999,
+  // D'Sierra's mark above sign-in, on its rounded tile.
+  mark: 72,
+  radiusMark: 16,
+  // The code field at sign-in, taller than a field for its larger digits.
+  codeField: 64,
 } as const;
+
+// An icon: beside a small word, a status word, a line of body text, a row's choice mark, a
+// control's own glyph, an empty state.
+export const icon = {
+  small: 16,
+  status: 18,
+  line: 20,
+  row: 22,
+  control: 24,
+  large: 28,
+} as const;
+
+// A control's and a card's edge.
+export const border = { hairline: 1 } as const;
+
+// The ink behind an open sheet: the page shows through, dimmed.
+export const scrim = "rgba(17, 24, 39, 0.4)";
 
 export const type = {
   title: { fontSize: 24, lineHeight: 30, fontWeight: "600" },
@@ -84,6 +109,10 @@ export const type = {
     fontFamily: "BodoniModa_700Bold",
     fontWeight: "normal",
   },
+  // The running clock, the sign-in heading and the typed code: sizes no other text takes.
+  timer: { fontSize: 56, lineHeight: 64, fontWeight: "600" },
+  signInHeading: { fontSize: 32, lineHeight: 38 },
+  code: { fontSize: 22, letterSpacing: 6 },
   label: {
     fontSize: 15,
     lineHeight: 20,

@@ -1,0 +1,27 @@
+# The code step, for the worker.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- scrollUntilVisible:
+    element:
+      id: "sign-in-demo-back"
+    centerElement: true
+- tapOn:
+    id: "sign-in-demo-back"
+# Back leaves the page scrolled to its foot: the field is above.
+- scrollUntilVisible:
+    element:
+      id: "sign-in-address"
+    direction: UP
+    centerElement: true
+- tapOn:
+    id: "sign-in-address"
+- inputText: ${LUIS}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-code"
+    timeout: 30000

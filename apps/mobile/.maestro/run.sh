@@ -18,6 +18,7 @@
 # `fresh` starts the app with nothing kept and signs in (the flow runs parts/sign-in.yaml);
 # `resume` leaves the app as the flow before left it. `allow` or `deny` is the location
 # permission of a fresh start; `never` starts unasked and fails the flow if the app asks.
+# FLOW_ENV, when set, is more `-e NAME=value` words for Maestro (matrix.sh's sweep).
 set -eu
 platform=$1
 device=$2
@@ -50,9 +51,10 @@ case "$platform" in
       never) ios_location=unset ;;
       *) ios_location=never ;;
     esac
+    # shellcheck disable=SC2086 # FLOW_ENV is a list of `-e NAME=value` words.
     exec maestro --device "$device" test -e LAUNCH=maestro -e LOCATION="$location" \
       -e IOS_LOCATION="$ios_location" -e LANDS_ON="$lands" \
-      -e EMAIL="$email" "$here/$flow.yaml"
+      -e EMAIL="$email" ${FLOW_ENV:-} "$here/$flow.yaml"
     ;;
   android)
     adb=${ANDROID_HOME:?set ANDROID_HOME}/platform-tools/adb
@@ -83,8 +85,9 @@ case "$platform" in
       fi
       "$adb" -s "$device" shell am start -a android.intent.action.VIEW -d "'$link'" >/dev/null
     fi
+    # shellcheck disable=SC2086 # FLOW_ENV is a list of `-e NAME=value` words.
     maestro --device "$device" test -e LAUNCH=adb -e LOCATION="$location" \
-      -e LANDS_ON="$lands" -e EMAIL="$email" "$here/$flow.yaml"
+      -e LANDS_ON="$lands" -e EMAIL="$email" ${FLOW_ENV:-} "$here/$flow.yaml"
     ;;
   *)
     echo "usage: run.sh ios <udid> <flow> | run.sh android <serial> <flow>" >&2

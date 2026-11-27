@@ -1,0 +1,29 @@
+# A person's sheet, from Crew's first row. At the largest text Crew is long and a row
+# taller than the screen: faster, longer, partly in view is enough, and the row brought to
+# the middle, where it is tapped. A Crew with no one on it (the demo's day has turned) has
+# no row: the step then leaves Crew as it is, and the sheet is not seen.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- scrollUntilVisible:
+    element:
+      id: "crew-person-0"
+    visibilityPercentage: 10
+    timeout: 60000
+    speed: 70
+    centerElement: true
+    optional: true
+- runFlow:
+    when:
+      visible:
+        id: "crew-person-0"
+    commands:
+      - tapOn:
+          id: "crew-person-0"
+      - extendedWaitUntil:
+          visible:
+            id: "person-sheet"
+          timeout: 10000

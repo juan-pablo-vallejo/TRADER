@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { StyleSheet, type TextStyle, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useLayout } from "../layout";
 import { color, grows, space, type } from "../theme";
 import { Text } from "./text";
 
@@ -19,6 +20,9 @@ export function Band({
   children?: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  // At the largest text the band keeps only its title: the screen shows its main fact on
+  // the page, where it scrolls, and the band does not fill the screen.
+  const huge = useLayout().text === "huge";
   return (
     <View style={[styles.band, { paddingTop: insets.top + space[3] }]}>
       <StatusBar style="light" />
@@ -32,7 +36,7 @@ export function Band({
         </Text>
         {beside}
       </View>
-      {children}
+      {!huge && children}
     </View>
   );
 }

@@ -9,16 +9,19 @@
 import { wallClock } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 
 import { age, dayName, duration, wallTime } from "../../format";
 import { useSpeech, useStrings } from "../../i18n";
 import { useSync } from "../../sync/provider";
 import { hoursByDay, shiftDays } from "../../sync/week";
-import { color, size, space } from "../../theme";
+import { border, color, icon, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
 import { JobSheet, type JobFacts } from "../../ui/job-sheet";
+import { useLayout } from "../../layout";
+import { Band } from "../../ui/band";
 import { SyncChip } from "../../ui/sync-chip";
+import { Press } from "../../ui/press";
 import { Text } from "../../ui/text";
 
 // Older than this, the schedule on the phone is said to be possibly out of date.
@@ -26,6 +29,7 @@ const STALE_MS = 60 * 60_000;
 
 export default function Week() {
   const { t, language } = useStrings();
+  const huge = useLayout().text === "huge";
   const speech = useSpeech();
   const { snapshot, records, sync, syncing } = useSync();
   const [opened, setOpened] = useState<JobFacts | null>(null);
@@ -49,16 +53,12 @@ export default function Week() {
   let row = 0;
 
   return (
-    <Screen testID="week">
-      <View style={styles.head}>
-        <Text style={text.title} accessibilityRole="header">
-          {t.week.title}
-        </Text>
-        <SyncChip />
-      </View>
+    <Screen testID="week" band={<Band title={t.week.title} beside={<SyncChip />} />}>
       <ScrollView contentContainerStyle={styles.page}>
-        <View style={styles.age}>
-          <View style={styles.fill}>
+        {/* At the largest text the button goes under its line: side by side it would run
+            past the screen's edge (layout.ts). */}
+        <View style={huge ? styles.ageStack : styles.age}>
+          <View style={huge ? undefined : styles.fill}>
             <Text testID="week-age" style={text.secondary}>
               {old === null ? t.week.never : t.week.updated(age(old, t.age))}
             </Text>
@@ -93,7 +93,7 @@ export default function Week() {
               {dayName(day, language)}
             </Text>
             {shifts.map((shift, i) => (
-              <Pressable
+              <Press
                 key={shift.id}
                 testID={`week-shift-${d}-${i}`}
                 accessibilityRole="button"
@@ -123,8 +123,12 @@ export default function Week() {
                     <Text style={text.secondary}>{shift.job.address}</Text>
                   )}
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={color.inkSecondary} />
-              </Pressable>
+                <Ionicons
+                  name="chevron-forward"
+                  size={icon.line}
+                  color={color.inkSecondary}
+                />
+              </Press>
             ))}
           </View>
         ))}
@@ -171,7 +175,7 @@ export default function Week() {
                           <View key={flag} style={styles.flag}>
                             <Ionicons
                               name="flag-outline"
-                              size={16}
+                              size={icon.small}
                               color={color.attentionInk}
                             />
                             <Text
@@ -204,15 +208,15 @@ export default function Week() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  head: { gap: space[2] },
   page: { gap: space[4], paddingBottom: space[6] },
   age: { flexDirection: "row", alignItems: "center", gap: space[3] },
+  ageStack: { gap: space[3] },
   card: {
     gap: space[2],
     padding: space[4],
     borderRadius: size.radiusCard,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
   },
   today: { borderColor: color.action },

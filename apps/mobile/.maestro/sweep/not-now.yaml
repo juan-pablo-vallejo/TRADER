@@ -1,0 +1,19 @@
+# Just signed in: the offer of Face ID or fingerprint, answered Not now. At the largest text
+# its buttons are below the screen until scrolled to, which parts/landed.yaml does not do.
+appId: app.jpteq.trader
+---
+- extendedWaitUntil:
+    visible:
+      id: "biometric-offer|${LANDS_ON}|tab-me"
+    timeout: 30000
+- runFlow:
+    when:
+      visible:
+        id: "biometric-offer"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "biometric-not-now"
+          centerElement: true
+      - tapOn:
+          id: "biometric-not-now"

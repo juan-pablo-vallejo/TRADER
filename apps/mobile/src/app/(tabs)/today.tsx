@@ -15,7 +15,7 @@
 import { compareNames, wallClock, whatsAppLink } from "@trader/api/contract";
 import { Ionicons } from "@expo/vector-icons";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, ScrollView, StyleSheet, type TextStyle, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { announce, felt } from "../../feedback";
@@ -31,13 +31,15 @@ import {
   timer,
   workedOn,
 } from "../../sync/today";
-import { color, lift, size, space } from "../../theme";
+import { border, color, icon, lift, size, space, type } from "../../theme";
+import { useLayout } from "../../layout";
 import { AdminToday } from "../../ui/admin-today";
 import { Band } from "../../ui/band";
-import { Button, Screen, text } from "../../ui/controls";
+import { Button, Pair, Screen, Side, text } from "../../ui/controls";
 import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { Sheet } from "../../ui/sheet";
 import { SyncChip } from "../../ui/sync-chip";
+import { Press } from "../../ui/press";
 import { Text } from "../../ui/text";
 import { WhatsAppButton } from "../../ui/whatsapp-button";
 
@@ -49,6 +51,9 @@ const TIMER_GROWS = 1.25;
 export default function Today() {
   const { t, language } = useStrings();
   const speech = useSpeech();
+  // At the largest text the clock leaves the band for the page, and the foot's buttons
+  // scroll with it (layout.ts).
+  const huge = useLayout().text === "huge";
   const { snapshot, records, clock, last, refused, tap, sync } = useSync();
   const insets = useSafeAreaInsets();
   const [picked, setPicked] = useState<string | null>(null);
@@ -196,7 +201,7 @@ export default function Today() {
         <View style={styles.statusLine}>
           <Ionicons
             name={clock.status === "paused" ? "pause-circle" : "time"}
-            size={20}
+            size={icon.line}
             color={
               onNavy
                 ? color.onAction
@@ -237,6 +242,79 @@ export default function Today() {
       </>
     );
 
+  // The foot of the screen: the one button, and what goes beneath it.
+  const foot = (
+    <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, space[2]) }]}>
+      {clock.status === "off" && !noShift && (
+        <Button
+          testID="clock-in"
+          label={target === null ? t.today.clockIn : t.today.clockInAt(nameOf(target))}
+          disabled={target === null}
+          onPress={() => {
+            if (target !== null) void capture({ action: "start", jobId: target });
+          }}
+        />
+      )}
+      {/* A disabled button says why: no job is chosen yet. */}
+      {clock.status === "off" && !noShift && target === null && jobs.length > 0 && (
+        <Text testID="clock-in-why" style={[text.secondary, styles.why]}>
+          {t.today.pickToClockIn}
+        </Text>
+      )}
+      {noShift && officeChat !== null && (
+        <WhatsAppButton
+          testID="whatsapp-office"
+          spoken={t.today.whatsAppSpoken}
+          onPress={() => void Linking.openURL(officeChat).catch(() => undefined)}
+        />
+      )}
+      {clock.status === "working" && (
+        <>
+          <Button
+            testID="clock-out"
+            label={earlier ? t.today.clockOutNow : t.today.clockOut}
+            onPress={() => setAsking("clock-out")}
+          />
+          <Pair choice={false}>
+            <Side>
+              <Button
+                testID="clock-pause"
+                kind="secondary"
+                label={t.today.pause}
+                onPress={() => void capture({ action: "pause" })}
+              />
+            </Side>
+            {switchTo.length > 0 && (
+              <Side>
+                <Button
+                  testID="clock-switch"
+                  kind="secondary"
+                  label={t.today.switchJob}
+                  onPress={() => setAsking("switch")}
+                />
+              </Side>
+            )}
+          </Pair>
+        </>
+      )}
+      {clock.status === "paused" && (
+        <>
+          <Button
+            testID="clock-resume"
+            label={t.today.resume}
+            onPress={() => void capture({ action: "resume" })}
+          />
+          <Button
+            testID="clock-out"
+            kind="secondary"
+            label={earlier ? t.today.clockOutNow : t.today.clockOut}
+            onPress={() => setAsking("clock-out")}
+          />
+        </>
+      )}
+    </View>
+  );
+
   // An admin's Today is the office's at a glance: what needs attention, never a clock-in.
   if (data?.me.role === "admin") return <AdminToday />;
 
@@ -245,14 +323,14 @@ export default function Today() {
       testID="today"
       band={
         <Band title={t.today.title} beside={<SyncChip />}>
-          <View style={styles.status}>{clockPart(true)}</View>
+          {!huge && <View style={styles.status}>{clockPart(true)}</View>}
         </Band>
       }
     >
       <ScrollView style={styles.fill} contentContainerStyle={styles.page}>
         {clock.status !== "off" && earlier && (
           <View testID="today-earlier" style={styles.earlier} accessibilityRole="alert">
-            <Ionicons name="alert-circle" size={20} color={color.attentionInk} />
+            <Ionicons name="alert-circle" size={icon.line} color={color.attentionInk} />
             <Text style={[text.body, styles.earlierText]}>
               {t.today.earlier(
                 nameOf(clock.jobId),
@@ -263,7 +341,7 @@ export default function Today() {
         )}
 
         {card !== null && (
-          <Pressable
+          <Press
             testID="job-card"
             accessibilityRole="button"
             accessibilityLanguage={speech}
@@ -284,7 +362,11 @@ export default function Today() {
           >
             <View style={styles.cardHead}>
               <Text style={[text.heading, styles.fill]}>{card.name}</Text>
-              <Ionicons name="chevron-forward" size={20} color={color.inkSecondary} />
+              <Ionicons
+                name="chevron-forward"
+                size={icon.line}
+                color={color.inkSecondary}
+              />
             </View>
             {card.address !== null && <Text style={text.secondary}>{card.address}</Text>}
             {shift !== null && clock.status === "off" && (
@@ -295,10 +377,11 @@ export default function Today() {
                 )}
               </Text>
             )}
-          </Pressable>
+          </Press>
         )}
 
         <View style={styles.status}>
+          {huge && clockPart(false)}
           <View style={styles.statusLine}>
             <Text testID="today-hours" style={text.secondary}>
               {t.today.hoursToday(duration(workedToday))}
@@ -310,7 +393,11 @@ export default function Today() {
                 accessibilityLabel={t.today.captured}
                 style={styles.statusLine}
               >
-                <Ionicons name="checkmark-circle" size={20} color={color.doneInk} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={icon.line}
+                  color={color.doneInk}
+                />
                 <Text style={[text.secondary, { color: color.doneInk }]}>
                   {t.today.captured}
                 </Text>
@@ -356,7 +443,7 @@ export default function Today() {
                 {jobs.map((job, index) => {
                   const chosen = job.id === target;
                   return (
-                    <Pressable
+                    <Press
                       key={job.id}
                       testID={`job-row-${index}`}
                       accessibilityRole="radio"
@@ -370,7 +457,7 @@ export default function Today() {
                     >
                       <Ionicons
                         name={chosen ? "radio-button-on" : "radio-button-off"}
-                        size={22}
+                        size={icon.row}
                         color={chosen ? color.action : color.controlBorder}
                       />
                       <View style={styles.fill}>
@@ -379,85 +466,16 @@ export default function Today() {
                           <Text style={text.secondary}>{job.address}</Text>
                         )}
                       </View>
-                    </Pressable>
+                    </Press>
                   );
                 })}
               </View>
             )}
           </>
         )}
+        {huge && foot}
       </ScrollView>
-
-      {/* The foot of the screen: the one button, and what goes beneath it. */}
-      <View style={[styles.foot, { paddingBottom: Math.max(insets.bottom, space[2]) }]}>
-        {clock.status === "off" && !noShift && (
-          <Button
-            testID="clock-in"
-            label={target === null ? t.today.clockIn : t.today.clockInAt(nameOf(target))}
-            disabled={target === null}
-            onPress={() => {
-              if (target !== null) void capture({ action: "start", jobId: target });
-            }}
-          />
-        )}
-        {/* A disabled button says why: no job is chosen yet. */}
-        {clock.status === "off" && !noShift && target === null && jobs.length > 0 && (
-          <Text testID="clock-in-why" style={[text.secondary, styles.why]}>
-            {t.today.pickToClockIn}
-          </Text>
-        )}
-        {noShift && officeChat !== null && (
-          <WhatsAppButton
-            testID="whatsapp-office"
-            spoken={t.today.whatsAppSpoken}
-            onPress={() => void Linking.openURL(officeChat).catch(() => undefined)}
-          />
-        )}
-        {clock.status === "working" && (
-          <>
-            <Button
-              testID="clock-out"
-              label={earlier ? t.today.clockOutNow : t.today.clockOut}
-              onPress={() => setAsking("clock-out")}
-            />
-            <View style={styles.pair}>
-              <View style={styles.fill}>
-                <Button
-                  testID="clock-pause"
-                  kind="secondary"
-                  label={t.today.pause}
-                  onPress={() => void capture({ action: "pause" })}
-                />
-              </View>
-              {switchTo.length > 0 && (
-                <View style={styles.fill}>
-                  <Button
-                    testID="clock-switch"
-                    kind="secondary"
-                    label={t.today.switchJob}
-                    onPress={() => setAsking("switch")}
-                  />
-                </View>
-              )}
-            </View>
-          </>
-        )}
-        {clock.status === "paused" && (
-          <>
-            <Button
-              testID="clock-resume"
-              label={t.today.resume}
-              onPress={() => void capture({ action: "resume" })}
-            />
-            <Button
-              testID="clock-out"
-              kind="secondary"
-              label={earlier ? t.today.clockOutNow : t.today.clockOut}
-              onPress={() => setAsking("clock-out")}
-            />
-          </>
-        )}
-      </View>
+      {!huge && foot}
 
       {/* Clock out asks once, naming the job and the time worked. */}
       <Sheet
@@ -538,7 +556,7 @@ const styles = StyleSheet.create({
     padding: space[4],
     borderRadius: size.radiusPrimary,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
   },
   cardHead: { flexDirection: "row", alignItems: "center", gap: space[2] },
@@ -550,9 +568,7 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
   },
   timer: {
-    fontSize: 56,
-    lineHeight: 64,
-    fontWeight: "600",
+    ...(type.timer as TextStyle),
     color: color.ink,
     fontVariant: ["tabular-nums"],
   },
@@ -569,11 +585,10 @@ const styles = StyleSheet.create({
     padding: space[3],
     borderRadius: size.radiusPrimary,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
   },
   chosen: { borderColor: color.action, backgroundColor: color.actionTint },
   foot: { gap: space[2] },
   why: { textAlign: "center" },
-  pair: { flexDirection: "row", gap: space[2] },
 });

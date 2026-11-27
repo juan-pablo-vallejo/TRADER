@@ -1,0 +1,16 @@
+# A job's sheet, from its card.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# Near its top: at the largest text the card is taller than the screen, and its middle is
+# under the tab bar.
+- tapOn:
+    id: "job-card"
+    point: "50%,10%"
+- extendedWaitUntil:
+    visible:
+      id: "job-sheet"
+    timeout: 10000

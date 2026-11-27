@@ -69,7 +69,7 @@ import {
   type Step,
 } from "../sign-in-steps";
 import { deviceStore } from "../store/device";
-import { color, grows, size, space, type } from "../theme";
+import { border, color, grows, icon, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
 import { Text } from "./text";
@@ -621,14 +621,18 @@ const styles = StyleSheet.create({
   // The navy runs up under the clock; the page below it is the app's own.
   screen: { flex: 1, backgroundColor: color.brandNavy },
   // Their navy, under the clock: the mark, their name and, on the first step, the heading.
-  band: { alignItems: "center", gap: space[3], paddingVertical: space[6] * 1.5 },
+  band: {
+    alignItems: "center",
+    gap: space[3],
+    paddingVertical: space[6] * 1.5,
+    backgroundColor: color.brandNavy,
+  },
   page: { flex: 1, backgroundColor: color.brandNavyTint },
   scroll: { flexGrow: 1 },
   content: { padding: space[4], gap: space[4], paddingBottom: space[6] * 2 },
   heading: {
     ...(type.title as TextStyle),
-    fontSize: 32,
-    lineHeight: 38,
+    ...type.signInHeading,
     color: color.brandNavy,
     // Bodoni Moda draws its own weight: a weight asked of it as well would be faked.
     fontFamily: "BodoniModa_700Bold",
@@ -647,17 +651,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
   },
   input: {
-    minHeight: 64,
+    minHeight: size.codeField,
     paddingHorizontal: space[3],
     borderRadius: size.radiusCard,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
     backgroundColor: color.surface,
     color: color.ink,
-    fontSize: 22,
+    fontSize: type.code.fontSize,
     fontFamily: fontFile("400"),
   },
-  code: { letterSpacing: 6, textAlign: "center", fontVariant: ["tabular-nums"] },
+  code: {
+    letterSpacing: type.code.letterSpacing,
+    textAlign: "center",
+    fontVariant: ["tabular-nums"],
+  },
   textButton: {
     minHeight: size.target,
     justifyContent: "center",
@@ -673,7 +681,7 @@ const styles = StyleSheet.create({
   textButtonDisabled: { color: color.muted },
   trouble: { gap: space[2] },
   // Google's "G" at the size of its own assets, 20 pt in a 44 pt button.
-  googleG: { width: 20, height: 20 },
+  googleG: { width: icon.line, height: icon.line },
   apple: { minHeight: size.target },
   appleButton: { height: size.target, width: "100%" },
   or: { textAlign: "center" },

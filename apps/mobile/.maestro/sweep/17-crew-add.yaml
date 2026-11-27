@@ -1,0 +1,34 @@
+# Adding a shift.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# A sheet left open closes when the app goes to the background between steps; one still
+# showing is closed here.
+- runFlow:
+    when:
+      visible:
+        id: "person-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "person-close"
+          centerElement: true
+          optional: true
+          timeout: 60000
+          speed: 70
+      - tapOn:
+          id: "person-close"
+          optional: true
+- scrollUntilVisible:
+    element:
+      id: "crew-add"
+    centerElement: true
+- tapOn:
+    id: "crew-add"
+- extendedWaitUntil:
+    visible:
+      id: "add-sheet"
+    timeout: 10000

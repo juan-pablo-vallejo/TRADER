@@ -26,7 +26,7 @@ import {
 import * as Crypto from "expo-crypto";
 import { Redirect, useFocusEffect } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Linking, Platform, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { Linking, Platform, ScrollView, StyleSheet, View } from "react-native";
 
 import { createApi } from "../../api";
 import { apiUrl } from "../../config";
@@ -53,10 +53,12 @@ import {
 } from "../../sync/crew";
 import { CYCLE_MS, useSync } from "../../sync/provider";
 import { mapsLink } from "../../sync/today";
-import { color, size, space } from "../../theme";
+import { border, color, icon, size, space } from "../../theme";
 import { Button, Screen, text } from "../../ui/controls";
 import { Sheet } from "../../ui/sheet";
+import { Band } from "../../ui/band";
 import { SyncChip } from "../../ui/sync-chip";
+import { Press } from "../../ui/press";
 import { Text } from "../../ui/text";
 import { WhatsAppButton } from "../../ui/whatsapp-button";
 
@@ -106,7 +108,7 @@ function StatusPill({
   const tone = TONE[status];
   return (
     <View testID={testID} style={[styles.pill, { backgroundColor: tone.tint }]}>
-      <Ionicons name={tone.icon} size={18} color={tone.ink} />
+      <Ionicons name={tone.icon} size={icon.status} color={tone.ink} />
       <Text style={[text.secondary, styles.pillText, { color: tone.ink }]}>{label}</Text>
     </View>
   );
@@ -126,7 +128,7 @@ function Choice({
 }) {
   const speech = useSpeech();
   return (
-    <Pressable
+    <Press
       testID={testID}
       accessibilityRole="radio"
       accessibilityLanguage={speech}
@@ -138,11 +140,11 @@ function Choice({
     >
       <Ionicons
         name={chosen ? "radio-button-on" : "radio-button-off"}
-        size={22}
+        size={icon.row}
         color={chosen ? color.action : color.controlBorder}
       />
       <Text style={[text.body, styles.fill]}>{label}</Text>
-    </Pressable>
+    </Press>
   );
 }
 
@@ -175,7 +177,7 @@ function TimeStepper({
     <View style={styles.stepper}>
       <Text style={text.label}>{label}</Text>
       <View style={styles.stepperRow}>
-        <Pressable
+        <Press
           testID={`${testID}-earlier`}
           accessibilityRole="button"
           accessibilityLanguage={speech}
@@ -183,8 +185,8 @@ function TimeStepper({
           onPress={() => step(-1)}
           style={styles.step}
         >
-          <Ionicons name="remove" size={24} color={color.ink} />
-        </Pressable>
+          <Ionicons name="remove" size={icon.control} color={color.ink} />
+        </Press>
         <Text
           testID={testID}
           style={[text.heading, styles.time]}
@@ -192,7 +194,7 @@ function TimeStepper({
         >
           {wallTime(value, language)}
         </Text>
-        <Pressable
+        <Press
           testID={`${testID}-later`}
           accessibilityRole="button"
           accessibilityLanguage={speech}
@@ -200,8 +202,8 @@ function TimeStepper({
           onPress={() => step(1)}
           style={styles.step}
         >
-          <Ionicons name="add" size={24} color={color.ink} />
-        </Pressable>
+          <Ionicons name="add" size={icon.control} color={color.ink} />
+        </Press>
       </View>
     </View>
   );
@@ -502,7 +504,7 @@ export default function CrewTab() {
     index: number,
     prefix: string,
   ) => (
-    <Pressable
+    <Press
       key={`${prefix}-${person.person.id}`}
       testID={`${prefix}-${index}`}
       accessibilityRole="button"
@@ -523,8 +525,8 @@ export default function CrewTab() {
         label={statusLabel(status)}
         testID={`${prefix}-${index}-${status}`}
       />
-      <Ionicons name="chevron-forward" size={20} color={color.inkSecondary} />
-    </Pressable>
+      <Ionicons name="chevron-forward" size={icon.line} color={color.inkSecondary} />
+    </Press>
   );
 
   // What the one sheet is showing: nothing when its person or jobsite left the answer.
@@ -549,28 +551,25 @@ export default function CrewTab() {
   const sheet = open === null ? null : sheets[open.kind];
 
   return (
-    <Screen testID="crew">
-      {/* The title and Check now, then the chip beneath, as on every other tab. */}
-      <View style={styles.top}>
-        <View style={styles.head}>
-          <Text style={text.title} accessibilityRole="header">
-            {t.crew.title}
-          </Text>
-          <Button
-            testID="crew-refresh"
-            kind="secondary"
-            label={busy ? t.loading : t.crew.refresh}
-            disabled={busy}
-            onPress={() => void refresh()}
-          />
-        </View>
-        <SyncChip />
-      </View>
+    <Screen testID="crew" band={<Band title={t.crew.title} beside={<SyncChip />} />}>
       <ScrollView contentContainerStyle={styles.page}>
+        {/* Check now, the page's first line: a white button does not sit on the navy, and
+            above the page it would hold the list to a strip at the largest text. */}
+        <Button
+          testID="crew-refresh"
+          kind="secondary"
+          label={busy ? t.loading : t.crew.refresh}
+          disabled={busy}
+          onPress={() => void refresh()}
+        />
         {load.phase === "loading" && <Text style={text.secondary}>{t.loading}</Text>}
         {load.phase === "offline" && (
           <View testID="crew-offline" style={styles.card}>
-            <Ionicons name="cloud-offline-outline" size={28} color={color.inkSecondary} />
+            <Ionicons
+              name="cloud-offline-outline"
+              size={icon.large}
+              color={color.inkSecondary}
+            />
             <Text style={text.body} accessibilityRole="alert">
               {t.crew.offline}
             </Text>
@@ -631,7 +630,7 @@ export default function CrewTab() {
 
             <View accessibilityRole="radiogroup" style={styles.views}>
               {(["person", "job"] as const).map((which) => (
-                <Pressable
+                <Press
                   key={which}
                   testID={`crew-view-${which}`}
                   accessibilityRole="radio"
@@ -645,7 +644,7 @@ export default function CrewTab() {
                   >
                     {which === "person" ? t.crew.byPerson : t.crew.byJob}
                   </Text>
-                </Pressable>
+                </Press>
               ))}
             </View>
 
@@ -665,7 +664,7 @@ export default function CrewTab() {
 
             {view === "job" &&
               groups.map((g, i) => (
-                <Pressable
+                <Press
                   key={g.job.id}
                   testID={`crew-job-${i}`}
                   accessibilityRole="button"
@@ -687,7 +686,7 @@ export default function CrewTab() {
                     <Text style={[text.bodyStrong, styles.fill]}>{g.job.name}</Text>
                     <Ionicons
                       name="chevron-forward"
-                      size={20}
+                      size={icon.line}
                       color={color.inkSecondary}
                     />
                   </View>
@@ -701,7 +700,7 @@ export default function CrewTab() {
                       />
                     </View>
                   ))}
-                </Pressable>
+                </Press>
               ))}
 
             <Button
@@ -1004,31 +1003,26 @@ export default function CrewTab() {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  top: { gap: space[2] },
-  head: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: space[3],
-  },
   page: { gap: space[4], paddingBottom: space[6] },
   note: { color: color.doneInk },
   counts: { flexDirection: "row", flexWrap: "wrap", gap: space[2] },
+  // A count never runs past the screen: at the largest text its words wrap inside it.
   pill: {
+    maxWidth: "100%",
     flexDirection: "row",
     alignItems: "center",
     gap: space[1],
     paddingHorizontal: space[2],
     paddingVertical: space[1],
-    borderRadius: 999,
+    borderRadius: size.radiusPill,
   },
-  pillText: { fontWeight: "600" },
+  pillText: { fontWeight: "600", flexShrink: 1 },
   card: {
     gap: space[2],
     padding: space[4],
     borderRadius: size.radiusCard,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
   },
   attention: { borderColor: color.attentionInk },
@@ -1042,7 +1036,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[2],
     borderRadius: size.radiusPrimary,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
   },
   viewOn: { backgroundColor: color.action, borderColor: color.action },
@@ -1055,7 +1049,7 @@ const styles = StyleSheet.create({
     padding: space[3],
     borderRadius: size.radiusCard,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.border,
   },
   jobHead: { flexDirection: "row", alignItems: "center", gap: space[2] },
@@ -1071,7 +1065,7 @@ const styles = StyleSheet.create({
     paddingVertical: space[2],
     borderRadius: size.radiusCard,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
   },
   chosen: { borderColor: color.action, backgroundColor: color.actionTint },
@@ -1084,7 +1078,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: size.radiusPrimary,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
   },
   time: { flex: 1, textAlign: "center", fontVariant: ["tabular-nums"] },

@@ -1,0 +1,20 @@
+# The admin's Today: the office at a glance.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: ../parts/sign-out.yaml
+- runFlow:
+    file: in.yaml
+    env:
+      ADDRESS: ${OFFICE}
+      LANDS_ON: "tab-crew"
+- tapOn:
+    id: "tab-today"
+- extendedWaitUntil:
+    visible:
+      id: "admin-today"
+    timeout: 30000

@@ -3,11 +3,13 @@
 // often is, takes a second and the button grows with it: it is never cut short. Every control carries a `testID`: a
 // Maestro flow selects by it, never by text, which is in two languages.
 import { Pressable, StyleSheet, type TextStyle, View } from "react-native";
+import { StatusBar } from "expo-status-bar";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type { ReactNode } from "react";
 
 import { useSpeech } from "../i18n";
-import { color, size, space, type } from "../theme";
+import { useLayout } from "../layout";
+import { border, color, size, space, type } from "../theme";
 import { Text } from "./text";
 
 export function Button({
@@ -39,6 +41,9 @@ export function Button({
   // an action.
   const chosen = primary && selected === true;
   const speech = useSpeech();
+  const layout = useLayout();
+  // At a large text size a mark sits above the words, which then have the button's width.
+  const markAbove = mark !== undefined && layout.text !== "default";
   return (
     <Pressable
       testID={testID}
@@ -60,16 +65,18 @@ export function Button({
               ? styles.primaryPressed
               : styles.secondaryPressed),
         disabled && primary && styles.disabled,
-        mark !== undefined && styles.withMark,
+        mark !== undefined && !markAbove && styles.withMark,
+        markAbove && styles.markAbove,
       ]}
     >
       {mark}
       <Text
         // Beside a mark the words have less width: never cut short, they take a third line.
-        numberOfLines={mark === undefined ? 2 : 3}
+        // At the largest text sizes no count is kept: the button grows with its words.
+        numberOfLines={layout.text === "huge" ? undefined : mark === undefined ? 2 : 3}
         style={[
           styles.buttonLabel,
-          mark !== undefined && styles.labelBesideMark,
+          mark !== undefined && !markAbove && styles.labelBesideMark,
           { color: chosen ? color.onAction : primary ? color.onPrimary : color.ink },
         ]}
       >
@@ -79,14 +86,31 @@ export function Button({
   );
 }
 
-// Two buttons side by side, one of them chosen: a radio group, each side's selected state
-// said, as Crew's view switch is.
-export function Pair({ children }: { children: ReactNode }) {
+// Two buttons side by side; at the largest text one above the other, so a word is never
+// broken inside itself. A choice between them is a radio group, each side's selected state
+// said, as Crew's view switch is; two actions (`choice={false}`) are a plain row.
+export function Pair({
+  children,
+  choice = true,
+}: {
+  children: ReactNode;
+  choice?: boolean;
+}) {
+  const huge = useLayout().text === "huge";
   return (
-    <View accessibilityRole="radiogroup" style={styles.pair}>
+    <View
+      accessibilityRole={choice ? "radiogroup" : undefined}
+      style={huge ? styles.stack : styles.pair}
+    >
       {children}
     </View>
   );
+}
+
+// One side of a pair: half the row, or the whole width when the pair stacks.
+export function Side({ children }: { children: ReactNode }) {
+  const huge = useLayout().text === "huge";
+  return <View style={huge ? undefined : styles.side}>{children}</View>;
 }
 
 export function Screen({
@@ -107,6 +131,8 @@ export function Screen({
         style={styles.screen}
         edges={["top", "left", "right"]}
       >
+        {/* Dark on the pale page: a band before it (ui/band.tsx) left the bar's words white. */}
+        <StatusBar style="dark" />
         {children}
       </SafeAreaView>
     );
@@ -157,14 +183,17 @@ const styles = StyleSheet.create({
   secondary: {
     minHeight: size.target,
     backgroundColor: color.surface,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
   },
   disabled: { backgroundColor: color.muted },
   buttonLabel: { ...(type.bodyStrong as TextStyle), textAlign: "center" },
   withMark: { flexDirection: "row", gap: space[3] },
-  // Beside a mark the words give way, wrapping, so the mark keeps its place at the
-  // largest text instead of being pushed against the edge.
+  markAbove: { gap: space[2] },
+  // Beside a mark the words give way, wrapping, so the mark keeps its place instead of
+  // being pushed against the edge.
   labelBesideMark: { flexShrink: 1 },
   pair: { flexDirection: "row", gap: space[2] },
+  stack: { gap: space[2] },
+  side: { flex: 1 },
 });

@@ -1,0 +1,16 @@
+# Signs ${ADDRESS} in from the sign-in screen with the development stand-in's code, at any
+# text size: at the largest the field is below the fold until it is scrolled to.
+appId: app.jpteq.trader
+---
+- scrollUntilVisible:
+    element:
+      id: "sign-in-address"
+    centerElement: true
+- runFlow:
+    file: ../parts/code.yaml
+    env:
+      CODE: "123456"
+- runFlow:
+    file: not-now.yaml
+- runFlow:
+    file: ../parts/landed.yaml

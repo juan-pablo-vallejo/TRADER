@@ -1,0 +1,29 @@
+# Me for someone signed in by number with no email: the offer to add one.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: ../parts/sign-out.yaml
+- runFlow:
+    file: in.yaml
+    env:
+      ADDRESS: "4015550109"
+      LANDS_ON: today
+- tapOn:
+    id: "tab-me"
+# Me can keep its place from the last person's visit: back to its top, then down to the
+# offer.
+- repeat:
+    times: 4
+    commands:
+      - swipe:
+          start: 50%, 40%
+          end: 50%, 90%
+# Partly in view is enough: at the largest text the block is taller than the screen.
+- scrollUntilVisible:
+    element:
+      id: "add-email"
+    visibilityPercentage: 10

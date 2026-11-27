@@ -1,0 +1,12 @@
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- tapOn:
+    id: "tab-week"
+- extendedWaitUntil:
+    visible:
+      id: "week"
+    timeout: 10000

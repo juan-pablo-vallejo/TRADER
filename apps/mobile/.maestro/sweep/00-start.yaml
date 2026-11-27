@@ -1,0 +1,23 @@
+# The sweep: every screen and state of the phone app, one flow each, run in order by
+# matrix.sh, which saves the screen and its view tree after each. This one starts the app
+# with nothing kept and, for a Spanish run, chooses Spanish in Me and signs out again, as
+# the language outlives a sign-out.
+appId: app.jpteq.trader
+---
+- runFlow:
+    file: ../parts/launch.yaml
+- runFlow:
+    when:
+      true: ${LANG == "es"}
+    commands:
+      - runFlow:
+          file: in.yaml
+          env:
+            ADDRESS: ${LUIS}
+            LANDS_ON: today
+      - tapOn:
+          id: "tab-me"
+      - tapOn:
+          id: "language-es"
+      - runFlow:
+          file: ../parts/sign-out.yaml

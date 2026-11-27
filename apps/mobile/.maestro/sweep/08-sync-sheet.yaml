@@ -1,0 +1,15 @@
+# The sync chip's sheet. Tapped near its start: on Android a development build's own
+# button can float over the band's top right (deliver.yaml).
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- tapOn:
+    id: "sync-pending|sync-synced|sync-attention"
+    point: "15%,50%"
+- extendedWaitUntil:
+    visible:
+      id: "sync-sheet"
+    timeout: 10000

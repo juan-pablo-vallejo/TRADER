@@ -1,0 +1,13 @@
+# Me, as a worker: the name and both addresses greyed, the office's.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- tapOn:
+    id: "tab-me"
+- extendedWaitUntil:
+    visible:
+      id: "me"
+    timeout: 10000

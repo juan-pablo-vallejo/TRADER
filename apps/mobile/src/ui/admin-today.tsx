@@ -17,6 +17,7 @@ import type { Crew } from "../sync/crew";
 import { CYCLE_MS, useSync } from "../sync/provider";
 import { color, size, space } from "../theme";
 import { Screen, text } from "./controls";
+import { Band } from "./band";
 import { SyncChip } from "./sync-chip";
 import { Text } from "./text";
 import { WhatsAppButton } from "./whatsapp-button";
@@ -69,13 +70,10 @@ export function AdminToday() {
     today?.people.filter((p) => crewStatus(p, minute) === "expected") ?? [];
 
   return (
-    <Screen testID="admin-today">
-      <View style={styles.head}>
-        <Text style={text.title} accessibilityRole="header">
-          {t.today.title}
-        </Text>
-        <SyncChip />
-      </View>
+    <Screen
+      testID="admin-today"
+      band={<Band title={t.today.title} beside={<SyncChip />} />}
+    >
       <ScrollView contentContainerStyle={styles.page}>
         {load.phase === "offline" && (
           <Text testID="admin-today-offline" style={text.attention}>
@@ -216,7 +214,6 @@ export function AdminToday() {
 }
 
 const styles = StyleSheet.create({
-  head: { gap: space[2] },
   page: { gap: space[3], paddingBottom: space[6] },
   list: { gap: space[2] },
   row: {

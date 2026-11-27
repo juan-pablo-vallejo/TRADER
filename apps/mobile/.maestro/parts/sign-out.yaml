@@ -16,13 +16,20 @@ appId: app.jpteq.trader
             id: "me"
           timeout: 5000
           optional: true
+# Not centred: Sign out sits near the page's end, where the page cannot scroll it up to
+# the middle, and the scroll would never stop.
 - scrollUntilVisible:
     element:
       id: "sign-out"
-    centerElement: true
+    # At the largest text Me is long: more time, and faster.
+    timeout: 60000
+    speed: 70
+# Once more: at the largest text the button can be in the window but under the tab bar.
+- scroll
 - tapOn:
     id: "sign-out"
+# The sign-in screen itself: at the largest text its field is below the fold.
 - extendedWaitUntil:
     visible:
-      id: "sign-in-address"
+      id: "sign-in"
     timeout: 30000

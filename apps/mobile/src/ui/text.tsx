@@ -13,14 +13,26 @@ import { Text as NativeText, StyleSheet, type TextStyle } from "react-native";
 
 import { fontFor } from "../fonts";
 import { useSpeech } from "../i18n";
+import { grows, type } from "../theme";
 
-export function Text({ style, ...props }: ComponentProps<typeof NativeText>) {
+// A heading grows with the phone's text size to twice its size at most (theme.ts, grows),
+// unless the text says its own limit.
+export function Text({
+  style,
+  maxFontSizeMultiplier,
+  ...props
+}: ComponentProps<typeof NativeText>) {
   const speech = useSpeech();
+  const flat = fontFor(StyleSheet.flatten(style) as TextStyle | undefined);
+  const heading = (flat.fontSize ?? 0) >= type.heading.fontSize;
   return (
     <NativeText
       accessibilityLanguage={speech}
+      maxFontSizeMultiplier={
+        maxFontSizeMultiplier ?? (heading ? grows.heading : undefined)
+      }
       {...props}
-      style={fontFor(StyleSheet.flatten(style) as TextStyle | undefined)}
+      style={flat}
     />
   );
 }

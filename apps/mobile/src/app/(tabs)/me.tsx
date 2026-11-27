@@ -8,7 +8,6 @@
 // shown (feedback.ts). Signing out never discards an entry: what has not been sent stays in
 // the outbox under its owner and goes when they sign in again, and the screen says so
 // before the button.
-import { fontFile } from "../../fonts";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -18,7 +17,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  TextInput,
   type TextStyle,
   View,
 } from "react-native";
@@ -35,11 +33,12 @@ import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
 import { deviceStore } from "../../store/device";
 import { useSync } from "../../sync/provider";
-import { color, grows, size, space, type } from "../../theme";
+import { border, color, grows, size, space, type } from "../../theme";
 import { Band } from "../../ui/band";
-import { Button, Pair, Screen, text } from "../../ui/controls";
+import { Button, Pair, Screen, Side, text } from "../../ui/controls";
 import { AddEmail } from "../../ui/add-email";
 import { SyncChip } from "../../ui/sync-chip";
+import { Field } from "../../ui/field";
 import { Text } from "../../ui/text";
 
 export default function Me() {
@@ -200,7 +199,7 @@ export default function Me() {
           <Text style={text.label}>{t.me.language}</Text>
           <Pair>
             {pairs.language.map(({ value, selected }) => (
-              <View key={value} style={styles.fill}>
+              <Side key={value}>
                 <Button
                   testID={`language-${value}`}
                   kind={selected ? "primary" : "secondary"}
@@ -208,13 +207,13 @@ export default function Me() {
                   label={value === "en" ? t.me.english : t.me.spanish}
                   onPress={() => setLanguage(value)}
                 />
-              </View>
+              </Side>
             ))}
           </Pair>
 
           <Text style={text.label}>{t.me.name}</Text>
           {admin ? (
-            <TextInput
+            <Field
               testID="me-name"
               accessibilityLabel={t.me.name}
               accessibilityLanguage={speech}
@@ -228,7 +227,7 @@ export default function Me() {
             />
           ) : (
             <>
-              <TextInput
+              <Field
                 testID="me-name"
                 accessibilityLabel={t.me.name}
                 accessibilityLanguage={speech}
@@ -236,6 +235,8 @@ export default function Me() {
                 style={[styles.input, styles.readOnly]}
                 value={name}
                 editable={false}
+                // Read, not typed: the whole value wraps, never cut short at a large text size.
+                multiline
                 selectTextOnFocus={false}
               />
               <Text style={text.secondary}>{t.me.nameByOffice}</Text>
@@ -248,7 +249,7 @@ export default function Me() {
               </Text>
               {/* Read-only: greyed, and said as not editable. Only the office (or TRADER's
                   support, for an admin) changes how a person signs in. */}
-              <TextInput
+              <Field
                 testID={`me-sign-in-${row.kind}`}
                 accessibilityLabel={
                   row.kind === "phone" ? t.me.signInPhone : t.me.signInEmail
@@ -258,6 +259,8 @@ export default function Me() {
                 style={[styles.input, styles.readOnly]}
                 value={row.value}
                 editable={false}
+                // Read, not typed: the whole value wraps, never cut short at a large text size.
+                multiline
                 selectTextOnFocus={false}
               />
               <Text style={text.secondary}>
@@ -330,7 +333,7 @@ export default function Me() {
               </Text>
               <Pair>
                 {pairs.key.map(({ value, selected }) => (
-                  <View key={value} style={styles.fill}>
+                  <Side key={value}>
                     <Button
                       testID={`biometric-me-${value}`}
                       kind={selected ? "primary" : "secondary"}
@@ -339,7 +342,7 @@ export default function Me() {
                       disabled={keyBusy}
                       onPress={() => void setKeyOn(value === "on")}
                     />
-                  </View>
+                  </Side>
                 ))}
               </Pair>
               <Text style={text.secondary}>{t.biometric.meHelp}</Text>
@@ -398,12 +401,11 @@ const styles = StyleSheet.create({
     minHeight: size.target,
     paddingHorizontal: space[3],
     borderRadius: size.radiusCard,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: type.body.fontSize,
-    fontFamily: fontFile("400"),
   },
   build: { textAlign: "center" },
   // The person's name, large on the navy band.

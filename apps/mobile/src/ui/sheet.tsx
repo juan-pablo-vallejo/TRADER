@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { color, size, space } from "../theme";
+import { color, scrim, size, space } from "../theme";
 import { text } from "./controls";
 import { Text } from "./text";
 
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     left: 0,
-    backgroundColor: "rgba(17, 24, 39, 0.4)",
+    backgroundColor: scrim,
   },
   panel: {
     maxHeight: "85%",

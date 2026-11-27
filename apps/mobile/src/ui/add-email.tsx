@@ -12,7 +12,7 @@ import { StyleSheet, TextInput, View } from "react-native";
 import type { Api } from "../api";
 import { announce, felt } from "../feedback";
 import { useSpeech, useStrings } from "../i18n";
-import { color, size, space, type } from "../theme";
+import { border, color, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Text } from "./text";
 
@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
     minHeight: size.target,
     paddingHorizontal: space[3],
     borderRadius: size.radiusCard,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
     backgroundColor: color.surface,
     color: color.ink,

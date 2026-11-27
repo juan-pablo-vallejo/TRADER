@@ -13,7 +13,7 @@ import type { Catalog } from "../i18n/catalog";
 import { useSync } from "../sync/provider";
 import { type ChipState, waiting } from "../sync/today";
 import type { OutboxRecord } from "../sync/types";
-import { color, size, space } from "../theme";
+import { color, icon, size, space } from "../theme";
 import { Button, text } from "./controls";
 import { Sheet } from "./sheet";
 import { Text } from "./text";
@@ -131,7 +131,7 @@ export function SyncChip() {
         hitSlop={8}
         style={[styles.chip, { backgroundColor: look.tint }]}
       >
-        <Ionicons name={look.icon} size={18} color={look.ink} />
+        <Ionicons name={look.icon} size={icon.status} color={look.ink} />
         <Text style={[text.secondary, styles.word, { color: look.ink }]}>
           {t.sync.chip[where.state]}
           {where.unsent > 0 ? ` · ${String(where.unsent)}` : ""}
@@ -216,9 +216,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: space[2],
-    minHeight: 32,
+    // The whole chip is a 48-point target; its pill is drawn inside it.
+    minHeight: size.target,
     paddingHorizontal: space[3],
-    borderRadius: 16,
+    borderRadius: size.radiusPill,
   },
   word: { fontWeight: "600" },
   list: { gap: space[2] },

@@ -5,7 +5,7 @@
 import { Image, Pressable, StyleSheet } from "react-native";
 
 import { useSpeech } from "../i18n";
-import { color, size, space } from "../theme";
+import { border, color, size, space } from "../theme";
 
 // The logo's own proportions: 1487 by 346.
 const HEIGHT = 22;
@@ -44,7 +44,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: space[4],
     borderRadius: size.radiusCard,
-    borderWidth: 1,
+    borderWidth: border.hairline,
     borderColor: color.controlBorder,
     backgroundColor: color.surface,
   },
