@@ -89,12 +89,35 @@ export function Pair({ children }: { children: ReactNode }) {
   );
 }
 
-export function Screen({ children, testID }: { children: ReactNode; testID: string }) {
+export function Screen({
+  children,
+  testID,
+  band,
+}: {
+  children: ReactNode;
+  testID: string;
+  // A navy head (ui/band.tsx) that runs up under the clock; the page below keeps clear of it.
+  band?: ReactNode;
+}) {
+  if (band === undefined) {
+    return (
+      // Inside the safe area: nothing of a screen sits under the clock or the home bar.
+      <SafeAreaView
+        testID={testID}
+        style={styles.screen}
+        edges={["top", "left", "right"]}
+      >
+        {children}
+      </SafeAreaView>
+    );
+  }
   return (
-    // Inside the safe area: nothing of a screen sits under the clock or the home bar.
-    <SafeAreaView testID={testID} style={styles.screen} edges={["top", "left", "right"]}>
-      {children}
-    </SafeAreaView>
+    <View testID={testID} style={styles.banded}>
+      {band}
+      <SafeAreaView style={styles.under} edges={["left", "right"]}>
+        {children}
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -104,12 +127,20 @@ export const text = StyleSheet.create({
   body: { ...(type.body as TextStyle), color: color.ink },
   bodyStrong: { ...(type.bodyStrong as TextStyle), color: color.ink },
   secondary: { ...(type.secondary as TextStyle), color: color.inkSecondary },
-  label: { ...(type.label as TextStyle), color: color.inkSecondary },
+  label: { ...(type.label as TextStyle), color: color.brandNavy },
   attention: { ...(type.secondary as TextStyle), color: color.attention },
 });
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: color.canvas, padding: space[4], gap: space[4] },
+  // The page is their navy's palest tint, under a navy band where a screen has one.
+  screen: {
+    flex: 1,
+    backgroundColor: color.brandNavyTint,
+    padding: space[4],
+    gap: space[4],
+  },
+  banded: { flex: 1, backgroundColor: color.brandNavyTint },
+  under: { flex: 1, padding: space[4], gap: space[4] },
   button: {
     alignItems: "center",
     justifyContent: "center",

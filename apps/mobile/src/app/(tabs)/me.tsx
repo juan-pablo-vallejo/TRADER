@@ -19,6 +19,7 @@ import {
   ScrollView,
   StyleSheet,
   TextInput,
+  type TextStyle,
   View,
 } from "react-native";
 
@@ -34,7 +35,8 @@ import { reportOnPurpose, reportsOnPurpose } from "../../report";
 import { headersFor, useSession } from "../../session";
 import { deviceStore } from "../../store/device";
 import { useSync } from "../../sync/provider";
-import { color, size, space, type } from "../../theme";
+import { color, grows, size, space, type } from "../../theme";
+import { Band } from "../../ui/band";
 import { Button, Pair, Screen, text } from "../../ui/controls";
 import { AddEmail } from "../../ui/add-email";
 import { SyncChip } from "../../ui/sync-chip";
@@ -170,13 +172,18 @@ export default function Me() {
     (r) => r.standing === "pending" || r.standing === "syncing",
   ).length;
   return (
-    <Screen testID="me">
-      <View style={styles.head}>
-        <Text style={text.title} accessibilityRole="header">
-          {t.me.title}
-        </Text>
-        <SyncChip />
-      </View>
+    <Screen
+      testID="me"
+      band={
+        <Band title={t.me.title} beside={<SyncChip />}>
+          {name.trim() !== "" && (
+            <Text style={styles.heroName} maxFontSizeMultiplier={grows.display}>
+              {name}
+            </Text>
+          )}
+        </Band>
+      }
+    >
       {/* The page scrolls clear of the keyboard, so Save is never under it: on iOS by the
           scroll view's own insets; on Android, where that prop does nothing, by padding the
           keyboard's height under the page. */}
@@ -386,7 +393,6 @@ export default function Me() {
 const styles = StyleSheet.create({
   room: { flex: 1 },
   fill: { flex: 1 },
-  head: { gap: space[2] },
   page: { gap: space[3], paddingBottom: space[6] },
   input: {
     minHeight: size.target,
@@ -400,6 +406,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFile("400"),
   },
   build: { textAlign: "center" },
+  // The person's name, large on the navy band.
+  heroName: { ...(type.display as TextStyle), color: color.onAction },
   field: { gap: space[3] },
   // Greyed, so it reads as locked: a grey fill, a hairline in place of a control's navy
   // edge, and the secondary ink (above 4.5:1 on the fill).

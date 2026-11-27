@@ -31,8 +31,9 @@ import {
   timer,
   workedOn,
 } from "../../sync/today";
-import { color, size, space } from "../../theme";
+import { color, lift, size, space } from "../../theme";
 import { AdminToday } from "../../ui/admin-today";
+import { Band } from "../../ui/band";
 import { Button, Screen, text } from "../../ui/controls";
 import { JobSheet, type JobFacts } from "../../ui/job-sheet";
 import { Sheet } from "../../ui/sheet";
@@ -184,18 +185,70 @@ export default function Today() {
   const noShift = offer !== null && offer.kind !== "eligible" && clock.status === "off";
   const sheetJob = opened === null ? null : (facts.get(opened) ?? null);
 
+  // The clock's state and its timer, on the navy band.
+  const clockPart = (onNavy: boolean) =>
+    clock.status === "off" ? (
+      <Text testID="clock-off" style={[text.body, onNavy && styles.onNavy]}>
+        {t.today.off}
+      </Text>
+    ) : (
+      <>
+        <View style={styles.statusLine}>
+          <Ionicons
+            name={clock.status === "paused" ? "pause-circle" : "time"}
+            size={20}
+            color={
+              onNavy
+                ? color.onAction
+                : clock.status === "paused"
+                  ? color.attentionInk
+                  : color.activeInk
+            }
+          />
+          <Text
+            testID={`clock-${clock.status}`}
+            style={[text.bodyStrong, onNavy && styles.onNavy]}
+          >
+            {clock.status === "paused" ? t.today.onBreak : t.today.onTheClock}
+          </Text>
+          {!earlier && (
+            <Text style={[text.secondary, onNavy && styles.onNavySoft]}>
+              {t.today.since(timeOfDay(clock.since, zone, language))}
+            </Text>
+          )}
+        </View>
+        <Text
+          testID="clock-timer"
+          accessibilityRole="timer"
+          accessibilityLabel={t.today.timerSpoken(spoken.hours, spoken.minutes)}
+          // At the phone's largest text "10:00:00" at 56 pt grown with it would run past
+          // the screen: it grows a quarter at most, and shrinks to its one line.
+          maxFontSizeMultiplier={TIMER_GROWS}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          style={[
+            styles.timer,
+            clock.status === "paused" && styles.timerPaused,
+            onNavy && styles.onNavy,
+          ]}
+        >
+          {timer(session)}
+        </Text>
+      </>
+    );
+
   // An admin's Today is the office's at a glance: what needs attention, never a clock-in.
   if (data?.me.role === "admin") return <AdminToday />;
 
   return (
-    <Screen testID="today">
-      <View style={styles.head}>
-        <Text style={text.title} accessibilityRole="header">
-          {t.today.title}
-        </Text>
-        <SyncChip />
-      </View>
-
+    <Screen
+      testID="today"
+      band={
+        <Band title={t.today.title} beside={<SyncChip />}>
+          <View style={styles.status}>{clockPart(true)}</View>
+        </Band>
+      }
+    >
       <ScrollView style={styles.fill} contentContainerStyle={styles.page}>
         {clock.status !== "off" && earlier && (
           <View testID="today-earlier" style={styles.earlier} accessibilityRole="alert">
@@ -246,42 +299,6 @@ export default function Today() {
         )}
 
         <View style={styles.status}>
-          {clock.status === "off" ? (
-            <Text testID="clock-off" style={text.body}>
-              {t.today.off}
-            </Text>
-          ) : (
-            <>
-              <View style={styles.statusLine}>
-                <Ionicons
-                  name={clock.status === "paused" ? "pause-circle" : "time"}
-                  size={20}
-                  color={clock.status === "paused" ? color.attentionInk : color.activeInk}
-                />
-                <Text testID={`clock-${clock.status}`} style={text.bodyStrong}>
-                  {clock.status === "paused" ? t.today.onBreak : t.today.onTheClock}
-                </Text>
-                {!earlier && (
-                  <Text style={text.secondary}>
-                    {t.today.since(timeOfDay(clock.since, zone, language))}
-                  </Text>
-                )}
-              </View>
-              <Text
-                testID="clock-timer"
-                accessibilityRole="timer"
-                accessibilityLabel={t.today.timerSpoken(spoken.hours, spoken.minutes)}
-                // At the phone's largest text "10:00:00" at 56 pt grown with it would run past
-                // the screen: it grows a quarter at most, and shrinks to its one line.
-                maxFontSizeMultiplier={TIMER_GROWS}
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                style={[styles.timer, clock.status === "paused" && styles.timerPaused]}
-              >
-                {timer(session)}
-              </Text>
-            </>
-          )}
           <View style={styles.statusLine}>
             <Text testID="today-hours" style={text.secondary}>
               {t.today.hoursToday(duration(workedToday))}
@@ -516,9 +533,10 @@ const styles = StyleSheet.create({
   },
   earlierText: { flex: 1, color: color.attentionInk },
   card: {
+    ...lift,
     gap: space[1],
     padding: space[4],
-    borderRadius: size.radiusCard,
+    borderRadius: size.radiusPrimary,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.border,
@@ -539,14 +557,17 @@ const styles = StyleSheet.create({
     fontVariant: ["tabular-nums"],
   },
   timerPaused: { color: color.inkSecondary },
+  onNavy: { color: color.onAction },
+  onNavySoft: { color: color.onBrandNavySoft },
   list: { gap: space[2] },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: space[3],
+    ...lift,
     minHeight: size.target,
     padding: space[3],
-    borderRadius: size.radiusCard,
+    borderRadius: size.radiusPrimary,
     backgroundColor: color.surface,
     borderWidth: 1,
     borderColor: color.border,

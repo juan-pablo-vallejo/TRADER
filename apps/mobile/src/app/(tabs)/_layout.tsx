@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { type ErrorBoundaryProps, Redirect, Tabs, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
 import type { ColorValue } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useStrings } from "../../i18n";
 import { reportScreenFailure } from "../../report";
@@ -13,7 +14,7 @@ import { RemindersProvider } from "../../reminders";
 import { useSession } from "../../session";
 import { opensOnCrew } from "../../sync/crew";
 import { SyncProvider, useSync } from "../../sync/provider";
-import { color, type } from "../../theme";
+import { color, size, type } from "../../theme";
 
 // An icon beside each word: the word stays, so the tab is never an icon alone.
 const icon =
@@ -46,6 +47,7 @@ function AppTabs() {
   const router = useRouter();
   const data = snapshot?.data ?? null;
   const admin = data?.me.role === "admin";
+  const insets = useSafeAreaInsets();
 
   // An admin with no shift today opens the app on Crew: once, the first time this launch
   // knows who is signed in and what their day holds. After that the tabs are theirs.
@@ -62,8 +64,19 @@ function AppTabs() {
         headerShown: false,
         tabBarActiveTintColor: color.action,
         tabBarInactiveTintColor: color.inkSecondary,
-        // 15 pt, as `type.label` is (theme.ts).
-        tabBarLabelStyle: { fontSize: type.label.fontSize, fontFamily: fontFile("600") },
+        // 15 pt on its 20 pt line, as `type.label` is (theme.ts): the library sets no line,
+        // and Inter's own is too short for a "y" on a phone with a short tab bar. The
+        // library's own weight is cleared, so none is faked over Inter's file (fonts.ts).
+        // The library's bar is 49 pt above the home bar: an icon and a 20 pt line do not fit
+        // it, and on a phone with no home bar (an iPhone SE) the label's foot is cut by the
+        // screen's edge. The primary button's height gives them room.
+        tabBarStyle: { height: size.primary + insets.bottom },
+        tabBarLabelStyle: {
+          fontSize: type.label.fontSize,
+          lineHeight: type.label.lineHeight,
+          fontFamily: fontFile("600"),
+          fontWeight: "normal",
+        },
       }}
     >
       <Tabs.Screen

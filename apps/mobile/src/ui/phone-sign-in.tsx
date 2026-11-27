@@ -69,7 +69,7 @@ import {
   type Step,
 } from "../sign-in-steps";
 import { deviceStore } from "../store/device";
-import { color, size, space, type } from "../theme";
+import { color, grows, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
 import { Text } from "./text";
@@ -324,12 +324,9 @@ export function PhoneSignIn({
   return (
     <SafeAreaView testID="sign-in" style={styles.screen} edges={["top", "left", "right"]}>
       <StatusBar style="light" />
-      <View style={styles.band}>
-        <Mark />
-      </View>
       <ScrollView
         style={styles.page}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         // Dragged away, the keyboard shows what is under it: the trouble lines.
         keyboardDismissMode="on-drag"
@@ -337,235 +334,247 @@ export function PhoneSignIn({
         // iOS-only), so what a person must see sits close under the field they type in.
         automaticallyAdjustKeyboardInsets
       >
-        {form.at === "field" && (
-          <>
+        {/* The navy scrolls with the page: at the largest text it is tall, and the field
+            below must still come into view. */}
+        <View style={styles.band}>
+          <Mark />
+          <Text style={styles.wordmark} maxFontSizeMultiplier={grows.display}>
+            D{"\u2019"}Sierra Painting
+          </Text>
+          {form.at === "field" && (
             <Text
-              style={styles.heading}
+              style={[styles.heading, styles.headingOnNavy]}
               accessibilityRole="header"
               accessibilityLabel={s.title}
               maxFontSizeMultiplier={HEADING_GROWS}
             >
               {unbroken(s.title)}
             </Text>
-            {keyReady && (
+          )}
+        </View>
+        <View style={styles.content}>
+          {form.at === "field" && (
+            <>
+              {keyReady && (
+                <Button
+                  testID="sign-in-key"
+                  kind="secondary"
+                  label={s.keySignIn(t.biometric.names[biometrics.name])}
+                  disabled={busy}
+                  onPress={() => void withKey()}
+                />
+              )}
               <Button
-                testID="sign-in-key"
+                testID="sign-in-google"
                 kind="secondary"
-                label={s.keySignIn(t.biometric.names[biometrics.name])}
+                label={s.google}
+                mark={
+                  <Image
+                    source={googleG}
+                    style={styles.googleG}
+                    accessible={false}
+                    accessibilityElementsHidden
+                    importantForAccessibility="no"
+                  />
+                }
                 disabled={busy}
-                onPress={() => void withKey()}
+                onPress={() => void withSocial("google")}
               />
-            )}
-            <Button
-              testID="sign-in-google"
-              kind="secondary"
-              label={s.google}
-              mark={
-                <Image
-                  source={googleG}
-                  style={styles.googleG}
-                  accessible={false}
-                  accessibilityElementsHidden
-                  importantForAccessibility="no"
-                />
-              }
-              disabled={busy}
-              onPress={() => void withSocial("google")}
-            />
-            {/* Apple's own button, in its words and drawing, as its guidelines ask. */}
-            {Platform.OS === "ios" && (
-              <View testID="sign-in-apple" style={styles.apple}>
-                <AppleAuthenticationButton
-                  buttonType={AppleAuthenticationButtonType.CONTINUE}
-                  buttonStyle={AppleAuthenticationButtonStyle.BLACK}
-                  cornerRadius={size.radiusPrimary}
-                  style={styles.appleButton}
-                  onPress={() => {
-                    if (!busy) void withSocial("apple");
-                  }}
-                />
-              </View>
-            )}
-            <Text style={[text.secondary, styles.or]}>{s.or}</Text>
-            <Text style={text.body}>{s.helper}</Text>
-            <Text style={text.label}>{s.address}</Text>
-            <TextInput
-              testID="sign-in-address"
-              accessibilityLabel={s.address}
-              accessibilityLanguage={speech}
-              style={styles.input}
-              // No focus as the screen opens: the keyboard would cover what is above the
-              // field before it has been read, and Send under it.
-              value={typed}
-              onChangeText={setTyped}
-              // Letters, digits and an @: a number and an email are both typed here.
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="username"
-              autoComplete="username"
-              maxLength={254}
-              returnKeyType="go"
-              onSubmitEditing={send}
-            />
-            {noteLine}
-            <Button
-              testID="sign-in-send"
-              kind="brand"
-              label={busy ? s.sending : s.send}
-              disabled={busy}
-              onPress={send}
-            />
-          </>
-        )}
-        {form.at === "code" && (
-          <>
-            <Text
-              style={styles.heading}
-              accessibilityRole="header"
-              maxFontSizeMultiplier={HEADING_GROWS}
-            >
-              {s.codeTitle}
-            </Text>
-            <Text style={text.body}>
-              {form.to.kind === "phone"
-                ? s.codeTexted(shown(form.to.phone))
-                : s.codeEmailed(form.to.email)}
-            </Text>
-            <Text style={text.label}>{s.code}</Text>
-            <TextInput
-              testID="sign-in-code"
-              ref={codeField}
-              accessibilityLabel={s.code}
-              accessibilityLanguage={speech}
-              // The texted code is offered above the keyboard, and one tap fills it: iOS by
-              // `oneTimeCode`, Android by `sms-otp`.
-              style={[styles.input, styles.code]}
-              autoFocus
-              maxLength={SIGN_IN_CODE_LENGTH}
-              value={code}
-              // Never made read-only while a code is checked: a field that is loses its
-              // focus, and the keyboard goes with it. What is typed meanwhile is ignored.
-              onChangeText={(entered) => {
-                if (busy) return;
-                const digits = entered.replace(/\D/g, "").slice(0, SIGN_IN_CODE_LENGTH);
-                setCode(digits);
-                // The last digit sends it: nobody types a code and then looks for a button.
-                if (digits.length === SIGN_IN_CODE_LENGTH) check(digits);
-              }}
-              keyboardType="number-pad"
-              textContentType="oneTimeCode"
-              autoComplete="sms-otp"
-              returnKeyType="go"
-              onSubmitEditing={() => check(code)}
-            />
-            {noteLine}
-            <Button
-              testID="sign-in-verify"
-              kind="brand"
-              label={busy ? s.checking : s.submit}
-              disabled={busy || code.length < SIGN_IN_CODE_LENGTH}
-              onPress={() => check(code)}
-            />
+              {/* Apple's own button, in its words and drawing, as its guidelines ask. */}
+              {Platform.OS === "ios" && (
+                <View testID="sign-in-apple" style={styles.apple}>
+                  <AppleAuthenticationButton
+                    buttonType={AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={AppleAuthenticationButtonStyle.BLACK}
+                    cornerRadius={size.radiusPrimary}
+                    style={styles.appleButton}
+                    onPress={() => {
+                      if (!busy) void withSocial("apple");
+                    }}
+                  />
+                </View>
+              )}
+              <Text style={[text.secondary, styles.or]}>{s.or}</Text>
+              <Text style={text.body}>{s.helper}</Text>
+              <Text style={text.label}>{s.address}</Text>
+              <TextInput
+                testID="sign-in-address"
+                accessibilityLabel={s.address}
+                accessibilityLanguage={speech}
+                style={styles.input}
+                // No focus as the screen opens: the keyboard would cover what is above the
+                // field before it has been read, and Send under it.
+                value={typed}
+                onChangeText={setTyped}
+                // Letters, digits and an @: a number and an email are both typed here.
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                textContentType="username"
+                autoComplete="username"
+                maxLength={254}
+                returnKeyType="go"
+                onSubmitEditing={send}
+              />
+              {noteLine}
+              <Button
+                testID="sign-in-send"
+                kind="brand"
+                label={busy ? s.sending : s.send}
+                disabled={busy}
+                onPress={send}
+              />
+            </>
+          )}
+          {form.at === "code" && (
+            <>
+              <Text
+                style={styles.heading}
+                accessibilityRole="header"
+                maxFontSizeMultiplier={HEADING_GROWS}
+              >
+                {s.codeTitle}
+              </Text>
+              <Text style={text.body}>
+                {form.to.kind === "phone"
+                  ? s.codeTexted(shown(form.to.phone))
+                  : s.codeEmailed(form.to.email)}
+              </Text>
+              <Text style={text.label}>{s.code}</Text>
+              <TextInput
+                testID="sign-in-code"
+                ref={codeField}
+                accessibilityLabel={s.code}
+                accessibilityLanguage={speech}
+                // The texted code is offered above the keyboard, and one tap fills it: iOS by
+                // `oneTimeCode`, Android by `sms-otp`.
+                style={[styles.input, styles.code]}
+                autoFocus
+                maxLength={SIGN_IN_CODE_LENGTH}
+                value={code}
+                // Never made read-only while a code is checked: a field that is loses its
+                // focus, and the keyboard goes with it. What is typed meanwhile is ignored.
+                onChangeText={(entered) => {
+                  if (busy) return;
+                  const digits = entered.replace(/\D/g, "").slice(0, SIGN_IN_CODE_LENGTH);
+                  setCode(digits);
+                  // The last digit sends it: nobody types a code and then looks for a button.
+                  if (digits.length === SIGN_IN_CODE_LENGTH) check(digits);
+                }}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                autoComplete="sms-otp"
+                returnKeyType="go"
+                onSubmitEditing={() => check(code)}
+              />
+              {noteLine}
+              <Button
+                testID="sign-in-verify"
+                kind="brand"
+                label={busy ? s.checking : s.submit}
+                disabled={busy || code.length < SIGN_IN_CODE_LENGTH}
+                onPress={() => check(code)}
+              />
+              <TextButton
+                testID="sign-in-resend"
+                label={waiting > 0 ? s.resendIn(waiting) : s.resend}
+                disabled={busy || waiting > 0}
+                onPress={() => {
+                  if (form.at === "code")
+                    void run(() => resend(provider, form, Date.now()));
+                }}
+              />
+              <TextButton
+                testID="sign-in-change"
+                label={s.change}
+                disabled={busy}
+                onPress={back}
+              />
+            </>
+          )}
+          {form.at === "demo" && (
+            <>
+              <Text
+                style={styles.heading}
+                accessibilityRole="header"
+                maxFontSizeMultiplier={HEADING_GROWS}
+              >
+                {s.demo}
+              </Text>
+              <Text style={text.body}>{s.demoHelp}</Text>
+              <Text style={text.label}>{s.demoPhone}</Text>
+              <TextInput
+                testID="sign-in-demo-phone"
+                accessibilityLabel={s.demoPhone}
+                accessibilityLanguage={speech}
+                style={styles.input}
+                value={demoPhone}
+                onChangeText={setDemoPhone}
+                keyboardType="phone-pad"
+                textContentType="telephoneNumber"
+                autoComplete="tel"
+              />
+              <Text style={text.label}>{s.demoCode}</Text>
+              <TextInput
+                testID="sign-in-demo-code"
+                accessibilityLabel={s.demoCode}
+                accessibilityLanguage={speech}
+                style={styles.input}
+                value={demoCode}
+                onChangeText={setDemoCode}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+                returnKeyType="go"
+                onSubmitEditing={demo}
+              />
+              {noteLine}
+              <Button
+                testID="sign-in-demo-submit"
+                kind="brand"
+                label={busy ? s.checking : s.demoSubmit}
+                disabled={busy}
+                onPress={demo}
+              />
+              <TextButton
+                testID="sign-in-demo-back"
+                label={s.back}
+                disabled={busy}
+                onPress={back}
+              />
+            </>
+          )}
+          {form.at === "field" && (
             <TextButton
-              testID="sign-in-resend"
-              label={waiting > 0 ? s.resendIn(waiting) : s.resend}
-              disabled={busy || waiting > 0}
+              testID="sign-in-demo"
+              label={s.demo}
+              disabled={busy}
               onPress={() => {
-                if (form.at === "code")
-                  void run(() => resend(provider, form, Date.now()));
+                setNote(null);
+                setForm({ at: "demo" });
               }}
             />
-            <TextButton
-              testID="sign-in-change"
-              label={s.change}
-              disabled={busy}
-              onPress={back}
-            />
-          </>
-        )}
-        {form.at === "demo" && (
-          <>
-            <Text
-              style={styles.heading}
-              accessibilityRole="header"
-              maxFontSizeMultiplier={HEADING_GROWS}
-            >
-              {s.demo}
-            </Text>
-            <Text style={text.body}>{s.demoHelp}</Text>
-            <Text style={text.label}>{s.demoPhone}</Text>
-            <TextInput
-              testID="sign-in-demo-phone"
-              accessibilityLabel={s.demoPhone}
-              accessibilityLanguage={speech}
-              style={styles.input}
-              value={demoPhone}
-              onChangeText={setDemoPhone}
-              keyboardType="phone-pad"
-              textContentType="telephoneNumber"
-              autoComplete="tel"
-            />
-            <Text style={text.label}>{s.demoCode}</Text>
-            <TextInput
-              testID="sign-in-demo-code"
-              accessibilityLabel={s.demoCode}
-              accessibilityLanguage={speech}
-              style={styles.input}
-              value={demoCode}
-              onChangeText={setDemoCode}
-              autoCapitalize="none"
-              autoCorrect={false}
-              secureTextEntry
-              returnKeyType="go"
-              onSubmitEditing={demo}
-            />
-            {noteLine}
-            <Button
-              testID="sign-in-demo-submit"
-              kind="brand"
-              label={busy ? s.checking : s.demoSubmit}
-              disabled={busy}
-              onPress={demo}
-            />
-            <TextButton
-              testID="sign-in-demo-back"
-              label={s.back}
-              disabled={busy}
-              onPress={back}
-            />
-          </>
-        )}
-        {form.at === "field" && (
+          )}
           <TextButton
-            testID="sign-in-demo"
-            label={s.demo}
-            disabled={busy}
-            onPress={() => {
-              setNote(null);
-              setForm({ at: "demo" });
-            }}
+            testID="sign-in-trouble"
+            label={s.trouble}
+            disabled={false}
+            expanded={trouble}
+            onPress={() => setTrouble(!trouble)}
           />
-        )}
-        <TextButton
-          testID="sign-in-trouble"
-          label={s.trouble}
-          disabled={false}
-          expanded={trouble}
-          onPress={() => setTrouble(!trouble)}
-        />
-        {trouble && (
-          <View testID="sign-in-trouble-help" style={styles.trouble}>
-            <Text style={text.secondary}>{s.troubleNoCode}</Text>
-            <Text style={text.secondary}>{s.troubleNewPhone}</Text>
-            <Text style={text.secondary}>{s.troubleNeverInvited}</Text>
-          </View>
-        )}
-        {standIn && (
-          <Text testID="sign-in-stand-in" style={text.secondary}>
-            {s.developmentOnly}
-          </Text>
-        )}
+          {trouble && (
+            <View testID="sign-in-trouble-help" style={styles.trouble}>
+              <Text style={text.secondary}>{s.troubleNoCode}</Text>
+              <Text style={text.secondary}>{s.troubleNewPhone}</Text>
+              <Text style={text.secondary}>{s.troubleNeverInvited}</Text>
+            </View>
+          )}
+          {standIn && (
+            <Text testID="sign-in-stand-in" style={text.secondary}>
+              {s.developmentOnly}
+            </Text>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -611,8 +620,10 @@ function TextButton({
 const styles = StyleSheet.create({
   // The navy runs up under the clock; the page below it is the app's own.
   screen: { flex: 1, backgroundColor: color.brandNavy },
-  band: { alignItems: "center", paddingVertical: space[6] },
-  page: { flex: 1, backgroundColor: color.canvas },
+  // Their navy, under the clock: the mark, their name and, on the first step, the heading.
+  band: { alignItems: "center", gap: space[3], paddingVertical: space[6] * 1.5 },
+  page: { flex: 1, backgroundColor: color.brandNavyTint },
+  scroll: { flexGrow: 1 },
   content: { padding: space[4], gap: space[4], paddingBottom: space[6] * 2 },
   heading: {
     ...(type.title as TextStyle),
@@ -622,6 +633,18 @@ const styles = StyleSheet.create({
     // Bodoni Moda draws its own weight: a weight asked of it as well would be faked.
     fontFamily: "BodoniModa_700Bold",
     fontWeight: "normal",
+  },
+  wordmark: {
+    ...(type.heading as TextStyle),
+    color: color.onAction,
+    fontFamily: "BodoniModa_700Bold",
+    fontWeight: "normal",
+    textAlign: "center",
+  },
+  headingOnNavy: {
+    color: color.onAction,
+    textAlign: "center",
+    paddingHorizontal: space[4],
   },
   input: {
     minHeight: 64,

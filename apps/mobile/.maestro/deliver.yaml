@@ -2,8 +2,12 @@
 # sent.
 appId: app.jpteq.trader
 ---
+# Near the chip's start: on Android the relaunch in offline-capture.yaml reaches the
+# development build without the link's `__expo_disable_fab=1`, and the build's own button
+# then floats over the band's top right, where the chip's end is.
 - tapOn:
     id: "sync-pending|sync-synced|sync-attention"
+    point: "15%,50%"
 # The chip changes its word as entries go; a tap that lands mid-change opens nothing.
 - runFlow:
     when:
@@ -12,6 +16,7 @@ appId: app.jpteq.trader
     commands:
       - tapOn:
           id: "sync-pending|sync-synced|sync-attention"
+          point: "15%,50%"
 - tapOn:
     id: "sync-now"
 - tapOn:

@@ -27,6 +27,9 @@ export const color = {
   actionTint: "#E3E0EC",
   brand: "#BC0C0C",
   brandNavy: "#140064",
+  // Their navy's palest tint, a page under a navy band; and the quieter white on the navy.
+  brandNavyTint: "#F3F2F7",
+  onBrandNavySoft: "#BDB8D4",
   muted: "#6B7280",
   // Five status tones, each an ink on its tint. Never color alone: an icon and a word too.
   neutralInk: "#374151",
@@ -45,6 +48,19 @@ export const color = {
   attention: "#991B1B",
 } as const;
 
+// A card lifted off the page by a faint shadow of their navy.
+export const lift = {
+  shadowColor: color.brandNavy,
+  shadowOpacity: 0.08,
+  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 2,
+} as const;
+
+// How far a style grows with the phone's text size, at most. Body text grows all the way;
+// display type (a band's title, a name set large) half again, or it fills the screen.
+export const grows = { display: 1.5 } as const;
+
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 6: 24 } as const;
 
 export const size = {
@@ -60,6 +76,14 @@ export const type = {
   body: { fontSize: 17, lineHeight: 24, fontWeight: "400" },
   bodyStrong: { fontSize: 17, lineHeight: 24, fontWeight: "600" },
   secondary: { fontSize: 15, lineHeight: 20, fontWeight: "400" },
+  // A screen's title on the navy band and a name set large: Bodoni Moda, as D'Sierra's
+  // wordmark and homepage headings are. The face draws its own weight; none is asked.
+  display: {
+    fontSize: 30,
+    lineHeight: 36,
+    fontFamily: "BodoniModa_700Bold",
+    fontWeight: "normal",
+  },
   label: {
     fontSize: 15,
     lineHeight: 20,

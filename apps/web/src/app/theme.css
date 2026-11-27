@@ -23,6 +23,9 @@
   --accent-tint: #eeebfa;
   --brand: #bc0c0c;
   --brand-navy: #140064;
+  /* The phone's: a page under its navy band, and the quieter white on the navy. */
+  --brand-navy-tint: #f3f2f7;
+  --on-brand-navy-soft: #bdb8d4;
   --muted: #6b7280;
 
   /* Five status tones, each an ink on its tint, 4.5:1 or better (the same test). A status

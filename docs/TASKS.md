@@ -74,7 +74,9 @@ Compact on a laptop, large targets on a phone.
 **The look.** D'Sierra's brand. Their roller and brush is the icon. In the office their
 indigo is the color of every action; the phone app is on their own red for an action and
 their navy for what is chosen, a link and the active tab, as the homepage and the two
-sign-in screens are, which take Bodoni Moda for their heading. Red never sits on navy.
+sign-in screens are, which take Bodoni Moda for their heading. A phone screen opens under
+their navy, its title in Bodoni Moda and its main fact (Today's clock, the person's name)
+on the navy, over their navy's palest tint. Red never sits on navy.
 
 **Finish line.** D'Sierra's whole crew runs one full pay period on it: every hour clocked on
 a phone, payroll hours exported from TRADER, one real invoice issued and emailed.
