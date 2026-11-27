@@ -152,6 +152,11 @@ also uses.
   and the Android phone flows.
 - Android's builds and phone flows run on the workstation alone; when it does not answer,
   the Mac does the work and Android waits.
+- The phone's device matrix, for the layout sweep (`apps/mobile/.maestro/matrix.sh`): the
+  iPhone SE, 17 and 17 Pro Max simulators on the Mac; on the workstation four emulators
+  (`trader-ws sweep`): 360 points wide, the Moto g04s's 720×1612 at 280 dpi, 1080×2400, and
+  Android 7 (API 24, the app's floor); each at the default and the largest text, in both
+  languages. The owner's own Moto g04s and iPhone are the walk's.
 - The workstation holds no credential: no GitHub sign-in, no signing key, no staging key,
   no vendor sign-in, no Expo token, and no keystore but Android's debug one. Everything it
   serves listens on its own loopback, and the Mac reaches it through SSH.

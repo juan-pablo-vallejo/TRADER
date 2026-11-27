@@ -85,6 +85,20 @@ still up, sign in as a demo worker, `luis.herrera@demo.invalid`. The second line
 phone flows: stop the office first, because the suite starts its own on port 3000 and builds
 its own database.
 
+The layout sweep visits every phone screen and state on each device given, at the default
+and the largest text, in English then Spanish, and checks what it saw (a control with no
+name or under 48 points, text cut short or past its side). Each run ends on a line
+"<device> <text> <language>: <n> screens, <n> faults"; the pictures and view trees land in
+`~/Library/Caches/TRADER/sweep/`. It too needs the bundler and port 3000 free:
+
+```sh
+apps/mobile/.maestro/matrix.sh ios <iPhone SE udid> <iPhone 17 udid> <17 Pro Max udid>
+scripts/trader-ws sweep && scripts/trader-ws wait sweep && scripts/trader-ws sweep-fetch
+```
+
+The second line runs it on the workstation's four Android emulators: a 360-point phone, the
+Moto g04s's shape, a 1080×2400 phone, and Android 7, the app's oldest.
+
 ## Everyday commands
 
 - `pnpm check`: typecheck, lint, format check and every test. The quick loop. Never piped:
