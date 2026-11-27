@@ -117,6 +117,8 @@ Moto g04s's shape, a 1080×2400 phone, and Android 7, the app's oldest.
   alone.
 - `apps/mobile/.maestro/affected.sh`: the phone flows and sweep steps a change can break,
   and whether it touches Android's code (`affected.map`).
+- `scripts/trader-ws time ci`: the whole check's wall time, three runs on the workstation
+  and three on this Mac, as medians; without `ci`, `pnpm check` cold and warm on both too.
 - `pnpm test`: the tests alone. They need the local database and refuse a deployed one. One
   file: `pnpm exec vitest run <file>`, from its package's folder.
 - `pnpm build`: builds the office. CI's `build` and `scripts/trader-ws check` run it;
