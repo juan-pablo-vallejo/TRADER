@@ -6,6 +6,8 @@ appId: app.jpteq.trader
 - launchApp:
     stopApp: false
 - runFlow:
+    file: close-sheets.yaml
+- runFlow:
     file: ../parts/sign-out.yaml
 - runFlow:
     file: in.yaml

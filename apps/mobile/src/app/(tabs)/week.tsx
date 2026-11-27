@@ -145,8 +145,10 @@ export default function Week() {
             ) : (
               hours.map(({ day, workedMs, sessions }) => (
                 <View key={day} style={styles.card}>
-                  <View style={styles.dayHead}>
-                    <Text style={[text.label, styles.fill]}>
+                  {/* At the largest text the day goes above its total, with the card's
+                      width: beside it, "VIE, 27 NOV" breaks inside itself. */}
+                  <View style={huge ? styles.headStack : styles.dayHead}>
+                    <Text style={[text.label, !huge && styles.fill]}>
                       {dayName(day, language)}
                     </Text>
                     <Text style={[text.secondary, styles.figures]}>
@@ -158,8 +160,8 @@ export default function Week() {
                     row += 1;
                     return (
                       <View key={session.rootEventId} testID={`hours-row-${i}`}>
-                        <View style={styles.dayHead}>
-                          <Text style={[text.body, styles.fill]}>
+                        <View style={huge ? styles.headStack : styles.dayHead}>
+                          <Text style={[text.body, !huge && styles.fill]}>
                             {jobName.get(session.jobId) ?? "—"}
                           </Text>
                           <Text style={[text.bodyStrong, styles.figures]}>
@@ -228,6 +230,7 @@ const styles = StyleSheet.create({
   },
   hours: { gap: space[2] },
   dayHead: { flexDirection: "row", alignItems: "baseline", gap: space[2] },
+  headStack: { gap: space[1] },
   figures: { fontVariant: ["tabular-nums"] },
   flag: { flexDirection: "row", alignItems: "flex-start", gap: space[1] },
   flagText: { flex: 1, color: color.attentionInk },

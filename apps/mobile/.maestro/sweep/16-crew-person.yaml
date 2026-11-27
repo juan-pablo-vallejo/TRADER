@@ -27,3 +27,27 @@ appId: app.jpteq.trader
           visible:
             id: "person-sheet"
           timeout: 10000
+          optional: true
+# Crew redraws as its answer comes in, and can take the page back to its top under the tap:
+# once more.
+- runFlow:
+    when:
+      notVisible:
+        id: "person-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "crew-person-0"
+          visibilityPercentage: 10
+          timeout: 60000
+          speed: 70
+          centerElement: true
+          optional: true
+      - tapOn:
+          id: "crew-person-0"
+          optional: true
+      - extendedWaitUntil:
+          visible:
+            id: "person-sheet"
+          timeout: 10000
+          optional: true

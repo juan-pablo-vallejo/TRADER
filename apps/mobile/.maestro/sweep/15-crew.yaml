@@ -4,9 +4,21 @@ appId: app.jpteq.trader
 # the front, as it was.
 - launchApp:
     stopApp: false
-- tapOn:
-    id: "tab-crew"
-- extendedWaitUntil:
-    visible:
-      id: "crew"
-    timeout: 30000
+- runFlow:
+    file: close-sheets.yaml
+# Tapped until the screen shows: a tap that lands while the app redraws is lost.
+- repeat:
+    while:
+      notVisible:
+        id: "crew"
+    times: 3
+    commands:
+      - tapOn:
+          id: "tab-crew"
+      - extendedWaitUntil:
+          visible:
+            id: "crew"
+          timeout: 10000
+          optional: true
+- assertVisible:
+    id: "crew"

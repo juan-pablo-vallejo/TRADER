@@ -13,6 +13,9 @@
 #   trader-ws verified                  exit 0 only if HEAD's tree has a green check
 #   trader-ws e2e                       sync, then the browser suite on the demo data
 #   trader-ws android                   sync, then the phone flows on the emulator, detached
+#   trader-ws sweep [profile...]        sync, then the layout sweep on each emulator profile
+#                                       (all four by default), detached
+#   trader-ws sweep-fetch               the sweep's pictures and view trees -> this Mac
 #   trader-ws wait <name> [secs]        wait for a detached job; its log's tail; its exit code
 #   trader-ws logs <name> [lines]       a log's tail: check, e2e, sync, run, or a job's name
 #   trader-ws db-reset                  drop, create and migrate the local database there
@@ -192,6 +195,21 @@ pnpm e2e:local" || rc=$?
     printf '%s\n%s\n%s\n' "$remote_prelude" "$pg_gate" 'exec ~/bin/trader-android ~/trader' | ssh "$HOST" "cat > ~/trader-jobs/android.sh"
     ssh "$HOST" "tmux new-session -d -s tw-android \"flock -n -o -E 75 $RHOME/$RDIR/.lock bash -l $RHOME/trader-jobs/android.sh > $RHOME/trader-jobs/android.log 2>&1; echo \\\$? > $RHOME/trader-jobs/android.exit\""
     echo "started the phone flows on tree $SYNCED; trader-ws wait android" ;;
+  sweep)
+    [ $# -gt 0 ] || set -- trader trader-small trader-medium trader-oldest
+    for p in "$@"; do
+      case "$p" in trader|trader-small|trader-medium|trader-oldest) ;; *) die "no profile $p" ;; esac
+    done
+    do_sync
+    ssh "$HOST" "mkdir -p ~/trader-jobs && rm -f ~/trader-jobs/sweep.exit ~/trader-jobs/sweep.tree"
+    printf '%s\n%s\n%s\n' "$remote_prelude" "$pg_gate" "exec ~/bin/trader-android ~/trader sweep $*" | ssh "$HOST" "cat > ~/trader-jobs/sweep.sh"
+    ssh "$HOST" "tmux new-session -d -s tw-sweep \"flock -n -o -E 75 $RHOME/$RDIR/.lock bash -l $RHOME/trader-jobs/sweep.sh > $RHOME/trader-jobs/sweep.log 2>&1; echo \\\$? > $RHOME/trader-jobs/sweep.exit\""
+    echo "started the sweep on $*; trader-ws wait sweep" ;;
+  sweep-fetch)
+    reach
+    mkdir -p "$HOME/Library/Caches/TRADER/sweep"
+    rsync -a "$HOST:trader-sweep/" "$HOME/Library/Caches/TRADER/sweep/"
+    echo "in ~/Library/Caches/TRADER/sweep" ;;
   db-reset)
     reach
     remote_shown db-reset 'set -euo pipefail
@@ -240,9 +258,10 @@ $*" ;;
     reach
     ssh "$HOST" 'mkdir -p ~/bin ~/.config/systemd/user'
     scp -q "$HERE/trader-ws.d/trader-android" "$HOST:bin/trader-android"
+    scp -q "$HERE/trader-ws.d/trader-avds" "$HOST:bin/trader-avds"
     scp -q "$HERE"/trader-ws.d/*.service "$HOST:.config/systemd/user/"
     ls "$HERE"/trader-ws.d/*.timer >/dev/null 2>&1 && scp -q "$HERE"/trader-ws.d/*.timer "$HOST:.config/systemd/user/"
-    ssh "$HOST" 'chmod +x ~/bin/trader-*; systemctl --user daemon-reload; for t in ~/.config/systemd/user/*.timer; do [ -f "$t" ] && systemctl --user enable --now "$(basename "$t")"; done; ls ~/bin ~/.config/systemd/user; systemctl --user list-timers --no-pager 2>/dev/null | head -4' ;;
+    ssh "$HOST" 'rm -f ~/.config/systemd/user/trader-emulator.service; chmod +x ~/bin/trader-*; ~/bin/trader-avds || true; systemctl --user daemon-reload; for t in ~/.config/systemd/user/*.timer; do [ -f "$t" ] && systemctl --user enable --now "$(basename "$t")"; done; ls ~/bin ~/.config/systemd/user; systemctl --user list-timers --no-pager 2>/dev/null | head -4' ;;
   audit)
     reach
     rc=0
@@ -257,5 +276,5 @@ $*" ;;
   time)
     exec sh "$HERE/trader-ws.d/time" "$@" ;;
   *)
-    sed -n '2,28p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
+    sed -n '2,31p' "$0" | sed 's/^# \{0,1\}//'; exit 2 ;;
 esac

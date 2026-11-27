@@ -57,10 +57,11 @@ export const lift = {
   elevation: 2,
 } as const;
 
-// How far a style grows with the phone's text size, at most. Body text grows all the way;
-// a heading (20 pt and up) to twice its size, or a long word breaks inside itself; display
-// type (a band's title, a name set large) half again, or it fills the screen.
-export const grows = { heading: 2, display: 1.5 } as const;
+// How far a style grows with the phone's text size, at most: past it a long word no longer
+// fits the smallest phone's line and breaks inside itself. Body text and labels to 2.3
+// times (more than WCAG's 200%), a heading (20 pt and up) to twice its size, so it is never
+// smaller than the text under it, display type (a band's title, a name set large) half again.
+export const grows = { body: 2.3, heading: 2, display: 1.5 } as const;
 
 export const space = { 1: 4, 2: 8, 3: 12, 4: 16, 6: 24 } as const;
 

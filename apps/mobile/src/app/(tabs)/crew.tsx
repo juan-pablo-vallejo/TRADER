@@ -58,6 +58,7 @@ import { Button, Screen, text } from "../../ui/controls";
 import { Sheet } from "../../ui/sheet";
 import { Band } from "../../ui/band";
 import { SyncChip } from "../../ui/sync-chip";
+import { useLayout } from "../../layout";
 import { Press } from "../../ui/press";
 import { Text } from "../../ui/text";
 import { WhatsAppButton } from "../../ui/whatsapp-button";
@@ -217,6 +218,9 @@ const timeRange = (start: string, end: string, language: string): string =>
 export default function CrewTab() {
   const { t, language } = useStrings();
   const speech = useSpeech();
+  // From a large text size a status goes under the name it belongs to: beside it, the
+  // pill takes the row and the name is pressed to a letter a line (layout.ts).
+  const stacked = useLayout().text !== "default";
   const { session } = useSession();
   const { snapshot } = useSync();
   const [load, setLoad] = useState<Load>({ phase: "loading" });
@@ -519,12 +523,21 @@ export default function CrewTab() {
       <View style={styles.fill}>
         <Text style={text.bodyStrong}>{person.person.name}</Text>
         <Text style={text.secondary}>{line(person)}</Text>
+        {stacked && (
+          <StatusPill
+            status={status}
+            label={statusLabel(status)}
+            testID={`${prefix}-${index}-${status}`}
+          />
+        )}
       </View>
-      <StatusPill
-        status={status}
-        label={statusLabel(status)}
-        testID={`${prefix}-${index}-${status}`}
-      />
+      {!stacked && (
+        <StatusPill
+          status={status}
+          label={statusLabel(status)}
+          testID={`${prefix}-${index}-${status}`}
+        />
+      )}
       <Ionicons name="chevron-forward" size={icon.line} color={color.inkSecondary} />
     </Press>
   );
@@ -691,8 +704,13 @@ export default function CrewTab() {
                     />
                   </View>
                   {[...g.here, ...g.scheduled].map(({ person, status }) => (
-                    <View key={person.person.id} style={styles.jobPerson}>
-                      <Text style={[text.body, styles.fill]}>{person.person.name}</Text>
+                    <View
+                      key={person.person.id}
+                      style={stacked ? styles.jobPersonStacked : styles.jobPerson}
+                    >
+                      <Text style={[text.body, !stacked && styles.fill]}>
+                        {person.person.name}
+                      </Text>
                       <StatusPill
                         status={status}
                         label={statusLabel(status)}
@@ -1054,6 +1072,7 @@ const styles = StyleSheet.create({
   },
   jobHead: { flexDirection: "row", alignItems: "center", gap: space[2] },
   jobPerson: { flexDirection: "row", alignItems: "center", gap: space[2] },
+  jobPersonStacked: { alignItems: "flex-start", gap: space[1] },
   sheetStatus: { flexDirection: "row", alignItems: "center", gap: space[2] },
   choices: { gap: space[2] },
   choice: {

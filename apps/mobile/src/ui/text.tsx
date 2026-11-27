@@ -8,30 +8,55 @@
 // a maker's system font without a face for the weight asked (Motorola's has no 600) has
 // Android measure a line in one face and draw it in a wider fake bold, and the line's end is
 // cut. A style's weight picks Inter's file for it and is then cleared, so nothing is faked.
-import type { ComponentProps } from "react";
+import { type ComponentProps, useState } from "react";
 import { Text as NativeText, StyleSheet, type TextStyle } from "react-native";
 
 import { fontFor } from "../fonts";
 import { useSpeech } from "../i18n";
 import { grows, type } from "../theme";
 
-// A heading grows with the phone's text size to twice its size at most (theme.ts, grows),
-// unless the text says its own limit.
+// Text grows with the phone's text size to its role's limit (theme.ts, grows): a heading to
+// twice its size, everything else to 2.3 times, unless the text says its own limit.
+//
+// In a development build a text held to a number of lines that cuts its words short says
+// so: "-truncated" on its test id, which the layout sweep's check reads
+// (.maestro/check-hierarchy.mjs). A release build does not watch.
 export function Text({
   style,
   maxFontSizeMultiplier,
+  testID,
+  onTextLayout,
   ...props
 }: ComponentProps<typeof NativeText>) {
   const speech = useSpeech();
+  const [cut, setCut] = useState(false);
   const flat = fontFor(StyleSheet.flatten(style) as TextStyle | undefined);
   const heading = (flat.fontSize ?? 0) >= type.heading.fontSize;
+  const words = typeof props.children === "string" ? props.children : null;
+  const lines = props.numberOfLines;
+  const watch = __DEV__ && lines !== undefined && words !== null;
   return (
     <NativeText
       accessibilityLanguage={speech}
       maxFontSizeMultiplier={
-        maxFontSizeMultiplier ?? (heading ? grows.heading : undefined)
+        maxFontSizeMultiplier ?? (heading ? grows.heading : grows.body)
       }
       {...props}
+      testID={cut ? `${testID ?? "text"}-truncated` : testID}
+      onTextLayout={
+        watch
+          ? (event) => {
+              // The words on the lines shown, against all of them, spaces aside.
+              const shown = event.nativeEvent.lines
+                .slice(0, lines)
+                .map((line) => line.text)
+                .join("");
+              const bare = (t: string) => t.replace(/\s/g, "").length;
+              setCut(bare(shown) < bare(words));
+              onTextLayout?.(event);
+            }
+          : onTextLayout
+      }
       style={flat}
     />
   );

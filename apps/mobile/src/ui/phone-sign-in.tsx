@@ -34,7 +34,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  TextInput,
+  type TextInput,
   View,
   type TextStyle,
 } from "react-native";
@@ -72,8 +72,8 @@ import { deviceStore } from "../store/device";
 import { border, color, grows, icon, size, space, type } from "../theme";
 import { Button, text } from "./controls";
 import { Mark } from "./mark";
+import { Field } from "./field";
 import { Text } from "./text";
-import { fontFile } from "../fonts";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports -- React Native's way to name a bundled image
 const googleG = require("../../assets/google/g.png") as number;
@@ -397,7 +397,7 @@ export function PhoneSignIn({
               <Text style={[text.secondary, styles.or]}>{s.or}</Text>
               <Text style={text.body}>{s.helper}</Text>
               <Text style={text.label}>{s.address}</Text>
-              <TextInput
+              <Field
                 testID="sign-in-address"
                 accessibilityLabel={s.address}
                 accessibilityLanguage={speech}
@@ -441,7 +441,7 @@ export function PhoneSignIn({
                   : s.codeEmailed(form.to.email)}
               </Text>
               <Text style={text.label}>{s.code}</Text>
-              <TextInput
+              <Field
                 testID="sign-in-code"
                 ref={codeField}
                 accessibilityLabel={s.code}
@@ -503,7 +503,7 @@ export function PhoneSignIn({
               </Text>
               <Text style={text.body}>{s.demoHelp}</Text>
               <Text style={text.label}>{s.demoPhone}</Text>
-              <TextInput
+              <Field
                 testID="sign-in-demo-phone"
                 accessibilityLabel={s.demoPhone}
                 accessibilityLanguage={speech}
@@ -515,7 +515,7 @@ export function PhoneSignIn({
                 autoComplete="tel"
               />
               <Text style={text.label}>{s.demoCode}</Text>
-              <TextInput
+              <Field
                 testID="sign-in-demo-code"
                 accessibilityLabel={s.demoCode}
                 accessibilityLanguage={speech}
@@ -659,15 +659,17 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: type.code.fontSize,
-    fontFamily: fontFile("400"),
   },
   code: {
     letterSpacing: type.code.letterSpacing,
     textAlign: "center",
     fontVariant: ["tabular-nums"],
   },
+  // A word or two that reads as a link, on a 48-point target both ways: "Back" alone is
+  // narrower than that.
   textButton: {
     minHeight: size.target,
+    minWidth: size.target,
     justifyContent: "center",
     alignSelf: "flex-start",
   },

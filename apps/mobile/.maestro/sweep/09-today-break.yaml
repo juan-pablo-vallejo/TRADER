@@ -5,6 +5,8 @@ appId: app.jpteq.trader
 # the front, as it was.
 - launchApp:
     stopApp: false
+- runFlow:
+    file: close-sheets.yaml
 # A sheet left open closes when the app goes to the background between steps; one still
 # showing is closed here.
 - runFlow:

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useReduceMotion } from "../motion";
 import { color, scrim, size, space } from "../theme";
 import { text } from "./controls";
 import { Text } from "./text";
@@ -23,11 +24,13 @@ export function Sheet({
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  // Under Reduce Motion the sheet holds still: it is there, with nothing sliding in.
+  const still = useReduceMotion();
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType={still ? "none" : "slide"}
       onRequestClose={onClose}
       statusBarTranslucent
     >

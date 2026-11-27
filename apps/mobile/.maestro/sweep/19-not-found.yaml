@@ -5,6 +5,8 @@ appId: app.jpteq.trader
 # the front, as it was.
 - launchApp:
     stopApp: false
+- runFlow:
+    file: close-sheets.yaml
 - openLink: app.jpteq.trader://no-such-screen
 - runFlow:
     when:

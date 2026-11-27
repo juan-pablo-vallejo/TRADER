@@ -26,9 +26,17 @@ api_pid=
 device=
 . "$here/lib.sh"
 
-commit=$(git -C "$root" rev-parse --short HEAD)
-[ -z "$(git -C "$root" status --porcelain)" ] || commit="$commit-dirty"
+# The commit, or, in a copy with no history (the workstation's), the time of the run.
+if commit=$(git -C "$root" rev-parse --short HEAD 2>/dev/null); then
+  [ -z "$(git -C "$root" status --porcelain)" ] || commit="$commit-dirty"
+else
+  commit=run-$(date +%Y%m%d-%H%M)
+fi
 out=${TRADER_SWEEP_OUT:-$HOME/Library/Caches/TRADER/sweep}/$commit
+limit=
+! command -v timeout >/dev/null 2>&1 || limit="timeout 600"
+# Maestro's iOS driver can take longer to start than its own default after many runs.
+export MAESTRO_DRIVER_STARTUP_TIMEOUT=${MAESTRO_DRIVER_STARTUP_TIMEOUT:-180000}
 trap 'api_down; [ -z "$device" ] || largest_text off' EXIT
 
 # The demo, as each run starts it: the schedule enforced, the worker with a shift around now
@@ -81,8 +89,10 @@ run() {
     name=$(basename "$step" .yaml)
     start=resume
     [ "$name" != 00-start ] || start=fresh
+    # Ten minutes a step at most, where the system has `timeout` (the workstation): a driver
+    # that hangs is one fault, not a run that never ends.
     if ! FLOW_ENV="-e LANG=$lang -e LUIS=$LUIS -e SAM=$SAM -e OFFICE=$OFFICE" \
-      "$here/run.sh" "$platform" "$device" "sweep/$name" "$start" allow "$LUIS" \
+      $limit "$here/run.sh" "$platform" "$device" "sweep/$name" "$start" allow "$LUIS" \
       >"$dir/$name.log" 2>&1; then
       faults=$((faults + 1))
       picture "$dir/$name.failed.png"
@@ -91,7 +101,7 @@ run() {
     fi
     [ "$name" != 00-start ] || continue
     picture "$dir/$name.png"
-    maestro --device "$device" hierarchy >"$dir/$name.json" 2>/dev/null
+    $limit maestro --device "$device" hierarchy >"$dir/$name.json" 2>/dev/null || true
     screens=$((screens + 1))
   done
   # What the saved view trees show: nameless or small controls, text past the edge or cut.
@@ -106,6 +116,8 @@ run() {
 }
 
 for device in "$@"; do
+  # From the default, whatever a stopped run left.
+  largest_text off
   for text in ${MATRIX_TEXT:-default largest}; do
     if [ "$text" = largest ]; then largest_text on; else largest_text off; fi
     run "$text" en

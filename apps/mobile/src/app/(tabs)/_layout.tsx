@@ -1,15 +1,15 @@
 // The signed-in app: Today, the person's own week, Crew for an admin, and Me, over the sync
 // layer they all read. Nobody signed in is sent to sign in.
-import { fontFile } from "../../fonts";
 import { Ionicons } from "@expo/vector-icons";
 import { type ErrorBoundaryProps, Redirect, Tabs, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import type { ColorValue } from "react-native";
+import { type ColorValue, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useStrings } from "../../i18n";
 import { reportScreenFailure } from "../../report";
 import { Fallback } from "../../ui/fallback";
+import { Text } from "../../ui/text";
 import { RemindersProvider } from "../../reminders";
 import { useSession } from "../../session";
 import { opensOnCrew } from "../../sync/crew";
@@ -64,19 +64,22 @@ function AppTabs() {
         headerShown: false,
         tabBarActiveTintColor: color.action,
         tabBarInactiveTintColor: color.inkSecondary,
-        // 15 pt on its 20 pt line, as `type.label` is (theme.ts): the library sets no line,
-        // and Inter's own is too short for a "y" on a phone with a short tab bar. The
-        // library's own weight is cleared, so none is faked over Inter's file (fonts.ts).
         // The library's bar is 49 pt above the home bar: an icon and a 20 pt line do not fit
         // it, and on a phone with no home bar (an iPhone SE) the label's foot is cut by the
         // screen's edge. The primary button's height gives them room.
         tabBarStyle: { height: size.primary + insets.bottom },
-        tabBarLabelStyle: {
-          fontSize: type.label.fontSize,
-          lineHeight: type.label.lineHeight,
-          fontFamily: fontFile("600"),
-          fontWeight: "normal",
-        },
+        // The word, in the app's Text, on one line that shrinks to the tab's width: with
+        // four tabs at the largest text, "Semana" and "Equipo" no longer fit a quarter of a
+        // small phone, and the library's own label would end them in "...".
+        tabBarLabel: ({ color: ink, children }) => (
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={[styles.tabLabel, { color: ink }]}
+          >
+            {children}
+          </Text>
+        ),
       }}
     >
       <Tabs.Screen
@@ -133,3 +136,14 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
     />
   );
 }
+
+// 15 pt on its 20 pt line, as `type.label` is (theme.ts): Inter's own line is too short for
+// a "y" on a phone with a short tab bar.
+const styles = StyleSheet.create({
+  tabLabel: {
+    fontSize: type.label.fontSize,
+    lineHeight: type.label.lineHeight,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+});

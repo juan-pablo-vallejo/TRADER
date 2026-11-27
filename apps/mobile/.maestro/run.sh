@@ -73,7 +73,9 @@ case "$platform" in
       "$adb" -s "$device" shell pm clear app.jpteq.trader >/dev/null
       # Notifications granted before launch: the app asks for them as it opens (shift
       # reminders are always on), and the system's question would cover the screen.
-      "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.POST_NOTIFICATIONS
+      # The permission exists from Android 13; an older Android has no such question.
+      "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.POST_NOTIFICATIONS \
+        >/dev/null 2>&1 || true
       if [ "$location" = allow ]; then
         "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.ACCESS_FINE_LOCATION
         "$adb" -s "$device" shell pm grant app.jpteq.trader android.permission.ACCESS_COARSE_LOCATION

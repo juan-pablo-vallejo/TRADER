@@ -5,6 +5,8 @@ appId: app.jpteq.trader
 # the front, as it was.
 - launchApp:
     stopApp: false
+- runFlow:
+    file: close-sheets.yaml
 # A sheet left open closes when the app goes to the background between steps; one still
 # showing is closed here.
 - runFlow:
@@ -22,9 +24,19 @@ appId: app.jpteq.trader
       - tapOn:
           id: "form-cancel"
           optional: true
-- tapOn:
-    id: "tab-me"
-- extendedWaitUntil:
-    visible:
-      id: "me"
-    timeout: 10000
+# Tapped until the screen shows: a tap that lands while the app redraws is lost.
+- repeat:
+    while:
+      notVisible:
+        id: "me"
+    times: 3
+    commands:
+      - tapOn:
+          id: "tab-me"
+      - extendedWaitUntil:
+          visible:
+            id: "me"
+          timeout: 10000
+          optional: true
+- assertVisible:
+    id: "me"

@@ -42,6 +42,8 @@ events_of() {
           and e.client_timestamp > now() - interval '1 hour'"
 }
 
+# The phone's own text size first: a run stopped at the largest (matrix.sh) leaves it there.
+largest_text off
 (cd "$root" && pnpm demo --db $DB --reset >/dev/null)
 # What the office would have typed: its number, which the office's WhatsApp button opens a
 # chat with, and notes on every jobsite, which the job's sheet shows.

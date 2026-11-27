@@ -2,6 +2,22 @@
 # its buttons are below the screen until scrolled to, which parts/landed.yaml does not do.
 appId: app.jpteq.trader
 ---
+# A fresh emulator's offer of Location Accuracy can come over the app at any moment of the
+# first minute (parts/location.yaml answers it): until the app's own screen is in view,
+# answer what the system shows, and look again.
+- repeat:
+    times: 12
+    while:
+      notVisible:
+        id: "biometric-offer|${LANDS_ON}|tab-me"
+    commands:
+      - runFlow:
+          file: ../parts/location.yaml
+      - extendedWaitUntil:
+          visible:
+            id: "biometric-offer|${LANDS_ON}|tab-me"
+          timeout: 5000
+          optional: true
 - extendedWaitUntil:
     visible:
       id: "biometric-offer|${LANDS_ON}|tab-me"
@@ -17,3 +33,10 @@ appId: app.jpteq.trader
           centerElement: true
       - tapOn:
           id: "biometric-not-now"
+# The offer can come a moment after the screen: a last look for it.
+- extendedWaitUntil:
+    visible: "No thanks"
+    timeout: 8000
+    optional: true
+- runFlow:
+    file: ../parts/location.yaml

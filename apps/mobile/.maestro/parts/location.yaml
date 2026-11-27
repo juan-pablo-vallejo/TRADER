@@ -23,3 +23,12 @@ appId: app.jpteq.trader
             true: ${LOCATION == "deny"}
           commands:
             - tapOn: "Don.t Allow|Don.t allow"
+# A fresh Android emulator also offers Google's Location Accuracy over the app: the phone's,
+# not the app's question. Turned on, the emulator keeps it (its data outlives a boot) and
+# never asks again.
+- runFlow:
+    when:
+      visible: "No thanks"
+    commands:
+      # Android 7 asks the same with OK.
+      - tapOn: "Turn on|OK"

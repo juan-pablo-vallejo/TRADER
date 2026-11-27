@@ -9,6 +9,21 @@ appId: app.jpteq.trader
 - tapOn:
     id: "sync-pending|sync-synced|sync-attention"
     point: "15%,50%"
+# The chip changes its word as entries go; a tap that lands mid-change opens nothing
+# (deliver.yaml): once more.
+- extendedWaitUntil:
+    visible:
+      id: "sync-sheet"
+    timeout: 3000
+    optional: true
+- runFlow:
+    when:
+      notVisible:
+        id: "sync-sheet"
+    commands:
+      - tapOn:
+          id: "sync-pending|sync-synced|sync-attention"
+          point: "15%,50%"
 - extendedWaitUntil:
     visible:
       id: "sync-sheet"

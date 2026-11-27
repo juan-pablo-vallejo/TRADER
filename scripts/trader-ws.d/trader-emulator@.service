@@ -1,0 +1,17 @@
+# ~/.config/systemd/user/trader-emulator@.service, on the workstation's job account. One
+# Android emulator by its profile's name (the instance: trader, trader-small, trader-medium,
+# trader-oldest; made by trader-avds), headless, started when a phone job asks for it and
+# stopped when the job ends. Software GPU: the flows need a screen that draws the same every
+# run, not a fast one. A full boot every time (-no-snapshot): the device's data stays, its
+# RAM image does not. The flags are emulator 37.3.10's (`emulator -help`, read 2026-11-22).
+[Unit]
+Description=TRADER Android emulator %i (headless)
+
+[Service]
+Environment=ANDROID_HOME=/opt/android-sdk
+Environment=ANDROID_AVD_HOME=%h/.android/avd
+ExecStart=/opt/android-sdk/emulator/emulator -avd %i -port 5554 -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect
+ExecStop=/opt/android-sdk/platform-tools/adb -s emulator-5554 emu kill
+TimeoutStartSec=300
+MemoryMax=12G
+Restart=no

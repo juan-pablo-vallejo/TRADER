@@ -1,0 +1,61 @@
+# Any sheet a step before left open is closed, so each step starts on its screen: a job's,
+# the sync chip's, a person's, adding a shift. Its close button can be below the screen at
+# the largest text.
+appId: app.jpteq.trader
+---
+- runFlow:
+    when:
+      visible:
+        id: "job-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "job-close"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "job-close"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "sync-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "sync-close"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "sync-close"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "person-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "person-close"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "person-close"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "add-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "form-cancel"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "form-cancel"
+          optional: true

@@ -3,7 +3,8 @@
 //
 // - a control with no name: a clickable node with no text or label, in itself or below it;
 // - a target under 48 points either way;
-// - text that runs past the screen's edge, or past the side of the box it sits in;
+// - text that runs past the screen's edge, or past the side of the box it sits in, or is
+//   pressed into a strip a letter or two wide;
 // - text the app marked as cut short (ui/text.tsx, development builds: "-truncated" on its
 //   test id).
 //
@@ -93,6 +94,18 @@ for (const file of files) {
     }
   };
   within(root, null);
+  // Each node with the box of the scrolling view it sits in: Android gives a node's visible
+  // part, so one the scroll view's edge cuts is not measured as small.
+  const scrolled = new Map();
+  const mark = (node, box) => {
+    const b = bounds(node.attributes?.bounds);
+    const here = node.attributes?.scrollable === "true" && b ? b : box;
+    for (const child of node.children ?? []) {
+      scrolled.set(child, here);
+      mark(child, here);
+    }
+  };
+  mark(root, null);
   visit(root, (node) => {
     const a = node.attributes ?? {};
     const b = bounds(a.bounds);
@@ -104,9 +117,19 @@ for (const file of files) {
     const words = (a.text || a.accessibilityText || "").trim();
     if (words && (b[2] > width + 1 || b[0] < -1))
       say(`runs past the screen's edge: "${words}"`);
+    // Words pressed into a strip, a letter or two a line: their box is narrow and tall. Not
+    // iOS's scroll indicator, which says how far down it is ("100%").
+    const bw = (b[2] - b[0]) / density;
+    const bh = (b[3] - b[1]) / density;
+    if (words.length > 3 && !/^\d+%$/.test(words) && bw < 40 && bh > 3 * bw)
+      say(`pressed to a strip: "${words}"`);
     if (platform !== "android" || a.clickable !== "true") return;
     if (a.package !== undefined && a.package !== APP) return;
+    // Hidden from a screen reader on purpose: a sheet's backdrop, which its Close repeats.
+    if (a["important-for-accessibility"] === "false") return;
     if (!named(node)) say(`a control with no name at ${a.bounds}${id ? ` (${id})` : ""}`);
+    const box = scrolled.get(node);
+    if (box && (b[1] <= box[1] + 1 || b[3] >= box[3] - 1)) return;
     const w = (b[2] - b[0]) / density;
     const h = (b[3] - b[1]) / density;
     if (w < TARGET - 0.5 || h < TARGET - 0.5)

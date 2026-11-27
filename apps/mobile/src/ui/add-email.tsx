@@ -4,16 +4,16 @@
 // email the person's; from then on it shows greyed with the number, and the office changes
 // it. A refusal is said in the server's own terms (catalog, addEmail.refused), beside the
 // step it belongs to, and aloud. Needs a connection: a call that does not go through says so.
-import { fontFile } from "../fonts";
 import { signInIdentifier } from "@trader/api/contract";
 import { useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import type { Api } from "../api";
 import { announce, felt } from "../feedback";
 import { useSpeech, useStrings } from "../i18n";
 import { border, color, size, space, type } from "../theme";
 import { Button, text } from "./controls";
+import { Field } from "./field";
 import { Text } from "./text";
 
 type Refusal = keyof ReturnType<typeof useStrings>["t"]["addEmail"]["refused"];
@@ -96,7 +96,7 @@ export function AddEmail({ api, onAdded }: { api: Api; onAdded: () => void }) {
       {step === "email" ? (
         <>
           <Text style={text.secondary}>{a.help}</Text>
-          <TextInput
+          <Field
             testID="add-email-address"
             accessibilityLabel={a.email}
             accessibilityLanguage={speech}
@@ -125,7 +125,7 @@ export function AddEmail({ api, onAdded }: { api: Api; onAdded: () => void }) {
         <>
           <Text style={text.body}>{a.codeTitle(email)}</Text>
           <Text style={text.secondary}>{a.codeHelp}</Text>
-          <TextInput
+          <Field
             testID="add-email-code"
             accessibilityLabel={a.code}
             accessibilityLanguage={speech}
@@ -178,6 +178,5 @@ const styles = StyleSheet.create({
     backgroundColor: color.surface,
     color: color.ink,
     fontSize: type.body.fontSize,
-    fontFamily: fontFile("400"),
   },
 });

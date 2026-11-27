@@ -5,6 +5,8 @@ appId: app.jpteq.trader
 # the front, as it was.
 - launchApp:
     stopApp: false
+- runFlow:
+    file: close-sheets.yaml
 # A sheet left open closes when the app goes to the background between steps; one still
 # showing is closed here.
 - runFlow:
@@ -22,10 +24,14 @@ appId: app.jpteq.trader
       - tapOn:
           id: "person-close"
           optional: true
+# Not centred: it is the page's last thing, which the page cannot scroll to the middle.
 - scrollUntilVisible:
     element:
       id: "crew-add"
-    centerElement: true
+    timeout: 60000
+    speed: 70
+# Once more: it can be in the window but under the tab bar.
+- scroll
 - tapOn:
     id: "crew-add"
 - extendedWaitUntil:
