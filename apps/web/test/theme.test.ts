@@ -65,27 +65,14 @@ describe("the theme", () => {
   const web = webColors();
   const phone = phoneColors();
 
-  // The phone is on D'Sierra's red and navy for its actions; the office keeps its indigo.
-  const PHONE_OWN = [
-    "primary",
-    "primaryPressed",
-    "onPrimary",
-    "action",
-    "actionPressed",
-    "onAction",
-    "actionTint",
-  ];
-  const OFFICE_OWN = ["accent", "onAccent", "accentTint"];
-
   it("holds the same colors under the same names in the office and on the phone", () => {
     expect(web.size).toBeGreaterThan(20);
-    const shared = (colors: Map<string, string>, own: string[]) =>
-      Object.fromEntries([...colors].filter(([name]) => !own.includes(name)).sort());
-    expect(shared(phone, PHONE_OWN)).toEqual(shared(web, OFFICE_OWN));
-    for (const name of PHONE_OWN) expect([name, phone.has(name)]).toEqual([name, true]);
+    expect(Object.fromEntries([...phone].sort())).toEqual(
+      Object.fromEntries([...web].sort()),
+    );
   });
 
-  it("puts the phone's actions on D'Sierra's red and navy, each readable", () => {
+  it("puts the actions on D'Sierra's red and navy, each readable", () => {
     expect(phone.get("primary")).toBe(web.get("brand"));
     expect(phone.get("action")).toBe(web.get("brandNavy"));
     for (const [ink, ground] of [
@@ -112,8 +99,8 @@ describe("the theme", () => {
       surface: "#FFFFFF",
       border: "#D9DCE3",
       controlBorder: "#140064",
-      accent: "#2808AC",
-      accentTint: "#EEEBFA",
+      primary: "#BC0C0C",
+      action: "#140064",
       brand: "#BC0C0C",
       brandNavy: "#140064",
     });
@@ -138,7 +125,7 @@ describe("the theme", () => {
       contrast(web.get("controlBorder")!, web.get("canvas")!),
     ).toBeGreaterThanOrEqual(3);
     for (const ground of ["surface", "canvas"]) {
-      for (const ink of ["ink", "inkSecondary", "accent"]) {
+      for (const ink of ["ink", "inkSecondary", "action", "primary"]) {
         expect([ink, ground, contrast(web.get(ink)!, web.get(ground)!) >= 4.5]).toEqual([
           ink,
           ground,
@@ -146,18 +133,46 @@ describe("the theme", () => {
         ]);
       }
     }
-    expect(contrast(web.get("onAccent")!, web.get("accent")!)).toBeGreaterThanOrEqual(
+    expect(contrast(web.get("onPrimary")!, web.get("primary")!)).toBeGreaterThanOrEqual(
       4.5,
     );
   });
 
-  it("never colors a control or a status with the mark's red or navy", () => {
-    const sheets = [
-      "../src/app/controls.module.css",
-      "../src/app/table.module.css",
-      "../src/app/nav.module.css",
-    ].map(read);
-    for (const sheet of sheets) expect(sheet).not.toMatch(/--brand\b|--brand-navy/);
+  // Their red is the one main button's (controls.module.css, `.primary`): no other rule
+  // of the office names it, so it never lands on a status or on the navy.
+  it("puts the red on the primary button alone", () => {
+    const office = [
+      "controls",
+      "table",
+      "nav",
+      "header",
+      "account",
+      "shell",
+      "command-menu",
+      "side-panel",
+      "toast",
+      "badge",
+      "(office)/schedule/schedule",
+      "(office)/hours/hours",
+      "(office)/jobs/jobs",
+      "(office)/invoices/invoices",
+      "(office)/today/today",
+      "(office)/people/people",
+    ];
+    for (const name of office) {
+      const sheet = read(`../src/app/${name}.module.css`).replace(
+        /\/\*[\s\S]*?\*\//g,
+        "",
+      );
+      expect([name, /--brand\b|--brand-navy/.test(sheet)]).toEqual([name, false]);
+      for (const m of sheet.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
+        if (!/var\(--primary(-pressed)?\)/.test(m[2]!)) continue;
+        expect([name, m[1]!.trim()]).toEqual([
+          name,
+          expect.stringMatching(/\.primary\b/),
+        ]);
+      }
+    }
   });
 });
 
@@ -299,12 +314,15 @@ describe("the homepage's scale", () => {
   });
 
   it("gives the browser's own bar the header's navy, on the homepage and on sign-in", () => {
-    for (const file of ["(public)/page.tsx", "(auth)/sign-in/page.tsx"]) {
+    const own = read("../src/app/theme.ts");
+    expect(own.toUpperCase()).toContain(`BRAND_NAVY = "${web.get("brandNavy")}"`);
+    for (const file of [
+      "(public)/page.tsx",
+      "(auth)/sign-in/page.tsx",
+      "(auth)/sign-in/sso-callback/page.tsx",
+    ]) {
       const page = read(`../src/app/${file}`);
-      expect([file, page.toUpperCase()]).toEqual([
-        file,
-        expect.stringContaining(`THEMECOLOR: "${web.get("brandNavy")}"`),
-      ]);
+      expect([file, page.includes("themeColor: BRAND_NAVY")]).toEqual([file, true]);
     }
   });
 });

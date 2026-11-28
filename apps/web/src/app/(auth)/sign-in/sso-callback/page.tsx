@@ -6,6 +6,7 @@ import { identityMode } from "../../../../server/identity-mode";
 import { returnPath, SIGN_IN_PATH } from "../../../../server/sign-in-paths";
 import { SignInFrame } from "../../sign-in-frame";
 import { SsoCallback } from "./sso-callback";
+import { BRAND_NAVY } from "../../../theme";
 
 // Where the browser comes back to from Google when the sign-in was not finished there:
 // sso-callback.tsx finishes it if it can be, and otherwise sends the person back to the
@@ -15,7 +16,7 @@ import { SsoCallback } from "./sso-callback";
 export const dynamic = "force-dynamic";
 
 // The browser's own bar takes the navy, as on sign-in (page.tsx).
-export const viewport: Viewport = { themeColor: "#140064" };
+export const viewport: Viewport = { themeColor: BRAND_NAVY };
 
 export default async function SsoCallbackPage({
   searchParams,

@@ -1,5 +1,5 @@
 /* The office navigation: a menu button over the groups on narrow, the groups alone on wide.
-   Every link is a 48 pt row; the current route is in accent, marked by a bar as well as color. */
+   Every link is a 48 pt row; the current route is in navy, marked by a bar as well as color. */
 .nav {
   background: var(--surface);
   border-bottom: var(--hairline) solid var(--border);
@@ -42,14 +42,14 @@
 }
 .current,
 .current:hover {
-  color: var(--accent);
+  color: var(--action);
   font-weight: 600;
-  border-left-color: var(--accent);
-  background: var(--accent-tint);
+  border-left-color: var(--action);
+  background: var(--action-tint);
 }
 
 /* Two tabs of one place (jobs-tabs.tsx): a row of links, the current one underlined in
-   accent as well as colored. */
+   navy as well as colored. */
 .tabs {
   display: flex;
   gap: var(--space-4);
@@ -71,9 +71,9 @@
 }
 .tabCurrent,
 .tabCurrent:hover {
-  color: var(--accent);
+  color: var(--action);
   font-weight: 600;
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--action);
 }
 @media (min-width: 768px) {
   .nav {

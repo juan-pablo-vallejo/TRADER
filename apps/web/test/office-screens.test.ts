@@ -121,7 +121,7 @@ describe("a stacked row", () => {
     expect(name).toContain("display: flex");
     expect(name).toContain("width: 100%");
     // Set as Jobs' names are: a link's color.
-    expect(name).toContain("color: var(--accent)");
+    expect(name).toContain("color: var(--action)");
   });
 
   it("puts a row's Edit on a line of its own, a full target tall", () => {

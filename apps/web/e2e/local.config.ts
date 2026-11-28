@@ -10,10 +10,13 @@ import { defineConfig, devices } from "@playwright/test";
 // by their `Origin` (server/edge.ts), and `next dev` knows itself as `localhost` whatever
 // address it is bound to. A browser at `127.0.0.1` is refused every change with a 403.
 const ORIGIN = "http://localhost:3000";
+// The empty company screens.local.ts opens, written beside the demo (look-prepare.ts).
+process.env.PREPARE_DB = "trader_demo_browser";
 
 export default defineConfig({
   testDir: ".",
-  testMatch: "office.local.ts",
+  testMatch: ["office.local.ts", "screens.local.ts"],
+  globalSetup: "./look-prepare.ts",
   outputDir: process.env.E2E_OUTPUT_DIR ?? "./test-results",
   // One browser, in order: the tests share a database and a server.
   fullyParallel: false,

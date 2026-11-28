@@ -7,9 +7,9 @@
   margin: 0 0 var(--space-4);
 }
 .presets button[aria-pressed="true"] {
-  background: var(--accent-tint);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--action-tint);
+  border-color: var(--action);
+  color: var(--action);
 }
 .formGrid {
   display: grid;

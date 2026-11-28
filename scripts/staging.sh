@@ -7,8 +7,10 @@
 #   scripts/staging.sh ready           what /api/ready answers, beside main's commit
 #   scripts/staging.sh names           which of the names this needs are set (names only)
 #   scripts/staging.sh smoke           the browser smoke test, as the deploy job runs it
-#   scripts/staging.sh look <path>...  office screens as the suite's admin, as screenshots
-#                                      at 390, 768 and 1280 wide; prints where they are
+#   scripts/staging.sh look [<name>...] the catalogue's entries (apps/web/e2e/screens.ts),
+#                                      all when none is named, as the suite's admin, in
+#                                      LOOK_LANGS (default "en es"), as screenshots
+#                                      at 390, 768 and 1280 wide and a contact sheet; prints where
 #   scripts/staging.sh invite <number> <name>
 #                                      one person onto staging's people as an admin, by
 #                                      the suite's admin; the number is never printed
@@ -129,16 +131,15 @@ case ${1:-} in
     ;;
   look)
     shift
-    [ $# -gt 0 ] || { echo "usage: staging.sh look <path>..." >&2; exit 64; }
-    for path in "$@"; do
-      case $path in /*) ;; *) echo "staging.sh: a path begins with /: $path" >&2; exit 64 ;; esac
+    for name in "$@"; do
+      case $name in *[!a-z0-9-]*|'') echo "staging.sh: not a catalogue name: $name" >&2; exit 64 ;; esac
     done
     tickets
     mkdir -p "$out/look"
     cd "$root/apps/web"
-    LOOK_PATHS=$* LOOK_DIR=$out/look E2E_OUTPUT_DIR=$out/look-results \
-      pnpm exec playwright test -c e2e/look.config.ts
-    echo "screenshots: $out/look"
+    LOOK_SCREENS=$* LOOK_LANGS=${LOOK_LANGS:-en es} LOOK_DIR=$out/look \
+      E2E_OUTPUT_DIR=$out/look-results pnpm exec playwright test -c e2e/look.config.ts
+    echo "contact sheet: $out/look/index.html"
     ;;
   invite)
     shift

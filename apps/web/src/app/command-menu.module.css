@@ -43,8 +43,8 @@
   cursor: pointer;
 }
 .option[aria-selected="true"] {
-  background: var(--accent-tint);
-  outline: 2px solid var(--accent);
+  background: var(--action-tint);
+  outline: 2px solid var(--action);
   outline-offset: -2px;
 }
 .kind {

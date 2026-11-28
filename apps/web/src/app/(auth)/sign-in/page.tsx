@@ -9,6 +9,7 @@ import { requestStrings, titled } from "../../i18n/server";
 import styles from "../auth.module.css";
 import { SignInFrame } from "../sign-in-frame";
 import { SignInForm } from "./sign-in-form";
+import { BRAND_NAVY } from "../../theme";
 
 // Office sign-in: a code sent to the person's mobile number or to their email, asked for
 // in one field (sign-in-form.tsx), inside the page sign-in-frame.tsx draws. Clerk sends and
@@ -22,7 +23,7 @@ export const dynamic = "force-dynamic";
 
 // The browser's own bar takes the navy: --brand-navy (theme.css), which a test holds
 // this to.
-export const viewport: Viewport = { themeColor: "#140064" };
+export const viewport: Viewport = { themeColor: BRAND_NAVY };
 
 // Named in the browser's tab as every page is: "Team sign-in · TRADER".
 export const generateMetadata = () => titled((t) => t.teamSignIn);

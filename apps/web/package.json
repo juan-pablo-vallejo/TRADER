@@ -9,7 +9,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "e2e:staging": "playwright test -c e2e/playwright.config.ts",
-    "e2e:local": "playwright test -c e2e/local.config.ts"
+    "e2e:local": "playwright test -c e2e/local.config.ts",
+    "look": "pnpm --filter @trader/api demo --db trader_demo_look --reset && export LOOK_DIR=\"${LOOK_DIR:-$HOME/Library/Caches/TRADER/look/web-$(date +%Y%m%d-%H%M%S)}\" && playwright test -c e2e/look.local.config.ts && LOOK_PASS=frame playwright test -c e2e/look.local.config.ts"
   },
   "dependencies": {
     "@clerk/localizations": "4.24.6",
@@ -28,6 +29,7 @@
     "superjson": "^2.2.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.1",
     "@playwright/test": "1.65.0",
     "@types/node": "^24.9.2",
     "@types/react": "^19.3.0",

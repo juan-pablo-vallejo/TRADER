@@ -15,6 +15,7 @@ import { Gallery } from "./gallery";
 import { HOME, type Photo } from "./home-content";
 import styles from "./home.module.css";
 import { SiteHeader } from "./site-header";
+import { BRAND_NAVY } from "../theme";
 
 // `/`: D'Sierra Painting's homepage, one page in English and Spanish, and the first thing
 // a customer of theirs sees. A header that stays, a photo of their work, what they do and
@@ -82,7 +83,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // The browser's own bar takes the header's navy: --brand-navy (theme.css), which a test
 // holds this to.
-export const viewport: Viewport = { themeColor: "#140064" };
+export const viewport: Viewport = { themeColor: BRAND_NAVY };
 
 // One of their photos: resized and re-encoded by next/image for the screen that asks, a
 // blurred stand-in until it arrives, and lazy unless it is the page's first: that one is

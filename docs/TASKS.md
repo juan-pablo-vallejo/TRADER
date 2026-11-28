@@ -71,12 +71,14 @@ sees only Me.
 filters kept in the address, Undo on schedule edits, keyboard row movement, a command menu.
 Compact on a laptop, large targets on a phone.
 
-**The look.** D'Sierra's brand. Their roller and brush is the icon. In the office their
-indigo is the color of every action; the phone app is on their own red for an action and
-their navy for what is chosen, a link and the active tab, as the homepage and the two
-sign-in screens are, which take Bodoni Moda for their heading. A phone screen opens under
-their navy, its title in Bodoni Moda and its main fact (Today's clock, the person's name)
-on the navy, over their navy's palest tint. Red never sits on navy.
+**The look.** D'Sierra's brand. Their roller and brush is the icon. The office, the phone
+app, the homepage and the two sign-in screens are on one scheme: their red for an action,
+the one main button of a view; their navy for what is chosen, a link, the current nav item
+or active tab, and a control's edge. The status tones are their own. Bodoni Moda is for
+display headings only; everything else is Inter. A phone screen opens under their navy,
+its title in Bodoni Moda and its main fact (Today's clock, the person's name) on the navy,
+over their navy's palest tint, and an office screen opens the same way. Red never sits on
+navy.
 
 **Finish line.** D'Sierra's whole crew runs one full pay period on it: every hour clocked on
 a phone, payroll hours exported from TRADER, one real invoice issued and emailed.
@@ -141,14 +143,51 @@ after it is seen working: one already built says so in the commits since `origin
 
 ### Claude's
 
-Nothing open before the release: the next is the owner's.
-
 **Validate the widened address check** (backend-change)
 
 - In the release after the one that ships `0001_email_claim.sql`: a migration that runs
   `VALIDATE CONSTRAINT address_changes_not_own`, added NOT VALID there
   (`docs/ARCHITECTURE.md`, Migrating a live database).
 - Done when: `convalidated` is true for it on staging and in production.
+
+**The whole-app sweep** (interface-change)
+
+- `scripts/trader-ws sweep` on every cell of `scripts/sweep/cells.json`: every phone,
+  office, public and sign-in screen and state, the phones at three text sizes, the office
+  at six widths and two engines, both languages. The pre-push hook refuses a tree with no
+  clean sweep; `scripts/sweep/known-faults.json` is written by the first whole run and only
+  shrinks.
+- Done when: the sweep is clean on `main` with an empty `known-faults.json`.
+
+**Office look, run 1** (interface-change)
+
+- The band on the shell, Today, Schedule and Hours: the header on their navy with the mark
+  on its white tile; each screen under a navy band, its title in Bodoni Moda and its main
+  fact on the navy (Today's count on the clock, Hours' total for the dates shown); the page
+  on their navy's palest tint, its cards lifted.
+- Hours and Schedule: less above the table, the explaining sentence one line and the
+  range or week buttons beside the title from 768 up. Every side panel keeps its title and
+  Close in view. Below 768 the header keeps the mark and the person, without the
+  company's name. One pressed look for every filter group, Schedule's day tabs among them. Hours'
+  Export opens in the side panel. Schedule's header is the shared one, with two actions.
+- States: Hours' Export shows placeholder rows while it counts; Schedule's empty week is
+  the shared empty state, with Add shift and Copy last week.
+- Done when: these screens are clean in the whole sweep, none is in `UNMOVED`, and
+  visual-qa reports no Critical or High.
+
+**Office look, run 2** (interface-change)
+
+- The band on Jobs, a job's page, Customers, Invoices, an invoice, People, Settings, Sign
+  in, Home, Get the app, Privacy and Terms; `global-error.tsx` and Google's button on the
+  tokens.
+- Settings: Passkeys in a card. People, an invoice and Settings: a switch that destroys
+  nothing drawn apart from Void and Deactivate. One main button on Settings and on an issued
+  invoice. An issued invoice's lines in the office's one table. A person's email once in
+  their panel. The job page's header is the shared one. The back link sits on the band.
+  Privacy, Terms and Get the app at reading size, Back to the homepage at the target height.
+- States: sign-in says a new code went out and puts a refused code beside its field.
+- Done when: these screens are clean in the whole sweep, `UNMOVED` is empty, and visual-qa
+  reports no Critical or High.
 
 ### The owner's
 

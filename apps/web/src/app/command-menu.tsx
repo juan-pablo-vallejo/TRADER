@@ -182,7 +182,9 @@ export function CommandMenu() {
       <button
         type="button"
         className={`${controls.secondary} ${styles.opener}`}
-        aria-label={t.command.title}
+        // Named by its visible word alone, so what is said is what is seen (WCAG 2.5.3);
+        // the key it answers to is said apart.
+        aria-keyshortcuts="Control+K Meta+K"
         aria-haspopup="dialog"
         onClick={() => setOpen(true)}
       >

@@ -5,7 +5,7 @@
 // test fails when the two differ (apps/web/test/theme.test.ts). The phone is on D'Sierra's
 // own scheme, as their homepage and sign-in are: their red for an action, their navy for
 // what is chosen, a link, the active tab and a control's edge. Red never sits on navy
-// (2.63:1). The office keeps its indigo; the status tones are the office's.
+// (2.63:1). The office is on the same scheme; the status tones are shared.
 export const color = {
   ink: "#111827",
   inkSecondary: "#4B5563",

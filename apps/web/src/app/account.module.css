@@ -85,7 +85,7 @@ summary.name::after {
   background: var(--canvas);
 }
 .current {
-  color: var(--accent);
+  color: var(--action);
   font-weight: 600;
 }
 /* Narrow: the first name, whole, in place of the full name, and the account never shrinks;

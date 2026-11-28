@@ -26,13 +26,13 @@
   opacity: 0.6;
 }
 
-/* Primary button: 56 px and full width when narrow, accent; one per screen. */
+/* Primary button: 56 px and full width when narrow, their red; one per screen. */
 .primary {
-  min-height: var(--primary);
+  min-height: var(--primary-size);
   width: 100%;
   padding: 0 var(--space-4);
-  background: var(--accent);
-  color: var(--on-accent);
+  background: var(--primary);
+  color: var(--on-primary);
   border: 0;
   border-radius: var(--radius-primary);
   font-weight: 600;
@@ -59,7 +59,7 @@
     background: var(--canvas);
   }
   .primary:hover:not(:disabled, [aria-disabled="true"]) {
-    background: color-mix(in srgb, var(--accent) 88%, var(--ink));
+    background: color-mix(in srgb, var(--primary) 50%, var(--primary-pressed));
   }
   .destructive:hover:not(:disabled, [aria-disabled="true"]) {
     background: var(--problem-tint);
@@ -69,7 +69,7 @@
   }
 }
 .primary:active:not(:disabled, [aria-disabled="true"]) {
-  background: color-mix(in srgb, var(--accent) 76%, var(--ink));
+  background: var(--primary-pressed);
 }
 .secondary:active:not(:disabled, [aria-disabled="true"]) {
   background: var(--border);
@@ -91,13 +91,13 @@
   width: auto;
 }
 
-/* A text action in accent: the row's Edit toggle, 44 pt in the wide table, 48 pt narrow. */
+/* A text action in navy: the row's Edit toggle, 44 pt in the wide table, 48 pt narrow. */
 .textAction {
   min-height: var(--target);
   padding: 0 var(--space-2);
   background: none;
   border: 0;
-  color: var(--accent);
+  color: var(--action);
   font-weight: 600;
 }
 /* The same shape in attention: removing one item from a list, never a bordered button. */
@@ -159,7 +159,7 @@
   width: 24px;
   height: 24px;
   margin: 12px 0;
-  accent-color: var(--accent);
+  accent-color: var(--action);
 }
 .check span {
   padding: 14px 0;

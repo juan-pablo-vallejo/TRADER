@@ -45,9 +45,9 @@
   margin: 0 0 var(--space-3);
 }
 .presets button[aria-pressed="true"] {
-  background: var(--accent-tint);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--action-tint);
+  border-color: var(--action);
+  color: var(--action);
 }
 /* Sessions still open: a strip above the table, in the active tone. */
 .strip {

@@ -3,11 +3,10 @@
    on the web is the CSS px. */
 :root {
   /* Color. The same names and values as the phone's (apps/mobile/src/theme.ts); a test
-     fails when the two differ (apps/web/test/theme.test.ts). D'Sierra's brand: their indigo
-     is the color of every action, link, focus ring and current item inside the office;
-     their red and their navy belong to the mark, the homepage and sign-in, never to a
-     control of the office and never to a status, save the navy on a control's edge
-     (--control-border). */
+     fails when the two differ (apps/web/test/theme.test.ts). D'Sierra's scheme, the
+     phone's too: their red for an action, the one main button of a view; their navy for
+     what is chosen, a link, the focus ring, the current item and a control's edge. Red
+     never sits on navy (2.63:1). Neither is ever a status. */
   --ink: #111827;
   --ink-secondary: #4b5563;
   --canvas: #f5f6f8;
@@ -17,10 +16,17 @@
   /* The edge of a control: their navy, the one place it is a control's, 3:1 and more on
      white and on the canvas, so a field is seen without its label. */
   --control-border: #140064;
-  --accent: #2808ac;
-  --on-accent: #ffffff;
-  /* Behind a selected row and the current item. */
-  --accent-tint: #eeebfa;
+  /* An action: the one main button of a view, white on their red (6.57:1), darker while
+     pressed. */
+  --primary: #bc0c0c;
+  --primary-pressed: #9a0a0a;
+  --on-primary: #ffffff;
+  /* What is chosen, a link, the current item, the focus ring: their navy, and its tint
+     behind a chosen row and the current item. */
+  --action: #140064;
+  --action-pressed: #0d0041;
+  --on-action: #ffffff;
+  --action-tint: #e3e0ec;
   --brand: #bc0c0c;
   --brand-navy: #140064;
   /* The phone's: a page under its navy band, and the quieter white on the navy. */
@@ -69,6 +75,13 @@
   --scrim: color-mix(in srgb, var(--ink) 45%, transparent);
   --shadow-overlay: 0 8px 24px rgb(17 24 39 / 15%);
   --radius-small: 4px;
+  /* The band, as the phone's: a screen's head on their navy, its title in their display
+     face and its main fact beside it; a card lifted off the page by their navy's faint
+     shadow. */
+  --lift: 0 4px 12px rgb(20 0 100 / 8%);
+  --font-display: "Bodoni Moda", Georgia, "Times New Roman", serif;
+  --text-fact: 24px;
+  --text-fact-line: 30px;
   /* Stacking, lowest first: a sticky heading, a menu, the toast. A modal dialog is above
      them all, in the browser's top layer. */
   --z-sticky: 1;
@@ -78,7 +91,7 @@
   /* Density, narrow: a phone in a hand. 17 px text, 48 px targets. */
   --target: 48px;
   --row: 48px;
-  --primary: 56px;
+  --primary-size: 56px;
   --text: 17px;
   --text-line: 24px;
   --text-small: 15px;
@@ -98,7 +111,7 @@
   :root {
     --target: 36px;
     --row: 40px;
-    --primary: 36px;
+    --primary-size: 36px;
     --text: 15px;
     --text-line: 22px;
     --text-small: 13px;
@@ -127,9 +140,8 @@
   --red-600: var(--brand);
   --red-700: #9a0a0a;
   --red-800: #7c0808;
-  /* Headings, in the serif their own wordmark is drawn in; the page loads it. Text in
-     Inter's Latin cut, which the page loads too: the office's file is seven times it. */
-  --font-display: "Bodoni Moda", Georgia, "Times New Roman", serif;
+  /* Text in Inter's Latin cut, which the page loads: the office's file is seven times it.
+     Headings are in --font-display, above, which the page loads too. */
   --font-home: "Inter Latin", system-ui, sans-serif;
 
   /* Its sizes: a customer's page, read once, so larger than the office's, and it does not
@@ -284,11 +296,11 @@ summary {
 
 /* Keyboard focus: one outline for every control. */
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--action);
   outline-offset: 2px;
 }
 
-/* Links are actions: accent, never the brand red */
+/* A link is navy, never the red: the red is the one main button's. */
 a {
-  color: var(--accent);
+  color: var(--action);
 }
