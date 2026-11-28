@@ -520,6 +520,7 @@ export const es: Catalog = {
     code: "Código",
     checking: "Revisando…",
     resend: "Enviar otro código",
+    codeResent: "Te enviamos un código nuevo.",
     resendIn: (seconds) => `Enviar otro código en ${seconds} s`,
     change: "Usar otro número o correo",
     codeWrong: "Ese código no funcionó. Revísalo o pide uno nuevo.",

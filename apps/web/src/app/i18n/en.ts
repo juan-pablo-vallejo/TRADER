@@ -543,6 +543,7 @@ export const en = {
     code: "Code",
     checking: "Checking…",
     resend: "Send another code",
+    codeResent: "We sent a new code.",
     resendIn: (seconds: number) => `Send another code in ${seconds} s`,
     change: "Use a different number or email",
     codeWrong: "That code did not work. Check it, or ask for a new one.",

@@ -224,6 +224,16 @@ after it is seen working: one already built says so in the commits since `origin
   invoice and the test finds none.
 - Done when: the test passes on any day of the week.
 
+**Sign-in calls Clerk's limit a lost connection**
+
+- When Clerk refuses to send a code because too many were asked for (a 429 on
+  `prepare_first_factor`, seen against the development instance after repeated sends),
+  the office's sign-in says "That did not go through. Check your connection and try
+  again.", which sends a person to check what is not wrong. The sweep's sign-in cells stop
+  there after their first sends.
+- Done when: a refused send for too many codes says to wait a few minutes, in both
+  languages, and a test holds it.
+
 ### The owner's
 
 `<angle brackets>` mark a value only the owner holds.

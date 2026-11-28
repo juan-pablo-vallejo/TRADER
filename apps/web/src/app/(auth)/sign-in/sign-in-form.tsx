@@ -102,6 +102,9 @@ export function SignInForm({
   // "Use a different number or email" sends the focus back to the field on any width.
   const backToField = useRef(false);
   const [wait, setWait] = useState(0);
+  // A new code went out on "Send another code": said under where it went, until the next
+  // thing the person does.
+  const [resent, setResent] = useState(false);
   const address = useRef<HTMLInputElement>(null);
   const codeField = useRef<HTMLInputElement>(null);
 
@@ -290,6 +293,7 @@ export function SignInForm({
       if (error !== null) return signInFailure(codeOf(error));
       setCode("");
       setWait(SIGN_IN_RESEND_SECONDS);
+      setResent(true);
       return null;
     });
   };
@@ -301,6 +305,7 @@ export function SignInForm({
     setCode("");
     setNote(null);
     setWait(0);
+    setResent(false);
   };
 
   const shown: Note | null = note ?? (stalled ? "not_loaded" : null);
@@ -398,6 +403,11 @@ export function SignInForm({
           ? s.codeTexted(shownNumber(sentTo.phone))
           : s.codeEmailed(sentTo.email)}
       </p>
+      {resent && note === null && (
+        <p className={styles.helper} role="status">
+          {s.codeResent}
+        </p>
+      )}
       <label className={styles.label} htmlFor="sign-in-code">
         {s.code}
       </label>
@@ -418,6 +428,7 @@ export function SignInForm({
         onChange={(event) => {
           const entered = signInCode(event.target.value);
           setCode(entered);
+          setResent(false);
           // The last digit sends it: nobody types a code and then looks for a button.
           verify(entered);
         }}

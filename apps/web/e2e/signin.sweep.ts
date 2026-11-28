@@ -55,9 +55,11 @@ const STATES: Record<string, (page: Page, lang: Lang) => Promise<void>> = {
     const again = page.getByRole("button", { name: CATALOGS[lang].signInForm.resend });
     await again.waitFor({ timeout: 90_000 });
     await again.click();
+    // The state is the sentence that says a new code went out.
     await page
-      .waitForLoadState("networkidle", { timeout: 15_000 })
-      .catch(() => undefined);
+      .getByRole("status")
+      .filter({ hasText: CATALOGS[lang].signInForm.codeResent })
+      .waitFor();
   },
 };
 
