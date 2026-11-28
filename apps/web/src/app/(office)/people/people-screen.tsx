@@ -364,6 +364,8 @@ function PersonPanel({ row, onClose }: { row: Row; onClose: () => void }) {
     <SidePanel title={row.name} onClose={onClose} returnTo={row.id} opensAt="top">
       <p className={`secondary ${styles.line}`}>
         {t.roles[row.role]} · {statusOf(t, row)}
+        {/* Their email, once, under their name: not again among the numbers. */}
+        {row.email !== null && <span className={styles.email}>{row.email}</span>}
       </p>
       <Numbers row={row} />
       <p className={styles.line}>
@@ -428,10 +430,6 @@ function Numbers({ row }: { row: Row }) {
             </li>
           )}
         </ul>
-      )}
-      {/* Said once: an active worker's email is in its field under Addresses. */}
-      {row.email !== null && (row.role === "admin" || row.deactivatedAt !== null) && (
-        <p className="secondary">{row.email}</p>
       )}
     </EditorSection>
   );

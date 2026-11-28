@@ -60,8 +60,13 @@
 
 /* The public pages: white (the logo is drawn on white), no menu. The homepage fills the
    width and brings its own styles ((public)/home.module.css); `/get`, the policy and the
-   terms are one readable column, 720 px at most. */
+   terms are one readable column, 720 px at most, at reading sizes. */
 .public {
+  /* Reading sizes at every width, not the office's laptop density. */
+  --text: var(--reading-text);
+  --text-line: var(--reading-text-line);
+  --text-small: var(--reading-small);
+  --text-small-line: var(--reading-small-line);
   min-height: 100vh;
   background: var(--surface);
 }
@@ -107,7 +112,7 @@
 
 /* The privacy policy and the terms: a column of text at a reading measure. */
 .legal {
-  max-width: var(--legal);
+  max-width: var(--reading-measure);
   margin: 0 auto;
 }
 .legal h1 {

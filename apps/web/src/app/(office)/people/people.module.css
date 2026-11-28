@@ -76,3 +76,9 @@
 .access {
   display: contents;
 }
+
+/* A person's email under their name in the panel, on a line of its own. */
+.email {
+  display: block;
+  overflow-wrap: anywhere;
+}

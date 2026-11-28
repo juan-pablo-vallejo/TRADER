@@ -112,7 +112,6 @@
   --column: 720px;
   --about: 34rem;
   --ways: 320px;
-  --legal: 40rem;
   --panel: 32rem;
   --panel-wide: 44rem;
   --menu-min: 180px;
@@ -126,6 +125,13 @@
   --keys-column: 7rem;
   --status-column: 32rem;
   --label-column: 8rem;
+  /* The public pages read at one size at every width: 17 px text, 15 px small print, a
+     68-character line (shell.module.css's `.public`). */
+  --reading-text: 17px;
+  --reading-text-line: 26px;
+  --reading-small: 15px;
+  --reading-small-line: 22px;
+  --reading-measure: 68ch;
   --totals: 24rem;
   --form-width: 44rem;
   --tracking: 0.04em;

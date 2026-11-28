@@ -187,6 +187,31 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
     },
   ];
 
+  // The first step not reached carries the page's one main action, in the header's row.
+  const action =
+    first === "scheduled" ? (
+      <Link className={controls.primary} href="/schedule">
+        {s.schedule}
+      </Link>
+    ) : first === "invoiced" && draftOf !== undefined ? (
+      // A job has one draft at a time from here: its own, opened, not another made.
+      <Link className={controls.primary} href={`/invoices/${draftOf.id}`}>
+        {s.openDraft}
+      </Link>
+    ) : first === "invoiced" ? (
+      <WriteButton
+        type="button"
+        className={controls.primary}
+        pending={draft.isPending}
+        onClick={() => {
+          setNote(null);
+          draft.mutate({ id: draftId, jobId: job.id, currency: "USD" });
+        }}
+      >
+        {s.createInvoice}
+      </WriteButton>
+    ) : undefined;
+
   return (
     <>
       <title>{`${job.name} · ${t.nav.jobs} · TRADER`}</title>
@@ -197,6 +222,7 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
         beside={
           <StatusBadge tone={JOB_TONES[job.status]} label={t.jobStatus[job.status]} />
         }
+        actions={action}
       />
       <RefreshFailed reads={[read]} />
 
@@ -218,36 +244,6 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
             </li>
           ))}
         </ol>
-        {first === "scheduled" && (
-          <p className={styles.action}>
-            <Link className={controls.primary} href="/schedule">
-              {s.schedule}
-            </Link>
-          </p>
-        )}
-        {first === "invoiced" && draftOf !== undefined && (
-          // A job has one draft at a time from here: its own, opened, not another made.
-          <p className={styles.action}>
-            <Link className={controls.primary} href={`/invoices/${draftOf.id}`}>
-              {s.openDraft}
-            </Link>
-          </p>
-        )}
-        {first === "invoiced" && draftOf === undefined && (
-          <p className={styles.action}>
-            <WriteButton
-              type="button"
-              className={controls.primary}
-              pending={draft.isPending}
-              onClick={() => {
-                setNote(null);
-                draft.mutate({ id: draftId, jobId: job.id, currency: "USD" });
-              }}
-            >
-              {s.createInvoice}
-            </WriteButton>
-          </p>
-        )}
         {first === "hoursRecorded" && (
           <p className="secondary">
             {closedWithoutHours ? s.noHoursClosed : s.waitingForHours}
