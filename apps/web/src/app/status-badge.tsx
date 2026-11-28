@@ -26,18 +26,26 @@ const ICONS: Record<Tone, string> = {
     "m4.1 3 3.9 3.9L11.9 3 13 4.1 9.1 8l3.9 3.9-1.1 1.1L8 9.1 4.1 13 3 11.9 6.9 8 3 4.1 4.1 3Z",
 };
 
+// A tone's mark alone, in the ink around it: what a note in a tone carries before its words
+// (failure.tsx), as a badge does.
+export function ToneIcon({ tone, size = 14 }: { tone: Tone; size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={ICONS[tone]} fill="currentColor" fillRule="evenodd" />
+    </svg>
+  );
+}
+
 export function StatusBadge({ tone, label }: { tone: Tone; label: string }) {
   return (
     <span className={`${styles.badge} ${styles[tone]}`}>
-      <svg
-        width="14"
-        height="14"
-        viewBox="0 0 16 16"
-        aria-hidden="true"
-        focusable="false"
-      >
-        <path d={ICONS[tone]} fill="currentColor" fillRule="evenodd" />
-      </svg>
+      <ToneIcon tone={tone} />
       {label}
     </span>
   );

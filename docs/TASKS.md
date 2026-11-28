@@ -194,8 +194,8 @@ after it is seen working: one already built says so in the commits since `origin
 - Today: a company with no people and no jobs gets an empty state with the way on; the
   band's count and the section under it say "on the clock" once.
 - First load: the band holds its fact's height and Schedule its head's, so nothing drops
-  when the data arrives. A failed load keeps the person in the header, never "Sign in",
-  and its note carries the problem icon and sits under the band on Hours too.
+  when the data arrives. A failed load keeps the person in the header (and the company's
+  name from 768), and its note sits under the band on Hours too.
 - Schedule: one add control in every cell, today's column marked by a word; View drawn as
   the pressed pair; View and Show on one line; the two actions together on one row; Add
   shift's day lines at each density's height, its button whole at 390; Copy last week
@@ -223,6 +223,32 @@ after it is seen working: one already built says so in the commits since `origin
   plans shifts Monday to Friday, so on a Saturday or Sunday no open job offers Create
   invoice and the test finds none.
 - Done when: the test passes on any day of the week.
+
+**Office look, run 2: what its review left** (interface-change)
+
+- Tables at 1280: a wrapped cell keeps a one-line row's padding; Jobs' names, customers
+  and headers on one line.
+- An invoice: its customer, job, status and due date on the band as the job page's are, a
+  word kept with its date; the totals under the Amount column; one width for its blocks;
+  Send invoice's sending and Sign in's checking each said on its own control.
+- Edit panels for a job and a customer commit with their one main button, as adding does;
+  Save one width from 768 up; Add job's Radius label on one line at 390.
+- The saved, refused and failed notes carry their tone's icon. Jobs', Customers' and
+  Invoices' empty states are the shared one with the way on, and say "yet" when nothing
+  exists. First load holds the action row's and filters' height.
+- One underline on a stacked card's links; one phone format on Customers and People; New
+  invoice's Job select prompts as Add job's does; the job card's two links on their own row
+  at 390; the job page's status badge beside its title; Get the app's two lines at the
+  page's measure; the homepage's email button whole at 768; "Getting sign-in ready" at the
+  form's small size.
+- Privacy, Terms and Get the app: headings, the Draft notice (with its attention icon),
+  the foot links and the band's language link at reading sizes, headings a step above the
+  text; Get the app's text on the title's left edge at one measure.
+- The job page: a person's stacked row in fixed lines (badge, the two figures, the two
+  links) and its number named WhatsApp; the empty Invoices line says what makes the first.
+- The homepage: one main action in the hero, its four figures' captions on one line.
+  Spanish says "Personal" or "Personas" for the same people, one of them.
+- Done when: these are seen fixed at 390, 768 and 1280 in both languages.
 
 **Sign-in calls Clerk's limit a lost connection**
 

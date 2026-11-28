@@ -3,6 +3,7 @@
 // A refused caller is offered this server's sign-in (identity-mode.ts) — or, where a Clerk
 // session exists and the API still knows nobody, told so (clerk-session.tsx).
 import { ClerkRefused } from "./clerk-session";
+import { ToneIcon } from "./status-badge";
 import controls from "./controls.module.css";
 import { EmptyState } from "./empty-state";
 import { useClerkOn } from "./providers";
@@ -39,7 +40,10 @@ export function Failure({
   if (code === "FORBIDDEN") return <EmptyState text={t.notPermitted} />;
   return (
     <div className={controls.banner} role="alert">
-      <p className="body-strong">{t.loadFailed}</p>
+      <p className={`body-strong ${controls.bannerHead}`}>
+        <ToneIcon tone="problem" size={16} />
+        {t.loadFailed}
+      </p>
       <p className="secondary">{t.loadFailedHelp}</p>
       {onRetry !== undefined && (
         <button type="button" className={controls.secondary} onClick={onRetry}>

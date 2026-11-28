@@ -207,6 +207,12 @@ a.secondary {
 .banner p {
   margin: 0;
 }
+/* Its first line leads with the problem's mark, as a badge does: an icon and a word. */
+.bannerHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
 .banner button {
   margin-top: var(--space-3);
 }
