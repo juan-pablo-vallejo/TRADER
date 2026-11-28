@@ -63,7 +63,7 @@
   padding: 0 var(--space-1);
   color: var(--ink-secondary);
   text-decoration: none;
-  border-bottom: 2px solid transparent;
+  border-bottom: var(--rule) solid transparent;
   margin-bottom: calc(-1 * var(--hairline));
 }
 .tab:hover {

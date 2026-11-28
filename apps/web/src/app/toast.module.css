@@ -2,7 +2,7 @@
 .toast {
   position: fixed;
   left: 50%;
-  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0));
   transform: translateX(-50%);
   z-index: var(--z-toast);
   display: flex;
@@ -26,5 +26,8 @@
   transform: none;
   /* The width a side panel (32rem, side-panel.module.css) leaves; a full-screen panel
      leaves none, and the toast then sits at its foot. */
-  max-width: min(28rem, max(14rem, calc(100vw - 34rem)));
+  max-width: min(
+    var(--toast),
+    max(var(--toast-min), calc(100vw - var(--panel) - 2 * var(--space-4)))
+  );
 }

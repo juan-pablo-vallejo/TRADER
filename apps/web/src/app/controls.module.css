@@ -156,13 +156,14 @@
 }
 .check input {
   flex: none;
-  width: 24px;
-  height: 24px;
-  margin: 12px 0;
+  width: var(--check);
+  height: var(--check);
+  /* Its line is the target: the density's height, the box in its middle. */
+  margin: calc((var(--target) - var(--check)) / 2) 0;
   accent-color: var(--action);
 }
 .check span {
-  padding: 14px 0;
+  padding: calc((var(--target) - var(--text-line)) / 2) 0;
 }
 
 /* Card: surface, lifted off the page by their navy's faint shadow, as the phone's cards are;
@@ -341,7 +342,7 @@
   border-bottom: 0;
 }
 .loadingRow span {
-  height: 10px;
+  height: var(--placeholder-bar);
   border-radius: var(--radius-small);
   background: var(--neutral-tint);
   flex: 0 1 32%;

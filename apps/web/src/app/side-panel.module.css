@@ -2,7 +2,7 @@
    screen. Its backdrop covers the page behind it, the navigation included. */
 .panel {
   box-sizing: border-box;
-  width: min(32rem, 100vw);
+  width: min(var(--panel), 100vw);
   max-width: 100vw;
   height: 100dvh;
   max-height: 100dvh;
@@ -15,7 +15,7 @@
   border-left: var(--hairline) solid var(--border);
 }
 .wide {
-  width: min(44rem, 100vw);
+  width: min(var(--panel-wide), 100vw);
 }
 .panel::backdrop {
   background: var(--scrim);

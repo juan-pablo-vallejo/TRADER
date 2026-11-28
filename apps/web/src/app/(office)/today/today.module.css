@@ -48,7 +48,7 @@
 .grow,
 .money span,
 .people li > span:first-child {
-  flex: 1 1 12rem;
+  flex: 1 1 var(--line-min);
 }
 .rows a,
 .money a {

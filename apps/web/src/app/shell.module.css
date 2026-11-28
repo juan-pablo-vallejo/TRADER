@@ -20,7 +20,7 @@
 .skip {
   position: absolute;
   left: var(--space-2);
-  top: -100px;
+  top: var(--away);
   z-index: var(--z-menu);
   padding: var(--space-2) var(--space-4);
   background: var(--surface);
@@ -54,7 +54,7 @@
 /* D'Sierra's logo, on `/get`: their red and navy live in the mark, on the homepage and on
    sign-in ((auth)/auth.module.css), nowhere else. */
 .logo {
-  width: 160px;
+  width: var(--logo);
   height: auto;
 }
 
@@ -66,7 +66,7 @@
   background: var(--surface);
 }
 .column {
-  padding: var(--space-6) max(var(--space-4), calc((100% - 720px) / 2));
+  padding: var(--space-6) max(var(--space-4), calc((100% - var(--column)) / 2));
   box-sizing: border-box;
 }
 /* `/get`: the logo, then what to do, centered in the column. */
@@ -83,7 +83,7 @@
 }
 /* A sentence or two, held to a readable measure and centered under the logo. */
 .about {
-  max-width: 34rem;
+  max-width: var(--about);
   text-align: center;
 }
 /* The ways in: buttons of one width, one under the other. */
@@ -91,7 +91,7 @@
   display: grid;
   gap: var(--space-3);
   width: 100%;
-  max-width: 320px;
+  max-width: var(--ways);
 }
 .ways a {
   display: flex;
@@ -107,7 +107,7 @@
 
 /* The privacy policy and the terms: a column of text at a reading measure. */
 .legal {
-  max-width: 40rem;
+  max-width: var(--legal);
   margin: 0 auto;
 }
 .legal h1 {

@@ -1,9 +1,9 @@
 /* The command menu: a box near the top of the screen, the whole width on a phone. */
 .menu {
   box-sizing: border-box;
-  width: min(36rem, calc(100vw - var(--space-4) * 2));
+  width: min(var(--dialog), calc(100vw - var(--space-4) * 2));
   max-width: 100vw;
-  max-height: min(32rem, calc(100dvh - var(--space-6) * 2));
+  max-height: min(var(--dialog-height), calc(100dvh - var(--space-6) * 2));
   margin: var(--space-6) auto auto;
   padding: 0;
   color: var(--ink);
@@ -44,12 +44,12 @@
 }
 .option[aria-selected="true"] {
   background: var(--action-tint);
-  outline: 2px solid var(--action);
-  outline-offset: -2px;
+  outline: var(--rule) solid var(--action);
+  outline-offset: calc(-1 * var(--rule));
 }
 .kind {
   flex: none;
-  min-width: 5.5rem;
+  min-width: var(--kind-min);
   color: var(--ink-secondary);
 }
 .foot {
@@ -73,7 +73,7 @@
   border: var(--hairline) solid var(--border);
   border-radius: var(--radius-small);
 }
-@media (max-width: 767px) {
+@media (width < 768px) {
   .menu {
     width: calc(100vw - var(--space-2) * 2);
     margin-top: var(--space-2);

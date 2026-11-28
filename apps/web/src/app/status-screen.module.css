@@ -9,14 +9,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  max-width: 32rem;
+  max-width: var(--status-column);
   width: 100%;
 }
 .code {
   margin: 0;
   color: var(--ink-secondary);
   font-weight: 600;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--tracking);
   text-transform: uppercase;
 }
 .title {
@@ -57,8 +57,8 @@
   color: var(--ink-secondary);
   overflow-wrap: anywhere;
 }
+/* The address asked for, in the page's own face: picked whole with one press, for support. */
 .reference code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.95em;
+  font: inherit;
   user-select: all;
 }

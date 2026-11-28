@@ -60,7 +60,7 @@
   color: var(--ink);
 }
 .totals td {
-  border-top: 2px solid var(--border);
+  border-top: var(--rule) solid var(--border);
   border-bottom: 0;
 }
 .cellOpen {
@@ -95,7 +95,7 @@
    found only by pointing at it. */
 .cellOpen > :first-child {
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--underline-offset);
 }
 .table tr td:first-child .cellOpen {
   color: var(--action);
@@ -126,10 +126,10 @@
   table-layout: fixed;
 }
 .lines thead th:first-child {
-  width: 8.5rem;
+  width: var(--figure-column);
 }
 .lines thead th:last-child {
-  width: 6rem;
+  width: var(--action-column);
 }
 /* A day's cell gives its flags the width ("sin conexión" stands on one line); the total
    keeps the same edge, so figures line up down a stacked row too. */
@@ -190,7 +190,7 @@
   }
   .table thead {
     position: absolute;
-    left: -9999px;
+    left: var(--away);
   }
   .table tbody tr {
     position: relative;
@@ -208,15 +208,15 @@
     height: auto;
     border: 0;
     padding: 0;
-    font-size: 15px;
-    line-height: 20px;
+    font-size: var(--text-row);
+    line-height: var(--text-row-line);
     color: var(--ink-secondary);
     overflow-wrap: anywhere;
   }
   .table tr td:first-child {
     display: block;
-    font-size: 17px;
-    line-height: 24px;
+    font-size: var(--text-row-name);
+    line-height: var(--text-row-name-line);
     color: var(--ink);
   }
   .table tr td[data-empty] {
@@ -259,7 +259,7 @@
   .table tfoot tr {
     background: var(--surface);
     border: var(--hairline) solid var(--border);
-    border-top: 2px solid var(--border);
+    border-top: var(--rule) solid var(--border);
     border-radius: var(--radius-card);
     padding: var(--space-3) var(--space-4);
   }

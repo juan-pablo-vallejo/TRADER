@@ -86,6 +86,46 @@
   --text-band-line: 36px;
   /* The longest line a sentence runs to before it wraps. */
   --measure: 72ch;
+  /* The narrowest a line of words takes before its neighbour wraps under it (Today), and
+     Schedule's column of names. */
+  --line-min: 12rem;
+  --name-column: 9.5rem;
+  /* The office's fixed measures: a rule or an outline two hairlines strong, a link's
+     underline set off from its words, the place a thing out of sight is put, a
+     disclosure's chevron, a checkbox's box, a placeholder bar, a status badge's height and
+     type, a stacked row's type, and the widths of the logo, a side panel, a menu, a dialog,
+     the toast and the columns of figures, actions and keys. */
+  --rule: 2px;
+  --underline-offset: 3px;
+  --away: -9999px;
+  --chevron: 7px;
+  --check: 24px;
+  --placeholder-bar: 10px;
+  --badge: 24px;
+  --text-badge: 13px;
+  --text-badge-line: 16px;
+  --text-row: 15px;
+  --text-row-line: 20px;
+  --text-row-name: 17px;
+  --text-row-name-line: 24px;
+  --logo: 160px;
+  --column: 720px;
+  --about: 34rem;
+  --ways: 320px;
+  --legal: 40rem;
+  --panel: 32rem;
+  --panel-wide: 44rem;
+  --menu-min: 180px;
+  --dialog: 36rem;
+  --dialog-height: 32rem;
+  --kind-min: 5.5rem;
+  --toast: 28rem;
+  --toast-min: 14rem;
+  --figure-column: 8.5rem;
+  --action-column: 6rem;
+  --keys-column: 7rem;
+  --status-column: 32rem;
+  --tracking: 0.04em;
   /* Stacking, lowest first: a sticky heading, a menu, the toast. A modal dialog is above
      them all, in the browser's top layer. */
   --z-sticky: 1;

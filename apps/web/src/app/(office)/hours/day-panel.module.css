@@ -50,7 +50,7 @@
 
 /* Two to a row only where each control keeps its whole date and time beside the navigation.
    `minmax(0, …)`: a control's own width must never widen the page. */
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
   .fields {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

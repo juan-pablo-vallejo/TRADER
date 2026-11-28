@@ -6,7 +6,8 @@
 //   and `inherit` are not a colour of the brand's and stay);
 // - writes a length into a declaration: no px, rem, em, ch or pt number but 0;
 // - puts an inline `style` on an element;
-// - asks a media or container query of any width but 768 px, the one breakpoint.
+// - asks a media query of any width but 768 px, the one breakpoint, or a container query
+//   of any but 720 px, the column a table needs beside it (table.module.css).
 //
 // UNMOVED lists, per file, the rules it still breaks; it only shrinks: a listed rule the
 // file no longer breaks fails here too, so the list is kept to what is still true.
@@ -45,8 +46,9 @@ function offences(file: string, source: string): Record<Rule, string[]> {
   if (file.endsWith(".css")) {
     const css = stripComments(source);
     for (const m of css.matchAll(/@(media|container)[^{]*/g)) {
+      const allowed = m[1] === "media" ? ["768"] : ["719", "720"];
       for (const [whole, value, unit] of m[0].matchAll(LENGTH)) {
-        if (!(value === "768" && unit === "px")) out.media.push(whole);
+        if (!(allowed.includes(value!) && unit === "px")) out.media.push(whole);
       }
     }
     const body = css.replace(/@(media|container)[^{]*/g, "");
@@ -77,27 +79,12 @@ const UNMOVED: Record<string, Rule[]> = {
   "app/(auth)/auth.module.css": ["length", "media"],
   "app/(auth)/sign-in/google-button.module.css": ["colour", "length"],
   "app/(office)/customers/customers-screen.tsx": ["inline"],
-  "app/(office)/hours/day-panel.module.css": ["media"],
   "app/(office)/invoices/invoices.module.css": ["length"],
   "app/(office)/jobs/[jobId]/job.module.css": ["length", "media"],
   "app/(office)/people/people-screen.tsx": ["inline"],
-  "app/(office)/people/people.module.css": ["media"],
-  "app/(office)/schedule/schedule.module.css": ["length", "media"],
   "app/(office)/settings/settings.module.css": ["length"],
-  "app/(office)/today/today.module.css": ["length"],
   "app/(public)/home.module.css": ["length", "media"],
-  "app/account.module.css": ["length", "media"],
-  "app/badge.module.css": ["length"],
-  "app/command-menu.module.css": ["length", "media"],
-  "app/controls.module.css": ["length"],
   "app/global-error.tsx": ["colour", "inline"],
-  "app/keyboard-rows.module.css": ["length"],
-  "app/nav.module.css": ["length"],
-  "app/shell.module.css": ["length"],
-  "app/side-panel.module.css": ["length"],
-  "app/status-screen.module.css": ["length"],
-  "app/table.module.css": ["length", "media"],
-  "app/toast.module.css": ["length"],
 };
 
 describe("the office's styles", () => {
