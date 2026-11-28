@@ -59,7 +59,7 @@ type Read = {
   dataUpdatedAt: number;
   refetch: () => unknown;
 };
-const refused = (read: Read) =>
+export const refused = (read: Read) =>
   ["UNAUTHORIZED", "FORBIDDEN"].includes(codeOf(read.error) ?? "");
 
 // The read that leaves the screen nothing to show: one that failed before it ever had

@@ -811,7 +811,8 @@ export const en = {
     gone: "There is no job at this address.",
     steps: "Where this job stands",
     step: {
-      scheduled: "Scheduled",
+      // A shift today or later (job.read): a week's past shifts do not count.
+      scheduled: "Shifts ahead",
       hoursRecorded: "Hours recorded",
       invoiced: "Invoiced",
       paid: "Paid",

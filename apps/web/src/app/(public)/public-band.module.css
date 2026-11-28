@@ -1,0 +1,59 @@
+/* The band over Get the app, Privacy and Terms (public-band.tsx): their navy, the mark and
+   name on a row with the other language, then the title in Bodoni, its edges the column's
+   beneath it (shell.module.css's `.column`). White on navy: links included. */
+.band {
+  padding: var(--space-4) max(var(--space-4), calc((100% - var(--column)) / 2))
+    var(--space-6);
+  background: var(--brand-navy);
+  color: var(--on-action);
+}
+.band :focus-visible {
+  outline: var(--rule) solid var(--on-action);
+  outline-offset: var(--rule);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: var(--home-target);
+  margin-right: auto;
+  color: var(--on-action);
+  font-family: var(--font-display);
+  font-size: var(--home-brand);
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: none;
+}
+/* The mark on its white tile: the file is drawn on white, so the tile is the picture. */
+.mark {
+  width: var(--home-mark);
+  height: var(--home-mark);
+  border-radius: var(--radius-card);
+}
+/* The other language: a button that reads as a link, white on the navy. */
+.language {
+  min-height: var(--home-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.language:hover {
+  text-decoration: underline;
+}
+.title {
+  margin: var(--space-4) 0 0;
+  font-family: var(--font-display);
+  font-size: var(--text-band);
+  line-height: var(--text-band-line);
+  font-weight: 600;
+  overflow-wrap: break-word;
+}

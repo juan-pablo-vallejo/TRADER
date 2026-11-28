@@ -18,7 +18,7 @@ import { useClerkOn } from "./providers";
 import { useStrings } from "./i18n";
 import { KEYS_HELP_EVENT } from "./keyboard-rows";
 import { LANGUAGES } from "./i18n/language";
-import { blocking } from "./failure";
+import { blocking, refused } from "./failure";
 import { firstName } from "./format";
 import { useTRPC } from "./trpc";
 
@@ -39,8 +39,9 @@ export function Account({ signInHref }: { signInHref: string }) {
   }, []);
   const me = useQuery(trpc.me.get.queryOptions());
   if (me.isPending) return null;
-  // Signed out only when the server says so, or nothing was ever read: a refresh that
-  // failed keeps the name (failure.tsx, blocking).
+  // Signed out only when the server says so: a refresh that failed keeps the name, and a
+  // first read that failed says nothing of the session it does not know, as a first load.
+  if (me.data === undefined && me.isError && !refused(me)) return null;
   if (blocking([me]) !== undefined || me.data === undefined) {
     return (
       <div className={styles.account}>

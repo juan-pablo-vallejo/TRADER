@@ -773,7 +773,7 @@ export const es: Catalog = {
     gone: "No hay ninguna obra en esta dirección.",
     steps: "Cómo va esta obra",
     step: {
-      scheduled: "Con turnos",
+      scheduled: "Con turnos por venir",
       hoursRecorded: "Con horas registradas",
       invoiced: "Facturada",
       paid: "Pagada",

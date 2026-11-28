@@ -3,9 +3,8 @@ import { headers } from "next/headers";
 import { appLinks, deviceOf } from "../../../server/app-links";
 import controls from "../../controls.module.css";
 import { requestStrings, titled } from "../../i18n/server";
-import { LanguageSwitch } from "../../language-switch";
-import { Logo } from "../../logo";
 import styles from "../../shell.module.css";
+import { PublicBand } from "../public-band";
 import { homeHref } from "../../../server/sign-in-paths";
 
 // `/get`: where an invitation's message points. In the phone's language, one button for
@@ -25,35 +24,35 @@ export default async function GetTheApp() {
     (kind) => device === "other" || device === kind,
   );
   return (
-    <main className={styles.column}>
-      <div className={styles.home}>
-        <Logo />
-        <h1 className="title">{t.get.title}</h1>
-        <p className={`body ${styles.about}`}>{t.get.explain}</p>
-        <div className={styles.ways}>
-          {shown.map((kind) => {
-            const href = links[kind];
-            const label = kind === "ios" ? t.get.iphone : t.get.android;
-            return href === null ? (
-              <p key={kind} className="body" data-missing={kind}>
-                <strong>{label}.</strong> {t.get.askOffice}
-              </p>
-            ) : (
-              <a key={kind} className={controls.primary} href={href} rel="noreferrer">
-                {label}
-              </a>
-            );
-          })}
+    <>
+      <PublicBand title={t.get.title} />
+      <main className={styles.column}>
+        <div className={styles.home}>
+          <p className={`body ${styles.about}`}>{t.get.explain}</p>
+          <div className={styles.ways}>
+            {shown.map((kind) => {
+              const href = links[kind];
+              const label = kind === "ios" ? t.get.iphone : t.get.android;
+              return href === null ? (
+                <p key={kind} className="body" data-missing={kind}>
+                  <strong>{label}.</strong> {t.get.askOffice}
+                </p>
+              ) : (
+                <a key={kind} className={controls.primary} href={href} rel="noreferrer">
+                  {label}
+                </a>
+              );
+            })}
+          </div>
+          {shown.includes("android") && (
+            <p className={`secondary ${styles.about}`}>{t.get.androidNote}</p>
+          )}
+          <p className={`secondary ${styles.about}`}>{t.get.thenSignIn}</p>
+          <a className={controls.linkTarget} href={homeHref(process.env)}>
+            {t.get.home}
+          </a>
         </div>
-        {shown.includes("android") && (
-          <p className={`secondary ${styles.about}`}>{t.get.androidNote}</p>
-        )}
-        <p className={`secondary ${styles.about}`}>{t.get.thenSignIn}</p>
-        <a className={controls.linkTarget} href={homeHref(process.env)}>
-          {t.get.home}
-        </a>
-        <LanguageSwitch />
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

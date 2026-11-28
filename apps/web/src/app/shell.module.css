@@ -51,13 +51,6 @@
   }
 }
 
-/* D'Sierra's logo, on `/get`: their red and navy live in the mark, on the homepage and on
-   sign-in ((auth)/auth.module.css), nowhere else. */
-.logo {
-  width: var(--logo);
-  height: auto;
-}
-
 /* The public pages: white (the logo is drawn on white), no menu. The homepage fills the
    width and brings its own styles ((public)/home.module.css); `/get`, the policy and the
    terms are one readable column, 720 px at most, at reading sizes. */
@@ -67,6 +60,9 @@
   --text-line: var(--reading-text-line);
   --text-small: var(--reading-small);
   --text-small-line: var(--reading-small-line);
+  /* Named here: the band's `data-brand` takes the document's own font away
+     (theme.css), and the homepage's root names its own over this. */
+  font-family: var(--font);
   min-height: 100vh;
   background: var(--surface);
 }
@@ -113,7 +109,8 @@
 /* The privacy policy and the terms: a column of text at a reading measure. */
 .legal {
   max-width: var(--reading-measure);
-  margin: 0 auto;
+  /* At the column's left edge, under the band's title. */
+  margin: 0;
 }
 .legal h1 {
   margin: 0 0 var(--space-1);

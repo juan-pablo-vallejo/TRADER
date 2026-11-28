@@ -36,16 +36,16 @@ describe("the three layouts", () => {
       "(public)/page.tsx",
       "(public)/site-header.tsx",
       "(public)/gallery.tsx",
-      "logo.tsx",
+      "(public)/public-band.tsx",
       // Sign-in too: a server with no Clerk keys serves it under the policy that admits
-      // no inline style at all, so its two pictures are plain <img> as the logo is.
+      // no inline style at all, so its two pictures are plain <img> as the band's mark is.
       "(auth)/sign-in-frame.tsx",
       "(auth)/sign-in/page.tsx",
       "(auth)/sign-in/sign-in-form.tsx",
     ]) {
       expect(read(file), file).not.toMatch(/style=\{|<style\b|dangerouslySetInnerHTML/);
     }
-    for (const file of ["logo.tsx", "(auth)/sign-in-frame.tsx"]) {
+    for (const file of ["(public)/public-band.tsx", "(auth)/sign-in-frame.tsx"]) {
       expect(read(file), file).not.toMatch(/<Image\b|import Image from "next\/image"/);
     }
   });
