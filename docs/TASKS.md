@@ -177,17 +177,10 @@ after it is seen working: one already built says so in the commits since `origin
 
 **Office look, run 2** (interface-change)
 
-- The band on Jobs, a job's page, Customers, Invoices, an invoice, People, Settings, Sign
-  in, Home, Get the app, Privacy and Terms; `global-error.tsx` and Google's button on the
-  tokens.
-- Settings: Passkeys in a card. People, an invoice and Settings: a switch that destroys
-  nothing drawn apart from Void and Deactivate. One main button on Settings and on an issued
-  invoice. An issued invoice's lines in the office's one table. A person's email once in
-  their panel. The job page's header is the shared one. The back link sits on the band.
-  Privacy, Terms and Get the app at reading size, Back to the homepage at the target height.
-- States: sign-in says a new code went out and puts a refused code beside its field.
-- Done when: these screens are clean in the whole sweep, `UNMOVED` is empty, and visual-qa
-  reports no Critical or High.
+- Built and reviewed: Jobs, a job's page, Customers, Invoices, an invoice, People,
+  Settings, Sign in, Home, Get the app, Privacy and Terms, with sign-in's new-code state.
+  The new-code state is pictured once Clerk's development instance sends codes again.
+- Done when: these screens are clean in the whole sweep.
 
 **Office look, run 1: what its review left** (interface-change)
 
