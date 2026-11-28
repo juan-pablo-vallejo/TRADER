@@ -7,8 +7,9 @@
   width: 100%;
   border-collapse: collapse;
   background: var(--surface);
-  border: var(--hairline) solid var(--border);
   border-radius: var(--radius-card);
+  /* Lifted off the page as a card is (controls.module.css). */
+  box-shadow: var(--lift);
 }
 .table th,
 .table td {
@@ -185,6 +186,7 @@
   .table {
     border: 0;
     background: none;
+    box-shadow: none;
   }
   .table thead {
     position: absolute;
@@ -193,7 +195,8 @@
   .table tbody tr {
     position: relative;
     background: var(--surface);
-    border: var(--hairline) solid var(--border);
+    border: var(--hairline) solid transparent;
+    box-shadow: var(--lift);
     border-radius: var(--radius-card);
     margin-bottom: var(--space-2);
     min-height: var(--target);

@@ -148,8 +148,8 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
   );
   return (
     <>
-      <JobsTabs />
       <PageHeader
+        above={<JobsTabs />}
         title={t.jobs}
         action={
           ready

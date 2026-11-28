@@ -6,11 +6,6 @@
   margin: 0 0 var(--space-4);
   color: var(--ink-secondary);
 }
-.headerActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
 .bar {
   display: grid;
   gap: var(--space-3);

@@ -1,5 +1,5 @@
-/* The office header: 56 pt, the mark and the wordmark on the left, the
-   signed-in person and sign-out on the right, one hairline below. One row at every width. */
+/* The office header: 56 pt on their navy, as the phone's band is, the mark and the
+   wordmark on the left, the signed-in person on the right. One row at every width. */
 .header {
   display: flex;
   align-items: center;
@@ -7,8 +7,22 @@
   min-height: var(--header);
   box-sizing: border-box;
   padding: 0 var(--space-4);
+  background: var(--brand-navy);
+  color: var(--on-action);
+}
+/* On the navy the focus ring is white: a navy ring would not be seen. The header's own
+   controls only: the account's menu opens white, and keeps the navy ring. */
+.header > :focus-visible,
+.header summary:focus-visible {
+  outline-color: var(--on-action);
+}
+/* Red never sits on navy: the mark keeps a tile of white. */
+.mark {
+  display: inline-flex;
+  flex: none;
+  padding: var(--space-1);
   background: var(--surface);
-  border-bottom: var(--hairline) solid var(--border);
+  border-radius: var(--radius-card);
 }
 /* The company's name gives way before the person's first name and the search: it shortens
    with an ellipsis. */
@@ -17,5 +31,5 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--ink);
+  color: var(--on-action);
 }

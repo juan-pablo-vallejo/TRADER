@@ -7,6 +7,8 @@ import { KeyboardRows } from "../keyboard-rows";
 import { Nav } from "../nav";
 import { SessionFrame } from "../session-frame";
 import styles from "../shell.module.css";
+// The band's title is in their display face (page-header.tsx).
+import "../brand-fonts.css";
 
 // The office: the header, the menu and one screen. Every page is dynamic, so the identity
 // mode and the keys are read per request (session-frame.tsx).

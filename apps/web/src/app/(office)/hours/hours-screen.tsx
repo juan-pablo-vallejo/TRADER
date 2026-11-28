@@ -71,6 +71,20 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
   const flagged = filters.flagged === "1";
   // The dates in the form: the range on screen until someone types others.
   const shown = range ?? weekOf(today());
+  const person = /^[0-9a-f-]{36}$/.test(filters.person) ? filters.person : null;
+  // The band's main fact: the total for the dates shown. The same read the table makes
+  // (Shown, below), so one request answers both.
+  const trpc = useTRPC();
+  const total = useQuery(
+    trpc.labor.hours.queryOptions(
+      {
+        ...shown,
+        ...(flagged && { flagged: true }),
+        ...(person !== null && { workerId: person }),
+      },
+      { placeholderData: keepPreviousData, enabled: range !== null },
+    ),
+  );
   const [draft, setDraft] = useState<Range | null>(null);
   const typed = draft ?? shown;
   // The two fields keep their own values, as sign-in's does: React empties a field it holds
@@ -137,7 +151,17 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
 
   return (
     <>
-      <PageHeader title={t.hoursTitle} />
+      <PageHeader
+        title={t.hoursTitle}
+        fact={
+          range === null || total.data === undefined
+            ? undefined
+            : {
+                label: said(range),
+                value: t.hoursValue(hours(total.data.totals.hundredths)),
+              }
+        }
+      />
       <p className={`secondary ${styles.explain}`}>{t.reconExplain}</p>
       <div className={styles.presets} role="group" aria-label={t.hoursTitle}>
         <button
@@ -229,7 +253,7 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
           range={range}
           said={said(range)}
           flagged={flagged}
-          person={/^[0-9a-f-]{36}$/.test(filters.person) ? filters.person : null}
+          person={person}
           onEveryone={() => setFilters({ person: "" })}
           signInHref={signInHref}
           onOpen={(workerId, day) => setDay({ who: workerId, day })}

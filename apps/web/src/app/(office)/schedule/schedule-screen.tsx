@@ -21,6 +21,7 @@ import controls from "../../controls.module.css";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { Note } from "../../note";
+import { PageHeader } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
 import { useStrings } from "../../i18n";
 import { StatusBadge } from "../../status-badge";
@@ -358,29 +359,31 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   };
 
   const header = (
-    <div className={controls.pageHeader}>
-      <h1 className="title">{s.title}</h1>
-      {ready && (
-        <div className={styles.headerActions}>
-          <button
-            type="button"
-            className={controls.secondary}
-            disabled={stale}
-            onClick={() => setPanel({ kind: "copy" })}
-          >
-            {s.copyLastWeek}
-          </button>
-          <button
-            type="button"
-            className={controls.primary}
-            disabled={stale}
-            onClick={() => setPanel({ kind: "add" })}
-          >
-            {s.addShift}
-          </button>
-        </div>
-      )}
-    </div>
+    <PageHeader
+      title={s.title}
+      actions={
+        ready ? (
+          <>
+            <button
+              type="button"
+              className={controls.secondary}
+              disabled={stale}
+              onClick={() => setPanel({ kind: "copy" })}
+            >
+              {s.copyLastWeek}
+            </button>
+            <button
+              type="button"
+              className={controls.primary}
+              disabled={stale}
+              onClick={() => setPanel({ kind: "add" })}
+            >
+              {s.addShift}
+            </button>
+          </>
+        ) : undefined
+      }
+    />
   );
   if (listed.isPending || jobs.isPending || week.isPending) {
     return (

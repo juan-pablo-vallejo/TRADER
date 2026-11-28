@@ -58,7 +58,20 @@ export function TodayScreen({ signInHref }: { signInHref: string }) {
   }, []);
   return (
     <>
-      <PageHeader title={t.todayScreen.title} />
+      <PageHeader
+        title={t.todayScreen.title}
+        fact={
+          read.data === undefined
+            ? undefined
+            : {
+                label: t.todayScreen.onTheClock,
+                value: String(
+                  bands(read.data, minuteIn(new Date(now), read.data.timezone)).working
+                    .length,
+                ),
+              }
+        }
+      />
       {clerkOn && <PasskeyBand />}
       {read.isPending ? (
         <LoadingRows />

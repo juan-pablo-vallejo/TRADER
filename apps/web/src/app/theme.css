@@ -82,6 +82,8 @@
   --font-display: "Bodoni Moda", Georgia, "Times New Roman", serif;
   --text-fact: 24px;
   --text-fact-line: 30px;
+  --text-band: 30px;
+  --text-band-line: 36px;
   /* Stacking, lowest first: a sticky heading, a menu, the toast. A modal dialog is above
      them all, in the browser's top layer. */
   --z-sticky: 1;

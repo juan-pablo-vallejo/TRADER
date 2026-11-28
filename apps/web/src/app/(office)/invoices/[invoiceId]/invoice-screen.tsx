@@ -1083,20 +1083,20 @@ export function InvoiceScreen({
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   return (
     <Said.Provider value={setSaid}>
-      {back}
-      <RefreshFailed reads={[read]} />
       <title>{`${
         invoice.number === null
           ? s.draftOf(invoice.job.name)
           : s.invoiceNo(invoice.number)
       } · ${t.nav.invoices} · TRADER`}</title>
       <PageHeader
+        above={back}
         title={
           invoice.number === null
             ? s.draftOf(invoice.job.name)
             : s.invoiceNo(invoice.number)
         }
       />
+      <RefreshFailed reads={[read]} />
       <p className={`body ${styles.meta}`}>
         {invoice.customer.name} ·{" "}
         <Link className={controls.linkTarget} href={`/jobs/${invoice.job.id}`}>

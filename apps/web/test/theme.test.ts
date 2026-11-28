@@ -139,7 +139,8 @@ describe("the theme", () => {
   });
 
   // Their red is the one main button's (controls.module.css, `.primary`): no other rule
-  // of the office names it, so it never lands on a status or on the navy.
+  // of the office names it, so it never lands on a status or on the navy. Their navy is
+  // the office's header and each screen's band, as the phone's, and may be named.
   it("puts the red on the primary button alone", () => {
     const office = [
       "controls",
@@ -164,7 +165,7 @@ describe("the theme", () => {
         /\/\*[\s\S]*?\*\//g,
         "",
       );
-      expect([name, /--brand\b|--brand-navy/.test(sheet)]).toEqual([name, false]);
+      expect([name, /--brand(?![\w-])/.test(sheet)]).toEqual([name, false]);
       for (const m of sheet.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
         if (!/var\(--primary(-pressed)?\)/.test(m[2]!)) continue;
         expect([name, m[1]!.trim()]).toEqual([

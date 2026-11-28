@@ -15,7 +15,9 @@ import styles from "./header.module.css";
 export function Header() {
   return (
     <header className={styles.header}>
-      <Image src={icon} alt="" width={32} height={32} priority />
+      <span className={styles.mark}>
+        <Image src={icon} alt="" width={32} height={32} priority />
+      </span>
       <CompanyName className={`heading ${styles.wordmark}`} />
       <CommandMenu />
       <Account signInHref={signInPath(process.env)} />

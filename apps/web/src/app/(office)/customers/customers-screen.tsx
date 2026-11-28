@@ -71,8 +71,8 @@ export function CustomersScreen({ signInHref }: { signInHref: string }) {
   const ready = list.isSuccess;
   return (
     <>
-      <JobsTabs />
       <PageHeader
+        above={<JobsTabs />}
         title={t.customers}
         action={
           ready

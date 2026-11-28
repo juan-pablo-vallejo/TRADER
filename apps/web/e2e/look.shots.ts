@@ -104,11 +104,18 @@ test("every catalogue entry, as pictures", async ({ browser }) => {
   const pages = new Map<string, Page>();
   for (const lang of LANGS) {
     for (const entry of entries) {
-      const key = `${entry.as}-${lang}`;
+      // On staging the ticket signs in once: one page for every language, told each
+      // language by its cookie.
+      const key = staging ? String(entry.as) : `${entry.as}-${lang}`;
       let page = pages.get(key);
       if (page === undefined) {
         page = await opened(browser, entry.as, lang);
         pages.set(key, page);
+      } else if (staging) {
+        const origin = new URL(test.info().project.use.baseURL ?? "").origin;
+        await page
+          .context()
+          .addCookies([{ name: "trader_lang", value: lang, url: origin }]);
       }
       for (const width of WIDTHS) {
         if (entry.narrowOnly === true && width >= 768) continue;

@@ -15,7 +15,8 @@
   min-height: var(--target);
   padding: 0 var(--space-2);
   border-radius: var(--radius-card);
-  color: var(--ink);
+  /* The header's own colour: white on its navy. */
+  color: inherit;
   text-decoration: none;
   cursor: pointer;
   list-style: none;
@@ -29,8 +30,8 @@ summary.name::after {
   flex: none;
   width: 7px;
   height: 7px;
-  border-right: 2px solid var(--ink-secondary);
-  border-bottom: 2px solid var(--ink-secondary);
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
   transform: translateY(-2px) rotate(45deg);
   transition: transform var(--move) var(--ease);
 }
@@ -39,7 +40,7 @@ summary.name::after {
 }
 .name:hover,
 .account[open] .name {
-  background: var(--canvas);
+  background: color-mix(in srgb, currentColor 14%, transparent);
 }
 .nameText {
   min-width: 0;

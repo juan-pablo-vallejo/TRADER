@@ -4,6 +4,10 @@
 .shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
+  /* The page under the band is their navy's palest tint, as the phone's is. */
+  --canvas: var(--brand-navy-tint);
+  background: var(--canvas);
+  min-height: calc(100dvh - var(--header));
 }
 /* The skip link: out of sight until it has the focus, then above the header's left edge. */
 .skip {
