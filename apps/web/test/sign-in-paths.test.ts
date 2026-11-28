@@ -122,18 +122,34 @@ describe("the sign-in form", () => {
   });
 
   it("offers Google in Google's own style, with nothing of Google's fetched", () => {
-    // A sheet of its own: these colors are Google's, and the page's sheet names tokens.
+    // A sheet of its own: these colors are Google's, and the page's sheet does not
+    // reach for them.
     const sheet = read("(auth)/sign-in/google-button.module.css");
     expect(read("(auth)/auth.module.css")).not.toContain(".google");
+    expect(read("(auth)/auth.module.css")).not.toContain("--google-");
     const rule = sheet.slice(sheet.indexOf(".google {"), sheet.indexOf(".google img"));
-    // Google's light button (Google's branding page, read 2026-11-23).
+    // Google's light button (Google's branding page, read 2026-11-23), held in theme.css's
+    // `--google-*` tokens.
+    const theme = read("theme.css");
+    for (const token of [
+      "--google-surface: #ffffff;",
+      "--google-edge: #747775;",
+      "--google-ink: #1f1f1f;",
+      "--google-text: 14px;",
+      "--google-text-line: 20px;",
+      "--google-end: 12px;",
+      "--google-gap: 10px;",
+      "--google-mark: 20px;",
+    ]) {
+      expect([token, theme.includes(token)]).toEqual([token, true]);
+    }
     for (const part of [
-      "background: #ffffff;",
-      "box-shadow: inset 0 0 0 1px #747775;",
-      "color: #1f1f1f;",
-      "gap: 10px;",
-      "padding: 0 12px;",
-      '500 14px/20px "Google Sans"',
+      "background: var(--google-surface);",
+      "box-shadow: inset 0 0 0 var(--hairline) var(--google-edge);",
+      "color: var(--google-ink);",
+      "gap: var(--google-gap);",
+      "padding: 0 var(--google-end);",
+      '500 var(--google-text) / var(--google-text-line) "Google Sans"',
       // As tall as the page's own button: no less prominent.
       "min-height: var(--home-control);",
     ]) {

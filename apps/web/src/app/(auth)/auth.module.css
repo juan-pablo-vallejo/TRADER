@@ -1,6 +1,6 @@
 /* Sign-in, the homepage's next page ((auth)/sign-in-frame.tsx) and its form
    (sign-in/sign-in-form.tsx). D'Sierra's navy beside the form on white: at a phone's width
-   the navy is a header over the form; from 900 px it is a panel with one of their photos
+   the navy is a header over the form; from 768 px it is a panel with one of their photos
    and the homepage's headline. Their red is the form's one main button, on white, and it
    never sits on navy: 2.63:1. Every color, and every size it shares with the homepage, is
    a token of theme.css's `[data-brand]` block; a test holds this sheet to that
@@ -23,12 +23,12 @@
    page's. */
 .page :where(a) {
   color: var(--navy-700);
-  text-underline-offset: 3px;
+  text-underline-offset: var(--underline-offset);
 }
 /* Keyboard focus: navy on white, and white where the ground is navy. */
 .page :focus-visible {
-  outline: 2px solid var(--navy-700);
-  outline-offset: 2px;
+  outline: var(--rule) solid var(--navy-700);
+  outline-offset: var(--rule);
 }
 .panel :focus-visible {
   outline-color: var(--surface);
@@ -50,19 +50,19 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  min-height: 48px;
+  min-height: var(--home-target);
   margin-right: auto;
   color: var(--surface);
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--home-brand);
   font-weight: 700;
   line-height: 1;
   text-decoration: none;
 }
 /* The mark on its white tile: the file is drawn on white, so the tile is the picture. */
 .mark {
-  width: 36px;
-  height: 36px;
+  width: var(--home-mark);
+  height: var(--home-mark);
   border-radius: var(--radius-card);
 }
 .picture,
@@ -73,7 +73,7 @@
 }
 /* The other language: a button that reads as a link, in the color of where it stands. */
 .language {
-  min-height: 48px;
+  min-height: var(--home-target);
   padding: 0 var(--space-2);
   border: 0;
   background: none;
@@ -95,7 +95,7 @@
 .form {
   box-sizing: border-box;
   width: 100%;
-  max-width: calc(400px + 2 * var(--home-gutter));
+  max-width: calc(var(--home-form) + 2 * var(--home-gutter));
   margin: 0 auto;
   padding: var(--space-6) var(--home-gutter) var(--home-gap);
 }
@@ -109,10 +109,10 @@
 .heading {
   color: var(--navy-700);
   font-family: var(--font-display);
-  font-size: 40px;
+  font-size: var(--home-heading);
   font-weight: 700;
-  line-height: 44px;
-  letter-spacing: -0.01em;
+  line-height: var(--home-heading-line);
+  letter-spacing: var(--home-tracking);
 }
 .helper {
   margin-top: var(--space-1);
@@ -131,21 +131,21 @@
   min-height: var(--home-control);
   margin-top: var(--space-1);
   padding: 0 var(--space-3);
-  border: 1px solid var(--control-border);
+  border: var(--hairline) solid var(--control-border);
   border-radius: var(--radius-card);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 18px;
+  font-size: var(--home-field-text);
 }
 .field[aria-invalid="true"] {
   border-color: var(--problem-ink);
 }
 /* The code: six digits, set apart so each can be checked against the message. */
 .code {
-  font-size: 24px;
+  font-size: var(--home-code);
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.3em;
+  letter-spacing: var(--home-code-tracking);
   text-align: center;
 }
 .problem {
@@ -161,7 +161,7 @@
   gap: var(--space-3);
   margin: var(--space-4) 0;
   color: var(--ink-secondary);
-  font-size: 14px;
+  font-size: var(--home-fine);
 }
 .or::before,
 .or::after {
@@ -179,7 +179,7 @@
   background: var(--red-600);
   color: var(--surface);
   font: inherit;
-  font-size: 18px;
+  font-size: var(--home-field-text);
   font-weight: 600;
   cursor: pointer;
 }
@@ -197,7 +197,7 @@
 /* What else can be done on a step: a button that reads as a link, 48 px tall. */
 .textButton {
   align-self: flex-start;
-  min-height: 48px;
+  min-height: var(--home-target);
   margin-top: var(--space-2);
   padding: 0;
   border: 0;
@@ -207,7 +207,7 @@
   font-weight: 600;
   text-align: left;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: var(--underline-offset);
   cursor: pointer;
 }
 .send + .textButton {
@@ -232,17 +232,17 @@
   font-size: var(--home-small);
   line-height: var(--home-small-line);
 }
-/* The way back, under the form at a phone's width; the panel carries it from 900 px. */
+/* The way back, under the form at a phone's width; the panel carries it from 768 px. */
 .back {
   display: inline-flex;
   align-items: center;
-  min-height: 48px;
+  min-height: var(--home-target);
   font-weight: 600;
 }
 
-@media (min-width: 900px) {
+@media (min-width: 768px) {
   .page {
-    grid-template-columns: minmax(480px, 5fr) 7fr;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
     grid-template-rows: minmax(0, 1fr);
   }
   /* The navy: a panel the height of the screen. Their name at its head, the photo and
@@ -253,7 +253,7 @@
     gap: var(--home-gutter);
     height: auto;
     min-height: 100vh;
-    padding: var(--home-gutter) 56px 40px;
+    padding: var(--home-gutter) var(--home-panel-side) var(--home-panel-foot);
   }
   .brand {
     margin-right: 0;
@@ -263,7 +263,7 @@
   .picture {
     display: block;
     width: 100%;
-    max-width: min(440px, 48vh);
+    max-width: var(--home-picture);
     aspect-ratio: 1;
     margin-top: auto;
     border-radius: var(--home-radius);
@@ -278,18 +278,18 @@
   }
   .line {
     display: block;
-    max-width: 440px;
+    max-width: var(--home-line);
     margin-bottom: auto;
     font-family: var(--font-display);
-    font-size: 36px;
+    font-size: var(--home-line-text);
     font-weight: 700;
-    line-height: 40px;
-    letter-spacing: -0.01em;
+    line-height: var(--home-line-height);
+    letter-spacing: var(--home-tracking);
   }
   .home {
     display: inline-flex;
     align-items: center;
-    min-height: 48px;
+    min-height: var(--home-target);
     color: var(--surface);
     font-weight: 600;
   }
@@ -300,11 +300,11 @@
   .wide {
     display: flex;
     justify-content: flex-end;
-    padding: var(--space-6) 56px 0;
+    padding: var(--space-6) var(--home-panel-side) 0;
     color: var(--navy-700);
   }
   .form {
     margin: auto;
-    padding: var(--space-6) var(--home-gutter) 80px;
+    padding: var(--space-6) var(--home-gutter) var(--home-form-foot);
   }
 }

@@ -1,0 +1,41 @@
+/* The last fallback's page: the office's canvas, ink and type, its one button the office's
+   main one. Its document has none of the layout's, so global-error.tsx imports theme.css
+   itself; the Inter the layout loads is not here, and `--font` falls back to the system's. */
+.body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
+  padding: var(--space-4);
+  box-sizing: border-box;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--text);
+  line-height: var(--text-line);
+}
+.main {
+  width: 100%;
+  max-width: var(--status-column);
+}
+.main h1 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-title);
+  line-height: var(--text-title-line);
+}
+.main p {
+  margin: 0 0 var(--space-1);
+  color: var(--ink-secondary);
+}
+.main p + button {
+  margin-top: var(--space-6);
+}
+.reference {
+  margin-top: var(--space-6);
+  font-size: var(--text-small);
+}
+.reference code {
+  font: inherit;
+  user-select: all;
+}

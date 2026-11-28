@@ -12,7 +12,7 @@ import styles from "./auth.module.css";
 
 // The page sign-in is drawn in, the homepage's next page: D'Sierra's navy beside the form on white. At a
 // phone's width the navy is a header (their mark and name, the other language) over the
-// form; from 900 px it is a panel with one of their photos and the homepage's headline.
+// form; from 768 px it is a panel with one of their photos and the homepage's headline.
 // No menu: there is nothing to go to before a person is someone. The way back to the
 // homepage, the other language and Trouble signing in? are here, around the form, so they
 // are on every one of its steps.
@@ -39,7 +39,7 @@ export async function SignInFrame({ children }: { children: ReactNode }) {
     width: 36,
     height: 36,
   }).props;
-  // Drawn only from 900 px, where the panel is: lazy, so a phone never asks for it.
+  // Drawn only from 768 px, where the panel is: lazy, so a phone never asks for it.
   const { style: _photoStyle, ...photoImg } = getImageProps({
     src: SIGN_IN_PHOTO.image,
     alt: SIGN_IN_PHOTO.alt[language],

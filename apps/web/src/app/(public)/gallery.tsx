@@ -51,7 +51,7 @@ export function Gallery({ photos }: { photos: GalleryPhoto[] }) {
                 src={photo.image}
                 alt=""
                 placeholder="blur"
-                sizes="(min-width: 1100px) 290px, (min-width: 768px) 33vw, 50vw"
+                sizes="(min-width: 1200px) 400px, (min-width: 768px) 33vw, 50vw"
               />
             </a>
           </li>

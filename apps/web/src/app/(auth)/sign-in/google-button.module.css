@@ -1,33 +1,30 @@
-/* Google's button, as its light one is drawn (Google's branding page, read 2026-11-23): white,
-   a 1px #747775 edge inside, #1F1F1F words in Google Sans Medium 14/20, 12px before the
-   mark, 10px after it, 12px after the words, the mark at its own 20px and in its own
-   colors. A sheet of its own because these three colors are Google's and not the page's:
-   auth.module.css names tokens only (theme.test.ts). As tall and as wide as the page's own
-   button below it: no less prominent. */
+/* Google's button, as its light one is drawn: its colors and measures are theme.css's
+   `--google-*` tokens, Google's and not the page's, so they stay in a sheet of their own.
+   As tall and as wide as the page's own button below it: no less prominent. */
 .google {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--google-gap);
   min-height: var(--home-control);
   /* Clear of the heading above, as the field is of its label. */
   margin-top: var(--space-6);
-  padding: 0 12px;
+  padding: 0 var(--google-end);
   border: 0;
   border-radius: var(--radius-card);
-  background: #ffffff;
-  box-shadow: inset 0 0 0 1px #747775;
-  color: #1f1f1f;
+  background: var(--google-surface);
+  box-shadow: inset 0 0 0 var(--hairline) var(--google-edge);
+  color: var(--google-ink);
   font:
-    500 14px/20px "Google Sans",
+    500 var(--google-text) / var(--google-text-line) "Google Sans",
     var(--font-home);
   cursor: pointer;
 }
 .google img {
   display: block;
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: var(--google-mark);
+  height: var(--google-mark);
 }
 .google:disabled {
   cursor: default;

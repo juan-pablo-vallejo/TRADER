@@ -212,6 +212,43 @@
   --home-control: 52px;
   --home-radius: 4px;
   --home-chip: 64px;
+  /* Fixed measures of their pages: a target, the mark and their name beside it, the
+     form's width and its type, the code's digits, the small print, a headline's tracking,
+     a lede's and a caption's measure, a tag's corner, the call button's height, and the
+     sign-in panel's padding, photo and line. */
+  --home-target: 48px;
+  --home-call: 40px;
+  --home-mark: 36px;
+  --home-brand: 20px;
+  --home-form: 400px;
+  --home-field-text: 18px;
+  --home-heading: 40px;
+  --home-heading-line: 44px;
+  --home-code: 24px;
+  --home-code-tracking: 0.3em;
+  --home-fine: 14px;
+  --home-tracking: -0.01em;
+  --home-lede: 36em;
+  --home-prose: 40em;
+  --home-radius-small: 2px;
+  --home-panel-side: clamp(32px, 4.4vw, 56px);
+  --home-panel-foot: 40px;
+  --home-form-foot: 80px;
+  --home-picture: min(440px, 48vh);
+  --home-line: 440px;
+  --home-line-text: clamp(28px, 2.8vw, 36px);
+  --home-line-height: 1.11;
+  /* Google's button, as its light one is drawn (Google's branding page, read 2026-11-23):
+     their white, edge and words, Google Sans Medium 14/20, 12 px at either end, 10 px
+     between the mark and the words, the mark at its own 20 px. Google's, not the page's. */
+  --google-surface: #ffffff;
+  --google-edge: #747775;
+  --google-ink: #1f1f1f;
+  --google-text: 14px;
+  --google-text-line: 20px;
+  --google-end: 12px;
+  --google-gap: 10px;
+  --google-mark: 20px;
 }
 @media (min-width: 768px) {
   [data-brand] {
@@ -221,11 +258,7 @@
     --home-figure: 30px;
     --home-figure-line: 34px;
     --home-chip: 88px;
-  }
-}
-/* Wide enough for the photo and the headline to stand side by side. */
-@media (min-width: 900px) {
-  [data-brand] {
+    /* Wide enough for the photo and the headline to stand side by side. */
     --home-text: 18px;
     --home-text-line: 28px;
     --home-h1: clamp(40px, 4.2vw, 60px);

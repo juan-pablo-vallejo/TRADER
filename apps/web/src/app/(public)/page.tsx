@@ -133,7 +133,7 @@ export default async function Home() {
             <Shot
               photo={HOME.hero}
               language={language}
-              sizes="(min-width: 900px) 54vw, 100vw"
+              sizes="(min-width: 768px) 54vw, 100vw"
               first
             />
           </div>

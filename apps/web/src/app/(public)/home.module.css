@@ -1,8 +1,8 @@
 /* D'Sierra Painting's homepage ((public)/page.tsx). White and near-white surfaces, their
    navy for the header, the headings, the footer and the facts, and their red for what a
    customer can press and for nothing else. Every color, size and space is a token of
-   theme.css's `[data-brand]` block. Three widths: a phone; 768 px, where the Call bar
-   goes and photos sit side by side; 900 px, where the headline stands beside the photo. */
+   theme.css's `[data-brand]` block. Two widths: a phone; and from 768 px, where the Call
+   bar goes, photos sit side by side and the headline stands beside the photo. */
 
 /* Its two fonts are declared in app/brand-fonts.css, which page.tsx imports beside this. */
 .page {
@@ -24,7 +24,7 @@
 /* A link here is navy and underlined; pointed at, it is their red. */
 .page :where(a) {
   color: var(--navy-700);
-  text-underline-offset: 3px;
+  text-underline-offset: var(--underline-offset);
 }
 .page :where(a:hover) {
   color: var(--red-600);
@@ -32,8 +32,8 @@
 /* Keyboard focus: their red on white, and white where the ground is navy (further down:
    the red on navy is 2.63:1 and would not be seen). */
 .page :focus-visible {
-  outline: 2px solid var(--red-600);
-  outline-offset: 2px;
+  outline: var(--rule) solid var(--red-600);
+  outline-offset: var(--rule);
 }
 
 /* A photo fills the box its section gives it; the box holds the place, in a pale navy,
@@ -71,7 +71,7 @@
    stays as WhatsApp made it, and the button around it is ours. */
 .call {
   background: var(--surface);
-  box-shadow: inset 0 0 0 2px var(--navy-700);
+  box-shadow: inset 0 0 0 var(--rule) var(--navy-700);
 }
 .call:hover {
   background: var(--navy-50);
@@ -82,7 +82,7 @@
 .email {
   background: var(--surface);
   color: var(--navy-700);
-  box-shadow: inset 0 0 0 2px var(--navy-700);
+  box-shadow: inset 0 0 0 var(--rule) var(--navy-700);
 }
 .email:hover {
   background: var(--navy-50);
@@ -116,14 +116,14 @@
 }
 /* Their mark on its white tile: the file is drawn on white, so the tile is the picture. */
 .mark {
-  width: 36px;
-  height: 36px;
+  width: var(--home-mark);
+  height: var(--home-mark);
   border-radius: var(--radius-card);
 }
 .brandName {
   display: none;
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--home-brand);
   font-weight: 700;
   line-height: 1;
 }
@@ -147,7 +147,7 @@
 }
 /* The other language: a button that reads as a link. */
 .headLink {
-  min-height: 48px;
+  min-height: var(--home-target);
   padding: 0 var(--space-2);
   border: 0;
   background: none;
@@ -160,10 +160,10 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  min-height: 40px;
+  min-height: var(--home-call);
   padding: 0 var(--space-3);
   border-radius: var(--radius-card);
-  box-shadow: inset 0 0 0 2px var(--surface);
+  box-shadow: inset 0 0 0 var(--rule) var(--surface);
   font-size: var(--home-small);
   font-weight: 600;
   white-space: nowrap;
@@ -172,7 +172,7 @@
 .signIn::after {
   content: "";
   position: absolute;
-  inset: -4px 0;
+  inset: calc(-1 * var(--space-1)) 0;
 }
 .signIn:hover {
   background: var(--surface);
@@ -198,7 +198,7 @@
   font-size: var(--home-h1);
   font-weight: 700;
   line-height: var(--home-h1-line);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--home-tracking);
   text-wrap: balance;
 }
 /* A word of the headline is never broken, not even at its own hyphen. */
@@ -206,7 +206,7 @@
   white-space: nowrap;
 }
 .lede {
-  max-width: 36em;
+  max-width: var(--home-lede);
   margin-top: var(--space-4);
 }
 .place {
@@ -235,7 +235,7 @@
   flex-direction: column;
   padding: 0 var(--space-3) var(--space-3);
   border: var(--hairline) solid var(--border);
-  border-radius: 2px;
+  border-radius: var(--home-radius-small);
 }
 /* The color itself, rolled on from the left once as the page arrives: the one thing here
    that moves unasked, and not at all under reduced motion (theme.css). */
@@ -294,7 +294,7 @@
   font-size: var(--home-h2);
   font-weight: 700;
   line-height: var(--home-h2-line);
-  letter-spacing: -0.01em;
+  letter-spacing: var(--home-tracking);
 }
 
 /* Before and after. One strip a photo wide, moved by a swipe or a sideways scroll and
@@ -334,7 +334,7 @@
   top: var(--space-3);
   left: var(--space-3);
   padding: var(--space-1) var(--space-3);
-  border-radius: 2px;
+  border-radius: var(--home-radius-small);
   font-size: var(--home-small);
   font-weight: 600;
   line-height: var(--home-small-line);
@@ -360,7 +360,7 @@
 .swipe {
   display: inline-flex;
   align-items: center;
-  min-height: 48px;
+  min-height: var(--home-target);
 }
 
 /* The gallery: squares, cut to each photo's middle, so every row keeps one line. */
@@ -388,7 +388,7 @@
 }
 .tile:hover::after,
 .tile:focus-visible::after {
-  box-shadow: inset 0 0 0 4px var(--red-600);
+  box-shadow: inset 0 0 0 calc(2 * var(--rule)) var(--red-600);
 }
 
 /* The viewer: one photo, whole, on their darkest navy. */
@@ -444,18 +444,18 @@
   border-radius: var(--home-radius);
 }
 .viewerFigure figcaption {
-  max-width: 40em;
+  max-width: var(--home-prose);
   font-size: var(--home-small);
   line-height: var(--home-small-line);
   text-align: center;
 }
 .viewerButton {
-  min-height: 48px;
+  min-height: var(--home-target);
   padding: 0 var(--space-4);
   border: 0;
   border-radius: var(--radius-card);
   background: none;
-  box-shadow: inset 0 0 0 2px var(--surface);
+  box-shadow: inset 0 0 0 var(--rule) var(--surface);
   color: var(--surface);
   font: inherit;
   font-size: var(--home-small);
@@ -524,7 +524,7 @@
 }
 .footerName {
   font-family: var(--font-display);
-  font-size: 20px;
+  font-size: var(--home-brand);
   font-weight: 700;
 }
 .footerLinks {
@@ -538,7 +538,7 @@
 .footerSwitch {
   display: inline-flex;
   align-items: center;
-  min-height: 48px;
+  min-height: var(--home-target);
   color: var(--surface);
 }
 .footerLinks a:hover {
@@ -578,18 +578,12 @@
   padding: 0 var(--space-4);
 }
 
-@media (min-width: 480px) {
-  .brandName {
-    display: block;
-  }
-}
-
 @media (min-width: 768px) {
   .headCall {
     display: inline-flex;
   }
-  .heroPhoto {
-    aspect-ratio: 16 / 9;
+  .brandName {
+    display: block;
   }
   .actions {
     display: flex;
@@ -639,9 +633,6 @@
   .callBar {
     display: none;
   }
-}
-
-@media (min-width: 900px) {
   /* The words on the left at the page's own edge, the photo to the right edge of the
      screen. */
   .hero {
@@ -659,11 +650,5 @@
         var(--home-gutter),
         calc((100vw - var(--home-measure)) / 2 + var(--home-gutter))
       );
-  }
-}
-
-@media (min-width: 1100px) {
-  .gallery {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

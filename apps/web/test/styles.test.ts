@@ -75,12 +75,7 @@ function offences(file: string, source: string): Record<Rule, string[]> {
 const RULES: Rule[] = ["colour", "length", "inline", "media"];
 
 // Today's offenders, file by file. Only shrinks.
-const UNMOVED: Record<string, Rule[]> = {
-  "app/(auth)/auth.module.css": ["length", "media"],
-  "app/(auth)/sign-in/google-button.module.css": ["colour", "length"],
-  "app/(public)/home.module.css": ["length", "media"],
-  "app/global-error.tsx": ["colour", "inline"],
-};
+const UNMOVED: Record<string, Rule[]> = {};
 
 describe("the office's styles", () => {
   it("name no colour, length, inline style or second breakpoint outside the theme", () => {
