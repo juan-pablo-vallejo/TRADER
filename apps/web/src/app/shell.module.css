@@ -9,6 +9,13 @@
   background: var(--canvas);
   min-height: calc(100dvh - var(--header));
 }
+/* Narrow, a page shorter than the screen leaves its spare height under the screen, not in
+   the menu's row. */
+@media (width < 768px) {
+  .shell {
+    align-content: start;
+  }
+}
 /* The skip link: out of sight until it has the focus, then above the header's left edge. */
 .skip {
   position: absolute;

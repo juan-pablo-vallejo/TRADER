@@ -20,6 +20,7 @@ import { useCallback, useRef, useState } from "react";
 import controls from "../../controls.module.css";
 import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
+import { EmptyState } from "../../empty-state";
 import { Note } from "../../note";
 import { PageHeader } from "../../page-header";
 import { LoadingRows } from "../../loading-rows";
@@ -361,27 +362,59 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   const header = (
     <PageHeader
       title={s.title}
+      lead={s.explain}
+      beside={
+        <div className={controls.presets}>
+          <button
+            type="button"
+            className={controls.secondary}
+            aria-label={s.previousWeek}
+            onClick={() => show(addDays(weekStart, -7))}
+          >
+            {s.previous}
+          </button>
+          <button
+            type="button"
+            className={controls.secondary}
+            disabled={weekStart === mondayOf(today())}
+            onClick={() => show(mondayOf(today()))}
+          >
+            {s.thisWeek}
+          </button>
+          <button
+            type="button"
+            className={controls.secondary}
+            aria-label={s.nextWeek}
+            onClick={() => show(addDays(weekStart, 7))}
+          >
+            {s.next}
+          </button>
+        </div>
+      }
       actions={
-        ready ? (
-          <>
-            <button
-              type="button"
-              className={controls.secondary}
-              disabled={stale}
-              onClick={() => setPanel({ kind: "copy" })}
-            >
-              {s.copyLastWeek}
-            </button>
-            <button
-              type="button"
-              className={controls.primary}
-              disabled={stale}
-              onClick={() => setPanel({ kind: "add" })}
-            >
-              {s.addShift}
-            </button>
-          </>
-        ) : undefined
+        <>
+          {/* An empty week's own empty state carries these two: one main button a view. */}
+          {ready && week.data.shifts.length > 0 && (
+            <>
+              <button
+                type="button"
+                className={controls.secondary}
+                disabled={stale}
+                onClick={() => setPanel({ kind: "copy" })}
+              >
+                {s.copyLastWeek}
+              </button>
+              <button
+                type="button"
+                className={controls.primary}
+                disabled={stale}
+                onClick={() => setPanel({ kind: "add" })}
+              >
+                {s.addShift}
+              </button>
+            </>
+          )}
+        </>
       }
     />
   );
@@ -429,35 +462,8 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
   return (
     <>
       {header}
-      <p className={`secondary ${styles.explain}`}>{s.explain}</p>
       <RefreshFailed reads={[listed, jobs, week]} />
       <div className={styles.bar}>
-        <div className={styles.weekSteps}>
-          <button
-            type="button"
-            className={controls.secondary}
-            aria-label={s.previousWeek}
-            onClick={() => show(addDays(weekStart, -7))}
-          >
-            {s.previous}
-          </button>
-          <button
-            type="button"
-            className={controls.secondary}
-            disabled={weekStart === mondayOf(today())}
-            onClick={() => show(mondayOf(today()))}
-          >
-            {s.thisWeek}
-          </button>
-          <button
-            type="button"
-            className={controls.secondary}
-            aria-label={s.nextWeek}
-            onClick={() => show(addDays(weekStart, 7))}
-          >
-            {s.next}
-          </button>
-        </div>
         <p className={`body-strong ${styles.range}`} aria-live="polite">
           {s.weekOf(f.day(drawn), f.day(addDays(drawn, 6)))}
         </p>
@@ -500,7 +506,7 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
             <button
               key={day}
               type="button"
-              className={styles.dayTab}
+              className={`${styles.dayTab} ${controls.pressed}`}
               aria-pressed={day === selected}
               onClick={() => setFilters({ day })}
             >
@@ -511,9 +517,34 @@ export function ScheduleScreen({ signInHref }: { signInHref: string }) {
       </div>
       <Note text={note} tone="saved" />
       <Note text={problem} tone="error" />
-      {rows.length === 0 ? (
-        <p className={`body ${controls.empty}`}>{s.noShifts}</p>
-      ) : (
+      {/* A week with no shift says so, with the two ways to fill it; its grid stays below
+          for a shift on one day. */}
+      {week.data.shifts.length === 0 && (
+        <EmptyState
+          text={s.noShifts}
+          action={
+            <div className={controls.actions}>
+              <button
+                type="button"
+                className={controls.primary}
+                disabled={stale}
+                onClick={() => setPanel({ kind: "add" })}
+              >
+                {s.addShift}
+              </button>
+              <button
+                type="button"
+                className={controls.secondary}
+                disabled={stale}
+                onClick={() => setPanel({ kind: "copy" })}
+              >
+                {s.copyLastWeek}
+              </button>
+            </div>
+          }
+        />
+      )}
+      {rows.length === 0 ? null : (
         <Grid
           week={week.data}
           rows={rows}

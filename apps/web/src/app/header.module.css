@@ -33,3 +33,10 @@
   white-space: nowrap;
   color: var(--on-action);
 }
+/* Below 768 the header keeps the mark, the search and the person: the company's name
+   would be cut to a few letters there. */
+@media (width < 768px) {
+  .wordmark {
+    display: none;
+  }
+}

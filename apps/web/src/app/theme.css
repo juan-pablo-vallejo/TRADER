@@ -84,6 +84,8 @@
   --text-fact-line: 30px;
   --text-band: 30px;
   --text-band-line: 36px;
+  /* The longest line a sentence runs to before it wraps. */
+  --measure: 72ch;
   /* Stacking, lowest first: a sticky heading, a menu, the toast. A modal dialog is above
      them all, in the browser's top layer. */
   --z-sticky: 1;

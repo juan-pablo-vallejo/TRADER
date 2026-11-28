@@ -2,19 +2,10 @@
    days, the shift card, and the drawer its forms open in. The grid reads the content column's
    width (shell.module.css sets the container), not the viewport's: under 720 it shows one
    day, chosen from the day buttons. */
-.explain {
-  margin: 0 0 var(--space-4);
-  color: var(--ink-secondary);
-}
 .bar {
   display: grid;
   gap: var(--space-3);
   margin-bottom: var(--space-3);
-}
-.weekSteps {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
 }
 .range {
   margin: 0;
@@ -131,12 +122,6 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-2);
   }
-  /* The three steps share one row. */
-  .weekSteps {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-2);
-  }
   .dayTab {
     min-height: var(--target);
     font: inherit;
@@ -147,11 +132,6 @@
     cursor: pointer;
     padding: 0 var(--space-1);
     font-size: 15px;
-  }
-  .dayTab[aria-pressed="true"] {
-    color: var(--on-action);
-    background: var(--action);
-    border-color: var(--action);
   }
   .grid [data-day]:not([data-selected]) {
     display: none;

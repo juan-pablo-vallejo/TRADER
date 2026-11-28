@@ -60,7 +60,22 @@ const firstLink = async (page: Page, prefix: string) => {
   await main(page).getByRole("heading", { level: 1 }).waitFor();
 };
 
-const shiftCard = (page: Page) => main(page).getByRole("button", { name: /\d:\d{2}/ });
+// A shift's card, where one is drawn. Below 720 of column Schedule shows one day, and the
+// day it opens on may have none (a weekend): its day tabs are tried in turn until one does.
+const shiftCard = (page: Page) =>
+  main(page)
+    .getByRole("button", { name: /\d:\d{2}/ })
+    .filter({ visible: true });
+async function busyDay(page: Page): Promise<void> {
+  const tabs = main(page).locator("button[aria-pressed]");
+  for (
+    let i = 0;
+    i < (await tabs.count()) && (await shiftCard(page).count()) === 0;
+    i++
+  ) {
+    if (await tabs.nth(i).isVisible()) await tabs.nth(i).click();
+  }
+}
 
 // The demo holds no invoice, so the first entry that needs one issues it: a draft for the
 // first job, one line, issued. Later entries on the same page reopen it.
@@ -183,6 +198,7 @@ export const SCREENS: readonly Entry[] = [
     path: "/schedule",
     as: "admin",
     open: async (page) => {
+      await busyDay(page);
       await shiftCard(page).first().click();
       await page.getByRole("dialog").waitFor();
     },
@@ -204,6 +220,7 @@ export const SCREENS: readonly Entry[] = [
     as: "admin",
     writes: true,
     open: async (page, t) => {
+      await busyDay(page);
       const cards = shiftCard(page);
       const count = await cards.count();
       for (let i = 0; i < count; i++) {

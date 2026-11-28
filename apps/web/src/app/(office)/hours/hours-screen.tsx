@@ -21,7 +21,7 @@
 // is in the address too.
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import controls from "../../controls.module.css";
 import { DataTable, type Column } from "../../data-table";
@@ -29,8 +29,10 @@ import { blocking, Failure, RefreshFailed } from "../../failure";
 import { Field } from "../../field";
 import { hours } from "../../format";
 import { useStrings } from "../../i18n";
+import { LoadingRows } from "../../loading-rows";
 import { Note } from "../../note";
 import { PageHeader } from "../../page-header";
+import { SidePanel } from "../../side-panel";
 import { FlagBadges, StatusBadge } from "../../status-badge";
 import { useTRPC } from "../../trpc";
 import { useAsked, useUrlFilters } from "../../use-url-filters";
@@ -153,6 +155,39 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
     <>
       <PageHeader
         title={t.hoursTitle}
+        lead={t.reconExplain}
+        beside={
+          <div className={controls.presets} role="group" aria-label={t.hoursTitle}>
+            <button
+              type="button"
+              className={controls.secondary}
+              aria-pressed={preset === "this"}
+              onClick={() => choose("this")}
+            >
+              {t.week.thisWeek}
+            </button>
+            <button
+              type="button"
+              className={controls.secondary}
+              aria-pressed={preset === "last"}
+              onClick={() => choose("last")}
+            >
+              {t.week.lastWeek}
+            </button>
+          </div>
+        }
+        actions={
+          <div className={controls.presets}>
+            <label className={controls.check}>
+              <input
+                type="checkbox"
+                checked={flagged}
+                onChange={(e) => setFilters({ flagged: e.target.checked ? "1" : "" })}
+              />
+              <span>{t.week.flaggedOnly}</span>
+            </label>
+          </div>
+        }
         fact={
           range === null || total.data === undefined
             ? undefined
@@ -162,33 +197,6 @@ export function HoursScreen({ signInHref }: { signInHref: string }) {
               }
         }
       />
-      <p className={`secondary ${styles.explain}`}>{t.reconExplain}</p>
-      <div className={styles.presets} role="group" aria-label={t.hoursTitle}>
-        <button
-          type="button"
-          className={controls.secondary}
-          aria-pressed={preset === "this"}
-          onClick={() => choose("this")}
-        >
-          {t.week.thisWeek}
-        </button>
-        <button
-          type="button"
-          className={controls.secondary}
-          aria-pressed={preset === "last"}
-          onClick={() => choose("last")}
-        >
-          {t.week.lastWeek}
-        </button>
-        <label className={controls.check}>
-          <input
-            type="checkbox"
-            checked={flagged}
-            onChange={(e) => setFilters({ flagged: e.target.checked ? "1" : "" })}
-          />
-          <span>{t.week.flaggedOnly}</span>
-        </label>
-      </div>
       <form aria-label={t.week.dates} className={controls.card} onSubmit={submit}>
         <div className={styles.lookupGrid}>
           <Field id="hours-from" label={t.planFrom}>
@@ -398,7 +406,7 @@ function Shown({
     <>
       <p className={`secondary ${styles.line}`}>
         {said}
-        {answer !== undefined && ` · ${t.workDatesIn(answer.timezone)}`}
+        {answer !== undefined && ` · ${t.workDatesIn(answer.timezone)}`} {t.reconRules}
       </p>
       {person !== null && (
         <p className={`body ${styles.only}`}>
@@ -494,8 +502,6 @@ function ExportDialog({
   const { t } = useStrings();
   const trpc = useTRPC();
   const queryClient = useQueryClient();
-  const ref = useRef<HTMLDialogElement>(null);
-  const titleId = useId();
   type File = Awaited<ReturnType<typeof ask>>;
   const ask = () =>
     queryClient.fetchQuery(
@@ -505,12 +511,6 @@ function ExportDialog({
   const [failed, setFailed] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   useEffect(() => {
-    const dialog = ref.current;
-    // No cleanup: closing here would report a dismissal nobody made when React mounts an
-    // effect twice in development. Unmounting removes the dialog.
-    if (dialog !== null && !dialog.open) dialog.showModal();
-  }, []);
-  useEffect(() => {
     let current = true;
     ask().then(
       (answer) => current && setFile(answer),
@@ -519,7 +519,7 @@ function ExportDialog({
     return () => {
       current = false;
     };
-    // The range is fixed for the life of the dialog.
+    // The range is fixed for the life of the panel.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const download = () => {
@@ -532,25 +532,17 @@ function ExportDialog({
     URL.revokeObjectURL(url);
     setNote(t.week.downloaded(file.filename));
   };
+  // The side panel every other form opens in (side-panel.tsx), with its own Close.
   return (
-    <dialog
-      ref={ref}
-      className={styles.dialog}
-      aria-labelledby={titleId}
-      onClose={onClose}
-    >
-      <h2 id={titleId} className="heading">
-        {t.week.exportTitle}
-      </h2>
+    <SidePanel title={t.week.exportTitle} onClose={onClose} opensAt="top">
       <p className="body-strong">{said}</p>
       {failed ? (
         <p className={`secondary ${controls.error}`} role="alert">
           {t.requestFailed}
         </p>
       ) : file === null ? (
-        <p className="body" role="status">
-          {t.loading}
-        </p>
+        // While it counts: the three lines' shape, never the word "Loading".
+        <LoadingRows rows={3} />
       ) : (
         <ul className={styles.holds}>
           <li className="body-strong">{t.week.exportTotal(hours(file.hundredths))}</li>
@@ -569,10 +561,7 @@ function ExportDialog({
         >
           {t.week.download}
         </button>
-        <button type="button" className={controls.secondary} onClick={onClose}>
-          {t.close}
-        </button>
       </div>
-    </dialog>
+    </SidePanel>
   );
 }

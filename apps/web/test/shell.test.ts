@@ -84,9 +84,9 @@ describe("the three layouts", () => {
     expect(read("fonts/Inter-LICENSE.txt")).toContain("SIL Open Font License");
     expect(read("layout.tsx")).toContain("next/font/local");
     // D'Sierra's two, Bodoni Moda and Inter's Latin cut: files of the app's own at fixed
-    // addresses, their licenses kept, declared in one sheet that only the homepage and
-    // sign-in import, and each of those asks for its headline's itself. Not next/font,
-    // whose preloads this build puts on every route.
+    // addresses, their licenses kept, declared in one sheet that the homepage, sign-in and
+    // the office (its band's title) import; the first two ask for their headline's font
+    // themselves. Not next/font, whose preloads this build puts on every route.
     const web = (path: string) => fileURLToPath(new URL(`../${path}`, import.meta.url));
     for (const file of ["BodoniModa-latin-5.3.0.woff2", "Inter-latin-5.3.0.woff2"]) {
       expect(existsSync(web(`public/fonts/${file}`)), file).toBe(true);
@@ -110,12 +110,8 @@ describe("the three layouts", () => {
       expect(read(file), file).toContain("preload(HEADING_FONT,");
       expect(read(file), file).not.toMatch(/from "next\/font/);
     }
-    for (const file of [
-      "layout.tsx",
-      "(office)/layout.tsx",
-      "(public)/layout.tsx",
-      "(auth)/layout.tsx",
-    ]) {
+    expect(read("(office)/layout.tsx")).toContain('import "../brand-fonts.css";');
+    for (const file of ["layout.tsx", "(public)/layout.tsx", "(auth)/layout.tsx"]) {
       expect(read(file), file).not.toContain("brand-fonts.css");
     }
     expect(read("fonts/BodoniModa-LICENSE.txt")).toContain("SIL Open Font License");

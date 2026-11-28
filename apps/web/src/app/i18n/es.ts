@@ -116,8 +116,7 @@ export const es: Catalog = {
   jobs: "Obras",
   schedule: {
     title: "Horario semanal",
-    explain:
-      "Solo los turnos planeados. Las horas trabajadas y sus correcciones están en Horas.",
+    explain: "Solo turnos planeados; las horas trabajadas y sus correcciones, en Horas.",
     previousWeek: "Semana anterior",
     nextWeek: "Semana siguiente",
     previous: "Anterior",
@@ -859,8 +858,9 @@ export const es: Catalog = {
     clock_skewed: "reloj erróneo",
     unscheduled: "fuera del horario",
   },
-  reconExplain:
-    "Las horas de cada persona por día y obra, en los días que elijas. Todos los registros cuentan; un aviso dice por qué quizá quieras revisarlo. El tiempo de un día en una obra se suma primero y después se redondea a la centésima de hora.",
+  reconExplain: "Las horas de cada persona por día y obra, en los días que elijas.",
+  reconRules:
+    "Todos los registros cuentan; un aviso dice por qué quizá quieras revisarlo. El tiempo de un día en una obra se suma primero y después se redondea a la centésima de hora.",
   workDatesIn: (zone) => `Fechas de trabajo en ${zone}.`,
   noHoursYet: "Todavía no ha terminado ninguna hora en estos días.",
   reconTotal: (hours) => `${hours} h en estos días`,

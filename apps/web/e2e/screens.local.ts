@@ -40,7 +40,11 @@ test("every screen and state: axe, no sideways scroll, a visible focus in order"
       let page = pages.get(key);
       if (page === undefined) {
         const origin = new URL(test.info().project.use.baseURL ?? "").origin;
-        page = await signedIn(browser, origin, entry.as, lang);
+        // Under reduced motion: a colour measured half way through its transition (a button
+        // turning from Add to Close) is no colour the page shows at rest.
+        page = await signedIn(browser, origin, entry.as, lang, {
+          reducedMotion: "reduce",
+        });
         pages.set(key, page);
       }
       for (const width of [390, 768, 1280]) {

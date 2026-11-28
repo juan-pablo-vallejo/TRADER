@@ -189,6 +189,24 @@ after it is seen working: one already built says so in the commits since `origin
 - Done when: these screens are clean in the whole sweep, `UNMOVED` is empty, and visual-qa
   reports no Critical or High.
 
+**Office look, run 1: what its review left** (interface-change)
+
+- Today: a company with no people and no jobs gets an empty state with the way on; the
+  band's count and the section under it say "on the clock" once.
+- First load: the band holds its fact's height and Schedule its head's, so nothing drops
+  when the data arrives. A failed load keeps the person in the header, never "Sign in",
+  and its note carries the problem icon and sits under the band on Hours too.
+- Schedule: one add control in every cell, today's column marked by a word; View drawn as
+  the pressed pair; View and Show on one line; the two actions together on one row; Add
+  shift's day lines at each density's height, its button whole at 390; Copy last week
+  says why there is nothing to copy; the edited shift marked as chosen in its card.
+- Hours: Flagged only centred on its row; the zone named as a person says it; Export says
+  when there is nothing to download; the day panel's flags on one edge, and the day
+  columns wide enough for a Spanish flag on one line.
+- The shell: the command menu has a Close and a shorter hint below 768; Menu turns its
+  arrow as the account does; the 404 under the band, on the page's left edge, in Inter.
+- Done when: these are seen fixed at 390, 768 and 1280 in both languages.
+
 **The iPhone asks for location before anyone signs in**
 
 - On the iPhone 17 simulator (iOS 26.2), a fresh launch shows the location prompt over the
@@ -197,6 +215,14 @@ after it is seen working: one already built says so in the commits since `origin
   passes the same flow.
 - Done when: `stamps-off` is green on the iPhone, and a fresh launch asks nothing until a
   pull says the person's taps are stamped.
+
+**The office suite's invoice test fails at the weekend**
+
+- `office.local.ts`, "a job's second Create invoice…", looks for a job whose next step is
+  its invoice. A job counts as scheduled only with a shift today or later, and the demo
+  plans shifts Monday to Friday, so on a Saturday or Sunday no open job offers Create
+  invoice and the test finds none.
+- Done when: the test passes on any day of the week.
 
 ### The owner's
 

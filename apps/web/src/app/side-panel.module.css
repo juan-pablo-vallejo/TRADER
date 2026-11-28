@@ -20,17 +20,25 @@
 .panel::backdrop {
   background: var(--scrim);
 }
+/* The panel's title and Close stay in view while its body scrolls under them: a long
+   panel (a person, a day) never scrolls Close out of reach. */
 .head {
+  position: sticky;
+  top: calc(-1 * var(--space-4));
+  z-index: var(--z-sticky);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface);
+  border-bottom: var(--hairline) solid var(--border);
 }
 .head h2 {
   margin: 0;
 }
-@media (max-width: 767px) {
+@media (width < 768px) {
   .panel,
   .wide {
     width: 100vw;

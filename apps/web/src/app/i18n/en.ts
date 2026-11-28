@@ -898,8 +898,10 @@ export const en = {
     clock_skewed: "phone clock off",
     unscheduled: "not on the schedule",
   },
-  reconExplain:
-    "Each person's hours by day and job, for the days you choose. Every entry counts; a flag says why you may want to look at it. A day's time on a job is added up first, then rounded to the hundredth of an hour.",
+  reconExplain: "Each person's hours by day and job, for the days you choose.",
+  // Beside the hours themselves, where they are read (hours-screen.tsx).
+  reconRules:
+    "Every entry counts; a flag says why you may want to look at it. A day's time on a job is added up first, then rounded to the hundredth of an hour.",
   workDatesIn: (zone: string) => `Work dates in ${zone}.`,
   noHoursYet: "No hours have ended on these days yet.",
   reconTotal: (hours: string) => `${hours} h on these days`,

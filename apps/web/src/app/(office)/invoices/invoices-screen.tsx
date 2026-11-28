@@ -255,7 +255,7 @@ export function InvoicesScreen({ signInHref }: { signInHref: string }) {
           <p className={`secondary ${styles.explain}`}>{s.explain}</p>
           {adding && <NewDraft jobs={jobs.data} />}
           <Figures />
-          <div className={styles.presets} role="group" aria-label={t.show}>
+          <div className={controls.presets} role="group" aria-label={t.show}>
             {PRESETS.map((p) => (
               <button
                 key={p}

@@ -19,12 +19,19 @@ export const CREATE_FORM_ID = "create-form";
 export function PageHeader({
   title,
   above,
+  lead,
+  beside,
   fact,
   action,
   actions,
 }: {
   title: string;
   above?: ReactNode;
+  // The sentence that says what the screen holds, on the band under its title.
+  lead?: string;
+  // Beside the title from 768 up, under it below: the range or week the screen shows
+  // (Hours' weeks, Schedule's steps). Secondary buttons only: red never sits on navy.
+  beside?: ReactNode;
   fact?: { label: string; value: string };
   action?: { label: string; open: boolean; onToggle: () => void };
   actions?: ReactNode;
@@ -33,8 +40,10 @@ export function PageHeader({
   return (
     <div className={controls.pageHeader}>
       <div className={controls.band}>
-        {above}
+        {above !== undefined && <div className={controls.whole}>{above}</div>}
         <h1 className={controls.bandTitle}>{title}</h1>
+        {beside !== undefined && <div className={controls.beside}>{beside}</div>}
+        {lead !== undefined && <p className={controls.lead}>{lead}</p>}
         {fact !== undefined && (
           <p className={controls.fact}>
             <span className={controls.factLabel}>{fact.label}</span>

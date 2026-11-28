@@ -185,7 +185,7 @@ export function JobsScreen({ signInHref }: { signInHref: string }) {
             />
           )}
           <Note text={note} tone="saved" />
-          <div className={styles.presets} role="group" aria-label={t.show}>
+          <div className={controls.presets} role="group" aria-label={t.show}>
             {[...STATUSES, "all" as const].map((s) => (
               <button
                 key={s}
