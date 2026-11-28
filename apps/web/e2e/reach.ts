@@ -61,8 +61,11 @@ export async function reach(page: Page, entry: Entry, lang: Lang): Promise<void>
       .catch(() => undefined);
   }
   await page.evaluate(() => document.fonts.ready.then(() => undefined));
-  // `next dev`'s own badge is no part of the page.
-  await page.addStyleTag({ content: "nextjs-portal{display:none!important}" });
+  // `next dev`'s own badge is no part of the page. Removed, not hidden by a style tag: a
+  // public page's policy admits no inline style, and on staging it refused the tag.
+  await page.evaluate(() => {
+    for (const badge of document.querySelectorAll("nextjs-portal")) badge.remove();
+  });
 }
 
 // The network let go, and what the entry changed put back.
