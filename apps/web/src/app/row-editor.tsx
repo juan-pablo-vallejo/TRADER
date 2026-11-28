@@ -41,6 +41,7 @@ export function DestructiveAction({
   effect,
   disabled,
   quiet = false,
+  plain = false,
   acknowledge,
   onConfirm,
 }: {
@@ -48,6 +49,10 @@ export function DestructiveAction({
   effect: string;
   disabled: boolean;
   quiet?: boolean;
+  // An act that destroys nothing and can be turned back (a setting, a role, a status):
+  // asked first all the same, but drawn as an ordinary button, apart from Void and
+  // Deactivate.
+  plain?: boolean;
   acknowledge?: string;
   onConfirm: () => void;
 }) {
@@ -73,7 +78,9 @@ export function DestructiveAction({
       <button
         ref={trigger}
         type="button"
-        className={quiet ? controls.quiet : controls.destructive}
+        className={
+          plain ? controls.secondary : quiet ? controls.quiet : controls.destructive
+        }
         disabled={disabled}
         onClick={() => setAsking(true)}
       >
@@ -99,7 +106,7 @@ export function DestructiveAction({
       <div className={controls.actions}>
         <button
           type="button"
-          className={controls.destructive}
+          className={plain ? controls.secondary : controls.destructive}
           disabled={disabled || (acknowledge !== undefined && !ticked)}
           aria-describedby={effectId}
           onClick={() => {

@@ -25,7 +25,7 @@ import { PageHeader } from "../../../page-header";
 import { DestructiveAction } from "../../../row-editor";
 import { useStrings } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import table from "../../../table.module.css";
+import { DataTable } from "../../../data-table";
 import { SidePanel } from "../../../side-panel";
 import { StatusBadge } from "../../../status-badge";
 import { useTRPC } from "../../../trpc";
@@ -924,9 +924,10 @@ function Sends({ invoice }: { invoice: Invoice }) {
             />
           </Field>
           <div className={controls.actions}>
+            {/* Secondary: an issued invoice's one main button is Record a payment. */}
             <WriteButton
               type="submit"
-              className={controls.primary}
+              className={controls.secondary}
               pending={send.isPending}
             >
               {s.send}
@@ -967,41 +968,35 @@ function Issued({ invoice }: { invoice: Invoice }) {
     <>
       <section className={styles.section} aria-label={s.lines}>
         <h2 className="heading">{s.lines}</h2>
-        <table className={table.table}>
-          <caption className="visually-hidden">{s.lines}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{s.description}</th>
-              <th scope="col" className={table.number}>
-                {s.quantity}
-              </th>
-              <th scope="col" className={table.number}>
-                {s.price}
-              </th>
-              <th scope="col" className={table.number}>
-                {s.amount}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.lines.map((l) => (
-              <tr key={l.id}>
-                {/* `data-label`: what names each figure when the row stacks at 390. */}
-                <td data-label={s.description}>{l.description}</td>
-                <td className={table.number} data-label={s.quantity}>
-                  {l.quantity.replace(/\.?0+$/, "")}
-                  {l.unit === null ? "" : ` ${l.unit}`}
-                </td>
-                <td className={table.number} data-label={s.price}>
-                  {f.money(l.unitPriceCents, invoice.currency)}
-                </td>
-                <td className={table.number} data-label={s.amount}>
-                  {f.money(l.amountCents, invoice.currency)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {/* The office's one table: a stacked row names each figure at 390. */}
+        <DataTable
+          caption={s.lines}
+          rows={invoice.lines}
+          rowKey={(l) => l.id}
+          empty={s.lines}
+          columns={[
+            { key: "description", header: s.description, cell: (l) => l.description },
+            {
+              key: "quantity",
+              header: s.quantity,
+              number: true,
+              cell: (l) =>
+                `${l.quantity.replace(/\.?0+$/, "")}${l.unit === null ? "" : ` ${l.unit}`}`,
+            },
+            {
+              key: "price",
+              header: s.price,
+              number: true,
+              cell: (l) => f.money(l.unitPriceCents, invoice.currency),
+            },
+            {
+              key: "amount",
+              header: s.amount,
+              number: true,
+              cell: (l) => f.money(l.amountCents, invoice.currency),
+            },
+          ]}
+        />
         <Totals
           subtotal={invoice.subtotalCents}
           tax={invoice.taxCents}

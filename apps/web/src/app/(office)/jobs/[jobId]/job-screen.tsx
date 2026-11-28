@@ -24,6 +24,7 @@ import { hours, signInPhone } from "../../../format";
 import { useStrings } from "../../../i18n";
 import { LoadingRows } from "../../../loading-rows";
 import { Note } from "../../../note";
+import { PageHeader } from "../../../page-header";
 import { StatusBadge, type Tone } from "../../../status-badge";
 import { useTRPC } from "../../../trpc";
 import { uuidv7 } from "../../../uuidv7";
@@ -189,13 +190,15 @@ export function JobScreen({ jobId, signInHref }: { jobId: string; signInHref: st
   return (
     <>
       <title>{`${job.name} · ${t.nav.jobs} · TRADER`}</title>
-      {back}
+      <PageHeader
+        above={back}
+        title={job.name}
+        lead={job.customer.name}
+        beside={
+          <StatusBadge tone={JOB_TONES[job.status]} label={t.jobStatus[job.status]} />
+        }
+      />
       <RefreshFailed reads={[read]} />
-      <div className={styles.head}>
-        <h1 className="title">{job.name}</h1>
-        <StatusBadge tone={JOB_TONES[job.status]} label={t.jobStatus[job.status]} />
-      </div>
-      <p className={`secondary ${styles.line}`}>{job.customer.name}</p>
 
       <section aria-labelledby="job-steps" className={styles.part}>
         <h2 id="job-steps" className="visually-hidden">

@@ -71,3 +71,8 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* A place to find the panel's Deactivate by, with no box of its own in the footer. */
+.access {
+  display: contents;
+}

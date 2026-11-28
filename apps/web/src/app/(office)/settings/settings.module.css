@@ -1,7 +1,7 @@
 /* The profile form: one card, its fields stacked, 480 px at most on
    the wide layout so the inputs stay a hand's width. */
 .card {
-  max-width: 480px;
+  max-width: var(--form-width);
 }
 /* Settings' parts, one under the other, each under its heading. */
 .part {

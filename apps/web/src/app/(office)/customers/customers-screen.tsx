@@ -249,7 +249,7 @@ function CustomersTable({
       header: t.phone,
       empty: (row) => row.phone === null,
       // A phone number is read whole: never broken at its hyphen in a narrow column.
-      cell: (row) => <span style={{ whiteSpace: "nowrap" }}>{row.phone ?? ""}</span>,
+      cell: (row) => <span className={styles.phone}>{row.phone ?? ""}</span>,
     },
     {
       key: "email",

@@ -40,7 +40,7 @@
   font-variant-numeric: tabular-nums;
 }
 .totals {
-  max-width: 24rem;
+  max-width: var(--totals);
   margin: var(--space-4) 0;
   font-variant-numeric: tabular-nums;
 }
@@ -58,7 +58,7 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-width: 44rem;
+  max-width: var(--form-width);
 }
 .offers li {
   display: flex;
@@ -79,7 +79,7 @@
   color: var(--ink-secondary);
 }
 .payForm {
-  max-width: 44rem;
+  max-width: var(--form-width);
   margin-top: var(--space-4);
 }
 .payFields {

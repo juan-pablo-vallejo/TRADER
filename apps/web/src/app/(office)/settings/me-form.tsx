@@ -126,9 +126,10 @@ export function MeForm({ signInHref }: { signInHref: string }) {
           {me.data.role === "admin" && (
             <>
               <Note text={note} />
+              {/* Secondary: Settings' one main button is the company's Save. */}
               <WriteButton
                 type="submit"
-                className={controls.primary}
+                className={controls.secondary}
                 pending={save.isPending}
               >
                 {t.save}

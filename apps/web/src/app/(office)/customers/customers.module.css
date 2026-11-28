@@ -18,3 +18,8 @@
     grid-column: 1 / -1;
   }
 }
+
+/* A phone number never breaks at its hyphen. */
+.phone {
+  white-space: nowrap;
+}

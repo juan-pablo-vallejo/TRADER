@@ -429,7 +429,10 @@ function Numbers({ row }: { row: Row }) {
           )}
         </ul>
       )}
-      {row.email !== null && <p className="secondary">{row.email}</p>}
+      {/* Said once: an active worker's email is in its field under Addresses. */}
+      {row.email !== null && (row.role === "admin" || row.deactivatedAt !== null) && (
+        <p className="secondary">{row.email}</p>
+      )}
     </EditorSection>
   );
 }
@@ -719,6 +722,7 @@ function Address({ row, kind }: { row: Row; kind: AddressKind }) {
         />
       </Field>
       <DestructiveAction
+        plain
         label={kind === "email" ? p.changeEmail : p.changeNumber}
         effect={
           value === null
@@ -794,6 +798,7 @@ function Role({ row }: { row: Row }) {
       {other === "admin" ? (
         <>
           <DestructiveAction
+            plain
             label={t.personPanel.makeAdmin}
             effect={t.personPanel.makeAdminEffect(row.name)}
             disabled={setRoleCall.isPending || row.deactivatedAt !== null}
@@ -809,6 +814,7 @@ function Role({ row }: { row: Row }) {
       ) : (
         // It takes the office away: asked first, as making an admin is.
         <DestructiveAction
+          plain
           label={t.personPanel.makeWorker}
           effect={t.personPanel.makeWorkerEffect(row.name)}
           disabled={setRoleCall.isPending}
@@ -905,8 +911,7 @@ function Access({ row }: { row: Row }) {
   const busy = deactivate.isPending || reactivate.isPending;
   return (
     <>
-      {/* `contents`: a place to find the button by, with no box of its own in the footer. */}
-      <div data-access style={{ display: "contents" }}>
+      <div data-access className={styles.access}>
         {row.deactivatedAt === null ? (
           <DestructiveAction
             label={t.deactivate}

@@ -125,6 +125,9 @@
   --action-column: 6rem;
   --keys-column: 7rem;
   --status-column: 32rem;
+  --label-column: 8rem;
+  --totals: 24rem;
+  --form-width: 44rem;
   --tracking: 0.04em;
   /* Stacking, lowest first: a sticky heading, a menu, the toast. A modal dialog is above
      them all, in the browser's top layer. */

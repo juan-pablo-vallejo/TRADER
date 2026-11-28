@@ -620,6 +620,7 @@ function StatusEditor({ row }: { row: Row }) {
         // Archiving takes the job off every phone: asked first, as deactivating a
         // customer is.
         <DestructiveAction
+          plain
           label={t.setStatus}
           effect={t.archiveJobEffect}
           disabled={setStatusCall.isPending}

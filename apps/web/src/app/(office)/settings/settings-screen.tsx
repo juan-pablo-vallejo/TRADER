@@ -52,7 +52,7 @@ export function SettingsScreen({ signInHref }: { signInHref: string }) {
         me.data?.role === "admin" && <CompanyParts signInHref={signInHref} />
       )}
       <MeForm signInHref={signInHref} />
-      {clerkOn && <PasskeySection className={styles.part} />}
+      {clerkOn && <PasskeySection className={`${styles.part} ${controls.card}`} />}
     </>
   );
 }
@@ -341,6 +341,7 @@ function Switch({
       </h3>
       <p className="body">{on ? is.on : is.off}</p>
       <DestructiveAction
+        plain
         label={on ? turn.off : turn.on}
         effect={on ? effect.off : effect.on}
         disabled={busy}

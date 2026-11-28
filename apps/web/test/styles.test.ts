@@ -78,11 +78,6 @@ const RULES: Rule[] = ["colour", "length", "inline", "media"];
 const UNMOVED: Record<string, Rule[]> = {
   "app/(auth)/auth.module.css": ["length", "media"],
   "app/(auth)/sign-in/google-button.module.css": ["colour", "length"],
-  "app/(office)/customers/customers-screen.tsx": ["inline"],
-  "app/(office)/invoices/invoices.module.css": ["length"],
-  "app/(office)/jobs/[jobId]/job.module.css": ["length", "media"],
-  "app/(office)/people/people-screen.tsx": ["inline"],
-  "app/(office)/settings/settings.module.css": ["length"],
   "app/(public)/home.module.css": ["length", "media"],
   "app/global-error.tsx": ["colour", "inline"],
 };
