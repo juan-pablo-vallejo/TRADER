@@ -1,0 +1,24 @@
+# Crew with no connection: its card in place of the list.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- repeat:
+    while:
+      notVisible:
+        id: "crew"
+    times: 3
+    commands:
+      - tapOn:
+          id: "tab-crew"
+      - extendedWaitUntil:
+          visible:
+            id: "crew"
+          timeout: 10000
+          optional: true
+- extendedWaitUntil:
+    visible:
+      id: "crew-offline"
+    timeout: 60000

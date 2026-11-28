@@ -1,0 +1,45 @@
+# Moving someone to another jobsite, from their sheet on Crew by person: from now, to the
+# jobsite chosen, until the shift's end.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: close-sheets.yaml
+- scrollUntilVisible:
+    element:
+      id: "crew-view-person"
+    direction: UP
+    centerElement: true
+    timeout: 60000
+    speed: 70
+- tapOn:
+    id: "crew-view-person"
+# As 16-crew-person: partly in view is enough, and the row brought to the middle.
+- scrollUntilVisible:
+    element:
+      id: "crew-person-0"
+    visibilityPercentage: 10
+    timeout: 60000
+    speed: 70
+    centerElement: true
+- tapOn:
+    id: "crew-person-0"
+- extendedWaitUntil:
+    visible:
+      id: "person-sheet"
+    timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "person-move"
+    centerElement: true
+    timeout: 60000
+    speed: 70
+- tapOn:
+    id: "person-move"
+- extendedWaitUntil:
+    visible:
+      id: "move-sheet"
+    timeout: 10000

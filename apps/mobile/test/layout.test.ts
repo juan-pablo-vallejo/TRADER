@@ -6,7 +6,7 @@ vi.mock("react-native", () => ({
   useWindowDimensions: () => ({ width: 390, fontScale: 1 }),
 }));
 
-import { textClass, widthClass } from "../src/layout";
+import { brokenWord, textClass, widthClass } from "../src/layout";
 
 describe("the layout classes", () => {
   it("reads the window's width", () => {
@@ -25,5 +25,16 @@ describe("the layout classes", () => {
     // Android's largest, and iOS's accessibility sizes.
     expect(textClass(2)).toBe("huge");
     expect(textClass(3.1)).toBe("huge");
+  });
+
+  it("finds a word split across two lines", () => {
+    expect(brokenWord(["One line"])).toBe(false);
+    expect(brokenWord(["Clock ", "in"])).toBe(false);
+    expect(brokenWord(["Gate code 4411.", "Park"])).toBe(false);
+    expect(brokenWord(["well-", "known"])).toBe(false);
+    expect(brokenWord(["Line one\n", "Line two"])).toBe(false);
+    expect(brokenWord(["Contraseñ", "a"])).toBe(true);
+    expect(brokenWord(["Sincroniz", "ación"])).toBe(true);
+    expect(brokenWord(["first ", "Wor", "d"])).toBe(true);
   });
 });

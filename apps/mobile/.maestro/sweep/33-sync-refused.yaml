@@ -1,0 +1,47 @@
+# The sync sheet with a refused entry: the API is back, Send now, and the server refuses the
+# start, as the office removed the shift under it (matrix.sh).
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# The phone sends as it comes back to the front, and the sheet can close or redraw under a
+# tap as the answer comes: the chip and Send now asked again until the refusal shows.
+- repeat:
+    while:
+      notVisible:
+        id: "entry-refused-0"
+    times: 3
+    commands:
+      - runFlow:
+          when:
+            notVisible:
+              id: "sync-sheet"
+          commands:
+            - tapOn:
+                id: "sync-pending|sync-synced|sync-attention"
+                point: "15%,50%"
+            - extendedWaitUntil:
+                visible:
+                  id: "sync-sheet"
+                timeout: 10000
+                optional: true
+      - runFlow:
+          when:
+            visible:
+              id: "sync-now"
+          commands:
+            - tapOn:
+                id: "sync-now"
+      - extendedWaitUntil:
+          visible:
+            id: "entry-refused-0"
+          timeout: 20000
+          optional: true
+- scrollUntilVisible:
+    element:
+      id: "entry-refused-0"
+    direction: UP
+    centerElement: true
+    timeout: 30000

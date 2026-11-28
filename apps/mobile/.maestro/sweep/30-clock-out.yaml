@@ -1,0 +1,19 @@
+# Clocking out asks once, naming the job and the time worked.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: close-sheets.yaml
+- scrollUntilVisible:
+    element:
+      id: "clock-out"
+    centerElement: true
+- tapOn:
+    id: "clock-out"
+- extendedWaitUntil:
+    visible:
+      id: "clock-out-sheet"
+    timeout: 10000

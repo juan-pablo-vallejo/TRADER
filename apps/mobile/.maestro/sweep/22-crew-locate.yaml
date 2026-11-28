@@ -1,0 +1,39 @@
+# Setting a jobsite's location, from its sheet: the question, which names the jobsite. Not
+# answered: the sweep only looks.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# The sheet closes if the app went to the background between steps: opened again.
+- runFlow:
+    when:
+      notVisible:
+        id: "crew-job-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "crew-job-0"
+          visibilityPercentage: 10
+          timeout: 60000
+          speed: 70
+          centerElement: true
+      - tapOn:
+          id: "crew-job-0"
+      - extendedWaitUntil:
+          visible:
+            id: "crew-job-sheet"
+          timeout: 10000
+- scrollUntilVisible:
+    element:
+      id: "job-set-location"
+    centerElement: true
+    timeout: 60000
+    speed: 70
+- tapOn:
+    id: "job-set-location"
+- extendedWaitUntil:
+    visible:
+      id: "locate-sheet"
+    timeout: 10000

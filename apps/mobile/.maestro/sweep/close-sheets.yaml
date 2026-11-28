@@ -1,5 +1,6 @@
 # Any sheet a step before left open is closed, so each step starts on its screen: a job's,
-# the sync chip's, a person's, adding a shift. Its close button can be below the screen at
+# the sync chip's, switching job, clocking out, a person's, adding a shift, moving someone,
+# a jobsite's on Crew, setting its location. Its close button can be below the screen at
 # the largest text.
 appId: app.jpteq.trader
 ---
@@ -58,4 +59,74 @@ appId: app.jpteq.trader
           optional: true
       - tapOn:
           id: "form-cancel"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "switch-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "switch-cancel"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "switch-cancel"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "clock-out-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "clock-out-cancel"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "clock-out-cancel"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "move-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "form-cancel"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "form-cancel"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "crew-job-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "crew-job-close"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "crew-job-close"
+          optional: true
+- runFlow:
+    when:
+      visible:
+        id: "locate-sheet"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "locate-cancel"
+          timeout: 60000
+          speed: 70
+          optional: true
+      - tapOn:
+          id: "locate-cancel"
           optional: true

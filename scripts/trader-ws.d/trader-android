@@ -6,13 +6,36 @@
 # build their own demo databases in the local Postgres.
 #   trader-android <checkout>
 #   trader-android <checkout> sweep <profile>...
+# The sweep's run folder is $TRADER_SWEEP_TREE (trader-ws sweep names it by the tree it
+# sent), else the time; with SWEEP_WEB=1, Chromium's web cells (apps/web/e2e/sweep.config.ts)
+# run first, into the same folder.
+# The sweep runs its profiles side by side, $SWEEP_LANES (4) at a time. Each lane has its
+# own emulator (trader-emulator@.service gives each profile its port), its own API on
+# 3001, 3002…, from its own copy of apps/web (`next dev` locks the folder it runs in), and
+# its own demo database; all share one Metro. The app asks the device's localhost:3000,
+# which run.sh reverses to its lane's port.
 set -euo pipefail
 dir=${1:?usage: trader-android <checkout> [sweep <profile>...]}
 what=${2:-suite}
 profiles=("${@:3}")
-emu=emulator-5554
+lanes=${SWEEP_LANES:-4}
 cd "$dir"
 export MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true SENTRY_DISABLE_AUTO_UPLOAD=true
+
+# A profile's console port, as its service starts it, and so its serial.
+port() {
+  case $1 in
+    trader) echo 5554 ;;
+    trader-small) echo 5556 ;;
+    trader-medium) echo 5558 ;;
+    trader-oldest) echo 5560 ;;
+    trader-compact) echo 5562 ;;
+    *)
+      echo "no profile $1" >&2
+      return 64
+      ;;
+  esac
+}
 
 # The native project is disposable: make it again when what it is made from changed, and
 # build the development app from it. JavaScript reaches the app through Metro and needs
@@ -31,37 +54,106 @@ finish() {
   [[ -z $metro ]] || kill "$metro" 2>/dev/null || true
   # Metro leaves children holding its port.
   lsof -ti tcp:8081 -sTCP:LISTEN | xargs -r kill 2>/dev/null || true
+  # A lane's API leaves a child holding its port too.
+  for n in $(seq 1 "${#profiles[@]}"); do
+    lsof -ti "tcp:$((3000 + n))" -sTCP:LISTEN | xargs -r kill 2>/dev/null || true
+  done
   systemctl --user stop "trader-emulator@*" 2>/dev/null || true
   adb kill-server 2>/dev/null || true
+  rm -rf "$dir/.lanes"
 }
 trap finish EXIT
 
 # One profile's emulator, booted, with the development app on it.
 boot() {
-  echo "== emulator $1"
-  systemctl --user stop "trader-emulator@*" 2>/dev/null || true
+  local emu
+  emu=emulator-$(port "$1")
+  echo "== emulator $1 ($emu)"
   systemctl --user start "trader-emulator@$1"
   timeout 300 adb -s "$emu" wait-for-device
   timeout 300 bash -c "until [[ \$(adb -s $emu shell getprop sys.boot_completed 2>/dev/null | tr -d '\r') == 1 ]]; do sleep 2; done"
-  adb -s "$emu" install -r "$apk" >/dev/null
+  # Ten minutes at most: Android 7's emulator once hung here for an hour beside three
+  # others, and a lane that hangs holds the whole sweep.
+  timeout 600 adb -s "$emu" install -r "$apk" >/dev/null || {
+    echo "the app did not install on $emu in ten minutes" >&2
+    return 1
+  }
 }
 
-echo "== metro, on loopback"
-(cd apps/mobile && EXPO_PUBLIC_DEV_IDENTITY=enabled exec pnpm exec expo start --dev-client --localhost) \
-  >"$dir/.last-metro.log" 2>&1 &
-metro=$!
-timeout 180 bash -c 'until curl -fs -o /dev/null http://127.0.0.1:8081/status; do sleep 2; done'
+# Metro, on loopback, with the environment its bundle is built from.
+metro() {
+  echo "== metro, on loopback"
+  (cd apps/mobile && env EXPO_PUBLIC_DEV_IDENTITY=enabled "$@" pnpm exec expo start --dev-client --localhost) \
+    >"$dir/.last-metro.log" 2>&1 &
+  metro=$!
+  timeout 180 bash -c 'until curl -fs -o /dev/null http://127.0.0.1:8081/status; do sleep 2; done'
+}
 
 if [[ $what == suite ]]; then
+  # A ten-second sync cycle (src/sync/clock.ts): suite.sh's stale-window flow waits two of
+  # them, not two minutes. Metro and the suite are told the same.
+  export EXPO_PUBLIC_CYCLE_MS=10000
+  metro EXPO_PUBLIC_CYCLE_MS=$EXPO_PUBLIC_CYCLE_MS
+  systemctl --user stop "trader-emulator@*" 2>/dev/null || true
   boot trader
   echo "== the flows"
-  apps/mobile/.maestro/suite.sh android "$emu"
-else
-  rc=0
-  for profile in "${profiles[@]}"; do
-    boot "$profile"
-    echo "== the sweep on $profile"
-    TRADER_SWEEP_OUT=$HOME/trader-sweep apps/mobile/.maestro/matrix.sh android "$emu" || rc=1
-  done
-  exit $rc
+  apps/mobile/.maestro/suite.sh android "emulator-$(port trader)"
+  exit
 fi
+
+# The sweep. Every lane's cells land in one run's folder, named once here.
+for p in "${profiles[@]}"; do port "$p" >/dev/null; done
+export TRADER_SWEEP_OUT=$HOME/trader-sweep TRADER_SWEEP_TREE=${TRADER_SWEEP_TREE:-run-$(date +%Y%m%d-%H%M)}
+if [[ ${SWEEP_WEB:-} == 1 ]]; then
+  echo "== Chromium's web cells"
+  pnpm demo --db trader_demo_websweep --reset >/dev/null
+  (cd apps/web &&
+    SWEEP_OUT=$TRADER_SWEEP_OUT/$TRADER_SWEEP_TREE SWEEP_BROWSERS=chromium \
+      pnpm exec playwright test -c e2e/sweep.config.ts &&
+    SWEEP_OUT=$TRADER_SWEEP_OUT/$TRADER_SWEEP_TREE SWEEP_BROWSERS=chromium SWEEP_PASS=frame \
+      pnpm exec playwright test -c e2e/sweep.config.ts) || rc_web=1
+fi
+metro EXPO_PUBLIC_API_URL=http://localhost:3000
+systemctl --user stop "trader-emulator@*" 2>/dev/null || true
+# One adb server for every lane, up before any of them asks: lanes that each start their
+# own race for its port, and the losers fail.
+adb start-server
+mkdir -p .lanes
+lane() {
+  local n=$1 profile=$2 emu
+  emu=emulator-$(port "$profile")
+  boot "$profile"
+  # A copy of apps/web at the same depth, so its workspace links resolve as the original's.
+  rsync -a --exclude .next apps/web/ ".lanes/web$n/"
+  # `trader` also at the text size between the two (cells.json).
+  local text="default largest"
+  [[ $profile != trader ]] || text="default mid largest"
+  TRADER_API_PORT=$((3000 + n)) TRADER_DEVICE_API_PORT=3000 TRADER_API_DIR="$dir/.lanes/web$n" \
+    TRADER_SWEEP_DB=trader_demo_sweep$n MATRIX_TEXT=$text apps/mobile/.maestro/matrix.sh android "$emu"
+}
+# The lanes' own pids: Metro is a background job too, and is never waited for.
+logs=$TRADER_SWEEP_OUT/$TRADER_SWEEP_TREE
+mkdir -p "$logs"
+rc=0
+n=0
+running=()
+reap() {
+  wait -n "${running[@]}" || rc=1
+  local still=()
+  for pid in "${running[@]}"; do ! kill -0 "$pid" 2>/dev/null || still+=("$pid"); done
+  running=("${still[@]}")
+}
+for profile in "${profiles[@]}"; do
+  n=$((n + 1))
+  while ((${#running[@]} >= lanes)); do reap; done
+  echo "== lane $n: the sweep on $profile"
+  lane "$n" "$profile" >"$logs/lane$n.log" 2>&1 &
+  running+=($!)
+done
+while ((${#running[@]} > 0)); do reap; done
+for log in "$logs"/lane*.log; do
+  echo "== $log"
+  tail -n 20 "$log"
+done
+[[ -z ${rc_web:-} ]] || rc=1
+exit $rc

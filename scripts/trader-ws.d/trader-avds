@@ -2,7 +2,8 @@
 # ~/bin/trader-avds on the workstation's job account: the emulator profiles the layout sweep
 # runs on, made once and left alone after. The screen sizes are the plan's matrix: a small
 # phone (720x1600 at 320 dpi, 360 points wide), the Moto g04s's shape (720x1612 at 280), and
-# the oldest Android the app supports (API 24, its floor), at a common size. `trader` is the
+# the oldest Android the app supports (API 24, its floor), at a common size, and the
+# narrowest a phone comes (640x1386 at 320 dpi, 320 points wide). `trader` is the
 # phone flows' own (1080x2400 at 420). A system image not yet under /opt is installed by
 # the admin account (sdkmanager), never here: this account cannot write /opt.
 #   trader-avds
@@ -21,3 +22,4 @@ make() { # name, image, width, height, density
 make trader-small "system-images;android-36;google_apis;x86_64" 720 1600 320
 make trader-medium "system-images;android-36;google_apis;x86_64" 720 1612 280
 make trader-oldest "system-images;android-24;google_apis;x86_64" 1080 1920 420
+make trader-compact "system-images;android-36;google_apis;x86_64" 640 1386 320

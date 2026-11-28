@@ -156,7 +156,12 @@ also uses.
   iPhone SE, 17 and 17 Pro Max simulators on the Mac; on the workstation four emulators
   (`trader-ws sweep`): 360 points wide, the Moto g04s's 720×1612 at 280 dpi, 1080×2400, and
   Android 7 (API 24, the app's floor); each at the default and the largest text, in both
-  languages. The owner's own Moto g04s and iPhone are the walk's.
+  languages, and one iPhone and one emulator at the text size between (`mid`). The four
+  emulators run side by side, a lane each with its own API and demo database; the
+  simulators one after another, as they share the Mac's port 3000. The whole matrix runs
+  once a release; a batch sweeps the steps its change can break, on the iPhone SE at the
+  largest text (`apps/mobile/.maestro/affected.sh`). The owner's own Moto g04s and iPhone
+  are the walk's.
 - The workstation holds no credential: no GitHub sign-in, no signing key, no staging key,
   no vendor sign-in, no Expo token, and no keystore but Android's debug one. Everything it
   serves listens on its own loopback, and the Mac reaches it through SSH.

@@ -1,0 +1,25 @@
+# The refusal under the sign-in field, before any code is sent: an address no company has
+# added (sign-in-refused.yaml).
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: close-sheets.yaml
+- runFlow:
+    file: ../parts/sign-out.yaml
+- scrollUntilVisible:
+    element:
+      id: "sign-in-address"
+    centerElement: true
+- tapOn:
+    id: "sign-in-address"
+- inputText: "nobody.invited@demo.invalid"
+- pressKey: Enter
+# Its id gains "-broken" where a development build finds a word split (ui/text.tsx).
+- extendedWaitUntil:
+    visible:
+      id: "sign-in-note.*"
+    timeout: 30000

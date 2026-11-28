@@ -1,0 +1,51 @@
+# The refusal under Me's email field: the person invited by number gives an email someone
+# in the company already has.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# The refused address is still in the field: tapped at its end, so the cursor is after
+# the last letter, and erased.
+- scrollUntilVisible:
+    element:
+      id: "sign-in-address"
+    centerElement: true
+- tapOn:
+    id: "sign-in-address"
+    point: "97%,50%"
+- eraseText: 60
+- runFlow:
+    file: in.yaml
+    env:
+      ADDRESS: "4015550109"
+      LANDS_ON: today
+- repeat:
+    while:
+      notVisible:
+        id: "me"
+    times: 3
+    commands:
+      - tapOn:
+          id: "tab-me"
+      - extendedWaitUntil:
+          visible:
+            id: "me"
+          timeout: 10000
+          optional: true
+- scrollUntilVisible:
+    element:
+      id: "add-email-address"
+    centerElement: true
+    timeout: 60000
+    speed: 70
+- tapOn:
+    id: "add-email-address"
+- inputText: ${LUIS}
+- pressKey: Enter
+- scrollUntilVisible:
+    element:
+      id: "add-email-refused.*"
+    centerElement: true
+    timeout: 30000

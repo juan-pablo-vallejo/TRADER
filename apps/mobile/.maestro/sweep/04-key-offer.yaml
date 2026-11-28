@@ -1,4 +1,6 @@
-# The code given: Face ID or fingerprint is offered once, where the phone has it.
+# The code given: Face ID or fingerprint is offered once, where the phone has it, in the
+# run's language. A development build's stand-in offers it on every simulator and emulator
+# (src/biometrics.ts).
 appId: app.jpteq.trader
 ---
 # Each step is its own Maestro run, whose driver puts the app in the background: back to
@@ -10,5 +12,15 @@ appId: app.jpteq.trader
 - inputText: "123456"
 - extendedWaitUntil:
     visible:
-      id: "biometric-offer|today"
+      id: "biometric-offer"
     timeout: 30000
+- runFlow:
+    when:
+      true: ${LANG == "es"}
+    commands:
+      - assertVisible: "Inicia sesión más rápido"
+- runFlow:
+    when:
+      true: ${LANG != "es"}
+    commands:
+      - assertVisible: "Sign in faster"

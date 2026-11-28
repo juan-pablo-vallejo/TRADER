@@ -189,6 +189,15 @@ after it is seen working: one already built says so in the commits since `origin
 - Done when: these screens are clean in the whole sweep, `UNMOVED` is empty, and visual-qa
   reports no Critical or High.
 
+**The iPhone asks for location before anyone signs in**
+
+- On the iPhone 17 simulator (iOS 26.2), a fresh launch shows the location prompt over the
+  sign-in screen with no session and nothing kept, so the suite's `stamps-off` fails at its
+  start. A fresh development build and the commit before this work do the same; Android
+  passes the same flow.
+- Done when: `stamps-off` is green on the iPhone, and a fresh launch asks nothing until a
+  pull says the person's taps are stamped.
+
 ### The owner's
 
 `<angle brackets>` mark a value only the owner holds.

@@ -13,8 +13,9 @@
 #   trader-ws verified                  exit 0 only if HEAD's tree has a green check
 #   trader-ws e2e                       sync, then the browser suite on the demo data
 #   trader-ws android                   sync, then the phone flows on the emulator, detached
-#   trader-ws sweep [profile...]        sync, then the layout sweep on each emulator profile
-#                                       (all four by default), detached
+#   trader-ws sweep [web | profile...]  sync, then the workstation's half of the layout sweep,
+#                                       detached: Chromium's web cells and the five emulator
+#                                       profiles in lanes, or the part named
 #   trader-ws sweep-fetch               the sweep's pictures and view trees -> this Mac
 #   trader-ws wait <name> [secs]        wait for a detached job; its log's tail; its exit code
 #   trader-ws logs <name> [lines]       a log's tail: check, e2e, sync, run, or a job's name
@@ -196,15 +197,26 @@ pnpm e2e:local" || rc=$?
     ssh "$HOST" "tmux new-session -d -s tw-android \"flock -n -o -E 75 $RHOME/$RDIR/.lock bash -l $RHOME/trader-jobs/android.sh > $RHOME/trader-jobs/android.log 2>&1; echo \\\$? > $RHOME/trader-jobs/android.exit\""
     echo "started the phone flows on tree $SYNCED; trader-ws wait android" ;;
   sweep)
-    [ $# -gt 0 ] || set -- trader trader-small trader-medium trader-oldest
+    # The workstation's half of the whole sweep, into ~/trader-sweep/<the tree sent>: with
+    # nothing named, Chromium's web cells and then the five emulator profiles in lanes;
+    # `web` the web cells alone; profiles named, those alone. This Mac's half is
+    # scripts/sweep/mac.sh, and scripts/sweep/verdict.mjs judges both once `sweep-fetch` has
+    # brought them here.
+    web=0
+    if [ $# -eq 0 ]; then
+      web=1; set -- trader trader-small trader-medium trader-oldest trader-compact
+    elif [ "$1" = web ] && [ $# -eq 1 ]; then
+      web=1; shift
+    fi
     for p in "$@"; do
-      case "$p" in trader|trader-small|trader-medium|trader-oldest) ;; *) die "no profile $p" ;; esac
+      case "$p" in trader|trader-small|trader-medium|trader-oldest|trader-compact) ;; *) die "no profile $p" ;; esac
     done
     do_sync
     ssh "$HOST" "mkdir -p ~/trader-jobs && rm -f ~/trader-jobs/sweep.exit ~/trader-jobs/sweep.tree"
-    printf '%s\n%s\n%s\n' "$remote_prelude" "$pg_gate" "exec ~/bin/trader-android ~/trader sweep $*" | ssh "$HOST" "cat > ~/trader-jobs/sweep.sh"
+    printf '%s\n%s\n%s\n' "$remote_prelude" "$pg_gate" "SWEEP_WEB=$web TRADER_SWEEP_TREE=$SYNCED exec ~/bin/trader-android ~/trader sweep $*" | ssh "$HOST" "cat > ~/trader-jobs/sweep.sh"
     ssh "$HOST" "tmux new-session -d -s tw-sweep \"flock -n -o -E 75 $RHOME/$RDIR/.lock bash -l $RHOME/trader-jobs/sweep.sh > $RHOME/trader-jobs/sweep.log 2>&1; echo \\\$? > $RHOME/trader-jobs/sweep.exit\""
-    echo "started the sweep on $*; trader-ws wait sweep" ;;
+    [ $web -eq 0 ] || set -- web "$@"
+    echo "started the sweep of tree $SYNCED: $*; trader-ws wait sweep, then trader-ws sweep-fetch" ;;
   sweep-fetch)
     reach
     mkdir -p "$HOME/Library/Caches/TRADER/sweep"

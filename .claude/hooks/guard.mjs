@@ -424,6 +424,7 @@ const GUARDED = [
   "scripts/ci-scope.sh",
   "scripts/staging.sh",
   "scripts/release-facts.sh",
+  "scripts/sweep/",
   ".claude/hooks/",
   ".claude/agents/",
   ".claude/skills/",

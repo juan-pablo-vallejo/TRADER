@@ -1,7 +1,8 @@
 # The sweep: every screen and state of the phone app, one flow each, run in order by
 # matrix.sh, which saves the screen and its view tree after each. This one starts the app
 # with nothing kept and, for a Spanish run, chooses Spanish in Me and signs out again, as
-# the language outlives a sign-out.
+# the language outlives a sign-out. Omar chooses it: his "Not now" to Face ID or
+# fingerprint is kept for him, and the offer is then still the worker's (04-key-offer).
 appId: app.jpteq.trader
 ---
 - runFlow:
@@ -13,7 +14,7 @@ appId: app.jpteq.trader
       - runFlow:
           file: in.yaml
           env:
-            ADDRESS: ${LUIS}
+            ADDRESS: ${OMAR}
             LANDS_ON: today
       - tapOn:
           id: "tab-me"

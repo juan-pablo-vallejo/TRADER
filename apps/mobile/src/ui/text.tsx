@@ -13,14 +13,17 @@ import { Text as NativeText, StyleSheet, type TextStyle } from "react-native";
 
 import { fontFor } from "../fonts";
 import { useSpeech } from "../i18n";
+import { brokenWord } from "../layout";
 import { grows, type } from "../theme";
 
 // Text grows with the phone's text size to its role's limit (theme.ts, grows): a heading to
 // twice its size, everything else to 2.3 times, unless the text says its own limit.
 //
-// In a development build a text held to a number of lines that cuts its words short says
-// so: "-truncated" on its test id, which the layout sweep's check reads
-// (.maestro/check-hierarchy.mjs). A release build does not watch.
+// In a development build a text that misdraws its words says so on its test id, which the
+// layout sweep's check reads (scripts/sweep/check.mjs): "-broken" when a word is split
+// across two lines (layout.ts, brokenWord), and "-truncated" when a text held to a number
+// of lines cuts its words short. Both can apply, "-broken-truncated": the check reads the
+// id's end, so it then names the cut. A release build does not watch.
 export function Text({
   style,
   maxFontSizeMultiplier,
@@ -30,11 +33,15 @@ export function Text({
 }: ComponentProps<typeof NativeText>) {
   const speech = useSpeech();
   const [cut, setCut] = useState(false);
+  const [broken, setBroken] = useState(false);
   const flat = fontFor(StyleSheet.flatten(style) as TextStyle | undefined);
   const heading = (flat.fontSize ?? 0) >= type.heading.fontSize;
   const words = typeof props.children === "string" ? props.children : null;
   const lines = props.numberOfLines;
-  const watch = __DEV__ && lines !== undefined && words !== null;
+  const marked =
+    cut || broken
+      ? `${testID ?? "text"}${broken ? "-broken" : ""}${cut ? "-truncated" : ""}`
+      : testID;
   return (
     <NativeText
       accessibilityLanguage={speech}
@@ -42,17 +49,20 @@ export function Text({
         maxFontSizeMultiplier ?? (heading ? grows.heading : grows.body)
       }
       {...props}
-      testID={cut ? `${testID ?? "text"}-truncated` : testID}
+      testID={marked}
       onTextLayout={
-        watch
+        __DEV__
           ? (event) => {
-              // The words on the lines shown, against all of them, spaces aside.
+              // The lines shown: a text held to a number of lines lays out all of them.
               const shown = event.nativeEvent.lines
                 .slice(0, lines)
-                .map((line) => line.text)
-                .join("");
-              const bare = (t: string) => t.replace(/\s/g, "").length;
-              setCut(bare(shown) < bare(words));
+                .map((line) => line.text);
+              setBroken(brokenWord(shown));
+              // The words on the lines shown, against all of them, spaces aside.
+              if (lines !== undefined && words !== null) {
+                const bare = (t: string) => t.replace(/\s/g, "").length;
+                setCut(bare(shown.join("")) < bare(words));
+              }
               onTextLayout?.(event);
             }
           : onTextLayout

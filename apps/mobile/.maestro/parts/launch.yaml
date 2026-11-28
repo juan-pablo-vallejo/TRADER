@@ -17,7 +17,7 @@ appId: app.jpteq.trader
           permissions:
             location: ${IOS_LOCATION}
             notifications: allow
-      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A${METRO}&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
 - runFlow:
     file: location.yaml
 # The sign-in screen or the tabs: the screen itself, since at the largest text its field is

@@ -1,0 +1,34 @@
+# The kill switch: the office's system has paused the app (matrix.sh starts the API with
+# TRADER_SYNC_MODE=paused). The chip needs attention, and its sheet says why sending is held.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: close-sheets.yaml
+# The phone asks the API's state as it comes back to the front.
+- extendedWaitUntil:
+    visible:
+      id: "sync-attention"
+    timeout: 60000
+- repeat:
+    while:
+      notVisible:
+        id: "sync-sheet"
+    times: 3
+    commands:
+      - tapOn:
+          id: "sync-attention"
+          point: "15%,50%"
+      - extendedWaitUntil:
+          visible:
+            id: "sync-sheet"
+          timeout: 10000
+          optional: true
+# Its id gains "-broken" where a development build finds a word split (ui/text.tsx).
+- extendedWaitUntil:
+    visible:
+      id: "sync-held.*"
+    timeout: 30000

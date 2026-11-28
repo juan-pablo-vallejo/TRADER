@@ -1,0 +1,26 @@
+# Tom's Today, his shift around now offered (matrix.sh): the phone has the schedule from
+# its pull, which the next step's start relies on.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+# "Keep working": the worker stays on the clock.
+- runFlow:
+    file: close-sheets.yaml
+- runFlow:
+    file: ../parts/sign-out.yaml
+- runFlow:
+    file: in.yaml
+    env:
+      ADDRESS: ${TOM}
+      LANDS_ON: today
+- extendedWaitUntil:
+    visible:
+      id: "sync-synced"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "offer-eligible.*"
+    centerElement: true

@@ -1,0 +1,21 @@
+# A jobsite's sheet, from Crew by jobsite: who is there and expected, its address, whether
+# its location is set.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- scrollUntilVisible:
+    element:
+      id: "crew-job-0"
+    visibilityPercentage: 10
+    timeout: 60000
+    speed: 70
+    centerElement: true
+- tapOn:
+    id: "crew-job-0"
+- extendedWaitUntil:
+    visible:
+      id: "crew-job-sheet"
+    timeout: 10000

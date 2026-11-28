@@ -1,0 +1,37 @@
+# Switching job, on the clock: the jobsites to go to. The worker is back from the break he
+# took in 09-today-break; matrix.sh has turned the schedule off, so every open jobsite is
+# offered.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: ../parts/sign-out.yaml
+- runFlow:
+    file: in.yaml
+    env:
+      ADDRESS: ${LUIS}
+      LANDS_ON: today
+- runFlow:
+    when:
+      notVisible:
+        id: "clock-working"
+    commands:
+      - scrollUntilVisible:
+          element:
+            id: "clock-resume"
+          centerElement: true
+      - tapOn:
+          id: "clock-resume"
+- scrollUntilVisible:
+    element:
+      id: "clock-switch"
+    centerElement: true
+- tapOn:
+    id: "clock-switch"
+- extendedWaitUntil:
+    visible:
+      id: "switch-sheet"
+    timeout: 10000

@@ -21,3 +21,14 @@ export function useLayout(): { width: WidthClass; text: TextClass } {
   const { width, fontScale } = useWindowDimensions();
   return { width: widthClass(width), text: textClass(fontScale) };
 }
+
+// A word split across two lines: a line that ends in a letter, and the next that begins
+// with one. A break at a space leaves the space on the line before, and one at a hyphen
+// leaves the hyphen, so neither is a split. The letters are English's and Spanish's.
+const LETTER = "A-Za-zÀ-ÖØ-öø-ÿ";
+const ENDS = new RegExp(`[${LETTER}]$`);
+const BEGINS = new RegExp(`^[${LETTER}]`);
+export const brokenWord = (lines: readonly string[]): boolean =>
+  lines.some(
+    (line, i) => i + 1 < lines.length && ENDS.test(line) && BEGINS.test(lines[i + 1]!),
+  );

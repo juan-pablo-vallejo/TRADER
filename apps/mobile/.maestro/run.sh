@@ -1,8 +1,9 @@
 #!/bin/sh
 # Runs one flow on a booted iOS simulator or Android emulator. Needs the development build
-# installed (`pnpm ios`, `pnpm android`), Metro on 8081 started with
-# EXPO_PUBLIC_DEV_IDENTITY=enabled, and `next dev` on 3000 serving the demo database with
-# TRADER_DEV_IDENTITY=enabled (suite.sh starts that one itself). Never in CI.
+# installed (`pnpm ios`, `pnpm android`), Metro on $TRADER_METRO_PORT (8081) started with
+# EXPO_PUBLIC_DEV_IDENTITY=enabled, and `next dev` on $TRADER_API_PORT (3000) serving the
+# demo database with TRADER_DEV_IDENTITY=enabled (suite.sh and matrix.sh start that one
+# themselves). Never in CI.
 # Start Metro plainly: with CI=1 it does not watch files and serves a stale bundle after an
 # edit. Use --clear when in doubt.
 # The iOS development build: `pnpm ios` (`ios.sh`). On a fresh Android emulator the keyboard's
@@ -30,7 +31,9 @@ email=${6:-luis.herrera@demo.invalid}
 # on it (earlier-day.yaml).
 lands=${7:-clock-off}
 here=$(dirname "$0")
-link='exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1'
+metro=${TRADER_METRO_PORT:-8081}
+api=${TRADER_API_PORT:-3000}
+link="exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A$metro&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
 
 case "$platform" in
   ios)
@@ -53,14 +56,17 @@ case "$platform" in
     esac
     # shellcheck disable=SC2086 # FLOW_ENV is a list of `-e NAME=value` words.
     exec maestro --device "$device" test -e LAUNCH=maestro -e LOCATION="$location" \
-      -e IOS_LOCATION="$ios_location" -e LANDS_ON="$lands" \
+      -e IOS_LOCATION="$ios_location" -e LANDS_ON="$lands" -e METRO="$metro" \
       -e EMAIL="$email" ${FLOW_ENV:-} "$here/$flow.yaml"
     ;;
   android)
     adb=${ANDROID_HOME:?set ANDROID_HOME}/platform-tools/adb
-    # The emulator's own loopback is not the Mac's: forward the bundler and the API.
-    "$adb" -s "$device" reverse tcp:8081 tcp:8081
-    "$adb" -s "$device" reverse tcp:3000 tcp:3000
+    # The emulator's own loopback is not the Mac's: forward the bundler and the API. A
+    # sweep's lane serves its API on a port of its own while the app, from the bundler
+    # every lane shares, asks the device's $TRADER_DEVICE_API_PORT (the host's port when
+    # unset); the reverse joins the two.
+    "$adb" -s "$device" reverse "tcp:$metro" "tcp:$metro"
+    "$adb" -s "$device" reverse "tcp:${TRADER_DEVICE_API_PORT:-$api}" "tcp:$api"
     # The emulator hands a fix only to an app that is already asking: keep them coming
     # for as long as the flow runs.
     (while :; do
@@ -89,7 +95,7 @@ case "$platform" in
     fi
     # shellcheck disable=SC2086 # FLOW_ENV is a list of `-e NAME=value` words.
     maestro --device "$device" test -e LAUNCH=adb -e LOCATION="$location" \
-      -e LANDS_ON="$lands" -e EMAIL="$email" ${FLOW_ENV:-} "$here/$flow.yaml"
+      -e LANDS_ON="$lands" -e METRO="$metro" -e EMAIL="$email" ${FLOW_ENV:-} "$here/$flow.yaml"
     ;;
   *)
     echo "usage: run.sh ios <udid> <flow> | run.sh android <serial> <flow>" >&2

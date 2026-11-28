@@ -3,33 +3,45 @@
 # is there.
 appId: app.jpteq.trader
 ---
+# Me's page runs under the tab bar, where Maestro counts Sign out as in view though a tap
+# there lands on a tab: the page is dragged to its foot first, and the whole asked again
+# until the sign-in screen shows.
 - repeat:
     while:
       notVisible:
-        id: "me"
+        id: "sign-in"
     times: 3
     commands:
+      - repeat:
+          while:
+            notVisible:
+              id: "me"
+          times: 3
+          commands:
+            - tapOn:
+                id: "tab-me"
+            - extendedWaitUntil:
+                visible:
+                  id: "me"
+                timeout: 5000
+                optional: true
+      # Not centred: Sign out sits near the page's end, where the page cannot scroll it up
+      # to the middle, and the scroll would never stop. At the largest text Me is long:
+      # more time, and faster.
+      - scrollUntilVisible:
+          element:
+            id: "sign-out"
+          timeout: 60000
+          speed: 70
+      - scroll
+      - scroll
       - tapOn:
-          id: "tab-me"
+          id: "sign-out"
+      # The sign-in screen itself: at the largest text its field is below the fold.
       - extendedWaitUntil:
           visible:
-            id: "me"
-          timeout: 5000
+            id: "sign-in"
+          timeout: 10000
           optional: true
-# Not centred: Sign out sits near the page's end, where the page cannot scroll it up to
-# the middle, and the scroll would never stop.
-- scrollUntilVisible:
-    element:
-      id: "sign-out"
-    # At the largest text Me is long: more time, and faster.
-    timeout: 60000
-    speed: 70
-# Once more: at the largest text the button can be in the window but under the tab bar.
-- scroll
-- tapOn:
-    id: "sign-out"
-# The sign-in screen itself: at the largest text its field is below the fold.
-- extendedWaitUntil:
-    visible:
-      id: "sign-in"
-    timeout: 30000
+- assertVisible:
+    id: "sign-in"

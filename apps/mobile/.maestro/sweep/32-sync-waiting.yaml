@@ -1,0 +1,40 @@
+# The sync sheet with an entry waiting: with no connection (matrix.sh has stopped the API)
+# the start is saved on the phone, and the sheet says why it waits.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- scrollUntilVisible:
+    element:
+      id: "clock-in"
+    centerElement: true
+- tapOn:
+    id: "clock-in"
+- scrollUntilVisible:
+    element:
+      id: "clock-working"
+    direction: UP
+    centerElement: true
+# Tapped near its start (08-sync-sheet says why), and once more if the first is lost.
+- tapOn:
+    id: "sync-pending"
+    point: "15%,50%"
+- extendedWaitUntil:
+    visible:
+      id: "sync-sheet"
+    timeout: 3000
+    optional: true
+- runFlow:
+    when:
+      notVisible:
+        id: "sync-sheet"
+    commands:
+      - tapOn:
+          id: "sync-pending"
+          point: "15%,50%"
+- extendedWaitUntil:
+    visible:
+      id: "entry-unsent-0"
+    timeout: 10000

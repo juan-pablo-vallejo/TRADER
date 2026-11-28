@@ -1,0 +1,31 @@
+# Back to the top of what scroll.yaml scrolled, so the next step starts where it expects:
+# the sheet from near its foot (scroll.yaml says why), else the page from below the band,
+# which does not scroll.
+appId: app.jpteq.trader
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    when:
+      visible:
+        id: ".*-sheet"
+    commands:
+      - repeat:
+          times: 10
+          commands:
+            - swipe:
+                start: 50%, 80%
+                end: 50%, 97%
+                duration: 300
+- runFlow:
+    when:
+      notVisible:
+        id: ".*-sheet"
+    commands:
+      - repeat:
+          times: 6
+          commands:
+            - swipe:
+                start: 50%, 40%
+                end: 50%, 90%
+                duration: 300

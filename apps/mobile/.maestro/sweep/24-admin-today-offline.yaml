@@ -1,0 +1,28 @@
+# The admin's Today with no connection (matrix.sh has stopped the API): what it says in
+# place of the office at a glance.
+appId: app.jpteq.trader
+---
+# Each step is its own Maestro run, whose driver puts the app in the background: back to
+# the front, as it was.
+- launchApp:
+    stopApp: false
+- runFlow:
+    file: close-sheets.yaml
+- repeat:
+    while:
+      notVisible:
+        id: "admin-today"
+    times: 3
+    commands:
+      - tapOn:
+          id: "tab-today"
+      - extendedWaitUntil:
+          visible:
+            id: "admin-today"
+          timeout: 10000
+          optional: true
+# Its id gains "-broken" where a development build finds a word split (ui/text.tsx).
+- extendedWaitUntil:
+    visible:
+      id: "admin-today-offline.*"
+    timeout: 60000

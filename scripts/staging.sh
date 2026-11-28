@@ -11,6 +11,9 @@
 #                                      all when none is named, as the suite's admin, in
 #                                      LOOK_LANGS (default "en es"), as screenshots
 #                                      at 390, 768 and 1280 wide and a contact sheet; prints where
+#   scripts/staging.sh sweep-signin <folder>
+#                                      the sweep's sign-in cells against Clerk's development
+#                                      instance (apps/web/e2e/signin.sweep.ts), into <folder>
 #   scripts/staging.sh invite <number> <name>
 #                                      one person onto staging's people as an admin, by
 #                                      the suite's admin; the number is never printed
@@ -140,6 +143,17 @@ case ${1:-} in
     LOOK_SCREENS=$* LOOK_LANGS=${LOOK_LANGS:-en es} LOOK_DIR=$out/look \
       E2E_OUTPUT_DIR=$out/look-results pnpm exec playwright test -c e2e/look.config.ts
     echo "contact sheet: $out/look/index.html"
+    ;;
+  sweep-signin)
+    shift
+    [ $# -eq 1 ] || { echo "usage: staging.sh sweep-signin <folder>" >&2; exit 64; }
+    sweep_out=$1
+    local_env
+    cd "$root"
+    pnpm demo --db trader_demo_clerk --reset >/dev/null
+    cd "$root/apps/web"
+    SWEEP_OUT=$sweep_out E2E_OUTPUT_DIR=$out/signin-results \
+      pnpm exec playwright test -c e2e/signin.sweep.config.ts
     ;;
   invite)
     shift

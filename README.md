@@ -89,10 +89,14 @@ phone flows: stop the office first, because the suite starts its own on port 300
 its own database.
 
 The layout sweep visits every phone screen and state on each device given, at the default
-and the largest text, in English then Spanish, and checks what it saw (a control with no
-name or under 48 points, text cut short or past its side). Each run ends on a line
-"<device> <text> <language>: <n> screens, <n> faults"; the pictures and view trees land in
-`~/Library/Caches/TRADER/sweep/`. It too needs the bundler and port 3000 free:
+and the largest text (`MATRIX_TEXT`, of `default`, `mid` and `largest`), in English then
+Spanish, scrolls each screen to its foot above the default, and checks what it saw with
+`scripts/sweep/check.mjs` (a control with no name or under 48 points, text cut short,
+broken inside a word or past its side). Each run ends on a line
+"<cell>: <n> screens, <n> faults", a cell being `<platform>-<device>-<text>-<language>`;
+the pictures and view trees land in `~/Library/Caches/TRADER/sweep/`. It too needs the
+bundler and the API's port free; the ports, database and folders it reads from the
+environment are in the header of `matrix.sh`:
 
 ```sh
 apps/mobile/.maestro/matrix.sh ios <iPhone SE udid> <iPhone 17 udid> <17 Pro Max udid>
@@ -124,9 +128,15 @@ Moto g04s's shape, a 1080×2400 phone, and Android 7, the app's oldest.
 - `pnpm build`: builds the office. CI's `build` and `scripts/trader-ws check` run it;
   `pnpm check` does not.
 - `pnpm e2e:local`: the office in a real browser on the demo data (`apps/web/e2e`,
-  `office.local.ts`). It rebuilds the database `trader_demo_browser` and starts its own
-  office on port 3000. Playwright's browser comes first, once, from `apps/web`:
-  `pnpm exec playwright install chromium`. Not in CI.
+  `office.local.ts`, and `screens.local.ts`: axe, sideways scroll and a Tab walk over every
+  screen and state of `screens.ts`). It rebuilds the database `trader_demo_browser` and
+  starts its own office on port 3000. Playwright's browser comes first, once, from
+  `apps/web`: `pnpm exec playwright install chromium`. Not in CI.
+- `pnpm --filter @trader/web look`: pictures of every screen and state of
+  `apps/web/e2e/screens.ts` at 390, 768 and 1280 in both languages, and a contact sheet, in
+  `~/Library/Caches/TRADER/look/`. `LOOK_SCREENS` names some entries, `LOOK_LANGS` the
+  languages, `LOOK_BEFORE` an earlier run to set beside them. It rebuilds
+  `trader_demo_look` and needs port 3000.
 - `pnpm format`, `pnpm lint:fix`: rewrite formatting, apply lint fixes.
 - `pnpm db:generate`: a new migration from a schema change.
 - `pnpm demo --reset`: rebuild the demo database. A plain `pnpm demo` refuses one that

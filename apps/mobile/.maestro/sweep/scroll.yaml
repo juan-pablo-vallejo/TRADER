@@ -1,0 +1,26 @@
+# One drag toward the screen's foot, for matrix.sh's stops above the default text: inside
+# the open sheet when one is up (its own scroll view, sheet.tsx), from near its foot, as
+# a drag that starts on the dimmed screen behind it is a tap that closes it; else the
+# page, from its middle, above where a keyboard would be.
+appId: app.jpteq.trader
+---
+- launchApp:
+    stopApp: false
+- runFlow:
+    when:
+      visible:
+        id: ".*-sheet"
+    commands:
+      - swipe:
+          start: 50%, 88%
+          end: 50%, 40%
+          duration: 800
+- runFlow:
+    when:
+      notVisible:
+        id: ".*-sheet"
+    commands:
+      - swipe:
+          start: 50%, 55%
+          end: 50%, 15%
+          duration: 800

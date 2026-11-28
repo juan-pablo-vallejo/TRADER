@@ -24,7 +24,8 @@ export function Band({
   // the page, where it scrolls, and the band does not fill the screen.
   const huge = useLayout().text === "huge";
   return (
-    <View style={[styles.band, { paddingTop: insets.top + space[3] }]}>
+    // `band`: the sweep knows it stays put while the screen scrolls beneath it.
+    <View testID="band" style={[styles.band, { paddingTop: insets.top + space[3] }]}>
       <StatusBar style="light" />
       <View style={styles.row}>
         <Text

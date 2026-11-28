@@ -1,13 +1,9 @@
-# The office removed the shift a moment ago and this phone, connected, has not pulled since:
-# it still offers the shift. The start is sent at once, the server refuses it, and the
-# chip says the entry needs attention, with the reason behind it; the phone is off the
-# clock.
+# The office removed the shift before this phone heard of it, and the phone started it
+# (schedule-stale-capture, with the API down). The start is sent once the API is back, the
+# server refuses it, and the chip says the entry needs attention, with the reason behind
+# it; the phone is off the clock.
 appId: app.jpteq.trader
 ---
-- assertVisible:
-    id: "offer-eligible"
-- tapOn:
-    id: "clock-in"
 - extendedWaitUntil:
     visible:
       id: "sync-attention"

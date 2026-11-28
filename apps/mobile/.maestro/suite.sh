@@ -4,10 +4,16 @@
 # `trader_demo_e2e` is rebuilt first, so a run starts from the same place every time; it is
 # a local database made for this and nothing else. The suite starts and stops `next dev`
 # itself, because two flows need the API to be unreachable for a while. Metro must already
-# be running (see run.sh), and nothing else may hold port 3000. Never in CI.
+# be running (see run.sh), and nothing else may hold the API's port (lib.sh). Never in CI.
 #
 #   .maestro/suite.sh ios <simulator udid>
 #   .maestro/suite.sh android <emulator serial>
+#
+# From the environment, each with its default:
+#   SUITE_FLOWS           the flows to run (affected.sh), each section with the sections its
+#                         flows rest on, or "all" (the default)
+#   EXPO_PUBLIC_CYCLE_MS  the sync cycle Metro was started with (a minute): the stale-window
+#                         flow waits two of them
 set -eu
 platform=$1
 device=$2
@@ -33,8 +39,24 @@ expect() {
   fi
   echo "ok: $1"
 }
-trap 'api_down; largest_text off' EXIT
+trap 'api_down; text_size default' EXIT
 flow() { "$here/run.sh" "$platform" "$device" "$@"; }
+
+# Which sections run: one runs when it holds a flow named, and the sections those flows
+# rest on run with it. An unknown flow stops the run before anything starts.
+for w in ${SUITE_FLOWS:-all}; do
+  [ "$w" = all ] || [ -f "$here/$w.yaml" ] || {
+    echo "suite.sh: no flow $w" >&2
+    exit 64
+  }
+done
+want() {
+  case " ${SUITE_FLOWS:-all} " in *" all "*) return 0 ;; esac
+  for w in "$@"; do
+    case " $SUITE_FLOWS " in *" $w "*) return 0 ;; esac
+  done
+  return 1
+}
 
 events_of() {
   echo "select count(*) from entries e join users u on u.id = e.worker_id
@@ -43,7 +65,7 @@ events_of() {
 }
 
 # The phone's own text size first: a run stopped at the largest (matrix.sh) leaves it there.
-largest_text off
+text_size default
 (cd "$root" && pnpm demo --db $DB --reset >/dev/null)
 # What the office would have typed: its number, which the office's WhatsApp button opens a
 # chat with, and notes on every jobsite, which the job's sheet shows.
@@ -51,6 +73,7 @@ sql "update companies set phone = '(401) 555-0142';
      update jobs set notes = 'Gate code 4411. Park on the street.';"
 api_up
 
+if want sign-in-refused sign-in-codes sign-in-spanish smoke not-found; then
 echo "— sign-in: refused, the code step, in Spanish"
 flow sign-in-refused fresh allow nobody.invited@demo.invalid
 flow sign-in-refused fresh allow 4015550199
@@ -59,12 +82,16 @@ expect "an address no company has added bound nobody" \
 flow sign-in-codes fresh allow $LUIS
 flow sign-in-spanish fresh allow $LUIS
 
+fi
+if want smoke not-found; then
 echo "— smoke"
 flow smoke
 
 # A link to a screen the app does not have: the not-found screen, and the way back.
 flow not-found
 
+fi
+if want clock offline-capture deliver; then
 echo "— clock, with a connection"
 flow clock
 expect "six events, once each" "$(events_of $LUIS)" 6
@@ -87,16 +114,22 @@ expect "with the location, where the permission was granted" \
    where u.email = '$LUIS' and e.client_timestamp > now() - interval '1 hour'
      and e.location_lat is not null" t
 
+fi
+if want offline-capture deliver; then
 echo "— capture with the API unreachable, then deliver"
 api_down
 flow offline-capture resume
-api_up
+# Counted while the API is still down: once it is up, a short cycle (EXPO_PUBLIC_CYCLE_MS)
+# delivers before the count.
 expect "nothing arrived while it was down" "$(events_of $LUIS)" 6
+api_up
 flow deliver resume
 expect "two more events, once each" "$(events_of $LUIS)" 8
 flow deliver resume
 expect "a second send adds nothing" "$(events_of $LUIS)" 8
 
+fi
+if want location-denied; then
 echo "— location refused"
 flow location-denied fresh deny $OMAR
 expect "the entries have no location" \
@@ -104,6 +137,8 @@ expect "the entries have no location" \
    join users u on u.id = e.worker_id where u.email = '$OMAR'
      and e.client_timestamp > now() - interval '1 hour'" "2 0"
 
+fi
+if want earlier-day; then
 echo "— a session left open from an earlier day"
 sql "insert into entries
        (id, company_id, worker_id, job_id, type, client_timestamp, server_timestamp,
@@ -120,6 +155,8 @@ expect "yesterday's session is closed, by one clock-out" \
    where u.email = '$ELENA' and e.type = 'ended'
      and e.client_timestamp > now() - interval '1 hour'" 1
 
+fi
+if want stamps-off; then
 echo "— location stamps off for one person"
 # A worker for this flow: an admin's Today has no clock-in.
 sql "update users set location_stamps = false, role = 'worker' where email = '$MARCUS';"
@@ -130,6 +167,13 @@ expect "two entries, neither with a location, neither flagged for one" \
    from entries e join users u on u.id = e.worker_id
    where u.email = '$MARCUS' and e.client_timestamp > now() - interval '1 hour'" "2 0 0"
 
+fi
+# The schedule, enforced: the three sections below rest on it.
+if want schedule schedule-none schedule-offered schedule-refused schedule-stale-capture \
+  schedule-stale-review; then
+  sql "update companies set schedule_enforced = true;"
+fi
+if want schedule schedule-none; then
 echo "— the weekly schedule, enforced"
 sql "update companies set schedule_enforced = true;"
 shift_now $LUIS
@@ -139,23 +183,38 @@ expect "the start locked its shift" \
    where u.email = '$LUIS' and a.locked_at is not null" 1
 flow schedule-none fresh allow $SAM
 
+fi
+if want schedule-offered schedule-refused; then
 echo "— a start the server refuses"
 shift_now $TOM
 flow schedule-offered fresh allow $TOM
+# The office removes the shift while the phone cannot hear of it: with the API down no
+# pull, however short the cycle (EXPO_PUBLIC_CYCLE_MS), takes the offer away before the
+# tap. The start waits on the phone, and is sent once the API is back.
+api_down
 sql "delete from shifts a using users u
      where u.id = a.user_id and u.email = '$TOM' and a.locked_at is null;"
+flow schedule-stale-capture resume
+api_up
 flow schedule-refused resume
 expect "nothing was written" "$(events_of $TOM)" 0
 
+fi
+if want schedule-offered schedule-stale-capture schedule-stale-review; then
 echo "— a schedule changed while the phone was offline"
 shift_now $ANA
 flow schedule-offered fresh allow $ANA
 api_down
 sql "delete from shifts a using users u
      where u.id = a.user_id and u.email = '$ANA' and a.locked_at is null;"
-# Long enough that the phone's last word from the API is stale (clock.ts): what it
-# captures now says it was captured offline.
-sleep 135
+# Long enough that the phone's last word from the API is stale (clock.ts): two of its sync
+# cycles and 15 s, from the cycle Metro was started with (EXPO_PUBLIC_CYCLE_MS, which this
+# run must be given too; a minute when unset, as in the app). What it captures now says it
+# was captured offline.
+cycle=${EXPO_PUBLIC_CYCLE_MS:-60000}
+case $cycle in '' | *[!0-9]*) cycle=60000 ;; esac
+[ "$cycle" -ge 5000 ] && [ "$cycle" -le 60000 ] || cycle=60000
+sleep $((2 * cycle / 1000 + 15))
 flow schedule-stale-capture resume
 api_up
 flow schedule-stale-review resume
@@ -164,6 +223,8 @@ expect "the start is stored, flagged as unscheduled" \
    join users u on u.id = e.worker_id
    where u.email = '$ANA' and e.captured_offline and 'unscheduled' = any (e.flags)" 1
 
+fi
+if want crew; then
 echo "— the Crew tab, as the admin"
 sql "delete from shifts a using users u, companies c
      where u.id = a.user_id and c.id = u.company_id and u.email = '$SAM'
@@ -176,12 +237,14 @@ expect "the shift the admin added is on the server, today, on that jobsite" \
    where u.email = '$SAM' and j.name = 'Harbor View unit 4B'
      and a.work_date = (now() at time zone c.timezone)::date" 1
 
+fi
+if want biometric biometric-largest-text social biometric-key-set biometric-key-refused; then
 echo "— Face ID or fingerprint, Google and Apple"
 flow biometric fresh allow $LUIS
 # At the phone's largest text size, and back to the default after.
-largest_text on
+text_size largest
 flow biometric-largest-text fresh allow $TOM
-largest_text off
+text_size default
 flow social fresh allow $LUIS
 flow biometric-key-set fresh allow $OMAR
 sql "update users set deactivated_at = now() where email = '$OMAR';"
@@ -196,6 +259,8 @@ flow biometric-key-refused resume
 
 # By number: every demo person is bound to their email by now, so one is invited by number
 # alone, as the office would, and the number binds them.
+fi
+if want sign-in-number add-email; then
 echo "— sign-in by number"
 sql "insert into users (company_id, name, role, sign_in_phone)
      select company_id, 'Number Sign-in', 'worker', '+14015550109' from users
@@ -204,6 +269,8 @@ flow sign-in-number fresh allow 4015550109
 expect "the number bound the person invited by it" \
   "select identity_subject from users where name = 'Number Sign-in'" "dev:+14015550109"
 
+fi
+if want add-email; then
 echo "— an email added by its person, proved by a code"
 flow add-email resume
 expect "the email is the person's, recorded as their own change" \
@@ -211,4 +278,6 @@ expect "the email is the person's, recorded as their own change" \
      join address_changes a on a.user_id = u.id where u.name = 'Number Sign-in'" \
   "number.added@demo.invalid true"
 
-echo "all flows green on $platform"
+fi
+
+echo "${SUITE_FLOWS:-all} flows green on $platform"

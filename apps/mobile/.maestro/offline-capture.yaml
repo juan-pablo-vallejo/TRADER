@@ -24,14 +24,14 @@ appId: app.jpteq.trader
     when:
       true: ${LAUNCH == "maestro"}
     commands:
-      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A${METRO}&__expo_disable_fab=1&__expo_disable_auto_launch=1&__expo_disable_onboarding=1"
 # On Android only the link's first part survives Maestro's openLink, which is enough for a
 # build that has been opened once already.
 - runFlow:
     when:
       true: ${LAUNCH == "adb"}
     commands:
-      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A8081"
+      - openLink: "exp+trader://?__expo_url=http%3A%2F%2Flocalhost%3A${METRO}"
       # Without the link's other parts a freshly installed development build opens its own
       # menu over the app: put it away. It is the tool's, and has no test id of ours.
       # It comes up once the bundle has loaded, so it is waited for; it may never come.
